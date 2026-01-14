@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.0](https://github.com/itsmemeworks/adhx/compare/v1.9.0...v1.10.0) (2026-01-14)
+
+
+### Features
+
+* enhance unauthenticated tweet preview page ([#46](https://github.com/itsmemeworks/adhx/issues/46)) ([255bff7](https://github.com/itsmemeworks/adhx/commit/255bff7088e78561596be49c70254effeba0ff6f))
+
 ## [1.9.0](https://github.com/itsmemeworks/adhx/compare/v1.8.0...v1.9.0) (2026-01-14)
 
 
