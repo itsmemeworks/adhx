@@ -100,7 +100,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
               onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
               placeholder="add tag"
               maxLength={10}
-              className="w-14 bg-transparent text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
+              className="w-12 bg-transparent text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
             />
             {newTag.trim() ? (
               <button
