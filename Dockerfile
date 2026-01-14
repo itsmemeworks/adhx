@@ -18,11 +18,8 @@ WORKDIR /app
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
 
-# Install dependencies (pnpm blocks native build scripts by default)
-RUN pnpm install --frozen-lockfile
-
-# Explicitly rebuild better-sqlite3 native bindings
-RUN pnpm rebuild better-sqlite3
+# Install dependencies with build scripts enabled for native modules
+RUN pnpm install --frozen-lockfile --config.ignore-scripts=false
 
 # Copy source code
 COPY . .
