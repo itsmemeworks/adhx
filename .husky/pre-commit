@@ -1,0 +1,10 @@
+#!/bin/sh
+
+# Run lint-staged (eslint --fix on staged files)
+pnpm lint-staged
+
+# Run type-checking on the whole project
+pnpm typecheck
+
+# Run tests
+pnpm test

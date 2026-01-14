@@ -1,0 +1,18 @@
+[
+  {
+    "id": "1234567890",
+    "text": "Check out this cool tool https://t.co/abc123",
+    "author": {
+      "username": "testuser"
+    },
+    "createdAt": "2025-12-15T10:30:00Z"
+  },
+  {
+    "id": "1234567891",
+    "text": "Great article on AI https://t.co/def456",
+    "author": {
+      "username": "aiwriter"
+    },
+    "createdAt": "2025-12-16T14:00:00Z"
+  }
+]

@@ -1,0 +1,45 @@
+name: PR Title Check
+
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  check-title:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Configure which types are allowed
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            build
+            ci
+            chore
+            revert
+            security
+          # Require a scope (optional)
+          requireScope: false
+          # Configure subject pattern
+          subjectPattern: ^[a-z].+$
+          subjectPatternError: |
+            The subject "{subject}" found in the pull request title "{title}"
+            doesn't match the configured pattern. Please ensure:
+            - The subject starts with a lowercase letter
+            - Example: "feat: add new feature" or "fix: resolve login issue"
+          # Validate PR title format for conventional commits
+          validateSingleCommit: false
+          ignoreLabels: |
+            autorelease: pending
+            autorelease: tagged

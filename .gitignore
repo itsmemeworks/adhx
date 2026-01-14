@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# State files (contain your bookmark data)
+.state/
+
+# Database
+data/*.db
+data/*.db-wal
+data/*.db-shm
+
+# Media downloads (can be large)
+data/media/
+
+# Config with credentials
+bookmarks-archiver.config.json
+# Legacy config (if migrating from smaug)
+smaug.config.json
+.env
+.env.local
+.env.*.local
+
+# Output (optional - you may want to track this)
+# bookmarks.md
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Logs
+*.log
+
+# TypeScript
+*.tsbuildinfo

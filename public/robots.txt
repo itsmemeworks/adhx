@@ -1,0 +1,12 @@
+# ADHX - Save now. Read never. Find always.
+# https://adhx.com
+
+User-agent: *
+Allow: /
+
+# Disallow private/API routes
+Disallow: /api/
+Disallow: /settings
+
+# Sitemap location
+Sitemap: https://adhx.com/sitemap.xml

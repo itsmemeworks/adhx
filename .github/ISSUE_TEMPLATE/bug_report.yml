@@ -1,0 +1,72 @@
+name: "🐛 Bug Report"
+description: "Something's broken and it's not just your attention span"
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this! We know you probably have 50 other tabs open, so we'll keep this quick.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Tell us what went wrong. We promise not to judge if you forgot what you were doing mid-report.
+      placeholder: "I clicked the thing and then... wait, what was I doing?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should have happened?
+      description: In a perfect world (where we actually read our bookmarks), what would have occurred?
+      placeholder: "It should have saved my tweet so I can ignore it properly later"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Help us recreate the chaos
+      placeholder: |
+        1. Open ADHX
+        2. Click on...
+        3. Watch it break
+        4. Question your life choices
+    validations:
+      required: true
+
+  - type: dropdown
+    id: browsers
+    attributes:
+      label: What browser are you using?
+      description: (We know you have Chrome with 200 tabs, but which one specifically?)
+      options:
+        - Chrome (like everyone else)
+        - Firefox (respect)
+        - Safari (you brave soul)
+        - Edge (no judgment... okay, a little)
+        - Arc (fancy!)
+        - Other (please specify below)
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else?
+      description: Screenshots, error messages, your bookmark count (we won't judge)
+      placeholder: "I have 1,247 unread bookmarks and zero regrets"
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      options:
+        - label: I've searched existing issues and this isn't a duplicate
+          required: true
+        - label: I've tried turning it off and on again
+          required: false

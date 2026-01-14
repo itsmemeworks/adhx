@@ -1,0 +1,12 @@
+{
+  "generatedAt": "2025-12-15T12:00:00Z",
+  "count": 1,
+  "bookmarks": [
+    {
+      "id": "9876543210",
+      "author": "existinguser",
+      "text": "Already pending bookmark",
+      "date": "Sunday, December 15, 2025"
+    }
+  ]
+}

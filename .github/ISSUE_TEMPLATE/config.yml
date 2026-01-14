@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "💬 Discussions"
+    url: https://github.com/itsmemeworks/adhx/discussions
+    about: "Have a question? Want to share your bookmark hoarding stories? Join the discussion!"
+  - name: "📖 Documentation"
+    url: https://github.com/itsmemeworks/adhx#readme
+    about: "Check the README first - we know, we know, reading docs is the last thing any of us want to do"

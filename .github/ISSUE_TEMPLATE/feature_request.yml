@@ -1,0 +1,66 @@
+name: "✨ Feature Request"
+description: "Got an idea? We love ideas! (Almost as much as we love saving tweets we'll never read)"
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A new feature idea? Amazing! Let's hear it.
+
+        Fair warning: we might get distracted halfway through reading this and bookmark it for later.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Is this related to a frustration? (Beyond the existential one of having too many bookmarks)
+      placeholder: "I'm always frustrated when I can't find that one tweet I saved 6 months ago about..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: What's your proposed solution?
+      description: Describe what you'd like to happen. Dream big!
+      placeholder: "It would be amazing if ADHX could read my mind and organize everything automatically"
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Any alternatives you've considered?
+      description: Other approaches that might work (even if they're just "give up and start fresh")
+      placeholder: "I tried using folders but then I had 47 folders and couldn't find anything anyway"
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: How big is this feature?
+      description: Your best guess is fine
+      options:
+        - "🐣 Small - A quick tweak"
+        - "🐥 Medium - A few days of work"
+        - "🦅 Large - A significant undertaking"
+        - "🦖 Massive - Would need its own roadmap"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Would you like to work on this?
+      description: No pressure! Just curious.
+      options:
+        - label: I'd be interested in implementing this myself
+        - label: I can help test if someone else builds it
+        - label: I'm just here for the ideas (that's cool too!)
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else?
+      description: Screenshots, mockups, links to similar features elsewhere, your favorite bookmark
+      placeholder: "Here's a totally unrelated tweet I bookmarked: ..."

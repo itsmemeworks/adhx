@@ -1,0 +1,25 @@
+{
+  "name": "ADHX - Save now. Read never. Find always.",
+  "short_name": "ADHX",
+  "description": "For people who bookmark everything and read nothing. The ADHD-friendly X/Twitter bookmark manager.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#8B5CF6",
+  "orientation": "portrait-primary",
+  "categories": ["productivity", "social"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+name: Release Please
+
+# Creates release PRs and GitHub releases automatically based on conventional commits
+#
+# REQUIRED SETUP:
+# 1. Go to Settings → Actions → General → Workflow permissions
+# 2. Enable "Allow GitHub Actions to create and approve pull requests"
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
+      pr: ${{ steps.release.outputs.pr }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      # Auto-merge the release PR when it's created/updated
+      # Note: Requires "Allow auto-merge" enabled in repo settings
+      - name: Enable auto-merge for release PR
+        if: ${{ steps.release.outputs.pr }}
+        continue-on-error: true
+        run: |
+          gh pr merge ${{ steps.release.outputs.pr }} --auto --squash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Log when a release is created
+      - name: Log release
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          echo "🎉 Release created!"
+          echo "Tag: ${{ steps.release.outputs.tag_name }}"
+          echo "Version: ${{ steps.release.outputs.version }}"
+
+  # Build verification on release
+  build-on-release:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Log release info
+        run: |
+          echo "✅ Build successful for ${{ needs.release-please.outputs.tag_name }}"
