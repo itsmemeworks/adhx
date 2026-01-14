@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.1](https://github.com/itsmemeworks/adhx/compare/v1.7.0...v1.7.1) (2026-01-14)
+
+
+### Bug Fixes
+
+* regenerate migration with multi-user composite primary keys ([#40](https://github.com/itsmemeworks/adhx/issues/40)) ([4436ba1](https://github.com/itsmemeworks/adhx/commit/4436ba12916c1b0a4ca45ae56d819d794ade3ac0))
+
 ## [1.7.0](https://github.com/itsmemeworks/adhx/compare/v1.6.4...v1.7.0) (2026-01-14)
 
 
