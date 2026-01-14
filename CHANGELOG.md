@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.5.0](https://github.com/itsmemeworks/adhx/compare/v1.4.3...v1.5.0) (2026-01-14)
+
+
+### Features
+
+* add sentry error tracking and fix release-please ci trigger ([#17](https://github.com/itsmemeworks/adhx/issues/17)) ([9f79990](https://github.com/itsmemeworks/adhx/commit/9f799900466f2562ce30a42ee631a569371b18b1))
+
+
+### Bug Fixes
+
+* add explicit pull-request-title-pattern for release-please ([#15](https://github.com/itsmemeworks/adhx/issues/15)) ([e2c9702](https://github.com/itsmemeworks/adhx/commit/e2c9702cec64983161f8b1ee3edce8992d43fe71))
+
 ## [1.4.3](https://github.com/itsmemeworks/adhx/compare/v1.4.2...v1.4.3) (2026-01-14)
 
 
