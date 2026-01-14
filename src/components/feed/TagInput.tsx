@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, forwardRef, useImperativeHandle } from 'react'
-import { X } from 'lucide-react'
+import { X, Plus } from 'lucide-react'
 import type { TagItem } from './types'
 
 export interface TagInputHandle {
@@ -85,7 +85,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
         </span>
       ))}
       <div className="relative">
-        <form onSubmit={handleAddTag} className="flex gap-1">
+        <form onSubmit={handleAddTag} className="flex gap-1 items-center">
           <input
             ref={inputRef}
             type="text"
@@ -101,6 +101,15 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
             maxLength={10}
             className="w-16 px-2 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-gray-400 dark:focus:border-gray-600 focus:w-24 transition-all"
           />
+          {newTag.trim() && (
+            <button
+              type="submit"
+              className="p-0.5 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
+              title="Add tag"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          )}
         </form>
         {showSuggestions && suggestions.length > 0 && (
           <div className="absolute bottom-full left-0 mb-1 w-32 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg z-10">
