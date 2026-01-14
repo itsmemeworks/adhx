@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.2](https://github.com/itsmemeworks/adhx/compare/v1.6.1...v1.6.2) (2026-01-14)
+
+
+### Bug Fixes
+
+* deploy only on release pr merges ([#31](https://github.com/itsmemeworks/adhx/issues/31)) ([e95c1cd](https://github.com/itsmemeworks/adhx/commit/e95c1cd20d038b5693427b5a0c669cb286ee3714))
+* use workflow_call to trigger deploys only on release ([#33](https://github.com/itsmemeworks/adhx/issues/33)) ([0813dfd](https://github.com/itsmemeworks/adhx/commit/0813dfd7286d1c915d370f26988a01c9cb6d9456))
+
 ## [1.6.1](https://github.com/itsmemeworks/adhx/compare/v1.6.0...v1.6.1) (2026-01-14)
 
 
