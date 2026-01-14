@@ -3,6 +3,9 @@
 # Build stage - compile native modules and build Next.js
 FROM node:20-slim AS builder
 
+# Build argument for Sentry release tracking
+ARG SENTRY_RELEASE
+
 # Install build dependencies for better-sqlite3
 RUN apt-get update && apt-get install -y \
     python3 \
@@ -38,9 +41,14 @@ RUN npm install -g tsx
 
 WORKDIR /app
 
+# Re-declare ARG for runner stage
+ARG SENTRY_RELEASE
+
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+# Pass Sentry release version to runtime
+ENV SENTRY_RELEASE=${SENTRY_RELEASE}
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs && \

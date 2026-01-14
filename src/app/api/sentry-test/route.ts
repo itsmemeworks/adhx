@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server'
-import { captureException, captureMessage } from '@/lib/sentry'
+import { captureException, captureMessage, getSentryRelease } from '@/lib/sentry'
 
 export async function GET() {
+  const release = getSentryRelease()
+
   try {
     // Send a test message
     captureMessage('Sentry test - message received!', 'info', {
       testType: 'verification',
       timestamp: new Date().toISOString(),
+      release,
     })
 
     // Throw a test error to verify exception capture
@@ -15,11 +18,14 @@ export async function GET() {
     captureException(error, {
       testType: 'verification',
       endpoint: '/api/sentry-test',
+      release,
     })
 
     return NextResponse.json({
       success: true,
       message: 'Test error sent to Sentry! Check your Sentry dashboard.',
+      release: release || 'not set',
+      environment: process.env.NODE_ENV,
     })
   }
 }

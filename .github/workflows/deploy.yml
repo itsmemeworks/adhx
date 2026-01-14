@@ -1,0 +1,86 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip_sentry:
+        description: 'Skip Sentry release creation'
+        required: false
+        default: 'false'
+        type: boolean
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/release-please.yml'
+      - '.github/workflows/tests.yml'
+
+# Only allow one deploy at a time
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+  SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+  SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Only deploy if not a release-please PR merge (those just bump versions)
+    if: ${{ !contains(github.event.head_commit.message, 'chore: release main') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for Sentry commit association
+
+      - name: Get version from package.json
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "release=adhx@$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Setup Fly CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io
+        run: |
+          flyctl deploy --remote-only \
+            --build-arg SENTRY_RELEASE=${{ steps.version.outputs.version }}
+
+      # Sentry release tracking
+      - name: Create Sentry release
+        if: ${{ inputs.skip_sentry != 'true' && env.SENTRY_ORG != '' }}
+        uses: getsentry/action-release@v1
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ env.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ env.SENTRY_PROJECT }}
+        with:
+          environment: production
+          version: ${{ steps.version.outputs.release }}
+          # Associate commits for "Suspect Commits" feature
+          set_commits: auto
+
+      - name: Notify Sentry of deployment
+        if: ${{ inputs.skip_sentry != 'true' && env.SENTRY_ORG != '' }}
+        run: |
+          curl -sL https://sentry.io/api/0/organizations/${{ env.SENTRY_ORG }}/releases/${{ steps.version.outputs.release }}/deploys/ \
+            -H "Authorization: Bearer ${{ secrets.SENTRY_AUTH_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "environment": "production",
+              "name": "Deploy ${{ steps.version.outputs.release }}"
+            }' || echo "Deploy notification failed (non-fatal)"
+
+      - name: Deployment summary
+        run: |
+          echo "## Deployment Complete! 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Sentry Release**: ${{ steps.version.outputs.release }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: production" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL**: https://adhx.fly.dev" >> $GITHUB_STEP_SUMMARY
