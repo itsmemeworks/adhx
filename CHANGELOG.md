@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.3](https://github.com/itsmemeworks/adhx/compare/v1.6.2...v1.6.3) (2026-01-14)
+
+
+### Bug Fixes
+
+* trigger deploy on release published event ([#34](https://github.com/itsmemeworks/adhx/issues/34)) ([d85efaa](https://github.com/itsmemeworks/adhx/commit/d85efaa3e25be24f1ddfca7977b33d673c07e9ab))
+
 ## [1.6.2](https://github.com/itsmemeworks/adhx/compare/v1.6.1...v1.6.2) (2026-01-14)
 
 
