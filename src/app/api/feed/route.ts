@@ -6,6 +6,7 @@ import { resolveMediaUrl, getShareableUrl, getThumbnailUrl } from '@/lib/media/f
 import { expandUrls } from '@/lib/utils/url-expander'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { selectArticleLink, buildArticlePreview, parseArticleContent } from '@/lib/utils/feed-helpers'
+import { metrics } from '@/lib/sentry'
 
 export type FilterType = 'all' | 'photos' | 'videos' | 'text' | 'articles' | 'quoted'
 
@@ -530,6 +531,17 @@ export async function GET(request: NextRequest) {
       .where(and(eq(syncLogs.status, 'completed'), syncFilter))
       .orderBy(desc(syncLogs.startedAt))
       .limit(1)
+
+    // Track feed metrics
+    metrics.feedLoaded(items.length, filter !== 'all' ? filter : undefined)
+    if (search) {
+      metrics.feedSearched(items.length > 0, items.length)
+    }
+    if (filter !== 'all') {
+      metrics.feedFiltered(filter)
+    }
+    // Track daily active users
+    metrics.trackUser(userId)
 
     return NextResponse.json({
       items,

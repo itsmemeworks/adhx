@@ -4,8 +4,10 @@ import {
   exchangeCodeForTokens,
   getCurrentUser,
   saveTokens,
+  hasExistingTokens,
 } from '@/lib/auth/oauth'
 import { setSessionCookie } from '@/lib/auth/session'
+import { metrics } from '@/lib/sentry'
 
 const CLIENT_ID = process.env.TWITTER_CLIENT_ID!
 const CLIENT_SECRET = process.env.TWITTER_CLIENT_SECRET!
@@ -23,6 +25,7 @@ export async function GET(request: NextRequest) {
   // Handle error from Twitter
   if (error) {
     console.error('OAuth error:', error, errorDescription)
+    metrics.authFailed(error)
     return NextResponse.redirect(
       new URL(`/?error=${encodeURIComponent(errorDescription || error)}`, BASE_URL)
     )
@@ -56,6 +59,9 @@ export async function GET(request: NextRequest) {
     // Get user info
     const user = await getCurrentUser(tokens.accessToken)
 
+    // Check if this is a new user (for metrics)
+    const isNewUser = !(await hasExistingTokens(user.id))
+
     // Save tokens to database
     await saveTokens(
       user.id,
@@ -68,6 +74,10 @@ export async function GET(request: NextRequest) {
     )
 
     console.log(`Successfully authenticated as @${user.username}`)
+
+    // Track successful auth completion
+    metrics.authCompleted(isNewUser)
+    metrics.trackUser(user.id)
 
     // Check for a return URL cookie (from URL prefix feature)
     const returnUrlCookie = request.cookies.get('adhx_return_url')
@@ -106,6 +116,7 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     console.error('OAuth callback error:', err)
     const message = err instanceof Error ? err.message : 'Unknown error'
+    metrics.authFailed(message)
     return NextResponse.redirect(
       new URL(`/?error=${encodeURIComponent(message)}`, BASE_URL)
     )

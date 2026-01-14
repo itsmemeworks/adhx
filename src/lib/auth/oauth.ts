@@ -262,6 +262,17 @@ export async function getStoredTokens(userId: string): Promise<{
   return result[0]
 }
 
+// Check if tokens exist for a user (used to determine new vs returning user)
+export async function hasExistingTokens(userId: string): Promise<boolean> {
+  const result = await db
+    .select({ userId: oauthTokens.userId })
+    .from(oauthTokens)
+    .where(eq(oauthTokens.userId, userId))
+    .limit(1)
+
+  return result.length > 0
+}
+
 // Check if token is expired (with 5 minute buffer)
 export function isTokenExpired(expiresAt: number): boolean {
   const now = Math.floor(Date.now() / 1000)

@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { bookmarkTags, bookmarks } from '@/lib/db/schema'
 import { eq, and, or, isNull } from 'drizzle-orm'
 import { getCurrentUserId } from '@/lib/auth/session'
+import { metrics } from '@/lib/sentry'
 
 const MAX_TAG_LENGTH = 10
 
@@ -95,6 +96,15 @@ export async function POST(
       bookmarkId: id,
       tag: cleanTag,
     })
+
+    // Get updated tag count for this bookmark
+    const allTags = await db
+      .select({ tag: bookmarkTags.tag })
+      .from(bookmarkTags)
+      .where(eq(bookmarkTags.bookmarkId, id))
+
+    // Track tag addition
+    metrics.bookmarkTagged(allTags.length)
   } catch (error: unknown) {
     // Check if it's a unique constraint error (tag already exists)
     if ((error as { code?: string }).code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {

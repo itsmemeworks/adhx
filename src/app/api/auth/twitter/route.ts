@@ -8,6 +8,7 @@ import {
   deleteTokens,
 } from '@/lib/auth/oauth'
 import { getSession, clearSessionCookie } from '@/lib/auth/session'
+import { metrics } from '@/lib/sentry'
 
 const CLIENT_ID = process.env.TWITTER_CLIENT_ID!
 const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/twitter/callback`
@@ -32,6 +33,9 @@ export async function GET(request: NextRequest) {
 
   // Build authorization URL
   const authUrl = buildAuthorizationUrl(CLIENT_ID, REDIRECT_URI, state, codeChallenge)
+
+  // Track auth flow start
+  metrics.authStarted()
 
   // Check for returnUrl parameter
   const returnUrl = request.nextUrl.searchParams.get('returnUrl')

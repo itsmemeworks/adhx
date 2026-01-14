@@ -6,7 +6,7 @@ import { bookmarks, bookmarkLinks, bookmarkMedia, syncLogs } from '@/lib/db/sche
 import { eq, or, isNull, desc, and } from 'drizzle-orm'
 import { nanoid } from '@/lib/utils'
 import { getCurrentUserId } from '@/lib/auth/session'
-import { captureException } from '@/lib/sentry'
+import { captureException, metrics } from '@/lib/sentry'
 import type { StreamedBookmark } from '@/components/feed/types'
 
 // GET /api/sync - SSE endpoint for sync progress
@@ -72,6 +72,11 @@ export async function GET(request: NextRequest) {
       const keepAliveInterval = setInterval(() => {
         send('ping', { timestamp: Date.now() })
       }, 10000) // Send ping every 10 seconds
+
+      // Track sync start
+      const syncType = all ? 'full' : 'incremental'
+      metrics.syncStarted(syncType)
+      const syncStartTime = Date.now()
 
       try {
         send('start', { syncId, total: null })
@@ -164,6 +169,11 @@ export async function GET(request: NextRequest) {
           })
           .where(eq(syncLogs.id, syncId))
 
+        // Track sync completion
+        const syncDuration = Date.now() - syncStartTime
+        metrics.syncCompleted(newBookmarks, pageNumber, syncDuration)
+        metrics.trackUser(userId)
+
         send('complete', {
           stats: {
             total,
@@ -174,6 +184,9 @@ export async function GET(request: NextRequest) {
         })
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error'
+
+        // Track sync failure
+        metrics.syncFailed(message)
 
         // Capture error in Sentry with context
         captureException(error, {
