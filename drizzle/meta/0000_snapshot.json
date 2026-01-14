@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "cfcfc300-e611-4fe6-a3af-d1277155675d",
+  "id": "ac244a36-48e3-45ba-b0c0-9b56afc5e9d9",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "bookmark_links": {
@@ -13,6 +13,13 @@
           "primaryKey": true,
           "notNull": true,
           "autoincrement": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
         },
         "bookmark_id": {
           "name": "bookmark_id",
@@ -78,22 +85,17 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
-      "foreignKeys": {
-        "bookmark_links_bookmark_id_bookmarks_id_fk": {
-          "name": "bookmark_links_bookmark_id_bookmarks_id_fk",
-          "tableFrom": "bookmark_links",
-          "tableTo": "bookmarks",
-          "columnsFrom": [
+      "indexes": {
+        "bookmark_links_user_bookmark_idx": {
+          "name": "bookmark_links_user_bookmark_idx",
+          "columns": [
+            "user_id",
             "bookmark_id"
           ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "isUnique": false
         }
       },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
@@ -104,7 +106,14 @@
         "id": {
           "name": "id",
           "type": "text",
-          "primaryKey": true,
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
@@ -201,29 +210,39 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
-      "foreignKeys": {
-        "bookmark_media_bookmark_id_bookmarks_id_fk": {
-          "name": "bookmark_media_bookmark_id_bookmarks_id_fk",
-          "tableFrom": "bookmark_media",
-          "tableTo": "bookmarks",
-          "columnsFrom": [
+      "indexes": {
+        "bookmark_media_user_bookmark_idx": {
+          "name": "bookmark_media_user_bookmark_idx",
+          "columns": [
+            "user_id",
             "bookmark_id"
           ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "isUnique": false
         }
       },
-      "compositePrimaryKeys": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "bookmark_media_user_id_id_pk": {
+          "columns": [
+            "user_id",
+            "id"
+          ],
+          "name": "bookmark_media_user_id_id_pk"
+        }
+      },
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
     "bookmark_tags": {
       "name": "bookmark_tags",
       "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "bookmark_id": {
           "name": "bookmark_id",
           "type": "text",
@@ -239,29 +258,24 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
-      "foreignKeys": {
-        "bookmark_tags_bookmark_id_bookmarks_id_fk": {
-          "name": "bookmark_tags_bookmark_id_bookmarks_id_fk",
-          "tableFrom": "bookmark_tags",
-          "tableTo": "bookmarks",
-          "columnsFrom": [
-            "bookmark_id"
+      "indexes": {
+        "bookmark_tags_user_id_idx": {
+          "name": "bookmark_tags_user_id_idx",
+          "columns": [
+            "user_id"
           ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "isUnique": false
         }
       },
+      "foreignKeys": {},
       "compositePrimaryKeys": {
-        "bookmark_tags_bookmark_id_tag_pk": {
+        "bookmark_tags_user_id_bookmark_id_tag_pk": {
           "columns": [
+            "user_id",
             "bookmark_id",
             "tag"
           ],
-          "name": "bookmark_tags_bookmark_id_tag_pk"
+          "name": "bookmark_tags_user_id_bookmark_id_tag_pk"
         }
       },
       "uniqueConstraints": {},
@@ -273,7 +287,7 @@
         "id": {
           "name": "id",
           "type": "text",
-          "primaryKey": true,
+          "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
@@ -281,7 +295,7 @@
           "name": "user_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "author": {
@@ -430,15 +444,45 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "bookmarks_user_id_idx": {
+          "name": "bookmarks_user_id_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        },
+        "bookmarks_processed_at_idx": {
+          "name": "bookmarks_processed_at_idx",
+          "columns": [
+            "processed_at"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "bookmarks_user_id_id_pk": {
+          "columns": [
+            "user_id",
+            "id"
+          ],
+          "name": "bookmarks_user_id_id_pk"
+        }
+      },
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
     "collection_tweets": {
       "name": "collection_tweets",
       "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "collection_id": {
           "name": "collection_id",
           "type": "text",
@@ -470,41 +514,15 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {
-        "collection_tweets_collection_id_collections_id_fk": {
-          "name": "collection_tweets_collection_id_collections_id_fk",
-          "tableFrom": "collection_tweets",
-          "tableTo": "collections",
-          "columnsFrom": [
-            "collection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "collection_tweets_bookmark_id_bookmarks_id_fk": {
-          "name": "collection_tweets_bookmark_id_bookmarks_id_fk",
-          "tableFrom": "collection_tweets",
-          "tableTo": "bookmarks",
-          "columnsFrom": [
-            "bookmark_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {
-        "collection_tweets_collection_id_bookmark_id_pk": {
+        "collection_tweets_user_id_collection_id_bookmark_id_pk": {
           "columns": [
+            "user_id",
             "collection_id",
             "bookmark_id"
           ],
-          "name": "collection_tweets_collection_id_bookmark_id_pk"
+          "name": "collection_tweets_user_id_collection_id_bookmark_id_pk"
         }
       },
       "uniqueConstraints": {},
@@ -524,7 +542,7 @@
           "name": "user_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "name": {
@@ -593,6 +611,13 @@
             "share_code"
           ],
           "isUnique": true
+        },
+        "collections_user_id_idx": {
+          "name": "collections_user_id_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
         }
       },
       "foreignKeys": {},
@@ -623,7 +648,7 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false,
-          "default": "'2026-01-14T10:09:15.897Z'"
+          "default": "'2026-01-14T16:34:44.103Z'"
         }
       },
       "indexes": {},
@@ -690,7 +715,7 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false,
-          "default": "'2026-01-14T10:09:15.896Z'"
+          "default": "'2026-01-14T16:34:44.102Z'"
         },
         "updated_at": {
           "name": "updated_at",
@@ -709,10 +734,17 @@
     "read_status": {
       "name": "read_status",
       "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "bookmark_id": {
           "name": "bookmark_id",
           "type": "text",
-          "primaryKey": true,
+          "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
@@ -725,22 +757,16 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {
-        "read_status_bookmark_id_bookmarks_id_fk": {
-          "name": "read_status_bookmark_id_bookmarks_id_fk",
-          "tableFrom": "read_status",
-          "tableTo": "bookmarks",
-          "columnsFrom": [
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "read_status_user_id_bookmark_id_pk": {
+          "columns": [
+            "user_id",
             "bookmark_id"
           ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "name": "read_status_user_id_bookmark_id_pk"
         }
       },
-      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
@@ -758,7 +784,7 @@
           "name": "user_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "started_at": {
@@ -829,7 +855,15 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "sync_logs_user_id_idx": {
+          "name": "sync_logs_user_id_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -838,18 +872,18 @@
     "sync_state": {
       "name": "sync_state",
       "columns": {
-        "key": {
-          "name": "key",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
         "user_id": {
           "name": "user_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
           "autoincrement": false
         },
         "value": {
@@ -869,7 +903,15 @@
       },
       "indexes": {},
       "foreignKeys": {},
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "sync_state_user_id_key_pk": {
+          "columns": [
+            "user_id",
+            "key"
+          ],
+          "name": "sync_state_user_id_key_pk"
+        }
+      },
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
@@ -880,13 +922,13 @@
           "name": "user_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "key": {
           "name": "key",
           "type": "text",
-          "primaryKey": true,
+          "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
@@ -907,7 +949,15 @@
       },
       "indexes": {},
       "foreignKeys": {},
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "user_preferences_user_id_key_pk": {
+          "columns": [
+            "user_id",
+            "key"
+          ],
+          "name": "user_preferences_user_id_key_pk"
+        }
+      },
       "uniqueConstraints": {},
       "checkConstraints": {}
     }
