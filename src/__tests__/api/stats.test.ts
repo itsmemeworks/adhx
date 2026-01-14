@@ -54,6 +54,7 @@ describe('API: /api/stats', () => {
     expect(data.unread).toBe(0)
     expect(data.withMedia).toBe(0)
     expect(data.needsTranscript).toBe(0)
+    expect(data.manual).toBe(0)
     expect(data.categories).toEqual({})
   })
 
@@ -184,5 +185,90 @@ describe('API: /api/stats', () => {
     expect(dataB.total).toBe(5)
     expect(dataB.read).toBe(3)
     expect(dataB.unread).toBe(2)
+  })
+
+  // =========================================
+  // Source/Manual Count Tests
+  // =========================================
+  describe('manual bookmark counts', () => {
+    it('counts manually added bookmarks', async () => {
+      await testInstance.db.insert(schema.bookmarks).values([
+        createTestBookmark(USER_A, 't1', { source: 'manual' }),
+        createTestBookmark(USER_A, 't2', { source: 'manual' }),
+        createTestBookmark(USER_A, 't3', { source: 'sync' }),
+      ])
+
+      const { GET } = await import('@/app/api/stats/route')
+      const response = await GET()
+      const data = await response.json()
+
+      expect(data.total).toBe(3)
+      expect(data.manual).toBe(2)
+    })
+
+    it('counts url_prefix as manual additions', async () => {
+      await testInstance.db.insert(schema.bookmarks).values([
+        createTestBookmark(USER_A, 't1', { source: 'url_prefix' }),
+        createTestBookmark(USER_A, 't2', { source: 'url_prefix' }),
+        createTestBookmark(USER_A, 't3', { source: 'manual' }),
+        createTestBookmark(USER_A, 't4', { source: 'sync' }),
+      ])
+
+      const { GET } = await import('@/app/api/stats/route')
+      const response = await GET()
+      const data = await response.json()
+
+      expect(data.total).toBe(4)
+      expect(data.manual).toBe(3) // 2 url_prefix + 1 manual
+    })
+
+    it('does not count synced bookmarks as manual', async () => {
+      await testInstance.db.insert(schema.bookmarks).values([
+        createTestBookmark(USER_A, 't1', { source: 'sync' }),
+        createTestBookmark(USER_A, 't2', { source: 'sync' }),
+        createTestBookmark(USER_A, 't3'), // defaults to 'sync'
+      ])
+
+      const { GET } = await import('@/app/api/stats/route')
+      const response = await GET()
+      const data = await response.json()
+
+      expect(data.total).toBe(3)
+      expect(data.manual).toBe(0)
+    })
+
+    it('isolates manual counts between users', async () => {
+      // User A: 2 manual, 1 sync
+      await testInstance.db.insert(schema.bookmarks).values([
+        createTestBookmark(USER_A, 't1', { source: 'manual' }),
+        createTestBookmark(USER_A, 't2', { source: 'url_prefix' }),
+        createTestBookmark(USER_A, 't3', { source: 'sync' }),
+      ])
+
+      // User B: 1 manual, 3 sync
+      await testInstance.db.insert(schema.bookmarks).values([
+        createTestBookmark(USER_B, 't1', { source: 'manual' }),
+        createTestBookmark(USER_B, 't2', { source: 'sync' }),
+        createTestBookmark(USER_B, 't3', { source: 'sync' }),
+        createTestBookmark(USER_B, 't4', { source: 'sync' }),
+      ])
+
+      // User A stats
+      mockUserId = USER_A
+      const { GET } = await import('@/app/api/stats/route')
+      const responseA = await GET()
+      const dataA = await responseA.json()
+
+      expect(dataA.total).toBe(3)
+      expect(dataA.manual).toBe(2)
+
+      // User B stats
+      mockUserId = USER_B
+      const responseB = await GET()
+      const dataB = await responseB.json()
+
+      expect(dataB.total).toBe(4)
+      expect(dataB.manual).toBe(1)
+    })
   })
 })

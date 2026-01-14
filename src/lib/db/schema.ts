@@ -40,6 +40,9 @@ export const bookmarks = sqliteTable(
     // AI-generated summary
     summary: text('summary'),
 
+    // How this bookmark was added: 'sync', 'manual', 'url_prefix'
+    source: text('source').default('sync'),
+
     // Original JSON for debugging
     rawJson: text('raw_json'),
   },

@@ -104,7 +104,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose, inFocusMode = false }:
               <div>
                 <SectionHeader>Navigation</SectionHeader>
                 <Row keys={['/']} label="Search" />
-                <Row keys={['s']} label="Settings" />
+                <Row keys={[',']} label="Settings" />
                 <Row keys={['f']} label="Enter focus mode" />
                 <Row keys={['Esc']} label="Close / unfocus" />
               </div>
@@ -113,9 +113,10 @@ export function KeyboardShortcutsModal({ isOpen, onClose, inFocusMode = false }:
               <div>
                 <SectionHeader>Actions</SectionHeader>
                 <Row keys={['a']} label="Add tweet" />
-                <Row keys={['r']} label="Refresh / sync" />
+                <Row keys={['b']} label="Sync bookmarks" />
                 <Row keys={['u']} label="Toggle unread only" />
                 <Row keys={['t']} label="Open tags filter" />
+                <Row keys={['d']} label="Toggle dark mode" />
                 <Row keys={['?']} label="Show this help" />
               </div>
 

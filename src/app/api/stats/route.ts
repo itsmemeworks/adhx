@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { bookmarks, bookmarkMedia, readStatus } from '@/lib/db/schema'
-import { count, sql, eq, and } from 'drizzle-orm'
+import { count, sql, eq, and, or } from 'drizzle-orm'
 import { getCurrentUserId } from '@/lib/auth/session'
 
 // GET /api/stats - Get dashboard stats
@@ -57,6 +57,21 @@ export async function GET() {
       .from(bookmarks)
       .where(and(eq(bookmarks.userId, userId), sql`${bookmarks.needsTranscript} = 1`))
 
+    // Manually added bookmarks (not via sync)
+    const [manualResult] = await db
+      .select({ count: count() })
+      .from(bookmarks)
+      .where(
+        and(
+          eq(bookmarks.userId, userId),
+          or(
+            eq(bookmarks.source, 'manual'),
+            eq(bookmarks.source, 'url_prefix')
+          )
+        )
+      )
+    const manualCount = manualResult?.count || 0
+
     return NextResponse.json({
       total,
       unread,
@@ -64,6 +79,7 @@ export async function GET() {
       categories,
       withMedia: withMediaResult?.count || 0,
       needsTranscript: needsTranscriptResult?.count || 0,
+      manual: manualCount,
     })
   } catch (error) {
     console.error('Error fetching stats:', error)

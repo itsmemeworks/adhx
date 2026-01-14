@@ -179,12 +179,12 @@ export function LandingPage() {
           <FeatureCard
             icon={<Bookmark className="w-8 h-8" />}
             title="Hoard Mode"
-            description="Sync up to 800 of your X bookmarks. No judgment here."
+            description="Sync your X bookmarks or add tweets one by one. Hoard responsibly. Or don't."
           />
           <FeatureCard
-            icon={<Tag className="w-8 h-8" />}
-            title="Tag Everything"
-            description="Organize your chaos with custom tags. Or don't. We won't tell."
+            icon={<Maximize2 className="w-8 h-8" />}
+            title="Media Mode"
+            description="Full-screen media viewer with one-click downloads. Save that meme before it disappears."
           />
           <FeatureCard
             icon={<Search className="w-8 h-8" />}
@@ -192,9 +192,9 @@ export function LandingPage() {
             description="Full-text search that works. Find that tweet from 6 months ago."
           />
           <FeatureCard
-            icon={<Maximize2 className="w-8 h-8" />}
-            title="Focus Mode"
-            description="Immersive lightbox for media. Keyboard shortcuts for power users."
+            icon={<Tag className="w-8 h-8" />}
+            title="Tag Everything"
+            description="Organize your chaos with custom tags. Or don't. We won't tell."
           />
         </div>
       </section>

@@ -153,6 +153,7 @@ export async function POST(request: NextRequest) {
       createdAt: tweet.created_at ? new Date(tweet.created_at).toISOString() : now,
       processedAt: now,
       category,
+      source, // 'manual' or 'url_prefix'
     })
 
     // Process media if present
