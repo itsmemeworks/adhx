@@ -36,23 +36,28 @@ jobs:
         run: pnpm test
 
   build:
-    # Skip for release-please PRs (only update version/changelog)
-    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ubuntu-latest
     steps:
+      # Skip actual build for release-please PRs (only update version/changelog)
+      # Job still runs so the required status check reports success
       - uses: actions/checkout@v4
+        if: ${{ !startsWith(github.head_ref, 'release-please--') }}
 
       - uses: pnpm/action-setup@v4
+        if: ${{ !startsWith(github.head_ref, 'release-please--') }}
         with:
           version: 9
 
       - uses: actions/setup-node@v4
+        if: ${{ !startsWith(github.head_ref, 'release-please--') }}
         with:
           node-version: '20'
           cache: 'pnpm'
 
       - name: Install dependencies
+        if: ${{ !startsWith(github.head_ref, 'release-please--') }}
         run: pnpm install --frozen-lockfile
 
       - name: Build
+        if: ${{ !startsWith(github.head_ref, 'release-please--') }}
         run: pnpm build
