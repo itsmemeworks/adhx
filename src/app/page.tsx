@@ -263,11 +263,13 @@ function FeedPageContent(): React.ReactElement {
   }, [searchParams])
 
   useEffect(() => {
+    // Skip if not authenticated - landing page will be shown
+    if (!isAuthenticated) return
     // Skip fetching during sync - streamed items are being added directly to state
     // and sync-complete will trigger a proper fetch when done
     if (isSyncing) return
     fetchFeed(true)
-  }, [filter, unreadOnly, search, selectedTags, isSyncing])
+  }, [filter, unreadOnly, search, selectedTags, isSyncing, isAuthenticated])
 
   useEffect(() => {
     if (isAuthenticated) {

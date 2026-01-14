@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { bookmarks, bookmarkMedia, readStatus } from '@/lib/db/schema'
-import { count, sql, or, eq, isNull, and, inArray } from 'drizzle-orm'
+import { count, sql, eq, and } from 'drizzle-orm'
 import { getCurrentUserId } from '@/lib/auth/session'
 
 // GET /api/stats - Get dashboard stats
@@ -13,43 +13,31 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // User filter (supports migration period where userId may be null)
-    const userFilter = or(eq(bookmarks.userId, userId), isNull(bookmarks.userId))
-
-    // Total bookmarks for this user
+    // Total bookmarks for this user (strict userId check)
     const [totalResult] = await db
       .select({ count: count() })
       .from(bookmarks)
-      .where(userFilter)
+      .where(eq(bookmarks.userId, userId))
     const total = totalResult?.count || 0
 
-    // Get user's bookmark IDs for filtering read status
-    const userBookmarks = await db
-      .select({ id: bookmarks.id })
-      .from(bookmarks)
-      .where(userFilter)
-    const userBookmarkIds = userBookmarks.map((b) => b.id)
-
-    // Read count for user's bookmarks
-    const [readResult] = userBookmarkIds.length > 0
-      ? await db
-          .select({ count: count() })
-          .from(readStatus)
-          .where(inArray(readStatus.bookmarkId, userBookmarkIds))
-      : [{ count: 0 }]
+    // Read count for user's bookmarks (use userId from readStatus directly)
+    const [readResult] = await db
+      .select({ count: count() })
+      .from(readStatus)
+      .where(eq(readStatus.userId, userId))
     const readCount = readResult?.count || 0
 
     // Calculate unread
     const unread = Math.max(0, total - readCount)
 
-    // By category for this user
+    // By category for this user (strict userId check)
     const categoryCounts = await db
       .select({
         category: bookmarks.category,
         count: count(),
       })
       .from(bookmarks)
-      .where(userFilter)
+      .where(eq(bookmarks.userId, userId))
       .groupBy(bookmarks.category)
 
     const categories: Record<string, number> = {}
@@ -57,19 +45,17 @@ export async function GET() {
       categories[row.category || 'tweet'] = row.count
     }
 
-    // With media for this user's bookmarks
-    const [withMediaResult] = userBookmarkIds.length > 0
-      ? await db
-          .select({ count: sql<number>`count(distinct ${bookmarkMedia.bookmarkId})` })
-          .from(bookmarkMedia)
-          .where(inArray(bookmarkMedia.bookmarkId, userBookmarkIds))
-      : [{ count: 0 }]
+    // With media for this user (use userId from bookmarkMedia directly)
+    const [withMediaResult] = await db
+      .select({ count: sql<number>`count(distinct ${bookmarkMedia.bookmarkId})` })
+      .from(bookmarkMedia)
+      .where(eq(bookmarkMedia.userId, userId))
 
-    // Needs transcript for this user
+    // Needs transcript for this user (strict userId check)
     const [needsTranscriptResult] = await db
       .select({ count: count() })
       .from(bookmarks)
-      .where(and(userFilter, sql`${bookmarks.needsTranscript} = 1`))
+      .where(and(eq(bookmarks.userId, userId), sql`${bookmarks.needsTranscript} = 1`))
 
     return NextResponse.json({
       total,

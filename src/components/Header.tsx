@@ -57,18 +57,21 @@ export function Header() {
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    // Only fetch auth status on mount - stats/cooldown are fetched after auth is confirmed
     fetchAuthStatus()
-    fetchStats()
-    fetchCooldown()
 
-    // Listen for stats updates from other components
-    const handleStatsUpdate = () => fetchStats()
+    // Listen for stats updates from other components (only fires when authenticated)
+    const handleStatsUpdate = () => {
+      if (authStatus?.authenticated) fetchStats()
+    }
     window.addEventListener('stats-updated', handleStatsUpdate)
 
-    // Listen for sync complete to refresh stats and cooldown
+    // Listen for sync complete to refresh stats and cooldown (only fires when authenticated)
     const handleSyncComplete = () => {
-      fetchStats()
-      fetchCooldown()
+      if (authStatus?.authenticated) {
+        fetchStats()
+        fetchCooldown()
+      }
     }
     window.addEventListener('sync-complete', handleSyncComplete)
 
@@ -83,9 +86,6 @@ export function Header() {
     window.addEventListener('close-add-tweet', handleCloseAddTweet)
     window.addEventListener('open-sync', handleOpenSync)
 
-    // Update cooldown timer every minute
-    const cooldownInterval = setInterval(fetchCooldown, 60000)
-
     return () => {
       window.removeEventListener('stats-updated', handleStatsUpdate)
       window.removeEventListener('sync-complete', handleSyncComplete)
@@ -93,15 +93,18 @@ export function Header() {
       window.removeEventListener('open-add-tweet', handleOpenAddTweet)
       window.removeEventListener('close-add-tweet', handleCloseAddTweet)
       window.removeEventListener('open-sync', handleOpenSync)
-      clearInterval(cooldownInterval)
     }
-  }, [])
+  }, [authStatus?.authenticated])
 
-  // Refresh stats when auth status changes to authenticated
+  // Refresh stats and cooldown when auth status changes to authenticated
   useEffect(() => {
     if (authStatus?.authenticated) {
       fetchStats()
       fetchCooldown()
+
+      // Update cooldown timer every minute (only when authenticated)
+      const cooldownInterval = setInterval(fetchCooldown, 60000)
+      return () => clearInterval(cooldownInterval)
     }
   }, [authStatus?.authenticated])
 

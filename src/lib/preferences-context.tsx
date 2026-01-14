@@ -45,10 +45,19 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   const [preferences, setPreferences] = useState<Preferences>(defaultPreferences)
   const [loading, setLoading] = useState(true)
 
-  // Fetch preferences on mount
+  // Fetch preferences on mount (only if authenticated)
   useEffect(() => {
     async function fetchPreferences() {
       try {
+        // Check auth status first to avoid 401 on landing page
+        const authResponse = await fetch('/api/auth/twitter/status')
+        const authData = await authResponse.json()
+
+        if (!authData.authenticated) {
+          setLoading(false)
+          return
+        }
+
         const response = await fetch('/api/preferences')
         if (response.ok) {
           const data = await response.json()

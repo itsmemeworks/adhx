@@ -3,7 +3,7 @@ import { fetchBookmarks, TwitterBookmark } from '@/lib/twitter/client'
 import { fetchTweetData, extractEnrichmentData } from '@/lib/media/fxembed'
 import { db } from '@/lib/db'
 import { bookmarks, bookmarkLinks, bookmarkMedia, syncLogs } from '@/lib/db/schema'
-import { eq, or, isNull, desc, and } from 'drizzle-orm'
+import { eq, desc, and } from 'drizzle-orm'
 import { nanoid } from '@/lib/utils'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { captureException, metrics } from '@/lib/sentry'
@@ -17,17 +17,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Check cooldown - 1 hour between syncs
+  // Check cooldown - 1 hour between syncs (strict userId check)
   const cooldownMs = 60 * 60 * 1000 // 1 hour
   const [lastSync] = await db
     .select()
     .from(syncLogs)
-    .where(
-      and(
-        eq(syncLogs.status, 'completed'),
-        or(eq(syncLogs.userId, userId), isNull(syncLogs.userId))
-      )
-    )
+    .where(and(eq(syncLogs.status, 'completed'), eq(syncLogs.userId, userId)))
     .orderBy(desc(syncLogs.completedAt))
     .limit(1)
 
@@ -81,10 +76,9 @@ export async function GET(request: NextRequest) {
       try {
         send('start', { syncId, total: null })
 
-        // Get existing bookmark IDs for this user
-        const userFilter = or(eq(bookmarks.userId, userId), isNull(bookmarks.userId))
+        // Get existing bookmark IDs for this user (strict userId check)
         const existingIds = new Set(
-          (await db.select({ id: bookmarks.id }).from(bookmarks).where(userFilter)).map((b) => b.id)
+          (await db.select({ id: bookmarks.id }).from(bookmarks).where(eq(bookmarks.userId, userId))).map((b) => b.id)
         )
 
         // Track IDs we've inserted during this sync (for quote tweets that get saved separately)
@@ -329,14 +323,15 @@ async function saveBookmark(
       if (fxData?.tweet) {
         quotedTweetId = quoteRef.id
 
-        // Check if the quoted tweet already exists as a bookmark OR was already inserted during this sync
+        // Check if the quoted tweet already exists as a bookmark for THIS USER
+        // OR was already inserted during this sync (use composite key: userId + id)
         const alreadyInserted = insertedDuringSync.has(quoteRef.id)
         const [existingQuotedTweet] = alreadyInserted
           ? [{ id: quoteRef.id }] // Skip DB query if we know we already inserted it
           : await db
               .select({ id: bookmarks.id })
               .from(bookmarks)
-              .where(eq(bookmarks.id, quoteRef.id))
+              .where(and(eq(bookmarks.userId, userId), eq(bookmarks.id, quoteRef.id)))
               .limit(1)
 
         // If quoted tweet doesn't exist, save it as a separate bookmark
@@ -360,6 +355,7 @@ async function saveBookmark(
             : null
 
           // Save the quoted tweet as its own bookmark
+          // Use onConflictDoNothing to handle case where another user already synced this tweet
           await db.insert(bookmarks).values({
             id: quoteRef.id,
             userId,
@@ -374,18 +370,19 @@ async function saveBookmark(
             isReply: false,
             isQuote: false,
             isRetweet: false,
-          })
+          }).onConflictDoNothing()
 
           // Track that we've inserted this quoted tweet
           insertedDuringSync.add(quoteRef.id)
 
-          // Save media for the quoted tweet
+          // Save media for the quoted tweet (include userId for composite key)
           if (fxData.tweet.media?.photos) {
             for (let i = 0; i < fxData.tweet.media.photos.length; i++) {
               const photo = fxData.tweet.media.photos[i]
               const mediaId = `${quoteRef.id}_photo_${i}`
               await db.insert(bookmarkMedia).values({
                 id: mediaId,
+                userId,
                 bookmarkId: quoteRef.id,
                 mediaType: 'photo',
                 originalUrl: photo.url,
@@ -401,6 +398,7 @@ async function saveBookmark(
               const mediaId = `${quoteRef.id}_video_${i}`
               await db.insert(bookmarkMedia).values({
                 id: mediaId,
+                userId,
                 bookmarkId: quoteRef.id,
                 mediaType: 'video',
                 originalUrl: video.url,
@@ -438,6 +436,7 @@ async function saveBookmark(
             } : null
 
             await db.insert(bookmarkLinks).values({
+              userId,
               bookmarkId: quoteRef.id,
               expandedUrl: quotedArticleUrl,
               domain: 'x.com',
@@ -490,6 +489,8 @@ async function saveBookmark(
   }
 
   // Insert bookmark with userId for multi-user support and enrichment data
+  // Use onConflictDoNothing to handle case where another user already synced this tweet
+  // Note: Current schema uses tweet ID as primary key, so same tweet can only exist once
   await db.insert(bookmarks).values({
     id: tweet.id,
     userId, // Include userId for multi-user support
@@ -508,9 +509,9 @@ async function saveBookmark(
     isRetweet,
     retweetContext,
     rawJson: JSON.stringify(tweet),
-  })
+  }).onConflictDoNothing()
 
-  // Insert links
+  // Insert links (include userId)
   if (tweet.entities?.urls) {
     for (const url of tweet.entities.urls) {
       if (url.expandedUrl.includes('/status/')) continue
@@ -519,6 +520,7 @@ async function saveBookmark(
       const linkType = determineLinkType(url.expandedUrl)
 
       await db.insert(bookmarkLinks).values({
+        userId,
         bookmarkId: tweet.id,
         originalUrl: url.url,
         expandedUrl: url.expandedUrl,
@@ -528,7 +530,7 @@ async function saveBookmark(
     }
   }
 
-  // Insert media
+  // Insert media (include userId for composite key)
   if (tweet.media && tweet.media.length > 0) {
     for (let i = 0; i < tweet.media.length; i++) {
       const media = tweet.media[i]
@@ -537,6 +539,7 @@ async function saveBookmark(
 
       await db.insert(bookmarkMedia).values({
         id: mediaId,
+        userId,
         bookmarkId: tweet.id,
         mediaType: media.type,
         originalUrl,
@@ -548,13 +551,14 @@ async function saveBookmark(
     }
   }
 
-  // Insert article link with preview data if enrichment found an article
+  // Insert article link with preview data if enrichment found an article (include userId)
   if (enrichment?.article && enrichment.article.url) {
     const articleContentJson = enrichment.article.content
       ? JSON.stringify(enrichment.article.content)
       : null
 
     await db.insert(bookmarkLinks).values({
+      userId,
       bookmarkId: tweet.id,
       expandedUrl: enrichment.article.url,
       domain: 'x.com',
@@ -568,11 +572,11 @@ async function saveBookmark(
 
   // Insert external link with preview data if enrichment found external link
   if (enrichment?.external && enrichment.external.url) {
-    // Check if we already added this link from tweet.entities.urls
+    // Check if we already added this link from tweet.entities.urls (filter by userId)
     const existingLinks = await db
       .select()
       .from(bookmarkLinks)
-      .where(eq(bookmarkLinks.bookmarkId, tweet.id))
+      .where(and(eq(bookmarkLinks.userId, userId), eq(bookmarkLinks.bookmarkId, tweet.id)))
 
     const alreadyExists = existingLinks.some(
       (link) => link.expandedUrl === enrichment!.external!.url
@@ -581,6 +585,7 @@ async function saveBookmark(
     if (!alreadyExists) {
       const domain = extractDomain(enrichment.external.url)
       await db.insert(bookmarkLinks).values({
+        userId,
         bookmarkId: tweet.id,
         expandedUrl: enrichment.external.url,
         domain,
@@ -607,11 +612,11 @@ async function saveBookmark(
     }
   }
 
-  // Query the media we just inserted for the return value
+  // Query the media we just inserted for the return value (filter by userId)
   const savedMedia = await db
     .select()
     .from(bookmarkMedia)
-    .where(eq(bookmarkMedia.bookmarkId, tweet.id))
+    .where(and(eq(bookmarkMedia.userId, userId), eq(bookmarkMedia.bookmarkId, tweet.id)))
 
   // Build the StreamedBookmark return value
   return {

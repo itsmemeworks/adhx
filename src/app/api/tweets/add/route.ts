@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { bookmarks, bookmarkLinks, bookmarkMedia } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { metrics } from '@/lib/sentry'
+import { getCurrentUserId } from '@/lib/auth/session'
 
 // Parse tweet URL to extract author and tweet ID
 function parseTweetUrl(url: string): { author: string; tweetId: string } | null {
@@ -79,6 +80,11 @@ function determineCategory(tweet: Record<string, unknown>): string {
 // POST /api/tweets/add - Add a tweet by URL
 export async function POST(request: NextRequest) {
   try {
+    const userId = await getCurrentUserId()
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await request.json()
     const { url, source = 'manual' } = body
 
@@ -95,11 +101,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check for duplicate (id is the tweet ID)
+    // Check for duplicate (composite key: userId + tweetId)
     const existing = await db
       .select()
       .from(bookmarks)
-      .where(eq(bookmarks.id, parsed.tweetId))
+      .where(and(eq(bookmarks.userId, userId), eq(bookmarks.id, parsed.tweetId)))
       .limit(1)
 
     if (existing.length > 0) {
@@ -138,6 +144,7 @@ export async function POST(request: NextRequest) {
 
     await db.insert(bookmarks).values({
       id: parsed.tweetId,
+      userId,
       author: tweet.author?.screen_name || parsed.author,
       authorName: tweet.author?.name || null,
       authorProfileImageUrl: tweet.author?.avatar_url || null,
@@ -154,6 +161,7 @@ export async function POST(request: NextRequest) {
         const m = tweet.media.all[i]
         await db.insert(bookmarkMedia).values({
           id: `${parsed.tweetId}_${i}`,
+          userId,
           bookmarkId: parsed.tweetId,
           mediaType: m.type || 'photo',
           originalUrl: m.url || '',
@@ -197,6 +205,7 @@ export async function POST(request: NextRequest) {
       }
 
       await db.insert(bookmarkLinks).values({
+        userId,
         bookmarkId: parsed.tweetId,
         expandedUrl: articlePreview.url,
         domain: 'x.com',
@@ -212,6 +221,7 @@ export async function POST(request: NextRequest) {
     if (tweet.urls && Array.isArray(tweet.urls)) {
       for (const link of tweet.urls) {
         await db.insert(bookmarkLinks).values({
+          userId,
           bookmarkId: parsed.tweetId,
           originalUrl: link.url || link,
           expandedUrl: link.expanded_url || link.url || link,
@@ -224,7 +234,7 @@ export async function POST(request: NextRequest) {
     const newBookmark = await db
       .select()
       .from(bookmarks)
-      .where(eq(bookmarks.id, parsed.tweetId))
+      .where(and(eq(bookmarks.userId, userId), eq(bookmarks.id, parsed.tweetId)))
       .limit(1)
 
     // Track bookmark addition with source

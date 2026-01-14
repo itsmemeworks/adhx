@@ -30,11 +30,11 @@ export async function POST(
       return NextResponse.json({ error: 'Bookmark not found' }, { status: 404 })
     }
 
-    // Check if already read
+    // Check if already read (composite key: userId + bookmarkId)
     const [existing] = await db
       .select()
       .from(readStatus)
-      .where(eq(readStatus.bookmarkId, id))
+      .where(and(eq(readStatus.userId, userId), eq(readStatus.bookmarkId, id)))
       .limit(1)
 
     if (existing) {
@@ -46,9 +46,10 @@ export async function POST(
       })
     }
 
-    // Mark as read
+    // Mark as read (include userId for composite key)
     const readAt = new Date().toISOString()
     await db.insert(readStatus).values({
+      userId,
       bookmarkId: id,
       readAt,
     })
@@ -95,8 +96,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Bookmark not found' }, { status: 404 })
     }
 
-    // Delete read status
-    await db.delete(readStatus).where(eq(readStatus.bookmarkId, id))
+    // Delete read status (filter by userId for composite key)
+    await db.delete(readStatus).where(and(eq(readStatus.userId, userId), eq(readStatus.bookmarkId, id)))
 
     // Track unread toggle
     metrics.bookmarkReadToggled(false)
