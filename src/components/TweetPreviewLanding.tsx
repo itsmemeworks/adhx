@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { ArrowRight, Loader2, Search, Sparkles, Play, Zap, Eye, ExternalLink } from 'lucide-react'
 import { ADHX_PURPLE } from '@/lib/gestalt/theme'
-import { type FxTwitterResponse, getVideoUrl } from '@/lib/media/fxembed'
+import { type FxTwitterResponse } from '@/lib/media/fxembed'
 import { renderArticleBlock } from '@/components/feed/utils'
 import type { ArticleEntityMap } from '@/components/feed/types'
 import { FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
@@ -126,8 +126,8 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
       {/* Main Content */}
       <main className="relative z-10 px-4 sm:px-6 pb-6 flex-1">
         <div className="max-w-5xl mx-auto">
-          {/* Hero Text */}
-          <div className="text-center mb-8 animate-fade-in-up [animation-fill-mode:both]">
+          {/* Hero Text - Tighter spacing on mobile */}
+          <div className="text-center mb-4 md:mb-6 lg:mb-8 animate-fade-in-up [animation-fill-mode:both]">
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-3">
               Ooh, this looks good
             </h1>
@@ -136,11 +136,11 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
             </p>
           </div>
 
-          {/* Two Column Layout - Tops align, tweet card height matches right column */}
-          <div className="grid lg:grid-cols-2 gap-8 items-start">
-            {/* Tweet Card - Left Column - Height matches right column content */}
+          {/* Two Column Layout - Tops align, two columns from tablet (md) breakpoint */}
+          <div className="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start">
+            {/* Tweet Card - Left Column - Responsive heights for mobile/tablet/desktop */}
             <div className="animate-fade-in-up [animation-fill-mode:both] delay-100">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden h-[calc(100vh-240px)] lg:h-auto lg:max-h-[653px]">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[calc(100vh-200px)] md:max-h-[500px] lg:max-h-[653px]">
                 {/* Author Header */}
                 <div className="p-4 pb-3">
                   <div className="flex items-center gap-3">
@@ -373,8 +373,8 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
 
             {/* CTA Section - Right Column */}
             <div className="animate-fade-in-up [animation-fill-mode:both] delay-200">
-              {/* Benefits */}
-              <div className="space-y-4 mb-8">
+              {/* Benefits - Tighter spacing on mobile */}
+              <div className="space-y-3 md:space-y-4 mb-6 md:mb-8">
                 <BenefitItem
                   icon={<Sparkles className="w-5 h-5" />}
                   title="One place for everything"
@@ -528,19 +528,19 @@ interface MediaGridProps {
 function MediaGrid({ photos, videos, author, tweetId }: MediaGridProps) {
   const totalMedia = photos.length + videos.length
 
-  // Single media item - full width
+  // Single media item - full width with responsive heights
   if (totalMedia === 1) {
     if (videos.length > 0) {
       return <VideoPlayer author={author} tweetId={tweetId} thumbnail={videos[0].thumbnail_url} />
     }
     return (
       <div className="rounded-xl overflow-hidden">
-        <img src={photos[0].url} alt="Tweet media" className="w-full object-cover max-h-[400px]" />
+        <img src={photos[0].url} alt="Tweet media" className="w-full object-cover max-h-[250px] sm:max-h-[300px] md:max-h-[350px] lg:max-h-[400px]" />
       </div>
     )
   }
 
-  // 2 items - side by side
+  // 2 items - side by side with responsive heights
   if (totalMedia === 2) {
     return (
       <div className="grid grid-cols-2 gap-1 rounded-xl overflow-hidden">
@@ -548,26 +548,26 @@ function MediaGrid({ photos, videos, author, tweetId }: MediaGridProps) {
           <VideoPlayer key={`v-${i}`} author={author} tweetId={tweetId} thumbnail={video.thumbnail_url} />
         ))}
         {photos.map((photo, i) => (
-          <img key={`p-${i}`} src={photo.url} alt="" className="w-full h-48 object-cover" />
+          <img key={`p-${i}`} src={photo.url} alt="" className="w-full h-32 sm:h-40 md:h-44 lg:h-48 object-cover" />
         ))}
       </div>
     )
   }
 
-  // 3-4 items - 2x2 grid
+  // 3-4 items - 2x2 grid with responsive heights
   return (
     <div className="grid grid-cols-2 gap-1 rounded-xl overflow-hidden">
       {videos.map((video, i) => (
         <VideoPlayer key={`v-${i}`} author={author} tweetId={tweetId} thumbnail={video.thumbnail_url} />
       ))}
       {photos.slice(0, 4 - videos.length).map((photo, i) => (
-        <img key={`p-${i}`} src={photo.url} alt="" className="w-full h-36 object-cover" />
+        <img key={`p-${i}`} src={photo.url} alt="" className="w-full h-28 sm:h-32 md:h-34 lg:h-36 object-cover" />
       ))}
     </div>
   )
 }
 
-// Video player component
+// Video player component - uses server-side proxy to avoid CORS issues
 function VideoPlayer({ author, tweetId, thumbnail }: { author: string; tweetId: string; thumbnail: string }) {
   const [isPlaying, setIsPlaying] = useState(false)
 
@@ -575,7 +575,7 @@ function VideoPlayer({ author, tweetId, thumbnail }: { author: string; tweetId: 
     return (
       <button
         onClick={() => setIsPlaying(true)}
-        className="relative w-full aspect-video bg-black rounded-xl overflow-hidden group"
+        className="relative w-full aspect-video max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden group"
       >
         <img src={thumbnail} alt="" className="w-full h-full object-cover" />
         <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
@@ -587,15 +587,15 @@ function VideoPlayer({ author, tweetId, thumbnail }: { author: string; tweetId: 
     )
   }
 
-  // Use direct FxEmbed URL for reliable video playback
-  const videoUrl = getVideoUrl(author, tweetId)
+  // Use server-side video proxy to avoid CORS issues with video.twimg.com
+  const proxyUrl = `/api/media/video?author=${encodeURIComponent(author)}&tweetId=${encodeURIComponent(tweetId)}&quality=hd`
 
   return (
     <video
-      src={videoUrl}
+      src={proxyUrl}
       controls
       autoPlay
-      className="w-full aspect-video bg-black rounded-xl"
+      className="w-full aspect-video max-h-[50vh] md:max-h-none bg-black rounded-xl"
       poster={thumbnail}
     />
   )
