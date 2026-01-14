@@ -24,16 +24,17 @@ COPY . .
 # Build the application
 RUN npm run build
 
-# Compile migration script to CommonJS for production
-RUN npx tsc src/lib/db/migrate.ts --outDir scripts --module commonjs --esModuleInterop --skipLibCheck
-
 # Production stage - minimal runtime image
 FROM node:20-slim AS runner
 
-# Install runtime dependencies for better-sqlite3
+# Install sqlite3 CLI and runtime dependencies
 RUN apt-get update && apt-get install -y \
     libsqlite3-0 \
+    sqlite3 \
     && rm -rf /var/lib/apt/lists/*
+
+# Install tsx globally for running TypeScript migrations
+RUN npm install -g tsx
 
 WORKDIR /app
 
@@ -50,8 +51,8 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy compiled migration script for startup
-COPY --from=builder --chown=nextjs:nodejs /app/scripts/migrate.js ./scripts/migrate.js
+# Copy migration script (source TypeScript)
+COPY --from=builder --chown=nextjs:nodejs /app/src/lib/db/migrate.ts ./src/lib/db/migrate.ts
 
 # Create data directory for SQLite (will be mounted as volume)
 RUN mkdir -p /data && chown nextjs:nodejs /data
@@ -61,4 +62,4 @@ USER nextjs
 EXPOSE 3000
 
 # Run migrations then start server
-CMD ["sh", "-c", "node scripts/migrate.js && node server.js"]
+CMD ["sh", "-c", "tsx src/lib/db/migrate.ts && node server.js"]
