@@ -72,6 +72,45 @@ jobs:
           echo "Tag: ${{ steps.release.outputs.tag_name }}"
           echo "Version: ${{ steps.release.outputs.version }}"
 
+      # Workaround: Manually create release if release-please didn't
+      # This handles the "untagged, merged release PRs outstanding" case
+      - name: Check for and fix stuck releases
+        continue-on-error: true
+        run: |
+          # Find any merged release PRs with pending label
+          STUCK_PRS=$(gh pr list --state merged --label "autorelease: pending" --json number,title --jq '.[].number')
+
+          for PR_NUMBER in $STUCK_PRS; do
+            echo "Found stuck release PR #$PR_NUMBER"
+
+            # Get version from manifest
+            VERSION=$(cat .release-please-manifest.json | jq -r '.["."[]]' 2>/dev/null || cat .release-please-manifest.json | jq -r '."."')
+
+            if [ -n "$VERSION" ] && [ "$VERSION" != "null" ]; then
+              TAG="v$VERSION"
+
+              # Check if release already exists
+              if ! gh release view "$TAG" &>/dev/null; then
+                echo "Creating release $TAG"
+
+                # Get changelog section for this version
+                NOTES=$(sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | head -n -1)
+
+                if [ -z "$NOTES" ]; then
+                  NOTES="Release $TAG"
+                fi
+
+                gh release create "$TAG" --title "$TAG" --notes "$NOTES"
+              fi
+
+              # Update PR labels
+              gh pr edit "$PR_NUMBER" --remove-label "autorelease: pending" --add-label "autorelease: tagged"
+              echo "Fixed PR #$PR_NUMBER"
+            fi
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   # Build verification on release
   build-on-release:
     needs: release-please
