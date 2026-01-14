@@ -6,6 +6,7 @@ import { bookmarks, bookmarkLinks, bookmarkMedia, syncLogs } from '@/lib/db/sche
 import { eq, or, isNull, desc, and } from 'drizzle-orm'
 import { nanoid } from '@/lib/utils'
 import { getCurrentUserId } from '@/lib/auth/session'
+import { captureException } from '@/lib/sentry'
 import type { StreamedBookmark } from '@/components/feed/types'
 
 // GET /api/sync - SSE endpoint for sync progress
@@ -174,6 +175,15 @@ export async function GET(request: NextRequest) {
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error'
 
+        // Capture error in Sentry with context
+        captureException(error, {
+          syncId,
+          userId,
+          all,
+          maxPages,
+          errorMessage: message,
+        })
+
         // Update sync log with error
         await db
           .update(syncLogs)
@@ -251,6 +261,12 @@ async function saveBookmark(
     } catch (error) {
       if (attempt === 2) {
         console.error('Failed to fetch FxTwitter enrichment data after 2 attempts:', error)
+        captureException(error, {
+          context: 'fxtwitter_enrichment',
+          tweetId: tweet.id,
+          authorUsername,
+          attempt,
+        })
       } else {
         // Wait before retry
         await new Promise((resolve) => setTimeout(resolve, 200))
@@ -281,6 +297,11 @@ async function saveBookmark(
       }
     } catch (error) {
       console.error('Failed to fetch retweet data:', error)
+      captureException(error, {
+        context: 'retweet_fetch',
+        tweetId: tweet.id,
+        retweetId: retweetRef.id,
+      })
     }
   }
 
@@ -447,6 +468,11 @@ async function saveBookmark(
       }
     } catch (error) {
       console.error('Failed to fetch quote tweet data:', error)
+      captureException(error, {
+        context: 'quote_tweet_fetch',
+        tweetId: tweet.id,
+        quoteId: quoteRef.id,
+      })
     }
   }
 
