@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.1](https://github.com/itsmemeworks/adhx/compare/v1.4.0...v1.4.1) (2026-01-14)
+
+
+### Bug Fixes
+
+* run build job but skip steps for release-please prs ([#10](https://github.com/itsmemeworks/adhx/issues/10)) ([c79cf9c](https://github.com/itsmemeworks/adhx/commit/c79cf9c547b08f819cef0d67310acbc00ef11c1b))
+* skip filter fetches during active sync ([#7](https://github.com/itsmemeworks/adhx/issues/7)) ([cc08a9d](https://github.com/itsmemeworks/adhx/commit/cc08a9dff24a30e8fe1c1d119dee50f766dff1d8))
+
 ## [1.4.0](https://github.com/itsmemeworks/adhx/compare/v1.3.0...v1.4.0) (2026-01-14)
 
 
