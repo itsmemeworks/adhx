@@ -8,6 +8,8 @@ on:
 
 jobs:
   test:
+    # Skip for release-please PRs (only update version/changelog)
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ubuntu-latest
 
     strategy:
@@ -35,6 +37,8 @@ jobs:
         run: pnpm test
 
   build:
+    # Skip for release-please PRs (only update version/changelog)
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ubuntu-latest
     needs: test
 
