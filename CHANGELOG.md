@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.2](https://github.com/itsmemeworks/adhx/compare/v1.4.1...v1.4.2) (2026-01-14)
+
+
+### Bug Fixes
+
+* remove package-name to fix release-please component mismatch ([#11](https://github.com/itsmemeworks/adhx/issues/11)) ([75295ab](https://github.com/itsmemeworks/adhx/commit/75295ab8b5a7f9ba2e49d3ffa9912e11045f2f25))
+
 ## [1.4.1](https://github.com/itsmemeworks/adhx/compare/v1.4.0...v1.4.1) (2026-01-14)
 
 
