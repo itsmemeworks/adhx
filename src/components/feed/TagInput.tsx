@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, forwardRef, useImperativeHandle } from 'react'
-import { X } from 'lucide-react'
+import { X, Plus, Tag } from 'lucide-react'
 import type { TagItem } from './types'
 
 export interface TagInputHandle {
@@ -76,7 +76,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
       {tags.map((tag) => (
         <span
           key={tag}
-          className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 rounded text-xs"
+          className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 rounded text-xs border border-transparent"
         >
           {tag}
           <button onClick={() => onRemoveTag(tag)} className="hover:text-blue-800 dark:hover:text-white transition-colors">
@@ -85,22 +85,36 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
         </span>
       ))}
       <div className="relative">
-        <form onSubmit={handleAddTag} className="flex gap-1">
-          <input
-            ref={inputRef}
-            type="text"
-            value={newTag}
-            onChange={(e) => {
-              setNewTag(e.target.value)
-              setTagError(null)
-              setShowSuggestions(true)
-            }}
-            onFocus={() => setShowSuggestions(true)}
-            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-            placeholder="+ tag"
-            maxLength={10}
-            className="w-16 px-2 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-gray-400 dark:focus:border-gray-600 focus:w-24 transition-all"
-          />
+        <form onSubmit={handleAddTag}>
+          <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded text-xs focus-within:border-blue-400 dark:focus-within:border-blue-500 transition-colors">
+            <input
+              ref={inputRef}
+              type="text"
+              value={newTag}
+              onChange={(e) => {
+                setNewTag(e.target.value)
+                setTagError(null)
+                setShowSuggestions(true)
+              }}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+              placeholder="add tag"
+              maxLength={10}
+              className="w-12 bg-transparent text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
+            />
+            {newTag.trim() ? (
+              <button
+                type="submit"
+                onMouseDown={(e) => e.preventDefault()}
+                className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                title="Add tag"
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+            ) : (
+              <Tag className="w-3 h-3 text-gray-400 dark:text-gray-500" />
+            )}
+          </span>
         </form>
         {showSuggestions && suggestions.length > 0 && (
           <div className="absolute bottom-full left-0 mb-1 w-32 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg z-10">

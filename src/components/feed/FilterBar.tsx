@@ -27,7 +27,13 @@ export function FilterBar({
 }: FilterBarProps): React.ReactElement {
   const [showTagDropdown, setShowTagDropdown] = useState(false)
   const [tagDropdownPos, setTagDropdownPos] = useState({ top: 0, left: 0 })
+  const [focusedTagIndex, setFocusedTagIndex] = useState(-1)
   const tagButtonRef = useRef<HTMLButtonElement>(null)
+  const tagDropdownRef = useRef<HTMLDivElement>(null)
+
+  // Calculate total items in dropdown (clear button + tags)
+  const hasClearButton = selectedTags.length > 0
+  const totalItems = availableTags.length + (hasClearButton ? 1 : 0)
 
   // Listen for keyboard shortcut to toggle tag filter
   useEffect(() => {
@@ -42,6 +48,68 @@ export function FilterBar({
     window.addEventListener('toggle-tag-filter', handleToggleTagFilter)
     return () => window.removeEventListener('toggle-tag-filter', handleToggleTagFilter)
   }, [availableTags.length])
+
+  // Reset focused index when dropdown opens/closes
+  useEffect(() => {
+    if (showTagDropdown) {
+      setFocusedTagIndex(0) // Start at first item
+    } else {
+      setFocusedTagIndex(-1)
+    }
+  }, [showTagDropdown])
+
+  // Keyboard navigation for tag dropdown
+  useEffect(() => {
+    if (!showTagDropdown) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault()
+          setFocusedTagIndex((prev) => (prev + 1) % totalItems)
+          break
+        case 'ArrowUp':
+          e.preventDefault()
+          setFocusedTagIndex((prev) => (prev - 1 + totalItems) % totalItems)
+          break
+        case 'Enter':
+        case ' ':
+          e.preventDefault()
+          if (focusedTagIndex >= 0) {
+            if (hasClearButton && focusedTagIndex === 0) {
+              // Clear all tags
+              onSelectedTagsChange([])
+              setShowTagDropdown(false)
+            } else {
+              // Toggle the tag
+              const tagIndex = hasClearButton ? focusedTagIndex - 1 : focusedTagIndex
+              if (tagIndex >= 0 && tagIndex < availableTags.length) {
+                toggleTag(availableTags[tagIndex].tag)
+              }
+            }
+          }
+          break
+        case 'Escape':
+          e.preventDefault()
+          setShowTagDropdown(false)
+          break
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [showTagDropdown, focusedTagIndex, totalItems, hasClearButton, availableTags, onSelectedTagsChange])
+
+  // Auto-scroll focused item into view
+  useEffect(() => {
+    if (!showTagDropdown || focusedTagIndex < 0 || !tagDropdownRef.current) return
+
+    const container = tagDropdownRef.current
+    const focusedElement = container.children[focusedTagIndex] as HTMLElement
+    if (focusedElement) {
+      focusedElement.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    }
+  }, [focusedTagIndex, showTagDropdown])
 
   function handleTagButtonClick(): void {
     if (!showTagDropdown && tagButtonRef.current) {
@@ -96,6 +164,7 @@ export function FilterBar({
                 <>
                   <div className="fixed inset-0 z-[100]" onClick={() => setShowTagDropdown(false)} />
                   <div
+                    ref={tagDropdownRef}
                     className="fixed w-48 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-[101] max-h-64 overflow-y-auto"
                     style={{ top: tagDropdownPos.top, left: tagDropdownPos.left }}
                   >
@@ -105,27 +174,39 @@ export function FilterBar({
                           onSelectedTagsChange([])
                           setShowTagDropdown(false)
                         }}
-                        className="w-full px-3 py-2 text-left text-sm text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+                        className={`w-full px-3 py-2 text-left text-sm text-red-500 ${
+                          focusedTagIndex === 0
+                            ? 'bg-gray-100 dark:bg-gray-800 ring-2 ring-inset ring-blue-500'
+                            : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                        }`}
                       >
                         Clear all tags
                       </button>
                     )}
-                    {availableTags.map(({ tag, count }) => (
-                      <button
-                        key={tag}
-                        onClick={() => toggleTag(tag)}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-between"
-                      >
-                        <span
-                          className={
-                            selectedTags.includes(tag) ? 'text-blue-500 font-medium' : 'text-gray-700 dark:text-gray-300'
-                          }
+                    {availableTags.map(({ tag, count }, index) => {
+                      const itemIndex = hasClearButton ? index + 1 : index
+                      const isFocused = focusedTagIndex === itemIndex
+                      return (
+                        <button
+                          key={tag}
+                          onClick={() => toggleTag(tag)}
+                          className={`w-full px-3 py-2 text-left text-sm flex items-center justify-between ${
+                            isFocused
+                              ? 'bg-gray-100 dark:bg-gray-800 ring-2 ring-inset ring-blue-500'
+                              : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                          }`}
                         >
-                          {tag}
-                        </span>
-                        <span className="text-gray-400 text-xs">{count}</span>
-                      </button>
-                    ))}
+                          <span
+                            className={
+                              selectedTags.includes(tag) ? 'text-blue-500 font-medium' : 'text-gray-700 dark:text-gray-300'
+                            }
+                          >
+                            {tag}
+                          </span>
+                          <span className="text-gray-400 text-xs">{count}</span>
+                        </button>
+                      )
+                    })}
                   </div>
                 </>
               )}

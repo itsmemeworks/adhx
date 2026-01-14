@@ -15,6 +15,7 @@ import {
 } from '@/components/feed'
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
 import { Loader2, CheckCircle2 } from 'lucide-react'
+import { useTheme } from '@/lib/theme/context'
 
 function _FeedLoadingSkeleton(): React.ReactElement {
   return (
@@ -56,6 +57,7 @@ export default function FeedPage(): React.ReactElement {
 function FeedPageContent(): React.ReactElement {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { resolvedTheme, setTheme } = useTheme()
 
   const [items, setItems] = useState<FeedItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -418,6 +420,9 @@ function FeedPageContent(): React.ReactElement {
         return
       }
 
+      // Don't capture shortcuts when modifier keys are pressed (allow Cmd+R, Ctrl+R, etc.)
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+
       switch (e.key) {
         case 'Escape':
           setSelectedIndex(null)
@@ -434,6 +439,17 @@ function FeedPageContent(): React.ReactElement {
         case 'R':
           if (selectedItem && !selectedItem.isRead) {
             handleMarkAsRead(selectedItem.id)
+            // Auto-advance when in unread-only mode (same behavior as clicking the checkmark)
+            if (unreadOnly) {
+              setTimeout(() => {
+                if (items.length <= 1) {
+                  setSelectedIndex(null)
+                } else if (selectedIndex !== null && selectedIndex >= items.length - 1) {
+                  setSelectedIndex(selectedIndex - 1)
+                }
+                setItems((prev) => prev.filter((i) => i.id !== selectedItem.id))
+              }, 150)
+            }
           }
           break
         case 'u':
@@ -497,7 +513,7 @@ function FeedPageContent(): React.ReactElement {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedIndex, items.length, selectedItem, handleMarkAsRead])
+  }, [selectedIndex, items, selectedItem, handleMarkAsRead, unreadOnly])
 
   // Global keyboard shortcuts (when lightbox is NOT open)
   useEffect(() => {
@@ -530,6 +546,9 @@ function FeedPageContent(): React.ReactElement {
         return
       }
 
+      // Don't capture shortcuts when modifier keys are pressed (allow Cmd+R, Ctrl+R, etc.)
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+
       switch (e.key) {
         case 'Escape':
           e.preventDefault()
@@ -554,13 +573,12 @@ function FeedPageContent(): React.ReactElement {
           e.preventDefault()
           router.push('/')
           break
-        case 's':
-        case 'S':
+        case ',':
           e.preventDefault()
           router.push('/settings')
           break
-        case 'r':
-        case 'R':
+        case 'b':
+        case 'B':
           e.preventDefault()
           window.dispatchEvent(new CustomEvent('open-sync'))
           break
@@ -582,6 +600,11 @@ function FeedPageContent(): React.ReactElement {
           e.preventDefault()
           window.dispatchEvent(new CustomEvent('toggle-tag-filter'))
           break
+        case 'd':
+        case 'D':
+          e.preventDefault()
+          setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
+          break
         default:
           // Check for filter number keys (1-6)
           if (filterKeyMap[e.key]) {
@@ -594,7 +617,7 @@ function FeedPageContent(): React.ReactElement {
 
     window.addEventListener('keydown', handleGlobalKeyDown)
     return () => window.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [selectedIndex, isAuthenticated, router, showShortcutsModal, items.length])
+  }, [selectedIndex, isAuthenticated, router, showShortcutsModal, items.length, resolvedTheme, setTheme])
 
   function loadMore(): void {
     if (!loading && hasMore) {

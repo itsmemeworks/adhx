@@ -3,28 +3,44 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, Link2, Loader2, CheckCircle, AlertCircle, Copy, ExternalLink } from 'lucide-react'
 
+type AddState = 'idle' | 'loading' | 'success' | 'duplicate' | 'error'
+
+export interface AddTweetResult {
+  state: 'success' | 'duplicate' | 'error'
+  bookmark?: { id: string; author: string; text: string }
+  error?: string
+}
+
 interface AddTweetModalProps {
   isOpen: boolean
   onClose: () => void
   onSuccess?: () => void
   onOpenTweet?: (tweetId: string) => void
+  initialResult?: AddTweetResult | null
 }
 
-type AddState = 'idle' | 'loading' | 'success' | 'duplicate' | 'error'
-
-export function AddTweetModal({ isOpen, onClose, onSuccess, onOpenTweet }: AddTweetModalProps) {
+export function AddTweetModal({ isOpen, onClose, onSuccess, onOpenTweet, initialResult }: AddTweetModalProps) {
   const [url, setUrl] = useState('')
   const [state, setState] = useState<AddState>('idle')
   const [error, setError] = useState<string | null>(null)
   const [addedBookmark, setAddedBookmark] = useState<{ id: string; author: string; text: string } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Focus input when modal opens
+  // Focus input when modal opens (only if starting in idle state)
   useEffect(() => {
-    if (isOpen && inputRef.current) {
+    if (isOpen && inputRef.current && !initialResult) {
       inputRef.current.focus()
     }
-  }, [isOpen])
+  }, [isOpen, initialResult])
+
+  // Initialize from initialResult when modal opens with one
+  useEffect(() => {
+    if (isOpen && initialResult) {
+      setState(initialResult.state)
+      setAddedBookmark(initialResult.bookmark || null)
+      setError(initialResult.error || null)
+    }
+  }, [isOpen, initialResult])
 
   // Reset state when modal closes
   useEffect(() => {

@@ -35,6 +35,7 @@ export function createTestDb(): BetterSQLite3Database<typeof schema> & { close: 
       filed_path TEXT,
       needs_transcript INTEGER DEFAULT 0,
       summary TEXT,
+      source TEXT DEFAULT 'sync',
       raw_json TEXT,
       PRIMARY KEY (user_id, id)
     );

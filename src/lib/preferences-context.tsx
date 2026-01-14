@@ -5,9 +5,9 @@ import { createContext, useContext, useEffect, useState, useCallback, type React
 export type BodyFont = 'ibm-plex' | 'inter' | 'lexend' | 'atkinson'
 
 export const FONT_OPTIONS: Record<BodyFont, { name: string; description: string }> = {
-  'inter': {
-    name: 'Inter',
-    description: 'Neutral and familiar - the default choice',
+  'ibm-plex': {
+    name: 'IBM Plex Sans',
+    description: 'Clean and professional - the default choice',
   },
   'lexend': {
     name: 'Lexend',
@@ -17,9 +17,9 @@ export const FONT_OPTIONS: Record<BodyFont, { name: string; description: string 
     name: 'Atkinson Hyperlegible',
     description: 'Maximum legibility - great letter differentiation',
   },
-  'ibm-plex': {
-    name: 'IBM Plex Sans',
-    description: 'Clean and professional with excellent screen rendering',
+  'inter': {
+    name: 'Inter',
+    description: 'Neutral and familiar with excellent screen rendering',
   },
 }
 
@@ -36,7 +36,7 @@ interface PreferencesContextType {
 
 const defaultPreferences: Preferences = {
   bionicReading: false,
-  bodyFont: 'inter',
+  bodyFont: 'ibm-plex',
 }
 
 const PreferencesContext = createContext<PreferencesContextType | undefined>(undefined)

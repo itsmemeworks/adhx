@@ -123,6 +123,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_bookmarks_author ON bookmarks(author);
   CREATE INDEX IF NOT EXISTS idx_bookmarks_processed_at ON bookmarks(processed_at DESC);
   CREATE INDEX IF NOT EXISTS idx_bookmarks_created_at ON bookmarks(created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_bookmarks_source ON bookmarks(source);
 
   CREATE INDEX IF NOT EXISTS idx_links_bookmark ON bookmark_links(bookmark_id);
   CREATE INDEX IF NOT EXISTS idx_links_domain ON bookmark_links(domain);

@@ -3,7 +3,6 @@
 import { useEffect, useState, Suspense, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import {
-  Twitter,
   CheckCircle,
   XCircle,
   LogOut,
@@ -20,6 +19,15 @@ import {
   BookOpen,
   Type,
 } from 'lucide-react'
+
+// X (formerly Twitter) logo component
+function XLogo({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  )
+}
 import { SyncProgress } from '@/components/sync/SyncProgress'
 import { ADHX_PURPLE } from '@/lib/gestalt/theme'
 import { usePreferences, FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
@@ -38,6 +46,7 @@ interface AuthStatus {
 interface Stats {
   total: number
   unread: number
+  manual: number
 }
 
 interface CooldownStatus {
@@ -97,7 +106,7 @@ function SettingsPage() {
   const [actionLoading, setActionLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [showSyncModal, setShowSyncModal] = useState(false)
-  const [stats, setStats] = useState<Stats>({ total: 0, unread: 0 })
+  const [stats, setStats] = useState<Stats>({ total: 0, unread: 0, manual: 0 })
   const [cooldown, setCooldown] = useState<CooldownStatus>({ canSync: true, cooldownRemaining: 0, lastSyncAt: null, fetchedAt: Date.now() })
   const [displayedCooldown, setDisplayedCooldown] = useState(0)
 
@@ -194,7 +203,7 @@ function SettingsPage() {
     try {
       const response = await fetch('/api/stats')
       const data = await response.json()
-      setStats({ total: data.total || 0, unread: data.unread || 0 })
+      setStats({ total: data.total || 0, unread: data.unread || 0, manual: data.manual || 0 })
     } catch (error) {
       console.error('Failed to fetch stats:', error)
     }
@@ -424,7 +433,7 @@ function SettingsPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Settings</h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Manage your Twitter connection and sync preferences
+            Manage your X connection and sync preferences
           </p>
         </div>
 
@@ -453,18 +462,8 @@ function SettingsPage() {
         )}
 
         <div className="space-y-6">
-          {/* Twitter Connection Card */}
+          {/* X Connection Card */}
           <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-[#1DA1F2]/10 flex items-center justify-center">
-                <Twitter className="h-5 w-5 text-[#1DA1F2]" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Twitter Connection</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Connect to sync your bookmarks</p>
-              </div>
-            </div>
-
             {loading ? (
               <div className="flex items-center gap-3 text-gray-500">
                 <RefreshCw className="h-5 w-5 animate-spin" />
@@ -474,17 +473,23 @@ function SettingsPage() {
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    {authStatus.user?.profileImageUrl ? (
-                      <img
-                        src={authStatus.user.profileImageUrl}
-                        alt={authStatus.user.username}
-                        className="w-12 h-12 rounded-full flex-shrink-0"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-600 to-gray-800 flex items-center justify-center text-white font-semibold flex-shrink-0">
-                        {authStatus.user?.username[0].toUpperCase()}
+                    <div className="relative">
+                      {authStatus.user?.profileImageUrl ? (
+                        <img
+                          src={authStatus.user.profileImageUrl}
+                          alt={authStatus.user.username}
+                          className="w-12 h-12 rounded-full flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-600 to-gray-800 flex items-center justify-center text-white font-semibold flex-shrink-0">
+                          {authStatus.user?.username[0].toUpperCase()}
+                        </div>
+                      )}
+                      {/* X badge */}
+                      <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-black dark:bg-white flex items-center justify-center ring-2 ring-white dark:ring-gray-900">
+                        <XLogo className="h-3 w-3 text-white dark:text-black" />
                       </div>
-                    )}
+                    </div>
                     <div>
                       <p className="font-medium text-gray-900 dark:text-white">@{authStatus.user?.username}</p>
                       <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-1">
@@ -502,10 +507,14 @@ function SettingsPage() {
                   </button>
                 </div>
                 {/* Stats display */}
-                <div className="grid grid-cols-3 gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+                <div className="grid grid-cols-4 gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Total Bookmarks</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total - stats.manual}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Synced</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{stats.manual}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Manual</p>
                   </div>
                   <div className="text-center">
                     <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.total - stats.unread}</p>
@@ -518,13 +527,24 @@ function SettingsPage() {
                 </div>
               </div>
             ) : (
-              <button
-                onClick={handleConnect}
-                className="w-full py-3 bg-[#1DA1F2] text-white rounded-full font-semibold hover:bg-[#1a8cd8] transition-colors flex items-center justify-center gap-2"
-              >
-                <Twitter className="h-5 w-5" />
-                Connect Twitter
-              </button>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-black/10 dark:bg-white/10 flex items-center justify-center">
+                    <XLogo className="h-6 w-6 text-black dark:text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">X Connection</h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Connect to sync your bookmarks</p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleConnect}
+                  className="w-full py-3 bg-black dark:bg-white text-white dark:text-black rounded-full font-semibold hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
+                >
+                  <XLogo className="h-5 w-5" />
+                  Connect X
+                </button>
+              </div>
             )}
           </div>
 
@@ -537,7 +557,7 @@ function SettingsPage() {
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Sync Bookmarks</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Pull bookmarks from Twitter</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Pull bookmarks from X</p>
                 </div>
               </div>
 
@@ -559,12 +579,12 @@ function SettingsPage() {
 
               {!cooldown.canSync && (
                 <p className="text-xs text-amber-600 dark:text-amber-400 text-center mb-3">
-                  To protect your Twitter account, syncing is limited to once every 15 minutes.
+                  To protect your X account, syncing is limited to once every 15 minutes.
                 </p>
               )}
 
               <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                Twitter API limits access to your 800 most recent bookmarks
+                Each sync pulls up to 50 of your most recent X bookmarks
               </p>
             </div>
           )}
@@ -817,7 +837,7 @@ function SettingsPage() {
                     <div>
                       <p className="font-medium text-gray-900 dark:text-white">Clear All Data</p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Delete all bookmarks, tags, and sync history. Keeps Twitter connected.
+                        Delete all bookmarks, tags, and sync history. Keeps X connected.
                       </p>
                     </div>
                   </div>
@@ -836,7 +856,7 @@ function SettingsPage() {
                     <div>
                       <p className="font-medium text-gray-900 dark:text-white">Delete Account</p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Permanently delete everything including Twitter connection.
+                        Permanently delete everything including X connection.
                       </p>
                     </div>
                   </div>
@@ -858,8 +878,8 @@ function SettingsPage() {
               <ol className="list-decimal list-inside space-y-3 text-sm text-gray-600 dark:text-gray-400">
                 <li>
                   Go to{' '}
-                  <a href="https://developer.twitter.com/en/portal/dashboard" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                    Twitter Developer Portal
+                  <a href="https://developer.x.com/en/portal/dashboard" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                    X Developer Portal
                   </a>
                 </li>
                 <li>Create a new Project and App</li>
@@ -960,7 +980,7 @@ TWITTER_CLIENT_SECRET=your_client_secret`}
                 <li>Collections and preferences</li>
               </ul>
               <p className="text-sm text-green-600 dark:text-green-400">
-                ✓ Your Twitter connection will be preserved
+                ✓ Your X connection will be preserved
               </p>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -1027,7 +1047,7 @@ TWITTER_CLIENT_SECRET=your_client_secret`}
               </p>
               <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1 ml-2">
                 <li>All synced bookmarks and data</li>
-                <li>Your Twitter connection</li>
+                <li>Your X connection</li>
                 <li>All account settings</li>
               </ul>
               <div>

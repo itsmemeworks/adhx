@@ -14,7 +14,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { useTheme } from '@/lib/theme/context'
-import { AddTweetModal } from './AddTweetModal'
+import { AddTweetModal, AddTweetResult } from './AddTweetModal'
 import { SyncProgress } from './sync/SyncProgress'
 import { Tooltip } from './Tooltip'
 
@@ -45,6 +45,7 @@ export function Header() {
   const { theme, setTheme } = useTheme()
   const [searchValue, setSearchValue] = useState(searchParams.get('search') || '')
   const [showAddTweet, setShowAddTweet] = useState(false)
+  const [addTweetResult, setAddTweetResult] = useState<AddTweetResult | null>(null)
   const [showSync, setShowSync] = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -79,12 +80,10 @@ export function Header() {
     const handleFocusSearch = () => searchInputRef.current?.focus()
     const handleOpenAddTweet = () => setShowAddTweet(true)
     const handleCloseAddTweet = () => setShowAddTweet(false)
-    const handleOpenSync = () => setShowSync(true)
 
     window.addEventListener('focus-search', handleFocusSearch)
     window.addEventListener('open-add-tweet', handleOpenAddTweet)
     window.addEventListener('close-add-tweet', handleCloseAddTweet)
-    window.addEventListener('open-sync', handleOpenSync)
 
     return () => {
       window.removeEventListener('stats-updated', handleStatsUpdate)
@@ -92,9 +91,19 @@ export function Header() {
       window.removeEventListener('focus-search', handleFocusSearch)
       window.removeEventListener('open-add-tweet', handleOpenAddTweet)
       window.removeEventListener('close-add-tweet', handleCloseAddTweet)
-      window.removeEventListener('open-sync', handleOpenSync)
     }
   }, [authStatus?.authenticated])
+
+  // Separate effect for sync shortcut to track cooldown state
+  useEffect(() => {
+    const handleOpenSync = () => {
+      if (cooldown.canSync) {
+        setShowSync(true)
+      }
+    }
+    window.addEventListener('open-sync', handleOpenSync)
+    return () => window.removeEventListener('open-sync', handleOpenSync)
+  }, [cooldown.canSync])
 
   // Refresh stats and cooldown when auth status changes to authenticated
   useEffect(() => {
@@ -112,6 +121,36 @@ export function Header() {
   useEffect(() => {
     setSearchValue(searchParams.get('search') || '')
   }, [searchParams])
+
+  // Handle ?added= URL params from URL prefix feature
+  useEffect(() => {
+    const addedState = searchParams.get('added') as 'success' | 'duplicate' | 'error' | null
+    if (!addedState) return
+
+    // Build the result from URL params
+    const result: AddTweetResult = {
+      state: addedState,
+      bookmark: searchParams.get('tweetId') ? {
+        id: searchParams.get('tweetId')!,
+        author: searchParams.get('author') || 'unknown',
+        text: searchParams.get('text') || '',
+      } : undefined,
+      error: searchParams.get('error') || undefined,
+    }
+
+    setAddTweetResult(result)
+    setShowAddTweet(true)
+
+    // Clear the URL params
+    const params = new URLSearchParams(window.location.search)
+    params.delete('added')
+    params.delete('tweetId')
+    params.delete('author')
+    params.delete('text')
+    params.delete('error')
+    const queryString = params.toString()
+    router.replace(queryString ? `/?${queryString}` : '/', { scroll: false })
+  }, [searchParams, router])
 
   // Real-time search with debounce
   useEffect(() => {
@@ -441,7 +480,10 @@ export function Header() {
       {/* Add Tweet Modal */}
       <AddTweetModal
         isOpen={showAddTweet}
-        onClose={() => setShowAddTweet(false)}
+        onClose={() => {
+          setShowAddTweet(false)
+          setAddTweetResult(null)
+        }}
         onSuccess={() => {
           fetchStats()
           window.dispatchEvent(new CustomEvent('tweet-added'))
@@ -450,6 +492,7 @@ export function Header() {
           // Navigate to home page with open param to trigger lightbox
           router.push(`/?open=${tweetId}`)
         }}
+        initialResult={addTweetResult}
       />
 
       {/* Sync Progress Modal */}
