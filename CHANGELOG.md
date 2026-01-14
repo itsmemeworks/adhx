@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0](https://github.com/itsmemeworks/adhx/compare/v1.7.1...v1.8.0) (2026-01-14)
+
+
+### Features
+
+* manual tweet tracking, keyboard shortcuts, and landing page updates ([#42](https://github.com/itsmemeworks/adhx/issues/42)) ([f8d317d](https://github.com/itsmemeworks/adhx/commit/f8d317d009cb0896bc22eaa7c730462d7b64569c))
+
 ## [1.7.1](https://github.com/itsmemeworks/adhx/compare/v1.7.0...v1.7.1) (2026-01-14)
 
 
