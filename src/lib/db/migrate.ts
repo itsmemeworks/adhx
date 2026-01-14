@@ -1,18 +1,15 @@
 /**
- * Database migration script using Drizzle Kit
+ * Database migration script
  *
- * This script:
- * 1. Runs Drizzle migrations from ./drizzle folder
- * 2. Sets up FTS5 full-text search (not supported by Drizzle ORM)
- * 3. Creates triggers to keep FTS in sync
+ * Applies Drizzle-generated SQL migrations from ./drizzle folder
+ * without requiring drizzle-orm at runtime (for standalone Next.js builds)
  */
 import Database from 'better-sqlite3'
-import { drizzle } from 'drizzle-orm/better-sqlite3'
-import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import path from 'path'
 import fs from 'fs'
 
 const DB_PATH = process.env.DATABASE_PATH || './data/adhdone.db'
+const MIGRATIONS_PATH = process.env.MIGRATIONS_PATH || './drizzle'
 
 // Ensure data directory exists
 const dbDir = path.dirname(DB_PATH)
@@ -23,22 +20,64 @@ if (!fs.existsSync(dbDir)) {
 console.log(`[migrate] Running migrations on ${DB_PATH}...`)
 
 // Create SQLite connection
-const sqlite = new Database(DB_PATH)
-sqlite.pragma('journal_mode = WAL')
-sqlite.pragma('foreign_keys = ON')
+const db = new Database(DB_PATH)
+db.pragma('journal_mode = WAL')
+db.pragma('foreign_keys = ON')
 
-// Create Drizzle instance
-const db = drizzle(sqlite)
+// Create migrations tracking table (same as Drizzle uses)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS __drizzle_migrations (
+    id INTEGER PRIMARY KEY,
+    hash TEXT NOT NULL,
+    created_at INTEGER
+  );
+`)
 
-// Run Drizzle migrations
-// The migrations folder path is relative to the working directory
-const migrationsFolder = process.env.MIGRATIONS_PATH || './drizzle'
-migrate(db, { migrationsFolder })
+// Read and apply migrations from drizzle folder
+const journalPath = path.join(MIGRATIONS_PATH, 'meta', '_journal.json')
+if (fs.existsSync(journalPath)) {
+  const journal = JSON.parse(fs.readFileSync(journalPath, 'utf-8'))
 
-console.log('[migrate] Drizzle migrations complete')
+  // Get already applied migrations
+  const applied = new Set(
+    (db.prepare('SELECT hash FROM __drizzle_migrations').all() as { hash: string }[]).map(
+      (row) => row.hash
+    )
+  )
+
+  // Apply new migrations
+  for (const entry of journal.entries) {
+    if (!applied.has(entry.tag)) {
+      const sqlPath = path.join(MIGRATIONS_PATH, `${entry.tag}.sql`)
+      if (fs.existsSync(sqlPath)) {
+        const sql = fs.readFileSync(sqlPath, 'utf-8')
+
+        // Split by Drizzle's statement breakpoint marker and execute each
+        const statements = sql
+          .split('--> statement-breakpoint')
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0)
+
+        for (const statement of statements) {
+          db.exec(statement)
+        }
+
+        // Record migration as applied
+        db.prepare('INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)').run(
+          entry.tag,
+          Date.now()
+        )
+
+        console.log(`[migrate] Applied: ${entry.tag}`)
+      }
+    }
+  }
+}
+
+console.log('[migrate] SQL migrations complete')
 
 // Create FTS5 virtual table (Drizzle doesn't support virtual tables)
-sqlite.exec(`
+db.exec(`
   CREATE VIRTUAL TABLE IF NOT EXISTS bookmarks_fts USING fts5(
     id UNINDEXED,
     author,
@@ -52,21 +91,21 @@ sqlite.exec(`
 `)
 
 // Create triggers to keep FTS in sync
-sqlite.exec(`
+db.exec(`
   CREATE TRIGGER IF NOT EXISTS bookmarks_ai AFTER INSERT ON bookmarks BEGIN
     INSERT INTO bookmarks_fts(rowid, id, author, author_name, text, summary)
     VALUES (NEW.rowid, NEW.id, NEW.author, NEW.author_name, NEW.text, NEW.summary);
   END;
 `)
 
-sqlite.exec(`
+db.exec(`
   CREATE TRIGGER IF NOT EXISTS bookmarks_ad AFTER DELETE ON bookmarks BEGIN
     INSERT INTO bookmarks_fts(bookmarks_fts, rowid, id, author, author_name, text, summary)
     VALUES('delete', OLD.rowid, OLD.id, OLD.author, OLD.author_name, OLD.text, OLD.summary);
   END;
 `)
 
-sqlite.exec(`
+db.exec(`
   CREATE TRIGGER IF NOT EXISTS bookmarks_au AFTER UPDATE ON bookmarks BEGIN
     INSERT INTO bookmarks_fts(bookmarks_fts, rowid, id, author, author_name, text, summary)
     VALUES('delete', OLD.rowid, OLD.id, OLD.author, OLD.author_name, OLD.text, OLD.summary);
@@ -77,8 +116,8 @@ sqlite.exec(`
 
 console.log('[migrate] FTS5 and triggers configured')
 
-// Create indexes (these are kept here for performance, Drizzle schema can define them too)
-sqlite.exec(`
+// Create indexes
+db.exec(`
   CREATE INDEX IF NOT EXISTS idx_bookmarks_user_id ON bookmarks(user_id);
   CREATE INDEX IF NOT EXISTS idx_bookmarks_category ON bookmarks(category);
   CREATE INDEX IF NOT EXISTS idx_bookmarks_author ON bookmarks(author);
@@ -103,4 +142,4 @@ sqlite.exec(`
 console.log('[migrate] Indexes created')
 console.log(`[migrate] Database ready at: ${path.resolve(DB_PATH)}`)
 
-sqlite.close()
+db.close()
