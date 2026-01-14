@@ -476,7 +476,7 @@ function BottomBar({
 }): React.ReactElement {
   return (
     <div className="mt-auto pt-4 border-t border-gray-200 dark:border-gray-800">
-      <div className="flex items-center gap-2">
+      <div className="flex items-start gap-2">
         <TagInput
           ref={tagInputRef}
           tags={item.tags}
