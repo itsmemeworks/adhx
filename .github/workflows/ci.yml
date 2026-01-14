@@ -66,8 +66,12 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
-    # Skip for release-please PRs and workflow_run events (handled by release-pr-check job)
-    if: ${{ github.event_name != 'workflow_run' && !startsWith(github.head_ref, 'release-please--') }}
+    # Skip for workflow_run events (handled by release-pr-check job)
+    # For pull_request events, skip release-please PRs
+    # For push events, always run
+    if: |
+      github.event_name != 'workflow_run' &&
+      (github.event_name == 'push' || !startsWith(github.head_ref || '', 'release-please--'))
     steps:
       - uses: actions/checkout@v4
 
@@ -87,8 +91,11 @@ jobs:
         run: pnpm build
 
   test:
-    # Skip for release-please PRs (only update version/changelog)
-    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
+    # Skip for release-please PRs (only update version/changelog) and workflow_run events
+    # For push events, always run
+    if: |
+      github.event_name != 'workflow_run' &&
+      (github.event_name == 'push' || !startsWith(github.head_ref || '', 'release-please--'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -113,30 +120,3 @@ jobs:
 
       - name: Run tests
         run: pnpm test
-
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      # Skip actual build for release-please PRs (only update version/changelog)
-      # Job still runs so the required status check reports success
-      - uses: actions/checkout@v4
-        if: ${{ !startsWith(github.head_ref, 'release-please--') }}
-
-      - uses: pnpm/action-setup@v4
-        if: ${{ !startsWith(github.head_ref, 'release-please--') }}
-        with:
-          version: 9
-
-      - uses: actions/setup-node@v4
-        if: ${{ !startsWith(github.head_ref, 'release-please--') }}
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        if: ${{ !startsWith(github.head_ref, 'release-please--') }}
-        run: pnpm install --frozen-lockfile
-
-      - name: Build
-        if: ${{ !startsWith(github.head_ref, 'release-please--') }}
-        run: pnpm build
