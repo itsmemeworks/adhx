@@ -168,6 +168,36 @@ export interface FxTwitterResponse {
       description?: string
       thumbnail_url?: string
     }
+    // Quote tweet (when this tweet quotes another)
+    quote?: {
+      id: string
+      url: string
+      text: string
+      author: {
+        id: string
+        name: string
+        screen_name: string
+        avatar_url: string
+      }
+      created_at: string
+      replies: number
+      retweets: number
+      likes: number
+      views?: number
+      media?: {
+        photos?: Array<{
+          url: string
+          width: number
+          height: number
+        }>
+        videos?: Array<{
+          url: string
+          thumbnail_url: string
+          width: number
+          height: number
+        }>
+      }
+    }
     // X Article content
     article?: {
       id: string
