@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.3](https://github.com/itsmemeworks/adhx/compare/v1.4.2...v1.4.3) (2026-01-14)
+
+
+### Bug Fixes
+
+* explicitly set empty component to override package.json name ([#13](https://github.com/itsmemeworks/adhx/issues/13)) ([4a45489](https://github.com/itsmemeworks/adhx/commit/4a454891c1cf6fc5ae233c6b17af6315a5ca47db))
+
 ## [1.4.2](https://github.com/itsmemeworks/adhx/compare/v1.4.1...v1.4.2) (2026-01-14)
 
 
