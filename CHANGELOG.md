@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.1](https://github.com/itsmemeworks/adhx/compare/v1.6.0...v1.6.1) (2026-01-14)
+
+
+### Bug Fixes
+
+* auto-update release pr branch to stay current with main ([#30](https://github.com/itsmemeworks/adhx/issues/30)) ([9c8c97e](https://github.com/itsmemeworks/adhx/commit/9c8c97eac805a06f59bfb8620222fde660018c74))
+* quote yaml if condition to prevent syntax error ([#27](https://github.com/itsmemeworks/adhx/issues/27)) ([1e6d4de](https://github.com/itsmemeworks/adhx/commit/1e6d4de7bab0537260c6aa7234f62ca6d96e452c))
+
 ## [1.6.0](https://github.com/itsmemeworks/adhx/compare/v1.5.1...v1.6.0) (2026-01-14)
 
 
