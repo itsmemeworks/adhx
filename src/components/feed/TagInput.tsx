@@ -85,31 +85,34 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
         </span>
       ))}
       <div className="relative">
-        <form onSubmit={handleAddTag} className="flex gap-1 items-center">
-          <input
-            ref={inputRef}
-            type="text"
-            value={newTag}
-            onChange={(e) => {
-              setNewTag(e.target.value)
-              setTagError(null)
-              setShowSuggestions(true)
-            }}
-            onFocus={() => setShowSuggestions(true)}
-            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-            placeholder="+ tag"
-            maxLength={10}
-            className="w-16 px-2 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-gray-400 dark:focus:border-gray-600 focus:w-24 transition-all"
-          />
-          {newTag.trim() && (
-            <button
-              type="submit"
-              className="p-0.5 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
-              title="Add tag"
-            >
-              <Plus className="w-3.5 h-3.5" />
-            </button>
-          )}
+        <form onSubmit={handleAddTag}>
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded text-xs focus-within:border-blue-400 dark:focus-within:border-blue-500 transition-colors">
+            <input
+              ref={inputRef}
+              type="text"
+              value={newTag}
+              onChange={(e) => {
+                setNewTag(e.target.value)
+                setTagError(null)
+                setShowSuggestions(true)
+              }}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+              placeholder="add tag"
+              maxLength={10}
+              className="w-14 bg-transparent text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:w-20 transition-all"
+            />
+            {newTag.trim() && (
+              <button
+                type="submit"
+                onMouseDown={(e) => e.preventDefault()}
+                className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                title="Add tag"
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+            )}
+          </span>
         </form>
         {showSuggestions && suggestions.length > 0 && (
           <div className="absolute bottom-full left-0 mb-1 w-32 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg z-10">
