@@ -9,6 +9,9 @@ on:
         required: false
         default: 'false'
         type: boolean
+  # Triggered when a GitHub release is published (by release-please or fallback script)
+  release:
+    types: [published]
   # Called by release-please after a release is created
   workflow_call:
     inputs:
