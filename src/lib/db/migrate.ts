@@ -21,8 +21,10 @@ db.exec(`
   -- Main bookmarks table
   CREATE TABLE IF NOT EXISTS bookmarks (
     id TEXT PRIMARY KEY,
+    user_id TEXT,
     author TEXT NOT NULL,
     author_name TEXT,
+    author_profile_image_url TEXT,
     text TEXT NOT NULL,
     tweet_url TEXT NOT NULL,
     created_at TEXT,
@@ -32,6 +34,9 @@ db.exec(`
     reply_context TEXT,
     is_quote INTEGER DEFAULT 0,
     quote_context TEXT,
+    quoted_tweet_id TEXT,
+    is_retweet INTEGER DEFAULT 0,
+    retweet_context TEXT,
     extracted_content TEXT,
     filed_path TEXT,
     needs_transcript INTEGER DEFAULT 0,
@@ -79,6 +84,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS oauth_tokens (
     user_id TEXT PRIMARY KEY,
     username TEXT,
+    profile_image_url TEXT,
     access_token TEXT NOT NULL,
     refresh_token TEXT NOT NULL,
     expires_at INTEGER NOT NULL,
@@ -199,6 +205,24 @@ db.exec(`
     VALUES (NEW.rowid, NEW.id, NEW.author, NEW.author_name, NEW.text, NEW.summary);
   END;
 `)
+
+// Add missing columns to existing tables (safe to run multiple times)
+// SQLite doesn't support IF NOT EXISTS for ALTER TABLE, so we catch errors
+function addColumnIfNotExists(table: string, column: string, type: string) {
+  try {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`)
+  } catch {
+    // Column already exists, ignore
+  }
+}
+
+// Add columns that may be missing from older schemas
+addColumnIfNotExists('bookmarks', 'user_id', 'TEXT')
+addColumnIfNotExists('bookmarks', 'author_profile_image_url', 'TEXT')
+addColumnIfNotExists('bookmarks', 'quoted_tweet_id', 'TEXT')
+addColumnIfNotExists('bookmarks', 'is_retweet', 'INTEGER DEFAULT 0')
+addColumnIfNotExists('bookmarks', 'retweet_context', 'TEXT')
+addColumnIfNotExists('oauth_tokens', 'profile_image_url', 'TEXT')
 
 console.log('Database migrations completed successfully!')
 console.log(`Database created at: ${path.resolve(DB_PATH)}`)
