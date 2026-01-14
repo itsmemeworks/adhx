@@ -1,6 +1,7 @@
 name: Deploy
 
 on:
+  # Manual trigger
   workflow_dispatch:
     inputs:
       skip_sentry:
@@ -8,8 +9,14 @@ on:
         required: false
         default: 'false'
         type: boolean
-  push:
-    branches: [main]
+  # Called by release-please after a release is created
+  workflow_call:
+    inputs:
+      skip_sentry:
+        description: 'Skip Sentry release creation'
+        required: false
+        default: false
+        type: boolean
 
 # Only allow one deploy at a time
 concurrency:
@@ -24,11 +31,6 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # Only deploy when a release PR is merged (version bump commits)
-    # This ensures we always know exactly what version is being deployed
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      contains(github.event.head_commit.message, 'chore: release main')
     steps:
       - uses: actions/checkout@v4
         with:
