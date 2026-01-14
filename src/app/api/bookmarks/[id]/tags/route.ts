@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { bookmarkTags, bookmarks } from '@/lib/db/schema'
-import { eq, and, or, isNull } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { metrics } from '@/lib/sentry'
 
@@ -19,26 +19,22 @@ export async function GET(
 
   const { id } = await params
 
-  // Verify bookmark belongs to user
+  // Verify bookmark belongs to user (strict userId check)
   const [bookmark] = await db
     .select({ id: bookmarks.id })
     .from(bookmarks)
-    .where(
-      and(
-        eq(bookmarks.id, id),
-        or(eq(bookmarks.userId, userId), isNull(bookmarks.userId))
-      )
-    )
+    .where(and(eq(bookmarks.id, id), eq(bookmarks.userId, userId)))
     .limit(1)
 
   if (!bookmark) {
     return NextResponse.json({ error: 'Bookmark not found' }, { status: 404 })
   }
 
+  // Get tags (filter by userId for composite key)
   const tags = await db
     .select({ tag: bookmarkTags.tag })
     .from(bookmarkTags)
-    .where(eq(bookmarkTags.bookmarkId, id))
+    .where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.bookmarkId, id)))
 
   return NextResponse.json({ tags: tags.map((t) => t.tag) })
 }
@@ -74,34 +70,30 @@ export async function POST(
     )
   }
 
-  // Verify bookmark belongs to user
+  // Verify bookmark belongs to user (strict userId check)
   const [bookmark] = await db
     .select({ id: bookmarks.id })
     .from(bookmarks)
-    .where(
-      and(
-        eq(bookmarks.id, id),
-        or(eq(bookmarks.userId, userId), isNull(bookmarks.userId))
-      )
-    )
+    .where(and(eq(bookmarks.id, id), eq(bookmarks.userId, userId)))
     .limit(1)
 
   if (!bookmark) {
     return NextResponse.json({ error: 'Bookmark not found' }, { status: 404 })
   }
 
-  // Insert tag (ignore if already exists due to composite primary key)
+  // Insert tag with userId (composite key: userId + bookmarkId + tag)
   try {
     await db.insert(bookmarkTags).values({
+      userId,
       bookmarkId: id,
       tag: cleanTag,
     })
 
-    // Get updated tag count for this bookmark
+    // Get updated tag count for this bookmark (filter by userId)
     const allTags = await db
       .select({ tag: bookmarkTags.tag })
       .from(bookmarkTags)
-      .where(eq(bookmarkTags.bookmarkId, id))
+      .where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.bookmarkId, id)))
 
     // Track tag addition
     metrics.bookmarkTagged(allTags.length)
@@ -133,25 +125,21 @@ export async function DELETE(
     return NextResponse.json({ error: 'Tag is required' }, { status: 400 })
   }
 
-  // Verify bookmark belongs to user
+  // Verify bookmark belongs to user (strict userId check)
   const [bookmark] = await db
     .select({ id: bookmarks.id })
     .from(bookmarks)
-    .where(
-      and(
-        eq(bookmarks.id, id),
-        or(eq(bookmarks.userId, userId), isNull(bookmarks.userId))
-      )
-    )
+    .where(and(eq(bookmarks.id, id), eq(bookmarks.userId, userId)))
     .limit(1)
 
   if (!bookmark) {
     return NextResponse.json({ error: 'Bookmark not found' }, { status: 404 })
   }
 
+  // Delete tag (use userId for composite key)
   await db
     .delete(bookmarkTags)
-    .where(and(eq(bookmarkTags.bookmarkId, id), eq(bookmarkTags.tag, tag)))
+    .where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.bookmarkId, id), eq(bookmarkTags.tag, tag)))
 
   return NextResponse.json({ success: true })
 }
