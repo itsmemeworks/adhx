@@ -47,6 +47,9 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Copy migration script for startup
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/migrate.cjs ./scripts/migrate.cjs
+
 # Create data directory for SQLite (will be mounted as volume)
 RUN mkdir -p /data && chown nextjs:nodejs /data
 
@@ -54,4 +57,5 @@ USER nextjs
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+# Run migrations then start server
+CMD ["sh", "-c", "node scripts/migrate.cjs && node server.js"]
