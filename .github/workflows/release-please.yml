@@ -33,26 +33,8 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-      # Trigger CI for release PR by pushing an empty commit
-      # This ensures the 'build' status check is reported for branch protection
-      - name: Trigger CI for release PR
-        if: ${{ steps.release.outputs.prs_created == 'true' || steps.release.outputs.pr }}
-        continue-on-error: true
-        run: |
-          PR_NUMBER="${{ fromJSON(steps.release.outputs.pr).number }}"
-          BRANCH="release-please--branches--main"
-
-          echo "Triggering CI for PR #$PR_NUMBER on branch $BRANCH"
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git fetch origin $BRANCH
-          git checkout $BRANCH
-          git commit --allow-empty -m "chore: trigger ci"
-          git push origin $BRANCH
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Note: CI for release PRs is triggered via workflow_run event in ci.yml
+      # when this workflow completes, which creates the required 'build' status check
 
       # Auto-merge the release PR when it's created/updated
       # Note: Requires "Allow auto-merge" enabled in repo settings
