@@ -107,29 +107,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # Build verification on release
-  build-on-release:
+  # Deploy when a release is created
+  # This is the ONLY way deploys happen automatically (besides manual workflow_dispatch)
+  deploy-on-release:
     needs: release-please
     if: ${{ needs.release-please.outputs.release_created }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build
-        run: pnpm build
-
-      - name: Log release info
-        run: |
-          echo "✅ Build successful for ${{ needs.release-please.outputs.tag_name }}"
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit
