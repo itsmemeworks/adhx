@@ -1,14 +1,12 @@
-# Fly.io configuration for ADHX
-# See https://fly.io/docs/reference/configuration/
+# fly.toml app configuration file generated for adhx on 2026-01-14T09:26:22Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
 
 app = 'adhx'
-primary_region = 'sjc'
+primary_region = 'lhr'
 
 [build]
-
-[env]
-  NODE_ENV = 'production'
-  DATABASE_PATH = '/data/adhx.db'
 
 [http_service]
   internal_port = 3000
@@ -19,10 +17,7 @@ primary_region = 'sjc'
   processes = ['app']
 
 [[vm]]
-  memory = '512mb'
+  memory = '1gb'
   cpu_kind = 'shared'
   cpus = 1
-
-[mounts]
-  source = 'adhx_data'
-  destination = '/data'
+  memory_mb = 1024
