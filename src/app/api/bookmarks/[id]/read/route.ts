@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { bookmarks, readStatus } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { getCurrentUserId } from '@/lib/auth/session'
+import { metrics } from '@/lib/sentry'
 
 // POST /api/bookmarks/[id]/read - Mark bookmark as read
 export async function POST(
@@ -52,6 +53,9 @@ export async function POST(
       readAt,
     })
 
+    // Track read toggle
+    metrics.bookmarkReadToggled(true)
+
     return NextResponse.json({
       success: true,
       isRead: true,
@@ -93,6 +97,9 @@ export async function DELETE(
 
     // Delete read status
     await db.delete(readStatus).where(eq(readStatus.bookmarkId, id))
+
+    // Track unread toggle
+    metrics.bookmarkReadToggled(false)
 
     return NextResponse.json({
       success: true,

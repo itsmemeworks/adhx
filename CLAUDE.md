@@ -24,9 +24,11 @@ pnpm test        # Run tests (79 tests with vitest)
 - **Styling**: Tailwind CSS 3.4 + clsx + tailwind-merge
 - **Twitter API**: twitter-api-v2 with OAuth 2.0 PKCE
 - **Auth**: JWT-signed session cookies (jose)
+- **Monitoring**: Sentry (error tracking + metrics)
 - **Icons**: lucide-react
 - **Fonts**: Indie Flower (brand), IBM Plex Sans/Inter/Lexend/Atkinson Hyperlegible (body - user selectable)
 - **Testing**: Vitest
+- **Deployment**: Fly.io with automated deploys via GitHub Actions
 
 ## Security
 
@@ -51,6 +53,32 @@ if (!userId) {
 ### Database
 - Uses Drizzle ORM query builder (never raw SQL with interpolation)
 - All queries filter by `userId` for multi-user data isolation
+
+### Error Tracking & Metrics (Sentry)
+Error tracking and user behavior metrics via Sentry SDK 10.x.
+
+**Key file**: `src/lib/sentry.ts`
+
+```typescript
+import { captureException, metrics } from '@/lib/sentry'
+
+// Capture errors with context
+captureException(error, { userId, endpoint: '/api/sync' })
+
+// Track user behavior
+metrics.authCompleted(isNewUser)
+metrics.syncCompleted(bookmarksCount, pagesCount, durationMs)
+metrics.bookmarkReadToggled(true)
+metrics.feedSearched(hasResults, resultCount)
+metrics.trackUser(userId)
+```
+
+**Available metrics**:
+- `auth.*` - OAuth flow tracking (started, completed, failed)
+- `sync.*` - Sync operations (started, completed, failed, duration)
+- `bookmark.*` - User interactions (read_toggled, tagged, added, deleted)
+- `feed.*` - Feed usage (loaded, searched, filtered)
+- `users.daily_active` - DAU tracking
 
 ## Architecture
 
@@ -170,7 +198,28 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 # Optional
 SESSION_SECRET=           # For JWT signing (falls back to TWITTER_CLIENT_SECRET)
+SENTRY_DSN=               # Sentry error tracking DSN
+SENTRY_RELEASE=           # Set automatically in Docker builds
 ```
+
+## CI/CD & Deployment
+
+### GitHub Actions Workflows
+- **CI** (`.github/workflows/ci.yml`) - Runs on PRs: lint, typecheck, test, build
+- **Deploy** (`.github/workflows/deploy.yml`) - Deploys to Fly.io on main branch pushes
+- **Release Please** (`.github/workflows/release-please.yml`) - Automated semantic versioning
+
+### Sentry Release Tracking
+Deployments automatically create Sentry releases for error tracking:
+- Version from `package.json` is passed as `SENTRY_RELEASE` build arg
+- Commits are associated with releases for "Suspect Commits" feature
+- Deploy notifications sent to Sentry after successful deployment
+
+### Fly.io Secrets
+Required secrets on Fly.io (set via `fly secrets set`):
+- `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET` - Twitter OAuth
+- `SENTRY_DSN` - Error tracking
+- `SESSION_SECRET` - JWT signing (optional)
 
 ## Testing
 

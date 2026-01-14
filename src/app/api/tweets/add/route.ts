@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { bookmarks, bookmarkLinks, bookmarkMedia } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+import { metrics } from '@/lib/sentry'
 
 // Parse tweet URL to extract author and tweet ID
 function parseTweetUrl(url: string): { author: string; tweetId: string } | null {
@@ -79,7 +80,7 @@ function determineCategory(tweet: Record<string, unknown>): string {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { url } = body
+    const { url, source = 'manual' } = body
 
     if (!url) {
       return NextResponse.json({ error: 'URL is required' }, { status: 400 })
@@ -225,6 +226,9 @@ export async function POST(request: NextRequest) {
       .from(bookmarks)
       .where(eq(bookmarks.id, parsed.tweetId))
       .limit(1)
+
+    // Track bookmark addition with source
+    metrics.bookmarkAdded(source as 'manual' | 'url_prefix')
 
     return NextResponse.json({
       success: true,

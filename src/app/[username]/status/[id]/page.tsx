@@ -39,7 +39,7 @@ export default async function QuickAddPage({ params }: Props) {
         // Forward the session cookie
         Cookie: `tweetstash_session=${JSON.stringify(session)}`,
       },
-      body: JSON.stringify({ url: tweetUrl }),
+      body: JSON.stringify({ url: tweetUrl, source: 'url_prefix' }),
     })
 
     const data = await response.json()
