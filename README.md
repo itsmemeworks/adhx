@@ -147,7 +147,7 @@ fly auth login
 fly apps create adhx
 
 # Create persistent volume for SQLite database
-fly volumes create adhx_data --region sjc --size 1
+fly volumes create adhx_data --region lhr --size 1
 
 # Set secrets
 fly secrets set TWITTER_CLIENT_ID=your_client_id
