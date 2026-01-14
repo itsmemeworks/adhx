@@ -14,7 +14,7 @@ on:
       - '**.md'
       - '.github/workflows/ci.yml'
       - '.github/workflows/release-please.yml'
-      - '.github/workflows/tests.yml'
+      - '.github/workflows/pr-title.yml'
 
 # Only allow one deploy at a time
 concurrency:
