@@ -19,6 +19,13 @@ on:
     workflows: ['Release Please']
     types: [completed]
 
+# Permissions needed for:
+# - checks: write - to create check runs for release PRs
+# - contents: read - default permission to checkout code
+permissions:
+  checks: write
+  contents: read
+
 jobs:
   # Create check run for release PRs when triggered by Release Please workflow
   # Uses GitHub Checks API to report status on the PR's HEAD commit
