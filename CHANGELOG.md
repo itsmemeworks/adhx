@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.6.0](https://github.com/itsmemeworks/adhx/compare/v1.5.1...v1.6.0) (2026-01-14)
+
+
+### Features
+
+* add sentry metrics for user behavior tracking ([#26](https://github.com/itsmemeworks/adhx/issues/26)) ([631e9ee](https://github.com/itsmemeworks/adhx/commit/631e9eeef6616c66306a2aa3a081d527ff71663b))
+* add sentry release tracking and deploy workflow ([#25](https://github.com/itsmemeworks/adhx/issues/25)) ([00e7c0a](https://github.com/itsmemeworks/adhx/commit/00e7c0a28ba455433a3fc32fb052d82d56d27483))
+* add sentry test endpoint for verification ([#23](https://github.com/itsmemeworks/adhx/issues/23)) ([914a3df](https://github.com/itsmemeworks/adhx/commit/914a3df39435e0c2c4b9a6e4e1de624694f1249f))
+
 ## [1.5.1](https://github.com/itsmemeworks/adhx/compare/v1.5.0...v1.5.1) (2026-01-14)
 
 
