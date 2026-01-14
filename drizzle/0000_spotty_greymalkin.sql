@@ -1,5 +1,6 @@
 CREATE TABLE `bookmark_links` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`user_id` text NOT NULL,
 	`bookmark_id` text NOT NULL,
 	`original_url` text,
 	`expanded_url` text NOT NULL,
@@ -8,12 +9,13 @@ CREATE TABLE `bookmark_links` (
 	`content_json` text,
 	`preview_title` text,
 	`preview_description` text,
-	`preview_image_url` text,
-	FOREIGN KEY (`bookmark_id`) REFERENCES `bookmarks`(`id`) ON UPDATE no action ON DELETE cascade
+	`preview_image_url` text
 );
 --> statement-breakpoint
+CREATE INDEX `bookmark_links_user_bookmark_idx` ON `bookmark_links` (`user_id`,`bookmark_id`);--> statement-breakpoint
 CREATE TABLE `bookmark_media` (
-	`id` text PRIMARY KEY NOT NULL,
+	`id` text NOT NULL,
+	`user_id` text NOT NULL,
 	`bookmark_id` text NOT NULL,
 	`media_type` text NOT NULL,
 	`original_url` text NOT NULL,
@@ -27,19 +29,21 @@ CREATE TABLE `bookmark_media` (
 	`duration_ms` integer,
 	`file_size_bytes` integer,
 	`alt_text` text,
-	FOREIGN KEY (`bookmark_id`) REFERENCES `bookmarks`(`id`) ON UPDATE no action ON DELETE cascade
+	PRIMARY KEY(`user_id`, `id`)
 );
 --> statement-breakpoint
+CREATE INDEX `bookmark_media_user_bookmark_idx` ON `bookmark_media` (`user_id`,`bookmark_id`);--> statement-breakpoint
 CREATE TABLE `bookmark_tags` (
+	`user_id` text NOT NULL,
 	`bookmark_id` text NOT NULL,
 	`tag` text NOT NULL,
-	PRIMARY KEY(`bookmark_id`, `tag`),
-	FOREIGN KEY (`bookmark_id`) REFERENCES `bookmarks`(`id`) ON UPDATE no action ON DELETE cascade
+	PRIMARY KEY(`user_id`, `bookmark_id`, `tag`)
 );
 --> statement-breakpoint
+CREATE INDEX `bookmark_tags_user_id_idx` ON `bookmark_tags` (`user_id`);--> statement-breakpoint
 CREATE TABLE `bookmarks` (
-	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text,
+	`id` text NOT NULL,
+	`user_id` text NOT NULL,
 	`author` text NOT NULL,
 	`author_name` text,
 	`author_profile_image_url` text,
@@ -59,22 +63,24 @@ CREATE TABLE `bookmarks` (
 	`filed_path` text,
 	`needs_transcript` integer DEFAULT false,
 	`summary` text,
-	`raw_json` text
+	`raw_json` text,
+	PRIMARY KEY(`user_id`, `id`)
 );
 --> statement-breakpoint
+CREATE INDEX `bookmarks_user_id_idx` ON `bookmarks` (`user_id`);--> statement-breakpoint
+CREATE INDEX `bookmarks_processed_at_idx` ON `bookmarks` (`processed_at`);--> statement-breakpoint
 CREATE TABLE `collection_tweets` (
+	`user_id` text NOT NULL,
 	`collection_id` text NOT NULL,
 	`bookmark_id` text NOT NULL,
 	`added_at` text DEFAULT CURRENT_TIMESTAMP,
 	`notes` text,
-	PRIMARY KEY(`collection_id`, `bookmark_id`),
-	FOREIGN KEY (`collection_id`) REFERENCES `collections`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`bookmark_id`) REFERENCES `bookmarks`(`id`) ON UPDATE no action ON DELETE cascade
+	PRIMARY KEY(`user_id`, `collection_id`, `bookmark_id`)
 );
 --> statement-breakpoint
 CREATE TABLE `collections` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text,
+	`user_id` text NOT NULL,
 	`name` text NOT NULL,
 	`description` text,
 	`color` text,
@@ -86,10 +92,11 @@ CREATE TABLE `collections` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `collections_share_code_unique` ON `collections` (`share_code`);--> statement-breakpoint
+CREATE INDEX `collections_user_id_idx` ON `collections` (`user_id`);--> statement-breakpoint
 CREATE TABLE `oauth_state` (
 	`state` text PRIMARY KEY NOT NULL,
 	`code_verifier` text NOT NULL,
-	`created_at` text DEFAULT '2026-01-14T10:09:15.897Z'
+	`created_at` text DEFAULT '2026-01-14T16:34:44.103Z'
 );
 --> statement-breakpoint
 CREATE TABLE `oauth_tokens` (
@@ -100,19 +107,20 @@ CREATE TABLE `oauth_tokens` (
 	`refresh_token` text NOT NULL,
 	`expires_at` integer NOT NULL,
 	`scopes` text,
-	`created_at` text DEFAULT '2026-01-14T10:09:15.896Z',
+	`created_at` text DEFAULT '2026-01-14T16:34:44.102Z',
 	`updated_at` text
 );
 --> statement-breakpoint
 CREATE TABLE `read_status` (
-	`bookmark_id` text PRIMARY KEY NOT NULL,
+	`user_id` text NOT NULL,
+	`bookmark_id` text NOT NULL,
 	`read_at` text NOT NULL,
-	FOREIGN KEY (`bookmark_id`) REFERENCES `bookmarks`(`id`) ON UPDATE no action ON DELETE cascade
+	PRIMARY KEY(`user_id`, `bookmark_id`)
 );
 --> statement-breakpoint
 CREATE TABLE `sync_logs` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text,
+	`user_id` text NOT NULL,
 	`started_at` text NOT NULL,
 	`completed_at` text,
 	`status` text NOT NULL,
@@ -124,16 +132,19 @@ CREATE TABLE `sync_logs` (
 	`trigger_type` text
 );
 --> statement-breakpoint
+CREATE INDEX `sync_logs_user_id_idx` ON `sync_logs` (`user_id`);--> statement-breakpoint
 CREATE TABLE `sync_state` (
-	`key` text PRIMARY KEY NOT NULL,
-	`user_id` text,
+	`user_id` text NOT NULL,
+	`key` text NOT NULL,
 	`value` text,
-	`updated_at` text
+	`updated_at` text,
+	PRIMARY KEY(`user_id`, `key`)
 );
 --> statement-breakpoint
 CREATE TABLE `user_preferences` (
-	`user_id` text,
-	`key` text PRIMARY KEY NOT NULL,
+	`user_id` text NOT NULL,
+	`key` text NOT NULL,
 	`value` text,
-	`updated_at` text
+	`updated_at` text,
+	PRIMARY KEY(`user_id`, `key`)
 );

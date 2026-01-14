@@ -53,6 +53,7 @@ if (!userId) {
 ### Database
 - Uses Drizzle ORM query builder (never raw SQL with interpolation)
 - All queries filter by `userId` for multi-user data isolation
+- **Multi-user schema**: All user-owned tables use composite primary keys `(userId, id)` to allow multiple users to bookmark the same tweet independently
 
 ### Error Tracking & Metrics (Sentry)
 Error tracking and user behavior metrics via Sentry SDK 10.x.
@@ -111,6 +112,14 @@ Client component with:
 - **Lightbox**: Full-screen modal with keyboard navigation (←→, R/U for read/unread, Esc)
 - **FilterBar**: Category filters and search
 
+### Landing Page Optimization
+When unauthenticated, the app shows a landing page without making authenticated API calls:
+- `page.tsx` checks `isAuthenticated` before fetching feed
+- `Header.tsx` only fetches stats/cooldown after auth is confirmed
+- `preferences-context.tsx` checks auth status before fetching preferences
+
+This prevents 401 errors in server logs when visitors view the landing page.
+
 ### Shared Types (`src/components/feed/types.ts`)
 Centralized type definitions including:
 - `FeedItem` - Full bookmark data for display
@@ -131,13 +140,21 @@ Key files:
 
 Database location: `./data/adhdone.db`
 
-Key tables:
-- `bookmarks` - Main tweet data (includes `userId` for multi-user)
-- `bookmark_links` - URLs with enrichment data
-- `bookmark_media` - Media attachments
-- `read_status` - Read/unread tracking
-- `oauth_tokens` - Twitter OAuth credentials
-- `sync_logs` - Sync history
+**Multi-user schema with composite primary keys:**
+
+| Table | Primary Key | Description |
+|-------|-------------|-------------|
+| `bookmarks` | `(userId, id)` | Main tweet data - same tweet can exist for multiple users |
+| `bookmark_tags` | `(userId, bookmarkId, tag)` | Tags are per-user, not shared globally |
+| `bookmark_media` | `(userId, id)` | Media attachments per user |
+| `bookmark_links` | `id` (auto) + `userId` | URLs with enrichment data |
+| `read_status` | `(userId, bookmarkId)` | Read/unread tracking per user |
+| `user_preferences` | `(userId, key)` | User settings (theme, font, etc.) |
+| `oauth_tokens` | `userId` | Twitter OAuth credentials |
+| `sync_logs` | `id` + `userId` | Sync history per user |
+| `collections` | `id` + `userId` | Custom bookmark collections |
+
+**Why composite keys**: Allows User A and User B to both bookmark tweet X independently, with separate read status, tags, and preferences.
 
 Schema modifications: Edit `src/lib/db/schema.ts`, then run `pnpm drizzle-kit push:sqlite`
 
@@ -206,8 +223,10 @@ SENTRY_RELEASE=           # Set automatically in Docker builds
 
 ### GitHub Actions Workflows
 - **CI** (`.github/workflows/ci.yml`) - Runs on PRs: lint, typecheck, test, build
-- **Deploy** (`.github/workflows/deploy.yml`) - Deploys to Fly.io on main branch pushes
-- **Release Please** (`.github/workflows/release-please.yml`) - Automated semantic versioning
+- **Deploy** (`.github/workflows/deploy.yml`) - Deploys to Fly.io (triggered by release-please or manual dispatch)
+- **Release Please** (`.github/workflows/release-please.yml`) - Automated semantic versioning, triggers deploy via `workflow_dispatch`
+
+**Important**: GitHub doesn't fire `release: published` events when releases are created with `GITHUB_TOKEN` (security measure). The release-please workflow directly triggers deploy via `gh workflow run deploy.yml` instead.
 
 ### Sentry Release Tracking
 Deployments automatically create Sentry releases for error tracking:
@@ -220,6 +239,25 @@ Required secrets on Fly.io (set via `fly secrets set`):
 - `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET` - Twitter OAuth
 - `SENTRY_DSN` - Error tracking
 - `SESSION_SECRET` - JWT signing (optional)
+
+### Fresh Database Deployment (Major Schema Changes)
+For breaking schema changes (like switching to composite primary keys), deploy a fresh database:
+
+```bash
+# Stop and destroy the machine
+fly machines list --app adhx
+fly machines stop <machine-id> --app adhx
+fly machines destroy <machine-id> --app adhx --force
+
+# Delete and recreate the volume
+fly volumes delete <volume-id> --app adhx --yes
+fly volumes create adhx_data --region lhr --size 1 --app adhx
+
+# Trigger deploy (creates new machine with fresh DB)
+gh workflow run deploy.yml
+```
+
+The app will initialize a fresh SQLite database with the new schema. Users will need to re-authenticate and sync their bookmarks.
 
 ## Testing
 
@@ -235,6 +273,15 @@ Test files in `src/__tests__/`:
 - `url-expander.test.ts` - URL expansion
 - `fxembed.test.ts` - FxTwitter integration
 - `utils.test.ts` - General utilities
+
+API route tests in `src/__tests__/api/`:
+- `setup.ts` - In-memory SQLite test database factory
+- `test-utils.ts` - Request/response helpers
+- `bookmarks-*.test.ts` - Bookmark CRUD operations
+- `tags.test.ts` - Tag management
+- `preferences.test.ts` - User preferences
+
+All API tests verify multi-user isolation (User A's actions don't affect User B).
 
 ## Common Tasks
 

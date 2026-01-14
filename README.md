@@ -43,6 +43,7 @@ The tweet is saved to your collection and opens in the lightbox. It's that easy.
 | ⌨️ **Keyboard Shortcuts** | ← → to browse, R/U for read/unread, Esc to close |
 | 🔤 **ADHD-Friendly Fonts** | Choose from 4 fonts designed for readability (Lexend, Atkinson Hyperlegible, etc.) |
 | 📖 **Bionic Reading** | Bold the first part of each word to help your eyes flow |
+| 👥 **Multi-User Ready** | Each user gets their own bookmarks, tags, and read status |
 
 ---
 
@@ -106,9 +107,10 @@ SESSION_SECRET=your-secret-key-here
 | Layer | Technology |
 |-------|------------|
 | **Framework** | Next.js 15 (App Router) + React 19 |
-| **Database** | SQLite + Drizzle ORM |
+| **Database** | SQLite + Drizzle ORM (multi-user ready) |
 | **Styling** | Tailwind CSS |
 | **Auth** | Twitter OAuth 2.0 PKCE + JWT sessions |
+| **Deployment** | Fly.io with automated releases |
 | **Testing** | Vitest |
 
 ---
@@ -163,6 +165,16 @@ fly deploy
 
 1. Update your Twitter app's callback URL to `https://adhx.fly.dev/api/auth/twitter/callback`
 2. Visit `https://adhx.fly.dev` and connect your Twitter account
+
+### Automated Releases
+
+Releases are automated via [Release Please](https://github.com/googleapis/release-please):
+
+1. Merge PRs with [conventional commits](https://www.conventionalcommits.org/) to `main`
+2. Release Please creates/updates a release PR with changelog
+3. Merge the release PR → automatically deploys to Fly.io
+
+Manual deploy: `gh workflow run deploy.yml`
 
 ---
 
