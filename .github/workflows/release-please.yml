@@ -36,6 +36,20 @@ jobs:
       # Note: CI for release PRs is triggered via workflow_run event in ci.yml
       # when this workflow completes, which creates the required 'build' status check
 
+      # Keep release PR up to date with main branch
+      # This ensures the PR always includes the latest commits
+      - name: Update release PR branch
+        if: ${{ steps.release.outputs.pr }}
+        continue-on-error: true
+        run: |
+          PR_NUMBER=$(echo '${{ steps.release.outputs.pr }}' | jq -r '.number')
+          if [ -n "$PR_NUMBER" ] && [ "$PR_NUMBER" != "null" ]; then
+            echo "Updating PR #$PR_NUMBER branch to include latest main commits"
+            gh pr update-branch "$PR_NUMBER" --rebase || echo "Branch already up to date or update not needed"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       # Auto-merge the release PR when it's created/updated
       # Note: Requires "Allow auto-merge" enabled in repo settings
       - name: Enable auto-merge for release PR
