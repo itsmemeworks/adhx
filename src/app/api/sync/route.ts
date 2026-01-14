@@ -360,6 +360,7 @@ async function saveBookmark(
             : null
 
           // Save the quoted tweet as its own bookmark
+          // Use onConflictDoNothing to handle case where another user already synced this tweet
           await db.insert(bookmarks).values({
             id: quoteRef.id,
             userId,
@@ -374,7 +375,7 @@ async function saveBookmark(
             isReply: false,
             isQuote: false,
             isRetweet: false,
-          })
+          }).onConflictDoNothing()
 
           // Track that we've inserted this quoted tweet
           insertedDuringSync.add(quoteRef.id)
@@ -490,6 +491,8 @@ async function saveBookmark(
   }
 
   // Insert bookmark with userId for multi-user support and enrichment data
+  // Use onConflictDoNothing to handle case where another user already synced this tweet
+  // Note: Current schema uses tweet ID as primary key, so same tweet can only exist once
   await db.insert(bookmarks).values({
     id: tweet.id,
     userId, // Include userId for multi-user support
@@ -508,7 +511,7 @@ async function saveBookmark(
     isRetweet,
     retweetContext,
     rawJson: JSON.stringify(tweet),
-  })
+  }).onConflictDoNothing()
 
   // Insert links
   if (tweet.entities?.urls) {
