@@ -86,7 +86,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
       ))}
       <div className="relative">
         <form onSubmit={handleAddTag}>
-          <span className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded text-xs focus-within:border-blue-400 dark:focus-within:border-blue-500 transition-colors">
+          <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded text-xs focus-within:border-blue-400 dark:focus-within:border-blue-500 transition-colors">
             <input
               ref={inputRef}
               type="text"
