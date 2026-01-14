@@ -14,6 +14,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  actions: write  # Required for triggering deploy workflow
 
 jobs:
   release-please:
@@ -71,8 +72,11 @@ jobs:
       # Workaround: Manually create release if release-please didn't
       # This handles the "untagged, merged release PRs outstanding" case
       - name: Check for and fix stuck releases
+        id: fix-stuck
         continue-on-error: true
         run: |
+          CREATED_RELEASE=false
+
           # Find any merged release PRs with pending label
           STUCK_PRS=$(gh pr list --state merged --label "autorelease: pending" --json number,title --jq '.[].number')
 
@@ -97,6 +101,7 @@ jobs:
                 fi
 
                 gh release create "$TAG" --title "$TAG" --notes "$NOTES"
+                CREATED_RELEASE=true
               fi
 
               # Update PR labels
@@ -104,13 +109,17 @@ jobs:
               echo "Fixed PR #$PR_NUMBER"
             fi
           done
+
+          echo "created_release=$CREATED_RELEASE" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # Deploy when a release is created
-  # This is the ONLY way deploys happen automatically (besides manual workflow_dispatch)
-  deploy-on-release:
-    needs: release-please
-    if: ${{ needs.release-please.outputs.release_created }}
-    uses: ./.github/workflows/deploy.yml
-    secrets: inherit
+      # Trigger deploy via workflow_dispatch when release-please creates a release
+      # This is more reliable than the release: published event (which doesn't fire for GITHUB_TOKEN)
+      - name: Trigger deploy
+        if: ${{ steps.release.outputs.release_created == 'true' || steps.fix-stuck.outputs.created_release == 'true' }}
+        run: |
+          echo "Triggering deploy workflow..."
+          gh workflow run deploy.yml
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
