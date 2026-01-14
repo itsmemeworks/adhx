@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.0](https://github.com/itsmemeworks/adhx/compare/v1.2.0...v1.3.0) (2026-01-14)
+
+
+### Features
+
+* initial release of adhx bookmark manager ([2a3a4ce](https://github.com/itsmemeworks/adhx/commit/2a3a4ce8217ebb409be6affbcfa52d8802919d4f))
+
+
+### Bug Fixes
+
+* extract pr number from release-please json output ([3d4d0e1](https://github.com/itsmemeworks/adhx/commit/3d4d0e1ccf3b17a3ee9eaeacb9d8449e1daa0c43))
+
 ## [1.2.0](https://github.com/itsmemeworks/adhx/compare/v1.1.0...v1.2.0) (2026-01-13)
 
 
