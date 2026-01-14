@@ -30,7 +30,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     # Only deploy if not a release-please PR merge (those just bump versions)
-    if: ${{ !contains(github.event.head_commit.message, 'chore: release main') }}
+    if: "!contains(github.event.head_commit.message, 'chore: release main')"
     steps:
       - uses: actions/checkout@v4
         with:
