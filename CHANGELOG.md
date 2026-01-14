@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.0](https://github.com/itsmemeworks/adhx/compare/v1.8.0...v1.9.0) (2026-01-14)
+
+
+### Features
+
+* rich tweet preview landing page with aligned layout ([#44](https://github.com/itsmemeworks/adhx/issues/44)) ([f91c920](https://github.com/itsmemeworks/adhx/commit/f91c9207288fff78e85f339d194d7c6b3ef487f4))
+
 ## [1.8.0](https://github.com/itsmemeworks/adhx/compare/v1.7.1...v1.8.0) (2026-01-14)
 
 
