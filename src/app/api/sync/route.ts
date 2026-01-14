@@ -67,6 +67,11 @@ export async function GET(request: NextRequest) {
         triggerType: 'manual',
       })
 
+      // Keep-alive interval to prevent connection drops (defined outside try so finally can clear it)
+      const keepAliveInterval = setInterval(() => {
+        send('ping', { timestamp: Date.now() })
+      }, 10000) // Send ping every 10 seconds
+
       try {
         send('start', { syncId, total: null })
 
@@ -75,6 +80,9 @@ export async function GET(request: NextRequest) {
         const existingIds = new Set(
           (await db.select({ id: bookmarks.id }).from(bookmarks).where(userFilter)).map((b) => b.id)
         )
+
+        // Track IDs we've inserted during this sync (for quote tweets that get saved separately)
+        const insertedDuringSync = new Set<string>()
 
         let allTweets: TwitterBookmark[] = []
         let pageNumber = 0
@@ -118,7 +126,8 @@ export async function GET(request: NextRequest) {
             duplicatesSkipped++
             send('duplicate', { tweetId: tweet.id, skipped: true })
           } else {
-            const savedBookmark = await saveBookmark(tweet, userId)
+            const savedBookmark = await saveBookmark(tweet, userId, insertedDuringSync)
+            insertedDuringSync.add(tweet.id) // Track that we inserted this ID
             newBookmarks++
 
             send('processing', {
@@ -177,6 +186,7 @@ export async function GET(request: NextRequest) {
 
         send('error', { message })
       } finally {
+        clearInterval(keepAliveInterval)
         controller.close()
       }
     },
@@ -192,7 +202,11 @@ export async function GET(request: NextRequest) {
 }
 
 // Save a single bookmark to the database with automatic enrichment
-async function saveBookmark(tweet: TwitterBookmark, userId: string): Promise<StreamedBookmark> {
+async function saveBookmark(
+  tweet: TwitterBookmark,
+  userId: string,
+  insertedDuringSync: Set<string>
+): Promise<StreamedBookmark> {
   const now = new Date().toISOString()
   const authorUsername = tweet.author?.username || 'unknown'
   const tweetUrl = tweet.author
@@ -281,12 +295,15 @@ async function saveBookmark(tweet: TwitterBookmark, userId: string): Promise<Str
       if (fxData?.tweet) {
         quotedTweetId = quoteRef.id
 
-        // Check if the quoted tweet already exists as a bookmark
-        const [existingQuotedTweet] = await db
-          .select({ id: bookmarks.id })
-          .from(bookmarks)
-          .where(eq(bookmarks.id, quoteRef.id))
-          .limit(1)
+        // Check if the quoted tweet already exists as a bookmark OR was already inserted during this sync
+        const alreadyInserted = insertedDuringSync.has(quoteRef.id)
+        const [existingQuotedTweet] = alreadyInserted
+          ? [{ id: quoteRef.id }] // Skip DB query if we know we already inserted it
+          : await db
+              .select({ id: bookmarks.id })
+              .from(bookmarks)
+              .where(eq(bookmarks.id, quoteRef.id))
+              .limit(1)
 
         // If quoted tweet doesn't exist, save it as a separate bookmark
         if (!existingQuotedTweet) {
@@ -324,6 +341,9 @@ async function saveBookmark(tweet: TwitterBookmark, userId: string): Promise<Str
             isQuote: false,
             isRetweet: false,
           })
+
+          // Track that we've inserted this quoted tweet
+          insertedDuringSync.add(quoteRef.id)
 
           // Save media for the quoted tweet
           if (fxData.tweet.media?.photos) {
