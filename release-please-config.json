@@ -2,7 +2,6 @@
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "packages": {
     ".": {
-      "package-name": "adhx",
       "release-type": "node",
       "changelog-path": "CHANGELOG.md",
       "bump-minor-pre-major": true,
