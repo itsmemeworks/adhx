@@ -36,10 +36,10 @@ jobs:
       # Auto-merge the release PR when it's created/updated
       # Note: Requires "Allow auto-merge" enabled in repo settings
       - name: Enable auto-merge for release PR
-        if: ${{ steps.release.outputs.pr }}
+        if: ${{ steps.release.outputs.prs_created == 'true' }}
         continue-on-error: true
         run: |
-          gh pr merge ${{ steps.release.outputs.pr }} --auto --squash
+          gh pr merge ${{ fromJSON(steps.release.outputs.pr).number }} --auto --squash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
