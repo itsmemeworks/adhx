@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.4](https://github.com/itsmemeworks/adhx/compare/v1.6.3...v1.6.4) (2026-01-14)
+
+
+### Bug Fixes
+
+* trigger deploy via workflow_dispatch after release creation ([#37](https://github.com/itsmemeworks/adhx/issues/37)) ([f08b21f](https://github.com/itsmemeworks/adhx/commit/f08b21f6bfe39e4ab1cca9601a86e0cd6076c026))
+
 ## [1.6.3](https://github.com/itsmemeworks/adhx/compare/v1.6.2...v1.6.3) (2026-01-14)
 
 
