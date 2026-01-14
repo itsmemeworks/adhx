@@ -1,0 +1,28 @@
+# Fly.io configuration for ADHX
+# See https://fly.io/docs/reference/configuration/
+
+app = 'adhx'
+primary_region = 'sjc'
+
+[build]
+
+[env]
+  NODE_ENV = 'production'
+  DATABASE_PATH = '/data/adhx.db'
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+[[vm]]
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1
+
+[mounts]
+  source = 'adhx_data'
+  destination = '/data'

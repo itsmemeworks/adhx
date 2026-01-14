@@ -9,6 +9,9 @@ const nextConfig = {
     NEXT_PUBLIC_APP_VERSION: packageJson.version,
   },
 
+  // Enable standalone output for Docker deployment
+  output: 'standalone',
+
   // Enable server-side external packages for better-sqlite3
   serverExternalPackages: ['better-sqlite3'],
 

@@ -1,0 +1,40 @@
+# Dependencies
+node_modules
+
+# Build output
+.next
+out
+
+# Local data
+data/
+*.db
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Misc
+*.log
+*.md
+!README.md
+LICENSE
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+.nyc_output/
+
+# Fly.io
+fly.toml

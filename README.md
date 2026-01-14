@@ -126,6 +126,46 @@ pnpm db:migrate   # Run database migrations
 
 ---
 
+## 🚀 Deployment (Fly.io)
+
+ADHX is configured for deployment on [Fly.io](https://fly.io) with persistent SQLite storage.
+
+### Prerequisites
+
+```bash
+# Install Fly CLI
+curl -L https://fly.io/install.sh | sh
+
+# Login to Fly
+fly auth login
+```
+
+### Deploy
+
+```bash
+# Create the app (first time only)
+fly apps create adhx
+
+# Create persistent volume for SQLite database
+fly volumes create adhx_data --region sjc --size 1
+
+# Set secrets
+fly secrets set TWITTER_CLIENT_ID=your_client_id
+fly secrets set TWITTER_CLIENT_SECRET=your_client_secret
+fly secrets set SESSION_SECRET=$(openssl rand -base64 32)
+fly secrets set NEXT_PUBLIC_APP_URL=https://adhx.fly.dev
+
+# Deploy
+fly deploy
+```
+
+### Post-deployment
+
+1. Update your Twitter app's callback URL to `https://adhx.fly.dev/api/auth/twitter/callback`
+2. Visit `https://adhx.fly.dev` and connect your Twitter account
+
+---
+
 ## 🤝 Contributing
 
 We welcome contributions! Whether you're fixing bugs, adding features, or just improving docs.
