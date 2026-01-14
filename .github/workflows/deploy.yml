@@ -10,11 +10,6 @@ on:
         type: boolean
   push:
     branches: [main]
-    paths-ignore:
-      - '**.md'
-      - '.github/workflows/ci.yml'
-      - '.github/workflows/release-please.yml'
-      - '.github/workflows/pr-title.yml'
 
 # Only allow one deploy at a time
 concurrency:
@@ -29,8 +24,11 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # Only deploy if not a release-please PR merge (those just bump versions)
-    if: "!contains(github.event.head_commit.message, 'chore: release main')"
+    # Only deploy when a release PR is merged (version bump commits)
+    # This ensures we always know exactly what version is being deployed
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.head_commit.message, 'chore: release main')
     steps:
       - uses: actions/checkout@v4
         with:
