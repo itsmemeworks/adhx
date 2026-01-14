@@ -10,22 +10,19 @@ RUN apt-get update && apt-get install -y \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
 WORKDIR /app
 
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
 
-# Install dependencies with build scripts enabled for native modules
-RUN pnpm install --frozen-lockfile --config.ignore-scripts=false
+# Use npm instead of pnpm (pnpm v10 blocks native module builds)
+RUN npm install
 
 # Copy source code
 COPY . .
 
 # Build the application
-RUN pnpm build
+RUN npm run build
 
 # Production stage - minimal runtime image
 FROM node:20-slim AS runner
