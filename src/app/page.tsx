@@ -263,8 +263,11 @@ function FeedPageContent(): React.ReactElement {
   }, [searchParams])
 
   useEffect(() => {
+    // Skip fetching during sync - streamed items are being added directly to state
+    // and sync-complete will trigger a proper fetch when done
+    if (isSyncing) return
     fetchFeed(true)
-  }, [filter, unreadOnly, search, selectedTags])
+  }, [filter, unreadOnly, search, selectedTags, isSyncing])
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -276,11 +279,8 @@ function FeedPageContent(): React.ReactElement {
     if (page > 1) fetchFeed(false)
   }, [page])
 
-  useEffect(() => {
-    const handleSyncComplete = () => fetchFeed(true)
-    window.addEventListener('sync-complete', handleSyncComplete)
-    return () => window.removeEventListener('sync-complete', handleSyncComplete)
-  }, [fetchFeed])
+  // Note: sync-complete fetch is now handled by the filter/isSyncing effect above
+  // When isSyncing changes to false, that effect triggers fetchFeed(true)
 
   useEffect(() => {
     const handleTweetAdded = () => fetchFeed(true)
