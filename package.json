@@ -1,6 +1,6 @@
 {
   "name": "adhx",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "description": "Save now. Read never. Find always. A Twitter/X bookmark manager for people who bookmark everything and read nothing.",
   "type": "module",
   "scripts": {
