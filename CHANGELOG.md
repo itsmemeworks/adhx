@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.5.1](https://github.com/itsmemeworks/adhx/compare/v1.5.0...v1.5.1) (2026-01-14)
+
+
+### Bug Fixes
+
+* add checks write permission to ci workflow ([#22](https://github.com/itsmemeworks/adhx/issues/22)) ([a418624](https://github.com/itsmemeworks/adhx/commit/a4186249def75b91be43acd0bb12d36bb9897a08))
+* add workaround to auto-fix stuck release prs ([#18](https://github.com/itsmemeworks/adhx/issues/18)) ([5b2721c](https://github.com/itsmemeworks/adhx/commit/5b2721c1c478a61cefae5399f11fee60dc9ed7b5))
+* remove duplicate build job and fix event conditions ([#21](https://github.com/itsmemeworks/adhx/issues/21)) ([9d8cfec](https://github.com/itsmemeworks/adhx/commit/9d8cfec328e614749c8f32454d3ed53b0d106376))
+* use github checks api to report ci status for release prs ([#20](https://github.com/itsmemeworks/adhx/issues/20)) ([2f458d6](https://github.com/itsmemeworks/adhx/commit/2f458d69d9f9ffc1c125604fe88b9d3bd2ff0251))
+
 ## [1.5.0](https://github.com/itsmemeworks/adhx/compare/v1.4.3...v1.5.0) (2026-01-14)
 
 
