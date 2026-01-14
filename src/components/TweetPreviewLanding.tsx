@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowRight, Loader2, Search, Sparkles, Play, Zap, Eye, ExternalLink } from 'lucide-react'
+import { ArrowRight, Loader2, Search, Sparkles, Play, Zap, Eye } from 'lucide-react'
 import { ADHX_PURPLE } from '@/lib/gestalt/theme'
 import { type FxTwitterResponse } from '@/lib/media/fxembed'
 import { renderArticleBlock } from '@/components/feed/utils'
@@ -55,7 +55,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
   }
 
   return (
-    <div className="min-h-screen md:h-screen flex flex-col bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900 relative overflow-x-hidden md:overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900 relative overflow-x-hidden">
       {/* Animations */}
       <style jsx>{`
         @keyframes float {
@@ -166,9 +166,18 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
                         </p>
                       </div>
                     </a>
-                    <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
+                    <a
+                      href={`https://x.com/${tweet.author?.screen_name || username}/status/${tweetId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 px-2 py-1 rounded-full transition-colors"
+                      title="View on X"
+                    >
                       {formatRelativeTime(tweet.created_at)}
-                    </span>
+                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                      </svg>
+                    </a>
                   </div>
                 </div>
 
@@ -253,75 +262,18 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
                 {/* External Link Preview (Twitter Card) */}
                 {tweet.external && !hasMedia && !tweet.article && (
                   <div className="px-4 pb-3">
-                    <a
-                      href={tweet.external.expanded_url || tweet.external.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                    >
-                      {tweet.external.thumbnail_url && (
-                        <img
-                          src={tweet.external.thumbnail_url}
-                          alt={tweet.external.title || 'Link preview'}
-                          className="w-full h-40 object-cover"
-                        />
-                      )}
-                      <div className="p-3">
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                          {tweet.external.display_url}
-                        </p>
-                        {tweet.external.title && (
-                          <p className="font-medium text-gray-900 dark:text-white text-sm line-clamp-2">
-                            {tweet.external.title}
-                          </p>
-                        )}
-                        {tweet.external.description && (
-                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
-                            {tweet.external.description}
-                          </p>
-                        )}
-                      </div>
-                    </a>
+                    <ExternalLinkPreview external={tweet.external} />
                   </div>
                 )}
 
                 {/* Quote Tweet */}
                 {tweet.quote && (
                   <div className="px-4 pb-3">
-                    <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 dark:bg-gray-900/50">
-                      {/* Quote author */}
-                      <div className="p-3 pb-2">
-                        <div className="flex items-center gap-2">
-                          {tweet.quote.author?.avatar_url && (
-                            <img
-                              src={tweet.quote.author.avatar_url}
-                              alt={tweet.quote.author.name}
-                              className="w-5 h-5 rounded-full"
-                            />
-                          )}
-                          <span className="text-sm font-medium text-gray-900 dark:text-white">
-                            {tweet.quote.author?.name}
-                          </span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            @{tweet.quote.author?.screen_name}
-                          </span>
-                        </div>
-                      </div>
-                      {/* Quote text */}
-                      <div className="px-3 pb-2">
-                        <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-3">
-                          {tweet.quote.text}
-                        </p>
-                      </div>
-                      {/* Quote media (first photo only) */}
-                      {tweet.quote.media?.photos?.[0] && (
-                        <img
-                          src={tweet.quote.media.photos[0].url}
-                          alt="Quoted tweet media"
-                          className="w-full h-32 object-cover"
-                        />
-                      )}
-                    </div>
+                    <QuoteTweetPreview
+                      quote={tweet.quote}
+                      quoteAuthor={tweet.quote.author?.screen_name || ''}
+                      quoteTweetId={tweet.quote.id}
+                    />
                   </div>
                 )}
                 </div>
@@ -356,18 +308,57 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
                       {formatCount(tweet.views)}
                     </span>
                   )}
-                  <a
-                    href={`https://x.com/${username}/status/${tweetId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="ml-auto flex items-center gap-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                    title="View on X"
-                  >
-                    <span className="text-xs">View on X</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
                 </div>
               </div>
+
+              {/* ADHD Reading Tools - Mobile only, below tweet card for easy thumb access */}
+              {tweet.article && (
+                <div className="md:hidden mt-4 p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-purple-600 dark:text-purple-300">
+                      <Eye className="w-4 h-4 flex-shrink-0" />
+                      <span className="text-xs font-medium">Reading tools</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {/* Focus Mode Toggle */}
+                      <button
+                        onClick={() => setBionicReading(!bionicReading)}
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                          bionicReading
+                            ? 'bg-purple-200 dark:bg-purple-800/50 text-purple-800 dark:text-purple-200'
+                            : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-purple-100 dark:hover:bg-purple-900/30'
+                        }`}
+                        title="Bolds first part of each word for easier reading"
+                      >
+                        Focus
+                      </button>
+
+                      {/* Divider */}
+                      <div className="w-px h-4 bg-purple-200 dark:bg-purple-700" />
+
+                      {/* Font Selector */}
+                      <div className="flex items-center gap-0.5">
+                        {(Object.entries(FONT_OPTIONS) as [BodyFont, { name: string }][]).map(([key, { name }]) => (
+                          <button
+                            key={key}
+                            onClick={() => setSelectedFont(key)}
+                            className={`px-2 py-1 rounded-lg text-xs transition-colors ${
+                              selectedFont === key
+                                ? 'bg-purple-200 dark:bg-purple-800/50 text-purple-800 dark:text-purple-200'
+                                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-purple-100 dark:hover:bg-purple-900/30'
+                            }`}
+                            style={{ fontFamily: `var(--font-${key})` }}
+                            title={name}
+                          >
+                            Aa
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
             </div>
 
@@ -436,9 +427,9 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
                 </div>
               </div>
 
-              {/* ADHD Reading Tools - Below Pro tip */}
+              {/* ADHD Reading Tools - Below Pro tip (desktop only) */}
               {tweet.article && (
-                <div className="mt-4 p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800">
+                <div className="hidden md:block mt-4 p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 text-purple-600 dark:text-purple-300">
                       <Eye className="w-4 h-4 flex-shrink-0" />
@@ -598,5 +589,150 @@ function VideoPlayer({ author, tweetId, thumbnail }: { author: string; tweetId: 
       className="w-full aspect-video max-h-[50vh] md:max-h-none bg-black rounded-xl"
       poster={thumbnail}
     />
+  )
+}
+
+// Quote tweet preview component with full media support
+interface QuoteTweetPreviewProps {
+  quote: NonNullable<Tweet['quote']>
+  quoteAuthor: string
+  quoteTweetId: string
+}
+
+function QuoteTweetPreview({ quote, quoteAuthor, quoteTweetId }: QuoteTweetPreviewProps) {
+  const photos = quote.media?.photos || []
+  const videos = quote.media?.videos || []
+  const hasMedia = photos.length > 0 || videos.length > 0
+
+  return (
+    <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 dark:bg-gray-900/50">
+      {/* Quote author */}
+      <div className="p-3 pb-2">
+        <div className="flex items-center gap-2">
+          {quote.author?.avatar_url && (
+            <img
+              src={quote.author.avatar_url}
+              alt={quote.author.name}
+              className="w-5 h-5 rounded-full"
+            />
+          )}
+          <span className="text-sm font-medium text-gray-900 dark:text-white">
+            {quote.author?.name}
+          </span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            @{quote.author?.screen_name}
+          </span>
+        </div>
+      </div>
+
+      {/* Quote text - full text, no truncation */}
+      {quote.text && (
+        <div className="px-3 pb-3">
+          <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">
+            {quote.text}
+          </p>
+        </div>
+      )}
+
+      {/* Quote media - full grid with all photos/videos */}
+      {hasMedia && (
+        <div className="px-3 pb-3">
+          <MediaGrid
+            photos={photos}
+            videos={videos}
+            author={quoteAuthor}
+            tweetId={quoteTweetId}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// External link preview with enhanced article detection
+interface ExternalLinkPreviewProps {
+  external: NonNullable<Tweet['external']>
+}
+
+function ExternalLinkPreview({ external }: ExternalLinkPreviewProps) {
+  // Detect if this is an article-type link (has title, description > 80 chars)
+  const isArticle = Boolean(
+    external.title &&
+    external.description &&
+    external.description.length > 80
+  )
+
+  const url = external.expanded_url || external.url
+
+  if (isArticle) {
+    // Enhanced article preview with larger image and prominent title
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group"
+      >
+        {external.thumbnail_url && (
+          <div className="relative">
+            <img
+              src={external.thumbnail_url}
+              alt={external.title || 'Article preview'}
+              className="w-full h-48 object-cover group-hover:scale-[1.02] transition-transform"
+            />
+            {/* Gradient overlay for better text readability if text overlaps */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+          </div>
+        )}
+        <div className="p-4">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">
+            {external.display_url}
+          </p>
+          {external.title && (
+            <h3 className="font-semibold text-gray-900 dark:text-white text-base leading-snug mb-2 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+              {external.title}
+            </h3>
+          )}
+          {external.description && (
+            <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3 leading-relaxed">
+              {external.description}
+            </p>
+          )}
+        </div>
+      </a>
+    )
+  }
+
+  // Compact preview for non-article links
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+    >
+      {external.thumbnail_url && (
+        <img
+          src={external.thumbnail_url}
+          alt={external.title || 'Link preview'}
+          className="w-full h-40 object-cover"
+        />
+      )}
+      <div className="p-3">
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+          {external.display_url}
+        </p>
+        {external.title && (
+          <p className="font-medium text-gray-900 dark:text-white text-sm line-clamp-2">
+            {external.title}
+          </p>
+        )}
+        {external.description && (
+          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+            {external.description}
+          </p>
+        )}
+      </div>
+    </a>
   )
 }
