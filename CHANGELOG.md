@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/itsmemeworks/adhx/compare/v1.6.4...v1.7.0) (2026-01-14)
+
+
+### Features
+
+* multi-user database schema with composite primary keys ([#35](https://github.com/itsmemeworks/adhx/issues/35)) ([0733085](https://github.com/itsmemeworks/adhx/commit/07330850a1845609e420641736d1e37165430ec1))
+
 ## [1.6.4](https://github.com/itsmemeworks/adhx/compare/v1.6.3...v1.6.4) (2026-01-14)
 
 
