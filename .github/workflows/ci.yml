@@ -8,6 +8,8 @@ on:
 
 jobs:
   test:
+    # Skip for release-please PRs (only update version/changelog)
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,6 +36,8 @@ jobs:
         run: pnpm test
 
   build:
+    # Skip for release-please PRs (only update version/changelog)
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
