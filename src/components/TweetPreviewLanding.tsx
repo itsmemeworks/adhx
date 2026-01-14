@@ -55,7 +55,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900 relative overflow-hidden">
+    <div className="min-h-screen md:h-screen flex flex-col bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900 relative overflow-x-hidden md:overflow-hidden">
       {/* Animations */}
       <style jsx>{`
         @keyframes float {
@@ -123,8 +123,8 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="relative z-10 px-4 sm:px-6 pb-6 flex-1">
+      {/* Main Content - flex-1 only on md+ to allow mobile scrolling */}
+      <main className="relative z-10 px-4 sm:px-6 pb-6 md:flex-1">
         <div className="max-w-5xl mx-auto">
           {/* Hero Text - Tighter spacing on mobile */}
           <div className="text-center mb-4 md:mb-6 lg:mb-8 animate-fade-in-up [animation-fill-mode:both]">
@@ -138,9 +138,9 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
 
           {/* Two Column Layout - Tops align, two columns from tablet (md) breakpoint */}
           <div className="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start">
-            {/* Tweet Card - Left Column - Responsive heights for mobile/tablet/desktop */}
+            {/* Tweet Card - Left Column - Fixed max heights for scrollable mobile, viewport-based for desktop */}
             <div className="animate-fade-in-up [animation-fill-mode:both] delay-100">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[calc(100vh-200px)] md:max-h-[500px] lg:max-h-[653px]">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]">
                 {/* Author Header */}
                 <div className="p-4 pb-3">
                   <div className="flex items-center gap-3">
