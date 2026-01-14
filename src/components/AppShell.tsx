@@ -25,8 +25,8 @@ function HeaderSkeleton() {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
-  // Full-width pages without header (public share pages)
-  const isFullWidth = pathname.startsWith('/share/')
+  // Full-width pages without header (public share pages, URL prefix quick-add pages)
+  const isFullWidth = pathname.startsWith('/share/') || /^\/\w+\/status\/\d+$/.test(pathname)
 
   if (isFullWidth) {
     return <>{children}</>
