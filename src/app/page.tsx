@@ -420,6 +420,9 @@ function FeedPageContent(): React.ReactElement {
         return
       }
 
+      // Don't capture shortcuts when modifier keys are pressed (allow Cmd+R, Ctrl+R, etc.)
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+
       switch (e.key) {
         case 'Escape':
           setSelectedIndex(null)
@@ -542,6 +545,9 @@ function FeedPageContent(): React.ReactElement {
         }
         return
       }
+
+      // Don't capture shortcuts when modifier keys are pressed (allow Cmd+R, Ctrl+R, etc.)
+      if (e.metaKey || e.ctrlKey || e.altKey) return
 
       switch (e.key) {
         case 'Escape':
