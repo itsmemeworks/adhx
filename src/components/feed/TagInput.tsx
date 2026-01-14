@@ -76,7 +76,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
       {tags.map((tag) => (
         <span
           key={tag}
-          className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 rounded text-xs"
+          className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 rounded text-xs border border-transparent"
         >
           {tag}
           <button onClick={() => onRemoveTag(tag)} className="hover:text-blue-800 dark:hover:text-white transition-colors">
