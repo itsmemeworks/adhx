@@ -4,78 +4,11 @@ import { bookmarks, bookmarkLinks, bookmarkMedia } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { metrics } from '@/lib/sentry'
 import { getCurrentUserId } from '@/lib/auth/session'
-
-// Parse tweet URL to extract author and tweet ID
-function parseTweetUrl(url: string): { author: string; tweetId: string } | null {
-  // Supported patterns:
-  // https://twitter.com/user/status/123
-  // https://x.com/user/status/123
-  // https://mobile.twitter.com/user/status/123
-  // https://vxtwitter.com/user/status/123
-  // https://fxtwitter.com/user/status/123
-  const patterns = [
-    /(?:https?:\/\/)?(?:www\.|mobile\.)?(?:twitter|x|vxtwitter|fxtwitter)\.com\/([^/]+)\/status\/(\d+)/i,
-  ]
-
-  for (const pattern of patterns) {
-    const match = url.match(pattern)
-    if (match) {
-      return { author: match[1], tweetId: match[2] }
-    }
-  }
-
-  return null
-}
-
-// Fetch tweet data from fxtwitter API
-async function fetchTweetData(author: string, tweetId: string) {
-  const apiUrl = `https://api.fxtwitter.com/${author}/status/${tweetId}`
-  const response = await fetch(apiUrl, {
-    headers: {
-      'User-Agent': 'ADHX/1.0',
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch tweet: ${response.status}`)
-  }
-
-  const data = await response.json()
-  return data.tweet
-}
-
-// Determine category from tweet data
-function determineCategory(tweet: Record<string, unknown>): string {
-  // Check for X Article
-  if (tweet.article || tweet.is_article) {
-    return 'article'
-  }
-
-  // Check for video content
-  const media = tweet.media as { videos?: unknown[] } | undefined
-  if (media?.videos && Array.isArray(media.videos) && media.videos.length > 0) {
-    return 'video'
-  }
-
-  // Check for photos
-  const mediaAll = (tweet.media as { all?: Array<{ type?: string }> })?.all
-  if (mediaAll && Array.isArray(mediaAll)) {
-    const hasPhoto = mediaAll.some(m => m.type === 'photo')
-    if (hasPhoto) return 'photo'
-  }
-
-  // Check for external links (articles from other sites)
-  const urls = tweet.urls as Array<{ expanded_url?: string }> | undefined
-  if (urls && Array.isArray(urls) && urls.length > 0) {
-    const hasExternalLink = urls.some(u => {
-      const url = u.expanded_url || ''
-      return !url.includes('twitter.com') && !url.includes('x.com')
-    })
-    if (hasExternalLink) return 'article'
-  }
-
-  return 'text'
-}
+import {
+  parseTweetUrl,
+  fetchTweetFromFxTwitter,
+  determineCategory,
+} from '@/lib/tweets/processor'
 
 // POST /api/tweets/add - Add a tweet by URL
 export async function POST(request: NextRequest) {
@@ -121,7 +54,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch tweet data from fxtwitter
-    const tweet = await fetchTweetData(parsed.author, parsed.tweetId)
+    const fxResponse = await fetchTweetFromFxTwitter(parsed.author, parsed.tweetId)
+    if (!fxResponse?.tweet) {
+      return NextResponse.json({ error: 'Failed to fetch tweet data' }, { status: 500 })
+    }
+    const tweet = fxResponse.tweet
 
     // Determine category based on content
     const category = determineCategory(tweet)
@@ -133,8 +70,8 @@ export async function POST(request: NextRequest) {
     const authorUsername = tweet.author?.screen_name || parsed.author
     const articlePreview = tweet.article ? {
       title: tweet.article.title,
-      description: tweet.article.preview_text || tweet.article.description,
-      imageUrl: tweet.article.cover_media?.media_info?.original_img_url || tweet.article.thumbnail_url,
+      description: tweet.article.preview_text || null,
+      imageUrl: tweet.article.cover_media?.media_info?.original_img_url || null,
       url: `https://x.com/${authorUsername}/article/${parsed.tweetId}`,
       domain: 'x.com',
     } : null
@@ -269,7 +206,7 @@ export async function POST(request: NextRequest) {
           previewUrl: m.thumbnail_url || m.url || '',
           width: m.width || null,
           height: m.height || null,
-        })
+        }).onConflictDoNothing()
       }
     }
 
@@ -324,8 +261,8 @@ export async function POST(request: NextRequest) {
         await db.insert(bookmarkLinks).values({
           userId,
           bookmarkId: parsed.tweetId,
-          originalUrl: link.url || link,
-          expandedUrl: link.expanded_url || link.url || link,
+          originalUrl: link.url,
+          expandedUrl: link.expanded_url || link.url,
           domain: link.domain || null,
         })
       }

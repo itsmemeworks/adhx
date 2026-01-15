@@ -275,58 +275,131 @@ function MediaLightboxContent({
       {/* Media panel - shown first on mobile */}
       <div className="w-full lg:flex-1 flex items-center justify-center order-1 lg:order-2 relative group">
         {isVideo ? (
-          <video
-            key={item.id}
-            src={`/api/media/video?author=${item.author}&tweetId=${item.id}&quality=full`}
-            controls
-            autoPlay
-            loop={primaryMedia.mediaType === 'animated_gif'}
-            className="max-w-full max-h-[50vh] lg:max-h-[80vh] rounded-xl lg:rounded-2xl bg-black"
-          />
+          <div className="relative">
+            <video
+              key={item.id}
+              src={`/api/media/video?author=${item.author}&tweetId=${item.id}&quality=full`}
+              controls
+              autoPlay
+              loop={primaryMedia.mediaType === 'animated_gif'}
+              className="max-w-full max-h-[50vh] lg:max-h-[80vh] rounded-xl lg:rounded-2xl bg-black"
+            />
+            {/* Share/Download buttons for video */}
+            <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={(e) => handleDownloadMedia(
+                  e,
+                  `/api/media/video?author=${item.author}&tweetId=${item.id}&quality=full`,
+                  `tweet-${item.id}.mp4`
+                )}
+                className="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                title="Download"
+              >
+                <Download className="w-4 h-4 text-white" />
+              </button>
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation()
+                  const url = `${window.location.origin}/api/media/video?author=${item.author}&tweetId=${item.id}&quality=full`
+                  if (navigator.share) {
+                    try {
+                      await navigator.share({ url, title: `Tweet by @${item.author}` })
+                    } catch {
+                      // User cancelled or share failed
+                    }
+                  } else {
+                    await navigator.clipboard.writeText(url)
+                  }
+                }}
+                className="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                title="Share"
+              >
+                <Share2 className="w-4 h-4 text-white" />
+              </button>
+            </div>
+          </div>
+        ) : item.media && item.media.length > 1 ? (
+          /* Multi-image: vertical scroll gallery */
+          <div className="flex flex-col gap-4 max-h-[50vh] lg:max-h-[80vh] overflow-y-auto py-2 px-2 article-scrollbar">
+            {item.media
+              .filter(m => m.mediaType === 'photo')
+              .map((media, index) => (
+                <div key={media.id} className="relative group/img flex-shrink-0">
+                  <img
+                    src={media.url}
+                    alt={`Image ${index + 1} of ${item.media!.length}`}
+                    className="max-w-full max-h-[70vh] rounded-xl lg:rounded-2xl object-contain mx-auto"
+                  />
+                  {/* Share/Download buttons per image */}
+                  <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover/img:opacity-100 transition-opacity">
+                    <button
+                      onClick={(e) => handleDownloadMedia(e, media.url, `tweet-${item.id}-${index + 1}.jpg`)}
+                      className="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                      title="Download"
+                    >
+                      <Download className="w-4 h-4 text-white" />
+                    </button>
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation()
+                        if (navigator.share) {
+                          try {
+                            await navigator.share({ url: media.url, title: `Tweet by @${item.author}` })
+                          } catch {
+                            // User cancelled or share failed
+                          }
+                        } else {
+                          await navigator.clipboard.writeText(media.url)
+                        }
+                      }}
+                      className="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                      title="Share"
+                    >
+                      <Share2 className="w-4 h-4 text-white" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+          </div>
         ) : (
-          <img
-            key={item.id}
-            src={primaryMedia.url}
-            alt=""
-            className="max-w-full max-h-[50vh] lg:max-h-[80vh] rounded-xl lg:rounded-2xl object-contain"
-          />
+          /* Single image */
+          <div className="relative">
+            <img
+              key={item.id}
+              src={primaryMedia.url}
+              alt=""
+              className="max-w-full max-h-[50vh] lg:max-h-[80vh] rounded-xl lg:rounded-2xl object-contain"
+            />
+            {/* Share/Download buttons for single image */}
+            <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={(e) => handleDownloadMedia(e, primaryMedia.url, `tweet-${item.id}.jpg`)}
+                className="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                title="Download"
+              >
+                <Download className="w-4 h-4 text-white" />
+              </button>
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation()
+                  if (navigator.share) {
+                    try {
+                      await navigator.share({ url: primaryMedia.url, title: `Tweet by @${item.author}` })
+                    } catch {
+                      // User cancelled or share failed
+                    }
+                  } else {
+                    await navigator.clipboard.writeText(primaryMedia.url)
+                  }
+                }}
+                className="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                title="Share"
+              >
+                <Share2 className="w-4 h-4 text-white" />
+              </button>
+            </div>
+          </div>
         )}
-        {/* Share/Download buttons - appear on hover */}
-        <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={(e) => handleDownloadMedia(
-              e,
-              isVideo ? `/api/media/video?author=${item.author}&tweetId=${item.id}&quality=full` : primaryMedia.url,
-              `tweet-${item.id}.${isVideo ? 'mp4' : 'jpg'}`
-            )}
-            className="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
-            title="Download"
-          >
-            <Download className="w-4 h-4 text-white" />
-          </button>
-          <button
-            onClick={async (e) => {
-              e.stopPropagation()
-              const url = isVideo
-                ? `${window.location.origin}/api/media/video?author=${item.author}&tweetId=${item.id}&quality=full`
-                : primaryMedia.url
-              if (navigator.share) {
-                try {
-                  await navigator.share({ url, title: `Tweet by @${item.author}` })
-                } catch {
-                  // User cancelled or share failed
-                }
-              } else {
-                await navigator.clipboard.writeText(url)
-                // Could show a toast here
-              }
-            }}
-            className="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
-            title="Share"
-          >
-            <Share2 className="w-4 h-4 text-white" />
-          </button>
-        </div>
       </div>
 
       {/* Info panel - shown below media on mobile, left side on desktop */}
