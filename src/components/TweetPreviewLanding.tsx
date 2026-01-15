@@ -336,6 +336,32 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
                 />
               )}
 
+              {/* Mobile CTA - positioned right after reading tools, above value props */}
+              <div className="md:hidden mt-4">
+                <button
+                  onClick={handleLogin}
+                  disabled={isLoading}
+                  className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-[1.02] hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: ADHX_PURPLE }}
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    <>
+                      <XIcon className="w-5 h-5" />
+                      Save this tweet
+                      <ArrowRight className="w-5 h-5" />
+                    </>
+                  )}
+                </button>
+                <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-3">
+                  Your bookmarks stay private.
+                </p>
+              </div>
+
             </div>
 
             {/* CTA Section - Right Column */}
@@ -359,11 +385,11 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
                 />
               </div>
 
-              {/* CTA Button */}
+              {/* CTA Button - Desktop only (mobile CTA is above value props) */}
               <button
                 onClick={handleLogin}
                 disabled={isLoading}
-                className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-[1.02] hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed animate-fade-in-up [animation-fill-mode:both] delay-300"
+                className="hidden md:inline-flex w-full items-center justify-center gap-3 px-8 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-[1.02] hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed animate-fade-in-up [animation-fill-mode:both] delay-300"
                 style={{ backgroundColor: ADHX_PURPLE }}
               >
                 {isLoading ? (
@@ -380,7 +406,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
                 )}
               </button>
 
-              <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
+              <p className="hidden md:block text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
                 Your bookmarks stay private.
               </p>
 
