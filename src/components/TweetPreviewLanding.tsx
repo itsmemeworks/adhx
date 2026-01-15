@@ -45,7 +45,7 @@ function ReadingTools({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Focus Mode Toggle */}
+          {/* Bionic Reading Toggle */}
           <button
             onClick={onBionicToggle}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
@@ -55,7 +55,7 @@ function ReadingTools({
             }`}
             title="Bolds first part of each word for easier reading"
           >
-            Focus
+            Bionic
           </button>
 
           {/* Divider */}
