@@ -50,6 +50,10 @@ export const bookmarks = sqliteTable(
     pk: primaryKey({ columns: [table.userId, table.id] }),
     userIdIdx: index('bookmarks_user_id_idx').on(table.userId),
     processedAtIdx: index('bookmarks_processed_at_idx').on(table.processedAt),
+    // Composite indexes for common query patterns
+    userIdProcessedAtIdx: index('bookmarks_user_processed_at_idx').on(table.userId, table.processedAt),
+    userIdCategoryIdx: index('bookmarks_user_category_idx').on(table.userId, table.category),
+    userIdQuotedTweetIdx: index('bookmarks_user_quoted_tweet_idx').on(table.userId, table.quotedTweetId),
   })
 )
 
@@ -161,6 +165,8 @@ export const readStatus = sqliteTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.userId, table.bookmarkId] }),
+    // Index for counting read items per user
+    userIdIdx: index('read_status_user_id_idx').on(table.userId),
   })
 )
 

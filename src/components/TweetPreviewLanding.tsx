@@ -1,14 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowRight, Loader2, Search, Sparkles, Play, Zap, Eye } from 'lucide-react'
+import { ArrowRight, Search, Sparkles, Play, Zap, Eye, Maximize2, Minimize2 } from 'lucide-react'
 import { ADHX_PURPLE } from '@/lib/gestalt/theme'
 import { type FxTwitterResponse } from '@/lib/media/fxembed'
 import { renderArticleBlock } from '@/components/feed/utils'
 import type { ArticleEntityMap } from '@/components/feed/types'
 import { FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
+import { XIcon } from '@/components/icons'
+import { AnimatedBackground, LandingAnimations } from '@/components/landing'
+import { formatCount, formatRelativeTime } from '@/lib/utils/format'
 
-// Extract the tweet type from FxTwitterResponse
+/** Tweet type extracted from FxTwitterResponse */
 type Tweet = NonNullable<FxTwitterResponse['tweet']>
 
 interface TweetPreviewLandingProps {
@@ -17,32 +20,76 @@ interface TweetPreviewLandingProps {
   tweet: Tweet
 }
 
-// Format large numbers with K/M suffix
-function formatCount(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
-  return n.toString()
+/** Reading tools panel for ADHD-friendly font and bionic reading controls */
+interface ReadingToolsProps {
+  bionicReading: boolean
+  onBionicToggle: () => void
+  selectedFont: BodyFont
+  onFontChange: (font: BodyFont) => void
+  className?: string
 }
 
-// Format relative time
-function formatRelativeTime(dateStr: string): string {
-  const date = new Date(dateStr)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+function ReadingTools({
+  bionicReading,
+  onBionicToggle,
+  selectedFont,
+  onFontChange,
+  className,
+}: ReadingToolsProps): React.ReactElement {
+  return (
+    <div className={`p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 ${className || ''}`}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-purple-600 dark:text-purple-300">
+          <Eye className="w-4 h-4 flex-shrink-0" />
+          <span className="text-xs font-medium">Reading tools</span>
+        </div>
 
-  if (diffDays === 0) return 'Today'
-  if (diffDays === 1) return 'Yesterday'
-  if (diffDays < 7) return `${diffDays}d ago`
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`
-  if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`
-  return `${Math.floor(diffDays / 365)}y ago`
+        <div className="flex items-center gap-2">
+          {/* Focus Mode Toggle */}
+          <button
+            onClick={onBionicToggle}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+              bionicReading
+                ? 'bg-purple-200 dark:bg-purple-800/50 text-purple-800 dark:text-purple-200'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-purple-100 dark:hover:bg-purple-900/30'
+            }`}
+            title="Bolds first part of each word for easier reading"
+          >
+            Focus
+          </button>
+
+          {/* Divider */}
+          <div className="w-px h-4 bg-purple-200 dark:bg-purple-700" />
+
+          {/* Font Selector */}
+          <div className="flex items-center gap-0.5">
+            {(Object.entries(FONT_OPTIONS) as [BodyFont, { name: string }][]).map(([key, { name }]) => (
+              <button
+                key={key}
+                onClick={() => onFontChange(key)}
+                className={`px-2 py-1 rounded-lg text-xs transition-colors ${
+                  selectedFont === key
+                    ? 'bg-purple-200 dark:bg-purple-800/50 text-purple-800 dark:text-purple-200'
+                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-purple-100 dark:hover:bg-purple-900/30'
+                }`}
+                style={{ fontFamily: `var(--font-${key})` }}
+                title={name}
+              >
+                Aa
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 }
 
-export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLandingProps) {
+export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLandingProps): React.ReactElement {
   const [isLoading, setIsLoading] = useState(false)
   const [bionicReading, setBionicReading] = useState(false)
   const [selectedFont, setSelectedFont] = useState<BodyFont>('ibm-plex')
+  const [isExpanded, setIsExpanded] = useState(false)
 
   const photos = tweet.media?.photos || []
   const videos = tweet.media?.videos || []
@@ -56,52 +103,8 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900 relative overflow-x-hidden">
-      {/* Animations */}
-      <style jsx>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-10px) rotate(2deg); }
-        }
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes pulse-glow {
-          0%, 100% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.2); }
-          50% { box-shadow: 0 0 40px rgba(139, 92, 246, 0.4); }
-        }
-        @keyframes blob {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          25% { transform: translate(20px, -30px) scale(1.1); }
-          50% { transform: translate(-20px, 20px) scale(0.9); }
-          75% { transform: translate(30px, 10px) scale(1.05); }
-        }
-        .animate-float { animation: float 4s ease-in-out infinite; }
-        .animate-fade-in-up { animation: fadeInUp 0.6s ease-out forwards; }
-        .animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
-        .animate-blob { animation: blob 20s ease-in-out infinite; }
-        .delay-100 { animation-delay: 0.1s; }
-        .delay-200 { animation-delay: 0.2s; }
-        .delay-300 { animation-delay: 0.3s; }
-        .delay-400 { animation-delay: 0.4s; }
-      `}</style>
-
-      {/* Animated Background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Gradient blobs */}
-        <div className="absolute -top-40 -left-40 w-80 h-80 bg-purple-300 dark:bg-purple-900/40 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-50 animate-blob" />
-        <div className="absolute top-20 -right-40 w-96 h-96 bg-pink-300 dark:bg-pink-900/40 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-40 animate-blob" style={{ animationDelay: '-5s' }} />
-        <div className="absolute bottom-40 left-20 w-72 h-72 bg-blue-300 dark:bg-blue-900/40 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-40 animate-blob" style={{ animationDelay: '-10s' }} />
-
-        {/* Dot grid pattern */}
-        <div
-          className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]"
-          style={{
-            backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)',
-            backgroundSize: '24px 24px',
-          }}
-        />
-      </div>
+      <LandingAnimations />
+      <AnimatedBackground />
 
       {/* Header */}
       <header className="relative z-10 p-4 sm:p-6">
@@ -129,10 +132,10 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
           {/* Hero Text - Tighter spacing on mobile */}
           <div className="text-center mb-4 md:mb-6 lg:mb-8 animate-fade-in-up [animation-fill-mode:both]">
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-3">
-              Ooh, this looks good
+              Found something good?
             </h1>
             <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              Quick, save it before you forget. <span className="text-purple-600 dark:text-purple-400 font-medium">Future you will be grateful.</span>
+              Save it now before <span className="text-purple-600 dark:text-purple-400 font-medium">47 browser tabs</span> make you forget.
             </p>
           </div>
 
@@ -140,7 +143,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
           <div className="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start">
             {/* Tweet Card - Left Column - Fixed max heights for scrollable mobile, viewport-based for desktop */}
             <div className="animate-fade-in-up [animation-fill-mode:both] delay-100">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]">
+              <div className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] ${isExpanded ? '' : 'max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]'}`}>
                 {/* Author Header */}
                 <div className="p-4 pb-3">
                   <div className="flex items-center gap-3">
@@ -174,16 +177,14 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
                       title="View on X"
                     >
                       {formatRelativeTime(tweet.created_at)}
-                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                      </svg>
+                      <XIcon className="w-3 h-3" />
                     </a>
                   </div>
                 </div>
 
                 {/* Scrollable Content Area */}
                 <div
-                  className="flex-1 overflow-y-auto min-h-0"
+                  className={`flex-1 min-h-0 ${isExpanded ? '' : 'overflow-y-auto'}`}
                   style={{ fontFamily: `var(--font-${selectedFont})` }}
                 >
                 {/* Tweet Text or Article */}
@@ -308,57 +309,58 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
                       {formatCount(tweet.views)}
                     </span>
                   )}
+                  {/* Expand/Collapse Toggle */}
+                  <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                    title={isExpanded ? 'Collapse tweet' : 'Expand tweet'}
+                  >
+                    {isExpanded ? (
+                      <Minimize2 className="w-4 h-4" />
+                    ) : (
+                      <Maximize2 className="w-4 h-4" />
+                    )}
+                    <span className="text-xs hidden sm:inline">{isExpanded ? 'Collapse' : 'Expand'}</span>
+                  </button>
                 </div>
               </div>
 
               {/* ADHD Reading Tools - Mobile only, below tweet card for easy thumb access */}
               {tweet.article && (
-                <div className="md:hidden mt-4 p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 text-purple-600 dark:text-purple-300">
-                      <Eye className="w-4 h-4 flex-shrink-0" />
-                      <span className="text-xs font-medium">Reading tools</span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {/* Focus Mode Toggle */}
-                      <button
-                        onClick={() => setBionicReading(!bionicReading)}
-                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                          bionicReading
-                            ? 'bg-purple-200 dark:bg-purple-800/50 text-purple-800 dark:text-purple-200'
-                            : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-purple-100 dark:hover:bg-purple-900/30'
-                        }`}
-                        title="Bolds first part of each word for easier reading"
-                      >
-                        Focus
-                      </button>
-
-                      {/* Divider */}
-                      <div className="w-px h-4 bg-purple-200 dark:bg-purple-700" />
-
-                      {/* Font Selector */}
-                      <div className="flex items-center gap-0.5">
-                        {(Object.entries(FONT_OPTIONS) as [BodyFont, { name: string }][]).map(([key, { name }]) => (
-                          <button
-                            key={key}
-                            onClick={() => setSelectedFont(key)}
-                            className={`px-2 py-1 rounded-lg text-xs transition-colors ${
-                              selectedFont === key
-                                ? 'bg-purple-200 dark:bg-purple-800/50 text-purple-800 dark:text-purple-200'
-                                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-purple-100 dark:hover:bg-purple-900/30'
-                            }`}
-                            style={{ fontFamily: `var(--font-${key})` }}
-                            title={name}
-                          >
-                            Aa
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <ReadingTools
+                  bionicReading={bionicReading}
+                  onBionicToggle={() => setBionicReading(!bionicReading)}
+                  selectedFont={selectedFont}
+                  onFontChange={setSelectedFont}
+                  className="md:hidden mt-4"
+                />
               )}
+
+              {/* Mobile CTA - positioned right after reading tools, above value props */}
+              <div className="md:hidden mt-4">
+                <button
+                  onClick={handleLogin}
+                  disabled={isLoading}
+                  className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-[1.02] hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: ADHX_PURPLE }}
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    <>
+                      <XIcon className="w-5 h-5" />
+                      Save this tweet
+                      <ArrowRight className="w-5 h-5" />
+                    </>
+                  )}
+                </button>
+                <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-3">
+                  Into your own Collection. Visible only to you.
+                </p>
+              </div>
 
             </div>
 
@@ -383,31 +385,29 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
                 />
               </div>
 
-              {/* CTA Button */}
+              {/* CTA Button - Desktop only (mobile CTA is above value props) */}
               <button
                 onClick={handleLogin}
                 disabled={isLoading}
-                className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-[1.02] hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed animate-fade-in-up [animation-fill-mode:both] delay-300"
+                className="hidden md:inline-flex w-full items-center justify-center gap-3 px-8 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-[1.02] hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed animate-fade-in-up [animation-fill-mode:both] delay-300"
                 style={{ backgroundColor: ADHX_PURPLE }}
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     Connecting...
                   </>
                 ) : (
                   <>
-                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                    </svg>
+                    <XIcon className="w-5 h-5" />
                     Save this tweet
                     <ArrowRight className="w-5 h-5" />
                   </>
                 )}
               </button>
 
-              <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
-                Your bookmarks stay private.
+              <p className="hidden md:block text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
+                Into your own Collection. Visible only to you.
               </p>
 
               {/* URL Trick Callout */}
@@ -429,51 +429,13 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
 
               {/* ADHD Reading Tools - Below Pro tip (desktop only) */}
               {tweet.article && (
-                <div className="hidden md:block mt-4 p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 text-purple-600 dark:text-purple-300">
-                      <Eye className="w-4 h-4 flex-shrink-0" />
-                      <span className="text-xs font-medium">Reading tools</span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {/* Focus Mode Toggle */}
-                      <button
-                        onClick={() => setBionicReading(!bionicReading)}
-                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                          bionicReading
-                            ? 'bg-purple-200 dark:bg-purple-800/50 text-purple-800 dark:text-purple-200'
-                            : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-purple-100 dark:hover:bg-purple-900/30'
-                        }`}
-                        title="Bolds first part of each word for easier reading"
-                      >
-                        Focus
-                      </button>
-
-                      {/* Divider */}
-                      <div className="w-px h-4 bg-purple-200 dark:bg-purple-700" />
-
-                      {/* Font Selector */}
-                      <div className="flex items-center gap-0.5">
-                        {(Object.entries(FONT_OPTIONS) as [BodyFont, { name: string }][]).map(([key, { name }]) => (
-                          <button
-                            key={key}
-                            onClick={() => setSelectedFont(key)}
-                            className={`px-2 py-1 rounded-lg text-xs transition-colors ${
-                              selectedFont === key
-                                ? 'bg-purple-200 dark:bg-purple-800/50 text-purple-800 dark:text-purple-200'
-                                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-purple-100 dark:hover:bg-purple-900/30'
-                            }`}
-                            style={{ fontFamily: `var(--font-${key})` }}
-                            title={name}
-                          >
-                            Aa
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <ReadingTools
+                  bionicReading={bionicReading}
+                  onBionicToggle={() => setBionicReading(!bionicReading)}
+                  selectedFont={selectedFont}
+                  onFontChange={setSelectedFont}
+                  className="hidden md:block mt-4"
+                />
               )}
             </div>
           </div>
@@ -490,8 +452,8 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
   )
 }
 
-// Benefit item component
-function BenefitItem({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
+/** Benefit item component for CTA section */
+function BenefitItem({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }): React.ReactElement {
   return (
     <div className="flex gap-4 p-4 rounded-xl bg-white dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 hover:border-purple-200 dark:hover:border-purple-700 transition-colors">
       <div
@@ -508,7 +470,7 @@ function BenefitItem({ icon, title, description }: { icon: React.ReactNode; titl
   )
 }
 
-// Media grid component
+/** Media grid component for displaying tweet photos and videos */
 interface MediaGridProps {
   photos: Array<{ url: string; width: number; height: number }>
   videos: Array<{ url: string; thumbnail_url: string; width: number; height: number }>
@@ -516,7 +478,7 @@ interface MediaGridProps {
   tweetId: string
 }
 
-function MediaGrid({ photos, videos, author, tweetId }: MediaGridProps) {
+function MediaGrid({ photos, videos, author, tweetId }: MediaGridProps): React.ReactElement {
   const totalMedia = photos.length + videos.length
 
   // Single media item - full width with responsive heights
@@ -558,8 +520,8 @@ function MediaGrid({ photos, videos, author, tweetId }: MediaGridProps) {
   )
 }
 
-// Video player component - uses server-side proxy to avoid CORS issues
-function VideoPlayer({ author, tweetId, thumbnail }: { author: string; tweetId: string; thumbnail: string }) {
+/** Video player component - uses server-side proxy to avoid CORS issues */
+function VideoPlayer({ author, tweetId, thumbnail }: { author: string; tweetId: string; thumbnail: string }): React.ReactElement {
   const [isPlaying, setIsPlaying] = useState(false)
 
   if (!isPlaying) {
@@ -592,14 +554,14 @@ function VideoPlayer({ author, tweetId, thumbnail }: { author: string; tweetId: 
   )
 }
 
-// Quote tweet preview component with full media support
+/** Quote tweet preview component with full media support */
 interface QuoteTweetPreviewProps {
   quote: NonNullable<Tweet['quote']>
   quoteAuthor: string
   quoteTweetId: string
 }
 
-function QuoteTweetPreview({ quote, quoteAuthor, quoteTweetId }: QuoteTweetPreviewProps) {
+function QuoteTweetPreview({ quote, quoteAuthor, quoteTweetId }: QuoteTweetPreviewProps): React.ReactElement {
   const photos = quote.media?.photos || []
   const videos = quote.media?.videos || []
   const hasMedia = photos.length > 0 || videos.length > 0
@@ -649,12 +611,12 @@ function QuoteTweetPreview({ quote, quoteAuthor, quoteTweetId }: QuoteTweetPrevi
   )
 }
 
-// External link preview with enhanced article detection
+/** External link preview with enhanced article detection */
 interface ExternalLinkPreviewProps {
   external: NonNullable<Tweet['external']>
 }
 
-function ExternalLinkPreview({ external }: ExternalLinkPreviewProps) {
+function ExternalLinkPreview({ external }: ExternalLinkPreviewProps): React.ReactElement {
   // Detect if this is an article-type link (has title, description > 80 chars)
   const isArticle = Boolean(
     external.title &&

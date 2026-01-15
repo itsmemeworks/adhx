@@ -14,6 +14,7 @@ import {
   streamedBookmarkToFeedItem,
 } from '@/components/feed'
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Loader2, CheckCircle2 } from 'lucide-react'
 import { useTheme } from '@/lib/theme/context'
 
@@ -770,57 +771,63 @@ function FeedPageContent(): React.ReactElement {
         </div>
       )}
 
-      <FilterBar
-        filter={filter}
-        onFilterChange={setFilter}
-        unreadOnly={unreadOnly}
-        onUnreadOnlyChange={setUnreadOnly}
-        selectedTags={selectedTags}
-        onSelectedTagsChange={setSelectedTags}
-        availableTags={availableTags}
-        stats={stats}
-      />
+      <ErrorBoundary componentName="FilterBar">
+        <FilterBar
+          filter={filter}
+          onFilterChange={setFilter}
+          unreadOnly={unreadOnly}
+          onUnreadOnlyChange={setUnreadOnly}
+          selectedTags={selectedTags}
+          onSelectedTagsChange={setSelectedTags}
+          availableTags={availableTags}
+          stats={stats}
+        />
+      </ErrorBoundary>
 
       <div className="p-4">
-        <FeedGrid
-          items={items}
-          loading={loading}
-          hasMore={hasMore}
-          lastSyncAt={lastSyncAt}
-          unreadOnly={unreadOnly}
-          stats={stats}
-          onExpand={setSelectedIndex}
-          onMarkRead={handleMarkAsRead}
-          onRemove={(id) => setItems((prev) => prev.filter((i) => i.id !== id))}
-          onLoadMore={loadMore}
-          onShowAll={() => setUnreadOnly(false)}
-        />
+        <ErrorBoundary componentName="FeedGrid">
+          <FeedGrid
+            items={items}
+            loading={loading}
+            hasMore={hasMore}
+            lastSyncAt={lastSyncAt}
+            unreadOnly={unreadOnly}
+            stats={stats}
+            onExpand={setSelectedIndex}
+            onMarkRead={handleMarkAsRead}
+            onRemove={(id) => setItems((prev) => prev.filter((i) => i.id !== id))}
+            onLoadMore={loadMore}
+            onShowAll={() => setUnreadOnly(false)}
+          />
+        </ErrorBoundary>
       </div>
 
       {selectedItem && selectedIndex !== null && (
-        <Lightbox
-          item={selectedItem}
-          index={selectedIndex}
-          total={items.length}
-          onClose={() => setSelectedIndex(null)}
-          onPrev={() => setSelectedIndex(selectedIndex > 0 ? selectedIndex - 1 : items.length - 1)}
-          onNext={() => setSelectedIndex(selectedIndex < items.length - 1 ? selectedIndex + 1 : 0)}
-          onMarkRead={() => handleMarkAsRead(selectedItem.id)}
-          markingRead={markingRead}
-          onTagAdd={(tag) => handleAddTag(selectedItem.id, tag)}
-          onTagRemove={(tag) => handleRemoveTag(selectedItem.id, tag)}
-          availableTags={availableTags}
-          unreadOnly={unreadOnly}
-          onRemoveItem={() => setItems((prev) => prev.filter((i) => i.id !== selectedItem.id))}
-          onNavigateToId={(id) => {
-            const targetIndex = items.findIndex((i) => i.id === id)
-            if (targetIndex !== -1) {
-              setSelectedIndex(targetIndex)
-              return true
-            }
-            return false
-          }}
-        />
+        <ErrorBoundary componentName="Lightbox">
+          <Lightbox
+            item={selectedItem}
+            index={selectedIndex}
+            total={items.length}
+            onClose={() => setSelectedIndex(null)}
+            onPrev={() => setSelectedIndex(selectedIndex > 0 ? selectedIndex - 1 : items.length - 1)}
+            onNext={() => setSelectedIndex(selectedIndex < items.length - 1 ? selectedIndex + 1 : 0)}
+            onMarkRead={() => handleMarkAsRead(selectedItem.id)}
+            markingRead={markingRead}
+            onTagAdd={(tag) => handleAddTag(selectedItem.id, tag)}
+            onTagRemove={(tag) => handleRemoveTag(selectedItem.id, tag)}
+            availableTags={availableTags}
+            unreadOnly={unreadOnly}
+            onRemoveItem={() => setItems((prev) => prev.filter((i) => i.id !== selectedItem.id))}
+            onNavigateToId={(id) => {
+              const targetIndex = items.findIndex((i) => i.id === id)
+              if (targetIndex !== -1) {
+                setSelectedIndex(targetIndex)
+                return true
+              }
+              return false
+            }}
+          />
+        </ErrorBoundary>
       )}
 
       {/* Keyboard Shortcuts Modal */}
