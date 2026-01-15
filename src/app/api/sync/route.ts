@@ -8,6 +8,12 @@ import { nanoid } from '@/lib/utils'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { captureException, metrics } from '@/lib/sentry'
 import type { StreamedBookmark } from '@/components/feed/types'
+import {
+  categorizeTweetByUrls,
+  extractDomain,
+  determineLinkType,
+} from '@/lib/tweets/processor'
+import { getSyncCooldownMs } from '@/lib/sync/config'
 
 // GET /api/sync - SSE endpoint for sync progress
 export async function GET(request: NextRequest) {
@@ -17,8 +23,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Check cooldown - 1 hour between syncs (strict userId check)
-  const cooldownMs = 60 * 60 * 1000 // 1 hour
+  // Check cooldown between syncs (configurable via SYNC_COOLDOWN_MINUTES env)
+  const cooldownMs = getSyncCooldownMs()
   const [lastSync] = await db
     .select()
     .from(syncLogs)
@@ -230,8 +236,8 @@ async function saveBookmark(
     ? `https://x.com/${authorUsername}/status/${tweet.id}`
     : `https://x.com/i/status/${tweet.id}`
 
-  // Determine category based on URLs
-  let category = categorizeBookmark(tweet)
+  // Determine category based on URLs (will be overridden by FxTwitter if media detected)
+  let category = categorizeTweetByUrls(tweet.entities?.urls?.map(u => ({ expandedUrl: u.expandedUrl })) || [])
 
   // Check for reply/quote/retweet context
   const isReply = tweet.referencedTweets?.some((rt) => rt.type === 'replied_to') || false
@@ -650,44 +656,5 @@ async function saveBookmark(
   }
 }
 
-function categorizeBookmark(tweet: TwitterBookmark): string {
-  // Only detect articles from known blog/article platforms
-  // All other categorization is done via user tags
-  const urls = tweet.entities?.urls || []
-
-  for (const url of urls) {
-    const expanded = url.expandedUrl.toLowerCase()
-
-    if (
-      expanded.includes('medium.com') ||
-      expanded.includes('substack.com') ||
-      expanded.includes('dev.to') ||
-      expanded.includes('/article/') ||
-      expanded.includes('/blog/')
-    ) {
-      return 'article'
-    }
-  }
-
-  return 'tweet'
-}
-
-function extractDomain(url: string): string {
-  try {
-    const parsed = new URL(url)
-    return parsed.hostname.replace('www.', '')
-  } catch {
-    return ''
-  }
-}
-
-function determineLinkType(url: string): string {
-  const lower = url.toLowerCase()
-
-  if (lower.includes('twitter.com') || lower.includes('x.com')) return 'tweet'
-  if (lower.includes('youtube.com') || lower.includes('youtu.be')) return 'video'
-  if (/\.(jpg|jpeg|png|gif|webp)$/i.test(lower)) return 'image'
-  if (/\.(mp4|webm|mov)$/i.test(lower)) return 'media'
-
-  return 'link'
-}
+// Note: categorizeBookmark, extractDomain, and determineLinkType are now
+// imported from @/lib/tweets/processor for consistency with /api/tweets/add

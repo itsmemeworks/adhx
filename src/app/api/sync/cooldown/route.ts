@@ -3,8 +3,7 @@ import { db } from '@/lib/db'
 import { syncLogs } from '@/lib/db/schema'
 import { eq, or, isNull, desc, and } from 'drizzle-orm'
 import { getCurrentUserId } from '@/lib/auth/session'
-
-const COOLDOWN_MS = 15 * 60 * 1000 // 15 minutes
+import { getSyncCooldownMs } from '@/lib/sync/config'
 
 // GET /api/sync/cooldown - Check if user can sync
 export async function GET() {
@@ -34,7 +33,8 @@ export async function GET() {
   }
 
   const elapsed = Date.now() - new Date(lastSync.completedAt).getTime()
-  const cooldownRemaining = Math.max(0, COOLDOWN_MS - elapsed)
+  const cooldownMs = getSyncCooldownMs()
+  const cooldownRemaining = Math.max(0, cooldownMs - elapsed)
 
   return NextResponse.json({
     canSync: cooldownRemaining === 0,

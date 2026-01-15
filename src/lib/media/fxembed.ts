@@ -157,7 +157,23 @@ export interface FxTwitterResponse {
         height: number
         duration: number
       }>
+      // Combined array with type field (used by add endpoint)
+      all?: Array<{
+        type: 'photo' | 'video' | 'animated_gif'
+        url: string
+        thumbnail_url?: string
+        width: number
+        height: number
+        duration?: number
+      }>
     }
+    // URLs extracted from tweet text
+    urls?: Array<{
+      url: string
+      expanded_url?: string
+      display_url?: string
+      domain?: string
+    }>
     // External link preview (Twitter Card)
     twitter_card?: 'summary' | 'summary_large_image' | 'player'
     external?: {
@@ -196,6 +212,25 @@ export interface FxTwitterResponse {
           width: number
           height: number
         }>
+      }
+      // Article in quoted tweet
+      article?: {
+        id: string
+        title: string
+        preview_text?: string
+        cover_media?: {
+          media_info?: {
+            original_img_url?: string
+          }
+        }
+      }
+      // External link in quoted tweet
+      external?: {
+        url: string
+        expanded_url?: string
+        title?: string
+        description?: string
+        thumbnail_url?: string
       }
     }
     // X Article content
