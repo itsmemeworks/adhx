@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.0](https://github.com/itsmemeworks/adhx/compare/v1.12.0...v1.13.0) (2026-01-15)
+
+
+### Features
+
+* quote card in media lightbox + bug fixes + manual filter ([#53](https://github.com/itsmemeworks/adhx/issues/53)) ([786216a](https://github.com/itsmemeworks/adhx/commit/786216aecfe11c24ff549cf275b290ffe1cf55dd))
+
 ## [1.12.0](https://github.com/itsmemeworks/adhx/compare/v1.11.0...v1.12.0) (2026-01-15)
 
 
