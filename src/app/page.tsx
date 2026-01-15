@@ -80,7 +80,7 @@ function FeedPageContent(): React.ReactElement {
   const [showSyncModal, setShowSyncModal] = useState(false)
   const [streamedItems, setStreamedItems] = useState<FeedItem[]>([])
   const syncTriggeredRef = useRef(false)
-  const [pendingNavigationId, setPendingNavigationId] = useState<string | null>(null)
+  const [pendingNavigation, setPendingNavigation] = useState<{ id: string; fallbackUrl?: string } | null>(null)
   const prevLoadingRef = useRef(false)
   const [showShortcutsModal, setShowShortcutsModal] = useState(false)
 
@@ -300,15 +300,22 @@ function FeedPageContent(): React.ReactElement {
     prevLoadingRef.current = loading
 
     // Only proceed if we have a pending navigation AND loading just finished
-    if (pendingNavigationId && wasLoading && !loading && items.length > 0) {
-      const targetIndex = items.findIndex((i) => i.id === pendingNavigationId)
+    if (pendingNavigation && wasLoading && !loading && items.length > 0) {
+      const targetIndex = items.findIndex((i) => i.id === pendingNavigation.id)
       if (targetIndex !== -1) {
         setSelectedIndex(targetIndex)
+      } else if (pendingNavigation.fallbackUrl) {
+        // Parent tweet not in user's collection - open externally as fallback
+        window.open(pendingNavigation.fallbackUrl, '_blank')
+        setSelectedIndex(null)
+      } else {
+        // No fallback URL available - just close lightbox
+        setSelectedIndex(null)
       }
-      // Clear pending navigation regardless of whether we found it
-      setPendingNavigationId(null)
+      // Clear pending navigation regardless of outcome
+      setPendingNavigation(null)
     }
-  }, [pendingNavigationId, items, loading])
+  }, [pendingNavigation, items, loading])
 
   useEffect(() => {
     const params = new URLSearchParams()
@@ -343,7 +350,40 @@ function FeedPageContent(): React.ReactElement {
     setUnreadOnly(true)
     setSearch('')
     setSelectedTags([])
-    setPendingNavigationId(openId)
+    setPendingNavigation({ id: openId })
+  }, [searchParams]) // Only run when searchParams changes
+
+  // Handle ?added=success URL parameter after adding tweet via URL prefix
+  useEffect(() => {
+    const added = searchParams.get('added')
+    const tweetId = searchParams.get('tweetId')
+
+    if (!added || !tweetId) return
+
+    // Clear the added params from URL immediately
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('added')
+    params.delete('tweetId')
+    params.delete('author')
+    params.delete('text')
+    params.delete('error')
+    const queryString = params.toString()
+    router.replace(queryString ? `?${queryString}` : '/', { scroll: false })
+
+    // Refresh the feed to include the newly added tweet
+    fetchFeed(true).then(() => {
+      // After feed loads, find and open the new tweet
+      // Use a small delay to ensure items state is updated
+      setTimeout(() => {
+        const newIndex = items.findIndex((i) => i.id === tweetId)
+        if (newIndex !== -1) {
+          setSelectedIndex(newIndex)
+        } else {
+          // If not found in current view, use pending navigation
+          setPendingNavigation({ id: tweetId })
+        }
+      }, 100)
+    })
   }, [searchParams]) // Only run when searchParams changes
 
   const handleMarkAsRead = useCallback(
@@ -468,9 +508,10 @@ function FeedPageContent(): React.ReactElement {
               setSelectedIndex(quotedIndex)
             } else {
               // Quoted tweet not in current feed - switch to "all" filter and navigate after reload
-              setPendingNavigationId(selectedItem.quotedTweetId)
+              // Include fallback URL to open externally if not in user's collection
+              const quotedUrl = selectedItem.quotedTweet?.tweetUrl
+              setPendingNavigation({ id: selectedItem.quotedTweetId, fallbackUrl: quotedUrl })
               setFilter('all')
-              setUnreadOnly(false)
               setSearch('')
             }
           }
@@ -485,10 +526,11 @@ function FeedPageContent(): React.ReactElement {
               setSelectedIndex(parentIndex)
             } else {
               // Parent not in current feed - switch to "all" filter and navigate after reload
-              setPendingNavigationId(parentId)
+              // Include fallback URL to open externally if parent not in user's collection
+              const parentUrl = selectedItem.parentTweets[0].tweetUrl
+              setPendingNavigation({ id: parentId, fallbackUrl: parentUrl })
               setFilter('all')
-              setUnreadOnly(false) // Also clear unread filter to ensure we find it
-              setSearch('') // Clear search too
+              setSearch('')
             }
           }
           break
@@ -497,6 +539,14 @@ function FeedPageContent(): React.ReactElement {
           // Open current tweet externally
           if (selectedItem?.tweetUrl) {
             window.open(selectedItem.tweetUrl, '_blank')
+          }
+          break
+        case 's':
+        case 'S':
+          // Copy ADHX share link to clipboard
+          if (selectedItem) {
+            const shareUrl = `${window.location.origin}/${selectedItem.author}/status/${selectedItem.id}`
+            navigator.clipboard.writeText(shareUrl)
           }
           break
         case 'g':
@@ -531,6 +581,7 @@ function FeedPageContent(): React.ReactElement {
       '4': 'text',
       '5': 'articles',
       '6': 'quoted',
+      '7': 'manual',
     }
 
     function handleGlobalKeyDown(e: KeyboardEvent): void {
@@ -818,12 +869,17 @@ function FeedPageContent(): React.ReactElement {
             availableTags={availableTags}
             unreadOnly={unreadOnly}
             onRemoveItem={() => setItems((prev) => prev.filter((i) => i.id !== selectedItem.id))}
-            onNavigateToId={(id) => {
+            onNavigateToId={(id, fallbackUrl) => {
               const targetIndex = items.findIndex((i) => i.id === id)
               if (targetIndex !== -1) {
                 setSelectedIndex(targetIndex)
                 return true
               }
+              // Item not in current feed - switch to "all" filter and navigate after reload
+              // Pass fallbackUrl so we can open externally if item not in user's collection
+              setPendingNavigation({ id, fallbackUrl })
+              setFilter('all')
+              setSearch('')
               return false
             }}
           />

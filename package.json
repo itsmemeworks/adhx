@@ -10,6 +10,7 @@
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
     "db:migrate": "tsx src/lib/db/migrate.ts",
+    "db:reset": "tsx src/lib/db/reset.ts",
     "db:seed": "tsx src/lib/db/seed.ts",
     "test": "vitest run",
     "test:watch": "vitest",

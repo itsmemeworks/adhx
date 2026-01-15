@@ -34,7 +34,7 @@ interface LightboxProps {
   availableTags: TagItem[]
   unreadOnly?: boolean
   onRemoveItem?: () => void
-  onNavigateToId?: (id: string) => boolean // Returns true if navigation succeeded (id was in feed)
+  onNavigateToId?: (id: string, fallbackUrl?: string) => boolean // Returns true if navigation succeeded (id was in feed)
 }
 
 export function Lightbox({
@@ -220,7 +220,7 @@ export function Lightbox({
 
       {/* Keyboard hint - hidden on mobile */}
       <div className="hidden sm:block absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs">
-        &larr; &rarr; navigate | R read | U unread | T tag | Q quoted | P parent | X open | Esc close
+        &larr; &rarr; navigate | R read | U unread | T tag | Q quoted | P parent | S share | X open | Esc close
       </div>
     </div>
   )
@@ -236,7 +236,7 @@ interface LightboxContentProps {
   availableTags: TagItem[]
   tagInputRef: React.RefObject<TagInputHandle | null>
   bionicReading: boolean
-  onNavigateToId?: (id: string) => boolean
+  onNavigateToId?: (id: string, fallbackUrl?: string) => boolean
 }
 
 function MediaLightboxContent({
@@ -259,14 +259,11 @@ function MediaLightboxContent({
   const hasMedia = item.media && item.media.length > 0
   const renderText = bionicReading ? renderBionicTextWithLinks : renderTextWithLinks
 
-  // Handle parent navigation
+  // Handle parent navigation - parent component handles filter switching if item not in current view
   const handleNavigateToParent = (): void => {
     if (item.parentTweets?.[0]?.id && onNavigateToId) {
-      const success = onNavigateToId(item.parentTweets[0].id)
-      if (!success) {
-        // Parent not in current feed - open in new tab
-        window.open(item.parentTweets[0].tweetUrl, '_blank')
-      }
+      const parentTweet = item.parentTweets[0]
+      onNavigateToId(parentTweet.id, parentTweet.tweetUrl)
     }
   }
 
@@ -284,8 +281,8 @@ function MediaLightboxContent({
               loop={primaryMedia.mediaType === 'animated_gif'}
               className="max-w-full max-h-[50vh] lg:max-h-[80vh] rounded-xl lg:rounded-2xl bg-black"
             />
-            {/* Share/Download buttons for video */}
-            <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Download button for video */}
+            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
                 onClick={(e) => handleDownloadMedia(
                   e,
@@ -296,25 +293,6 @@ function MediaLightboxContent({
                 title="Download"
               >
                 <Download className="w-4 h-4 text-white" />
-              </button>
-              <button
-                onClick={async (e) => {
-                  e.stopPropagation()
-                  const url = `${window.location.origin}/api/media/video?author=${item.author}&tweetId=${item.id}&quality=full`
-                  if (navigator.share) {
-                    try {
-                      await navigator.share({ url, title: `Tweet by @${item.author}` })
-                    } catch {
-                      // User cancelled or share failed
-                    }
-                  } else {
-                    await navigator.clipboard.writeText(url)
-                  }
-                }}
-                className="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
-                title="Share"
-              >
-                <Share2 className="w-4 h-4 text-white" />
               </button>
             </div>
           </div>
@@ -330,32 +308,14 @@ function MediaLightboxContent({
                     alt={`Image ${index + 1} of ${item.media!.length}`}
                     className="max-w-full max-h-[70vh] rounded-xl lg:rounded-2xl object-contain mx-auto"
                   />
-                  {/* Share/Download buttons per image */}
-                  <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover/img:opacity-100 transition-opacity">
+                  {/* Download button per image */}
+                  <div className="absolute top-3 right-3 opacity-0 group-hover/img:opacity-100 transition-opacity">
                     <button
                       onClick={(e) => handleDownloadMedia(e, media.url, `tweet-${item.id}-${index + 1}.jpg`)}
                       className="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
                       title="Download"
                     >
                       <Download className="w-4 h-4 text-white" />
-                    </button>
-                    <button
-                      onClick={async (e) => {
-                        e.stopPropagation()
-                        if (navigator.share) {
-                          try {
-                            await navigator.share({ url: media.url, title: `Tweet by @${item.author}` })
-                          } catch {
-                            // User cancelled or share failed
-                          }
-                        } else {
-                          await navigator.clipboard.writeText(media.url)
-                        }
-                      }}
-                      className="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
-                      title="Share"
-                    >
-                      <Share2 className="w-4 h-4 text-white" />
                     </button>
                   </div>
                 </div>
@@ -370,32 +330,14 @@ function MediaLightboxContent({
               alt=""
               className="max-w-full max-h-[50vh] lg:max-h-[80vh] rounded-xl lg:rounded-2xl object-contain"
             />
-            {/* Share/Download buttons for single image */}
-            <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Download button for single image */}
+            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
                 onClick={(e) => handleDownloadMedia(e, primaryMedia.url, `tweet-${item.id}.jpg`)}
                 className="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
                 title="Download"
               >
                 <Download className="w-4 h-4 text-white" />
-              </button>
-              <button
-                onClick={async (e) => {
-                  e.stopPropagation()
-                  if (navigator.share) {
-                    try {
-                      await navigator.share({ url: primaryMedia.url, title: `Tweet by @${item.author}` })
-                    } catch {
-                      // User cancelled or share failed
-                    }
-                  } else {
-                    await navigator.clipboard.writeText(primaryMedia.url)
-                  }
-                }}
-                className="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
-                title="Share"
-              >
-                <Share2 className="w-4 h-4 text-white" />
               </button>
             </div>
           </div>
@@ -422,6 +364,10 @@ function MediaLightboxContent({
           <p className="text-gray-900 dark:text-white text-sm leading-relaxed mb-4 line-clamp-4 lg:line-clamp-none">
             {renderText(stripMediaUrls(item.text, !!hasMedia))}
           </p>
+        )}
+        {/* Embedded QuoteCard for quote tweets with media */}
+        {item.isQuote && (item.quotedTweet || item.quoteContext) && (
+          <QuoteCard item={item} onNavigateToId={onNavigateToId} compact />
         )}
         <BottomBar
           item={item}
@@ -452,14 +398,11 @@ function TextLightboxContent({
 }: LightboxContentProps): React.ReactElement {
   const renderText = bionicReading ? renderBionicTextWithLinks : renderTextWithLinks
 
-  // Handle parent navigation
+  // Handle parent navigation - parent component handles filter switching if item not in current view
   const handleNavigateToParent = (): void => {
     if (item.parentTweets?.[0]?.id && onNavigateToId) {
-      const success = onNavigateToId(item.parentTweets[0].id)
-      if (!success) {
-        // Parent not in current feed - open in new tab
-        window.open(item.parentTweets[0].tweetUrl, '_blank')
-      }
+      const parentTweet = item.parentTweets[0]
+      onNavigateToId(parentTweet.id, parentTweet.tweetUrl)
     }
   }
 
@@ -508,6 +451,29 @@ function TextLightboxContent({
 }
 
 function AuthorHeader({ item }: { item: FeedItem }): React.ReactElement {
+  // Build ADHX share URL format: {domain}/{author}/status/{id}
+  const getAdhxShareUrl = (): string => {
+    // Use window.location.origin to get the current domain
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+    return `${baseUrl}/${item.author}/status/${item.id}`
+  }
+
+  const handleShare = async (e: React.MouseEvent): Promise<void> => {
+    e.stopPropagation()
+    const shareUrl = getAdhxShareUrl()
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ url: shareUrl })
+      } catch {
+        // User cancelled or share failed - fall back to clipboard
+        await navigator.clipboard.writeText(shareUrl)
+      }
+    } else {
+      await navigator.clipboard.writeText(shareUrl)
+    }
+  }
+
   return (
     <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-200 dark:border-gray-800">
       <AuthorAvatar src={item.authorProfileImageUrl} author={item.author} size="lg" />
@@ -515,15 +481,24 @@ function AuthorHeader({ item }: { item: FeedItem }): React.ReactElement {
         <span className="text-gray-900 dark:text-white font-medium block truncate">@{item.author}</span>
         {item.authorName && <p className="text-gray-500 dark:text-white/60 text-sm truncate">{item.authorName}</p>}
       </div>
-      <a
-        href={item.tweetUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
-        title="View on X"
-      >
-        <ExternalLink className="w-4 h-4 text-gray-700 dark:text-white" />
-      </a>
+      <div className="flex gap-2 flex-shrink-0">
+        <button
+          onClick={handleShare}
+          className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          title="Share via ADHX"
+        >
+          <Share2 className="w-4 h-4 text-gray-700 dark:text-white" />
+        </button>
+        <a
+          href={item.tweetUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          title="View on X"
+        >
+          <ExternalLink className="w-4 h-4 text-gray-700 dark:text-white" />
+        </a>
+      </div>
     </div>
   )
 }
@@ -627,6 +602,105 @@ function RetweetContent({ retweetContext, bionicReading }: { retweetContext: Non
   )
 }
 
+// Reusable QuoteCard component for displaying embedded quoted tweets
+function QuoteCard({
+  item,
+  onNavigateToId,
+  compact = false,
+}: {
+  item: FeedItem
+  onNavigateToId?: (id: string, fallbackUrl?: string) => boolean
+  compact?: boolean
+}): React.ReactElement | null {
+  const quotedTweet = item.quotedTweet
+  const quoteContext = item.quoteContext
+
+  if (!quotedTweet && !quoteContext) {
+    return null
+  }
+
+  // Build quoted tweet data from either source
+  const quotedAuthor = quotedTweet?.author || quoteContext?.author || ''
+  const quotedAuthorName = quotedTweet?.authorName || quoteContext?.authorName || quotedAuthor
+  const quotedProfileImage = quotedTweet?.authorProfileImageUrl || quoteContext?.authorProfileImageUrl
+  const quotedText = quotedTweet?.text || quoteContext?.text || ''
+  const quotedTweetId = quotedTweet?.id || quoteContext?.tweetId || ''
+  const quotedTweetUrl = quotedTweet?.tweetUrl || (quoteContext ? `https://x.com/${quoteContext.author}/status/${quoteContext.tweetId}` : '#')
+
+  // Check for media/article in quoted tweet
+  const quotedHasMedia = quotedTweet?.media && quotedTweet.media.length > 0
+  const quotedIsArticle = quotedTweet?.category === 'article' || quotedTweet?.articlePreview || quoteContext?.article
+
+  // Get thumbnail URL
+  const getThumbnail = (): string | null => {
+    if (quotedHasMedia && quotedTweet?.media?.[0]) {
+      const media = quotedTweet.media[0]
+      return media.thumbnailUrl || media.url
+    }
+    if (quotedTweet?.articlePreview?.imageUrl) {
+      return quotedTweet.articlePreview.imageUrl
+    }
+    if (quoteContext?.article?.imageUrl) {
+      return quoteContext.article.imageUrl
+    }
+    if (quotedTweet?.articleContent?.mediaEntities) {
+      const firstMediaId = Object.keys(quotedTweet.articleContent.mediaEntities)[0]
+      if (firstMediaId) {
+        return quotedTweet.articleContent.mediaEntities[firstMediaId]?.url || null
+      }
+    }
+    return null
+  }
+
+  const thumbnail = getThumbnail()
+
+  const handleClick = (): void => {
+    if (quotedTweetId && onNavigateToId) {
+      onNavigateToId(quotedTweetId, quotedTweetUrl)
+    }
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      className={`w-full text-left bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors flex gap-3 ${compact ? 'p-2 mb-3' : 'p-3'}`}
+    >
+      {/* Thumbnail */}
+      {thumbnail && (
+        <div className={`rounded-lg overflow-hidden flex-shrink-0 bg-gray-200 dark:bg-gray-700 ${compact ? 'w-[80px] h-[60px]' : 'w-[120px] h-[80px]'}`}>
+          <img src={thumbnail} alt="" className="w-full h-full object-cover" />
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          {quotedProfileImage ? (
+            <img src={quotedProfileImage} alt={quotedAuthor} className={`rounded-full object-cover ${compact ? 'w-4 h-4' : 'w-5 h-5'}`} />
+          ) : (
+            <div className={`rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold ${compact ? 'w-4 h-4 text-[10px]' : 'w-5 h-5 text-xs'}`}>
+              {quotedAuthor?.[0]?.toUpperCase() || '?'}
+            </div>
+          )}
+          <span className={`font-medium text-gray-900 dark:text-white truncate ${compact ? 'text-xs' : 'text-sm'}`}>{quotedAuthorName}</span>
+          <span className={`text-gray-500 ${compact ? 'text-[10px]' : 'text-xs'}`}>@{quotedAuthor}</span>
+        </div>
+        <p className={`text-gray-700 dark:text-gray-300 ${compact ? 'text-xs line-clamp-1' : 'text-sm line-clamp-2'}`}>
+          {quotedText.replace(/\s*https:\/\/t\.co\/\w+$/g, '').trim()}
+        </p>
+        {quotedIsArticle && (
+          <div className={`flex items-center gap-1 mt-1 text-blue-500 ${compact ? 'text-[10px]' : 'text-xs'}`}>
+            <FileText className={compact ? 'w-2.5 h-2.5' : 'w-3 h-3'} />
+            <span className="truncate">
+              {quotedTweet?.articlePreview?.title || quoteContext?.article?.title || 'X Article'}
+            </span>
+          </div>
+        )}
+      </div>
+    </button>
+  )
+}
+
 // Quote tweet content with embedded QuoteCard - shows quoting text then embedded quoted tweet
 function TextQuoteContent({
   item,
@@ -635,7 +709,7 @@ function TextQuoteContent({
 }: {
   item: FeedItem
   bionicReading: boolean
-  onNavigateToId?: (id: string) => boolean
+  onNavigateToId?: (id: string, fallbackUrl?: string) => boolean
 }): React.ReactElement {
   const renderText = bionicReading ? renderBionicTextWithLinks : renderTextWithLinks
   const quotedTweet = item.quotedTweet
@@ -691,11 +765,8 @@ function TextQuoteContent({
   // Handle quote card click - navigate internally or open externally
   const handleQuoteCardClick = (): void => {
     if (quotedTweetId && onNavigateToId) {
-      const success = onNavigateToId(quotedTweetId)
-      if (!success && quotedTweetUrl) {
-        // Quoted tweet not in current feed - open externally
-        window.open(quotedTweetUrl, '_blank')
-      }
+      // Pass fallbackUrl so parent can open externally if not in collection
+      onNavigateToId(quotedTweetId, quotedTweetUrl)
     }
   }
 
@@ -766,7 +837,6 @@ function TextQuoteContent({
 
 function ArticleContent({ item, bionicReading }: { item: FeedItem; bionicReading: boolean }): React.ReactElement {
   const renderText = bionicReading ? renderBionicTextWithLinks : renderTextWithLinks
-  const articleUrl = item.links?.[0]?.expandedUrl || item.tweetUrl
 
   return (
     <div className="max-h-[60vh] overflow-y-auto pr-2 -mr-2 article-scrollbar">
@@ -777,32 +847,14 @@ function ArticleContent({ item, bionicReading }: { item: FeedItem; bionicReading
             alt=""
             className="w-full rounded-xl object-cover max-h-64"
           />
-          {/* Share/Download buttons - appear on hover */}
-          <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Download button - appears on hover */}
+          <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               onClick={(e) => handleDownloadMedia(e, item.articlePreview!.imageUrl!, `article-${item.id}.jpg`)}
               className="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
               title="Download image"
             >
               <Download className="w-4 h-4 text-white" />
-            </button>
-            <button
-              onClick={async (e) => {
-                e.stopPropagation()
-                if (navigator.share) {
-                  try {
-                    await navigator.share({ url: articleUrl, title: item.articlePreview?.title || `Article from @${item.author}` })
-                  } catch {
-                    // User cancelled or share failed
-                  }
-                } else {
-                  await navigator.clipboard.writeText(articleUrl)
-                }
-              }}
-              className="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
-              title="Share article"
-            >
-              <Share2 className="w-4 h-4 text-white" />
             </button>
           </div>
         </div>

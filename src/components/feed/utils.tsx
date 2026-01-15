@@ -2,25 +2,9 @@
  * Utility functions for feed components
  */
 import React from 'react'
-import { Download, Share2 } from 'lucide-react'
+import { Download } from 'lucide-react'
 import type { ArticleContentBlock, ArticleEntityMap, MediaEntitiesMap } from './types'
 
-/**
- * Share media helper - uses Web Share API or copies URL to clipboard
- */
-async function handleShareMedia(e: React.MouseEvent, url: string): Promise<void> {
-  e.stopPropagation()
-  e.preventDefault()
-  if (navigator.share) {
-    try {
-      await navigator.share({ url })
-    } catch {
-      // User cancelled or share failed silently
-    }
-  } else {
-    await navigator.clipboard.writeText(url)
-  }
-}
 
 /**
  * Download media helper - fetches image as blob and triggers download
@@ -44,9 +28,9 @@ export async function handleDownloadMedia(e: React.MouseEvent, url: string, file
 
     // Clean up the blob URL after a short delay
     setTimeout(() => URL.revokeObjectURL(blobUrl), 100)
-  } catch {
-    // Fallback: open in new tab if download fails
-    window.open(url, '_blank')
+  } catch (error) {
+    // Log error but don't open in new tab - download should just fail silently
+    console.error('Download failed:', error)
   }
 }
 
@@ -90,20 +74,13 @@ function MediaWithActions({
           className={className}
           loading="lazy"
         />
-        <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={(e) => handleDownloadMedia(e, src, getFilename())}
             className="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
             title="Download image"
           >
             <Download className="w-4 h-4 text-white" />
-          </button>
-          <button
-            onClick={(e) => handleShareMedia(e, src)}
-            className="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
-            title="Share image"
-          >
-            <Share2 className="w-4 h-4 text-white" />
           </button>
         </div>
       </div>

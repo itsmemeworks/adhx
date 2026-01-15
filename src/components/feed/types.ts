@@ -130,7 +130,7 @@ export interface FeedItem {
   parentTweets?: FeedItem[] | null // Tweets that quote this one (for reverse navigation)
 }
 
-export type FilterType = 'all' | 'photos' | 'videos' | 'text' | 'articles' | 'quoted'
+export type FilterType = 'all' | 'photos' | 'videos' | 'text' | 'articles' | 'quoted' | 'manual'
 
 export interface TagItem {
   tag: string
@@ -144,6 +144,7 @@ export const FILTER_OPTIONS: { value: FilterType; label: string }[] = [
   { value: 'text', label: 'Text' },
   { value: 'articles', label: 'Articles' },
   { value: 'quoted', label: 'Quoted' },
+  { value: 'manual', label: 'Manual' },
 ]
 
 /**

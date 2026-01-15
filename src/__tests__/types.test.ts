@@ -8,7 +8,7 @@ import {
 describe('Feed Types', () => {
   describe('FILTER_OPTIONS', () => {
     it('should have all expected filter options', () => {
-      expect(FILTER_OPTIONS).toHaveLength(6)
+      expect(FILTER_OPTIONS).toHaveLength(7)
       expect(FILTER_OPTIONS.map(o => o.value)).toEqual([
         'all',
         'photos',
@@ -16,6 +16,7 @@ describe('Feed Types', () => {
         'text',
         'articles',
         'quoted',
+        'manual',
       ])
     })
 

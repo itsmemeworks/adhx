@@ -8,7 +8,7 @@ import { getCurrentUserId } from '@/lib/auth/session'
 import { selectArticleLink, buildArticlePreview, parseArticleContent } from '@/lib/utils/feed-helpers'
 import { metrics } from '@/lib/sentry'
 
-export type FilterType = 'all' | 'photos' | 'videos' | 'text' | 'articles' | 'quoted'
+export type FilterType = 'all' | 'photos' | 'videos' | 'text' | 'articles' | 'quoted' | 'manual'
 
 // GET /api/feed - Unified feed for gallery view
 export async function GET(request: NextRequest) {
@@ -218,6 +218,14 @@ export async function GET(request: NextRequest) {
           stats: { total: 0, unread: 0 },
         })
       }
+    } else if (filter === 'manual') {
+      // Bookmarks added manually via URL prefix or manual add
+      conditions.push(
+        or(
+          eq(bookmarks.source, 'manual'),
+          eq(bookmarks.source, 'url_prefix')
+        )!
+      )
     }
 
     // Unread filter
