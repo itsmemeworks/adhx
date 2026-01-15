@@ -110,7 +110,9 @@ export function AddTweetModal({ isOpen, onClose, onSuccess, onOpenTweet, initial
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-card rounded-lg border shadow-lg w-full max-w-md overflow-hidden">
+      {/* Backdrop - click to close */}
+      <div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
+      <div className="relative bg-card rounded-lg border shadow-lg w-full max-w-md overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold flex items-center gap-2">

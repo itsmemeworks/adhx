@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowRight, Search, Sparkles, Play, Zap, Eye, Maximize2, Minimize2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { ArrowRight, Search, Sparkles, Play, Zap, Eye, Maximize2, Minimize2, Plus, Loader2 } from 'lucide-react'
 import { ADHX_PURPLE } from '@/lib/gestalt/theme'
 import { type FxTwitterResponse } from '@/lib/media/fxembed'
 import { renderArticleBlock } from '@/components/feed/utils'
@@ -18,6 +19,7 @@ interface TweetPreviewLandingProps {
   username: string
   tweetId: string
   tweet: Tweet
+  isAuthenticated?: boolean
 }
 
 /** Reading tools panel for ADHD-friendly font and bionic reading controls */
@@ -85,8 +87,10 @@ function ReadingTools({
   )
 }
 
-export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLandingProps): React.ReactElement {
+export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated = false }: TweetPreviewLandingProps): React.ReactElement {
+  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [isAdding, setIsAdding] = useState(false)
   const [bionicReading, setBionicReading] = useState(false)
   const [selectedFont, setSelectedFont] = useState<BodyFont>('ibm-plex')
   const [isExpanded, setIsExpanded] = useState(false)
@@ -99,6 +103,36 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
     setIsLoading(true)
     const returnUrl = encodeURIComponent(window.location.pathname)
     window.location.href = `/api/auth/twitter?returnUrl=${returnUrl}`
+  }
+
+  const handleAddToCollection = async () => {
+    setIsAdding(true)
+    try {
+      const response = await fetch('/api/tweets/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: `https://x.com/${username}/status/${tweetId}`,
+          source: 'url_prefix',
+        }),
+      })
+      const data = await response.json()
+
+      if (data.success) {
+        router.push(`/?added=success&tweetId=${data.bookmark.id}&author=${data.bookmark.author}&text=${encodeURIComponent((data.bookmark.text || '').slice(0, 200))}`)
+      } else if (data.isDuplicate) {
+        // Gracefully handle duplicates - show as duplicate, not error
+        router.push(`/?added=duplicate&tweetId=${data.bookmark.id}&author=${data.bookmark.author}&text=${encodeURIComponent((data.bookmark.text || '').slice(0, 200))}`)
+      } else {
+        router.push(`/?added=error&error=${encodeURIComponent(data.error || 'Failed to add tweet')}`)
+      }
+    } catch (error) {
+      router.push(`/?added=error&error=${encodeURIComponent(error instanceof Error ? error.message : 'Failed to add tweet')}`)
+    }
+  }
+
+  const handleContinueToGallery = () => {
+    router.push('/')
   }
 
   return (
@@ -337,29 +371,62 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
               )}
 
               {/* Mobile CTA - positioned right after reading tools, above value props */}
-              <div className="md:hidden mt-4">
-                <button
-                  onClick={handleLogin}
-                  disabled={isLoading}
-                  className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-[1.02] hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ backgroundColor: ADHX_PURPLE }}
-                >
-                  {isLoading ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Connecting...
-                    </>
-                  ) : (
-                    <>
-                      <XIcon className="w-5 h-5" />
-                      Save this tweet
+              <div className="md:hidden mt-4 space-y-3">
+                {isAuthenticated ? (
+                  <>
+                    <button
+                      onClick={handleAddToCollection}
+                      disabled={isAdding}
+                      className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-[1.02] hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ backgroundColor: ADHX_PURPLE }}
+                    >
+                      {isAdding ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          Adding...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-5 h-5" />
+                          Add to Collection
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={handleContinueToGallery}
+                      disabled={isAdding}
+                      className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 text-lg font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 rounded-full transition-all hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50"
+                    >
                       <ArrowRight className="w-5 h-5" />
-                    </>
-                  )}
-                </button>
-                <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-3">
-                  Into your own Collection. Visible only to you.
-                </p>
+                      Continue to Gallery
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={handleLogin}
+                      disabled={isLoading}
+                      className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-[1.02] hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ backgroundColor: ADHX_PURPLE }}
+                    >
+                      {isLoading ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Connecting...
+                        </>
+                      ) : (
+                        <>
+                          <XIcon className="w-5 h-5" />
+                          Save this tweet
+                          <ArrowRight className="w-5 h-5" />
+                        </>
+                      )}
+                    </button>
+                    <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+                      Into your own Collection. Visible only to you.
+                    </p>
+                  </>
+                )}
               </div>
 
             </div>
@@ -386,29 +453,63 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
               </div>
 
               {/* CTA Button - Desktop only (mobile CTA is above value props) */}
-              <button
-                onClick={handleLogin}
-                disabled={isLoading}
-                className="hidden md:inline-flex w-full items-center justify-center gap-3 px-8 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-[1.02] hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed animate-fade-in-up [animation-fill-mode:both] delay-300"
-                style={{ backgroundColor: ADHX_PURPLE }}
-              >
-                {isLoading ? (
+              <div className="hidden md:block space-y-3 animate-fade-in-up [animation-fill-mode:both] delay-300">
+                {isAuthenticated ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Connecting...
+                    <button
+                      onClick={handleAddToCollection}
+                      disabled={isAdding}
+                      className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-[1.02] hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ backgroundColor: ADHX_PURPLE }}
+                    >
+                      {isAdding ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          Adding...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-5 h-5" />
+                          Add to Collection
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={handleContinueToGallery}
+                      disabled={isAdding}
+                      className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 text-lg font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 rounded-full transition-all hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50"
+                    >
+                      <ArrowRight className="w-5 h-5" />
+                      Continue to Gallery
+                    </button>
                   </>
                 ) : (
                   <>
-                    <XIcon className="w-5 h-5" />
-                    Save this tweet
-                    <ArrowRight className="w-5 h-5" />
+                    <button
+                      onClick={handleLogin}
+                      disabled={isLoading}
+                      className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-[1.02] hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ backgroundColor: ADHX_PURPLE }}
+                    >
+                      {isLoading ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Connecting...
+                        </>
+                      ) : (
+                        <>
+                          <XIcon className="w-5 h-5" />
+                          Save this tweet
+                          <ArrowRight className="w-5 h-5" />
+                        </>
+                      )}
+                    </button>
+                    <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+                      Into your own Collection. Visible only to you.
+                    </p>
                   </>
                 )}
-              </button>
-
-              <p className="hidden md:block text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
-                Into your own Collection. Visible only to you.
-              </p>
+              </div>
 
               {/* URL Trick Callout */}
               <div className="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400">

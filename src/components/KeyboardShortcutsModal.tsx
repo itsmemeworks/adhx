@@ -130,6 +130,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose, inFocusMode = false }:
                   <Row keys={['4']} label="Text" />
                   <Row keys={['5']} label="Articles" />
                   <Row keys={['6']} label="Quoted" />
+                  <Row keys={['7']} label="Manual" />
                 </div>
               </div>
             </>
@@ -149,6 +150,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose, inFocusMode = false }:
                 <Row keys={['r']} label="Mark as read" />
                 <Row keys={['u']} label="Mark as unread" />
                 <Row keys={['t']} label="Add tag" />
+                <Row keys={['s']} label="Copy share link" />
                 <Row keys={['x']} label="Open on X" />
               </div>
 

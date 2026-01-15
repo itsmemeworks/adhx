@@ -321,4 +321,38 @@ describe('API: /api/feed', () => {
       expect(data.stats.unread).toBe(2)
     })
   })
+
+  describe('Manual filter', () => {
+    beforeEach(async () => {
+      await testInstance.db.insert(schema.bookmarks).values([
+        createTestBookmark(USER_A, 'tweet-synced', { source: 'sync' }),
+        createTestBookmark(USER_A, 'tweet-manual', { source: 'manual' }),
+        createTestBookmark(USER_A, 'tweet-url-prefix', { source: 'url_prefix' }),
+      ])
+    })
+
+    it('filters by manual source', async () => {
+      const { GET } = await import('@/app/api/feed/route')
+      const response = await GET(createRequest({ filter: 'manual', unreadOnly: 'false' }))
+
+      expect(response.status).toBe(200)
+      const data = await response.json()
+
+      expect(data.items).toHaveLength(2)
+      const ids = data.items.map((i: { id: string }) => i.id)
+      expect(ids).toContain('tweet-manual')
+      expect(ids).toContain('tweet-url-prefix')
+      expect(ids).not.toContain('tweet-synced')
+    })
+
+    it('does not include synced bookmarks in manual filter', async () => {
+      const { GET } = await import('@/app/api/feed/route')
+      const response = await GET(createRequest({ filter: 'manual', unreadOnly: 'false' }))
+
+      expect(response.status).toBe(200)
+      const data = await response.json()
+
+      expect(data.items.every((i: { id: string }) => i.id !== 'tweet-synced')).toBe(true)
+    })
+  })
 })
