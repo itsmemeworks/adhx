@@ -132,10 +132,10 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
           {/* Hero Text - Tighter spacing on mobile */}
           <div className="text-center mb-4 md:mb-6 lg:mb-8 animate-fade-in-up [animation-fill-mode:both]">
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-3">
-              Save this tweet to ADHX
+              Found something good?
             </h1>
             <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              Your personal bookmark manager for X. <span className="text-purple-600 dark:text-purple-400 font-medium">Never lose a tweet again.</span>
+              Save it now before <span className="text-purple-600 dark:text-purple-400 font-medium">47 browser tabs</span> make you forget.
             </p>
           </div>
 
