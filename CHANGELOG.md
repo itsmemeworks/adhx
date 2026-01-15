@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.0](https://github.com/itsmemeworks/adhx/compare/v1.10.0...v1.11.0) (2026-01-15)
+
+
+### Features
+
+* enhance tweet preview landing page with og image improvements ([#48](https://github.com/itsmemeworks/adhx/issues/48)) ([646a75d](https://github.com/itsmemeworks/adhx/commit/646a75d3a9f1f34a088320e614f8ab47297938ee))
+
 ## [1.10.0](https://github.com/itsmemeworks/adhx/compare/v1.9.0...v1.10.0) (2026-01-14)
 
 
