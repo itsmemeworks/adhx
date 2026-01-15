@@ -196,6 +196,24 @@ Client component with:
 - **Lightbox**: Full-screen modal with keyboard navigation (←→, R/U for read/unread, Esc)
 - **FilterBar**: Category filters and search
 
+### Quote Tweet Handling
+Quote tweets display embedded content showing the quoted tweet. Two data sources:
+- `quotedTweet`: Full `FeedItem` when the quoted tweet exists in user's collection
+- `quoteContext`: Fallback JSON blob with basic info (author, text, thumbnail) when not in collection
+
+**Lightbox rendering:**
+- `TextLightboxContent`: Shows `TextQuoteContent` for text-only quote tweets
+- `MediaLightboxContent`: Shows `QuoteCard` (compact) alongside media content
+- `QuoteCard` component handles both data sources with `compact` prop for sizing
+
+**Keyboard navigation:**
+- `Q` key: Navigate to quoted tweet (if in collection, otherwise opens on X)
+- `P` key: Navigate to parent tweet (tweets that quote the current one)
+
+Files:
+- `src/components/feed/Lightbox.tsx` - QuoteCard, TextQuoteContent components
+- `src/components/feed/types.ts` - FeedItem.quotedTweet, FeedItem.quoteContext types
+
 ### Landing Page Optimization
 When unauthenticated, the app shows a landing page without making authenticated API calls:
 - `page.tsx` checks `isAuthenticated` before fetching feed
