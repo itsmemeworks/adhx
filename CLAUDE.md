@@ -14,7 +14,7 @@ A Twitter/X bookmark manager for people who bookmark everything and read nothing
 pnpm install
 pnpm dev         # Start dev server at localhost:3000
 pnpm build       # Production build
-pnpm test        # Run tests (79 tests with vitest)
+pnpm test        # Run tests (317 tests with vitest)
 ```
 
 ## Tech Stack
@@ -87,7 +87,15 @@ metrics.trackUser(userId)
 Users can save tweets by visiting `adhx.com/{username}/status/{id}`:
 - Route: `src/app/[username]/status/[id]/page.tsx`
 - Authenticated: Adds tweet, redirects to `/?open={id}` (opens lightbox)
-- Unauthenticated: Shows `QuickAddLanding` with login prompt
+- Unauthenticated: Shows `TweetPreviewLanding` with rich preview or `QuickAddLanding` as fallback
+
+**OG Image Selection** (`getOgImage()` in page.tsx):
+When generating Open Graph metadata for social unfurling, images are selected in priority order:
+1. Direct media (tweet's own photos/video thumbnails)
+2. Article cover image (X Articles `tweet.article.cover_media.media_info.original_img_url`)
+3. Quote tweet media (when parent has no media, use quoted tweet's photos/videos)
+4. External link thumbnail (`tweet.external.thumbnail_url`)
+5. Fallback to `/logo.png` for text-only tweets
 
 ### Typography & Reading Preferences
 ADHD-friendly font system with user selection:
@@ -262,24 +270,33 @@ The app will initialize a fresh SQLite database with the new schema. Users will 
 ## Testing
 
 ```bash
-pnpm test         # Run all 79 tests
+pnpm test         # Run all 317 tests
 pnpm test:watch   # Watch mode
 ```
 
 Test files in `src/__tests__/`:
 - `session.test.ts` - JWT session handling
+- `oauth.test.ts` - OAuth PKCE flow, state management, token exchange
 - `types.test.ts` - Shared type conversions
 - `feed-helpers.test.ts` - Feed utilities
+- `format.test.ts` - Number formatting, relative time, text truncation
 - `url-expander.test.ts` - URL expansion
 - `fxembed.test.ts` - FxTwitter integration
+- `twitter-client.test.ts` - Twitter API client, token refresh, bookmarks fetching
+- `og-image-selection.test.ts` - OG image priority selection for social unfurling
 - `utils.test.ts` - General utilities
 
 API route tests in `src/__tests__/api/`:
 - `setup.ts` - In-memory SQLite test database factory
-- `test-utils.ts` - Request/response helpers
 - `bookmarks-*.test.ts` - Bookmark CRUD operations
 - `tags.test.ts` - Tag management
 - `preferences.test.ts` - User preferences
+- `feed.test.ts` - Feed filtering, pagination, tag queries
+- `auth-callback.test.ts` - OAuth callback handling
+- `auth-status.test.ts` - Auth status and token refresh
+- `sync-cooldown.test.ts` - 15-minute sync rate limiting
+- `tweets-add.test.ts` - Manual tweet adding, URL parsing, categorization
+- `media-video.test.ts` - Video proxy, quality selection, range requests
 
 All API tests verify multi-user isolation (User A's actions don't affect User B).
 

@@ -38,6 +38,9 @@ export const FULL_SCHEMA_SQL = `
   );
   CREATE INDEX bookmarks_user_id_idx ON bookmarks(user_id);
   CREATE INDEX bookmarks_processed_at_idx ON bookmarks(processed_at);
+  CREATE INDEX bookmarks_user_processed_at_idx ON bookmarks(user_id, processed_at);
+  CREATE INDEX bookmarks_user_category_idx ON bookmarks(user_id, category);
+  CREATE INDEX bookmarks_user_quoted_tweet_idx ON bookmarks(user_id, quoted_tweet_id);
 
   CREATE TABLE bookmark_links (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -88,6 +91,7 @@ export const FULL_SCHEMA_SQL = `
     read_at TEXT NOT NULL,
     PRIMARY KEY (user_id, bookmark_id)
   );
+  CREATE INDEX read_status_user_id_idx ON read_status(user_id);
 
   CREATE TABLE user_preferences (
     user_id TEXT NOT NULL,

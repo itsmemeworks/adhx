@@ -5,15 +5,11 @@ import { getSession } from '@/lib/auth/session'
 import { QuickAddLanding } from '@/components/QuickAddLanding'
 import { TweetPreviewLanding } from '@/components/TweetPreviewLanding'
 import { fetchTweetData } from '@/lib/media/fxembed'
+import { truncate } from '@/lib/utils/format'
+import { getOgImage } from '@/lib/utils/og-image'
 
 interface Props {
   params: Promise<{ username: string; id: string }>
-}
-
-// Truncate text to a max length, adding ellipsis if needed
-function truncate(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text
-  return text.slice(0, maxLength - 1).trim() + '…'
 }
 
 // Fetch tweet data from FxTwitter API (cached per request via Next.js)
@@ -150,11 +146,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = truncate(tweetText, 160)
   const title = `@${tweet.author.screen_name}: "${truncate(tweetText, 50)}" - Save to ADHX`
 
-  // Use tweet's first photo if available, otherwise use branded OG image route
+  // Select best OG image: direct media → article cover → quote media → external → logo
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-  const ogImage = tweet.media?.photos?.[0]?.url
-    || tweet.media?.videos?.[0]?.thumbnail_url
-    || `${baseUrl}/api/og/tweet?u=${encodeURIComponent(username)}&t=${encodeURIComponent(id)}`
+  const ogImage = getOgImage(tweet, baseUrl)
 
   return {
     title,

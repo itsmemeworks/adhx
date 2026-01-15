@@ -90,26 +90,28 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Get all tags for this user grouped by bookmark
-    const allTags = await db.select().from(bookmarkTags).where(eq(bookmarkTags.userId, userId))
-    const tagsByBookmark = new Map<string, string[]>()
-    for (const t of allTags) {
-      const existing = tagsByBookmark.get(t.bookmarkId) || []
-      existing.push(t.tag)
-      tagsByBookmark.set(t.bookmarkId, existing)
-    }
-
     // Tag filter (AND logic - must have ALL specified tags)
+    // Use SQL-level filtering instead of loading all tags into memory
     if (tags.length > 0) {
-      const bookmarkIdsWithAllTags = new Set<string>()
-      for (const [bookmarkId, bookmarkTagList] of tagsByBookmark) {
-        const hasAllTags = tags.every((tag) => bookmarkTagList.includes(tag.toLowerCase()))
-        if (hasAllTags) {
-          bookmarkIdsWithAllTags.add(bookmarkId)
-        }
-      }
-      if (bookmarkIdsWithAllTags.size > 0) {
-        conditions.push(inArray(bookmarks.id, [...bookmarkIdsWithAllTags]))
+      // Normalize tags to lowercase for case-insensitive matching
+      const normalizedTags = tags.map((t) => t.toLowerCase())
+
+      // Use SQL GROUP BY/HAVING to find bookmarks with ALL requested tags
+      // This is more efficient than loading all tags into memory
+      const matchingBookmarks = await db
+        .select({ bookmarkId: bookmarkTags.bookmarkId })
+        .from(bookmarkTags)
+        .where(and(
+          eq(bookmarkTags.userId, userId),
+          inArray(bookmarkTags.tag, normalizedTags)
+        ))
+        .groupBy(bookmarkTags.bookmarkId)
+        .having(sql`count(distinct ${bookmarkTags.tag}) = ${normalizedTags.length}`)
+
+      const matchingIds = matchingBookmarks.map((b) => b.bookmarkId)
+
+      if (matchingIds.length > 0) {
+        conditions.push(inArray(bookmarks.id, matchingIds))
       } else {
         // No bookmarks have all the requested tags
         return NextResponse.json({
@@ -119,6 +121,8 @@ export async function GET(request: NextRequest) {
         })
       }
     }
+
+    // Tags will be loaded later only for the result set (not all tags upfront)
 
     // Build linksByBookmarkId and articleBookmarkIds from already-fetched allLinks
     const linksByBookmarkId = new Map<string, typeof allLinks>()
@@ -240,16 +244,29 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .offset(offset)
 
-    // Get links for returned bookmarks (filter by userId)
+    // Get links and tags for returned bookmarks (filter by userId)
+    // This loads data only for the result set, not all bookmarks
     const bookmarkIds = results.map((b) => b.id)
-    const links = bookmarkIds.length > 0
-      ? await db.select().from(bookmarkLinks).where(and(eq(bookmarkLinks.userId, userId), inArray(bookmarkLinks.bookmarkId, bookmarkIds)))
-      : []
+    const [links, resultTags] = bookmarkIds.length > 0
+      ? await Promise.all([
+          db.select().from(bookmarkLinks).where(and(eq(bookmarkLinks.userId, userId), inArray(bookmarkLinks.bookmarkId, bookmarkIds))),
+          db.select().from(bookmarkTags).where(and(eq(bookmarkTags.userId, userId), inArray(bookmarkTags.bookmarkId, bookmarkIds))),
+        ])
+      : [[], []]
+
     const linksByBookmark = new Map<string, typeof links>()
     for (const link of links) {
       const existing = linksByBookmark.get(link.bookmarkId) || []
       existing.push(link)
       linksByBookmark.set(link.bookmarkId, existing)
+    }
+
+    // Build tags map from result set only (not all tags)
+    const tagsByBookmark = new Map<string, string[]>()
+    for (const t of resultTags) {
+      const existing = tagsByBookmark.get(t.bookmarkId) || []
+      existing.push(t.tag)
+      tagsByBookmark.set(t.bookmarkId, existing)
     }
 
     // Define the feed item type for explicit return type
