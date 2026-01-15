@@ -143,7 +143,6 @@ const mockTweetWithMediaAndQuote = {
     },
   },
 }
-
 describe('API: /api/tweets/add', () => {
   beforeEach(() => {
     testInstance = createTestDb()
