@@ -43,3 +43,4 @@ Thumbs.db
 # TypeScript
 *.tsbuildinfo
 coverage/
+CLAUDE.local.md

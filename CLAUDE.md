@@ -2,11 +2,87 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Local Configuration
+
+Create `./CLAUDE.local.md` for personal settings that won't be committed:
+
+```markdown
+# Example CLAUDE.local.md
+
+## GitHub CLI
+Always use the `your-username` account for gh commands.
+
+## Sentry CLI
+Use org `your-org` and project `your-project`.
+
+## Personal Notes
+- My test user ID: user_abc123
+- Local dev URL: http://localhost:3000
+```
+
+**Use cases for `CLAUDE.local.md`:**
+- CLI tool credentials (GitHub, Sentry, Fly.io accounts)
+- Personal test data and user IDs
+- Local environment URLs and ports
+- Workflow preferences specific to you
+- Notes that shouldn't affect other contributors
+
+---
+
 ## ADHX
 
 **Save now. Read never. Find always.**
 
 A Twitter/X bookmark manager for people who bookmark everything and read nothing. Built with Next.js 15.
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                  BROWSER                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Landing Page          Main Feed              URL Prefix Feature            │
+│  ┌─────────────┐      ┌─────────────┐        ┌─────────────────────┐       │
+│  │ /           │      │ / (auth'd)  │        │ /{user}/status/{id} │       │
+│  │ Marketing   │      │ FeedGrid    │        │ Quick-save tweet    │       │
+│  │ OAuth Start │      │ Lightbox    │        │ → Add & redirect    │       │
+│  └─────────────┘      │ FilterBar   │        └─────────────────────┘       │
+│                       └─────────────┘                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              NEXT.JS API ROUTES                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Auth                    Data                      Media                     │
+│  ┌──────────────┐       ┌──────────────┐         ┌──────────────┐          │
+│  │ /auth/twitter│       │ /api/feed    │         │ /api/media/  │          │
+│  │ /auth/callback       │ /api/sync    │◄──SSE   │   video      │          │
+│  │ /auth/status │       │ /api/tweets/ │         └──────┬───────┘          │
+│  └──────┬───────┘       │   add        │                │                   │
+│         │               │ /api/bookmarks               │                   │
+│         │               └──────┬───────┘                │                   │
+│         │                      │                        │                   │
+└─────────┼──────────────────────┼────────────────────────┼───────────────────┘
+          │                      │                        │
+          ▼                      ▼                        ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────────┐
+│   Twitter API   │    │  SQLite + Drizzle│    │    FxTwitter API    │
+│   (OAuth 2.0)   │    │                  │    │ (Media proxy/embed) │
+│                 │    │  bookmarks       │    │                     │
+│  • Auth tokens  │    │  bookmark_media  │    │  • Video URLs       │
+│  • User info    │    │  bookmark_tags   │    │  • Photo URLs       │
+│  • Bookmarks    │    │  read_status     │    │  • Tweet enrichment │
+│                 │    │  sync_logs       │    │                     │
+└─────────────────┘    └─────────────────┘    └─────────────────────┘
+```
+
+**Data Flow:**
+1. **Sync**: Twitter API → Process tweets → SQLite (via `/api/sync` SSE stream)
+2. **Add**: URL → FxTwitter enrichment → SQLite (via `/api/tweets/add`)
+3. **View**: SQLite → Feed API → React components
+4. **Media**: FxTwitter proxy → Video/Photo display (bypasses Twitter CORS)
 
 ## Quick Start
 
@@ -14,7 +90,7 @@ A Twitter/X bookmark manager for people who bookmark everything and read nothing
 pnpm install
 pnpm dev         # Start dev server at localhost:3000
 pnpm build       # Production build
-pnpm test        # Run tests (317 tests with vitest)
+pnpm test        # Run all 372 tests
 ```
 
 ## Tech Stack
