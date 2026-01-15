@@ -320,7 +320,7 @@ function MediaLightboxContent({
           </div>
         ) : item.media && item.media.length > 1 ? (
           /* Multi-image: vertical scroll gallery */
-          <div className="flex flex-col gap-4 max-h-[50vh] lg:max-h-[80vh] overflow-y-auto py-2 px-2">
+          <div className="flex flex-col gap-4 max-h-[50vh] lg:max-h-[80vh] overflow-y-auto py-2 px-2 article-scrollbar">
             {item.media
               .filter(m => m.mediaType === 'photo')
               .map((media, index) => (
