@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowRight, Search, Sparkles, Play, Zap, Eye } from 'lucide-react'
+import { ArrowRight, Search, Sparkles, Play, Zap, Eye, Maximize2, Minimize2 } from 'lucide-react'
 import { ADHX_PURPLE } from '@/lib/gestalt/theme'
 import { type FxTwitterResponse } from '@/lib/media/fxembed'
 import { renderArticleBlock } from '@/components/feed/utils'
@@ -89,6 +89,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
   const [isLoading, setIsLoading] = useState(false)
   const [bionicReading, setBionicReading] = useState(false)
   const [selectedFont, setSelectedFont] = useState<BodyFont>('ibm-plex')
+  const [isExpanded, setIsExpanded] = useState(false)
 
   const photos = tweet.media?.photos || []
   const videos = tweet.media?.videos || []
@@ -131,10 +132,10 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
           {/* Hero Text - Tighter spacing on mobile */}
           <div className="text-center mb-4 md:mb-6 lg:mb-8 animate-fade-in-up [animation-fill-mode:both]">
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-3">
-              Ooh, this looks good
+              Save this tweet to ADHX
             </h1>
             <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              Quick, save it before you forget. <span className="text-purple-600 dark:text-purple-400 font-medium">Future you will be grateful.</span>
+              Your personal bookmark manager for X. <span className="text-purple-600 dark:text-purple-400 font-medium">Never lose a tweet again.</span>
             </p>
           </div>
 
@@ -142,7 +143,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
           <div className="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start">
             {/* Tweet Card - Left Column - Fixed max heights for scrollable mobile, viewport-based for desktop */}
             <div className="animate-fade-in-up [animation-fill-mode:both] delay-100">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]">
+              <div className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] ${isExpanded ? '' : 'max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]'}`}>
                 {/* Author Header */}
                 <div className="p-4 pb-3">
                   <div className="flex items-center gap-3">
@@ -183,7 +184,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
 
                 {/* Scrollable Content Area */}
                 <div
-                  className="flex-1 overflow-y-auto min-h-0"
+                  className={`flex-1 min-h-0 ${isExpanded ? '' : 'overflow-y-auto'}`}
                   style={{ fontFamily: `var(--font-${selectedFont})` }}
                 >
                 {/* Tweet Text or Article */}
@@ -308,6 +309,19 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
                       {formatCount(tweet.views)}
                     </span>
                   )}
+                  {/* Expand/Collapse Toggle */}
+                  <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                    title={isExpanded ? 'Collapse tweet' : 'Expand tweet'}
+                  >
+                    {isExpanded ? (
+                      <Minimize2 className="w-4 h-4" />
+                    ) : (
+                      <Maximize2 className="w-4 h-4" />
+                    )}
+                    <span className="text-xs hidden sm:inline">{isExpanded ? 'Collapse' : 'Expand'}</span>
+                  </button>
                 </div>
               </div>
 
