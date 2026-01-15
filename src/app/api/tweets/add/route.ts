@@ -142,6 +142,103 @@ export async function POST(request: NextRequest) {
     // Create bookmark
     const now = new Date().toISOString()
 
+    // Process quote tweet if present (FxTwitter includes quote data in tweet.quote)
+    let isQuote = false
+    let quoteContext: string | null = null
+    let quotedTweetId: string | null = null
+
+    if (tweet.quote) {
+      isQuote = true
+      quotedTweetId = tweet.quote.id
+
+      // Build quoteContext JSON for display
+      quoteContext = JSON.stringify({
+        tweetId: tweet.quote.id,
+        author: tweet.quote.author?.screen_name,
+        authorName: tweet.quote.author?.name,
+        authorProfileImageUrl: tweet.quote.author?.avatar_url,
+        text: tweet.quote.text,
+        media: tweet.quote.media ? {
+          photos: tweet.quote.media.photos,
+          videos: tweet.quote.media.videos,
+        } : null,
+        article: tweet.quote.article ? {
+          url: `https://x.com/${tweet.quote.author?.screen_name}/article/${tweet.quote.id}`,
+          title: tweet.quote.article.title,
+          description: tweet.quote.article.preview_text,
+          imageUrl: tweet.quote.article.cover_media?.media_info?.original_img_url,
+        } : null,
+        external: tweet.quote.external || null,
+        createdAt: tweet.quote.created_at,
+      })
+
+      // Also save the quoted tweet as a separate bookmark if it doesn't exist
+      const [existingQuotedTweet] = await db
+        .select({ id: bookmarks.id })
+        .from(bookmarks)
+        .where(and(eq(bookmarks.userId, userId), eq(bookmarks.id, tweet.quote.id)))
+        .limit(1)
+
+      if (!existingQuotedTweet) {
+        const quotedAuthor = tweet.quote.author?.screen_name || 'unknown'
+
+        // Determine category for quoted tweet
+        let quotedCategory = 'text'
+        if (tweet.quote.article) {
+          quotedCategory = 'article'
+        } else if (tweet.quote.media?.videos?.length) {
+          quotedCategory = 'video'
+        } else if (tweet.quote.media?.photos?.length) {
+          quotedCategory = 'photo'
+        }
+
+        await db.insert(bookmarks).values({
+          id: tweet.quote.id,
+          userId,
+          author: quotedAuthor,
+          authorName: tweet.quote.author?.name || null,
+          authorProfileImageUrl: tweet.quote.author?.avatar_url || null,
+          text: tweet.quote.text || '',
+          tweetUrl: `https://x.com/${quotedAuthor}/status/${tweet.quote.id}`,
+          createdAt: tweet.quote.created_at ? new Date(tweet.quote.created_at).toISOString() : now,
+          processedAt: now,
+          category: quotedCategory,
+          source: 'quoted', // Mark as saved via quote
+        }).onConflictDoNothing()
+
+        // Save media for the quoted tweet
+        if (tweet.quote.media?.photos) {
+          for (let i = 0; i < tweet.quote.media.photos.length; i++) {
+            const photo = tweet.quote.media.photos[i]
+            await db.insert(bookmarkMedia).values({
+              id: `${tweet.quote.id}_photo_${i}`,
+              userId,
+              bookmarkId: tweet.quote.id,
+              mediaType: 'photo',
+              originalUrl: photo.url,
+              width: photo.width,
+              height: photo.height,
+            }).onConflictDoNothing()
+          }
+        }
+        if (tweet.quote.media?.videos) {
+          for (let i = 0; i < tweet.quote.media.videos.length; i++) {
+            const video = tweet.quote.media.videos[i]
+            await db.insert(bookmarkMedia).values({
+              id: `${tweet.quote.id}_video_${i}`,
+              userId,
+              bookmarkId: tweet.quote.id,
+              mediaType: 'video',
+              originalUrl: video.url,
+              previewUrl: video.thumbnail_url,
+              width: video.width,
+              height: video.height,
+            }).onConflictDoNothing()
+          }
+        }
+      }
+    }
+
     await db.insert(bookmarks).values({
       id: parsed.tweetId,
       userId,
@@ -154,6 +251,9 @@ export async function POST(request: NextRequest) {
       processedAt: now,
       category,
       source, // 'manual' or 'url_prefix'
+      isQuote,
+      quoteContext,
+      quotedTweetId,
     })
 
     // Process media if present

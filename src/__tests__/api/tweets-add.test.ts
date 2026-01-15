@@ -85,6 +85,32 @@ const mockTweetWithArticle = {
   },
 }
 
+const mockQuoteTweet = {
+  tweet: {
+    id: '999888777',
+    text: 'This is my commentary on the quoted tweet',
+    created_at: '2024-01-15T14:00:00Z',
+    author: {
+      screen_name: 'quoter',
+      name: 'Quote Person',
+      avatar_url: 'https://pbs.twimg.com/profile/quoter.jpg',
+    },
+    quote: {
+      id: '111222333',
+      text: 'This is the original quoted tweet with important content',
+      created_at: '2024-01-14T10:00:00Z',
+      author: {
+        screen_name: 'originalauthor',
+        name: 'Original Author',
+        avatar_url: 'https://pbs.twimg.com/profile/original.jpg',
+      },
+      media: {
+        photos: [{ url: 'https://pbs.twimg.com/quoted-photo.jpg', width: 1200, height: 800 }],
+      },
+    },
+  },
+}
+
 describe('API: /api/tweets/add', () => {
   beforeEach(() => {
     testInstance = createTestDb()
@@ -336,6 +362,101 @@ describe('API: /api/tweets/add', () => {
 
       expect(media).toHaveLength(1)
       expect(media[0].mediaType).toBe('photo')
+    })
+  })
+
+  describe('Quote tweet handling', () => {
+    it('saves quote tweets with quoteContext and quotedTweetId', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockQuoteTweet),
+      })
+
+      const { POST } = await import('@/app/api/tweets/add/route')
+      const response = await POST(createRequest({ url: 'https://twitter.com/quoter/status/999888777' }))
+
+      expect(response.status).toBe(200)
+      const data = await response.json()
+      expect(data.bookmark.isQuote).toBe(true)
+      expect(data.bookmark.quotedTweetId).toBe('111222333')
+      expect(data.bookmark.quoteContext).toBeTruthy()
+
+      // Verify quoteContext contains the quoted tweet data
+      const quoteContext = JSON.parse(data.bookmark.quoteContext)
+      expect(quoteContext.tweetId).toBe('111222333')
+      expect(quoteContext.author).toBe('originalauthor')
+      expect(quoteContext.text).toBe('This is the original quoted tweet with important content')
+    })
+
+    it('saves quoted tweet as separate bookmark', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockQuoteTweet),
+      })
+
+      const { POST } = await import('@/app/api/tweets/add/route')
+      await POST(createRequest({ url: 'https://twitter.com/quoter/status/999888777' }))
+
+      // Check that the quoted tweet was saved as its own bookmark
+      const quotedBookmark = await testInstance.db
+        .select()
+        .from(schema.bookmarks)
+        .where(and(eq(schema.bookmarks.userId, 'user-123'), eq(schema.bookmarks.id, '111222333')))
+
+      expect(quotedBookmark).toHaveLength(1)
+      expect(quotedBookmark[0].author).toBe('originalauthor')
+      expect(quotedBookmark[0].text).toBe('This is the original quoted tweet with important content')
+      expect(quotedBookmark[0].source).toBe('quoted')
+    })
+
+    it('saves media from quoted tweet', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockQuoteTweet),
+      })
+
+      const { POST } = await import('@/app/api/tweets/add/route')
+      await POST(createRequest({ url: 'https://twitter.com/quoter/status/999888777' }))
+
+      // Check that media from the quoted tweet was saved
+      const quotedMedia = await testInstance.db
+        .select()
+        .from(schema.bookmarkMedia)
+        .where(eq(schema.bookmarkMedia.bookmarkId, '111222333'))
+
+      expect(quotedMedia).toHaveLength(1)
+      expect(quotedMedia[0].mediaType).toBe('photo')
+      expect(quotedMedia[0].originalUrl).toBe('https://pbs.twimg.com/quoted-photo.jpg')
+    })
+
+    it('does not duplicate quoted tweet if already exists', async () => {
+      // Pre-insert the quoted tweet
+      await testInstance.db.insert(schema.bookmarks).values({
+        id: '111222333',
+        userId: 'user-123',
+        author: 'originalauthor',
+        text: 'Existing quoted tweet',
+        tweetUrl: 'https://x.com/originalauthor/status/111222333',
+        processedAt: new Date().toISOString(),
+      })
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockQuoteTweet),
+      })
+
+      const { POST } = await import('@/app/api/tweets/add/route')
+      await POST(createRequest({ url: 'https://twitter.com/quoter/status/999888777' }))
+
+      // Should still have only one quoted tweet (no duplicate)
+      const quotedBookmarks = await testInstance.db
+        .select()
+        .from(schema.bookmarks)
+        .where(and(eq(schema.bookmarks.userId, 'user-123'), eq(schema.bookmarks.id, '111222333')))
+
+      expect(quotedBookmarks).toHaveLength(1)
+      // Original text should be preserved (not overwritten)
+      expect(quotedBookmarks[0].text).toBe('Existing quoted tweet')
     })
   })
 
