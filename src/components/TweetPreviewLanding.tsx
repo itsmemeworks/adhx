@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowRight, Loader2, Search, Sparkles, Play, Zap, Eye } from 'lucide-react'
+import { ArrowRight, Search, Sparkles, Play, Zap, Eye } from 'lucide-react'
 import { ADHX_PURPLE } from '@/lib/gestalt/theme'
 import { type FxTwitterResponse } from '@/lib/media/fxembed'
 import { renderArticleBlock } from '@/components/feed/utils'
@@ -17,14 +17,14 @@ interface TweetPreviewLandingProps {
   tweet: Tweet
 }
 
-// Format large numbers with K/M suffix
+/** Format large numbers with K/M suffix */
 function formatCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
   return n.toString()
 }
 
-// Format relative time
+/** Format relative time from ISO date string */
 function formatRelativeTime(dateStr: string): string {
   const date = new Date(dateStr)
   const now = new Date()
@@ -39,7 +39,81 @@ function formatRelativeTime(dateStr: string): string {
   return `${Math.floor(diffDays / 365)}y ago`
 }
 
-export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLandingProps) {
+/** X (Twitter) logo SVG icon */
+function XIcon({ className }: { className?: string }): React.ReactElement {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  )
+}
+
+/** Reading tools panel for ADHD-friendly font and bionic reading controls */
+interface ReadingToolsProps {
+  bionicReading: boolean
+  onBionicToggle: () => void
+  selectedFont: BodyFont
+  onFontChange: (font: BodyFont) => void
+  className?: string
+}
+
+function ReadingTools({
+  bionicReading,
+  onBionicToggle,
+  selectedFont,
+  onFontChange,
+  className,
+}: ReadingToolsProps): React.ReactElement {
+  return (
+    <div className={`p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 ${className || ''}`}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-purple-600 dark:text-purple-300">
+          <Eye className="w-4 h-4 flex-shrink-0" />
+          <span className="text-xs font-medium">Reading tools</span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Focus Mode Toggle */}
+          <button
+            onClick={onBionicToggle}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+              bionicReading
+                ? 'bg-purple-200 dark:bg-purple-800/50 text-purple-800 dark:text-purple-200'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-purple-100 dark:hover:bg-purple-900/30'
+            }`}
+            title="Bolds first part of each word for easier reading"
+          >
+            Focus
+          </button>
+
+          {/* Divider */}
+          <div className="w-px h-4 bg-purple-200 dark:bg-purple-700" />
+
+          {/* Font Selector */}
+          <div className="flex items-center gap-0.5">
+            {(Object.entries(FONT_OPTIONS) as [BodyFont, { name: string }][]).map(([key, { name }]) => (
+              <button
+                key={key}
+                onClick={() => onFontChange(key)}
+                className={`px-2 py-1 rounded-lg text-xs transition-colors ${
+                  selectedFont === key
+                    ? 'bg-purple-200 dark:bg-purple-800/50 text-purple-800 dark:text-purple-200'
+                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-purple-100 dark:hover:bg-purple-900/30'
+                }`}
+                style={{ fontFamily: `var(--font-${key})` }}
+                title={name}
+              >
+                Aa
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLandingProps): React.ReactElement {
   const [isLoading, setIsLoading] = useState(false)
   const [bionicReading, setBionicReading] = useState(false)
   const [selectedFont, setSelectedFont] = useState<BodyFont>('ibm-plex')
@@ -174,9 +248,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
                       title="View on X"
                     >
                       {formatRelativeTime(tweet.created_at)}
-                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                      </svg>
+                      <XIcon className="w-3 h-3" />
                     </a>
                   </div>
                 </div>
@@ -313,51 +385,13 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
 
               {/* ADHD Reading Tools - Mobile only, below tweet card for easy thumb access */}
               {tweet.article && (
-                <div className="md:hidden mt-4 p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 text-purple-600 dark:text-purple-300">
-                      <Eye className="w-4 h-4 flex-shrink-0" />
-                      <span className="text-xs font-medium">Reading tools</span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {/* Focus Mode Toggle */}
-                      <button
-                        onClick={() => setBionicReading(!bionicReading)}
-                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                          bionicReading
-                            ? 'bg-purple-200 dark:bg-purple-800/50 text-purple-800 dark:text-purple-200'
-                            : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-purple-100 dark:hover:bg-purple-900/30'
-                        }`}
-                        title="Bolds first part of each word for easier reading"
-                      >
-                        Focus
-                      </button>
-
-                      {/* Divider */}
-                      <div className="w-px h-4 bg-purple-200 dark:bg-purple-700" />
-
-                      {/* Font Selector */}
-                      <div className="flex items-center gap-0.5">
-                        {(Object.entries(FONT_OPTIONS) as [BodyFont, { name: string }][]).map(([key, { name }]) => (
-                          <button
-                            key={key}
-                            onClick={() => setSelectedFont(key)}
-                            className={`px-2 py-1 rounded-lg text-xs transition-colors ${
-                              selectedFont === key
-                                ? 'bg-purple-200 dark:bg-purple-800/50 text-purple-800 dark:text-purple-200'
-                                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-purple-100 dark:hover:bg-purple-900/30'
-                            }`}
-                            style={{ fontFamily: `var(--font-${key})` }}
-                            title={name}
-                          >
-                            Aa
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <ReadingTools
+                  bionicReading={bionicReading}
+                  onBionicToggle={() => setBionicReading(!bionicReading)}
+                  selectedFont={selectedFont}
+                  onFontChange={setSelectedFont}
+                  className="md:hidden mt-4"
+                />
               )}
 
             </div>
@@ -392,14 +426,12 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     Connecting...
                   </>
                 ) : (
                   <>
-                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                    </svg>
+                    <XIcon className="w-5 h-5" />
                     Save this tweet
                     <ArrowRight className="w-5 h-5" />
                   </>
@@ -429,51 +461,13 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
 
               {/* ADHD Reading Tools - Below Pro tip (desktop only) */}
               {tweet.article && (
-                <div className="hidden md:block mt-4 p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 text-purple-600 dark:text-purple-300">
-                      <Eye className="w-4 h-4 flex-shrink-0" />
-                      <span className="text-xs font-medium">Reading tools</span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {/* Focus Mode Toggle */}
-                      <button
-                        onClick={() => setBionicReading(!bionicReading)}
-                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                          bionicReading
-                            ? 'bg-purple-200 dark:bg-purple-800/50 text-purple-800 dark:text-purple-200'
-                            : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-purple-100 dark:hover:bg-purple-900/30'
-                        }`}
-                        title="Bolds first part of each word for easier reading"
-                      >
-                        Focus
-                      </button>
-
-                      {/* Divider */}
-                      <div className="w-px h-4 bg-purple-200 dark:bg-purple-700" />
-
-                      {/* Font Selector */}
-                      <div className="flex items-center gap-0.5">
-                        {(Object.entries(FONT_OPTIONS) as [BodyFont, { name: string }][]).map(([key, { name }]) => (
-                          <button
-                            key={key}
-                            onClick={() => setSelectedFont(key)}
-                            className={`px-2 py-1 rounded-lg text-xs transition-colors ${
-                              selectedFont === key
-                                ? 'bg-purple-200 dark:bg-purple-800/50 text-purple-800 dark:text-purple-200'
-                                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-purple-100 dark:hover:bg-purple-900/30'
-                            }`}
-                            style={{ fontFamily: `var(--font-${key})` }}
-                            title={name}
-                          >
-                            Aa
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <ReadingTools
+                  bionicReading={bionicReading}
+                  onBionicToggle={() => setBionicReading(!bionicReading)}
+                  selectedFont={selectedFont}
+                  onFontChange={setSelectedFont}
+                  className="hidden md:block mt-4"
+                />
               )}
             </div>
           </div>
@@ -490,8 +484,8 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
   )
 }
 
-// Benefit item component
-function BenefitItem({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
+/** Benefit item component for CTA section */
+function BenefitItem({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }): React.ReactElement {
   return (
     <div className="flex gap-4 p-4 rounded-xl bg-white dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 hover:border-purple-200 dark:hover:border-purple-700 transition-colors">
       <div
@@ -508,7 +502,7 @@ function BenefitItem({ icon, title, description }: { icon: React.ReactNode; titl
   )
 }
 
-// Media grid component
+/** Media grid component for displaying tweet photos and videos */
 interface MediaGridProps {
   photos: Array<{ url: string; width: number; height: number }>
   videos: Array<{ url: string; thumbnail_url: string; width: number; height: number }>
@@ -516,7 +510,7 @@ interface MediaGridProps {
   tweetId: string
 }
 
-function MediaGrid({ photos, videos, author, tweetId }: MediaGridProps) {
+function MediaGrid({ photos, videos, author, tweetId }: MediaGridProps): React.ReactElement {
   const totalMedia = photos.length + videos.length
 
   // Single media item - full width with responsive heights
@@ -558,8 +552,8 @@ function MediaGrid({ photos, videos, author, tweetId }: MediaGridProps) {
   )
 }
 
-// Video player component - uses server-side proxy to avoid CORS issues
-function VideoPlayer({ author, tweetId, thumbnail }: { author: string; tweetId: string; thumbnail: string }) {
+/** Video player component - uses server-side proxy to avoid CORS issues */
+function VideoPlayer({ author, tweetId, thumbnail }: { author: string; tweetId: string; thumbnail: string }): React.ReactElement {
   const [isPlaying, setIsPlaying] = useState(false)
 
   if (!isPlaying) {
@@ -592,14 +586,14 @@ function VideoPlayer({ author, tweetId, thumbnail }: { author: string; tweetId: 
   )
 }
 
-// Quote tweet preview component with full media support
+/** Quote tweet preview component with full media support */
 interface QuoteTweetPreviewProps {
   quote: NonNullable<Tweet['quote']>
   quoteAuthor: string
   quoteTweetId: string
 }
 
-function QuoteTweetPreview({ quote, quoteAuthor, quoteTweetId }: QuoteTweetPreviewProps) {
+function QuoteTweetPreview({ quote, quoteAuthor, quoteTweetId }: QuoteTweetPreviewProps): React.ReactElement {
   const photos = quote.media?.photos || []
   const videos = quote.media?.videos || []
   const hasMedia = photos.length > 0 || videos.length > 0
@@ -649,12 +643,12 @@ function QuoteTweetPreview({ quote, quoteAuthor, quoteTweetId }: QuoteTweetPrevi
   )
 }
 
-// External link preview with enhanced article detection
+/** External link preview with enhanced article detection */
 interface ExternalLinkPreviewProps {
   external: NonNullable<Tweet['external']>
 }
 
-function ExternalLinkPreview({ external }: ExternalLinkPreviewProps) {
+function ExternalLinkPreview({ external }: ExternalLinkPreviewProps): React.ReactElement {
   // Detect if this is an article-type link (has title, description > 80 chars)
   const isArticle = Boolean(
     external.title &&
