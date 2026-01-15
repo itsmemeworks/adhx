@@ -182,8 +182,10 @@ function MediaContent({ item, primaryMedia, isVideo, aspectRatio, isHovered, err
     )
   }
 
+  const imageCount = item.media?.length ?? 0
+
   return (
-    <>
+    <div className="relative">
       <img
         src={primaryMedia.thumbnailUrl}
         alt=""
@@ -194,7 +196,13 @@ function MediaContent({ item, primaryMedia, isVideo, aspectRatio, isHovered, err
         loading="lazy"
       />
       {!loaded && <div className="absolute inset-0 bg-gray-200 dark:bg-gray-700 animate-pulse" />}
-    </>
+      {/* Multi-image badge */}
+      {imageCount > 1 && (
+        <div className="absolute top-2 right-2 bg-black/70 text-white text-xs font-medium px-2 py-0.5 rounded-full">
+          1/{imageCount}
+        </div>
+      )}
+    </div>
   )
 }
 
