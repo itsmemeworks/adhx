@@ -358,7 +358,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
                   )}
                 </button>
                 <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-3">
-                  Your bookmarks stay private.
+                  Into your own Collection. Visible only to you.
                 </p>
               </div>
 
@@ -407,7 +407,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet }: TweetPreviewLa
               </button>
 
               <p className="hidden md:block text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
-                Your bookmarks stay private.
+                Into your own Collection. Visible only to you.
               </p>
 
               {/* URL Trick Callout */}
