@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.12.0](https://github.com/itsmemeworks/adhx/compare/v1.11.0...v1.12.0) (2026-01-15)
+
+
+### Features
+
+* multi-image support + tweet processing unification + bug fixes ([#51](https://github.com/itsmemeworks/adhx/issues/51)) ([0fd906b](https://github.com/itsmemeworks/adhx/commit/0fd906b14b420136692e9c95c506a37041cf38d6))
+
+
+### Bug Fixes
+
+* store quote tweet data when adding tweets via url prefix ([#50](https://github.com/itsmemeworks/adhx/issues/50)) ([425256f](https://github.com/itsmemeworks/adhx/commit/425256fe84eb614e91a2d1bc92c87f09243313f6))
+
 ## [1.11.0](https://github.com/itsmemeworks/adhx/compare/v1.10.0...v1.11.0) (2026-01-15)
 
 
