@@ -111,6 +111,39 @@ const mockQuoteTweet = {
   },
 }
 
+// Edge case: Tweet with BOTH media AND quote
+const mockTweetWithMediaAndQuote = {
+  tweet: {
+    id: '555666777',
+    text: 'Check out this image and also this quoted tweet!',
+    created_at: '2024-01-15T16:00:00Z',
+    author: {
+      screen_name: 'mediaandquoter',
+      name: 'Media And Quote Person',
+      avatar_url: 'https://pbs.twimg.com/profile/mediaandquoter.jpg',
+    },
+    media: {
+      all: [
+        { type: 'photo', url: 'https://pbs.twimg.com/main-photo-1.jpg', width: 1200, height: 800 },
+        { type: 'photo', url: 'https://pbs.twimg.com/main-photo-2.jpg', width: 1200, height: 900 },
+      ],
+    },
+    quote: {
+      id: '888999000',
+      text: 'This is the quoted tweet content',
+      created_at: '2024-01-14T08:00:00Z',
+      author: {
+        screen_name: 'quoteduser',
+        name: 'Quoted User',
+        avatar_url: 'https://pbs.twimg.com/profile/quoteduser.jpg',
+      },
+      media: {
+        photos: [{ url: 'https://pbs.twimg.com/quoted-photo-in-combo.jpg', width: 800, height: 600 }],
+      },
+    },
+  },
+}
+
 describe('API: /api/tweets/add', () => {
   beforeEach(() => {
     testInstance = createTestDb()
@@ -457,6 +490,104 @@ describe('API: /api/tweets/add', () => {
       expect(quotedBookmarks).toHaveLength(1)
       // Original text should be preserved (not overwritten)
       expect(quotedBookmarks[0].text).toBe('Existing quoted tweet')
+    })
+  })
+
+  describe('Tweet with both media AND quote', () => {
+    it('saves both media and quote context for combined tweets', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockTweetWithMediaAndQuote),
+      })
+
+      const { POST } = await import('@/app/api/tweets/add/route')
+      const response = await POST(createRequest({ url: 'https://twitter.com/mediaandquoter/status/555666777' }))
+
+      expect(response.status).toBe(200)
+      const data = await response.json()
+
+      // Should be marked as both a photo (category) and a quote
+      expect(data.bookmark.category).toBe('photo')
+      expect(data.bookmark.isQuote).toBe(true)
+      expect(data.bookmark.quotedTweetId).toBe('888999000')
+      expect(data.bookmark.quoteContext).toBeTruthy()
+    })
+
+    it('saves main tweet media for combined tweets', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockTweetWithMediaAndQuote),
+      })
+
+      const { POST } = await import('@/app/api/tweets/add/route')
+      await POST(createRequest({ url: 'https://twitter.com/mediaandquoter/status/555666777' }))
+
+      // Check that main tweet's media was saved
+      const mainMedia = await testInstance.db
+        .select()
+        .from(schema.bookmarkMedia)
+        .where(eq(schema.bookmarkMedia.bookmarkId, '555666777'))
+
+      expect(mainMedia).toHaveLength(2)
+      expect(mainMedia[0].mediaType).toBe('photo')
+      expect(mainMedia[0].originalUrl).toBe('https://pbs.twimg.com/main-photo-1.jpg')
+      expect(mainMedia[1].originalUrl).toBe('https://pbs.twimg.com/main-photo-2.jpg')
+    })
+
+    it('saves quoted tweet as separate bookmark with its media', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockTweetWithMediaAndQuote),
+      })
+
+      const { POST } = await import('@/app/api/tweets/add/route')
+      await POST(createRequest({ url: 'https://twitter.com/mediaandquoter/status/555666777' }))
+
+      // Check quoted tweet was saved as separate bookmark
+      const [quotedBookmark] = await testInstance.db
+        .select()
+        .from(schema.bookmarks)
+        .where(and(eq(schema.bookmarks.userId, 'user-123'), eq(schema.bookmarks.id, '888999000')))
+
+      expect(quotedBookmark).toBeTruthy()
+      expect(quotedBookmark.author).toBe('quoteduser')
+      expect(quotedBookmark.text).toBe('This is the quoted tweet content')
+      expect(quotedBookmark.source).toBe('quoted')
+
+      // Check quoted tweet's media was saved
+      const quotedMedia = await testInstance.db
+        .select()
+        .from(schema.bookmarkMedia)
+        .where(eq(schema.bookmarkMedia.bookmarkId, '888999000'))
+
+      expect(quotedMedia).toHaveLength(1)
+      expect(quotedMedia[0].originalUrl).toBe('https://pbs.twimg.com/quoted-photo-in-combo.jpg')
+    })
+
+    it('creates three bookmarks total: main + quoted (both with media)', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockTweetWithMediaAndQuote),
+      })
+
+      const { POST } = await import('@/app/api/tweets/add/route')
+      await POST(createRequest({ url: 'https://twitter.com/mediaandquoter/status/555666777' }))
+
+      // Should have 2 bookmarks: main tweet and quoted tweet
+      const allBookmarks = await testInstance.db
+        .select()
+        .from(schema.bookmarks)
+        .where(eq(schema.bookmarks.userId, 'user-123'))
+
+      expect(allBookmarks).toHaveLength(2)
+
+      // Should have 3 media items total: 2 for main tweet, 1 for quoted tweet
+      const allMedia = await testInstance.db
+        .select()
+        .from(schema.bookmarkMedia)
+        .where(eq(schema.bookmarkMedia.userId, 'user-123'))
+
+      expect(allMedia).toHaveLength(3)
     })
   })
 
