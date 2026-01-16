@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.1](https://github.com/itsmemeworks/adhx/compare/v1.13.0...v1.13.1) (2026-01-16)
+
+
+### Bug Fixes
+
+* browser path normalization in URL prefix middleware ([#55](https://github.com/itsmemeworks/adhx/issues/55)) ([622e30c](https://github.com/itsmemeworks/adhx/commit/622e30c1c78c44494e6eb1568ffbc0d18b83e678))
+
 ## [1.13.0](https://github.com/itsmemeworks/adhx/compare/v1.12.0...v1.13.0) (2026-01-15)
 
 
