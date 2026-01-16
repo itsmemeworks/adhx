@@ -16,7 +16,7 @@ Open this to see the entire post",
     "images": [
       {
         "height": 630,
-        "url": "https://pbs.twimg.com/media/G-e63eNWkAATqEB.jpg?name=orig",
+        "url": "https://pbs.twimg.com/media/G-e63eNWkAATqEB.jpg",
         "width": 1200,
       },
     ],
@@ -33,7 +33,7 @@ Dude spills some sauce on LinkedIn.
 
 Open this to see the entire post",
     "images": [
-      "https://pbs.twimg.com/media/G-e63eNWkAATqEB.jpg?name=orig",
+      "https://pbs.twimg.com/media/G-e63eNWkAATqEB.jpg",
     ],
     "title": "@iamgdsa on X",
   },
@@ -148,7 +148,7 @@ We built a fully automated system that repurposes, localizes, and launches winni
     "images": [
       {
         "height": 630,
-        "url": "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg?name=orig",
+        "url": "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg",
         "width": 1200,
       },
     ],
@@ -163,7 +163,7 @@ We built a fully automated system that repurposes, localizes, and launches winni
 
 We built a fully automated system that repurposes, localizes, and launches winning TikTok Shop cont…",
     "images": [
-      "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg?name=orig",
+      "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg",
     ],
     "title": "@maverickecom on X",
   },
@@ -186,7 +186,7 @@ U.S state department made clear last night speaking on the UK and Keir Starmer �
     "images": [
       {
         "height": 630,
-        "url": "https://pbs.twimg.com/media/G-w2zr6aEAAt-FN.png?name=orig",
+        "url": "https://pbs.twimg.com/media/G-w2zr6aEAAt-FN.png",
         "width": 1200,
       },
     ],
@@ -205,7 +205,7 @@ U.S state department made clear last night speaking on the UK and Keir Starmer �
 
 "The government has, indeed, repeat…",
     "images": [
-      "https://pbs.twimg.com/media/G-w2zr6aEAAt-FN.png?name=orig",
+      "https://pbs.twimg.com/media/G-w2zr6aEAAt-FN.png",
     ],
     "title": "@BasilTheGreat on X",
   },
@@ -232,7 +232,7 @@ There was a greenlight. Then a…",
     "images": [
       {
         "height": 630,
-        "url": "https://pbs.twimg.com/media/G-tNQK3akAAXwrR.jpg?name=orig",
+        "url": "https://pbs.twimg.com/media/G-tNQK3akAAXwrR.jpg",
         "width": 1200,
       },
     ],
@@ -253,7 +253,7 @@ This is state-level controlled ignition.
 
 There was a greenlight. Then a…",
     "images": [
-      "https://pbs.twimg.com/media/G-tNQK3akAAXwrR.jpg?name=orig",
+      "https://pbs.twimg.com/media/G-tNQK3akAAXwrR.jpg",
     ],
     "title": "@_The_Prophet__ on X",
   },
@@ -300,7 +300,7 @@ you’re welcome",
     "images": [
       {
         "height": 630,
-        "url": "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg?name=orig",
+        "url": "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg",
         "width": 1200,
       },
     ],
@@ -315,7 +315,7 @@ you’re welcome",
 
 you’re welcome",
     "images": [
-      "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg?name=orig",
+      "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg",
     ],
     "title": "@Nate_Google_ on X",
   },
@@ -476,7 +476,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'youtube-li
 
 exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > '4-images': returns correct OG image 1`] = `
 {
-  "ogImage": "https://pbs.twimg.com/media/G-e63eNWkAATqEB.jpg?name=orig",
+  "ogImage": "https://pbs.twimg.com/media/G-e63eNWkAATqEB.jpg",
   "slug": "4-images",
 }
 `;
@@ -504,21 +504,21 @@ exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image f
 
 exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'long-text-1-image': returns correct OG image 1`] = `
 {
-  "ogImage": "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg?name=orig",
+  "ogImage": "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg",
   "slug": "long-text-1-image",
 }
 `;
 
 exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'long-text-2-images': returns correct OG image 1`] = `
 {
-  "ogImage": "https://pbs.twimg.com/media/G-w2zr6aEAAt-FN.png?name=orig",
+  "ogImage": "https://pbs.twimg.com/media/G-w2zr6aEAAt-FN.png",
   "slug": "long-text-2-images",
 }
 `;
 
 exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'long-text-with-quote': returns correct OG image 1`] = `
 {
-  "ogImage": "https://pbs.twimg.com/media/G-tNQK3akAAXwrR.jpg?name=orig",
+  "ogImage": "https://pbs.twimg.com/media/G-tNQK3akAAXwrR.jpg",
   "slug": "long-text-with-quote",
 }
 `;
@@ -532,7 +532,7 @@ exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image f
 
 exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'quote-of-image-tweet': returns correct OG image 1`] = `
 {
-  "ogImage": "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg?name=orig",
+  "ogImage": "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg",
   "slug": "quote-of-image-tweet",
 }
 `;
