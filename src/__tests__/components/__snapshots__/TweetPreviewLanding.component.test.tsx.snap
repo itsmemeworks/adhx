@@ -236,14 +236,14 @@ Open this to see the entire post
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -258,11 +258,11 @@ Open this to see the entire post
                 50
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -277,11 +277,11 @@ Open this to see the entire post
                 98
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -296,11 +296,11 @@ Open this to see the entire post
                 2.4K
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -321,11 +321,11 @@ Open this to see the entire post
                 370.0K
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -1440,14 +1440,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1462,11 +1462,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 240
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1481,11 +1481,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 629
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1500,11 +1500,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 4.8K
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1525,11 +1525,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 2.7M
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -3721,14 +3721,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -3743,11 +3743,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 57
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -3762,11 +3762,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 220
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -3781,11 +3781,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 4.4K
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -3806,11 +3806,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 780.5K
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -4573,14 +4573,14 @@ Live now 🚀
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -4595,11 +4595,11 @@ Live now 🚀
                 360
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -4614,11 +4614,11 @@ Live now 🚀
                 821
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -4633,11 +4633,11 @@ Live now 🚀
                 2.2K
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -4658,11 +4658,11 @@ Live now 🚀
                 446.6K
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -5265,14 +5265,14 @@ PS – Repost for early access to the full TikTok Shop content factory system.
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -5287,11 +5287,11 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 1.4K
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -5306,11 +5306,11 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 491
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -5325,11 +5325,11 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 4.5K
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -5350,11 +5350,11 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 746.5K
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -5935,14 +5935,14 @@ His days are numbered
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -5957,11 +5957,11 @@ His days are numbered
                 103
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -5976,11 +5976,11 @@ His days are numbered
                 538
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -5995,11 +5995,11 @@ His days are numbered
                 3.0K
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -6020,11 +6020,11 @@ His days are numbered
                 49.2K
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -6548,7 +6548,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   target="_blank"
                   title="View on X"
                 >
-                  Today
+                  Yesterday
                   <svg
                     class="w-3 h-3"
                     fill="currentColor"
@@ -6708,14 +6708,14 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -6730,11 +6730,11 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                 321
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -6749,11 +6749,11 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                 916
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -6768,11 +6768,11 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                 5.9K
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -6793,11 +6793,11 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                 1.8M
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -7349,14 +7349,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -7371,11 +7371,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 5.0K
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -7390,11 +7390,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 401
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -7409,11 +7409,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 4.9K
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -7434,11 +7434,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 23.3M
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -8084,14 +8084,14 @@ PS – Repost for early access to the full TikTok Shop content factory system.
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -8106,11 +8106,11 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 16
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -8125,11 +8125,11 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 34
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -8144,11 +8144,11 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 1.1K
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -8169,11 +8169,11 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 238.5K
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -8770,14 +8770,14 @@ This is not a coincidence.
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -8792,11 +8792,11 @@ This is not a coincidence.
                 411
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -8811,11 +8811,11 @@ This is not a coincidence.
                 423
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -8830,11 +8830,11 @@ This is not a coincidence.
                 3.2K
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -8855,11 +8855,11 @@ This is not a coincidence.
                 1.8M
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -9411,14 +9411,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -9433,11 +9433,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 13
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -9452,11 +9452,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 13
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -9471,11 +9471,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 114
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -9496,11 +9496,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 20.0K
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -10138,14 +10138,14 @@ Try it for free in our demo app (link in the thread).
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -10160,11 +10160,11 @@ Try it for free in our demo app (link in the thread).
                 24
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -10179,11 +10179,11 @@ Try it for free in our demo app (link in the thread).
                 27
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -10198,11 +10198,11 @@ Try it for free in our demo app (link in the thread).
                 636
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -10223,11 +10223,11 @@ Try it for free in our demo app (link in the thread).
                 71.3K
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -10820,14 +10820,14 @@ Hidden order.
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -10842,11 +10842,11 @@ Hidden order.
                 186
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -10861,11 +10861,11 @@ Hidden order.
                 592
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -10880,11 +10880,11 @@ Hidden order.
                 3.6K
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -10905,11 +10905,11 @@ Hidden order.
                 146.0K
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -11461,14 +11461,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -11483,11 +11483,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 10
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -11502,11 +11502,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 22
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -11521,11 +11521,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 381
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -11546,11 +11546,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 55.5K
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -12134,14 +12134,14 @@ Open this to see the entire post
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -12156,11 +12156,11 @@ Open this to see the entire post
                 50
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -12175,11 +12175,11 @@ Open this to see the entire post
                 98
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -12194,11 +12194,11 @@ Open this to see the entire post
                 2.4K
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -12219,11 +12219,11 @@ Open this to see the entire post
                 370.0K
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -13318,14 +13318,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -13340,11 +13340,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 240
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -13359,11 +13359,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 629
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -13378,11 +13378,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 4.8K
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -13403,11 +13403,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 2.7M
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -15579,14 +15579,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -15601,11 +15601,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 57
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -15620,11 +15620,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 220
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -15639,11 +15639,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 4.4K
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -15664,11 +15664,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 780.5K
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -16411,14 +16411,14 @@ Live now 🚀
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -16433,11 +16433,11 @@ Live now 🚀
                 360
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -16452,11 +16452,11 @@ Live now 🚀
                 821
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -16471,11 +16471,11 @@ Live now 🚀
                 2.2K
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -16496,11 +16496,11 @@ Live now 🚀
                 446.6K
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -17083,14 +17083,14 @@ PS – Repost for early access to the full TikTok Shop content factory system.
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -17105,11 +17105,11 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 1.4K
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -17124,11 +17124,11 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 491
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -17143,11 +17143,11 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 4.5K
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -17168,11 +17168,11 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 746.5K
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -17733,14 +17733,14 @@ His days are numbered
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -17755,11 +17755,11 @@ His days are numbered
                 103
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -17774,11 +17774,11 @@ His days are numbered
                 538
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -17793,11 +17793,11 @@ His days are numbered
                 3.0K
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -17818,11 +17818,11 @@ His days are numbered
                 49.2K
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -18326,7 +18326,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   target="_blank"
                   title="View on X"
                 >
-                  Today
+                  Yesterday
                   <svg
                     class="w-3 h-3"
                     fill="currentColor"
@@ -18486,14 +18486,14 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -18508,11 +18508,11 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                 321
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -18527,11 +18527,11 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                 916
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -18546,11 +18546,11 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                 5.9K
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -18571,11 +18571,11 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                 1.8M
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -19107,14 +19107,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -19129,11 +19129,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 5.0K
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -19148,11 +19148,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 401
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -19167,11 +19167,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 4.9K
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -19192,11 +19192,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 23.3M
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -19822,14 +19822,14 @@ PS – Repost for early access to the full TikTok Shop content factory system.
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -19844,11 +19844,11 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 16
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -19863,11 +19863,11 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 34
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -19882,11 +19882,11 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 1.1K
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -19907,11 +19907,11 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 238.5K
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -20488,14 +20488,14 @@ This is not a coincidence.
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -20510,11 +20510,11 @@ This is not a coincidence.
                 411
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -20529,11 +20529,11 @@ This is not a coincidence.
                 423
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -20548,11 +20548,11 @@ This is not a coincidence.
                 3.2K
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -20573,11 +20573,11 @@ This is not a coincidence.
                 1.8M
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -21109,14 +21109,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -21131,11 +21131,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 13
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -21150,11 +21150,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 13
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -21169,11 +21169,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 114
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -21194,11 +21194,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 20.0K
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -21816,14 +21816,14 @@ Try it for free in our demo app (link in the thread).
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -21838,11 +21838,11 @@ Try it for free in our demo app (link in the thread).
                 24
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -21857,11 +21857,11 @@ Try it for free in our demo app (link in the thread).
                 27
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -21876,11 +21876,11 @@ Try it for free in our demo app (link in the thread).
                 636
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -21901,11 +21901,11 @@ Try it for free in our demo app (link in the thread).
                 71.3K
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -22478,14 +22478,14 @@ Hidden order.
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -22500,11 +22500,11 @@ Hidden order.
                 186
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -22519,11 +22519,11 @@ Hidden order.
                 592
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -22538,11 +22538,11 @@ Hidden order.
                 3.6K
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -22563,11 +22563,11 @@ Hidden order.
                 146.0K
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -23099,14 +23099,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 sm:gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50"
+              class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Replies"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -23121,11 +23121,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 10
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Reposts"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -23140,11 +23140,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 22
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Likes"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -23159,11 +23159,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 381
               </span>
               <span
-                class="flex md:hidden lg:flex items-center gap-1.5"
+                class="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5"
                 title="Views"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -23184,11 +23184,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 55.5K
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-4 h-4"
+                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
