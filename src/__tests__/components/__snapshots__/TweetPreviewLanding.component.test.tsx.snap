@@ -109,13 +109,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -181,7 +190,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -347,7 +356,7 @@ Open this to see the entire post
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -773,13 +782,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -845,7 +863,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -1542,7 +1560,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -2134,13 +2152,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -2206,7 +2233,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -3814,7 +3841,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -4406,13 +4433,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -4478,7 +4514,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -4657,7 +4693,7 @@ Live now 🚀
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -5083,13 +5119,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -5155,7 +5200,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -5213,7 +5258,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 >
                   <img
                     alt="Tweet media"
-                    class="w-full object-cover max-h-[250px] sm:max-h-[300px] md:max-h-[350px] lg:max-h-[400px]"
+                    class="w-full max-w-full object-cover max-h-[250px] sm:max-h-[300px] md:max-h-[350px] lg:max-h-[400px]"
                     src="https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg?name=orig"
                   />
                 </div>
@@ -5340,7 +5385,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -5766,13 +5811,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -5838,7 +5892,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -6001,7 +6055,7 @@ His days are numbered
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -6427,13 +6481,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -6499,7 +6562,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -6636,7 +6699,7 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                     >
                       <img
                         alt="Tweet media"
-                        class="w-full object-cover max-h-[250px] sm:max-h-[300px] md:max-h-[350px] lg:max-h-[400px]"
+                        class="w-full max-w-full object-cover max-h-[250px] sm:max-h-[300px] md:max-h-[350px] lg:max-h-[400px]"
                         src="https://pbs.twimg.com/media/G-tNQK3akAAXwrR.jpg?name=orig"
                       />
                     </div>
@@ -6765,7 +6828,7 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -7191,13 +7254,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -7263,7 +7335,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -7397,7 +7469,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -7823,13 +7895,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -7895,7 +7976,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -7994,7 +8075,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                     >
                       <img
                         alt="Tweet media"
-                        class="w-full object-cover max-h-[250px] sm:max-h-[300px] md:max-h-[350px] lg:max-h-[400px]"
+                        class="w-full max-w-full object-cover max-h-[250px] sm:max-h-[300px] md:max-h-[350px] lg:max-h-[400px]"
                         src="https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg?name=orig"
                       />
                     </div>
@@ -8123,7 +8204,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -8549,13 +8630,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -8621,7 +8711,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -8800,7 +8890,7 @@ This is not a coincidence.
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -9226,13 +9316,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -9298,7 +9397,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -9432,7 +9531,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -9858,13 +9957,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -9930,7 +10038,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -10150,7 +10258,7 @@ Try it for free in our demo app (link in the thread).
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -10576,13 +10684,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -10648,7 +10765,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -10823,7 +10940,7 @@ Hidden order.
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -11249,13 +11366,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -11321,7 +11447,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -11455,7 +11581,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -11881,13 +12007,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -11953,7 +12088,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -12119,7 +12254,7 @@ Open this to see the entire post
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -12525,13 +12660,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -12597,7 +12741,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -13294,7 +13438,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -13866,13 +14010,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -13938,7 +14091,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -15546,7 +15699,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -16118,13 +16271,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -16190,7 +16352,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -16369,7 +16531,7 @@ Live now 🚀
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -16775,13 +16937,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -16847,7 +17018,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -16905,7 +17076,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 >
                   <img
                     alt="Tweet media"
-                    class="w-full object-cover max-h-[250px] sm:max-h-[300px] md:max-h-[350px] lg:max-h-[400px]"
+                    class="w-full max-w-full object-cover max-h-[250px] sm:max-h-[300px] md:max-h-[350px] lg:max-h-[400px]"
                     src="https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg?name=orig"
                   />
                 </div>
@@ -17032,7 +17203,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -17438,13 +17609,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -17510,7 +17690,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -17673,7 +17853,7 @@ His days are numbered
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -18079,13 +18259,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -18151,7 +18340,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -18288,7 +18477,7 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                     >
                       <img
                         alt="Tweet media"
-                        class="w-full object-cover max-h-[250px] sm:max-h-[300px] md:max-h-[350px] lg:max-h-[400px]"
+                        class="w-full max-w-full object-cover max-h-[250px] sm:max-h-[300px] md:max-h-[350px] lg:max-h-[400px]"
                         src="https://pbs.twimg.com/media/G-tNQK3akAAXwrR.jpg?name=orig"
                       />
                     </div>
@@ -18417,7 +18606,7 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -18823,13 +19012,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -18895,7 +19093,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -19029,7 +19227,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -19435,13 +19633,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -19507,7 +19714,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -19606,7 +19813,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                     >
                       <img
                         alt="Tweet media"
-                        class="w-full object-cover max-h-[250px] sm:max-h-[300px] md:max-h-[350px] lg:max-h-[400px]"
+                        class="w-full max-w-full object-cover max-h-[250px] sm:max-h-[300px] md:max-h-[350px] lg:max-h-[400px]"
                         src="https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg?name=orig"
                       />
                     </div>
@@ -19735,7 +19942,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -20141,13 +20348,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -20213,7 +20429,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -20392,7 +20608,7 @@ This is not a coincidence.
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -20798,13 +21014,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -20870,7 +21095,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -21004,7 +21229,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -21410,13 +21635,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -21482,7 +21716,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -21702,7 +21936,7 @@ Try it for free in our demo app (link in the thread).
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -22108,13 +22342,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -22180,7 +22423,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -22355,7 +22598,7 @@ Hidden order.
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
@@ -22761,13 +23004,22 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          Save it now before 
           <span
-            class="text-purple-600 dark:text-purple-400 font-medium"
+            class="sm:hidden"
           >
-            47 browser tabs
+            Save it now before you forget.
           </span>
-           make you forget.
+          <span
+            class="hidden sm:inline"
+          >
+            Save it now before 
+            <span
+              class="text-purple-600 dark:text-purple-400 font-medium"
+            >
+              47 browser tabs
+            </span>
+             make you forget.
+          </span>
         </p>
       </div>
       <div
@@ -22833,7 +23085,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -22967,7 +23219,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   />
                 </svg>
                 <span
-                  class="text-xs hidden sm:inline"
+                  class="text-xs hidden lg:inline"
                 >
                   Expand
                 </span>
