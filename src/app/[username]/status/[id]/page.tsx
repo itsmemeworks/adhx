@@ -74,9 +74,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   // Build dynamic metadata with tweet content
+  // For article tweets, use article title/preview since tweet.text is often empty
+  const isArticle = !!tweet.article?.title
   const tweetText = tweet.text || ''
-  const description = truncate(tweetText, 160)
-  const title = `@${tweet.author.screen_name}: "${truncate(tweetText, 50)}" - Save to ADHX`
+  const articleTitle = tweet.article?.title || ''
+  const articlePreview = tweet.article?.preview_text || ''
+
+  // Choose best text source: tweet text > article preview > article title
+  const displayText = tweetText || articlePreview || articleTitle
+  const description = truncate(displayText, 160)
+
+  // Title shows article title if it's an article, otherwise tweet text
+  const titleContent = isArticle ? articleTitle : truncate(tweetText, 50)
+  const title = `@${tweet.author.screen_name}: "${truncate(titleContent, 50)}" - Save to ADHX`
 
   // Select best OG image: direct media → article cover → quote media → external → logo
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
