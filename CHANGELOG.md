@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.14.4](https://github.com/itsmemeworks/adhx/compare/v1.14.3...v1.14.4) (2026-01-16)
+
+
+### Bug Fixes
+
+* optimize og images and improve button animations ([#68](https://github.com/itsmemeworks/adhx/issues/68)) ([4e8d083](https://github.com/itsmemeworks/adhx/commit/4e8d083d2f3971d732278504471f526260e5ea70))
+
 ## [1.14.3](https://github.com/itsmemeworks/adhx/compare/v1.14.2...v1.14.3) (2026-01-16)
 
 
