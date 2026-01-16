@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.14.2](https://github.com/itsmemeworks/adhx/compare/v1.14.1...v1.14.2) (2026-01-16)
+
+
+### Bug Fixes
+
+* strip query params from twitter photo urls for og images ([#63](https://github.com/itsmemeworks/adhx/issues/63)) ([4f59180](https://github.com/itsmemeworks/adhx/commit/4f59180756e997a16f4858993d0d33435f884e3a))
+
 ## [1.14.1](https://github.com/itsmemeworks/adhx/compare/v1.14.0...v1.14.1) (2026-01-16)
 
 
