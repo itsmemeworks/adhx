@@ -188,4 +188,81 @@ describe('OG Metadata with Real Fixtures', () => {
       expect(ogImage).toBeTruthy()
     })
   })
+
+  describe('OG Image URL Accessibility (Integration)', () => {
+    /**
+     * These tests verify that OG image URLs are actually fetchable by crawlers.
+     * This catches issues like:
+     * - URLs that return HTML instead of images
+     * - CDN blocks on crawler user-agents
+     * - Expired or invalid URLs
+     */
+
+    // Helper to check if a URL returns an image
+    async function isImageAccessible(url: string): Promise<{ ok: boolean; contentType?: string; status?: number }> {
+      try {
+        const response = await fetch(url, {
+          method: 'HEAD',
+          headers: {
+            // Simulate a social media crawler
+            'User-Agent': 'WhatsApp/2.0',
+          },
+        })
+        const contentType = response.headers.get('content-type') || ''
+        return {
+          ok: response.ok && contentType.startsWith('image/'),
+          contentType,
+          status: response.status,
+        }
+      } catch {
+        return { ok: false }
+      }
+    }
+
+    it('video-tweet: thumbnail URL is accessible to crawlers', async () => {
+      const tweet = fixtures['video-tweet'].tweet!
+      const ogImage = getOgImage(tweet, BASE_URL)
+
+      // Skip logo fallback URLs (local)
+      if (ogImage.includes('logo.png')) return
+
+      const result = await isImageAccessible(ogImage)
+      expect(result.ok).toBe(true)
+      expect(result.contentType).toMatch(/^image\//)
+    }, 10000)
+
+    it('4-images: photo URL is accessible to crawlers', async () => {
+      const tweet = fixtures['4-images'].tweet!
+      const ogImage = getOgImage(tweet, BASE_URL)
+
+      if (ogImage.includes('logo.png')) return
+
+      const result = await isImageAccessible(ogImage)
+      expect(result.ok).toBe(true)
+      expect(result.contentType).toMatch(/^image\//)
+    }, 10000)
+
+    it('article-with-media: article cover URL is accessible', async () => {
+      const tweet = fixtures['article-with-media'].tweet!
+      const ogImage = getOgImage(tweet, BASE_URL)
+
+      if (ogImage.includes('logo.png')) return
+
+      const result = await isImageAccessible(ogImage)
+      expect(result.ok).toBe(true)
+      expect(result.contentType).toMatch(/^image\//)
+    }, 10000)
+
+    it('youtube-link: external thumbnail URL is accessible', async () => {
+      const tweet = fixtures['youtube-link'].tweet!
+      const ogImage = getOgImage(tweet, BASE_URL)
+
+      if (ogImage.includes('logo.png')) return
+
+      const result = await isImageAccessible(ogImage)
+      // YouTube thumbnails should be accessible
+      expect(result.ok).toBe(true)
+      expect(result.contentType).toMatch(/^image\//)
+    }, 10000)
+  })
 })
