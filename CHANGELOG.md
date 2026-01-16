@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.14.3](https://github.com/itsmemeworks/adhx/compare/v1.14.2...v1.14.3) (2026-01-16)
+
+
+### Bug Fixes
+
+* use article content for og description when tweet.text is empty ([#65](https://github.com/itsmemeworks/adhx/issues/65)) ([ab5af48](https://github.com/itsmemeworks/adhx/commit/ab5af48ce4d1f9b9250f0d7f6bdd780a6eb026f6))
+* use optimized og-logo.png for fallback og images ([#67](https://github.com/itsmemeworks/adhx/issues/67)) ([6d3ea0b](https://github.com/itsmemeworks/adhx/commit/6d3ea0b84a3ad447cb536b2783f1593cdcad270c))
+
 ## [1.14.2](https://github.com/itsmemeworks/adhx/compare/v1.14.1...v1.14.2) (2026-01-16)
 
 
