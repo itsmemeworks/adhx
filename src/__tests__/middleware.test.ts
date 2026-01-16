@@ -152,4 +152,72 @@ describe('Middleware: URL Normalization', () => {
       )
     })
   })
+
+  /**
+   * Regression tests for real-world URLs that users paste.
+   * These are exact examples that were found to fail in production.
+   */
+  describe('Real-world URL regression tests', () => {
+    it('handles full x.com URL with query params (s=20 share param)', () => {
+      // Real URL: localhost:3000/https://x.com/crypto_iso/status/2011807169427988497?s=20
+      const request = createRequest(
+        '/https://x.com/crypto_iso/status/2011807169427988497?s=20'
+      )
+      const response = middleware(request)
+
+      expect(response.status).toBe(307)
+      expect(response.headers.get('location')).toBe(
+        'https://adhx.com/crypto_iso/status/2011807169427988497?s=20'
+      )
+    })
+
+    it('handles x.com URL with long tweet ID (19 digits)', () => {
+      // Twitter snowflake IDs are typically 18-19 digits
+      const request = createRequest(
+        '/https://x.com/someuser/status/1234567890123456789'
+      )
+      const response = middleware(request)
+
+      expect(response.status).toBe(307)
+      expect(response.headers.get('location')).toBe(
+        'https://adhx.com/someuser/status/1234567890123456789'
+      )
+    })
+
+    it('handles twitter.com URL copied from mobile app', () => {
+      // Mobile Twitter app often copies with twitter.com domain
+      const request = createRequest(
+        '/https://twitter.com/elonmusk/status/1234567890123456789?t=abc123'
+      )
+      const response = middleware(request)
+
+      expect(response.status).toBe(307)
+      expect(response.headers.get('location')).toBe(
+        'https://adhx.com/elonmusk/status/1234567890123456789?t=abc123'
+      )
+    })
+
+    it('handles URL without protocol (user types x.com directly)', () => {
+      // User might manually type adhx.com/x.com/...
+      const request = createRequest('/x.com/user/status/123456789')
+      const response = middleware(request)
+
+      expect(response.status).toBe(307)
+      expect(response.headers.get('location')).toBe(
+        'https://adhx.com/user/status/123456789'
+      )
+    })
+
+    it('handles URL with multiple query params', () => {
+      const request = createRequest(
+        '/https://x.com/user/status/123?s=20&t=abc&ref=copy'
+      )
+      const response = middleware(request)
+
+      expect(response.status).toBe(307)
+      expect(response.headers.get('location')).toBe(
+        'https://adhx.com/user/status/123?s=20&t=abc&ref=copy'
+      )
+    })
+  })
 })
