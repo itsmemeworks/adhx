@@ -296,7 +296,7 @@ Open this to see the entire post
                 2.4K
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -321,7 +321,7 @@ Open this to see the entire post
                 370.0K
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -1500,7 +1500,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 4.8K
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -1525,7 +1525,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 2.7M
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -3781,7 +3781,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 4.4K
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -3806,7 +3806,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 780.5K
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -4633,7 +4633,7 @@ Live now 🚀
                 2.2K
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -4658,7 +4658,7 @@ Live now 🚀
                 446.6K
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -5325,7 +5325,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 4.5K
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -5350,7 +5350,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 746.5K
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -5995,7 +5995,7 @@ His days are numbered
                 3.0K
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -6020,7 +6020,7 @@ His days are numbered
                 49.2K
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -6768,7 +6768,7 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                 5.9K
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -6793,7 +6793,7 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                 1.8M
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -7409,7 +7409,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 4.9K
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -7434,7 +7434,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 23.3M
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -8144,7 +8144,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 1.1K
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -8169,7 +8169,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 238.5K
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -8830,7 +8830,7 @@ This is not a coincidence.
                 3.2K
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -8855,7 +8855,7 @@ This is not a coincidence.
                 1.8M
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -9471,7 +9471,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 114
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -9496,7 +9496,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 20.0K
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -10198,7 +10198,7 @@ Try it for free in our demo app (link in the thread).
                 636
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -10223,7 +10223,7 @@ Try it for free in our demo app (link in the thread).
                 71.3K
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -10880,7 +10880,7 @@ Hidden order.
                 3.6K
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -10905,7 +10905,7 @@ Hidden order.
                 146.0K
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -11521,7 +11521,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 381
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -11546,7 +11546,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 55.5K
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -12194,7 +12194,7 @@ Open this to see the entire post
                 2.4K
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -12219,7 +12219,7 @@ Open this to see the entire post
                 370.0K
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -13378,7 +13378,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 4.8K
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -13403,7 +13403,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 2.7M
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -15639,7 +15639,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 4.4K
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -15664,7 +15664,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 780.5K
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -16471,7 +16471,7 @@ Live now 🚀
                 2.2K
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -16496,7 +16496,7 @@ Live now 🚀
                 446.6K
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -17143,7 +17143,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 4.5K
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -17168,7 +17168,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 746.5K
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -17793,7 +17793,7 @@ His days are numbered
                 3.0K
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -17818,7 +17818,7 @@ His days are numbered
                 49.2K
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -18546,7 +18546,7 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                 5.9K
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -18571,7 +18571,7 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                 1.8M
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -19167,7 +19167,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 4.9K
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -19192,7 +19192,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 23.3M
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -19882,7 +19882,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 1.1K
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -19907,7 +19907,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 238.5K
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -20548,7 +20548,7 @@ This is not a coincidence.
                 3.2K
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -20573,7 +20573,7 @@ This is not a coincidence.
                 1.8M
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -21169,7 +21169,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 114
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -21194,7 +21194,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 20.0K
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -21876,7 +21876,7 @@ Try it for free in our demo app (link in the thread).
                 636
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -21901,7 +21901,7 @@ Try it for free in our demo app (link in the thread).
                 71.3K
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -22538,7 +22538,7 @@ Hidden order.
                 3.6K
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -22563,7 +22563,7 @@ Hidden order.
                 146.0K
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
@@ -23159,7 +23159,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 381
               </span>
               <span
-                class="flex items-center gap-1.5"
+                class="flex md:hidden lg:flex items-center gap-1.5"
                 title="Views"
               >
                 <svg
@@ -23184,7 +23184,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 55.5K
               </span>
               <button
-                class="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                class="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 title="Expand tweet"
               >
                 <svg
