@@ -4500,7 +4500,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   target="_blank"
                   title="View on X"
                 >
-                  6d ago
+                  1w ago
                   <svg
                     class="w-3 h-3"
                     fill="currentColor"
@@ -7962,7 +7962,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   target="_blank"
                   title="View on X"
                 >
-                  Today
+                  Yesterday
                   <svg
                     class="w-3 h-3"
                     fill="currentColor"
@@ -16338,7 +16338,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   target="_blank"
                   title="View on X"
                 >
-                  6d ago
+                  1w ago
                   <svg
                     class="w-3 h-3"
                     fill="currentColor"
@@ -19700,7 +19700,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   target="_blank"
                   title="View on X"
                 >
-                  Today
+                  Yesterday
                   <svg
                     class="w-3 h-3"
                     fill="currentColor"

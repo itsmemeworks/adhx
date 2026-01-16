@@ -291,11 +291,18 @@ export interface FxTwitterResponse {
  */
 export async function fetchTweetData(author: string, tweetId: string): Promise<FxTwitterResponse | null> {
   try {
+    // Add 5 second timeout to prevent hanging when FxTwitter is slow/down
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 5000)
+
     const response = await fetch(`https://api.fxtwitter.com/${author}/status/${tweetId}`, {
       headers: {
         'User-Agent': 'ADHX/1.0',
       },
+      signal: controller.signal,
     })
+
+    clearTimeout(timeoutId)
 
     if (!response.ok) {
       console.error(`FxTwitter API error: ${response.status}`)
@@ -305,7 +312,12 @@ export async function fetchTweetData(author: string, tweetId: string): Promise<F
     const data = await response.json() as FxTwitterResponse
     return data
   } catch (error) {
-    console.error('Failed to fetch tweet data from FxTwitter:', error)
+    // AbortError means timeout - log differently for clarity
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.error('FxTwitter API request timed out after 5s')
+    } else {
+      console.error('Failed to fetch tweet data from FxTwitter:', error)
+    }
     return null
   }
 }
