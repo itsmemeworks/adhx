@@ -425,7 +425,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                       )}
                     </button>
                     <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-                      Into your own Collection. Visible only to you.
+                      Save to your own Collection. Visible only to you.
                     </p>
                   </>
                 )}
@@ -507,7 +507,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                       )}
                     </button>
                     <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-                      Into your own Collection. Visible only to you.
+                      Save to your own Collection. Visible only to you.
                     </p>
                   </>
                 )}

@@ -144,7 +144,7 @@ export function toBionicText(text: string): React.ReactNode {
 
     return (
       <span key={i}>
-        <strong className="font-bold">{boldPart}</strong>
+        <strong className="font-semibold">{boldPart}</strong>
         {normalPart}
       </span>
     )

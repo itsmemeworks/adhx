@@ -451,6 +451,8 @@ function TextLightboxContent({
 }
 
 function AuthorHeader({ item }: { item: FeedItem }): React.ReactElement {
+  const [showCopied, setShowCopied] = useState(false)
+
   // Build ADHX share URL format: {domain}/{author}/status/{id}
   const getAdhxShareUrl = (): string => {
     // Use window.location.origin to get the current domain
@@ -462,15 +464,24 @@ function AuthorHeader({ item }: { item: FeedItem }): React.ReactElement {
     e.stopPropagation()
     const shareUrl = getAdhxShareUrl()
 
-    if (navigator.share) {
+    // On desktop (devices with hover capability), skip the share menu and copy directly
+    // Mobile devices without hover get the native share sheet which is a better UX there
+    const isDesktop = typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches
+
+    if (!isDesktop && navigator.share) {
       try {
         await navigator.share({ url: shareUrl })
       } catch {
         // User cancelled or share failed - fall back to clipboard
         await navigator.clipboard.writeText(shareUrl)
+        setShowCopied(true)
+        setTimeout(() => setShowCopied(false), 1500)
       }
     } else {
+      // Desktop: just copy to clipboard with satisfying feedback
       await navigator.clipboard.writeText(shareUrl)
+      setShowCopied(true)
+      setTimeout(() => setShowCopied(false), 1500)
     }
   }
 
@@ -484,16 +495,25 @@ function AuthorHeader({ item }: { item: FeedItem }): React.ReactElement {
       <div className="flex gap-2 flex-shrink-0">
         <button
           onClick={handleShare}
-          className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          className={`relative p-2 rounded-full transition-all duration-300 overflow-hidden ${
+            showCopied
+              ? 'bg-blue-500 text-white scale-110 shadow-lg shadow-blue-500/40'
+              : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105'
+          }`}
           title="Share via ADHX"
         >
-          <Share2 className="w-4 h-4 text-gray-700 dark:text-white" />
+          <div className={`transition-all duration-300 ${showCopied ? 'rotate-180 scale-0 opacity-0' : 'rotate-0 scale-100 opacity-100'}`}>
+            <Share2 className="w-4 h-4 text-gray-700 dark:text-white" />
+          </div>
+          <div className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${showCopied ? 'rotate-0 scale-100 opacity-100' : '-rotate-180 scale-0 opacity-0'}`}>
+            <Check className="w-4 h-4" />
+          </div>
         </button>
         <a
           href={item.tweetUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105 transition-all duration-200"
           title="View on X"
         >
           <ExternalLink className="w-4 h-4 text-gray-700 dark:text-white" />
@@ -535,16 +555,22 @@ function BottomBar({
         <button
           onClick={onMarkRead}
           disabled={markingRead}
-          className={`p-2.5 rounded-full transition-all duration-200 disabled:opacity-50 flex-shrink-0 ${
+          className={`relative p-2.5 rounded-full transition-all disabled:opacity-50 flex-shrink-0 overflow-hidden ${
             showDopamine
-              ? 'bg-green-500 text-white scale-125 shadow-lg shadow-green-500/50'
+              ? 'bg-green-500 text-white scale-110 shadow-lg shadow-green-500/40'
               : item.isRead
-                ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'
-                : 'bg-green-500 text-white hover:bg-green-600'
-          }`}
+                ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 hover:scale-105'
+                : 'bg-green-500 text-white hover:bg-green-600 hover:scale-110 hover:shadow-lg hover:shadow-green-500/30'
+          } duration-300`}
           title={item.isRead ? 'Mark as unread' : 'Mark as read'}
         >
-          {item.isRead ? <EyeOff className="w-5 h-5" /> : <Check className="w-5 h-5" />}
+          {/* Icon rotation animation: Check rotates into EyeOff */}
+          <div className={`transition-all duration-300 ${showDopamine ? 'rotate-180 scale-0 opacity-0' : 'rotate-0 scale-100 opacity-100'}`}>
+            {item.isRead ? <EyeOff className="w-5 h-5" /> : <Check className="w-5 h-5" />}
+          </div>
+          <div className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${showDopamine ? 'rotate-0 scale-100 opacity-100' : '-rotate-180 scale-0 opacity-0'}`}>
+            <EyeOff className="w-5 h-5" />
+          </div>
         </button>
       </div>
     </div>
