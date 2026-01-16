@@ -113,6 +113,28 @@ describe('OG Metadata with Real Fixtures', () => {
       expect(ogImage).toBeTruthy()
       expect(ogImage).not.toBe(`${BASE_URL}/logo.png`)
     })
+
+    it('article tweets use article content for description when tweet.text is empty', () => {
+      // Article tweets often have empty tweet.text but have article.title and preview_text
+      const articleWithMedia = fixtures['article-with-media'].tweet!
+      const articleNoHeader = fixtures['article-no-header'].tweet!
+
+      // Verify the fixtures have empty text but article content
+      expect(articleWithMedia.text).toBe('')
+      expect(articleWithMedia.article?.title).toBeTruthy()
+      expect(articleWithMedia.article?.preview_text).toBeTruthy()
+
+      expect(articleNoHeader.text).toBe('')
+      expect(articleNoHeader.article?.title).toBeTruthy()
+      expect(articleNoHeader.article?.preview_text).toBeTruthy()
+
+      // Description should use article preview (since tweet.text is empty)
+      const displayText1 = articleWithMedia.text || articleWithMedia.article?.preview_text || ''
+      const displayText2 = articleNoHeader.text || articleNoHeader.article?.preview_text || ''
+
+      expect(displayText1).toContain('fidgeting with macros') // From article preview
+      expect(displayText2).toContain('$1 trillion') // From article preview
+    })
   })
 
   describe('External link tweets', () => {
@@ -132,9 +154,19 @@ describe('OG Metadata with Real Fixtures', () => {
       const tweet = fixture.tweet!
 
       // Simulate metadata generation (matching generateMetadata in page.tsx)
+      // For article tweets, use article title/preview since tweet.text is often empty
+      const isArticle = !!tweet.article?.title
       const tweetText = tweet.text || ''
-      const description = truncate(tweetText, 160)
-      const title = `@${tweet.author.screen_name}: "${truncate(tweetText, 50)}" - Save to ADHX`
+      const articleTitle = tweet.article?.title || ''
+      const articlePreview = tweet.article?.preview_text || ''
+
+      // Choose best text source: tweet text > article preview > article title
+      const displayText = tweetText || articlePreview || articleTitle
+      const description = truncate(displayText, 160)
+
+      // Title shows article title if it's an article, otherwise tweet text
+      const titleContent = isArticle ? articleTitle : truncate(tweetText, 50)
+      const title = `@${tweet.author.screen_name}: "${truncate(titleContent, 50)}" - Save to ADHX`
       const ogImage = getOgImage(tweet, BASE_URL)
 
       const metadata = {

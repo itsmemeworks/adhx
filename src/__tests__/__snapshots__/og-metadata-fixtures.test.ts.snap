@@ -42,9 +42,13 @@ Open this to see the entire post",
 
 exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-no-header': generates valid metadata structure 1`] = `
 {
-  "description": "",
+  "description": "human data will be a $1 trillion/year market
+This is not a short-term prediction. It is a structural claim about where the economy converges.
+To believe this,…",
   "openGraph": {
-    "description": "",
+    "description": "human data will be a $1 trillion/year market
+This is not a short-term prediction. It is a structural claim about where the economy converges.
+To believe this,…",
     "images": [
       {
         "height": 630,
@@ -56,10 +60,12 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-no
     "title": "@aliniikk on X",
     "type": "article",
   },
-  "title": "@aliniikk: "" - Save to ADHX",
+  "title": "@aliniikk: "human data will be a $1 trillion/year market" - Save to ADHX",
   "twitter": {
     "card": "summary_large_image",
-    "description": "",
+    "description": "human data will be a $1 trillion/year market
+This is not a short-term prediction. It is a structural claim about where the economy converges.
+To believe this,…",
     "images": [
       "https://adhx.com/logo.png",
     ],
@@ -70,9 +76,9 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-no
 
 exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-with-media': generates valid metadata structure 1`] = `
 {
-  "description": "",
+  "description": "Guys. I finally did it. After years of fidgeting with macros, intermittent fasting, and diet “hacks”, I finally got hyperlean. My visceral fat vanished, muscle…",
   "openGraph": {
-    "description": "",
+    "description": "Guys. I finally did it. After years of fidgeting with macros, intermittent fasting, and diet “hacks”, I finally got hyperlean. My visceral fat vanished, muscle…",
     "images": [
       {
         "height": 630,
@@ -84,10 +90,10 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-wi
     "title": "@NoahRyanCo on X",
     "type": "article",
   },
-  "title": "@NoahRyanCo: "" - Save to ADHX",
+  "title": "@NoahRyanCo: "How to Get Shredded (Without Even Trying)" - Save to ADHX",
   "twitter": {
     "card": "summary_large_image",
-    "description": "",
+    "description": "Guys. I finally did it. After years of fidgeting with macros, intermittent fasting, and diet “hacks”, I finally got hyperlean. My visceral fat vanished, muscle…",
     "images": [
       "https://pbs.twimg.com/media/G-E_92mXcAALnrI.jpg",
     ],
