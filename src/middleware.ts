@@ -15,8 +15,9 @@ import type { NextRequest } from 'next/server'
 
 // Pattern to match Twitter/X URLs in the path
 // Captures: protocol (optional), domain, username, tweet ID
+// Note: Browsers normalize // to / in paths, so https://x.com becomes https:/x.com
 const TWITTER_URL_PATTERN =
-  /^\/(https?:\/\/)?(x\.com|twitter\.com)\/(\w{1,15})\/status\/(\d+)/i
+  /^\/(https?:\/?\/?)?(?:www\.)?(x\.com|twitter\.com)\/(\w{1,15})\/status\/(\d+)/i
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
