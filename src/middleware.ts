@@ -38,13 +38,16 @@ export function middleware(request: NextRequest) {
   return NextResponse.next()
 }
 
-// Only run middleware on paths that might be pasted URLs
-// Skip API routes, static files, and Next.js internals
+// Run middleware on paths that might be pasted URLs
+// Use negative lookahead to skip API routes, static files, and Next.js internals
 export const config = {
   matcher: [
-    // Match paths starting with http, https, x.com, or twitter.com
-    '/(https?:)?/:path*',
-    '/x.com/:path*',
-    '/twitter.com/:path*',
+    /*
+     * Match all paths except:
+     * - /api/* (API routes)
+     * - /_next/* (Next.js internals)
+     * - /favicon.ico, /logo.png, etc (static files)
+     */
+    '/((?!api|_next|favicon\\.ico|logo\\.png|.*\\.[a-z]{2,4}$).*)',
   ],
 }
