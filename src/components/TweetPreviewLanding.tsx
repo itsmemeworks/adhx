@@ -169,15 +169,16 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
               Found something good?
             </h1>
             <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              Save it now before <span className="text-purple-600 dark:text-purple-400 font-medium">47 browser tabs</span> make you forget.
+              <span className="sm:hidden">Save it now before you forget.</span>
+              <span className="hidden sm:inline">Save it now before <span className="text-purple-600 dark:text-purple-400 font-medium">47 browser tabs</span> make you forget.</span>
             </p>
           </div>
 
           {/* Two Column Layout - Tops align, two columns from tablet (md) breakpoint */}
           <div className="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start">
             {/* Tweet Card - Left Column - Fixed max heights for scrollable mobile, viewport-based for desktop */}
-            <div className="animate-fade-in-up [animation-fill-mode:both] delay-100">
-              <div className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] ${isExpanded ? '' : 'max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]'}`}>
+            <div className="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0">
+              <div className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 ${isExpanded ? '' : 'max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]'}`}>
                 {/* Author Header */}
                 <div className="p-4 pb-3">
                   <div className="flex items-center gap-3">
@@ -216,13 +217,13 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                   </div>
                 </div>
 
-                {/* Scrollable Content Area */}
+                {/* Scrollable Content Area - overflow-x-hidden prevents horizontal scroll on mobile */}
                 <div
-                  className={`flex-1 min-h-0 ${isExpanded ? '' : 'overflow-y-auto'}`}
+                  className={`flex-1 min-h-0 overflow-x-hidden w-full min-w-0 ${isExpanded ? '' : 'overflow-y-auto'}`}
                   style={{ fontFamily: `var(--font-${selectedFont})` }}
                 >
                 {/* Tweet Text or Article */}
-                <div className="px-4 py-3">
+                <div className="px-4 py-3 w-full min-w-0">
                   {tweet.article ? (
                     // X Article display
                     <div className="space-y-3">
@@ -280,8 +281,8 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                       </div>
                     </div>
                   ) : (
-                    // Regular tweet text
-                    <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed">
+                    // Regular tweet text - break-all ensures long text wraps on mobile
+                    <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]">
                       {tweet.text}
                     </p>
                   )}
@@ -334,8 +335,9 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                     </svg>
                     {formatCount(tweet.likes)}
                   </span>
+                  {/* Views - hidden only at tablet (md-lg) where 2-col layout makes card narrow */}
                   {tweet.views && (
-                    <span className="flex items-center gap-1.5" title="Views">
+                    <span className="flex md:hidden lg:flex items-center gap-1.5" title="Views">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -343,10 +345,10 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                       {formatCount(tweet.views)}
                     </span>
                   )}
-                  {/* Expand/Collapse Toggle */}
+                  {/* Expand/Collapse Toggle - icon only until desktop to avoid clipping */}
                   <button
                     onClick={() => setIsExpanded(!isExpanded)}
-                    className="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                    className="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                     title={isExpanded ? 'Collapse tweet' : 'Expand tweet'}
                   >
                     {isExpanded ? (
@@ -354,7 +356,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                     ) : (
                       <Maximize2 className="w-4 h-4" />
                     )}
-                    <span className="text-xs hidden sm:inline">{isExpanded ? 'Collapse' : 'Expand'}</span>
+                    <span className="text-xs hidden lg:inline">{isExpanded ? 'Collapse' : 'Expand'}</span>
                   </button>
                 </div>
               </div>
@@ -582,14 +584,14 @@ interface MediaGridProps {
 function MediaGrid({ photos, videos, author, tweetId }: MediaGridProps): React.ReactElement {
   const totalMedia = photos.length + videos.length
 
-  // Single media item - full width with responsive heights
+  // Single media item - full width with responsive heights, max-w-full prevents horizontal overflow
   if (totalMedia === 1) {
     if (videos.length > 0) {
       return <VideoPlayer author={author} tweetId={tweetId} thumbnail={videos[0].thumbnail_url} />
     }
     return (
       <div className="rounded-xl overflow-hidden">
-        <img src={photos[0].url} alt="Tweet media" className="w-full object-cover max-h-[250px] sm:max-h-[300px] md:max-h-[350px] lg:max-h-[400px]" />
+        <img src={photos[0].url} alt="Tweet media" className="w-full max-w-full object-cover max-h-[250px] sm:max-h-[300px] md:max-h-[350px] lg:max-h-[400px]" />
       </div>
     )
   }

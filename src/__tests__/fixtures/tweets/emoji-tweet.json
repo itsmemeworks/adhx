@@ -1,0 +1,209 @@
+{
+  "code": 200,
+  "message": "OK",
+  "tweet": {
+    "url": "https://x.com/moonpay/status/2009626024968118554",
+    "id": "2009626024968118554",
+    "text": "BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Named Virtual Accounts powered by @moonpay & @iron\n\n1️⃣ Claim your own named account in the Avici app\n\n2️⃣ Fund fast via SEPA Instant, ACH, Wire, and Direct Deposit\n\n3️⃣ Take full self-custodial control of your money\n\nLive now 🚀",
+    "raw_text": {
+      "text": "BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Named Virtual Accounts powered by @moonpay &amp; @iron\n\n1️⃣ Claim your own named account in the Avici app\n\n2️⃣ Fund fast via SEPA Instant, ACH, Wire, and Direct Deposit\n\n3️⃣ Take full self-custodial control of your money\n\nLive now 🚀 https://t.co/MdwF20hNZ6",
+      "facets": [
+        {
+          "type": "mention",
+          "indices": [
+            10,
+            21
+          ],
+          "original": "AviciMoney",
+          "id": "1693274243956613120"
+        },
+        {
+          "type": "mention",
+          "indices": [
+            77,
+            85
+          ],
+          "original": "moonpay",
+          "id": "1024699964071522305"
+        },
+        {
+          "type": "mention",
+          "indices": [
+            92,
+            97
+          ],
+          "original": "iron",
+          "id": "4471841"
+        },
+        {
+          "type": "media",
+          "indices": [
+            276,
+            299
+          ],
+          "id": "2009617113384706048",
+          "display": "pic.x.com/MdwF20hNZ6",
+          "original": "https://t.co/MdwF20hNZ6",
+          "replacement": "https://x.com/moonpay/status/2009626024968118554/video/1"
+        }
+      ]
+    },
+    "author": {
+      "id": "1024699964071522305",
+      "name": "MoonPay 🟣",
+      "screen_name": "moonpay",
+      "avatar_url": "https://pbs.twimg.com/profile_images/1974903278400872448/XgE1PBG6_200x200.jpg",
+      "banner_url": "https://pbs.twimg.com/profile_banners/1024699964071522305/1768536989",
+      "description": "making crypto ownership easy since 2019 💜 for 24/7 help, visit or send us a DM 🟣 in the UK? follow @MoonPay_UK for updates",
+      "location": "",
+      "url": "https://x.com/moonpay",
+      "followers": 280529,
+      "following": 23010,
+      "joined": "Wed Aug 01 16:54:44 +0000 2018",
+      "likes": 151004,
+      "media_count": 5068,
+      "protected": false,
+      "website": {
+        "url": "http://go.moonpay.com/x",
+        "display_url": "go.moonpay.com/x"
+      },
+      "tweets": 27226,
+      "avatar_color": null
+    },
+    "replies": 360,
+    "retweets": 821,
+    "likes": 2157,
+    "bookmarks": 134,
+    "created_at": "Fri Jan 09 13:59:16 +0000 2026",
+    "created_timestamp": 1767967156,
+    "possibly_sensitive": false,
+    "views": 446641,
+    "is_note_tweet": false,
+    "community_note": null,
+    "lang": "en",
+    "replying_to": null,
+    "replying_to_status": null,
+    "media": {
+      "all": [
+        {
+          "id": "2009617113384706048",
+          "url": "https://video.twimg.com/amplify_video/2009617113384706048/vid/avc1/1280x720/uOjFsRli9lyeRCC1.mp4?tag=21",
+          "thumbnail_url": "https://pbs.twimg.com/amplify_video_thumb/2009617113384706048/img/uUdl5DT48QRZSEHb.jpg",
+          "duration": 24,
+          "width": 1280,
+          "height": 720,
+          "format": "video/mp4",
+          "type": "video",
+          "formats": [
+            {
+              "url": "https://video.twimg.com/amplify_video/2009617113384706048/pl/-_ndhakXO6GAl8E7.m3u8?tag=21&v=cfc",
+              "container": "m3u8"
+            },
+            {
+              "url": "https://video.twimg.com/amplify_video/2009617113384706048/vid/avc1/480x270/_V9tWfYvjtQ147VT.mp4?tag=21",
+              "bitrate": 256000,
+              "container": "mp4",
+              "codec": "h264"
+            },
+            {
+              "url": "https://video.twimg.com/amplify_video/2009617113384706048/vid/avc1/640x360/VdMFrZXRS2ZO5iIM.mp4?tag=21",
+              "bitrate": 832000,
+              "container": "mp4",
+              "codec": "h264"
+            },
+            {
+              "url": "https://video.twimg.com/amplify_video/2009617113384706048/vid/avc1/1280x720/uOjFsRli9lyeRCC1.mp4?tag=21",
+              "bitrate": 2176000,
+              "container": "mp4",
+              "codec": "h264"
+            }
+          ],
+          "variants": [
+            {
+              "url": "https://video.twimg.com/amplify_video/2009617113384706048/pl/-_ndhakXO6GAl8E7.m3u8?tag=21&v=cfc",
+              "bitrate": 0,
+              "content_type": "application/x-mpegURL"
+            },
+            {
+              "url": "https://video.twimg.com/amplify_video/2009617113384706048/vid/avc1/480x270/_V9tWfYvjtQ147VT.mp4?tag=21",
+              "bitrate": 256000,
+              "content_type": "video/mp4"
+            },
+            {
+              "url": "https://video.twimg.com/amplify_video/2009617113384706048/vid/avc1/640x360/VdMFrZXRS2ZO5iIM.mp4?tag=21",
+              "bitrate": 832000,
+              "content_type": "video/mp4"
+            },
+            {
+              "url": "https://video.twimg.com/amplify_video/2009617113384706048/vid/avc1/1280x720/uOjFsRli9lyeRCC1.mp4?tag=21",
+              "bitrate": 2176000,
+              "content_type": "video/mp4"
+            }
+          ]
+        }
+      ],
+      "videos": [
+        {
+          "id": "2009617113384706048",
+          "url": "https://video.twimg.com/amplify_video/2009617113384706048/vid/avc1/1280x720/uOjFsRli9lyeRCC1.mp4?tag=21",
+          "thumbnail_url": "https://pbs.twimg.com/amplify_video_thumb/2009617113384706048/img/uUdl5DT48QRZSEHb.jpg",
+          "duration": 24,
+          "width": 1280,
+          "height": 720,
+          "format": "video/mp4",
+          "type": "video",
+          "formats": [
+            {
+              "url": "https://video.twimg.com/amplify_video/2009617113384706048/pl/-_ndhakXO6GAl8E7.m3u8?tag=21&v=cfc",
+              "container": "m3u8"
+            },
+            {
+              "url": "https://video.twimg.com/amplify_video/2009617113384706048/vid/avc1/480x270/_V9tWfYvjtQ147VT.mp4?tag=21",
+              "bitrate": 256000,
+              "container": "mp4",
+              "codec": "h264"
+            },
+            {
+              "url": "https://video.twimg.com/amplify_video/2009617113384706048/vid/avc1/640x360/VdMFrZXRS2ZO5iIM.mp4?tag=21",
+              "bitrate": 832000,
+              "container": "mp4",
+              "codec": "h264"
+            },
+            {
+              "url": "https://video.twimg.com/amplify_video/2009617113384706048/vid/avc1/1280x720/uOjFsRli9lyeRCC1.mp4?tag=21",
+              "bitrate": 2176000,
+              "container": "mp4",
+              "codec": "h264"
+            }
+          ],
+          "variants": [
+            {
+              "url": "https://video.twimg.com/amplify_video/2009617113384706048/pl/-_ndhakXO6GAl8E7.m3u8?tag=21&v=cfc",
+              "bitrate": 0,
+              "content_type": "application/x-mpegURL"
+            },
+            {
+              "url": "https://video.twimg.com/amplify_video/2009617113384706048/vid/avc1/480x270/_V9tWfYvjtQ147VT.mp4?tag=21",
+              "bitrate": 256000,
+              "content_type": "video/mp4"
+            },
+            {
+              "url": "https://video.twimg.com/amplify_video/2009617113384706048/vid/avc1/640x360/VdMFrZXRS2ZO5iIM.mp4?tag=21",
+              "bitrate": 832000,
+              "content_type": "video/mp4"
+            },
+            {
+              "url": "https://video.twimg.com/amplify_video/2009617113384706048/vid/avc1/1280x720/uOjFsRli9lyeRCC1.mp4?tag=21",
+              "bitrate": 2176000,
+              "content_type": "video/mp4"
+            }
+          ]
+        }
+      ]
+    },
+    "source": "Twitter Web App",
+    "twitter_card": "player",
+    "color": null,
+    "provider": "twitter"
+  }
+}

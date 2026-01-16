@@ -1,0 +1,84 @@
+{
+  "code": 200,
+  "message": "OK",
+  "tweet": {
+    "url": "https://x.com/maverickecom/status/2011489837094683034",
+    "id": "2011489837094683034",
+    "text": "Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory\n\nWe built a fully automated system that repurposes, localizes, and launches winning TikTok Shop content across hundreds of creator-style accounts.\n\nIt’s so effective it feels like running Facebook ads in 2008. \n\n- CPMs as low as $0.10\n- no reliance on paid ads \n- no ghost creators\n- no wasted samples\n- no lost time \n\nMy $300/monthly tech stack which replaced $50k+ budget:\n\n- manus for product research and viral script ideas \n- cruva / Fastmoss for recently viral content ideas from competitors \n- nano banana pro for images \n- kling 2.6 for video \n- now using my own phone posting network for automated posting \n\nHere’s how it works:\n•Each AI Agent spins up a TikTok Shop–ready profile, built to sell my products through shoppable videos.\n•Agents are prompted to research the niche, scrape winning TikTok Shop videos, and rebuild them with new hooks, angles, and UGC-style visuals tailored to your brand.\n•They create and post daily using my tech stack onto affiliate accounts \n\nNo touchpoints. No delays.\n\nJust shoppable videos going live and GMV compounding every week.\n\nThen we use an MPS (Multi-Platform Swarm) approach:\n\nonce the concept works on TikTok Shop, we deploy hundreds of AI Agents to flood the niche with variations that all drive back to your Shop and Amazon listing.\n\nI’m giving you access to the full stack — the ai workflow, ready to plug into your TikTok Shop today.\n\nComment “Workflow” and I’ll send you everything.\n(must be connected)\n\nPS – Repost for early access to the full TikTok Shop content factory system.",
+    "raw_text": {
+      "text": "Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory\n\nWe built a fully automated system that repurposes, localizes, and launches winning TikTok Shop content across hundreds of creator-style accounts.\n\nIt’s so effective it feels like running Facebook ads in 2008. \n\n- CPMs as low as $0.10\n- no reliance on paid ads \n- no ghost creators\n- no wasted samples\n- no lost time \n\nMy $300/monthly tech stack which replaced $50k+ budget:\n\n- manus for product research and viral script ideas \n- cruva / Fastmoss for recently viral content ideas from competitors \n- nano banana pro for images \n- kling 2.6 for video \n- now using my own phone posting network for automated posting \n\nHere’s how it works:\n•Each AI Agent spins up a TikTok Shop–ready profile, built to sell my products through shoppable videos.\n•Agents are prompted to research the niche, scrape winning TikTok Shop videos, and rebuild them with new hooks, angles, and UGC-style visuals tailored to your brand.\n•They create and post daily using my tech stack onto affiliate accounts \n\nNo touchpoints. No delays.\n\nJust shoppable videos going live and GMV compounding every week.\n\nThen we use an MPS (Multi-Platform Swarm) approach:\n\nonce the concept works on TikTok Shop, we deploy hundreds of AI Agents to flood the niche with variations that all drive back to your Shop and Amazon listing.\n\nI’m giving you access to the full stack — the ai workflow, ready to plug into your TikTok Shop today.\n\nComment “Workflow” and I’ll send you everything.\n(must be connected)\n\nPS – Repost for early access to the full TikTok Shop content factory system.",
+      "facets": [
+        {
+          "type": "media",
+          "indices": [
+            281,
+            304
+          ],
+          "id": "2011489833403977728",
+          "display": "pic.x.com/1MN20OuC8l",
+          "original": "https://t.co/1MN20OuC8l",
+          "replacement": "https://x.com/maverickecom/status/2011489837094683034/photo/1"
+        }
+      ]
+    },
+    "author": {
+      "id": "1346924468988481538",
+      "name": "Noah Frydberg | Tiktok Shop For Brands",
+      "screen_name": "maverickecom",
+      "avatar_url": "https://pbs.twimg.com/profile_images/1997552793674985472/YA-0dCZO_200x200.jpg",
+      "banner_url": "https://pbs.twimg.com/profile_banners/1346924468988481538/1765844029",
+      "description": "I scale 8 figure TikTok Shop brands | 1b Views, $1m+ Generated, 37k+ Creators Community | Apply to work with me 👇",
+      "location": "Austin, TX",
+      "url": "https://x.com/maverickecom",
+      "followers": 21860,
+      "following": 1397,
+      "joined": "Wed Jan 06 20:59:56 +0000 2021",
+      "likes": 71135,
+      "media_count": 2234,
+      "protected": false,
+      "website": {
+        "url": "http://www.maverickcreative.net",
+        "display_url": "maverickcreative.net"
+      },
+      "tweets": 8455,
+      "avatar_color": null
+    },
+    "replies": 1429,
+    "retweets": 491,
+    "likes": 4458,
+    "bookmarks": 9262,
+    "created_at": "Wed Jan 14 17:25:23 +0000 2026",
+    "created_timestamp": 1768411523,
+    "possibly_sensitive": false,
+    "views": 746452,
+    "is_note_tweet": true,
+    "community_note": null,
+    "lang": "en",
+    "replying_to": null,
+    "replying_to_status": null,
+    "media": {
+      "all": [
+        {
+          "type": "photo",
+          "id": "2011489833403977728",
+          "url": "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg?name=orig",
+          "width": 1200,
+          "height": 1200
+        }
+      ],
+      "photos": [
+        {
+          "type": "photo",
+          "id": "2011489833403977728",
+          "url": "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg?name=orig",
+          "width": 1200,
+          "height": 1200
+        }
+      ]
+    },
+    "source": "Twitter for iPhone",
+    "twitter_card": "summary_large_image",
+    "color": null,
+    "provider": "twitter"
+  }
+}

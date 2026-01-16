@@ -1,0 +1,113 @@
+{
+  "code": 200,
+  "message": "OK",
+  "tweet": {
+    "url": "https://x.com/BasilTheGreat/status/2012044480556208542",
+    "id": "2012044480556208542",
+    "text": "🚨BREAKING: TRUMP FURIOUS WITH STARMER\n\nU.S state department made clear last night speaking on the UK and Keir Starmer ⬇️ \n\n\"The government has, indeed, repeatedly threatened to return Lucy Connolly to prison for benign political speech. \n\nIt also blocked her from visiting the United States at our invitation. \n\nIt’s also cancelling local elections, and curbing the right to a jury trial.\"\n\nThey know Starmer is a tyrant\nHis days are numbered",
+    "raw_text": {
+      "text": "🚨BREAKING: TRUMP FURIOUS WITH STARMER\n\nU.S state department made clear last night speaking on the UK and Keir Starmer ⬇️ \n\n\"The government has, indeed, repeatedly threatened to return Lucy Connolly to prison for benign political speech. \n\nIt also blocked her from visiting the United States at our invitation. \n\nIt’s also cancelling local elections, and curbing the right to a jury trial.\"\n\nThey know Starmer is a tyrant\nHis days are numbered",
+      "facets": [
+        {
+          "type": "media",
+          "indices": [
+            277,
+            300
+          ],
+          "id": "2012043395116699648",
+          "display": "pic.x.com/LIbR568qpK",
+          "original": "https://t.co/LIbR568qpK",
+          "replacement": "https://x.com/BasilTheGreat/status/2012044480556208542/photo/1"
+        },
+        {
+          "type": "media",
+          "indices": [
+            277,
+            300
+          ],
+          "id": "2012043478675701764",
+          "display": "pic.x.com/LIbR568qpK",
+          "original": "https://t.co/LIbR568qpK",
+          "replacement": "https://x.com/BasilTheGreat/status/2012044480556208542/photo/1"
+        }
+      ]
+    },
+    "author": {
+      "id": "1722014154322575360",
+      "name": "Basil the Great",
+      "screen_name": "BasilTheGreat",
+      "avatar_url": "https://pbs.twimg.com/profile_images/1870853024798715904/f7G0cKa9_200x200.jpg",
+      "banner_url": "https://pbs.twimg.com/profile_banners/1722014154322575360/1735733830",
+      "description": "🇬🇧We must take our country back🇬🇧\n\nDM for submissions/credit/deletion",
+      "location": "",
+      "url": "https://x.com/BasilTheGreat",
+      "followers": 257541,
+      "following": 4970,
+      "joined": "Tue Nov 07 22:12:31 +0000 2023",
+      "likes": 103752,
+      "media_count": 21874,
+      "protected": false,
+      "website": null,
+      "tweets": 57669,
+      "avatar_color": null
+    },
+    "replies": 103,
+    "retweets": 538,
+    "likes": 3020,
+    "bookmarks": 108,
+    "created_at": "Fri Jan 16 06:09:20 +0000 2026",
+    "created_timestamp": 1768543760,
+    "possibly_sensitive": false,
+    "views": 49245,
+    "is_note_tweet": true,
+    "community_note": null,
+    "lang": "en",
+    "replying_to": null,
+    "replying_to_status": null,
+    "media": {
+      "all": [
+        {
+          "type": "photo",
+          "id": "2012043395116699648",
+          "url": "https://pbs.twimg.com/media/G-w2zr6aEAAt-FN.png?name=orig",
+          "width": 862,
+          "height": 485
+        },
+        {
+          "type": "photo",
+          "id": "2012043478675701764",
+          "url": "https://pbs.twimg.com/media/G-w24jMbQAQQCqp.png?name=orig",
+          "width": 720,
+          "height": 406
+        }
+      ],
+      "photos": [
+        {
+          "type": "photo",
+          "id": "2012043395116699648",
+          "url": "https://pbs.twimg.com/media/G-w2zr6aEAAt-FN.png?name=orig",
+          "width": 862,
+          "height": 485
+        },
+        {
+          "type": "photo",
+          "id": "2012043478675701764",
+          "url": "https://pbs.twimg.com/media/G-w24jMbQAQQCqp.png?name=orig",
+          "width": 720,
+          "height": 406
+        }
+      ],
+      "mosaic": {
+        "type": "mosaic_photo",
+        "formats": {
+          "jpeg": "https://mosaic.fxtwitter.com/jpeg/2012044480556208542/G-w2zr6aEAAt-FN/G-w24jMbQAQQCqp",
+          "webp": "https://mosaic.fxtwitter.com/webp/2012044480556208542/G-w2zr6aEAAt-FN/G-w24jMbQAQQCqp"
+        }
+      }
+    },
+    "source": "Twitter Web App",
+    "twitter_card": "summary_large_image",
+    "color": null,
+    "provider": "twitter"
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "code": 200,
+  "message": "OK",
+  "tweet": {
+    "url": "https://x.com/TheCinesthetic/status/2010184900599583070",
+    "id": "2010184900599583070",
+    "text": "What movie is 10/10, yet hardly anyone has heard of it?",
+    "raw_text": {
+      "text": "What movie is 10/10, yet hardly anyone has heard of it?",
+      "facets": []
+    },
+    "author": {
+      "id": "907173236097646592",
+      "name": "cinesthetic.",
+      "screen_name": "TheCinesthetic",
+      "avatar_url": "https://pbs.twimg.com/profile_images/1385452682517745667/mfcIUnoX_200x200.jpg",
+      "banner_url": "https://pbs.twimg.com/profile_banners/907173236097646592/1762691084",
+      "description": "motion picture person. cinema, music, tv and beyond. For Ads, Promotion / Partnership- DM or Email: thecinesthetic@gmail.com",
+      "location": "Cinéma du Panthéon",
+      "url": "https://x.com/TheCinesthetic",
+      "followers": 1519333,
+      "following": 212,
+      "joined": "Mon Sep 11 09:25:28 +0000 2017",
+      "likes": 43388,
+      "media_count": 88884,
+      "protected": false,
+      "website": {
+        "url": "https://instagram.com/thecinesthetics",
+        "display_url": "instagram.com/thecinesthetics"
+      },
+      "tweets": 148010,
+      "avatar_color": null
+    },
+    "replies": 4995,
+    "retweets": 401,
+    "likes": 4901,
+    "bookmarks": 9349,
+    "created_at": "Sun Jan 11 03:00:02 +0000 2026",
+    "created_timestamp": 1768100402,
+    "views": 23260564,
+    "is_note_tweet": false,
+    "community_note": null,
+    "lang": "en",
+    "replying_to": null,
+    "replying_to_status": null,
+    "source": "Twitter Web App",
+    "twitter_card": "tweet",
+    "color": null,
+    "provider": "twitter"
+  }
+}

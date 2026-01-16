@@ -1,0 +1,228 @@
+{
+  "code": 200,
+  "message": "OK",
+  "tweet": {
+    "url": "https://x.com/swyx/status/2011861139689513314",
+    "id": "2011861139689513314",
+    "text": "insane how much goalposts have shifted that bfl can just drop a model that is ~10x better than Stable Diffusion while being ~as small and basically nobody bats an eye",
+    "raw_text": {
+      "text": "insane how much goalposts have shifted that bfl can just drop a model that is ~10x better than Stable Diffusion while being ~as small and basically nobody bats an eye",
+      "facets": []
+    },
+    "author": {
+      "id": "33521530",
+      "name": "swyx",
+      "screen_name": "swyx",
+      "avatar_url": "https://pbs.twimg.com/profile_images/1867875781676007424/RIF4Kt7U_200x200.jpg",
+      "banner_url": "https://pbs.twimg.com/profile_banners/33521530/1764195099",
+      "description": "achieve ambition with intentionality, intensity, and integrity.\n\naffiliations:\n- @dxtipshq \n- @cognition\n- @temporalio\n- @aidotengineer\n- @latentspacepod",
+      "location": "san francisco / singapore",
+      "url": "https://x.com/swyx",
+      "followers": 138342,
+      "following": 3454,
+      "joined": "Mon Apr 20 14:04:41 +0000 2009",
+      "likes": 131461,
+      "media_count": 8586,
+      "protected": false,
+      "website": {
+        "url": "https://swyx.io",
+        "display_url": "swyx.io"
+      },
+      "tweets": 74323,
+      "avatar_color": null
+    },
+    "replies": 24,
+    "retweets": 27,
+    "likes": 636,
+    "bookmarks": 311,
+    "created_at": "Thu Jan 15 18:00:48 +0000 2026",
+    "created_timestamp": 1768500048,
+    "views": 71254,
+    "is_note_tweet": false,
+    "community_note": null,
+    "lang": "en",
+    "replying_to": null,
+    "replying_to_status": null,
+    "quote": {
+      "url": "https://x.com/bfl_ml/status/2011825819082244266",
+      "id": "2011825819082244266",
+      "text": "Introducing FLUX.2 [klein]. Blazing fast. Beautiful.\n\nGenerate stunning images in under a second while maintaining exceptional quality.\n\nGreat for fast editing, changing styles, and developing ideas from 0 → 1.\n\nAvailable via API, or run it locally - Klein 4B under Apache 2.0, Klein 9B as open weights.\n\nTry it for free in our demo app (link in the thread).",
+      "raw_text": {
+        "text": "Introducing FLUX.2 [klein]. Blazing fast. Beautiful.\n\nGenerate stunning images in under a second while maintaining exceptional quality.\n\nGreat for fast editing, changing styles, and developing ideas from 0 → 1.\n\nAvailable via API, or run it locally - Klein 4B under Apache 2.0, Klein 9B as open weights.\n\nTry it for free in our demo app (link in the thread).",
+        "facets": [
+          {
+            "type": "media",
+            "indices": [
+              278,
+              301
+            ],
+            "id": "2011825767634911237",
+            "display": "pic.x.com/6MlLm6OSXS",
+            "original": "https://t.co/6MlLm6OSXS",
+            "replacement": "https://x.com/bfl_ml/status/2011825819082244266/video/1"
+          }
+        ]
+      },
+      "author": {
+        "id": "1799993095154724864",
+        "name": "Black Forest Labs",
+        "screen_name": "bfl_ml",
+        "avatar_url": "https://pbs.twimg.com/profile_images/1954888731053142016/NDyG-4-j_200x200.jpg",
+        "banner_url": "https://pbs.twimg.com/profile_banners/1799993095154724864/1755076591",
+        "description": "Powering visual intelligence everywhere\n\njoin us:",
+        "location": "",
+        "url": "https://x.com/bfl_ml",
+        "followers": 39985,
+        "following": 0,
+        "joined": "Mon Jun 10 02:32:57 +0000 2024",
+        "likes": 78,
+        "media_count": 58,
+        "protected": false,
+        "website": {
+          "url": "http://bfl.ai",
+          "display_url": "bfl.ai"
+        },
+        "tweets": 165,
+        "avatar_color": null
+      },
+      "replies": 50,
+      "retweets": 142,
+      "likes": 1335,
+      "bookmarks": 808,
+      "created_at": "Thu Jan 15 15:40:27 +0000 2026",
+      "created_timestamp": 1768491627,
+      "possibly_sensitive": false,
+      "views": 196688,
+      "is_note_tweet": true,
+      "community_note": null,
+      "lang": "en",
+      "replying_to": null,
+      "replying_to_status": null,
+      "media": {
+        "all": [
+          {
+            "id": "2011825767634911237",
+            "url": "https://video.twimg.com/amplify_video/2011825767634911237/vid/avc1/720x800/ykyrbcWSkom1fyiE.mp4?tag=14",
+            "thumbnail_url": "https://pbs.twimg.com/amplify_video_thumb/2011825767634911237/img/rRqDWGszLMh8F1zp.jpg",
+            "duration": 13.625,
+            "width": 972,
+            "height": 1080,
+            "format": "video/mp4",
+            "type": "video",
+            "formats": [
+              {
+                "url": "https://video.twimg.com/amplify_video/2011825767634911237/pl/wM8f5PLGvTCVgJww.m3u8?tag=14",
+                "container": "m3u8"
+              },
+              {
+                "url": "https://video.twimg.com/amplify_video/2011825767634911237/vid/avc1/320x354/c9_ed1cOBBIDO0Ng.mp4?tag=14",
+                "bitrate": 632000,
+                "container": "mp4",
+                "codec": "h264"
+              },
+              {
+                "url": "https://video.twimg.com/amplify_video/2011825767634911237/vid/avc1/480x532/4E16yAiMVFOZssIH.mp4?tag=14",
+                "bitrate": 950000,
+                "container": "mp4",
+                "codec": "h264"
+              },
+              {
+                "url": "https://video.twimg.com/amplify_video/2011825767634911237/vid/avc1/720x800/ykyrbcWSkom1fyiE.mp4?tag=14",
+                "bitrate": 2176000,
+                "container": "mp4",
+                "codec": "h264"
+              }
+            ],
+            "variants": [
+              {
+                "url": "https://video.twimg.com/amplify_video/2011825767634911237/pl/wM8f5PLGvTCVgJww.m3u8?tag=14",
+                "bitrate": 0,
+                "content_type": "application/x-mpegURL"
+              },
+              {
+                "url": "https://video.twimg.com/amplify_video/2011825767634911237/vid/avc1/320x354/c9_ed1cOBBIDO0Ng.mp4?tag=14",
+                "bitrate": 632000,
+                "content_type": "video/mp4"
+              },
+              {
+                "url": "https://video.twimg.com/amplify_video/2011825767634911237/vid/avc1/480x532/4E16yAiMVFOZssIH.mp4?tag=14",
+                "bitrate": 950000,
+                "content_type": "video/mp4"
+              },
+              {
+                "url": "https://video.twimg.com/amplify_video/2011825767634911237/vid/avc1/720x800/ykyrbcWSkom1fyiE.mp4?tag=14",
+                "bitrate": 2176000,
+                "content_type": "video/mp4"
+              }
+            ]
+          }
+        ],
+        "videos": [
+          {
+            "id": "2011825767634911237",
+            "url": "https://video.twimg.com/amplify_video/2011825767634911237/vid/avc1/720x800/ykyrbcWSkom1fyiE.mp4?tag=14",
+            "thumbnail_url": "https://pbs.twimg.com/amplify_video_thumb/2011825767634911237/img/rRqDWGszLMh8F1zp.jpg",
+            "duration": 13.625,
+            "width": 972,
+            "height": 1080,
+            "format": "video/mp4",
+            "type": "video",
+            "formats": [
+              {
+                "url": "https://video.twimg.com/amplify_video/2011825767634911237/pl/wM8f5PLGvTCVgJww.m3u8?tag=14",
+                "container": "m3u8"
+              },
+              {
+                "url": "https://video.twimg.com/amplify_video/2011825767634911237/vid/avc1/320x354/c9_ed1cOBBIDO0Ng.mp4?tag=14",
+                "bitrate": 632000,
+                "container": "mp4",
+                "codec": "h264"
+              },
+              {
+                "url": "https://video.twimg.com/amplify_video/2011825767634911237/vid/avc1/480x532/4E16yAiMVFOZssIH.mp4?tag=14",
+                "bitrate": 950000,
+                "container": "mp4",
+                "codec": "h264"
+              },
+              {
+                "url": "https://video.twimg.com/amplify_video/2011825767634911237/vid/avc1/720x800/ykyrbcWSkom1fyiE.mp4?tag=14",
+                "bitrate": 2176000,
+                "container": "mp4",
+                "codec": "h264"
+              }
+            ],
+            "variants": [
+              {
+                "url": "https://video.twimg.com/amplify_video/2011825767634911237/pl/wM8f5PLGvTCVgJww.m3u8?tag=14",
+                "bitrate": 0,
+                "content_type": "application/x-mpegURL"
+              },
+              {
+                "url": "https://video.twimg.com/amplify_video/2011825767634911237/vid/avc1/320x354/c9_ed1cOBBIDO0Ng.mp4?tag=14",
+                "bitrate": 632000,
+                "content_type": "video/mp4"
+              },
+              {
+                "url": "https://video.twimg.com/amplify_video/2011825767634911237/vid/avc1/480x532/4E16yAiMVFOZssIH.mp4?tag=14",
+                "bitrate": 950000,
+                "content_type": "video/mp4"
+              },
+              {
+                "url": "https://video.twimg.com/amplify_video/2011825767634911237/vid/avc1/720x800/ykyrbcWSkom1fyiE.mp4?tag=14",
+                "bitrate": 2176000,
+                "content_type": "video/mp4"
+              }
+            ]
+          }
+        ]
+      },
+      "source": "Typefully",
+      "twitter_card": "player",
+      "color": null,
+      "provider": "twitter"
+    },
+    "source": "Twitter for iPhone",
+    "color": null,
+    "provider": "twitter"
+  }
+}
