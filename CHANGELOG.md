@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.14.0](https://github.com/itsmemeworks/adhx/compare/v1.13.1...v1.14.0) (2026-01-16)
+
+
+### Features
+
+* component snapshot tests with real tweet fixtures + dev fixtures viewer ([#57](https://github.com/itsmemeworks/adhx/issues/57)) ([5500b6c](https://github.com/itsmemeworks/adhx/commit/5500b6cb91112c66f204e0ee52ab823cc872d1fc))
+
+
+### Bug Fixes
+
+* add 5s timeout to fxtwitter api calls ([#59](https://github.com/itsmemeworks/adhx/issues/59)) ([994a431](https://github.com/itsmemeworks/adhx/commit/994a4312115f2fbd941acc78159b99b1a70db62f))
+
 ## [1.13.1](https://github.com/itsmemeworks/adhx/compare/v1.13.0...v1.13.1) (2026-01-16)
 
 
