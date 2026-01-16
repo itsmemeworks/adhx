@@ -54,6 +54,7 @@ export function getOgImage(tweet: FxTweet, baseUrl: string): string {
     return tweet.external.thumbnail_url
   }
 
-  // 5. Fallback to logo for text-only tweets
-  return `${baseUrl}/logo.png`
+  // 5. Fallback to optimized OG logo for text-only tweets
+  // Using og-logo.png (150KB) instead of logo.png (918KB) for faster crawler fetches
+  return `${baseUrl}/og-logo.png`
 }

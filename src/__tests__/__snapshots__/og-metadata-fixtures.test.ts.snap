@@ -52,7 +52,7 @@ To believe this,…",
     "images": [
       {
         "height": 630,
-        "url": "https://adhx.com/logo.png",
+        "url": "https://adhx.com/og-logo.png",
         "width": 1200,
       },
     ],
@@ -67,7 +67,7 @@ To believe this,…",
 This is not a short-term prediction. It is a structural claim about where the economy converges.
 To believe this,…",
     "images": [
-      "https://adhx.com/logo.png",
+      "https://adhx.com/og-logo.png",
     ],
     "title": "@aliniikk on X",
   },
@@ -274,7 +274,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'plain-text
     "images": [
       {
         "height": 630,
-        "url": "https://adhx.com/logo.png",
+        "url": "https://adhx.com/og-logo.png",
         "width": 1200,
       },
     ],
@@ -287,7 +287,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'plain-text
     "card": "summary_large_image",
     "description": "What movie is 10/10, yet hardly anyone has heard of it?",
     "images": [
-      "https://adhx.com/logo.png",
+      "https://adhx.com/og-logo.png",
     ],
     "title": "@TheCinesthetic on X",
   },
@@ -336,7 +336,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-t
     "images": [
       {
         "height": 630,
-        "url": "https://adhx.com/logo.png",
+        "url": "https://adhx.com/og-logo.png",
         "width": 1200,
       },
     ],
@@ -349,7 +349,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-t
     "card": "summary_large_image",
     "description": "True",
     "images": [
-      "https://adhx.com/logo.png",
+      "https://adhx.com/og-logo.png",
     ],
     "title": "@elonmusk on X",
   },
@@ -364,7 +364,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'reply-twee
     "images": [
       {
         "height": 630,
-        "url": "https://adhx.com/logo.png",
+        "url": "https://adhx.com/og-logo.png",
         "width": 1200,
       },
     ],
@@ -377,7 +377,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'reply-twee
     "card": "summary_large_image",
     "description": "Based on recent reports, the UK government has approved postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing reorg…",
     "images": [
-      "https://adhx.com/logo.png",
+      "https://adhx.com/og-logo.png",
     ],
     "title": "@grok on X",
   },
@@ -460,7 +460,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'youtube-li
     "images": [
       {
         "height": 630,
-        "url": "https://adhx.com/logo.png",
+        "url": "https://adhx.com/og-logo.png",
         "width": 1200,
       },
     ],
@@ -473,7 +473,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'youtube-li
     "card": "summary_large_image",
     "description": "link: https://www.youtube.com/watch?v=yGQb9KkvQ1Q",
     "images": [
-      "https://adhx.com/logo.png",
+      "https://adhx.com/og-logo.png",
     ],
     "title": "@skalskip92 on X",
   },
@@ -489,7 +489,7 @@ exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image f
 
 exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'article-no-header': returns correct OG image 1`] = `
 {
-  "ogImage": "https://adhx.com/logo.png",
+  "ogImage": "https://adhx.com/og-logo.png",
   "slug": "article-no-header",
 }
 `;
@@ -531,7 +531,7 @@ exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image f
 
 exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'plain-text': returns correct OG image 1`] = `
 {
-  "ogImage": "https://adhx.com/logo.png",
+  "ogImage": "https://adhx.com/og-logo.png",
   "slug": "plain-text",
 }
 `;
@@ -545,14 +545,14 @@ exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image f
 
 exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'quote-of-text-tweet': returns correct OG image 1`] = `
 {
-  "ogImage": "https://adhx.com/logo.png",
+  "ogImage": "https://adhx.com/og-logo.png",
   "slug": "quote-of-text-tweet",
 }
 `;
 
 exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'reply-tweet': returns correct OG image 1`] = `
 {
-  "ogImage": "https://adhx.com/logo.png",
+  "ogImage": "https://adhx.com/og-logo.png",
   "slug": "reply-tweet",
 }
 `;
@@ -573,7 +573,7 @@ exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image f
 
 exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'youtube-link': returns correct OG image 1`] = `
 {
-  "ogImage": "https://adhx.com/logo.png",
+  "ogImage": "https://adhx.com/og-logo.png",
   "slug": "youtube-link",
 }
 `;

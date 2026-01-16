@@ -30,11 +30,11 @@ describe('OG Metadata with Real Fixtures', () => {
   })
 
   describe('Text tweets fallback to logo', () => {
-    it('plain-text: falls back to logo.png', () => {
+    it('plain-text: falls back to og-logo.png', () => {
       const tweet = fixtures['plain-text'].tweet!
       const ogImage = getOgImage(tweet, BASE_URL)
 
-      expect(ogImage).toBe(`${BASE_URL}/logo.png`)
+      expect(ogImage).toBe(`${BASE_URL}/og-logo.png`)
     })
   })
 
@@ -44,7 +44,7 @@ describe('OG Metadata with Real Fixtures', () => {
       const ogImage = getOgImage(tweet, BASE_URL)
 
       // Should be the video thumbnail, not the logo
-      expect(ogImage).not.toBe(`${BASE_URL}/logo.png`)
+      expect(ogImage).not.toBe(`${BASE_URL}/og-logo.png`)
       expect(ogImage).toContain('twimg.com')
     })
 
@@ -52,7 +52,7 @@ describe('OG Metadata with Real Fixtures', () => {
       const tweet = fixtures['4-images'].tweet!
       const ogImage = getOgImage(tweet, BASE_URL)
 
-      expect(ogImage).not.toBe(`${BASE_URL}/logo.png`)
+      expect(ogImage).not.toBe(`${BASE_URL}/og-logo.png`)
       expect(ogImage).toContain('twimg.com')
     })
 
@@ -60,14 +60,14 @@ describe('OG Metadata with Real Fixtures', () => {
       const tweet = fixtures['long-text-2-images'].tweet!
       const ogImage = getOgImage(tweet, BASE_URL)
 
-      expect(ogImage).not.toBe(`${BASE_URL}/logo.png`)
+      expect(ogImage).not.toBe(`${BASE_URL}/og-logo.png`)
     })
 
     it('long-text-1-image: uses the single photo', () => {
       const tweet = fixtures['long-text-1-image'].tweet!
       const ogImage = getOgImage(tweet, BASE_URL)
 
-      expect(ogImage).not.toBe(`${BASE_URL}/logo.png`)
+      expect(ogImage).not.toBe(`${BASE_URL}/og-logo.png`)
     })
   })
 
@@ -111,7 +111,7 @@ describe('OG Metadata with Real Fixtures', () => {
       const ogImage = getOgImage(tweet, BASE_URL)
 
       expect(ogImage).toBeTruthy()
-      expect(ogImage).not.toBe(`${BASE_URL}/logo.png`)
+      expect(ogImage).not.toBe(`${BASE_URL}/og-logo.png`)
     })
 
     it('article tweets use article content for description when tweet.text is empty', () => {
@@ -256,7 +256,7 @@ describe('OG Metadata with Real Fixtures', () => {
       const ogImage = getOgImage(tweet, BASE_URL)
 
       // Skip logo fallback URLs (local)
-      if (ogImage.includes('logo.png')) return
+      if (ogImage.includes('og-logo.png')) return
 
       const result = await isImageAccessible(ogImage)
       expect(result.ok).toBe(true)
@@ -267,7 +267,7 @@ describe('OG Metadata with Real Fixtures', () => {
       const tweet = fixtures['4-images'].tweet!
       const ogImage = getOgImage(tweet, BASE_URL)
 
-      if (ogImage.includes('logo.png')) return
+      if (ogImage.includes('og-logo.png')) return
 
       const result = await isImageAccessible(ogImage)
       expect(result.ok).toBe(true)
@@ -278,7 +278,7 @@ describe('OG Metadata with Real Fixtures', () => {
       const tweet = fixtures['article-with-media'].tweet!
       const ogImage = getOgImage(tweet, BASE_URL)
 
-      if (ogImage.includes('logo.png')) return
+      if (ogImage.includes('og-logo.png')) return
 
       const result = await isImageAccessible(ogImage)
       expect(result.ok).toBe(true)
@@ -289,7 +289,7 @@ describe('OG Metadata with Real Fixtures', () => {
       const tweet = fixtures['youtube-link'].tweet!
       const ogImage = getOgImage(tweet, BASE_URL)
 
-      if (ogImage.includes('logo.png')) return
+      if (ogImage.includes('og-logo.png')) return
 
       const result = await isImageAccessible(ogImage)
       // YouTube thumbnails should be accessible

@@ -259,7 +259,7 @@ describe('getOgImage', () => {
     it('returns logo URL for text-only tweets', () => {
       const tweet = createTweet({})
 
-      expect(getOgImage(tweet, BASE_URL)).toBe('https://example.com/logo.png')
+      expect(getOgImage(tweet, BASE_URL)).toBe('https://example.com/og-logo.png')
     })
 
     it('returns logo when media object exists but is empty', () => {
@@ -270,7 +270,7 @@ describe('getOgImage', () => {
         },
       })
 
-      expect(getOgImage(tweet, BASE_URL)).toBe('https://example.com/logo.png')
+      expect(getOgImage(tweet, BASE_URL)).toBe('https://example.com/og-logo.png')
     })
 
     it('returns logo when quote exists but has no media', () => {
@@ -292,7 +292,7 @@ describe('getOgImage', () => {
         },
       })
 
-      expect(getOgImage(tweet, BASE_URL)).toBe('https://example.com/logo.png')
+      expect(getOgImage(tweet, BASE_URL)).toBe('https://example.com/og-logo.png')
     })
   })
 
@@ -305,7 +305,7 @@ describe('getOgImage', () => {
         },
       })
 
-      expect(getOgImage(tweet, BASE_URL)).toBe('https://example.com/logo.png')
+      expect(getOgImage(tweet, BASE_URL)).toBe('https://example.com/og-logo.png')
     })
 
     it('handles article with cover_media but no media_info', () => {
@@ -317,7 +317,7 @@ describe('getOgImage', () => {
         },
       })
 
-      expect(getOgImage(tweet, BASE_URL)).toBe('https://example.com/logo.png')
+      expect(getOgImage(tweet, BASE_URL)).toBe('https://example.com/og-logo.png')
     })
 
     it('handles external without thumbnail_url', () => {
@@ -330,7 +330,7 @@ describe('getOgImage', () => {
         },
       })
 
-      expect(getOgImage(tweet, BASE_URL)).toBe('https://example.com/logo.png')
+      expect(getOgImage(tweet, BASE_URL)).toBe('https://example.com/og-logo.png')
     })
   })
 })
