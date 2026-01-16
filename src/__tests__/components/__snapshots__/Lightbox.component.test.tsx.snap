@@ -290,52 +290,76 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > '4
             class="flex gap-2 flex-shrink-0"
           >
             <button
-              class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              class="relative p-2 rounded-full transition-all duration-300 overflow-hidden bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105"
               title="Share via ADHX"
             >
-              <svg
-                class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
-                fill="none"
-                height="24"
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                viewBox="0 0 24 24"
-                width="24"
-                xmlns="http://www.w3.org/2000/svg"
+              <div
+                class="transition-all duration-300 rotate-0 scale-100 opacity-100"
               >
-                <circle
-                  cx="18"
-                  cy="5"
-                  r="3"
-                />
-                <circle
-                  cx="6"
-                  cy="12"
-                  r="3"
-                />
-                <circle
-                  cx="18"
-                  cy="19"
-                  r="3"
-                />
-                <line
-                  x1="8.59"
-                  x2="15.42"
-                  y1="13.51"
-                  y2="17.49"
-                />
-                <line
-                  x1="15.41"
-                  x2="8.59"
-                  y1="6.51"
-                  y2="10.49"
-                />
-              </svg>
+                <svg
+                  class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    cx="18"
+                    cy="5"
+                    r="3"
+                  />
+                  <circle
+                    cx="6"
+                    cy="12"
+                    r="3"
+                  />
+                  <circle
+                    cx="18"
+                    cy="19"
+                    r="3"
+                  />
+                  <line
+                    x1="8.59"
+                    x2="15.42"
+                    y1="13.51"
+                    y2="17.49"
+                  />
+                  <line
+                    x1="15.41"
+                    x2="8.59"
+                    y1="6.51"
+                    y2="10.49"
+                  />
+                </svg>
+              </div>
+              <div
+                class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+              >
+                <svg
+                  class="lucide lucide-check w-4 h-4"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M20 6 9 17l-5-5"
+                  />
+                </svg>
+              </div>
             </button>
             <a
-              class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105 transition-all duration-200"
               href="https://x.com/iamgdsa/status/2010782484728873387"
               rel="noopener noreferrer"
               target="_blank"
@@ -437,25 +461,58 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > '4
               </div>
             </div>
             <button
-              class="p-2.5 rounded-full transition-all duration-200 disabled:opacity-50 flex-shrink-0 bg-green-500 text-white hover:bg-green-600"
+              class="relative p-2.5 rounded-full transition-all disabled:opacity-50 flex-shrink-0 overflow-hidden bg-green-500 text-white hover:bg-green-600 hover:scale-110 hover:shadow-lg hover:shadow-green-500/30 duration-300"
               title="Mark as read"
             >
-              <svg
-                class="lucide lucide-check w-5 h-5"
-                fill="none"
-                height="24"
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                viewBox="0 0 24 24"
-                width="24"
-                xmlns="http://www.w3.org/2000/svg"
+              <div
+                class="transition-all duration-300 rotate-0 scale-100 opacity-100"
               >
-                <path
-                  d="M20 6 9 17l-5-5"
-                />
-              </svg>
+                <svg
+                  class="lucide lucide-check w-5 h-5"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M20 6 9 17l-5-5"
+                  />
+                </svg>
+              </div>
+              <div
+                class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+              >
+                <svg
+                  class="lucide lucide-eye-off w-5 h-5"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"
+                  />
+                  <path
+                    d="M14.084 14.158a3 3 0 0 1-4.242-4.242"
+                  />
+                  <path
+                    d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"
+                  />
+                  <path
+                    d="m2 2 20 20"
+                  />
+                </svg>
+              </div>
             </button>
           </div>
         </div>
@@ -577,52 +634,76 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'a
           class="flex gap-2 flex-shrink-0"
         >
           <button
-            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            class="relative p-2 rounded-full transition-all duration-300 overflow-hidden bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105"
             title="Share via ADHX"
           >
-            <svg
-              class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <div
+              class="transition-all duration-300 rotate-0 scale-100 opacity-100"
             >
-              <circle
-                cx="18"
-                cy="5"
-                r="3"
-              />
-              <circle
-                cx="6"
-                cy="12"
-                r="3"
-              />
-              <circle
-                cx="18"
-                cy="19"
-                r="3"
-              />
-              <line
-                x1="8.59"
-                x2="15.42"
-                y1="13.51"
-                y2="17.49"
-              />
-              <line
-                x1="15.41"
-                x2="8.59"
-                y1="6.51"
-                y2="10.49"
-              />
-            </svg>
+              <svg
+                class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="18"
+                  cy="5"
+                  r="3"
+                />
+                <circle
+                  cx="6"
+                  cy="12"
+                  r="3"
+                />
+                <circle
+                  cx="18"
+                  cy="19"
+                  r="3"
+                />
+                <line
+                  x1="8.59"
+                  x2="15.42"
+                  y1="13.51"
+                  y2="17.49"
+                />
+                <line
+                  x1="15.41"
+                  x2="8.59"
+                  y1="6.51"
+                  y2="10.49"
+                />
+              </svg>
+            </div>
+            <div
+              class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+            >
+              <svg
+                class="lucide lucide-check w-4 h-4"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M20 6 9 17l-5-5"
+                />
+              </svg>
+            </div>
           </button>
           <a
-            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105 transition-all duration-200"
             href="https://x.com/aliniikk/status/2009347948816335031"
             rel="noopener noreferrer"
             target="_blank"
@@ -1257,25 +1338,58 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'a
             </div>
           </div>
           <button
-            class="p-2.5 rounded-full transition-all duration-200 disabled:opacity-50 flex-shrink-0 bg-green-500 text-white hover:bg-green-600"
+            class="relative p-2.5 rounded-full transition-all disabled:opacity-50 flex-shrink-0 overflow-hidden bg-green-500 text-white hover:bg-green-600 hover:scale-110 hover:shadow-lg hover:shadow-green-500/30 duration-300"
             title="Mark as read"
           >
-            <svg
-              class="lucide lucide-check w-5 h-5"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <div
+              class="transition-all duration-300 rotate-0 scale-100 opacity-100"
             >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
+              <svg
+                class="lucide lucide-check w-5 h-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M20 6 9 17l-5-5"
+                />
+              </svg>
+            </div>
+            <div
+              class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+            >
+              <svg
+                class="lucide lucide-eye-off w-5 h-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"
+                />
+                <path
+                  d="M14.084 14.158a3 3 0 0 1-4.242-4.242"
+                />
+                <path
+                  d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"
+                />
+                <path
+                  d="m2 2 20 20"
+                />
+              </svg>
+            </div>
           </button>
         </div>
       </div>
@@ -1396,52 +1510,76 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'a
           class="flex gap-2 flex-shrink-0"
         >
           <button
-            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            class="relative p-2 rounded-full transition-all duration-300 overflow-hidden bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105"
             title="Share via ADHX"
           >
-            <svg
-              class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <div
+              class="transition-all duration-300 rotate-0 scale-100 opacity-100"
             >
-              <circle
-                cx="18"
-                cy="5"
-                r="3"
-              />
-              <circle
-                cx="6"
-                cy="12"
-                r="3"
-              />
-              <circle
-                cx="18"
-                cy="19"
-                r="3"
-              />
-              <line
-                x1="8.59"
-                x2="15.42"
-                y1="13.51"
-                y2="17.49"
-              />
-              <line
-                x1="15.41"
-                x2="8.59"
-                y1="6.51"
-                y2="10.49"
-              />
-            </svg>
+              <svg
+                class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="18"
+                  cy="5"
+                  r="3"
+                />
+                <circle
+                  cx="6"
+                  cy="12"
+                  r="3"
+                />
+                <circle
+                  cx="18"
+                  cy="19"
+                  r="3"
+                />
+                <line
+                  x1="8.59"
+                  x2="15.42"
+                  y1="13.51"
+                  y2="17.49"
+                />
+                <line
+                  x1="15.41"
+                  x2="8.59"
+                  y1="6.51"
+                  y2="10.49"
+                />
+              </svg>
+            </div>
+            <div
+              class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+            >
+              <svg
+                class="lucide lucide-check w-4 h-4"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M20 6 9 17l-5-5"
+                />
+              </svg>
+            </div>
           </button>
           <a
-            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105 transition-all duration-200"
             href="https://x.com/NoahRyanCo/status/2008957369212866843"
             rel="noopener noreferrer"
             target="_blank"
@@ -3668,25 +3806,58 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'a
             </div>
           </div>
           <button
-            class="p-2.5 rounded-full transition-all duration-200 disabled:opacity-50 flex-shrink-0 bg-green-500 text-white hover:bg-green-600"
+            class="relative p-2.5 rounded-full transition-all disabled:opacity-50 flex-shrink-0 overflow-hidden bg-green-500 text-white hover:bg-green-600 hover:scale-110 hover:shadow-lg hover:shadow-green-500/30 duration-300"
             title="Mark as read"
           >
-            <svg
-              class="lucide lucide-check w-5 h-5"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <div
+              class="transition-all duration-300 rotate-0 scale-100 opacity-100"
             >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
+              <svg
+                class="lucide lucide-check w-5 h-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M20 6 9 17l-5-5"
+                />
+              </svg>
+            </div>
+            <div
+              class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+            >
+              <svg
+                class="lucide lucide-eye-off w-5 h-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"
+                />
+                <path
+                  d="M14.084 14.158a3 3 0 0 1-4.242-4.242"
+                />
+                <path
+                  d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"
+                />
+                <path
+                  d="m2 2 20 20"
+                />
+              </svg>
+            </div>
           </button>
         </div>
       </div>
@@ -3858,52 +4029,76 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'e
             class="flex gap-2 flex-shrink-0"
           >
             <button
-              class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              class="relative p-2 rounded-full transition-all duration-300 overflow-hidden bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105"
               title="Share via ADHX"
             >
-              <svg
-                class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
-                fill="none"
-                height="24"
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                viewBox="0 0 24 24"
-                width="24"
-                xmlns="http://www.w3.org/2000/svg"
+              <div
+                class="transition-all duration-300 rotate-0 scale-100 opacity-100"
               >
-                <circle
-                  cx="18"
-                  cy="5"
-                  r="3"
-                />
-                <circle
-                  cx="6"
-                  cy="12"
-                  r="3"
-                />
-                <circle
-                  cx="18"
-                  cy="19"
-                  r="3"
-                />
-                <line
-                  x1="8.59"
-                  x2="15.42"
-                  y1="13.51"
-                  y2="17.49"
-                />
-                <line
-                  x1="15.41"
-                  x2="8.59"
-                  y1="6.51"
-                  y2="10.49"
-                />
-              </svg>
+                <svg
+                  class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    cx="18"
+                    cy="5"
+                    r="3"
+                  />
+                  <circle
+                    cx="6"
+                    cy="12"
+                    r="3"
+                  />
+                  <circle
+                    cx="18"
+                    cy="19"
+                    r="3"
+                  />
+                  <line
+                    x1="8.59"
+                    x2="15.42"
+                    y1="13.51"
+                    y2="17.49"
+                  />
+                  <line
+                    x1="15.41"
+                    x2="8.59"
+                    y1="6.51"
+                    y2="10.49"
+                  />
+                </svg>
+              </div>
+              <div
+                class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+              >
+                <svg
+                  class="lucide lucide-check w-4 h-4"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M20 6 9 17l-5-5"
+                  />
+                </svg>
+              </div>
             </button>
             <a
-              class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105 transition-all duration-200"
               href="https://x.com/moonpay/status/2009626024968118554"
               rel="noopener noreferrer"
               target="_blank"
@@ -4017,25 +4212,58 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'e
               </div>
             </div>
             <button
-              class="p-2.5 rounded-full transition-all duration-200 disabled:opacity-50 flex-shrink-0 bg-green-500 text-white hover:bg-green-600"
+              class="relative p-2.5 rounded-full transition-all disabled:opacity-50 flex-shrink-0 overflow-hidden bg-green-500 text-white hover:bg-green-600 hover:scale-110 hover:shadow-lg hover:shadow-green-500/30 duration-300"
               title="Mark as read"
             >
-              <svg
-                class="lucide lucide-check w-5 h-5"
-                fill="none"
-                height="24"
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                viewBox="0 0 24 24"
-                width="24"
-                xmlns="http://www.w3.org/2000/svg"
+              <div
+                class="transition-all duration-300 rotate-0 scale-100 opacity-100"
               >
-                <path
-                  d="M20 6 9 17l-5-5"
-                />
-              </svg>
+                <svg
+                  class="lucide lucide-check w-5 h-5"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M20 6 9 17l-5-5"
+                  />
+                </svg>
+              </div>
+              <div
+                class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+              >
+                <svg
+                  class="lucide lucide-eye-off w-5 h-5"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"
+                  />
+                  <path
+                    d="M14.084 14.158a3 3 0 0 1-4.242-4.242"
+                  />
+                  <path
+                    d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"
+                  />
+                  <path
+                    d="m2 2 20 20"
+                  />
+                </svg>
+              </div>
             </button>
           </div>
         </div>
@@ -4207,52 +4435,76 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'l
             class="flex gap-2 flex-shrink-0"
           >
             <button
-              class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              class="relative p-2 rounded-full transition-all duration-300 overflow-hidden bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105"
               title="Share via ADHX"
             >
-              <svg
-                class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
-                fill="none"
-                height="24"
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                viewBox="0 0 24 24"
-                width="24"
-                xmlns="http://www.w3.org/2000/svg"
+              <div
+                class="transition-all duration-300 rotate-0 scale-100 opacity-100"
               >
-                <circle
-                  cx="18"
-                  cy="5"
-                  r="3"
-                />
-                <circle
-                  cx="6"
-                  cy="12"
-                  r="3"
-                />
-                <circle
-                  cx="18"
-                  cy="19"
-                  r="3"
-                />
-                <line
-                  x1="8.59"
-                  x2="15.42"
-                  y1="13.51"
-                  y2="17.49"
-                />
-                <line
-                  x1="15.41"
-                  x2="8.59"
-                  y1="6.51"
-                  y2="10.49"
-                />
-              </svg>
+                <svg
+                  class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    cx="18"
+                    cy="5"
+                    r="3"
+                  />
+                  <circle
+                    cx="6"
+                    cy="12"
+                    r="3"
+                  />
+                  <circle
+                    cx="18"
+                    cy="19"
+                    r="3"
+                  />
+                  <line
+                    x1="8.59"
+                    x2="15.42"
+                    y1="13.51"
+                    y2="17.49"
+                  />
+                  <line
+                    x1="15.41"
+                    x2="8.59"
+                    y1="6.51"
+                    y2="10.49"
+                  />
+                </svg>
+              </div>
+              <div
+                class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+              >
+                <svg
+                  class="lucide lucide-check w-4 h-4"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M20 6 9 17l-5-5"
+                  />
+                </svg>
+              </div>
             </button>
             <a
-              class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105 transition-all duration-200"
               href="https://x.com/maverickecom/status/2011489837094683034"
               rel="noopener noreferrer"
               target="_blank"
@@ -4468,25 +4720,58 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'l
               </div>
             </div>
             <button
-              class="p-2.5 rounded-full transition-all duration-200 disabled:opacity-50 flex-shrink-0 bg-green-500 text-white hover:bg-green-600"
+              class="relative p-2.5 rounded-full transition-all disabled:opacity-50 flex-shrink-0 overflow-hidden bg-green-500 text-white hover:bg-green-600 hover:scale-110 hover:shadow-lg hover:shadow-green-500/30 duration-300"
               title="Mark as read"
             >
-              <svg
-                class="lucide lucide-check w-5 h-5"
-                fill="none"
-                height="24"
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                viewBox="0 0 24 24"
-                width="24"
-                xmlns="http://www.w3.org/2000/svg"
+              <div
+                class="transition-all duration-300 rotate-0 scale-100 opacity-100"
               >
-                <path
-                  d="M20 6 9 17l-5-5"
-                />
-              </svg>
+                <svg
+                  class="lucide lucide-check w-5 h-5"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M20 6 9 17l-5-5"
+                  />
+                </svg>
+              </div>
+              <div
+                class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+              >
+                <svg
+                  class="lucide lucide-eye-off w-5 h-5"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"
+                  />
+                  <path
+                    d="M14.084 14.158a3 3 0 0 1-4.242-4.242"
+                  />
+                  <path
+                    d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"
+                  />
+                  <path
+                    d="m2 2 20 20"
+                  />
+                </svg>
+              </div>
             </button>
           </div>
         </div>
@@ -4705,52 +4990,76 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'l
             class="flex gap-2 flex-shrink-0"
           >
             <button
-              class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              class="relative p-2 rounded-full transition-all duration-300 overflow-hidden bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105"
               title="Share via ADHX"
             >
-              <svg
-                class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
-                fill="none"
-                height="24"
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                viewBox="0 0 24 24"
-                width="24"
-                xmlns="http://www.w3.org/2000/svg"
+              <div
+                class="transition-all duration-300 rotate-0 scale-100 opacity-100"
               >
-                <circle
-                  cx="18"
-                  cy="5"
-                  r="3"
-                />
-                <circle
-                  cx="6"
-                  cy="12"
-                  r="3"
-                />
-                <circle
-                  cx="18"
-                  cy="19"
-                  r="3"
-                />
-                <line
-                  x1="8.59"
-                  x2="15.42"
-                  y1="13.51"
-                  y2="17.49"
-                />
-                <line
-                  x1="15.41"
-                  x2="8.59"
-                  y1="6.51"
-                  y2="10.49"
-                />
-              </svg>
+                <svg
+                  class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    cx="18"
+                    cy="5"
+                    r="3"
+                  />
+                  <circle
+                    cx="6"
+                    cy="12"
+                    r="3"
+                  />
+                  <circle
+                    cx="18"
+                    cy="19"
+                    r="3"
+                  />
+                  <line
+                    x1="8.59"
+                    x2="15.42"
+                    y1="13.51"
+                    y2="17.49"
+                  />
+                  <line
+                    x1="15.41"
+                    x2="8.59"
+                    y1="6.51"
+                    y2="10.49"
+                  />
+                </svg>
+              </div>
+              <div
+                class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+              >
+                <svg
+                  class="lucide lucide-check w-4 h-4"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M20 6 9 17l-5-5"
+                  />
+                </svg>
+              </div>
             </button>
             <a
-              class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105 transition-all duration-200"
               href="https://x.com/BasilTheGreat/status/2012044480556208542"
               rel="noopener noreferrer"
               target="_blank"
@@ -4874,25 +5183,58 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'l
               </div>
             </div>
             <button
-              class="p-2.5 rounded-full transition-all duration-200 disabled:opacity-50 flex-shrink-0 bg-green-500 text-white hover:bg-green-600"
+              class="relative p-2.5 rounded-full transition-all disabled:opacity-50 flex-shrink-0 overflow-hidden bg-green-500 text-white hover:bg-green-600 hover:scale-110 hover:shadow-lg hover:shadow-green-500/30 duration-300"
               title="Mark as read"
             >
-              <svg
-                class="lucide lucide-check w-5 h-5"
-                fill="none"
-                height="24"
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                viewBox="0 0 24 24"
-                width="24"
-                xmlns="http://www.w3.org/2000/svg"
+              <div
+                class="transition-all duration-300 rotate-0 scale-100 opacity-100"
               >
-                <path
-                  d="M20 6 9 17l-5-5"
-                />
-              </svg>
+                <svg
+                  class="lucide lucide-check w-5 h-5"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M20 6 9 17l-5-5"
+                  />
+                </svg>
+              </div>
+              <div
+                class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+              >
+                <svg
+                  class="lucide lucide-eye-off w-5 h-5"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"
+                  />
+                  <path
+                    d="M14.084 14.158a3 3 0 0 1-4.242-4.242"
+                  />
+                  <path
+                    d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"
+                  />
+                  <path
+                    d="m2 2 20 20"
+                  />
+                </svg>
+              </div>
             </button>
           </div>
         </div>
@@ -5014,52 +5356,76 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'l
           class="flex gap-2 flex-shrink-0"
         >
           <button
-            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            class="relative p-2 rounded-full transition-all duration-300 overflow-hidden bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105"
             title="Share via ADHX"
           >
-            <svg
-              class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <div
+              class="transition-all duration-300 rotate-0 scale-100 opacity-100"
             >
-              <circle
-                cx="18"
-                cy="5"
-                r="3"
-              />
-              <circle
-                cx="6"
-                cy="12"
-                r="3"
-              />
-              <circle
-                cx="18"
-                cy="19"
-                r="3"
-              />
-              <line
-                x1="8.59"
-                x2="15.42"
-                y1="13.51"
-                y2="17.49"
-              />
-              <line
-                x1="15.41"
-                x2="8.59"
-                y1="6.51"
-                y2="10.49"
-              />
-            </svg>
+              <svg
+                class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="18"
+                  cy="5"
+                  r="3"
+                />
+                <circle
+                  cx="6"
+                  cy="12"
+                  r="3"
+                />
+                <circle
+                  cx="18"
+                  cy="19"
+                  r="3"
+                />
+                <line
+                  x1="8.59"
+                  x2="15.42"
+                  y1="13.51"
+                  y2="17.49"
+                />
+                <line
+                  x1="15.41"
+                  x2="8.59"
+                  y1="6.51"
+                  y2="10.49"
+                />
+              </svg>
+            </div>
+            <div
+              class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+            >
+              <svg
+                class="lucide lucide-check w-4 h-4"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M20 6 9 17l-5-5"
+                />
+              </svg>
+            </div>
           </button>
           <a
-            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105 transition-all duration-200"
             href="https://x.com/_The_Prophet__/status/2011834234642841806"
             rel="noopener noreferrer"
             target="_blank"
@@ -5465,25 +5831,58 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
             </div>
           </div>
           <button
-            class="p-2.5 rounded-full transition-all duration-200 disabled:opacity-50 flex-shrink-0 bg-green-500 text-white hover:bg-green-600"
+            class="relative p-2.5 rounded-full transition-all disabled:opacity-50 flex-shrink-0 overflow-hidden bg-green-500 text-white hover:bg-green-600 hover:scale-110 hover:shadow-lg hover:shadow-green-500/30 duration-300"
             title="Mark as read"
           >
-            <svg
-              class="lucide lucide-check w-5 h-5"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <div
+              class="transition-all duration-300 rotate-0 scale-100 opacity-100"
             >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
+              <svg
+                class="lucide lucide-check w-5 h-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M20 6 9 17l-5-5"
+                />
+              </svg>
+            </div>
+            <div
+              class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+            >
+              <svg
+                class="lucide lucide-eye-off w-5 h-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"
+                />
+                <path
+                  d="M14.084 14.158a3 3 0 0 1-4.242-4.242"
+                />
+                <path
+                  d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"
+                />
+                <path
+                  d="m2 2 20 20"
+                />
+              </svg>
+            </div>
           </button>
         </div>
       </div>
@@ -5604,52 +6003,76 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'p
           class="flex gap-2 flex-shrink-0"
         >
           <button
-            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            class="relative p-2 rounded-full transition-all duration-300 overflow-hidden bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105"
             title="Share via ADHX"
           >
-            <svg
-              class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <div
+              class="transition-all duration-300 rotate-0 scale-100 opacity-100"
             >
-              <circle
-                cx="18"
-                cy="5"
-                r="3"
-              />
-              <circle
-                cx="6"
-                cy="12"
-                r="3"
-              />
-              <circle
-                cx="18"
-                cy="19"
-                r="3"
-              />
-              <line
-                x1="8.59"
-                x2="15.42"
-                y1="13.51"
-                y2="17.49"
-              />
-              <line
-                x1="15.41"
-                x2="8.59"
-                y1="6.51"
-                y2="10.49"
-              />
-            </svg>
+              <svg
+                class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="18"
+                  cy="5"
+                  r="3"
+                />
+                <circle
+                  cx="6"
+                  cy="12"
+                  r="3"
+                />
+                <circle
+                  cx="18"
+                  cy="19"
+                  r="3"
+                />
+                <line
+                  x1="8.59"
+                  x2="15.42"
+                  y1="13.51"
+                  y2="17.49"
+                />
+                <line
+                  x1="15.41"
+                  x2="8.59"
+                  y1="6.51"
+                  y2="10.49"
+                />
+              </svg>
+            </div>
+            <div
+              class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+            >
+              <svg
+                class="lucide lucide-check w-4 h-4"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M20 6 9 17l-5-5"
+                />
+              </svg>
+            </div>
           </button>
           <a
-            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105 transition-all duration-200"
             href="https://x.com/TheCinesthetic/status/2010184900599583070"
             rel="noopener noreferrer"
             target="_blank"
@@ -5743,25 +6166,58 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'p
             </div>
           </div>
           <button
-            class="p-2.5 rounded-full transition-all duration-200 disabled:opacity-50 flex-shrink-0 bg-green-500 text-white hover:bg-green-600"
+            class="relative p-2.5 rounded-full transition-all disabled:opacity-50 flex-shrink-0 overflow-hidden bg-green-500 text-white hover:bg-green-600 hover:scale-110 hover:shadow-lg hover:shadow-green-500/30 duration-300"
             title="Mark as read"
           >
-            <svg
-              class="lucide lucide-check w-5 h-5"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <div
+              class="transition-all duration-300 rotate-0 scale-100 opacity-100"
             >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
+              <svg
+                class="lucide lucide-check w-5 h-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M20 6 9 17l-5-5"
+                />
+              </svg>
+            </div>
+            <div
+              class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+            >
+              <svg
+                class="lucide lucide-eye-off w-5 h-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"
+                />
+                <path
+                  d="M14.084 14.158a3 3 0 0 1-4.242-4.242"
+                />
+                <path
+                  d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"
+                />
+                <path
+                  d="m2 2 20 20"
+                />
+              </svg>
+            </div>
           </button>
         </div>
       </div>
@@ -5882,52 +6338,76 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'q
           class="flex gap-2 flex-shrink-0"
         >
           <button
-            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            class="relative p-2 rounded-full transition-all duration-300 overflow-hidden bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105"
             title="Share via ADHX"
           >
-            <svg
-              class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <div
+              class="transition-all duration-300 rotate-0 scale-100 opacity-100"
             >
-              <circle
-                cx="18"
-                cy="5"
-                r="3"
-              />
-              <circle
-                cx="6"
-                cy="12"
-                r="3"
-              />
-              <circle
-                cx="18"
-                cy="19"
-                r="3"
-              />
-              <line
-                x1="8.59"
-                x2="15.42"
-                y1="13.51"
-                y2="17.49"
-              />
-              <line
-                x1="15.41"
-                x2="8.59"
-                y1="6.51"
-                y2="10.49"
-              />
-            </svg>
+              <svg
+                class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="18"
+                  cy="5"
+                  r="3"
+                />
+                <circle
+                  cx="6"
+                  cy="12"
+                  r="3"
+                />
+                <circle
+                  cx="18"
+                  cy="19"
+                  r="3"
+                />
+                <line
+                  x1="8.59"
+                  x2="15.42"
+                  y1="13.51"
+                  y2="17.49"
+                />
+                <line
+                  x1="15.41"
+                  x2="8.59"
+                  y1="6.51"
+                  y2="10.49"
+                />
+              </svg>
+            </div>
+            <div
+              class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+            >
+              <svg
+                class="lucide lucide-check w-4 h-4"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M20 6 9 17l-5-5"
+                />
+              </svg>
+            </div>
           </button>
           <a
-            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105 transition-all duration-200"
             href="https://x.com/Nate_Google_/status/2011791917122547826"
             rel="noopener noreferrer"
             target="_blank"
@@ -6129,25 +6609,58 @@ PS – Repost for early access to the full TikTok Shop content factory system.
             </div>
           </div>
           <button
-            class="p-2.5 rounded-full transition-all duration-200 disabled:opacity-50 flex-shrink-0 bg-green-500 text-white hover:bg-green-600"
+            class="relative p-2.5 rounded-full transition-all disabled:opacity-50 flex-shrink-0 overflow-hidden bg-green-500 text-white hover:bg-green-600 hover:scale-110 hover:shadow-lg hover:shadow-green-500/30 duration-300"
             title="Mark as read"
           >
-            <svg
-              class="lucide lucide-check w-5 h-5"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <div
+              class="transition-all duration-300 rotate-0 scale-100 opacity-100"
             >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
+              <svg
+                class="lucide lucide-check w-5 h-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M20 6 9 17l-5-5"
+                />
+              </svg>
+            </div>
+            <div
+              class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+            >
+              <svg
+                class="lucide lucide-eye-off w-5 h-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"
+                />
+                <path
+                  d="M14.084 14.158a3 3 0 0 1-4.242-4.242"
+                />
+                <path
+                  d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"
+                />
+                <path
+                  d="m2 2 20 20"
+                />
+              </svg>
+            </div>
           </button>
         </div>
       </div>
@@ -6268,52 +6781,76 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'q
           class="flex gap-2 flex-shrink-0"
         >
           <button
-            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            class="relative p-2 rounded-full transition-all duration-300 overflow-hidden bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105"
             title="Share via ADHX"
           >
-            <svg
-              class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <div
+              class="transition-all duration-300 rotate-0 scale-100 opacity-100"
             >
-              <circle
-                cx="18"
-                cy="5"
-                r="3"
-              />
-              <circle
-                cx="6"
-                cy="12"
-                r="3"
-              />
-              <circle
-                cx="18"
-                cy="19"
-                r="3"
-              />
-              <line
-                x1="8.59"
-                x2="15.42"
-                y1="13.51"
-                y2="17.49"
-              />
-              <line
-                x1="15.41"
-                x2="8.59"
-                y1="6.51"
-                y2="10.49"
-              />
-            </svg>
+              <svg
+                class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="18"
+                  cy="5"
+                  r="3"
+                />
+                <circle
+                  cx="6"
+                  cy="12"
+                  r="3"
+                />
+                <circle
+                  cx="18"
+                  cy="19"
+                  r="3"
+                />
+                <line
+                  x1="8.59"
+                  x2="15.42"
+                  y1="13.51"
+                  y2="17.49"
+                />
+                <line
+                  x1="15.41"
+                  x2="8.59"
+                  y1="6.51"
+                  y2="10.49"
+                />
+              </svg>
+            </div>
+            <div
+              class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+            >
+              <svg
+                class="lucide lucide-check w-4 h-4"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M20 6 9 17l-5-5"
+                />
+              </svg>
+            </div>
           </button>
           <a
-            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105 transition-all duration-200"
             href="https://x.com/elonmusk/status/2012040892719169884"
             rel="noopener noreferrer"
             target="_blank"
@@ -6475,25 +7012,58 @@ This is not a coincidence.
             </div>
           </div>
           <button
-            class="p-2.5 rounded-full transition-all duration-200 disabled:opacity-50 flex-shrink-0 bg-green-500 text-white hover:bg-green-600"
+            class="relative p-2.5 rounded-full transition-all disabled:opacity-50 flex-shrink-0 overflow-hidden bg-green-500 text-white hover:bg-green-600 hover:scale-110 hover:shadow-lg hover:shadow-green-500/30 duration-300"
             title="Mark as read"
           >
-            <svg
-              class="lucide lucide-check w-5 h-5"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <div
+              class="transition-all duration-300 rotate-0 scale-100 opacity-100"
             >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
+              <svg
+                class="lucide lucide-check w-5 h-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M20 6 9 17l-5-5"
+                />
+              </svg>
+            </div>
+            <div
+              class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+            >
+              <svg
+                class="lucide lucide-eye-off w-5 h-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"
+                />
+                <path
+                  d="M14.084 14.158a3 3 0 0 1-4.242-4.242"
+                />
+                <path
+                  d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"
+                />
+                <path
+                  d="m2 2 20 20"
+                />
+              </svg>
+            </div>
           </button>
         </div>
       </div>
@@ -6614,52 +7184,76 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'r
           class="flex gap-2 flex-shrink-0"
         >
           <button
-            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            class="relative p-2 rounded-full transition-all duration-300 overflow-hidden bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105"
             title="Share via ADHX"
           >
-            <svg
-              class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <div
+              class="transition-all duration-300 rotate-0 scale-100 opacity-100"
             >
-              <circle
-                cx="18"
-                cy="5"
-                r="3"
-              />
-              <circle
-                cx="6"
-                cy="12"
-                r="3"
-              />
-              <circle
-                cx="18"
-                cy="19"
-                r="3"
-              />
-              <line
-                x1="8.59"
-                x2="15.42"
-                y1="13.51"
-                y2="17.49"
-              />
-              <line
-                x1="15.41"
-                x2="8.59"
-                y1="6.51"
-                y2="10.49"
-              />
-            </svg>
+              <svg
+                class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="18"
+                  cy="5"
+                  r="3"
+                />
+                <circle
+                  cx="6"
+                  cy="12"
+                  r="3"
+                />
+                <circle
+                  cx="18"
+                  cy="19"
+                  r="3"
+                />
+                <line
+                  x1="8.59"
+                  x2="15.42"
+                  y1="13.51"
+                  y2="17.49"
+                />
+                <line
+                  x1="15.41"
+                  x2="8.59"
+                  y1="6.51"
+                  y2="10.49"
+                />
+              </svg>
+            </div>
+            <div
+              class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+            >
+              <svg
+                class="lucide lucide-check w-4 h-4"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M20 6 9 17l-5-5"
+                />
+              </svg>
+            </div>
           </button>
           <a
-            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105 transition-all duration-200"
             href="https://x.com/grok/status/2011596457824923855"
             rel="noopener noreferrer"
             target="_blank"
@@ -6762,25 +7356,58 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'r
             </div>
           </div>
           <button
-            class="p-2.5 rounded-full transition-all duration-200 disabled:opacity-50 flex-shrink-0 bg-green-500 text-white hover:bg-green-600"
+            class="relative p-2.5 rounded-full transition-all disabled:opacity-50 flex-shrink-0 overflow-hidden bg-green-500 text-white hover:bg-green-600 hover:scale-110 hover:shadow-lg hover:shadow-green-500/30 duration-300"
             title="Mark as read"
           >
-            <svg
-              class="lucide lucide-check w-5 h-5"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <div
+              class="transition-all duration-300 rotate-0 scale-100 opacity-100"
             >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
+              <svg
+                class="lucide lucide-check w-5 h-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M20 6 9 17l-5-5"
+                />
+              </svg>
+            </div>
+            <div
+              class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+            >
+              <svg
+                class="lucide lucide-eye-off w-5 h-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"
+                />
+                <path
+                  d="M14.084 14.158a3 3 0 0 1-4.242-4.242"
+                />
+                <path
+                  d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"
+                />
+                <path
+                  d="m2 2 20 20"
+                />
+              </svg>
+            </div>
           </button>
         </div>
       </div>
@@ -6901,52 +7528,76 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 't
           class="flex gap-2 flex-shrink-0"
         >
           <button
-            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            class="relative p-2 rounded-full transition-all duration-300 overflow-hidden bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105"
             title="Share via ADHX"
           >
-            <svg
-              class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <div
+              class="transition-all duration-300 rotate-0 scale-100 opacity-100"
             >
-              <circle
-                cx="18"
-                cy="5"
-                r="3"
-              />
-              <circle
-                cx="6"
-                cy="12"
-                r="3"
-              />
-              <circle
-                cx="18"
-                cy="19"
-                r="3"
-              />
-              <line
-                x1="8.59"
-                x2="15.42"
-                y1="13.51"
-                y2="17.49"
-              />
-              <line
-                x1="15.41"
-                x2="8.59"
-                y1="6.51"
-                y2="10.49"
-              />
-            </svg>
+              <svg
+                class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="18"
+                  cy="5"
+                  r="3"
+                />
+                <circle
+                  cx="6"
+                  cy="12"
+                  r="3"
+                />
+                <circle
+                  cx="18"
+                  cy="19"
+                  r="3"
+                />
+                <line
+                  x1="8.59"
+                  x2="15.42"
+                  y1="13.51"
+                  y2="17.49"
+                />
+                <line
+                  x1="15.41"
+                  x2="8.59"
+                  y1="6.51"
+                  y2="10.49"
+                />
+              </svg>
+            </div>
+            <div
+              class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+            >
+              <svg
+                class="lucide lucide-check w-4 h-4"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M20 6 9 17l-5-5"
+                />
+              </svg>
+            </div>
           </button>
           <a
-            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105 transition-all duration-200"
             href="https://x.com/swyx/status/2011861139689513314"
             rel="noopener noreferrer"
             target="_blank"
@@ -7112,25 +7763,58 @@ Try it for free in our demo app (link in the thread).
             </div>
           </div>
           <button
-            class="p-2.5 rounded-full transition-all duration-200 disabled:opacity-50 flex-shrink-0 bg-green-500 text-white hover:bg-green-600"
+            class="relative p-2.5 rounded-full transition-all disabled:opacity-50 flex-shrink-0 overflow-hidden bg-green-500 text-white hover:bg-green-600 hover:scale-110 hover:shadow-lg hover:shadow-green-500/30 duration-300"
             title="Mark as read"
           >
-            <svg
-              class="lucide lucide-check w-5 h-5"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <div
+              class="transition-all duration-300 rotate-0 scale-100 opacity-100"
             >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
+              <svg
+                class="lucide lucide-check w-5 h-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M20 6 9 17l-5-5"
+                />
+              </svg>
+            </div>
+            <div
+              class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+            >
+              <svg
+                class="lucide lucide-eye-off w-5 h-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"
+                />
+                <path
+                  d="M14.084 14.158a3 3 0 0 1-4.242-4.242"
+                />
+                <path
+                  d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"
+                />
+                <path
+                  d="m2 2 20 20"
+                />
+              </svg>
+            </div>
           </button>
         </div>
       </div>
@@ -7302,52 +7986,76 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'v
             class="flex gap-2 flex-shrink-0"
           >
             <button
-              class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              class="relative p-2 rounded-full transition-all duration-300 overflow-hidden bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105"
               title="Share via ADHX"
             >
-              <svg
-                class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
-                fill="none"
-                height="24"
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                viewBox="0 0 24 24"
-                width="24"
-                xmlns="http://www.w3.org/2000/svg"
+              <div
+                class="transition-all duration-300 rotate-0 scale-100 opacity-100"
               >
-                <circle
-                  cx="18"
-                  cy="5"
-                  r="3"
-                />
-                <circle
-                  cx="6"
-                  cy="12"
-                  r="3"
-                />
-                <circle
-                  cx="18"
-                  cy="19"
-                  r="3"
-                />
-                <line
-                  x1="8.59"
-                  x2="15.42"
-                  y1="13.51"
-                  y2="17.49"
-                />
-                <line
-                  x1="15.41"
-                  x2="8.59"
-                  y1="6.51"
-                  y2="10.49"
-                />
-              </svg>
+                <svg
+                  class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    cx="18"
+                    cy="5"
+                    r="3"
+                  />
+                  <circle
+                    cx="6"
+                    cy="12"
+                    r="3"
+                  />
+                  <circle
+                    cx="18"
+                    cy="19"
+                    r="3"
+                  />
+                  <line
+                    x1="8.59"
+                    x2="15.42"
+                    y1="13.51"
+                    y2="17.49"
+                  />
+                  <line
+                    x1="15.41"
+                    x2="8.59"
+                    y1="6.51"
+                    y2="10.49"
+                  />
+                </svg>
+              </div>
+              <div
+                class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+              >
+                <svg
+                  class="lucide lucide-check w-4 h-4"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M20 6 9 17l-5-5"
+                  />
+                </svg>
+              </div>
             </button>
             <a
-              class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105 transition-all duration-200"
               href="https://x.com/Kekius_Sage/status/2011872260118716688"
               rel="noopener noreferrer"
               target="_blank"
@@ -7451,25 +8159,58 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'v
               </div>
             </div>
             <button
-              class="p-2.5 rounded-full transition-all duration-200 disabled:opacity-50 flex-shrink-0 bg-green-500 text-white hover:bg-green-600"
+              class="relative p-2.5 rounded-full transition-all disabled:opacity-50 flex-shrink-0 overflow-hidden bg-green-500 text-white hover:bg-green-600 hover:scale-110 hover:shadow-lg hover:shadow-green-500/30 duration-300"
               title="Mark as read"
             >
-              <svg
-                class="lucide lucide-check w-5 h-5"
-                fill="none"
-                height="24"
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                viewBox="0 0 24 24"
-                width="24"
-                xmlns="http://www.w3.org/2000/svg"
+              <div
+                class="transition-all duration-300 rotate-0 scale-100 opacity-100"
               >
-                <path
-                  d="M20 6 9 17l-5-5"
-                />
-              </svg>
+                <svg
+                  class="lucide lucide-check w-5 h-5"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M20 6 9 17l-5-5"
+                  />
+                </svg>
+              </div>
+              <div
+                class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+              >
+                <svg
+                  class="lucide lucide-eye-off w-5 h-5"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"
+                  />
+                  <path
+                    d="M14.084 14.158a3 3 0 0 1-4.242-4.242"
+                  />
+                  <path
+                    d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"
+                  />
+                  <path
+                    d="m2 2 20 20"
+                  />
+                </svg>
+              </div>
             </button>
           </div>
         </div>
@@ -7591,52 +8332,76 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'y
           class="flex gap-2 flex-shrink-0"
         >
           <button
-            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            class="relative p-2 rounded-full transition-all duration-300 overflow-hidden bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105"
             title="Share via ADHX"
           >
-            <svg
-              class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <div
+              class="transition-all duration-300 rotate-0 scale-100 opacity-100"
             >
-              <circle
-                cx="18"
-                cy="5"
-                r="3"
-              />
-              <circle
-                cx="6"
-                cy="12"
-                r="3"
-              />
-              <circle
-                cx="18"
-                cy="19"
-                r="3"
-              />
-              <line
-                x1="8.59"
-                x2="15.42"
-                y1="13.51"
-                y2="17.49"
-              />
-              <line
-                x1="15.41"
-                x2="8.59"
-                y1="6.51"
-                y2="10.49"
-              />
-            </svg>
+              <svg
+                class="lucide lucide-share2 w-4 h-4 text-gray-700 dark:text-white"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="18"
+                  cy="5"
+                  r="3"
+                />
+                <circle
+                  cx="6"
+                  cy="12"
+                  r="3"
+                />
+                <circle
+                  cx="18"
+                  cy="19"
+                  r="3"
+                />
+                <line
+                  x1="8.59"
+                  x2="15.42"
+                  y1="13.51"
+                  y2="17.49"
+                />
+                <line
+                  x1="15.41"
+                  x2="8.59"
+                  y1="6.51"
+                  y2="10.49"
+                />
+              </svg>
+            </div>
+            <div
+              class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+            >
+              <svg
+                class="lucide lucide-check w-4 h-4"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M20 6 9 17l-5-5"
+                />
+              </svg>
+            </div>
           </button>
           <a
-            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105 transition-all duration-200"
             href="https://x.com/skalskip92/status/1996677567642996772"
             rel="noopener noreferrer"
             target="_blank"
@@ -7739,25 +8504,58 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'y
             </div>
           </div>
           <button
-            class="p-2.5 rounded-full transition-all duration-200 disabled:opacity-50 flex-shrink-0 bg-green-500 text-white hover:bg-green-600"
+            class="relative p-2.5 rounded-full transition-all disabled:opacity-50 flex-shrink-0 overflow-hidden bg-green-500 text-white hover:bg-green-600 hover:scale-110 hover:shadow-lg hover:shadow-green-500/30 duration-300"
             title="Mark as read"
           >
-            <svg
-              class="lucide lucide-check w-5 h-5"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <div
+              class="transition-all duration-300 rotate-0 scale-100 opacity-100"
             >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
+              <svg
+                class="lucide lucide-check w-5 h-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M20 6 9 17l-5-5"
+                />
+              </svg>
+            </div>
+            <div
+              class="absolute inset-0 flex items-center justify-center transition-all duration-300 -rotate-180 scale-0 opacity-0"
+            >
+              <svg
+                class="lucide lucide-eye-off w-5 h-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"
+                />
+                <path
+                  d="M14.084 14.158a3 3 0 0 1-4.242-4.242"
+                />
+                <path
+                  d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"
+                />
+                <path
+                  d="m2 2 20 20"
+                />
+              </svg>
+            </div>
           </button>
         </div>
       </div>
