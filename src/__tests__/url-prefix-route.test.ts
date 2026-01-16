@@ -261,20 +261,25 @@ describe('Middleware + Route Integration', () => {
   /**
    * These tests verify that the middleware regex and route validation
    * work together correctly for the URL prefix feature.
+   *
+   * IMPORTANT: Browsers normalize // to / in URL paths!
+   * Tests use single-slash format (https:/x.com) that middleware actually receives.
    */
 
+  // Updated pattern to handle browser path normalization (// → /)
   const middlewarePattern =
-    /^\/(https?:\/\/)?(x\.com|twitter\.com)\/(\w{1,15})\/status\/(\d+)/i
+    /^\/(https?:\/?\/?)?(?:www\.)?(x\.com|twitter\.com)\/(\w{1,15})\/status\/(\d+)/i
 
   it('middleware extracts valid username and ID', () => {
     const testCases = [
       {
-        path: '/https://x.com/testuser/status/123456789',
+        // Browser normalizes https://x.com to https:/x.com
+        path: '/https:/x.com/testuser/status/123456789',
         expectedUsername: 'testuser',
         expectedId: '123456789',
       },
       {
-        path: '/https://twitter.com/another_user/status/987654321',
+        path: '/https:/twitter.com/another_user/status/987654321',
         expectedUsername: 'another_user',
         expectedId: '987654321',
       },
@@ -295,10 +300,10 @@ describe('Middleware + Route Integration', () => {
 
   it('middleware rejects invalid Twitter URLs', () => {
     const invalidPaths = [
-      '/https://facebook.com/user/status/123', // wrong domain
-      '/https://x.com/user/posts/123', // wrong path structure
-      '/https://x.com/toolongusername1234/status/123', // username > 15 chars
-      '/https://x.com/user/status/abc', // non-numeric ID
+      '/https:/facebook.com/user/status/123', // wrong domain
+      '/https:/x.com/user/posts/123', // wrong path structure
+      '/https:/x.com/toolongusername1234/status/123', // username > 15 chars
+      '/https:/x.com/user/status/abc', // non-numeric ID
     ]
 
     for (const path of invalidPaths) {
@@ -321,9 +326,9 @@ describe('Middleware + Route Integration', () => {
     const routeIdPattern = /^\d+$/
 
     const validPaths = [
-      '/https://x.com/user123/status/999888777',
+      '/https:/x.com/user123/status/999888777',
       '/twitter.com/_test_/status/1',
-      '/http://x.com/A/status/12345678901234567890',
+      '/http:/x.com/A/status/12345678901234567890',
     ]
 
     for (const path of validPaths) {
