@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.14.1](https://github.com/itsmemeworks/adhx/compare/v1.14.0...v1.14.1) (2026-01-16)
+
+
+### Bug Fixes
+
+* always show all stats with responsive sizing ([#60](https://github.com/itsmemeworks/adhx/issues/60)) ([0a5b1d7](https://github.com/itsmemeworks/adhx/commit/0a5b1d7b9d9d8f67aa5999714f0920575d70678b))
+
 ## [1.14.0](https://github.com/itsmemeworks/adhx/compare/v1.13.1...v1.14.0) (2026-01-16)
 
 
