@@ -25,6 +25,16 @@ vi.mock('next/navigation', () => ({
   }),
 }))
 
+// Mock formatRelativeTime to return stable output for snapshot tests
+// (actual time would change as fixtures age, causing snapshot failures)
+vi.mock('@/lib/utils/format', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/utils/format')>()
+  return {
+    ...actual,
+    formatRelativeTime: () => 'Jan 15, 2026',
+  }
+})
+
 describe('TweetPreviewLanding Component Snapshots', () => {
   describe('Renders all fixture types correctly (unauthenticated)', () => {
     it.each(fixtureMetadata)('$slug: renders correctly', ({ slug, author, tweetId }) => {
