@@ -1,0 +1,3156 @@
+{
+  "code": 200,
+  "message": "OK",
+  "tweet": {
+    "url": "https://x.com/NoahRyanCo/status/2008957369212866843",
+    "id": "2008957369212866843",
+    "text": "",
+    "raw_text": {
+      "text": "https://t.co/m4C1AXpP1f",
+      "facets": []
+    },
+    "author": {
+      "id": "1347605550016696320",
+      "name": "Noah Ryan",
+      "screen_name": "NoahRyanCo",
+      "avatar_url": "https://pbs.twimg.com/profile_images/1761233957524541440/s5EXk28X_200x200.jpg",
+      "banner_url": "https://pbs.twimg.com/profile_banners/1347605550016696320/1763435907",
+      "description": "Elite Health Protocols // Growing Health Brands @basedbureau @basedsupps",
+      "location": "18k subs on my newsletter: ",
+      "url": "https://x.com/NoahRyanCo",
+      "followers": 141795,
+      "following": 447,
+      "joined": "Fri Jan 08 18:06:25 +0000 2021",
+      "likes": 42942,
+      "media_count": 1443,
+      "protected": false,
+      "website": {
+        "url": "http://www.noahryan.co",
+        "display_url": "noahryan.co"
+      },
+      "tweets": 22597,
+      "avatar_color": null
+    },
+    "replies": 57,
+    "retweets": 220,
+    "likes": 4415,
+    "bookmarks": 12621,
+    "created_at": "Wed Jan 07 17:42:16 +0000 2026",
+    "created_timestamp": 1767807736,
+    "possibly_sensitive": false,
+    "views": 780477,
+    "is_note_tweet": false,
+    "community_note": null,
+    "lang": null,
+    "replying_to": null,
+    "replying_to_status": null,
+    "source": "Twitter Web App",
+    "article": {
+      "created_at": "2026-01-07T17:42:16.000Z",
+      "modified_at": "2026-01-07T17:42:16.000Z",
+      "id": "2008954240690278400",
+      "title": "How to Get Shredded (Without Even Trying)",
+      "preview_text": "Guys. I finally did it. After years of fidgeting with macros, intermittent fasting, and diet “hacks”, I finally got hyperlean. My visceral fat vanished, muscles are fuller, and vascularity is through",
+      "cover_media": {
+        "id": "QXBpTWVkaWE6DAAFCgABG+E/92mXcAAKAAISs6gbmhcQAAAA",
+        "media_key": "3_2008957240644956160",
+        "media_id": "2008957240644956160",
+        "media_info": {
+          "__typename": "ApiImage",
+          "original_img_height": 396,
+          "original_img_width": 990,
+          "original_img_url": "https://pbs.twimg.com/media/G-E_92mXcAALnrI.jpg",
+          "color_info": {
+            "palette": [
+              {
+                "percentage": 83.38,
+                "rgb": {
+                  "blue": 72,
+                  "green": 67,
+                  "red": 74
+                }
+              },
+              {
+                "percentage": 16.54,
+                "rgb": {
+                  "blue": 163,
+                  "green": 161,
+                  "red": 165
+                }
+              }
+            ]
+          }
+        }
+      },
+      "content": {
+        "blocks": [
+          {
+            "key": "4d4to",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Guys. I finally did it. After years of fidgeting with macros, intermittent fasting, and diet “hacks”, I finally got hyperlean. My visceral fat vanished, muscles are fuller, and vascularity is through the roof. Its like I re-wrote my midwest corn-fed genetics.",
+            "type": "unstyled"
+          },
+          {
+            "key": "4icra",
+            "data": {},
+            "entityRanges": [
+              {
+                "key": 0,
+                "length": 1,
+                "offset": 0
+              }
+            ],
+            "inlineStyleRanges": [],
+            "text": " ",
+            "type": "atomic"
+          },
+          {
+            "key": "fbj7g",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "But I didn’t just get shredded. Every aspect of my life improved. More energy, better mood, better hormones. I transcended to a biologically better version of myself. I intentionally went off of this protocol to “bulk” but soon realized how much better my life was when on this protocol",
+            "type": "unstyled"
+          },
+          {
+            "key": "1bfu",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 10,
+                "offset": 58,
+                "style": "Italic"
+              },
+              {
+                "length": 10,
+                "offset": 58,
+                "style": "Bold"
+              }
+            ],
+            "text": "This is what happens when you upregulate your metabolism. Everything runs smoother. You signal abundance and give your body what it needs. It does not need to hold onto fat for a rainy day because there are no rainy days.",
+            "type": "unstyled"
+          },
+          {
+            "key": "erd30",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "That’s all that fat is, energy storage for when the going gets tough. This is why cortisol signals fat storage:",
+            "type": "unstyled"
+          },
+          {
+            "key": "7rort",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 146,
+                "offset": 0,
+                "style": "Italic"
+              },
+              {
+                "length": 173,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "“uh oh, things are getting stressful. This must mean that food will be scarce soon. I'd better start saving some of the energy I eat for later” - Your Prehistoric physiology",
+            "type": "unstyled"
+          },
+          {
+            "key": "b6rsp",
+            "data": {},
+            "entityRanges": [
+              {
+                "key": 1,
+                "length": 1,
+                "offset": 0
+              }
+            ],
+            "inlineStyleRanges": [],
+            "text": " ",
+            "type": "atomic"
+          },
+          {
+            "key": "cm2ti",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "This is a genius survival mechanism, but we live in a world of abundance, not scarcity. Overnutrition kills more people than undernutrition. So we can either starve ourself, or we can teach our body that it doesn’t have to be stingy with its energy. Like a sugar baby with an old man’s AMEX. Spend those kcals.",
+            "type": "unstyled"
+          },
+          {
+            "key": "aud0t",
+            "data": {},
+            "entityRanges": [
+              {
+                "key": 2,
+                "length": 1,
+                "offset": 0
+              }
+            ],
+            "inlineStyleRanges": [],
+            "text": " ",
+            "type": "atomic"
+          },
+          {
+            "key": "bmu69",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "I call this the shredmaxxing protocol, but its so much more.",
+            "type": "unstyled"
+          },
+          {
+            "key": "89evl",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 125,
+                "offset": 0,
+                "style": "Italic"
+              },
+              {
+                "length": 125,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "The “why do I feel so good all the time?” protocol\nThe “unlimited energy” protocol\"\nThe “lean mean fighting machine” protocol",
+            "type": "unstyled"
+          },
+          {
+            "key": "78pgk",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "You get what I’m saying.",
+            "type": "unstyled"
+          },
+          {
+            "key": "dqth7",
+            "data": {},
+            "entityRanges": [
+              {
+                "key": 3,
+                "length": 1,
+                "offset": 0
+              }
+            ],
+            "inlineStyleRanges": [],
+            "text": " ",
+            "type": "atomic"
+          },
+          {
+            "key": "gho8",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "This protocol will give you everything you need to know about this non-traditional cutting method:",
+            "type": "unstyled"
+          },
+          {
+            "key": "aum51",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Diet",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "5d8b1",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Supplementation",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "81qlo",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Lifestyle",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "6obnv",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Frequently Asked Questions",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "fmaco",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Acknowledgements:",
+            "type": "unstyled"
+          },
+          {
+            "key": "fej42",
+            "data": {},
+            "entityRanges": [
+              {
+                "key": 4,
+                "length": 13,
+                "offset": 158
+              },
+              {
+                "key": 5,
+                "length": 11,
+                "offset": 185
+              }
+            ],
+            "inlineStyleRanges": [],
+            "text": "I’ve pieced this protocol together for my own use case & needs. But this concept of upregulating your metabolism is far from new. I’ve taken inspiration from Thermobolic’s Potato diet, Anabology’s Honey diet, And Ray Peat’s findings on metabolism. Check them out for more nuance.",
+            "type": "unstyled"
+          },
+          {
+            "key": "aic1j",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Not Just Leaner, Better",
+            "type": "unstyled"
+          },
+          {
+            "key": "28cfu",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "I didn’t just get lean, I became the most athletic I’ve ever been. I sprinted faster, jumped higher. I was in an incredible mood for 90 days straight. My testosterone stayed in the upper reference range (860ng/dl) at a bf% where most people would be hypothyroid & infertile.",
+            "type": "unstyled"
+          },
+          {
+            "key": "ed51m",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Most importantly, it gave me an irreplicable lust for life. Childlike wonder. A twinkle in my eye",
+            "type": "unstyled"
+          },
+          {
+            "key": "avur0",
+            "data": {},
+            "entityRanges": [
+              {
+                "key": 6,
+                "length": 1,
+                "offset": 0
+              }
+            ],
+            "inlineStyleRanges": [],
+            "text": " ",
+            "type": "atomic"
+          },
+          {
+            "key": "ekgef",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "This may look restrictive, but once you hardwire this new “metabolic setting”, you can be flexible and still reap the rewards. This protocol makes you MORE resistant to indulgences that would otherwise be setbacks (alcohol, dessert, cheat meals).",
+            "type": "unstyled"
+          },
+          {
+            "key": "1vf7g",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Stop Starving, Start Burning",
+            "type": "header-two"
+          },
+          {
+            "key": "449c8",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "The gym-bro cutting method needs to die. Making yourself miserable for a bicep vein isn't worth giving yourself ED and irreparable hormonal damage. When you aggressively restrict calories, you're teaching your body to run on fumes:",
+            "type": "unstyled"
+          },
+          {
+            "key": "e5rb7",
+            "data": {},
+            "entityRanges": [
+              {
+                "key": 7,
+                "length": 1,
+                "offset": 0
+              }
+            ],
+            "inlineStyleRanges": [],
+            "text": " ",
+            "type": "atomic"
+          },
+          {
+            "key": "dp6gs",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "",
+            "type": "unstyled"
+          },
+          {
+            "key": "d8k0i",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Lower basal metabolic rate",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "e18lh",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Decreased calorie burn at rest",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "2in2s",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Suppressed thyroid function",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "3kdor",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Crashed sex hormones",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "82tk3",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Dead libido",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "9e5sq",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Reduced leptin (hello cravings)",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "90il9",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Compromised immune system",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "j6lm",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Brain fog and anxiety",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "a87o6",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "And for what? To look like you don’t even lift in a T-shirt? Pass.",
+            "type": "unstyled"
+          },
+          {
+            "key": "934bm",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 19,
+                "offset": 106,
+                "style": "Bold"
+              }
+            ],
+            "text": "Then when you start eating normal calories again, your downregulated metabolism stores everything as fat. Programmed scarcity. You diet yourself into nutrient deficiencies and your body reacts with uncontrollable cravings",
+            "type": "unstyled"
+          },
+          {
+            "key": "88idp",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "The key is to strategically signal abundance. Give your metabolism easy burning fuel most of the day, replenish essential macro & micronutrients on a daily and weekly cadence. Keep fats and carbs separate and keep your metabolism & mitochondria flourishing with physical activity, strategic supplementation, and a holistic lifestyle.",
+            "type": "unstyled"
+          },
+          {
+            "key": "i6e4",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "The Low-Down.",
+            "type": "unstyled"
+          },
+          {
+            "key": "ke1d",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 27,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "The playbook is as follows:",
+            "type": "unstyled"
+          },
+          {
+            "key": "apfoj",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Only eat fruit until noon",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "a65rc",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Take strategic supplements to improve glucose utilization and nutrient shuttling",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "e7hs5",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Get some form of physical activity before your lunch break",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "c217b",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Treat fat like a supplement, avoid PUFAs, prioritize Saturated fats.",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "2s2h8",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "High protein, high carb meal for lunch (moderate/low fat)",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "akao8",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Train low volume, high intensity to maintain muscle",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "ep4r2",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "High protein, high-fat meal for dinner",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "73mim",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Lets get into it…",
+            "type": "unstyled"
+          },
+          {
+            "key": "f641e",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Rule #1: Only Fruit Until Noon",
+            "type": "header-two"
+          },
+          {
+            "key": "2n0gd",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Leverage ‘Morning Metabolism’:",
+            "type": "unstyled"
+          },
+          {
+            "key": "6d3kt",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Your metabolism runs differently in the morning.",
+            "type": "unstyled"
+          },
+          {
+            "key": "eoc7f",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Insulin sensitivity is at its peak",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "3g61n",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Cortisol is naturally elevated",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "ff912",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Liver glycogen is depleted",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "9i4im",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Your cells are primed for nutrient uptake",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "2184o",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "This creates a perfect window for metabolic optimization. Your body’s a dry sponge, ready to soak up nutrients in the most efficient way possible. For this reason, we want only clean-burning carbohydrates",
+            "type": "unstyled"
+          },
+          {
+            "key": "2e8ib",
+            "data": {},
+            "entityRanges": [
+              {
+                "key": 8,
+                "length": 1,
+                "offset": 0
+              }
+            ],
+            "inlineStyleRanges": [],
+            "text": " ",
+            "type": "atomic"
+          },
+          {
+            "key": "2ntvp",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Simple, sugary carbs. Any other macros will interfere with your insulin response and slow down absorption, not what we want.",
+            "type": "unstyled"
+          },
+          {
+            "key": "1cqn3",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Why Fruit works so well",
+            "type": "unstyled"
+          },
+          {
+            "key": "ckgaf",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 41,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "The best fuel (in this context) is fruit. Fruit juice, fruit smoothie, whole fruit.",
+            "type": "unstyled"
+          },
+          {
+            "key": "5cc65",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 20,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "Natural Sugar Timing: Fruit sugars in the morning match your body's natural cortisol rhythm. Your insulin sensitivity is highest in the morning, meaning your body handles carbs better.",
+            "type": "ordered-list-item"
+          },
+          {
+            "key": "7p995",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 12,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "Clean Energy: Fruit provides rapid energy without the digestive load of complex meals. Your body doesn't waste energy on digestion.",
+            "type": "ordered-list-item"
+          },
+          {
+            "key": "9do4n",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 16,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "Nutrient Density: Fruits pack enzymes, flavonoids, and polyphenols that other carb sources lack. These compounds support metabolism and reduce inflammation.",
+            "type": "ordered-list-item"
+          },
+          {
+            "key": "7cbrp",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 9,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "Hydration: Most fruits are 80-90% water. Starting your day super hydrated supports every metabolic process.",
+            "type": "ordered-list-item"
+          },
+          {
+            "key": "1s9d3",
+            "data": {},
+            "entityRanges": [
+              {
+                "key": 9,
+                "length": 1,
+                "offset": 38
+              }
+            ],
+            "inlineStyleRanges": [],
+            "text": "Combine with sunlight for best results📷",
+            "type": "unstyled"
+          },
+          {
+            "key": "6mu78",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "The Dual Sugar Advantage:",
+            "type": "unstyled"
+          },
+          {
+            "key": "3m7o4",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Fruit contains glucose AND fructose, which follow different metabolic paths:",
+            "type": "unstyled"
+          },
+          {
+            "key": "2nhpu",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 7,
+                "offset": 0,
+                "style": "Italic"
+              },
+              {
+                "length": 7,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "Glucose enters your bloodstream and:",
+            "type": "unstyled"
+          },
+          {
+            "key": "9qqqp",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Provides immediate energy for your brain and muscles",
+            "type": "ordered-list-item"
+          },
+          {
+            "key": "6dup1",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Triggers a clean insulin response (no fat or protein interference)",
+            "type": "ordered-list-item"
+          },
+          {
+            "key": "vsed",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Replenishes muscle glycogen",
+            "type": "ordered-list-item"
+          },
+          {
+            "key": "d1sk7",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Supports thyroid function",
+            "type": "ordered-list-item"
+          },
+          {
+            "key": "3bn4b",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 8,
+                "offset": 0,
+                "style": "Italic"
+              },
+              {
+                "length": 8,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "Fructose takes a different path:",
+            "type": "unstyled"
+          },
+          {
+            "key": "10gvc",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Goes directly to your liver",
+            "type": "ordered-list-item"
+          },
+          {
+            "key": "bu2k3",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Replenishes liver glycogen",
+            "type": "ordered-list-item"
+          },
+          {
+            "key": "1s5dn",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Minimal insulin impact",
+            "type": "ordered-list-item"
+          },
+          {
+            "key": "cmn0s",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Supports metabolic flexibility",
+            "type": "ordered-list-item"
+          },
+          {
+            "key": "6m7rp",
+            "data": {},
+            "entityRanges": [
+              {
+                "key": 10,
+                "length": 1,
+                "offset": 0
+              }
+            ],
+            "inlineStyleRanges": [],
+            "text": " ",
+            "type": "atomic"
+          },
+          {
+            "key": "38rnt",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Consuming glucose & fructose simultaneously (in the form of fruit) lets you take advantage of both pathways without overburdening either.",
+            "type": "unstyled"
+          },
+          {
+            "key": "e8n3b",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 15,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "Implementation:",
+            "type": "unstyled"
+          },
+          {
+            "key": "74d8t",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Start slow and steady. Wake up and hydrate with some salt water and lower-glycemic fruits like berries. About an hour later move on to fruits like oranges, peaches, plums, and pears. Afterward, you can incorporate some pineapples, mangos, or fruit juice.",
+            "type": "unstyled"
+          },
+          {
+            "key": "20u7v",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "I make a big smoothie in the morning with specific pro-metabolic supplements (in the supplement stack section) and slowly sip on it with my cup of coffee in the sun",
+            "type": "unstyled"
+          },
+          {
+            "key": "8pdc",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 21,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "Non-Fruit Exceptions:",
+            "type": "unstyled"
+          },
+          {
+            "key": "30rp2",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "The longer you run this protocol, the less affected you’ll be by an imperfect morning fuel window. I experimented with coconut, collagen powder, and coffee creamers with no issue. Start strict, but don’t be neurotic. Try to keep non-fruit calories under 100 in the AM. Coffee is acceptable but preferably black and after your first fruit feeding",
+            "type": "unstyled"
+          },
+          {
+            "key": "bm64n",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 16,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "Troubleshooting:",
+            "type": "unstyled"
+          },
+          {
+            "key": "etita",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Start slow & steady to maintain steady blood sugar. If you have low energy, hunger, poor concentration, or lowered body temperature, up your fruit intake.",
+            "type": "unstyled"
+          },
+          {
+            "key": "6njnq",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "If you feel dizzy, weak, or like your blood sugar is too low, Put a little bit of MCT in your morning smoothie. If that doesn’t help, use coconut oil.",
+            "type": "unstyled"
+          },
+          {
+            "key": "dqrg7",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "If you feel you are losing weight too fast or want to prioritize muscle growth, consider including any of these protein sources in your AM window (Fruit Till Noon Lite).",
+            "type": "unstyled"
+          },
+          {
+            "key": "dr1e0",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Non-fat dairy products (kefir, yogurt, cottage cheese)",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "dm4af",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Collagen powder",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "augd9",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Essential Amino Acids",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "bgvht",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Egg whites (cooked)",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "46rht",
+            "data": {},
+            "entityRanges": [
+              {
+                "key": 11,
+                "length": 1,
+                "offset": 0
+              }
+            ],
+            "inlineStyleRanges": [],
+            "text": " ",
+            "type": "atomic"
+          },
+          {
+            "key": "509o2",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 25,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "How to Know it’s Working:",
+            "type": "unstyled"
+          },
+          {
+            "key": "3q2vr",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "If things are running smoothly, you should notice:",
+            "type": "unstyled"
+          },
+          {
+            "key": "49tfv",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Sustained energy all morning",
+            "type": "ordered-list-item"
+          },
+          {
+            "key": "brv3t",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Improved mental clarity",
+            "type": "ordered-list-item"
+          },
+          {
+            "key": "dhdi6",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Better digestion",
+            "type": "ordered-list-item"
+          },
+          {
+            "key": "6l9a",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Enhanced workout performance",
+            "type": "ordered-list-item"
+          },
+          {
+            "key": "c67f0",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Elevated mood",
+            "type": "ordered-list-item"
+          },
+          {
+            "key": "f033e",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Warmer body temperature",
+            "type": "ordered-list-item"
+          },
+          {
+            "key": "76is6",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "When I tap into this protocol, I become a human Golden Retriever. I start jogging in place. Calling all my friends & family. I’m bursting with feel-good, optimistic energy that needs to be released",
+            "type": "unstyled"
+          },
+          {
+            "key": "5bher",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Your metabolism is an adaptive system. Give it the right signals consistently, and it will reward you with enhanced function, better body composition, and improved performance.",
+            "type": "unstyled"
+          },
+          {
+            "key": "99pq9",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Rule #2 Physical Activity Before Your Lunch Break",
+            "type": "header-two"
+          },
+          {
+            "key": "2vofh",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Around that mid-day mark, do 5-30 minutes of physical activity. Get your heart rate up, and if you can, break a sweat:",
+            "type": "unstyled"
+          },
+          {
+            "key": "5gvgj",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Quick sauna session",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "53f6u",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Jump Rope",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "1j8ps",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Handstands & Pistol squats",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "732aa",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Rope flow",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "16kc4",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Pull-ups",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "2g4vu",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Get your body moving. This will prime you for your next meal but more importantly use up some of that extra fuel you have from the AM. Best done in sunlight",
+            "type": "unstyled"
+          },
+          {
+            "key": "ddf3d",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Rule #3: Do NOT mix High-Fats and High-Carbs",
+            "type": "header-two"
+          },
+          {
+            "key": "dj11",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Glucose and fatty acids are different types of vehicles trying to get to the same destination - your mitochondria (energy factories). When you flood your bloodstream with both fuels at once, it creates a metabolic traffic jam.",
+            "type": "unstyled"
+          },
+          {
+            "key": "75jv3",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 73,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "Why you’ll never see me eating pasta with extra butter and alfredo sauce:",
+            "type": "unstyled"
+          },
+          {
+            "key": "4uk14",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Glucose floods your bloodstream (from the pasta)",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "bbhjt",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Your pancreas pumps out insulin to deal with the glucose",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "3bikj",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Meanwhile, fatty acids are also flooding your system (from the butter and cream sauce)",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "eshge",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Your cells get confused about which fuel to burn first",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "758q9",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "The fatty acids block glucose from entering your cells",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "3uoe1",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Glucose stays in your blood longer than it should",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "fkmcp",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Your pancreas pumps out even more insulin to compensate",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "dj2kk",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "This excess insulin tells your body to store fat",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "81vvl",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Your body becomes less sensitive to insulin moving forward",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "faqed",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 50,
+                "offset": 0,
+                "style": "Bold"
+              },
+              {
+                "length": 9,
+                "offset": 41,
+                "style": "Italic"
+              }
+            ],
+            "text": "For carb + protein meals, keep fat under 12 grams:",
+            "type": "unstyled"
+          },
+          {
+            "key": "6kjt8",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Rice & Sirloin",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "9ui2e",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Potatoes & Bison",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "2kptt",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Rice noodles & Shrimp",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "95u8i",
+            "data": {},
+            "entityRanges": [
+              {
+                "key": 12,
+                "length": 1,
+                "offset": 0
+              }
+            ],
+            "inlineStyleRanges": [],
+            "text": " ",
+            "type": "atomic"
+          },
+          {
+            "key": "71p0j",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 51,
+                "offset": 0,
+                "style": "Bold"
+              },
+              {
+                "length": 9,
+                "offset": 42,
+                "style": "Italic"
+              }
+            ],
+            "text": "For fat & protein meals, keep carbs under 30 grams:",
+            "type": "unstyled"
+          },
+          {
+            "key": "a9q0",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Sardines & Arugula",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "avjqd",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Ribeye & Asparagus",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "13hm3",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Eggs & Goat Cheese",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "95ss6",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Rule #4: Treat Fat Like a Supplement",
+            "type": "header-two"
+          },
+          {
+            "key": "c0ugs",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Fat is essential. Its a metabolic signaling molecule, hormone precursor, and essential for absorption of fat-soluble vitamins like E+D+K. But dietary fat needs to be treated with precision otherwise it will make you fat.",
+            "type": "unstyled"
+          },
+          {
+            "key": "fp7ul",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 17,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "Fat Makes you Fat",
+            "type": "unstyled"
+          },
+          {
+            "key": "3q11m",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 19,
+                "offset": 146,
+                "style": "Italic"
+              },
+              {
+                "length": 41,
+                "offset": 146,
+                "style": "Bold"
+              }
+            ],
+            "text": "Dietary fat is stored as body fat with minimal energy cost (~2-3%), while carbohydrates must first undergo the metabolically expensive process of de novo lipogenesis (~23-25% energy loss) to be converted into fat. Excess carbs are primarily stored as glycogen in the liver and muscles, with significant fat conversion occurring only after prolonged overfeeding.",
+            "type": "unstyled"
+          },
+          {
+            "key": "76tv5",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 11,
+                "offset": 44,
+                "style": "Italic"
+              },
+              {
+                "length": 10,
+                "offset": 44,
+                "style": "Bold"
+              }
+            ],
+            "text": "So yes, fat is more likely to make you fat. Especially in a caloric surplus",
+            "type": "unstyled"
+          },
+          {
+            "key": "egbuv",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Think of fat like a supplement, you wouldn’t randomly slam pre-workout throughout the day. You’d 1: Make sure you’re getting quality pre-workout instead of meth and 2: time and dose it properly.",
+            "type": "unstyled"
+          },
+          {
+            "key": "a3d1e",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 22,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "Saturated Fats > PUFAs",
+            "type": "unstyled"
+          },
+          {
+            "key": "btksl",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Saturated fats are resistant to heat and oxidation, PUFAs are not. Your body is a high-heat, high-oxygen environment. Which makes more sense for a human to be eating?",
+            "type": "unstyled"
+          },
+          {
+            "key": "5le4u",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 14,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "Saturated fats = Brick wall. They burn cleanly in mitochondria, create less oxidative stress, generate more ATP, and support metabolic efficiency",
+            "type": "unstyled"
+          },
+          {
+            "key": "3ecoh",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Grass-fed animal fats, Coconut oil, MCT oil, Palm kernel oil, Tallow, butter, dairy, cocoa butter",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "11ct0",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 5,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "PUFAs = House of Cards. They create free radicals when burned, stress your mitochondria, can damage your cellular machinery and are generally inefficient.",
+            "type": "unstyled"
+          },
+          {
+            "key": "8o861",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Vegetable oils, nuts, fish oil, grain-fed meat",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "ff7fs",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Your body knows this and will not burn PUFAs unless it has to, preferring to store it as fat. This is why when obese people lose 30 pounds in a few months they age 10 years. All those oxidized PUFAs otherwise safely stored in fat cells are burnt off reaping absolute havoc on their cells.",
+            "type": "unstyled"
+          },
+          {
+            "key": "av8sn",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Rule #5 Respect The Fat Hierarchy:",
+            "type": "header-two"
+          },
+          {
+            "key": "beqt3",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Not all fat is created equal. Be more strategic with fat. You are what you eat. This is the fat hierarchy as it pertains to shredmaxxing",
+            "type": "unstyled"
+          },
+          {
+            "key": "7vapg",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 27,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "S-Tier Fats (Foundational):",
+            "type": "unstyled"
+          },
+          {
+            "key": "btbd6",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 35,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "Medium Chain Triglycerides (MCTs): Found in coconut oil & MCT oil. They bypass normal fat digestion and get shuttled straight to the liver. Quick energy without storage and can easily be broken down into ketones (a fat-derived fuel source). MCTs can be consumed with carbs more liberally and has a low risk of being stored as fat",
+            "type": "unstyled"
+          },
+          {
+            "key": "8gplo",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 14,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "Stearic acid: Found in Tallow, cocoa butter, grass-fed butter, and ruminant animal fat (eg bison & beef). Stearic acid increases your electron transport chain efficiency, driving your metabolic rate. They support mitochondrial function and are less likely to be stored as fat than PUFAs",
+            "type": "unstyled"
+          },
+          {
+            "key": "dp4o3",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 25,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "A-Tier Fats (Situational)",
+            "type": "unstyled"
+          },
+          {
+            "key": "eet7r",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 20,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "EPA/DHA (Omega 3s): The exception to the no PUFA rule. Omega 3s are essential for brain function and enhance insulin sensitivity. But don’t get fish oil pills (they’re rancid). Fresh, wild caught seafood, or canned sardines and oysters once a week is enough",
+            "type": "unstyled"
+          },
+          {
+            "key": "bmg0m",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 24,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "Palmitic + Lauric acid: Coconut oil, Palm kernel oil, Grass-fed beef fat, and pasture raised eggs. These are key structural components that support your cell membranes. They’re essential, but not needed in high amounts. Eggs cooked in coconut oil a few times a week will cover these bases",
+            "type": "unstyled"
+          },
+          {
+            "key": "2frjo",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 21,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "B-Tier Fats (Minimal)",
+            "type": "unstyled"
+          },
+          {
+            "key": "58v8f",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 22,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "Monounsaturated fats: These play a minor but important role, namely in hormone production. A drizzle of extra virgin olive oil here & there. Some guacamole every other week. A few macadamia nuts. Strategic & sparse.",
+            "type": "unstyled"
+          },
+          {
+            "key": "fsmfb",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 19,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "F-Tier Fats (Avoid)",
+            "type": "unstyled"
+          },
+          {
+            "key": "7n3ff",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 22,
+                "offset": 0,
+                "style": "Bold"
+              },
+              {
+                "length": 69,
+                "offset": 132,
+                "style": "Bold"
+              }
+            ],
+            "text": "Industrial Seed Oils: We know this. They’re oxidized and unstable. They will make you fat, inflamed, and cognitively dysfunctional. Soybean, canola, corn, vegetable, peanut, sunflower. Avoid all fryers. Anything cooked at a restaurant will be cooked in this slop unless stated otherwise.",
+            "type": "unstyled"
+          },
+          {
+            "key": "7qe2j",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 12,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "Trans Fats: These are straight-up dangerous. They block fat-burning, interfere with cell membranes, increase inflammation, and damage mitochondria. They’re found in processed foods, fried foods, and packaged baked goods",
+            "type": "unstyled"
+          },
+          {
+            "key": "8rv7r",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 32,
+                "offset": 0,
+                "style": "Italic"
+              },
+              {
+                "length": 32,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "Always. Read. Ingredient. Lists.",
+            "type": "unstyled"
+          },
+          {
+            "key": "e4fn",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "TLDR - The Hierarchy:",
+            "type": "unstyled"
+          },
+          {
+            "key": "5o2rn",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "S-tier fats: Any time after noon",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "7tbnc",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "A-tier fats: With high-fat meal",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "15kq2",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "B-tier fats: 1-2 servings/week",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "d22jt",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "F-tier: Never",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "fhrgc",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Cook most meals in coconut oil. A little butter at dinner. Fat from grass-fed beef. Olive oil & fatty fish once a week.",
+            "type": "unstyled"
+          },
+          {
+            "key": "f03l3",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Rule #6 Leverage starches",
+            "type": "header-two"
+          },
+          {
+            "key": "airc9",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "If you’re looking to get lean, eat mainly fruit for carbs. If you’re looking to get lean while keeping (or even gaining muscle) leverage starches.",
+            "type": "unstyled"
+          },
+          {
+            "key": "cdvu9",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 76,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "Fruit gives me a peeled, lean look. Starches give a full, hypertrophic look.",
+            "type": "unstyled"
+          },
+          {
+            "key": "6b8u2",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Replenish glycogen more efficiently than simple sugars (your body’s battery pack)",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "2r2fv",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Don't spike insulin as aggressively as sugars",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "csg9j",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Provide sustained energy for longer training sessions",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "9685a",
+            "data": {},
+            "entityRanges": [
+              {
+                "key": 13,
+                "length": 1,
+                "offset": 0
+              }
+            ],
+            "inlineStyleRanges": [],
+            "text": " ",
+            "type": "atomic"
+          },
+          {
+            "key": "e2j8u",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Eat starches pre and post workout. Fuller glycogen stores mean better performance. Your muscles are primed for glycogen synthesis post-workout. Insulin sensitivity is peaked. Nutrients get partitioned to muscle, not fat.",
+            "type": "unstyled"
+          },
+          {
+            "key": "3fivn",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Pre-Workout Meal (1-1.5 hrs before)",
+            "type": "unstyled"
+          },
+          {
+            "key": "e5ho0",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "50g high-quality starch (rice noodles)",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "3vcmt",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "30g fast-digesting protein (shrimp & scallops)",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "8njf8",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Post-Workout Meal (30 min after)",
+            "type": "unstyled"
+          },
+          {
+            "key": "8n02g",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "70-100g high-quality starch (potatoes)",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "eaet3",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "40-60g fast-digesting protein (sirloin)",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "spr0",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Eat more starches on training days. Have your highest starch meal post-workout. The further from training you are, the less starches you should have",
+            "type": "unstyled"
+          },
+          {
+            "key": "e1nmc",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 31,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "Resistant-Starch: The Exception",
+            "type": "unstyled"
+          },
+          {
+            "key": "eling",
+            "data": {},
+            "entityRanges": [
+              {
+                "key": 14,
+                "length": 17,
+                "offset": 16
+              }
+            ],
+            "inlineStyleRanges": [
+              {
+                "length": 92,
+                "offset": 0,
+                "style": "Italic"
+              }
+            ],
+            "text": "(If you read my super-rice recipe, you know how much of a cheat-code resistant starches are)",
+            "type": "unstyled"
+          },
+          {
+            "key": "f293t",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Resistant starch “resists” breakdown in your small intestine and is travels to your large intestine intact. Less starch for you, more for your microbes.",
+            "type": "unstyled"
+          },
+          {
+            "key": "dsond",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Resistant starch lets you eat more starch with less glucose response. It feeds butyrate-producing bacteria and is an excellent pre-bed carb source (even with a higher-fat meal)",
+            "type": "unstyled"
+          },
+          {
+            "key": "9mkgr",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "You make resistant starch by cooking then cooling starches:",
+            "type": "unstyled"
+          },
+          {
+            "key": "9opk7",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Potatoes",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "cjlu9",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Rice",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "aac4d",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Oats",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "fq1ul",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Cook, cool, then gently reheat to preserve the RS molecules. Start slow as RS can cause bloating. If you must eat carbs with fat, make them resistant starch carbs.",
+            "type": "unstyled"
+          },
+          {
+            "key": "f8obp",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Rule #7: One High Fat Meal a Day, One High Fat Day a Week",
+            "type": "header-two"
+          },
+          {
+            "key": "1vo6g",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Strategic fat-loading enhances metabolic flexibility and ensures you’re getting essential nutrition foundations. Don’t skip this part.",
+            "type": "unstyled"
+          },
+          {
+            "key": "3vvc2",
+            "data": {},
+            "entityRanges": [
+              {
+                "key": 15,
+                "length": 1,
+                "offset": 0
+              }
+            ],
+            "inlineStyleRanges": [],
+            "text": " ",
+            "type": "atomic"
+          },
+          {
+            "key": "e760n",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Don’t worry about ratios or grams, I haven’t counted calories in years. Timing is everything",
+            "type": "unstyled"
+          },
+          {
+            "key": "33a39",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Your body responds differently to fats based on time of day, previous meals, hormonal state, and activity level.",
+            "type": "unstyled"
+          },
+          {
+            "key": "62pef",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 25,
+                "offset": 152,
+                "style": "Bold"
+              }
+            ],
+            "text": "By concentrating fats into one daily meal, we can maintain insulin sensitivity, support hormone production, enhance fat adaptation and most importantly avoid metabolic confusion",
+            "type": "unstyled"
+          },
+          {
+            "key": "5leag",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Understanding Fat Timing:",
+            "type": "unstyled"
+          },
+          {
+            "key": "3p4gc",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Your circadian rhythm affects how nutrients are processed. Fat consumption is best reserved for evenings",
+            "type": "unstyled"
+          },
+          {
+            "key": "7j1fu",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 19,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "Morning Metabolism:",
+            "type": "unstyled"
+          },
+          {
+            "key": "a08cp",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Cortisol peaks",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "rmb3",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Insulin sensitivity is the highest",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "8n5o6",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Fat oxidation is lower",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "96mps",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Glucose metabolism dominates",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "44bb8",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 19,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "Evening Metabolism:",
+            "type": "unstyled"
+          },
+          {
+            "key": "e5b2o",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Cortisol drops",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "5usvr",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Growth hormone increases",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "3ujn5",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Hormone production ramps up",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "areqb",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Fat oxidation improves",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "b02i0",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Fats are essential for hormones like testosterone and growth hormone (GH). These naturally pulse at night. Hence it’s best to eat fat in the evening.",
+            "type": "unstyled"
+          },
+          {
+            "key": "bvhm5",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Growth hormone is triggered by ghrelin. Fatty acids like MCT can stimulate ghrelin. Evening cortisol decline allows maximum GH impact for better cellular repair and regeneration",
+            "type": "unstyled"
+          },
+          {
+            "key": "djeaf",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Cholesterol (from quality fats) provides the raw material for testosterone. Reduced insulin interference enhances production from saturated and monounsaturated fats.",
+            "type": "unstyled"
+          },
+          {
+            "key": "dvll5",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 22,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "Timing your last meal.",
+            "type": "unstyled"
+          },
+          {
+            "key": "b5jcr",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Your high-fat meal should be at least 3 hours before bed. It should incorporate some MCTs for initial ghrelin signaling (I’d just get liquid MCT), saturated fats for hormone production, and a small amount of monounsaturated fats for overall health (drizzle of olive oil or macadamia nut)",
+            "type": "unstyled"
+          },
+          {
+            "key": "f0bpr",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 14,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "Bedtime Snack:",
+            "type": "unstyled"
+          },
+          {
+            "key": "2ilb0",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Totally optional, but I like to have some fruit juice with sparkling water and glycine before bed. Stable blood sugar throughout the night is good. More fuel for recovery too.",
+            "type": "unstyled"
+          },
+          {
+            "key": "188kv",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "There you have it. The diet installment of the Shredmaxxing protocol. Get this right and everything else is unnecessary. BUT supplementation plays a huge part in getting the most juice out of your squeeze. Upregulating your metabolism requires supraphysiological insulin response, nutrient utilization, and nutrient repletion. ",
+            "type": "unstyled"
+          },
+          {
+            "key": "s7ii",
+            "data": {},
+            "entityRanges": [
+              {
+                "key": 16,
+                "length": 24,
+                "offset": 37
+              }
+            ],
+            "inlineStyleRanges": [],
+            "text": "This is part one of a 4 part series. You can read part 2 here",
+            "type": "unstyled"
+          },
+          {
+            "key": "euh03",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "",
+            "type": "unstyled"
+          }
+        ],
+        "entityMap": [
+          {
+            "key": "12",
+            "value": {
+              "type": "MEDIA",
+              "mutability": "Immutable",
+              "data": {
+                "caption": "My go-to lunch / Pre-workout meal",
+                "entityKey": "9a4b850c-e535-4f19-ab63-17a1d323767e",
+                "mediaItems": [
+                  {
+                    "localMediaId": "17",
+                    "mediaCategory": "DraftTweetImage",
+                    "mediaId": "2008955449614209024"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "key": "8",
+            "value": {
+              "type": "MEDIA",
+              "mutability": "Immutable",
+              "data": {
+                "entityKey": "c0de9e23-e32a-4c9a-9193-3d3ace75f768",
+                "mediaItems": [
+                  {
+                    "localMediaId": "11",
+                    "mediaCategory": "DraftTweetImage",
+                    "mediaId": "2008955043278422016"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "key": "4",
+            "value": {
+              "type": "LINK",
+              "mutability": "Mutable",
+              "data": {
+                "url": "https://x.com/Thermobolic"
+              }
+            }
+          },
+          {
+            "key": "15",
+            "value": {
+              "type": "MEDIA",
+              "mutability": "Immutable",
+              "data": {
+                "caption": "High-fat refeed: MUFAs, Omega 3s, Cholesterol. With pickled vegetables for digestion",
+                "entityKey": "a91146de-f313-4a47-be09-03542ad46fcd",
+                "mediaItems": [
+                  {
+                    "localMediaId": "21",
+                    "mediaCategory": "DraftTweetImage",
+                    "mediaId": "2008955801918967808"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "key": "11",
+            "value": {
+              "type": "MEDIA",
+              "mutability": "Immutable",
+              "data": {
+                "caption": "FTN Lite: nonfat kefir, coconut flakes, berries, apple, honey, pine pollen",
+                "entityKey": "3323ff4f-9e0f-4a05-90e5-6e8db1d5be87",
+                "mediaItems": [
+                  {
+                    "localMediaId": "15",
+                    "mediaCategory": "DraftTweetImage",
+                    "mediaId": "2008955323860602880"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "key": "9",
+            "value": {
+              "type": "TWEMOJI",
+              "mutability": "Immutable",
+              "data": {
+                "url": "https://abs-0.twimg.com/emoji/v2/svg/1f4f7.svg"
+              }
+            }
+          },
+          {
+            "key": "13",
+            "value": {
+              "type": "MEDIA",
+              "mutability": "Immutable",
+              "data": {
+                "entityKey": "c7d6da38-f029-49c5-9f08-fd15a58d5ce5",
+                "mediaItems": [
+                  {
+                    "localMediaId": "19",
+                    "mediaCategory": "DraftTweetImage",
+                    "mediaId": "2008955655265087488"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "key": "16",
+            "value": {
+              "type": "LINK",
+              "mutability": "Mutable",
+              "data": {
+                "url": "https://www.noahryan.co/p/shredmaxxing-protocol-pt-2-supplement"
+              }
+            }
+          },
+          {
+            "key": "5",
+            "value": {
+              "type": "LINK",
+              "mutability": "Mutable",
+              "data": {
+                "url": "https://x.com/anabology"
+              }
+            }
+          },
+          {
+            "key": "10",
+            "value": {
+              "type": "MEDIA",
+              "mutability": "Immutable",
+              "data": {
+                "caption": "Two different paths to the same destination → ATP (energy)",
+                "entityKey": "37a42f90-b7f8-4ec7-bb4b-85b45b64113b",
+                "mediaItems": [
+                  {
+                    "localMediaId": "13",
+                    "mediaCategory": "DraftTweetImage",
+                    "mediaId": "2008955172198776832"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "key": "6",
+            "value": {
+              "type": "MEDIA",
+              "mutability": "Immutable",
+              "data": {
+                "entityKey": "8755e68e-571f-4e34-88aa-a8343e25bad0",
+                "mediaItems": [
+                  {
+                    "localMediaId": "7",
+                    "mediaCategory": "DraftTweetImage",
+                    "mediaId": "2008954914240696320"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "key": "1",
+            "value": {
+              "type": "MEDIA",
+              "mutability": "Immutable",
+              "data": {
+                "entityKey": "11ca2526-c6b8-4ad3-b328-ee421c66d3c8",
+                "mediaItems": [
+                  {
+                    "localMediaId": "24",
+                    "mediaCategory": "DraftTweetImage",
+                    "mediaId": "2008956985690013696"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "key": "14",
+            "value": {
+              "type": "LINK",
+              "mutability": "Mutable",
+              "data": {
+                "url": "https://www.noahryan.co/p/super-rice-recipe"
+              }
+            }
+          },
+          {
+            "key": "0",
+            "value": {
+              "type": "MEDIA",
+              "mutability": "Immutable",
+              "data": {
+                "entityKey": "4706aa02-3de5-470e-8111-7a498fa34d13",
+                "mediaItems": [
+                  {
+                    "localMediaId": "1",
+                    "mediaCategory": "DraftTweetImage",
+                    "mediaId": "2008954639517962240"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "key": "2",
+            "value": {
+              "type": "MEDIA",
+              "mutability": "Immutable",
+              "data": {
+                "caption": "My metabolism right now",
+                "entityKey": "ad146f7a-c5cd-4d35-b585-afba7bee6876",
+                "mediaItems": [
+                  {
+                    "localMediaId": "3",
+                    "mediaCategory": "DraftTweetImage",
+                    "mediaId": "2008954742588821504"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "key": "7",
+            "value": {
+              "type": "MEDIA",
+              "mutability": "Immutable",
+              "data": {
+                "caption": "The modern gym-bro movement has been a disaster for the human race",
+                "entityKey": "97f6cbf9-940d-44c7-8d45-a85785b1aedd",
+                "mediaItems": [
+                  {
+                    "localMediaId": "9",
+                    "mediaCategory": "DraftTweetImage",
+                    "mediaId": "2008954958616391680"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "key": "3",
+            "value": {
+              "type": "MEDIA",
+              "mutability": "Immutable",
+              "data": {
+                "entityKey": "6fa9f1bf-a815-402d-87f9-1ba94d682e37",
+                "mediaItems": [
+                  {
+                    "localMediaId": "5",
+                    "mediaCategory": "DraftTweetImage",
+                    "mediaId": "2008954878329061376"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "media_entities": [
+        {
+          "id": "QXBpTWVkaWE6DAAFCgABG+E+hkmWcAAKAAISs6gbmhcQAAAA",
+          "media_key": "3_2008955655265087488",
+          "media_id": "2008955655265087488",
+          "media_info": {
+            "__typename": "ApiImage",
+            "original_img_height": 1941,
+            "original_img_width": 1456,
+            "original_img_url": "https://pbs.twimg.com/media/G-E-hkmWcAA0OHX.jpg",
+            "color_info": {
+              "palette": [
+                {
+                  "percentage": 44.36,
+                  "rgb": {
+                    "blue": 37,
+                    "green": 113,
+                    "red": 101
+                  }
+                },
+                {
+                  "percentage": 17.75,
+                  "rgb": {
+                    "blue": 64,
+                    "green": 135,
+                    "red": 196
+                  }
+                },
+                {
+                  "percentage": 7.37,
+                  "rgb": {
+                    "blue": 189,
+                    "green": 200,
+                    "red": 202
+                  }
+                },
+                {
+                  "percentage": 5.61,
+                  "rgb": {
+                    "blue": 26,
+                    "green": 63,
+                    "red": 111
+                  }
+                },
+                {
+                  "percentage": 5.26,
+                  "rgb": {
+                    "blue": 137,
+                    "green": 173,
+                    "red": 239
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "QXBpTWVkaWE6DAAFCgABG+E+OSBXUAAKAAISs6gbmhcQAAAA",
+          "media_key": "3_2008955323860602880",
+          "media_id": "2008955323860602880",
+          "media_info": {
+            "__typename": "ApiImage",
+            "original_img_height": 1941,
+            "original_img_width": 1456,
+            "original_img_url": "https://pbs.twimg.com/media/G-E-OSBXUAAHQi8.jpg",
+            "color_info": {
+              "palette": [
+                {
+                  "percentage": 36.7,
+                  "rgb": {
+                    "blue": 1,
+                    "green": 83,
+                    "red": 61
+                  }
+                },
+                {
+                  "percentage": 29.55,
+                  "rgb": {
+                    "blue": 186,
+                    "green": 195,
+                    "red": 189
+                  }
+                },
+                {
+                  "percentage": 10.31,
+                  "rgb": {
+                    "blue": 40,
+                    "green": 34,
+                    "red": 47
+                  }
+                },
+                {
+                  "percentage": 3.56,
+                  "rgb": {
+                    "blue": 7,
+                    "green": 55,
+                    "red": 26
+                  }
+                },
+                {
+                  "percentage": 2.34,
+                  "rgb": {
+                    "blue": 1,
+                    "green": 125,
+                    "red": 113
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "QXBpTWVkaWE6DAAFCgABG+E+VmfXEAAKAAISs6gbmhcQAAAA",
+          "media_key": "3_2008955449614209024",
+          "media_id": "2008955449614209024",
+          "media_info": {
+            "__typename": "ApiImage",
+            "original_img_height": 2096,
+            "original_img_width": 1179,
+            "original_img_url": "https://pbs.twimg.com/media/G-E-VmfXEAAYn1B.jpg",
+            "color_info": {
+              "palette": [
+                {
+                  "percentage": 39.04,
+                  "rgb": {
+                    "blue": 189,
+                    "green": 194,
+                    "red": 193
+                  }
+                },
+                {
+                  "percentage": 27.26,
+                  "rgb": {
+                    "blue": 66,
+                    "green": 51,
+                    "red": 34
+                  }
+                },
+                {
+                  "percentage": 10.31,
+                  "rgb": {
+                    "blue": 59,
+                    "green": 116,
+                    "red": 172
+                  }
+                },
+                {
+                  "percentage": 8.21,
+                  "rgb": {
+                    "blue": 120,
+                    "green": 173,
+                    "red": 179
+                  }
+                },
+                {
+                  "percentage": 3.97,
+                  "rgb": {
+                    "blue": 62,
+                    "green": 73,
+                    "red": 154
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "QXBpTWVkaWE6DAAFCgABG+E9mcpXUAAKAAISs6gbmhcQAAAA",
+          "media_key": "3_2008954639517962240",
+          "media_id": "2008954639517962240",
+          "media_info": {
+            "__typename": "ApiImage",
+            "original_img_height": 656,
+            "original_img_width": 856,
+            "original_img_url": "https://pbs.twimg.com/media/G-E9mcpXUAAhlxf.png",
+            "color_info": {
+              "palette": [
+                {
+                  "percentage": 17.43,
+                  "rgb": {
+                    "blue": 220,
+                    "green": 178,
+                    "red": 134
+                  }
+                },
+                {
+                  "percentage": 16.57,
+                  "rgb": {
+                    "blue": 44,
+                    "green": 42,
+                    "red": 55
+                  }
+                },
+                {
+                  "percentage": 15.19,
+                  "rgb": {
+                    "blue": 117,
+                    "green": 161,
+                    "red": 206
+                  }
+                },
+                {
+                  "percentage": 14.35,
+                  "rgb": {
+                    "blue": 38,
+                    "green": 63,
+                    "red": 104
+                  }
+                },
+                {
+                  "percentage": 7.55,
+                  "rgb": {
+                    "blue": 22,
+                    "green": 113,
+                    "red": 86
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "QXBpTWVkaWE6DAAFCgABG+E+FdCXgAAKAAISs6gbmhcQAAAA",
+          "media_key": "3_2008955172198776832",
+          "media_id": "2008955172198776832",
+          "media_info": {
+            "__typename": "ApiImage",
+            "original_img_height": 290,
+            "original_img_width": 533,
+            "original_img_url": "https://pbs.twimg.com/media/G-E-FdCXgAAwP0r.png",
+            "color_info": {
+              "palette": [
+                {
+                  "percentage": 97.4,
+                  "rgb": {
+                    "blue": 255,
+                    "green": 255,
+                    "red": 255
+                  }
+                },
+                {
+                  "percentage": 2.18,
+                  "rgb": {
+                    "blue": 132,
+                    "green": 132,
+                    "red": 132
+                  }
+                },
+                {
+                  "percentage": 0.42,
+                  "rgb": {
+                    "blue": 43,
+                    "green": 43,
+                    "red": 43
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "QXBpTWVkaWE6DAAFCgABG+E92cEXkAAKAAISs6gbmhcQAAAA",
+          "media_key": "3_2008954914240696320",
+          "media_id": "2008954914240696320",
+          "media_info": {
+            "__typename": "ApiImage",
+            "original_img_height": 1169,
+            "original_img_width": 1179,
+            "original_img_url": "https://pbs.twimg.com/media/G-E92cEXkAAoa1-.jpg",
+            "color_info": {
+              "palette": [
+                {
+                  "percentage": 48.77,
+                  "rgb": {
+                    "blue": 65,
+                    "green": 63,
+                    "red": 62
+                  }
+                },
+                {
+                  "percentage": 33.11,
+                  "rgb": {
+                    "blue": 171,
+                    "green": 170,
+                    "red": 172
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "QXBpTWVkaWE6DAAFCgABG+E9scnX0AAKAAISs6gbmhcQAAAA",
+          "media_key": "3_2008954742588821504",
+          "media_id": "2008954742588821504",
+          "media_info": {
+            "__typename": "ApiImage",
+            "original_img_height": 526,
+            "original_img_width": 800,
+            "original_img_url": "https://pbs.twimg.com/media/G-E9scnX0AAhpgm.png",
+            "color_info": {
+              "palette": [
+                {
+                  "percentage": 70.19,
+                  "rgb": {
+                    "blue": 181,
+                    "green": 173,
+                    "red": 156
+                  }
+                },
+                {
+                  "percentage": 17.51,
+                  "rgb": {
+                    "blue": 100,
+                    "green": 105,
+                    "red": 113
+                  }
+                },
+                {
+                  "percentage": 6.45,
+                  "rgb": {
+                    "blue": 115,
+                    "green": 130,
+                    "red": 146
+                  }
+                },
+                {
+                  "percentage": 1.53,
+                  "rgb": {
+                    "blue": 59,
+                    "green": 80,
+                    "red": 129
+                  }
+                },
+                {
+                  "percentage": 1.35,
+                  "rgb": {
+                    "blue": 29,
+                    "green": 34,
+                    "red": 48
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "QXBpTWVkaWE6DAAFCgABG+E90WSXgAAKAAISs6gbmhcQAAAA",
+          "media_key": "3_2008954878329061376",
+          "media_id": "2008954878329061376",
+          "media_info": {
+            "__typename": "ApiImage",
+            "original_img_height": 466,
+            "original_img_width": 448,
+            "original_img_url": "https://pbs.twimg.com/media/G-E90WSXgAAB_wM.png",
+            "color_info": {
+              "palette": [
+                {
+                  "percentage": 18.89,
+                  "rgb": {
+                    "blue": 87,
+                    "green": 106,
+                    "red": 105
+                  }
+                },
+                {
+                  "percentage": 17.17,
+                  "rgb": {
+                    "blue": 190,
+                    "green": 214,
+                    "red": 222
+                  }
+                },
+                {
+                  "percentage": 12.67,
+                  "rgb": {
+                    "blue": 55,
+                    "green": 39,
+                    "red": 24
+                  }
+                },
+                {
+                  "percentage": 10.5,
+                  "rgb": {
+                    "blue": 124,
+                    "green": 128,
+                    "red": 202
+                  }
+                },
+                {
+                  "percentage": 8.59,
+                  "rgb": {
+                    "blue": 49,
+                    "green": 104,
+                    "red": 168
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "QXBpTWVkaWE6DAAFCgABG+E/vA0XwAAKAAISs6gbmhcQAAAA",
+          "media_key": "3_2008956985690013696",
+          "media_id": "2008956985690013696",
+          "media_info": {
+            "__typename": "ApiImage",
+            "original_img_height": 185,
+            "original_img_width": 449,
+            "original_img_url": "https://pbs.twimg.com/media/G-E_vA0XwAAdgMK.png",
+            "color_info": {
+              "palette": [
+                {
+                  "percentage": 96.82,
+                  "rgb": {
+                    "blue": 255,
+                    "green": 255,
+                    "red": 255
+                  }
+                },
+                {
+                  "percentage": 2.42,
+                  "rgb": {
+                    "blue": 139,
+                    "green": 137,
+                    "red": 135
+                  }
+                },
+                {
+                  "percentage": 0.31,
+                  "rgb": {
+                    "blue": 244,
+                    "green": 205,
+                    "red": 138
+                  }
+                },
+                {
+                  "percentage": 0.29,
+                  "rgb": {
+                    "blue": 181,
+                    "green": 192,
+                    "red": 224
+                  }
+                },
+                {
+                  "percentage": 0.16,
+                  "rgb": {
+                    "blue": 36,
+                    "green": 39,
+                    "red": 43
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "QXBpTWVkaWE6DAAFCgABG+E+qG7XEAAKAAISs6gbmhcQAAAA",
+          "media_key": "3_2008955801918967808",
+          "media_id": "2008955801918967808",
+          "media_info": {
+            "__typename": "ApiImage",
+            "original_img_height": 2096,
+            "original_img_width": 1179,
+            "original_img_url": "https://pbs.twimg.com/media/G-E-qG7XEAAkMIM.jpg",
+            "color_info": {
+              "palette": [
+                {
+                  "percentage": 35.28,
+                  "rgb": {
+                    "blue": 152,
+                    "green": 178,
+                    "red": 193
+                  }
+                },
+                {
+                  "percentage": 22.97,
+                  "rgb": {
+                    "blue": 32,
+                    "green": 41,
+                    "red": 43
+                  }
+                },
+                {
+                  "percentage": 8.71,
+                  "rgb": {
+                    "blue": 51,
+                    "green": 95,
+                    "red": 111
+                  }
+                },
+                {
+                  "percentage": 7.47,
+                  "rgb": {
+                    "blue": 53,
+                    "green": 156,
+                    "red": 175
+                  }
+                },
+                {
+                  "percentage": 4.73,
+                  "rgb": {
+                    "blue": 77,
+                    "green": 86,
+                    "red": 48
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "QXBpTWVkaWE6DAAFCgABG+E95BYW8AAKAAISs6gbmhcQAAAA",
+          "media_key": "3_2008954958616391680",
+          "media_id": "2008954958616391680",
+          "media_info": {
+            "__typename": "ApiImage",
+            "original_img_height": 259,
+            "original_img_width": 194,
+            "original_img_url": "https://pbs.twimg.com/media/G-E95BYW8AAxtDU.png",
+            "color_info": {
+              "palette": [
+                {
+                  "percentage": 37.03,
+                  "rgb": {
+                    "blue": 224,
+                    "green": 229,
+                    "red": 235
+                  }
+                },
+                {
+                  "percentage": 21.74,
+                  "rgb": {
+                    "blue": 75,
+                    "green": 114,
+                    "red": 187
+                  }
+                },
+                {
+                  "percentage": 18.96,
+                  "rgb": {
+                    "blue": 9,
+                    "green": 14,
+                    "red": 21
+                  }
+                },
+                {
+                  "percentage": 12.03,
+                  "rgb": {
+                    "blue": 12,
+                    "green": 28,
+                    "red": 181
+                  }
+                },
+                {
+                  "percentage": 3.12,
+                  "rgb": {
+                    "blue": 26,
+                    "green": 49,
+                    "red": 92
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "QXBpTWVkaWE6DAAFCgABG+E998xXAAAKAAISs6gbmhcQAAAA",
+          "media_key": "3_2008955043278422016",
+          "media_id": "2008955043278422016",
+          "media_info": {
+            "__typename": "ApiImage",
+            "original_img_height": 1941,
+            "original_img_width": 1456,
+            "original_img_url": "https://pbs.twimg.com/media/G-E998xXAAAJLTL.jpg",
+            "color_info": {
+              "palette": [
+                {
+                  "percentage": 18.24,
+                  "rgb": {
+                    "blue": 5,
+                    "green": 162,
+                    "red": 247
+                  }
+                },
+                {
+                  "percentage": 9.29,
+                  "rgb": {
+                    "blue": 161,
+                    "green": 155,
+                    "red": 2
+                  }
+                },
+                {
+                  "percentage": 8.94,
+                  "rgb": {
+                    "blue": 3,
+                    "green": 110,
+                    "red": 218
+                  }
+                },
+                {
+                  "percentage": 7.51,
+                  "rgb": {
+                    "blue": 6,
+                    "green": 182,
+                    "red": 210
+                  }
+                },
+                {
+                  "percentage": 4.43,
+                  "rgb": {
+                    "blue": 2,
+                    "green": 15,
+                    "red": 18
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "twitter_card": "tweet",
+    "color": null,
+    "provider": "twitter"
+  }
+}

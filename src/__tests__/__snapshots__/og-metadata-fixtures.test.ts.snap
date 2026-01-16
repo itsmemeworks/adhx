@@ -1,0 +1,573 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`OG Metadata with Real Fixtures > Full metadata generation > '4-images': generates valid metadata structure 1`] = `
+{
+  "description": "Apparently, a 19 year old built Wisprflow's UGC program to 500M views in 60 days.
+
+Dude spills some sauce on LinkedIn. 
+
+Open this to see the entire post",
+  "openGraph": {
+    "description": "Apparently, a 19 year old built Wisprflow's UGC program to 500M views in 60 days.
+
+Dude spills some sauce on LinkedIn. 
+
+Open this to see the entire post",
+    "images": [
+      {
+        "height": 630,
+        "url": "https://pbs.twimg.com/media/G-e63eNWkAATqEB.jpg?name=orig",
+        "width": 1200,
+      },
+    ],
+    "siteName": "ADHX",
+    "title": "@iamgdsa on X",
+    "type": "article",
+  },
+  "title": "@iamgdsa: "Apparently, a 19 year old built Wisprflow's UGC p…" - Save to ADHX",
+  "twitter": {
+    "card": "summary_large_image",
+    "description": "Apparently, a 19 year old built Wisprflow's UGC program to 500M views in 60 days.
+
+Dude spills some sauce on LinkedIn. 
+
+Open this to see the entire post",
+    "images": [
+      "https://pbs.twimg.com/media/G-e63eNWkAATqEB.jpg?name=orig",
+    ],
+    "title": "@iamgdsa on X",
+  },
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-no-header': generates valid metadata structure 1`] = `
+{
+  "description": "",
+  "openGraph": {
+    "description": "",
+    "images": [
+      {
+        "height": 630,
+        "url": "https://adhx.com/logo.png",
+        "width": 1200,
+      },
+    ],
+    "siteName": "ADHX",
+    "title": "@aliniikk on X",
+    "type": "article",
+  },
+  "title": "@aliniikk: "" - Save to ADHX",
+  "twitter": {
+    "card": "summary_large_image",
+    "description": "",
+    "images": [
+      "https://adhx.com/logo.png",
+    ],
+    "title": "@aliniikk on X",
+  },
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-with-media': generates valid metadata structure 1`] = `
+{
+  "description": "",
+  "openGraph": {
+    "description": "",
+    "images": [
+      {
+        "height": 630,
+        "url": "https://pbs.twimg.com/media/G-E_92mXcAALnrI.jpg",
+        "width": 1200,
+      },
+    ],
+    "siteName": "ADHX",
+    "title": "@NoahRyanCo on X",
+    "type": "article",
+  },
+  "title": "@NoahRyanCo: "" - Save to ADHX",
+  "twitter": {
+    "card": "summary_large_image",
+    "description": "",
+    "images": [
+      "https://pbs.twimg.com/media/G-E_92mXcAALnrI.jpg",
+    ],
+    "title": "@NoahRyanCo on X",
+  },
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > Full metadata generation > 'emoji-tweet': generates valid metadata structure 1`] = `
+{
+  "description": "BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Named Virtual Accounts powered by @moonpay & @iron
+
+1️⃣ Claim your own named account in the Avici app
+
+2️⃣ Fund…",
+  "openGraph": {
+    "description": "BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Named Virtual Accounts powered by @moonpay & @iron
+
+1️⃣ Claim your own named account in the Avici app
+
+2️⃣ Fund…",
+    "images": [
+      {
+        "height": 630,
+        "url": "https://pbs.twimg.com/amplify_video_thumb/2009617113384706048/img/uUdl5DT48QRZSEHb.jpg",
+        "width": 1200,
+      },
+    ],
+    "siteName": "ADHX",
+    "title": "@moonpay on X",
+    "type": "article",
+  },
+  "title": "@moonpay: "BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Na…" - Save to ADHX",
+  "twitter": {
+    "card": "summary_large_image",
+    "description": "BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Named Virtual Accounts powered by @moonpay & @iron
+
+1️⃣ Claim your own named account in the Avici app
+
+2️⃣ Fund…",
+    "images": [
+      "https://pbs.twimg.com/amplify_video_thumb/2009617113384706048/img/uUdl5DT48QRZSEHb.jpg",
+    ],
+    "title": "@moonpay on X",
+  },
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-1-image': generates valid metadata structure 1`] = `
+{
+  "description": "Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory
+
+We built a fully automated system that repurposes, localizes, and launches winning TikTok Shop cont…",
+  "openGraph": {
+    "description": "Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory
+
+We built a fully automated system that repurposes, localizes, and launches winning TikTok Shop cont…",
+    "images": [
+      {
+        "height": 630,
+        "url": "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg?name=orig",
+        "width": 1200,
+      },
+    ],
+    "siteName": "ADHX",
+    "title": "@maverickecom on X",
+    "type": "article",
+  },
+  "title": "@maverickecom: "Nano Banana + Fastmoss + Manus + Veo3 = AI Conten…" - Save to ADHX",
+  "twitter": {
+    "card": "summary_large_image",
+    "description": "Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory
+
+We built a fully automated system that repurposes, localizes, and launches winning TikTok Shop cont…",
+    "images": [
+      "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg?name=orig",
+    ],
+    "title": "@maverickecom on X",
+  },
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-2-images': generates valid metadata structure 1`] = `
+{
+  "description": "🚨BREAKING: TRUMP FURIOUS WITH STARMER
+
+U.S state department made clear last night speaking on the UK and Keir Starmer ⬇️ 
+
+"The government has, indeed, repeat…",
+  "openGraph": {
+    "description": "🚨BREAKING: TRUMP FURIOUS WITH STARMER
+
+U.S state department made clear last night speaking on the UK and Keir Starmer ⬇️ 
+
+"The government has, indeed, repeat…",
+    "images": [
+      {
+        "height": 630,
+        "url": "https://pbs.twimg.com/media/G-w2zr6aEAAt-FN.png?name=orig",
+        "width": 1200,
+      },
+    ],
+    "siteName": "ADHX",
+    "title": "@BasilTheGreat on X",
+    "type": "article",
+  },
+  "title": "@BasilTheGreat: "🚨BREAKING: TRUMP FURIOUS WITH STARMER
+
+U.S state…" - Save to ADHX",
+  "twitter": {
+    "card": "summary_large_image",
+    "description": "🚨BREAKING: TRUMP FURIOUS WITH STARMER
+
+U.S state department made clear last night speaking on the UK and Keir Starmer ⬇️ 
+
+"The government has, indeed, repeat…",
+    "images": [
+      "https://pbs.twimg.com/media/G-w2zr6aEAAt-FN.png?name=orig",
+    ],
+    "title": "@BasilTheGreat on X",
+  },
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-with-quote': generates valid metadata structure 1`] = `
+{
+  "description": "⚡️This is a live containment operation.
+
+The strike was real. The reversal was real.
+
+This is state-level controlled ignition.
+
+There was a greenlight. Then a…",
+  "openGraph": {
+    "description": "⚡️This is a live containment operation.
+
+The strike was real. The reversal was real.
+
+This is state-level controlled ignition.
+
+There was a greenlight. Then a…",
+    "images": [
+      {
+        "height": 630,
+        "url": "https://pbs.twimg.com/media/G-tNQK3akAAXwrR.jpg?name=orig",
+        "width": 1200,
+      },
+    ],
+    "siteName": "ADHX",
+    "title": "@_The_Prophet__ on X",
+    "type": "article",
+  },
+  "title": "@_The_Prophet__: "⚡️This is a live containment operation.
+
+The stri…" - Save to ADHX",
+  "twitter": {
+    "card": "summary_large_image",
+    "description": "⚡️This is a live containment operation.
+
+The strike was real. The reversal was real.
+
+This is state-level controlled ignition.
+
+There was a greenlight. Then a…",
+    "images": [
+      "https://pbs.twimg.com/media/G-tNQK3akAAXwrR.jpg?name=orig",
+    ],
+    "title": "@_The_Prophet__ on X",
+  },
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > Full metadata generation > 'plain-text': generates valid metadata structure 1`] = `
+{
+  "description": "What movie is 10/10, yet hardly anyone has heard of it?",
+  "openGraph": {
+    "description": "What movie is 10/10, yet hardly anyone has heard of it?",
+    "images": [
+      {
+        "height": 630,
+        "url": "https://adhx.com/logo.png",
+        "width": 1200,
+      },
+    ],
+    "siteName": "ADHX",
+    "title": "@TheCinesthetic on X",
+    "type": "article",
+  },
+  "title": "@TheCinesthetic: "What movie is 10/10, yet hardly anyone has heard…" - Save to ADHX",
+  "twitter": {
+    "card": "summary_large_image",
+    "description": "What movie is 10/10, yet hardly anyone has heard of it?",
+    "images": [
+      "https://adhx.com/logo.png",
+    ],
+    "title": "@TheCinesthetic on X",
+  },
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-image-tweet': generates valid metadata structure 1`] = `
+{
+  "description": "for all of you guys that haven’t cracked organic yet
+
+you’re welcome",
+  "openGraph": {
+    "description": "for all of you guys that haven’t cracked organic yet
+
+you’re welcome",
+    "images": [
+      {
+        "height": 630,
+        "url": "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg?name=orig",
+        "width": 1200,
+      },
+    ],
+    "siteName": "ADHX",
+    "title": "@Nate_Google_ on X",
+    "type": "article",
+  },
+  "title": "@Nate_Google_: "for all of you guys that haven’t cracked organic…" - Save to ADHX",
+  "twitter": {
+    "card": "summary_large_image",
+    "description": "for all of you guys that haven’t cracked organic yet
+
+you’re welcome",
+    "images": [
+      "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg?name=orig",
+    ],
+    "title": "@Nate_Google_ on X",
+  },
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-text-tweet': generates valid metadata structure 1`] = `
+{
+  "description": "True",
+  "openGraph": {
+    "description": "True",
+    "images": [
+      {
+        "height": 630,
+        "url": "https://adhx.com/logo.png",
+        "width": 1200,
+      },
+    ],
+    "siteName": "ADHX",
+    "title": "@elonmusk on X",
+    "type": "article",
+  },
+  "title": "@elonmusk: "True" - Save to ADHX",
+  "twitter": {
+    "card": "summary_large_image",
+    "description": "True",
+    "images": [
+      "https://adhx.com/logo.png",
+    ],
+    "title": "@elonmusk on X",
+  },
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > Full metadata generation > 'reply-tweet': generates valid metadata structure 1`] = `
+{
+  "description": "Based on recent reports, the UK government has approved postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing reorg…",
+  "openGraph": {
+    "description": "Based on recent reports, the UK government has approved postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing reorg…",
+    "images": [
+      {
+        "height": 630,
+        "url": "https://adhx.com/logo.png",
+        "width": 1200,
+      },
+    ],
+    "siteName": "ADHX",
+    "title": "@grok on X",
+    "type": "article",
+  },
+  "title": "@grok: "Based on recent reports, the UK government has ap…" - Save to ADHX",
+  "twitter": {
+    "card": "summary_large_image",
+    "description": "Based on recent reports, the UK government has approved postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing reorg…",
+    "images": [
+      "https://adhx.com/logo.png",
+    ],
+    "title": "@grok on X",
+  },
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > Full metadata generation > 'text-quoting-video': generates valid metadata structure 1`] = `
+{
+  "description": "insane how much goalposts have shifted that bfl can just drop a model that is ~10x better than Stable Diffusion while being ~as small and basically nobody bats…",
+  "openGraph": {
+    "description": "insane how much goalposts have shifted that bfl can just drop a model that is ~10x better than Stable Diffusion while being ~as small and basically nobody bats…",
+    "images": [
+      {
+        "height": 630,
+        "url": "https://pbs.twimg.com/amplify_video_thumb/2011825767634911237/img/rRqDWGszLMh8F1zp.jpg",
+        "width": 1200,
+      },
+    ],
+    "siteName": "ADHX",
+    "title": "@swyx on X",
+    "type": "article",
+  },
+  "title": "@swyx: "insane how much goalposts have shifted that bfl c…" - Save to ADHX",
+  "twitter": {
+    "card": "summary_large_image",
+    "description": "insane how much goalposts have shifted that bfl can just drop a model that is ~10x better than Stable Diffusion while being ~as small and basically nobody bats…",
+    "images": [
+      "https://pbs.twimg.com/amplify_video_thumb/2011825767634911237/img/rRqDWGszLMh8F1zp.jpg",
+    ],
+    "title": "@swyx on X",
+  },
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > Full metadata generation > 'video-tweet': generates valid metadata structure 1`] = `
+{
+  "description": "Primes look chaotic in a line, but reveal structure when space curves.
+
+Same numbers.
+Different geometry.
+Hidden order.",
+  "openGraph": {
+    "description": "Primes look chaotic in a line, but reveal structure when space curves.
+
+Same numbers.
+Different geometry.
+Hidden order.",
+    "images": [
+      {
+        "height": 630,
+        "url": "https://pbs.twimg.com/amplify_video_thumb/2011857732484423680/img/wFNhWwXUnF0woRwH.jpg",
+        "width": 1200,
+      },
+    ],
+    "siteName": "ADHX",
+    "title": "@Kekius_Sage on X",
+    "type": "article",
+  },
+  "title": "@Kekius_Sage: "Primes look chaotic in a line, but reveal structu…" - Save to ADHX",
+  "twitter": {
+    "card": "summary_large_image",
+    "description": "Primes look chaotic in a line, but reveal structure when space curves.
+
+Same numbers.
+Different geometry.
+Hidden order.",
+    "images": [
+      "https://pbs.twimg.com/amplify_video_thumb/2011857732484423680/img/wFNhWwXUnF0woRwH.jpg",
+    ],
+    "title": "@Kekius_Sage on X",
+  },
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > Full metadata generation > 'youtube-link': generates valid metadata structure 1`] = `
+{
+  "description": "link: https://www.youtube.com/watch?v=yGQb9KkvQ1Q",
+  "openGraph": {
+    "description": "link: https://www.youtube.com/watch?v=yGQb9KkvQ1Q",
+    "images": [
+      {
+        "height": 630,
+        "url": "https://adhx.com/logo.png",
+        "width": 1200,
+      },
+    ],
+    "siteName": "ADHX",
+    "title": "@skalskip92 on X",
+    "type": "article",
+  },
+  "title": "@skalskip92: "link: https://www.youtube.com/watch?v=yGQb9KkvQ1Q" - Save to ADHX",
+  "twitter": {
+    "card": "summary_large_image",
+    "description": "link: https://www.youtube.com/watch?v=yGQb9KkvQ1Q",
+    "images": [
+      "https://adhx.com/logo.png",
+    ],
+    "title": "@skalskip92 on X",
+  },
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > '4-images': returns correct OG image 1`] = `
+{
+  "ogImage": "https://pbs.twimg.com/media/G-e63eNWkAATqEB.jpg?name=orig",
+  "slug": "4-images",
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'article-no-header': returns correct OG image 1`] = `
+{
+  "ogImage": "https://adhx.com/logo.png",
+  "slug": "article-no-header",
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'article-with-media': returns correct OG image 1`] = `
+{
+  "ogImage": "https://pbs.twimg.com/media/G-E_92mXcAALnrI.jpg",
+  "slug": "article-with-media",
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'emoji-tweet': returns correct OG image 1`] = `
+{
+  "ogImage": "https://pbs.twimg.com/amplify_video_thumb/2009617113384706048/img/uUdl5DT48QRZSEHb.jpg",
+  "slug": "emoji-tweet",
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'long-text-1-image': returns correct OG image 1`] = `
+{
+  "ogImage": "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg?name=orig",
+  "slug": "long-text-1-image",
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'long-text-2-images': returns correct OG image 1`] = `
+{
+  "ogImage": "https://pbs.twimg.com/media/G-w2zr6aEAAt-FN.png?name=orig",
+  "slug": "long-text-2-images",
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'long-text-with-quote': returns correct OG image 1`] = `
+{
+  "ogImage": "https://pbs.twimg.com/media/G-tNQK3akAAXwrR.jpg?name=orig",
+  "slug": "long-text-with-quote",
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'plain-text': returns correct OG image 1`] = `
+{
+  "ogImage": "https://adhx.com/logo.png",
+  "slug": "plain-text",
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'quote-of-image-tweet': returns correct OG image 1`] = `
+{
+  "ogImage": "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg?name=orig",
+  "slug": "quote-of-image-tweet",
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'quote-of-text-tweet': returns correct OG image 1`] = `
+{
+  "ogImage": "https://adhx.com/logo.png",
+  "slug": "quote-of-text-tweet",
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'reply-tweet': returns correct OG image 1`] = `
+{
+  "ogImage": "https://adhx.com/logo.png",
+  "slug": "reply-tweet",
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'text-quoting-video': returns correct OG image 1`] = `
+{
+  "ogImage": "https://pbs.twimg.com/amplify_video_thumb/2011825767634911237/img/rRqDWGszLMh8F1zp.jpg",
+  "slug": "text-quoting-video",
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'video-tweet': returns correct OG image 1`] = `
+{
+  "ogImage": "https://pbs.twimg.com/amplify_video_thumb/2011857732484423680/img/wFNhWwXUnF0woRwH.jpg",
+  "slug": "video-tweet",
+}
+`;
+
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'youtube-link': returns correct OG image 1`] = `
+{
+  "ogImage": "https://adhx.com/logo.png",
+  "slug": "youtube-link",
+}
+`;

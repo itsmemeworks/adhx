@@ -1,0 +1,762 @@
+{
+  "code": 200,
+  "message": "OK",
+  "tweet": {
+    "url": "https://x.com/aliniikk/status/2009347948816335031",
+    "id": "2009347948816335031",
+    "text": "",
+    "raw_text": {
+      "text": "https://t.co/lPl6ove4sO",
+      "facets": []
+    },
+    "author": {
+      "id": "731872902052597760",
+      "name": "Ali Ansari",
+      "screen_name": "aliniikk",
+      "avatar_url": "https://pbs.twimg.com/profile_images/1987673473108582402/yFQu0vw1_200x200.jpg",
+      "banner_url": "https://pbs.twimg.com/profile_banners/731872902052597760/1757669454",
+      "description": "ceo @micro1_ai / cs @stanford",
+      "location": "San Francisco",
+      "url": "https://x.com/aliniikk",
+      "followers": 16650,
+      "following": 2348,
+      "joined": "Sun May 15 15:44:32 +0000 2016",
+      "likes": 20873,
+      "media_count": 441,
+      "protected": false,
+      "website": null,
+      "tweets": 4102,
+      "avatar_color": null
+    },
+    "replies": 240,
+    "retweets": 629,
+    "likes": 4753,
+    "bookmarks": 12580,
+    "created_at": "Thu Jan 08 19:34:17 +0000 2026",
+    "created_timestamp": 1767900857,
+    "possibly_sensitive": false,
+    "views": 2669928,
+    "is_note_tweet": false,
+    "community_note": null,
+    "lang": null,
+    "replying_to": null,
+    "replying_to_status": null,
+    "source": "Twitter Web App",
+    "article": {
+      "created_at": "2026-01-08T19:34:17.000Z",
+      "modified_at": "2026-01-08T19:34:17.000Z",
+      "id": "2009344531444191232",
+      "title": "human data will be a $1 trillion/year market",
+      "preview_text": "human data will be a $1 trillion/year market\nThis is not a short-term prediction. It is a structural claim about where the economy converges.\nTo believe this, you need to accept two assumptions:",
+      "cover_media": {},
+      "content": {
+        "blocks": [
+          {
+            "key": "bav70",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 44,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "human data will be a $1 trillion/year market",
+            "type": "unstyled"
+          },
+          {
+            "key": "7cl3k",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "This is not a short-term prediction. It is a structural claim about where the economy converges.",
+            "type": "unstyled"
+          },
+          {
+            "key": "7vr8u",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "To believe this, you need to accept two assumptions:",
+            "type": "unstyled"
+          },
+          {
+            "key": "1or6o",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Digital and physical intelligence can eventually automate the tedious parts of the economy",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "1hj5a",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Self-learning intelligence without human data is impossible at the frontier",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "4rlc",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 64,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "automation is the most useful & liberating thing humanity can do",
+            "type": "unstyled"
+          },
+          {
+            "key": "f3mtl",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "If AI systems can automate functions, then automating all functions is the highest-leverage task for humanity.",
+            "type": "unstyled"
+          },
+          {
+            "key": "7grhr",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Automation compresses time. It allows:",
+            "type": "unstyled"
+          },
+          {
+            "key": "2cgd9",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Aspirations to be fulfilled faster, by orders of magnitude",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "9lqf5",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Humans to focus on the enjoyable, judgment-heavy parts of work while robots and agents to handle the rest",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "eslps",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "As humans gain time, they create more. Net-new work is initially creative and high-value. Over time it becomes legible, repeatable, and ready for automation. Once automated, it continues delivering value while freeing humans to focus on new creative work. This loop is permanent.",
+            "type": "unstyled"
+          },
+          {
+            "key": "3hrhp",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Automation does not eliminate human work. It pushes humans toward higher-value, more creative work.",
+            "type": "unstyled"
+          },
+          {
+            "key": "2p1jo",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "At a societal level, automation reshapes the economics of the world. As AI systems take on more production and coordination, the cost of producing goods and services collapses while availability explodes.",
+            "type": "unstyled"
+          },
+          {
+            "key": "9f165",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "At the same time, distribution becomes increasingly optimal. Digitally and physically intelligent systems coordinate supply and demand with less friction, less waste, and less delay, making access faster, cheaper, and more reliable every year",
+            "type": "unstyled"
+          },
+          {
+            "key": "job9",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 35,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "AI models learn from humans forever",
+            "type": "unstyled"
+          },
+          {
+            "key": "3qfct",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Every artificially intelligent system learns from humans in some form:",
+            "type": "unstyled"
+          },
+          {
+            "key": "14ubq",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Demonstrations",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "76d6u",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Supervised fine-tuning",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "5bpd6",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Preference learning",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "qh8",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Complex rubrics and evaluations",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "3t5v8",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Continual corrections",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "eqs4n",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Even self-play and synthetic data depend on human grounding — humans define objectives, rewards, and what “good” looks like.",
+            "type": "unstyled"
+          },
+          {
+            "key": "fd8he",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "As a result:",
+            "type": "unstyled"
+          },
+          {
+            "key": "91d8f",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Every function in the economy contains useful learning signal",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "3pifc",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Every decision, exception, failure, and tradeoff creates data",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "1j5d9",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "But raw activity is not enough. That data must be:",
+            "type": "unstyled"
+          },
+          {
+            "key": "d668t",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Recorded",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "63j4p",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Structured",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "cro3u",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Evaluated",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "56c6j",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Packaged into usable pipelines",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "49mge",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "And importantly, functions must continue running while they are being automated. Automation is iterative, not instantaneous.",
+            "type": "unstyled"
+          },
+          {
+            "key": "eafhn",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 51,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "this creates a universal obligation and opportunity",
+            "type": "unstyled"
+          },
+          {
+            "key": "cvrk4",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "To iteratively automate functions, every company, government agency, or institution running real operations must consume and produce structured data related to those functions. In most cases, it will not be optimal for them to create or structure that data themselves, due to scale inefficiencies, high fixed costs, and the operational difficulty of producing high-quality, reusable structured data in-house.",
+            "type": "unstyled"
+          },
+          {
+            "key": "2lrd2",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "We already see this dynamic today. For example, many lawyers produce more leverage per hour working on standardized, structured legal data through platforms like micro1 than they do performing unstructured work inside individual law firms. At micro1, over 1,000 lawyers work in structured data creation and earn on average ~20% more than in traditional firm roles. Law firms themselves are unlikely to become large-scale producers of structured training data, but they will increasingly be consumers of that data, either directly or by having it embedded in the tools they use.",
+            "type": "unstyled"
+          },
+          {
+            "key": "aer6s",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "This creates a powerful incentive structure.",
+            "type": "unstyled"
+          },
+          {
+            "key": "9f6bk",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Labs that are automating functions will pay for this data, because long term the value gained from incremental automation far exceeds the cost of acquiring the data.",
+            "type": "unstyled"
+          },
+          {
+            "key": "bmkt1",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "As a result:",
+            "type": "unstyled"
+          },
+          {
+            "key": "40gdg",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Entities are incentivized to produce high-quality human data not just to automate themselves, but because that data has external market value",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "1c33d",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Every hour of work can simultaneously:",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "8vla1",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Run the organization",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "1fkgn",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Train AI models",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "84ffi",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Generate additional revenue for the organization",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "3ru1h",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Human labor becomes not just labor to produce goods & services, but a revenue-generating asset on its own.",
+            "type": "unstyled"
+          },
+          {
+            "key": "cku8e",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 66,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "the ultimate convergence: 5%+ of human time is spent on human data",
+            "type": "unstyled"
+          },
+          {
+            "key": "7c3tr",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "It’s reasonable to think that most functions in the economy will spend some amount of time trying to automate themselves. Not fully, and not all at once, but continuously pushing work out of the human loop as it becomes repeatable and scalable.",
+            "type": "unstyled"
+          },
+          {
+            "key": "aq9g2",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Today, even knowledge workers spend the majority of their time on communication and coordination rather than on what we would consider actual productive work. As automation advances, tedious parts of  knowledge work are progressively removed, and automation increasingly absorbs coordination, scheduling, routing, and routine communication. The result is a larger share of human time being spent on judgment heavy knowledge work.",
+            "type": "unstyled"
+          },
+          {
+            "key": "2dkh5",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Even under conservative assumptions, it is reasonable to expect that in a more automated economy roughly 75% of work time is still spent on communication and coordination, while about 25% is spent doing actual work.",
+            "type": "unstyled"
+          },
+          {
+            "key": "dvenk",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 28,
+                "offset": 393,
+                "style": "Bold"
+              }
+            ],
+            "text": "Not all of that work needs to be structured. But a meaningful fraction does. Work that produces decisions, judgments, demonstrations, evaluations, and exceptions becomes far more valuable when captured in a structured, reusable form, both to complete the task and to enable future automation. If only one fifth of that actual work is performed in structured environments, that implies roughly 5% of total human labor time is spent generating structured human data.",
+            "type": "unstyled"
+          },
+          {
+            "key": "b4210",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 14,
+                "offset": 163,
+                "style": "Bold"
+              }
+            ],
+            "text": "With global GDP at roughly $100T, and labor representing about 50% of that, total labor spend is around $50T annually. Five percent of that corresponds to roughly $2.5T per year of human time directed at enabling automation, creating demonstrations, feedback, evaluations, and learning signals for AI systems.",
+            "type": "unstyled"
+          },
+          {
+            "key": "9dj4f",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 12,
+                "offset": 221,
+                "style": "Bold"
+              }
+            ],
+            "text": "Certainly not all of this will become explicit spend in the human data market. Much of it will remain implicit, fragmented, or unpriced. But even with aggressive discounting, you still arrive at something on the order of $1T per year.",
+            "type": "unstyled"
+          },
+          {
+            "key": "8vra5",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 48,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "automation reshapes labor,  it doesn’t shrink it",
+            "type": "unstyled"
+          },
+          {
+            "key": "9a69v",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "This results in automation scaling, As automation scales, some amount of what was spent on human labor is redirected towards:",
+            "type": "unstyled"
+          },
+          {
+            "key": "fa1kl",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Energy",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "djne",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Compute",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "e2lbk",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "AI labor",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "fil62",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "However, total human labor spend continues to increase.",
+            "type": "unstyled"
+          },
+          {
+            "key": "18qbm",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Why?",
+            "type": "unstyled"
+          },
+          {
+            "key": "8knj4",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Automation creates time.\nTime enables creativity.\nCreativity produces net-new functions within the economy.",
+            "type": "unstyled"
+          },
+          {
+            "key": "efv60",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Those functions are initially done by humans. Over time, they follow the same automation cycle.",
+            "type": "unstyled"
+          },
+          {
+            "key": "5i64",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 40,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "human labor gets more expensive because:",
+            "type": "unstyled"
+          },
+          {
+            "key": "839m8",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Human time is finite at any moment",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "e56cs",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Creativity and judgment are scarce",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "5pv0i",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Net-new ideas command premium value",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "2k5kj",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "As automation expands, humans concentrate more of their time on higher-leverage work. While total human hours do grow over time, that growth cannot be rapidly accelerated in response to demand. The fastest and dominant way the labor market expands is by increasing the value created per human hour.",
+            "type": "unstyled"
+          },
+          {
+            "key": "fd8sn",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "As this continues:",
+            "type": "unstyled"
+          },
+          {
+            "key": "al4h4",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Total human labor spend rises",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "etv4d",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "A larger share of human time is spent generating learning signals and enabling automation",
+            "type": "unordered-list-item"
+          },
+          {
+            "key": "firh5",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 40,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "we should never call it annotation again",
+            "type": "unstyled"
+          },
+          {
+            "key": "88mv3",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "The importance of this work in shaping AI means calling it “data labeling” or “annotation” is completely inaccurate. These phrases describe mechanical tasks, when the real value comes from human judgment, expertise, and decision-making expressed in structured form.",
+            "type": "unstyled"
+          },
+          {
+            "key": "emj6j",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 26,
+                "offset": 31,
+                "style": "Bold"
+              },
+              {
+                "length": 25,
+                "offset": 61,
+                "style": "Bold"
+              }
+            ],
+            "text": "A more accurate description is expert human data creation or structured human judgment.",
+            "type": "unstyled"
+          },
+          {
+            "key": "480so",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "This is how human expertise compounds in an automated economy. It explains why human data scales with automation rather than disappearing, and why it becomes a first-class economic input over time.",
+            "type": "unstyled"
+          },
+          {
+            "key": "dbsr8",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [
+              {
+                "length": 41,
+                "offset": 0,
+                "style": "Bold"
+              }
+            ],
+            "text": "human brilliance is needed more than ever",
+            "type": "unstyled"
+          },
+          {
+            "key": "q8n5",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "This does not require extreme assumptions. It only requires that automation continues to work, and that intelligence continues to learn from humans. If that is true, then human data is not a phase or a temporary bottleneck. It is a structural input to the economy.",
+            "type": "unstyled"
+          },
+          {
+            "key": "60nt",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "Human judgment is captured, structured, and refined.",
+            "type": "unstyled"
+          },
+          {
+            "key": "1p3km",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "That judgment becomes the training substrate of intelligence.",
+            "type": "unstyled"
+          },
+          {
+            "key": "75oc0",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "That intelligence, in turn, produces more automation.",
+            "type": "unstyled"
+          },
+          {
+            "key": "au90h",
+            "data": {},
+            "entityRanges": [],
+            "inlineStyleRanges": [],
+            "text": "As functions are automated, human time is freed. That time is spent creating new functions to automate, and the beautiful cycle continues.",
+            "type": "unstyled"
+          }
+        ],
+        "entityMap": []
+      },
+      "media_entities": []
+    },
+    "twitter_card": "tweet",
+    "color": null,
+    "provider": "twitter"
+  }
+}

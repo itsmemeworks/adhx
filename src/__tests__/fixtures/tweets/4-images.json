@@ -1,0 +1,194 @@
+{
+  "code": 200,
+  "message": "OK",
+  "tweet": {
+    "url": "https://x.com/iamgdsa/status/2010782484728873387",
+    "id": "2010782484728873387",
+    "text": "Apparently, a 19 year old built Wisprflow's UGC program to 500M views in 60 days.\n\nDude spills some sauce on LinkedIn. \n\nOpen this to see the entire post",
+    "raw_text": {
+      "text": "Apparently, a 19 year old built Wisprflow's UGC program to 500M views in 60 days.\n\nDude spills some sauce on LinkedIn. \n\nOpen this to see the entire post",
+      "facets": [
+        {
+          "type": "inline_media",
+          "indices": [
+            153,
+            172
+          ]
+        },
+        {
+          "type": "inline_media",
+          "indices": [
+            153,
+            172
+          ]
+        },
+        {
+          "type": "inline_media",
+          "indices": [
+            153,
+            172
+          ]
+        },
+        {
+          "type": "inline_media",
+          "indices": [
+            153,
+            172
+          ]
+        },
+        {
+          "type": "media",
+          "indices": [
+            154,
+            177
+          ],
+          "id": "2010781220808855552",
+          "display": "pic.x.com/Q27260DR4O",
+          "original": "https://t.co/Q27260DR4O",
+          "replacement": "https://x.com/iamgdsa/status/2010782484728873387/photo/1"
+        },
+        {
+          "type": "media",
+          "indices": [
+            154,
+            177
+          ],
+          "id": "2010781220800471040",
+          "display": "pic.x.com/Q27260DR4O",
+          "original": "https://t.co/Q27260DR4O",
+          "replacement": "https://x.com/iamgdsa/status/2010782484728873387/photo/1"
+        },
+        {
+          "type": "media",
+          "indices": [
+            154,
+            177
+          ],
+          "id": "2010781220817260545",
+          "display": "pic.x.com/Q27260DR4O",
+          "original": "https://t.co/Q27260DR4O",
+          "replacement": "https://x.com/iamgdsa/status/2010782484728873387/photo/1"
+        },
+        {
+          "type": "media",
+          "indices": [
+            154,
+            177
+          ],
+          "id": "2010781220804710400",
+          "display": "pic.x.com/Q27260DR4O",
+          "original": "https://t.co/Q27260DR4O",
+          "replacement": "https://x.com/iamgdsa/status/2010782484728873387/photo/1"
+        }
+      ]
+    },
+    "author": {
+      "id": "1621575066084311041",
+      "name": "Guillaume",
+      "screen_name": "iamgdsa",
+      "avatar_url": "https://pbs.twimg.com/profile_images/1730210378754236416/ghhY2XyX_200x200.jpg",
+      "banner_url": "https://pbs.twimg.com/profile_banners/1621575066084311041/1759223912",
+      "description": "writing daily @wesocialgrowth\ntracking+analytics:\ncreatornets:\n+ 4 apps + @viraltoktracker @appstoretracker \nw @jean__gatt\n\n⬇️",
+      "location": "➡️",
+      "url": "https://x.com/iamgdsa",
+      "followers": 32367,
+      "following": 640,
+      "joined": "Fri Feb 03 18:23:32 +0000 2023",
+      "likes": 9916,
+      "media_count": 1745,
+      "protected": false,
+      "website": {
+        "url": "http://socialgrowthengineers.com/subscribe",
+        "display_url": "socialgrowthengineers.com/subscribe"
+      },
+      "tweets": 5864,
+      "avatar_color": null
+    },
+    "replies": 50,
+    "retweets": 98,
+    "likes": 2406,
+    "bookmarks": 4769,
+    "created_at": "Mon Jan 12 18:34:37 +0000 2026",
+    "created_timestamp": 1768242877,
+    "possibly_sensitive": false,
+    "views": 370030,
+    "is_note_tweet": true,
+    "community_note": null,
+    "lang": "en",
+    "replying_to": null,
+    "replying_to_status": null,
+    "media": {
+      "all": [
+        {
+          "type": "photo",
+          "id": "2010781220808855552",
+          "url": "https://pbs.twimg.com/media/G-e63eNWkAATqEB.jpg?name=orig",
+          "width": 1094,
+          "height": 750
+        },
+        {
+          "type": "photo",
+          "id": "2010781220800471040",
+          "url": "https://pbs.twimg.com/media/G-e63eLWoAAvm24.png?name=orig",
+          "width": 1100,
+          "height": 810
+        },
+        {
+          "type": "photo",
+          "id": "2010781220817260545",
+          "url": "https://pbs.twimg.com/media/G-e63ePW0AE-WYx.png?name=orig",
+          "width": 1096,
+          "height": 640
+        },
+        {
+          "type": "photo",
+          "id": "2010781220804710400",
+          "url": "https://pbs.twimg.com/media/G-e63eMXUAAQo4L.jpg?name=orig",
+          "width": 1110,
+          "height": 1496
+        }
+      ],
+      "photos": [
+        {
+          "type": "photo",
+          "id": "2010781220808855552",
+          "url": "https://pbs.twimg.com/media/G-e63eNWkAATqEB.jpg?name=orig",
+          "width": 1094,
+          "height": 750
+        },
+        {
+          "type": "photo",
+          "id": "2010781220800471040",
+          "url": "https://pbs.twimg.com/media/G-e63eLWoAAvm24.png?name=orig",
+          "width": 1100,
+          "height": 810
+        },
+        {
+          "type": "photo",
+          "id": "2010781220817260545",
+          "url": "https://pbs.twimg.com/media/G-e63ePW0AE-WYx.png?name=orig",
+          "width": 1096,
+          "height": 640
+        },
+        {
+          "type": "photo",
+          "id": "2010781220804710400",
+          "url": "https://pbs.twimg.com/media/G-e63eMXUAAQo4L.jpg?name=orig",
+          "width": 1110,
+          "height": 1496
+        }
+      ],
+      "mosaic": {
+        "type": "mosaic_photo",
+        "formats": {
+          "jpeg": "https://mosaic.fxtwitter.com/jpeg/2010782484728873387/G-e63eNWkAATqEB/G-e63eLWoAAvm24/G-e63ePW0AE-WYx/G-e63eMXUAAQo4L",
+          "webp": "https://mosaic.fxtwitter.com/webp/2010782484728873387/G-e63eNWkAATqEB/G-e63eLWoAAvm24/G-e63ePW0AE-WYx/G-e63eMXUAAQo4L"
+        }
+      }
+    },
+    "source": "Twitter Web App",
+    "twitter_card": "summary_large_image",
+    "color": null,
+    "provider": "twitter"
+  }
+}
