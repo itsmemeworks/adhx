@@ -131,10 +131,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -190,14 +190,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <p
-                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed"
+                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
                   Apparently, a 19 year old built Wisprflow's UGC program to 500M views in 60 days.
 
@@ -804,10 +804,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -863,11 +863,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <div
                   class="space-y-3"
@@ -2174,10 +2174,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -2233,11 +2233,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <div
                   class="space-y-3"
@@ -4455,10 +4455,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -4514,14 +4514,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <p
-                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed"
+                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
                   BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Named Virtual Accounts powered by @moonpay & @iron
 
@@ -5141,10 +5141,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -5200,14 +5200,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <p
-                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed"
+                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
                   Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory
 
@@ -5833,10 +5833,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -5892,14 +5892,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <p
-                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed"
+                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
                   🚨BREAKING: TRUMP FURIOUS WITH STARMER
 
@@ -6503,10 +6503,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -6562,14 +6562,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <p
-                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed"
+                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
                   ⚡️This is a live containment operation.
 
@@ -7276,10 +7276,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -7335,14 +7335,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <p
-                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed"
+                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
                   What movie is 10/10, yet hardly anyone has heard of it?
                 </p>
@@ -7917,10 +7917,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -7976,14 +7976,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <p
-                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed"
+                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
                   for all of you guys that haven’t cracked organic yet
 
@@ -8652,10 +8652,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -8711,14 +8711,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <p
-                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed"
+                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
                   True
                 </p>
@@ -9338,10 +9338,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -9397,14 +9397,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <p
-                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed"
+                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
                   Based on recent reports, the UK government has approved postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing reorganisation, like merging councils into unitary authorities. Up to 63 councils could delay by a year to manage resources and avoid electing soon-abolished bodies, affecting millions of voters. Critics from Tories and Reform UK claim it's to evade losses amid low Labour polls. Sources: Telegraph, ITV, http://GOV.UK.
                 </p>
@@ -9979,10 +9979,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -10038,14 +10038,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <p
-                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed"
+                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
                   insane how much goalposts have shifted that bfl can just drop a model that is ~10x better than Stable Diffusion while being ~as small and basically nobody bats an eye
                 </p>
@@ -10706,10 +10706,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -10765,14 +10765,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <p
-                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed"
+                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
                   Primes look chaotic in a line, but reveal structure when space curves.
 
@@ -11388,10 +11388,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -11447,14 +11447,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <p
-                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed"
+                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
                   link: https://www.youtube.com/watch?v=yGQb9KkvQ1Q
                 </p>
@@ -12029,10 +12029,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -12088,14 +12088,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <p
-                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed"
+                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
                   Apparently, a 19 year old built Wisprflow's UGC program to 500M views in 60 days.
 
@@ -12682,10 +12682,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -12741,11 +12741,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <div
                   class="space-y-3"
@@ -14032,10 +14032,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -14091,11 +14091,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <div
                   class="space-y-3"
@@ -16293,10 +16293,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -16352,14 +16352,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <p
-                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed"
+                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
                   BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Named Virtual Accounts powered by @moonpay & @iron
 
@@ -16959,10 +16959,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -17018,14 +17018,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <p
-                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed"
+                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
                   Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory
 
@@ -17631,10 +17631,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -17690,14 +17690,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <p
-                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed"
+                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
                   🚨BREAKING: TRUMP FURIOUS WITH STARMER
 
@@ -18281,10 +18281,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -18340,14 +18340,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <p
-                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed"
+                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
                   ⚡️This is a live containment operation.
 
@@ -19034,10 +19034,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -19093,14 +19093,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <p
-                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed"
+                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
                   What movie is 10/10, yet hardly anyone has heard of it?
                 </p>
@@ -19655,10 +19655,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -19714,14 +19714,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <p
-                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed"
+                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
                   for all of you guys that haven’t cracked organic yet
 
@@ -20370,10 +20370,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -20429,14 +20429,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <p
-                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed"
+                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
                   True
                 </p>
@@ -21036,10 +21036,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -21095,14 +21095,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <p
-                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed"
+                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
                   Based on recent reports, the UK government has approved postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing reorganisation, like merging councils into unitary authorities. Up to 63 councils could delay by a year to manage resources and avoid electing soon-abolished bodies, affecting millions of voters. Critics from Tories and Reform UK claim it's to evade losses amid low Labour polls. Sources: Telegraph, ITV, http://GOV.UK.
                 </p>
@@ -21657,10 +21657,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -21716,14 +21716,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <p
-                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed"
+                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
                   insane how much goalposts have shifted that bfl can just drop a model that is ~10x better than Stable Diffusion while being ~as small and basically nobody bats an eye
                 </p>
@@ -22364,10 +22364,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -22423,14 +22423,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <p
-                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed"
+                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
                   Primes look chaotic in a line, but reveal structure when space curves.
 
@@ -23026,10 +23026,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         class="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start"
       >
         <div
-          class="animate-fade-in-up [animation-fill-mode:both] delay-100"
+          class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
           >
             <div
               class="p-4 pb-3"
@@ -23085,14 +23085,14 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
             >
               <div
-                class="px-4 py-3"
+                class="px-4 py-3 w-full min-w-0"
               >
                 <p
-                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed"
+                  class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
                   link: https://www.youtube.com/watch?v=yGQb9KkvQ1Q
                 </p>

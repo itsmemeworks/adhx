@@ -177,8 +177,8 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
           {/* Two Column Layout - Tops align, two columns from tablet (md) breakpoint */}
           <div className="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start">
             {/* Tweet Card - Left Column - Fixed max heights for scrollable mobile, viewport-based for desktop */}
-            <div className="animate-fade-in-up [animation-fill-mode:both] delay-100">
-              <div className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] ${isExpanded ? '' : 'max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]'}`}>
+            <div className="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0">
+              <div className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 ${isExpanded ? '' : 'max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]'}`}>
                 {/* Author Header */}
                 <div className="p-4 pb-3">
                   <div className="flex items-center gap-3">
@@ -219,11 +219,11 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
 
                 {/* Scrollable Content Area - overflow-x-hidden prevents horizontal scroll on mobile */}
                 <div
-                  className={`flex-1 min-h-0 overflow-x-hidden ${isExpanded ? '' : 'overflow-y-auto'}`}
+                  className={`flex-1 min-h-0 overflow-x-hidden w-full min-w-0 ${isExpanded ? '' : 'overflow-y-auto'}`}
                   style={{ fontFamily: `var(--font-${selectedFont})` }}
                 >
                 {/* Tweet Text or Article */}
-                <div className="px-4 py-3">
+                <div className="px-4 py-3 w-full min-w-0">
                   {tweet.article ? (
                     // X Article display
                     <div className="space-y-3">
@@ -281,8 +281,8 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                       </div>
                     </div>
                   ) : (
-                    // Regular tweet text
-                    <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed">
+                    // Regular tweet text - break-all ensures long text wraps on mobile
+                    <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]">
                       {tweet.text}
                     </p>
                   )}
