@@ -17,6 +17,21 @@ if (typeof window !== 'undefined') {
       cleanup()
     })
   })
+
+  // Mock window.matchMedia for components that use media queries (e.g., isTouchDevice)
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: query === '(hover: hover)', // Desktop by default
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  })
 }
 
 // Mock Next.js navigation (works in both environments)
