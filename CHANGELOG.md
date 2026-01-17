@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.14.5](https://github.com/itsmemeworks/adhx/compare/v1.14.4...v1.14.5) (2026-01-17)
+
+
+### Bug Fixes
+
+* use dynamic aspect ratio for videos on landing page preview ([#70](https://github.com/itsmemeworks/adhx/issues/70)) ([d76cc07](https://github.com/itsmemeworks/adhx/commit/d76cc07d3078f6c4b30247d07f10e284ecfc0531))
+
 ## [1.14.4](https://github.com/itsmemeworks/adhx/compare/v1.14.3...v1.14.4) (2026-01-16)
 
 
