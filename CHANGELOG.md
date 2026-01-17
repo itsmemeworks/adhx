@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.15.0](https://github.com/itsmemeworks/adhx/compare/v1.14.5...v1.15.0) (2026-01-17)
+
+
+### Features
+
+* improve mobile header layout and add media share functionality ([#73](https://github.com/itsmemeworks/adhx/issues/73)) ([58a8af8](https://github.com/itsmemeworks/adhx/commit/58a8af8dac76242341a20e3de78f72872157eb3a))
+
 ## [1.14.5](https://github.com/itsmemeworks/adhx/compare/v1.14.4...v1.14.5) (2026-01-17)
 
 
