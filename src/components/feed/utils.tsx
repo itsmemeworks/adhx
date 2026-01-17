@@ -35,6 +35,60 @@ export async function handleDownloadMedia(e: React.MouseEvent, url: string, file
 }
 
 /**
+ * Share or download media - uses Web Share API on mobile, falls back to download
+ * This enables native share sheets on touch devices (WhatsApp, Messages, etc.)
+ */
+export async function handleShareMedia(
+  e: React.MouseEvent,
+  url: string,
+  filename: string,
+  mimeType: string = 'image/jpeg'
+): Promise<{ success: boolean; method: 'share' | 'download' }> {
+  e.stopPropagation()
+  e.preventDefault()
+
+  try {
+    const response = await fetch(url)
+    const blob = await response.blob()
+    const file = new File([blob], filename, { type: mimeType })
+
+    // Check if file sharing is supported (mobile browsers)
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file] })
+      return { success: true, method: 'share' }
+    }
+
+    // Fallback to download for desktop or unsupported browsers
+    const blobUrl = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = blobUrl
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 100)
+
+    return { success: true, method: 'download' }
+  } catch (error) {
+    // AbortError means user cancelled the share sheet - still counts as handled
+    if (error instanceof Error && error.name === 'AbortError') {
+      return { success: true, method: 'share' }
+    }
+    console.error('Share failed:', error)
+    return { success: false, method: 'share' }
+  }
+}
+
+/**
+ * Detect if device is touch-only (no hover capability)
+ * Uses CSS media query which is more reliable than touch event detection
+ */
+export function isTouchDevice(): boolean {
+  if (typeof window === 'undefined') return false
+  return !window.matchMedia('(hover: hover)').matches
+}
+
+/**
  * Render media with share/download overlay buttons
  */
 function MediaWithActions({

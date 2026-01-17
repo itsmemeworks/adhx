@@ -134,7 +134,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
           >
             <div
               class="p-4 pb-3"
@@ -190,7 +190,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -212,26 +212,182 @@ Open this to see the entire post
                 <div
                   class="grid grid-cols-2 gap-1 rounded-xl overflow-hidden"
                 >
-                  <img
-                    alt=""
-                    class="w-full h-28 sm:h-32 md:h-34 lg:h-36 object-cover"
-                    src="https://pbs.twimg.com/media/G-e63eNWkAATqEB.jpg?name=orig"
-                  />
-                  <img
-                    alt=""
-                    class="w-full h-28 sm:h-32 md:h-34 lg:h-36 object-cover"
-                    src="https://pbs.twimg.com/media/G-e63eLWoAAvm24.png?name=orig"
-                  />
-                  <img
-                    alt=""
-                    class="w-full h-28 sm:h-32 md:h-34 lg:h-36 object-cover"
-                    src="https://pbs.twimg.com/media/G-e63ePW0AE-WYx.png?name=orig"
-                  />
-                  <img
-                    alt=""
-                    class="w-full h-28 sm:h-32 md:h-34 lg:h-36 object-cover"
-                    src="https://pbs.twimg.com/media/G-e63eMXUAAQo4L.jpg?name=orig"
-                  />
+                  <div
+                    class="relative group/img"
+                  >
+                    <img
+                      alt=""
+                      class="w-full h-28 sm:h-32 md:h-34 lg:h-36 object-cover"
+                      src="https://pbs.twimg.com/media/G-e63eNWkAATqEB.jpg?name=orig"
+                    />
+                    <div
+                      class="absolute top-2 right-2"
+                    >
+                      <button
+                        aria-label="Download media"
+                        class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover/img:opacity-100"
+                        title="Download"
+                      >
+                        <svg
+                          class="lucide lucide-download w-4 h-4 text-white"
+                          fill="none"
+                          height="24"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          viewBox="0 0 24 24"
+                          width="24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                          />
+                          <polyline
+                            points="7 10 12 15 17 10"
+                          />
+                          <line
+                            x1="12"
+                            x2="12"
+                            y1="15"
+                            y2="3"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div
+                    class="relative group/img"
+                  >
+                    <img
+                      alt=""
+                      class="w-full h-28 sm:h-32 md:h-34 lg:h-36 object-cover"
+                      src="https://pbs.twimg.com/media/G-e63eLWoAAvm24.png?name=orig"
+                    />
+                    <div
+                      class="absolute top-2 right-2"
+                    >
+                      <button
+                        aria-label="Download media"
+                        class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover/img:opacity-100"
+                        title="Download"
+                      >
+                        <svg
+                          class="lucide lucide-download w-4 h-4 text-white"
+                          fill="none"
+                          height="24"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          viewBox="0 0 24 24"
+                          width="24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                          />
+                          <polyline
+                            points="7 10 12 15 17 10"
+                          />
+                          <line
+                            x1="12"
+                            x2="12"
+                            y1="15"
+                            y2="3"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div
+                    class="relative group/img"
+                  >
+                    <img
+                      alt=""
+                      class="w-full h-28 sm:h-32 md:h-34 lg:h-36 object-cover"
+                      src="https://pbs.twimg.com/media/G-e63ePW0AE-WYx.png?name=orig"
+                    />
+                    <div
+                      class="absolute top-2 right-2"
+                    >
+                      <button
+                        aria-label="Download media"
+                        class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover/img:opacity-100"
+                        title="Download"
+                      >
+                        <svg
+                          class="lucide lucide-download w-4 h-4 text-white"
+                          fill="none"
+                          height="24"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          viewBox="0 0 24 24"
+                          width="24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                          />
+                          <polyline
+                            points="7 10 12 15 17 10"
+                          />
+                          <line
+                            x1="12"
+                            x2="12"
+                            y1="15"
+                            y2="3"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div
+                    class="relative group/img"
+                  >
+                    <img
+                      alt=""
+                      class="w-full h-28 sm:h-32 md:h-34 lg:h-36 object-cover"
+                      src="https://pbs.twimg.com/media/G-e63eMXUAAQo4L.jpg?name=orig"
+                    />
+                    <div
+                      class="absolute top-2 right-2"
+                    >
+                      <button
+                        aria-label="Download media"
+                        class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover/img:opacity-100"
+                        title="Download"
+                      >
+                        <svg
+                          class="lucide lucide-download w-4 h-4 text-white"
+                          fill="none"
+                          height="24"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          viewBox="0 0 24 24"
+                          width="24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                          />
+                          <polyline
+                            points="7 10 12 15 17 10"
+                          />
+                          <line
+                            x1="12"
+                            x2="12"
+                            y1="15"
+                            y2="3"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -320,47 +476,6 @@ Open this to see the entire post
                 </svg>
                 370.0K
               </span>
-              <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
-              >
-                <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="15 3 21 3 21 9"
-                  />
-                  <polyline
-                    points="9 21 3 21 3 15"
-                  />
-                  <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Expand
-                </span>
-              </button>
             </div>
           </div>
           <div
@@ -4458,7 +4573,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
           >
             <div
               class="p-4 pb-3"
@@ -4514,7 +4629,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -4537,24 +4652,54 @@ Live now 🚀
               <div
                 class="px-4 pb-3"
               >
-                <button
-                  class="relative w-full max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden group"
-                  style="aspect-ratio: 1280 / 720;"
+                <div
+                  class="relative group"
                 >
-                  <img
-                    alt=""
-                    class="w-full h-full object-cover"
-                    src="https://pbs.twimg.com/amplify_video_thumb/2009617113384706048/img/uUdl5DT48QRZSEHb.jpg"
-                  />
-                  <div
-                    class="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors"
+                  <button
+                    class="relative w-full max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden"
+                    style="aspect-ratio: 1280 / 720;"
                   >
+                    <img
+                      alt=""
+                      class="w-full h-full object-cover"
+                      src="https://pbs.twimg.com/amplify_video_thumb/2009617113384706048/img/uUdl5DT48QRZSEHb.jpg"
+                    />
                     <div
-                      class="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform"
+                      class="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors"
+                    >
+                      <div
+                        class="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform"
+                      >
+                        <svg
+                          class="lucide lucide-play w-7 h-7 text-gray-900 ml-1"
+                          fill="currentColor"
+                          height="24"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          viewBox="0 0 24 24"
+                          width="24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <polygon
+                            points="6 3 20 12 6 21 6 3"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                  </button>
+                  <div
+                    class="absolute top-3 right-3"
+                  >
+                    <button
+                      aria-label="Download media"
+                      class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover:opacity-100"
+                      title="Download"
                     >
                       <svg
-                        class="lucide lucide-play w-7 h-7 text-gray-900 ml-1"
-                        fill="currentColor"
+                        class="lucide lucide-download w-4 h-4 text-white"
+                        fill="none"
                         height="24"
                         stroke="currentColor"
                         stroke-linecap="round"
@@ -4564,13 +4709,22 @@ Live now 🚀
                         width="24"
                         xmlns="http://www.w3.org/2000/svg"
                       >
-                        <polygon
-                          points="6 3 20 12 6 21 6 3"
+                        <path
+                          d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                        />
+                        <polyline
+                          points="7 10 12 15 17 10"
+                        />
+                        <line
+                          x1="12"
+                          x2="12"
+                          y1="15"
+                          y2="3"
                         />
                       </svg>
-                    </div>
+                    </button>
                   </div>
-                </button>
+                </div>
               </div>
             </div>
             <div
@@ -4658,47 +4812,6 @@ Live now 🚀
                 </svg>
                 446.6K
               </span>
-              <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
-              >
-                <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="15 3 21 3 21 9"
-                  />
-                  <polyline
-                    points="9 21 3 21 3 15"
-                  />
-                  <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Expand
-                </span>
-              </button>
             </div>
           </div>
           <div
@@ -5145,7 +5258,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
           >
             <div
               class="p-4 pb-3"
@@ -5201,7 +5314,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -5255,13 +5368,48 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 class="px-4 pb-3"
               >
                 <div
-                  class="rounded-xl overflow-hidden"
+                  class="rounded-xl overflow-hidden relative group"
                 >
                   <img
                     alt="Tweet media"
-                    class="w-full max-w-full object-cover max-h-[250px] sm:max-h-[300px] md:max-h-[350px] lg:max-h-[400px]"
+                    class="w-full max-w-full object-contain"
                     src="https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg?name=orig"
                   />
+                  <div
+                    class="absolute top-3 right-3"
+                  >
+                    <button
+                      aria-label="Download media"
+                      class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover:opacity-100"
+                      title="Download"
+                    >
+                      <svg
+                        class="lucide lucide-download w-4 h-4 text-white"
+                        fill="none"
+                        height="24"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        viewBox="0 0 24 24"
+                        width="24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                        />
+                        <polyline
+                          points="7 10 12 15 17 10"
+                        />
+                        <line
+                          x1="12"
+                          x2="12"
+                          y1="15"
+                          y2="3"
+                        />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -5350,47 +5498,6 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 </svg>
                 746.5K
               </span>
-              <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
-              >
-                <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="15 3 21 3 21 9"
-                  />
-                  <polyline
-                    points="9 21 3 21 3 15"
-                  />
-                  <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Expand
-                </span>
-              </button>
             </div>
           </div>
           <div
@@ -5837,7 +5944,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
           >
             <div
               class="p-4 pb-3"
@@ -5893,7 +6000,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -5922,16 +6029,94 @@ His days are numbered
                 <div
                   class="grid grid-cols-2 gap-1 rounded-xl overflow-hidden"
                 >
-                  <img
-                    alt=""
-                    class="w-full h-32 sm:h-40 md:h-44 lg:h-48 object-cover"
-                    src="https://pbs.twimg.com/media/G-w2zr6aEAAt-FN.png?name=orig"
-                  />
-                  <img
-                    alt=""
-                    class="w-full h-32 sm:h-40 md:h-44 lg:h-48 object-cover"
-                    src="https://pbs.twimg.com/media/G-w24jMbQAQQCqp.png?name=orig"
-                  />
+                  <div
+                    class="relative group/img"
+                  >
+                    <img
+                      alt=""
+                      class="w-full h-32 sm:h-40 md:h-44 lg:h-48 object-cover"
+                      src="https://pbs.twimg.com/media/G-w2zr6aEAAt-FN.png?name=orig"
+                    />
+                    <div
+                      class="absolute top-2 right-2"
+                    >
+                      <button
+                        aria-label="Download media"
+                        class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover/img:opacity-100"
+                        title="Download"
+                      >
+                        <svg
+                          class="lucide lucide-download w-4 h-4 text-white"
+                          fill="none"
+                          height="24"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          viewBox="0 0 24 24"
+                          width="24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                          />
+                          <polyline
+                            points="7 10 12 15 17 10"
+                          />
+                          <line
+                            x1="12"
+                            x2="12"
+                            y1="15"
+                            y2="3"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div
+                    class="relative group/img"
+                  >
+                    <img
+                      alt=""
+                      class="w-full h-32 sm:h-40 md:h-44 lg:h-48 object-cover"
+                      src="https://pbs.twimg.com/media/G-w24jMbQAQQCqp.png?name=orig"
+                    />
+                    <div
+                      class="absolute top-2 right-2"
+                    >
+                      <button
+                        aria-label="Download media"
+                        class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover/img:opacity-100"
+                        title="Download"
+                      >
+                        <svg
+                          class="lucide lucide-download w-4 h-4 text-white"
+                          fill="none"
+                          height="24"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          viewBox="0 0 24 24"
+                          width="24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                          />
+                          <polyline
+                            points="7 10 12 15 17 10"
+                          />
+                          <line
+                            x1="12"
+                            x2="12"
+                            y1="15"
+                            y2="3"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -6020,47 +6205,6 @@ His days are numbered
                 </svg>
                 49.2K
               </span>
-              <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
-              >
-                <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="15 3 21 3 21 9"
-                  />
-                  <polyline
-                    points="9 21 3 21 3 15"
-                  />
-                  <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Expand
-                </span>
-              </button>
             </div>
           </div>
           <div
@@ -6696,13 +6840,48 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                     class="px-3 pb-3"
                   >
                     <div
-                      class="rounded-xl overflow-hidden"
+                      class="rounded-xl overflow-hidden relative group"
                     >
                       <img
                         alt="Tweet media"
-                        class="w-full max-w-full object-cover max-h-[250px] sm:max-h-[300px] md:max-h-[350px] lg:max-h-[400px]"
+                        class="w-full max-w-full object-contain"
                         src="https://pbs.twimg.com/media/G-tNQK3akAAXwrR.jpg?name=orig"
                       />
+                      <div
+                        class="absolute top-3 right-3"
+                      >
+                        <button
+                          aria-label="Download media"
+                          class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover:opacity-100"
+                          title="Download"
+                        >
+                          <svg
+                            class="lucide lucide-download w-4 h-4 text-white"
+                            fill="none"
+                            height="24"
+                            stroke="currentColor"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            viewBox="0 0 24 24"
+                            width="24"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                            />
+                            <polyline
+                              points="7 10 12 15 17 10"
+                            />
+                            <line
+                              x1="12"
+                              x2="12"
+                              y1="15"
+                              y2="3"
+                            />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -8072,13 +8251,48 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                     class="px-3 pb-3"
                   >
                     <div
-                      class="rounded-xl overflow-hidden"
+                      class="rounded-xl overflow-hidden relative group"
                     >
                       <img
                         alt="Tweet media"
-                        class="w-full max-w-full object-cover max-h-[250px] sm:max-h-[300px] md:max-h-[350px] lg:max-h-[400px]"
+                        class="w-full max-w-full object-contain"
                         src="https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg?name=orig"
                       />
+                      <div
+                        class="absolute top-3 right-3"
+                      >
+                        <button
+                          aria-label="Download media"
+                          class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover:opacity-100"
+                          title="Download"
+                        >
+                          <svg
+                            class="lucide lucide-download w-4 h-4 text-white"
+                            fill="none"
+                            height="24"
+                            stroke="currentColor"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            viewBox="0 0 24 24"
+                            width="24"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                            />
+                            <polyline
+                              points="7 10 12 15 17 10"
+                            />
+                            <line
+                              x1="12"
+                              x2="12"
+                              y1="15"
+                              y2="3"
+                            />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -10101,24 +10315,54 @@ Try it for free in our demo app (link in the thread).
                   <div
                     class="px-3 pb-3"
                   >
-                    <button
-                      class="relative w-full max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden group"
-                      style="aspect-ratio: 972 / 1080;"
+                    <div
+                      class="relative group"
                     >
-                      <img
-                        alt=""
-                        class="w-full h-full object-cover"
-                        src="https://pbs.twimg.com/amplify_video_thumb/2011825767634911237/img/rRqDWGszLMh8F1zp.jpg"
-                      />
-                      <div
-                        class="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors"
+                      <button
+                        class="relative w-full max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden"
+                        style="aspect-ratio: 972 / 1080;"
                       >
+                        <img
+                          alt=""
+                          class="w-full h-full object-cover"
+                          src="https://pbs.twimg.com/amplify_video_thumb/2011825767634911237/img/rRqDWGszLMh8F1zp.jpg"
+                        />
                         <div
-                          class="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform"
+                          class="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors"
+                        >
+                          <div
+                            class="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform"
+                          >
+                            <svg
+                              class="lucide lucide-play w-7 h-7 text-gray-900 ml-1"
+                              fill="currentColor"
+                              height="24"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                              width="24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <polygon
+                                points="6 3 20 12 6 21 6 3"
+                              />
+                            </svg>
+                          </div>
+                        </div>
+                      </button>
+                      <div
+                        class="absolute top-3 right-3"
+                      >
+                        <button
+                          aria-label="Download media"
+                          class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover:opacity-100"
+                          title="Download"
                         >
                           <svg
-                            class="lucide lucide-play w-7 h-7 text-gray-900 ml-1"
-                            fill="currentColor"
+                            class="lucide lucide-download w-4 h-4 text-white"
+                            fill="none"
                             height="24"
                             stroke="currentColor"
                             stroke-linecap="round"
@@ -10128,13 +10372,22 @@ Try it for free in our demo app (link in the thread).
                             width="24"
                             xmlns="http://www.w3.org/2000/svg"
                           >
-                            <polygon
-                              points="6 3 20 12 6 21 6 3"
+                            <path
+                              d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                            />
+                            <polyline
+                              points="7 10 12 15 17 10"
+                            />
+                            <line
+                              x1="12"
+                              x2="12"
+                              y1="15"
+                              y2="3"
                             />
                           </svg>
-                        </div>
+                        </button>
                       </div>
-                    </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -10711,7 +10964,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
           >
             <div
               class="p-4 pb-3"
@@ -10767,7 +11020,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -10786,24 +11039,54 @@ Hidden order.
               <div
                 class="px-4 pb-3"
               >
-                <button
-                  class="relative w-full max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden group"
-                  style="aspect-ratio: 1080 / 1920;"
+                <div
+                  class="relative group"
                 >
-                  <img
-                    alt=""
-                    class="w-full h-full object-cover"
-                    src="https://pbs.twimg.com/amplify_video_thumb/2011857732484423680/img/wFNhWwXUnF0woRwH.jpg"
-                  />
-                  <div
-                    class="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors"
+                  <button
+                    class="relative w-full max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden"
+                    style="aspect-ratio: 1080 / 1920;"
                   >
+                    <img
+                      alt=""
+                      class="w-full h-full object-cover"
+                      src="https://pbs.twimg.com/amplify_video_thumb/2011857732484423680/img/wFNhWwXUnF0woRwH.jpg"
+                    />
                     <div
-                      class="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform"
+                      class="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors"
+                    >
+                      <div
+                        class="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform"
+                      >
+                        <svg
+                          class="lucide lucide-play w-7 h-7 text-gray-900 ml-1"
+                          fill="currentColor"
+                          height="24"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          viewBox="0 0 24 24"
+                          width="24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <polygon
+                            points="6 3 20 12 6 21 6 3"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                  </button>
+                  <div
+                    class="absolute top-3 right-3"
+                  >
+                    <button
+                      aria-label="Download media"
+                      class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover:opacity-100"
+                      title="Download"
                     >
                       <svg
-                        class="lucide lucide-play w-7 h-7 text-gray-900 ml-1"
-                        fill="currentColor"
+                        class="lucide lucide-download w-4 h-4 text-white"
+                        fill="none"
                         height="24"
                         stroke="currentColor"
                         stroke-linecap="round"
@@ -10813,13 +11096,22 @@ Hidden order.
                         width="24"
                         xmlns="http://www.w3.org/2000/svg"
                       >
-                        <polygon
-                          points="6 3 20 12 6 21 6 3"
+                        <path
+                          d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                        />
+                        <polyline
+                          points="7 10 12 15 17 10"
+                        />
+                        <line
+                          x1="12"
+                          x2="12"
+                          y1="15"
+                          y2="3"
                         />
                       </svg>
-                    </div>
+                    </button>
                   </div>
-                </button>
+                </div>
               </div>
             </div>
             <div
@@ -10907,47 +11199,6 @@ Hidden order.
                 </svg>
                 146.0K
               </span>
-              <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
-              >
-                <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="15 3 21 3 21 9"
-                  />
-                  <polyline
-                    points="9 21 3 21 3 15"
-                  />
-                  <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Expand
-                </span>
-              </button>
             </div>
           </div>
           <div
@@ -12035,7 +12286,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
           >
             <div
               class="p-4 pb-3"
@@ -12091,7 +12342,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -12113,26 +12364,182 @@ Open this to see the entire post
                 <div
                   class="grid grid-cols-2 gap-1 rounded-xl overflow-hidden"
                 >
-                  <img
-                    alt=""
-                    class="w-full h-28 sm:h-32 md:h-34 lg:h-36 object-cover"
-                    src="https://pbs.twimg.com/media/G-e63eNWkAATqEB.jpg?name=orig"
-                  />
-                  <img
-                    alt=""
-                    class="w-full h-28 sm:h-32 md:h-34 lg:h-36 object-cover"
-                    src="https://pbs.twimg.com/media/G-e63eLWoAAvm24.png?name=orig"
-                  />
-                  <img
-                    alt=""
-                    class="w-full h-28 sm:h-32 md:h-34 lg:h-36 object-cover"
-                    src="https://pbs.twimg.com/media/G-e63ePW0AE-WYx.png?name=orig"
-                  />
-                  <img
-                    alt=""
-                    class="w-full h-28 sm:h-32 md:h-34 lg:h-36 object-cover"
-                    src="https://pbs.twimg.com/media/G-e63eMXUAAQo4L.jpg?name=orig"
-                  />
+                  <div
+                    class="relative group/img"
+                  >
+                    <img
+                      alt=""
+                      class="w-full h-28 sm:h-32 md:h-34 lg:h-36 object-cover"
+                      src="https://pbs.twimg.com/media/G-e63eNWkAATqEB.jpg?name=orig"
+                    />
+                    <div
+                      class="absolute top-2 right-2"
+                    >
+                      <button
+                        aria-label="Download media"
+                        class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover/img:opacity-100"
+                        title="Download"
+                      >
+                        <svg
+                          class="lucide lucide-download w-4 h-4 text-white"
+                          fill="none"
+                          height="24"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          viewBox="0 0 24 24"
+                          width="24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                          />
+                          <polyline
+                            points="7 10 12 15 17 10"
+                          />
+                          <line
+                            x1="12"
+                            x2="12"
+                            y1="15"
+                            y2="3"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div
+                    class="relative group/img"
+                  >
+                    <img
+                      alt=""
+                      class="w-full h-28 sm:h-32 md:h-34 lg:h-36 object-cover"
+                      src="https://pbs.twimg.com/media/G-e63eLWoAAvm24.png?name=orig"
+                    />
+                    <div
+                      class="absolute top-2 right-2"
+                    >
+                      <button
+                        aria-label="Download media"
+                        class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover/img:opacity-100"
+                        title="Download"
+                      >
+                        <svg
+                          class="lucide lucide-download w-4 h-4 text-white"
+                          fill="none"
+                          height="24"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          viewBox="0 0 24 24"
+                          width="24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                          />
+                          <polyline
+                            points="7 10 12 15 17 10"
+                          />
+                          <line
+                            x1="12"
+                            x2="12"
+                            y1="15"
+                            y2="3"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div
+                    class="relative group/img"
+                  >
+                    <img
+                      alt=""
+                      class="w-full h-28 sm:h-32 md:h-34 lg:h-36 object-cover"
+                      src="https://pbs.twimg.com/media/G-e63ePW0AE-WYx.png?name=orig"
+                    />
+                    <div
+                      class="absolute top-2 right-2"
+                    >
+                      <button
+                        aria-label="Download media"
+                        class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover/img:opacity-100"
+                        title="Download"
+                      >
+                        <svg
+                          class="lucide lucide-download w-4 h-4 text-white"
+                          fill="none"
+                          height="24"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          viewBox="0 0 24 24"
+                          width="24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                          />
+                          <polyline
+                            points="7 10 12 15 17 10"
+                          />
+                          <line
+                            x1="12"
+                            x2="12"
+                            y1="15"
+                            y2="3"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div
+                    class="relative group/img"
+                  >
+                    <img
+                      alt=""
+                      class="w-full h-28 sm:h-32 md:h-34 lg:h-36 object-cover"
+                      src="https://pbs.twimg.com/media/G-e63eMXUAAQo4L.jpg?name=orig"
+                    />
+                    <div
+                      class="absolute top-2 right-2"
+                    >
+                      <button
+                        aria-label="Download media"
+                        class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover/img:opacity-100"
+                        title="Download"
+                      >
+                        <svg
+                          class="lucide lucide-download w-4 h-4 text-white"
+                          fill="none"
+                          height="24"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          viewBox="0 0 24 24"
+                          width="24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                          />
+                          <polyline
+                            points="7 10 12 15 17 10"
+                          />
+                          <line
+                            x1="12"
+                            x2="12"
+                            y1="15"
+                            y2="3"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -12221,47 +12628,6 @@ Open this to see the entire post
                 </svg>
                 370.0K
               </span>
-              <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
-              >
-                <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="15 3 21 3 21 9"
-                  />
-                  <polyline
-                    points="9 21 3 21 3 15"
-                  />
-                  <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Expand
-                </span>
-              </button>
             </div>
           </div>
           <div
@@ -16299,7 +16665,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
           >
             <div
               class="p-4 pb-3"
@@ -16355,7 +16721,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -16378,24 +16744,54 @@ Live now 🚀
               <div
                 class="px-4 pb-3"
               >
-                <button
-                  class="relative w-full max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden group"
-                  style="aspect-ratio: 1280 / 720;"
+                <div
+                  class="relative group"
                 >
-                  <img
-                    alt=""
-                    class="w-full h-full object-cover"
-                    src="https://pbs.twimg.com/amplify_video_thumb/2009617113384706048/img/uUdl5DT48QRZSEHb.jpg"
-                  />
-                  <div
-                    class="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors"
+                  <button
+                    class="relative w-full max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden"
+                    style="aspect-ratio: 1280 / 720;"
                   >
+                    <img
+                      alt=""
+                      class="w-full h-full object-cover"
+                      src="https://pbs.twimg.com/amplify_video_thumb/2009617113384706048/img/uUdl5DT48QRZSEHb.jpg"
+                    />
                     <div
-                      class="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform"
+                      class="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors"
+                    >
+                      <div
+                        class="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform"
+                      >
+                        <svg
+                          class="lucide lucide-play w-7 h-7 text-gray-900 ml-1"
+                          fill="currentColor"
+                          height="24"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          viewBox="0 0 24 24"
+                          width="24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <polygon
+                            points="6 3 20 12 6 21 6 3"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                  </button>
+                  <div
+                    class="absolute top-3 right-3"
+                  >
+                    <button
+                      aria-label="Download media"
+                      class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover:opacity-100"
+                      title="Download"
                     >
                       <svg
-                        class="lucide lucide-play w-7 h-7 text-gray-900 ml-1"
-                        fill="currentColor"
+                        class="lucide lucide-download w-4 h-4 text-white"
+                        fill="none"
                         height="24"
                         stroke="currentColor"
                         stroke-linecap="round"
@@ -16405,13 +16801,22 @@ Live now 🚀
                         width="24"
                         xmlns="http://www.w3.org/2000/svg"
                       >
-                        <polygon
-                          points="6 3 20 12 6 21 6 3"
+                        <path
+                          d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                        />
+                        <polyline
+                          points="7 10 12 15 17 10"
+                        />
+                        <line
+                          x1="12"
+                          x2="12"
+                          y1="15"
+                          y2="3"
                         />
                       </svg>
-                    </div>
+                    </button>
                   </div>
-                </button>
+                </div>
               </div>
             </div>
             <div
@@ -16499,47 +16904,6 @@ Live now 🚀
                 </svg>
                 446.6K
               </span>
-              <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
-              >
-                <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="15 3 21 3 21 9"
-                  />
-                  <polyline
-                    points="9 21 3 21 3 15"
-                  />
-                  <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Expand
-                </span>
-              </button>
             </div>
           </div>
           <div
@@ -16966,7 +17330,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
           >
             <div
               class="p-4 pb-3"
@@ -17022,7 +17386,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -17076,13 +17440,48 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 class="px-4 pb-3"
               >
                 <div
-                  class="rounded-xl overflow-hidden"
+                  class="rounded-xl overflow-hidden relative group"
                 >
                   <img
                     alt="Tweet media"
-                    class="w-full max-w-full object-cover max-h-[250px] sm:max-h-[300px] md:max-h-[350px] lg:max-h-[400px]"
+                    class="w-full max-w-full object-contain"
                     src="https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg?name=orig"
                   />
+                  <div
+                    class="absolute top-3 right-3"
+                  >
+                    <button
+                      aria-label="Download media"
+                      class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover:opacity-100"
+                      title="Download"
+                    >
+                      <svg
+                        class="lucide lucide-download w-4 h-4 text-white"
+                        fill="none"
+                        height="24"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        viewBox="0 0 24 24"
+                        width="24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                        />
+                        <polyline
+                          points="7 10 12 15 17 10"
+                        />
+                        <line
+                          x1="12"
+                          x2="12"
+                          y1="15"
+                          y2="3"
+                        />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -17171,47 +17570,6 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 </svg>
                 746.5K
               </span>
-              <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
-              >
-                <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="15 3 21 3 21 9"
-                  />
-                  <polyline
-                    points="9 21 3 21 3 15"
-                  />
-                  <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Expand
-                </span>
-              </button>
             </div>
           </div>
           <div
@@ -17638,7 +17996,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
           >
             <div
               class="p-4 pb-3"
@@ -17694,7 +18052,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -17723,16 +18081,94 @@ His days are numbered
                 <div
                   class="grid grid-cols-2 gap-1 rounded-xl overflow-hidden"
                 >
-                  <img
-                    alt=""
-                    class="w-full h-32 sm:h-40 md:h-44 lg:h-48 object-cover"
-                    src="https://pbs.twimg.com/media/G-w2zr6aEAAt-FN.png?name=orig"
-                  />
-                  <img
-                    alt=""
-                    class="w-full h-32 sm:h-40 md:h-44 lg:h-48 object-cover"
-                    src="https://pbs.twimg.com/media/G-w24jMbQAQQCqp.png?name=orig"
-                  />
+                  <div
+                    class="relative group/img"
+                  >
+                    <img
+                      alt=""
+                      class="w-full h-32 sm:h-40 md:h-44 lg:h-48 object-cover"
+                      src="https://pbs.twimg.com/media/G-w2zr6aEAAt-FN.png?name=orig"
+                    />
+                    <div
+                      class="absolute top-2 right-2"
+                    >
+                      <button
+                        aria-label="Download media"
+                        class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover/img:opacity-100"
+                        title="Download"
+                      >
+                        <svg
+                          class="lucide lucide-download w-4 h-4 text-white"
+                          fill="none"
+                          height="24"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          viewBox="0 0 24 24"
+                          width="24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                          />
+                          <polyline
+                            points="7 10 12 15 17 10"
+                          />
+                          <line
+                            x1="12"
+                            x2="12"
+                            y1="15"
+                            y2="3"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div
+                    class="relative group/img"
+                  >
+                    <img
+                      alt=""
+                      class="w-full h-32 sm:h-40 md:h-44 lg:h-48 object-cover"
+                      src="https://pbs.twimg.com/media/G-w24jMbQAQQCqp.png?name=orig"
+                    />
+                    <div
+                      class="absolute top-2 right-2"
+                    >
+                      <button
+                        aria-label="Download media"
+                        class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover/img:opacity-100"
+                        title="Download"
+                      >
+                        <svg
+                          class="lucide lucide-download w-4 h-4 text-white"
+                          fill="none"
+                          height="24"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          viewBox="0 0 24 24"
+                          width="24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                          />
+                          <polyline
+                            points="7 10 12 15 17 10"
+                          />
+                          <line
+                            x1="12"
+                            x2="12"
+                            y1="15"
+                            y2="3"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -17821,47 +18257,6 @@ His days are numbered
                 </svg>
                 49.2K
               </span>
-              <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
-              >
-                <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="15 3 21 3 21 9"
-                  />
-                  <polyline
-                    points="9 21 3 21 3 15"
-                  />
-                  <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Expand
-                </span>
-              </button>
             </div>
           </div>
           <div
@@ -18477,13 +18872,48 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                     class="px-3 pb-3"
                   >
                     <div
-                      class="rounded-xl overflow-hidden"
+                      class="rounded-xl overflow-hidden relative group"
                     >
                       <img
                         alt="Tweet media"
-                        class="w-full max-w-full object-cover max-h-[250px] sm:max-h-[300px] md:max-h-[350px] lg:max-h-[400px]"
+                        class="w-full max-w-full object-contain"
                         src="https://pbs.twimg.com/media/G-tNQK3akAAXwrR.jpg?name=orig"
                       />
+                      <div
+                        class="absolute top-3 right-3"
+                      >
+                        <button
+                          aria-label="Download media"
+                          class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover:opacity-100"
+                          title="Download"
+                        >
+                          <svg
+                            class="lucide lucide-download w-4 h-4 text-white"
+                            fill="none"
+                            height="24"
+                            stroke="currentColor"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            viewBox="0 0 24 24"
+                            width="24"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                            />
+                            <polyline
+                              points="7 10 12 15 17 10"
+                            />
+                            <line
+                              x1="12"
+                              x2="12"
+                              y1="15"
+                              y2="3"
+                            />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -19813,13 +20243,48 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                     class="px-3 pb-3"
                   >
                     <div
-                      class="rounded-xl overflow-hidden"
+                      class="rounded-xl overflow-hidden relative group"
                     >
                       <img
                         alt="Tweet media"
-                        class="w-full max-w-full object-cover max-h-[250px] sm:max-h-[300px] md:max-h-[350px] lg:max-h-[400px]"
+                        class="w-full max-w-full object-contain"
                         src="https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg?name=orig"
                       />
+                      <div
+                        class="absolute top-3 right-3"
+                      >
+                        <button
+                          aria-label="Download media"
+                          class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover:opacity-100"
+                          title="Download"
+                        >
+                          <svg
+                            class="lucide lucide-download w-4 h-4 text-white"
+                            fill="none"
+                            height="24"
+                            stroke="currentColor"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            viewBox="0 0 24 24"
+                            width="24"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                            />
+                            <polyline
+                              points="7 10 12 15 17 10"
+                            />
+                            <line
+                              x1="12"
+                              x2="12"
+                              y1="15"
+                              y2="3"
+                            />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -21782,24 +22247,54 @@ Try it for free in our demo app (link in the thread).
                   <div
                     class="px-3 pb-3"
                   >
-                    <button
-                      class="relative w-full max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden group"
-                      style="aspect-ratio: 972 / 1080;"
+                    <div
+                      class="relative group"
                     >
-                      <img
-                        alt=""
-                        class="w-full h-full object-cover"
-                        src="https://pbs.twimg.com/amplify_video_thumb/2011825767634911237/img/rRqDWGszLMh8F1zp.jpg"
-                      />
-                      <div
-                        class="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors"
+                      <button
+                        class="relative w-full max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden"
+                        style="aspect-ratio: 972 / 1080;"
                       >
+                        <img
+                          alt=""
+                          class="w-full h-full object-cover"
+                          src="https://pbs.twimg.com/amplify_video_thumb/2011825767634911237/img/rRqDWGszLMh8F1zp.jpg"
+                        />
                         <div
-                          class="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform"
+                          class="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors"
+                        >
+                          <div
+                            class="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform"
+                          >
+                            <svg
+                              class="lucide lucide-play w-7 h-7 text-gray-900 ml-1"
+                              fill="currentColor"
+                              height="24"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                              width="24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <polygon
+                                points="6 3 20 12 6 21 6 3"
+                              />
+                            </svg>
+                          </div>
+                        </div>
+                      </button>
+                      <div
+                        class="absolute top-3 right-3"
+                      >
+                        <button
+                          aria-label="Download media"
+                          class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover:opacity-100"
+                          title="Download"
                         >
                           <svg
-                            class="lucide lucide-play w-7 h-7 text-gray-900 ml-1"
-                            fill="currentColor"
+                            class="lucide lucide-download w-4 h-4 text-white"
+                            fill="none"
                             height="24"
                             stroke="currentColor"
                             stroke-linecap="round"
@@ -21809,13 +22304,22 @@ Try it for free in our demo app (link in the thread).
                             width="24"
                             xmlns="http://www.w3.org/2000/svg"
                           >
-                            <polygon
-                              points="6 3 20 12 6 21 6 3"
+                            <path
+                              d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                            />
+                            <polyline
+                              points="7 10 12 15 17 10"
+                            />
+                            <line
+                              x1="12"
+                              x2="12"
+                              y1="15"
+                              y2="3"
                             />
                           </svg>
-                        </div>
+                        </button>
                       </div>
-                    </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -22372,7 +22876,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
           >
             <div
               class="p-4 pb-3"
@@ -22428,7 +22932,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -22447,24 +22951,54 @@ Hidden order.
               <div
                 class="px-4 pb-3"
               >
-                <button
-                  class="relative w-full max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden group"
-                  style="aspect-ratio: 1080 / 1920;"
+                <div
+                  class="relative group"
                 >
-                  <img
-                    alt=""
-                    class="w-full h-full object-cover"
-                    src="https://pbs.twimg.com/amplify_video_thumb/2011857732484423680/img/wFNhWwXUnF0woRwH.jpg"
-                  />
-                  <div
-                    class="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors"
+                  <button
+                    class="relative w-full max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden"
+                    style="aspect-ratio: 1080 / 1920;"
                   >
+                    <img
+                      alt=""
+                      class="w-full h-full object-cover"
+                      src="https://pbs.twimg.com/amplify_video_thumb/2011857732484423680/img/wFNhWwXUnF0woRwH.jpg"
+                    />
                     <div
-                      class="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform"
+                      class="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors"
+                    >
+                      <div
+                        class="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform"
+                      >
+                        <svg
+                          class="lucide lucide-play w-7 h-7 text-gray-900 ml-1"
+                          fill="currentColor"
+                          height="24"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          viewBox="0 0 24 24"
+                          width="24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <polygon
+                            points="6 3 20 12 6 21 6 3"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                  </button>
+                  <div
+                    class="absolute top-3 right-3"
+                  >
+                    <button
+                      aria-label="Download media"
+                      class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover:opacity-100"
+                      title="Download"
                     >
                       <svg
-                        class="lucide lucide-play w-7 h-7 text-gray-900 ml-1"
-                        fill="currentColor"
+                        class="lucide lucide-download w-4 h-4 text-white"
+                        fill="none"
                         height="24"
                         stroke="currentColor"
                         stroke-linecap="round"
@@ -22474,13 +23008,22 @@ Hidden order.
                         width="24"
                         xmlns="http://www.w3.org/2000/svg"
                       >
-                        <polygon
-                          points="6 3 20 12 6 21 6 3"
+                        <path
+                          d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                        />
+                        <polyline
+                          points="7 10 12 15 17 10"
+                        />
+                        <line
+                          x1="12"
+                          x2="12"
+                          y1="15"
+                          y2="3"
                         />
                       </svg>
-                    </div>
+                    </button>
                   </div>
-                </button>
+                </div>
               </div>
             </div>
             <div
@@ -22568,47 +23111,6 @@ Hidden order.
                 </svg>
                 146.0K
               </span>
-              <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
-              >
-                <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="15 3 21 3 21 9"
-                  />
-                  <polyline
-                    points="9 21 3 21 3 15"
-                  />
-                  <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Expand
-                </span>
-              </button>
             </div>
           </div>
           <div

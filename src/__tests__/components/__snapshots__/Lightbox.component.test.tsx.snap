@@ -95,10 +95,11 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > '4
               src="https://pbs.twimg.com/media/G-e63eNWkAATqEB.jpg?name=orig"
             />
             <div
-              class="absolute top-3 right-3 opacity-0 group-hover/img:opacity-100 transition-opacity"
+              class="absolute top-3 right-3"
             >
               <button
-                class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                aria-label="Download media"
+                class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover/img:opacity-100"
                 title="Download"
               >
                 <svg
@@ -138,10 +139,11 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > '4
               src="https://pbs.twimg.com/media/G-e63eLWoAAvm24.png?name=orig"
             />
             <div
-              class="absolute top-3 right-3 opacity-0 group-hover/img:opacity-100 transition-opacity"
+              class="absolute top-3 right-3"
             >
               <button
-                class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                aria-label="Download media"
+                class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover/img:opacity-100"
                 title="Download"
               >
                 <svg
@@ -181,10 +183,11 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > '4
               src="https://pbs.twimg.com/media/G-e63ePW0AE-WYx.png?name=orig"
             />
             <div
-              class="absolute top-3 right-3 opacity-0 group-hover/img:opacity-100 transition-opacity"
+              class="absolute top-3 right-3"
             >
               <button
-                class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                aria-label="Download media"
+                class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover/img:opacity-100"
                 title="Download"
               >
                 <svg
@@ -224,10 +227,11 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > '4
               src="https://pbs.twimg.com/media/G-e63eMXUAAQo4L.jpg?name=orig"
             />
             <div
-              class="absolute top-3 right-3 opacity-0 group-hover/img:opacity-100 transition-opacity"
+              class="absolute top-3 right-3"
             >
               <button
-                class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                aria-label="Download media"
+                class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover/img:opacity-100"
                 title="Download"
               >
                 <svg
@@ -1622,11 +1626,12 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'a
             src="https://pbs.twimg.com/media/G-E_92mXcAALnrI.jpg"
           />
           <div
-            class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+            class="absolute top-3 right-3"
           >
             <button
-              class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
-              title="Download image"
+              aria-label="Download media"
+              class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover:opacity-100"
+              title="Download"
             >
               <svg
                 class="lucide lucide-download w-4 h-4 text-white"
@@ -3964,10 +3969,11 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'e
             src="/api/media/video?author=moonpay&tweetId=2009626024968118554&quality=full"
           />
           <div
-            class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+            class="absolute top-3 right-3"
           >
             <button
-              class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+              aria-label="Download media"
+              class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover:opacity-100"
               title="Download"
             >
               <svg
@@ -4370,10 +4376,11 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'l
             src="https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg?name=orig"
           />
           <div
-            class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+            class="absolute top-3 right-3"
           >
             <button
-              class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+              aria-label="Download media"
+              class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover:opacity-100"
               title="Download"
             >
               <svg
@@ -4881,10 +4888,11 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'l
               src="https://pbs.twimg.com/media/G-w2zr6aEAAt-FN.png?name=orig"
             />
             <div
-              class="absolute top-3 right-3 opacity-0 group-hover/img:opacity-100 transition-opacity"
+              class="absolute top-3 right-3"
             >
               <button
-                class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                aria-label="Download media"
+                class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover/img:opacity-100"
                 title="Download"
               >
                 <svg
@@ -4924,10 +4932,11 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'l
               src="https://pbs.twimg.com/media/G-w24jMbQAQQCqp.png?name=orig"
             />
             <div
-              class="absolute top-3 right-3 opacity-0 group-hover/img:opacity-100 transition-opacity"
+              class="absolute top-3 right-3"
             >
               <button
-                class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                aria-label="Download media"
+                class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover/img:opacity-100"
                 title="Download"
               >
                 <svg
@@ -7921,10 +7930,11 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'v
             src="/api/media/video?author=Kekius_Sage&tweetId=2011872260118716688&quality=full"
           />
           <div
-            class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+            class="absolute top-3 right-3"
           >
             <button
-              class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+              aria-label="Download media"
+              class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80 opacity-0 group-hover:opacity-100"
               title="Download"
             >
               <svg
