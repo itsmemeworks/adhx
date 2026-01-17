@@ -587,7 +587,15 @@ function MediaGrid({ photos, videos, author, tweetId }: MediaGridProps): React.R
   // Single media item - full width with responsive heights, max-w-full prevents horizontal overflow
   if (totalMedia === 1) {
     if (videos.length > 0) {
-      return <VideoPlayer author={author} tweetId={tweetId} thumbnail={videos[0].thumbnail_url} />
+      return (
+        <VideoPlayer
+          author={author}
+          tweetId={tweetId}
+          thumbnail={videos[0].thumbnail_url}
+          width={videos[0].width}
+          height={videos[0].height}
+        />
+      )
     }
     return (
       <div className="rounded-xl overflow-hidden">
@@ -601,7 +609,14 @@ function MediaGrid({ photos, videos, author, tweetId }: MediaGridProps): React.R
     return (
       <div className="grid grid-cols-2 gap-1 rounded-xl overflow-hidden">
         {videos.map((video, i) => (
-          <VideoPlayer key={`v-${i}`} author={author} tweetId={tweetId} thumbnail={video.thumbnail_url} />
+          <VideoPlayer
+            key={`v-${i}`}
+            author={author}
+            tweetId={tweetId}
+            thumbnail={video.thumbnail_url}
+            width={video.width}
+            height={video.height}
+          />
         ))}
         {photos.map((photo, i) => (
           <img key={`p-${i}`} src={photo.url} alt="" className="w-full h-32 sm:h-40 md:h-44 lg:h-48 object-cover" />
@@ -614,7 +629,14 @@ function MediaGrid({ photos, videos, author, tweetId }: MediaGridProps): React.R
   return (
     <div className="grid grid-cols-2 gap-1 rounded-xl overflow-hidden">
       {videos.map((video, i) => (
-        <VideoPlayer key={`v-${i}`} author={author} tweetId={tweetId} thumbnail={video.thumbnail_url} />
+        <VideoPlayer
+          key={`v-${i}`}
+          author={author}
+          tweetId={tweetId}
+          thumbnail={video.thumbnail_url}
+          width={video.width}
+          height={video.height}
+        />
       ))}
       {photos.slice(0, 4 - videos.length).map((photo, i) => (
         <img key={`p-${i}`} src={photo.url} alt="" className="w-full h-28 sm:h-32 md:h-34 lg:h-36 object-cover" />
@@ -624,14 +646,30 @@ function MediaGrid({ photos, videos, author, tweetId }: MediaGridProps): React.R
 }
 
 /** Video player component - uses server-side proxy to avoid CORS issues */
-function VideoPlayer({ author, tweetId, thumbnail }: { author: string; tweetId: string; thumbnail: string }): React.ReactElement {
+function VideoPlayer({
+  author,
+  tweetId,
+  thumbnail,
+  width,
+  height,
+}: {
+  author: string
+  tweetId: string
+  thumbnail: string
+  width?: number
+  height?: number
+}): React.ReactElement {
   const [isPlaying, setIsPlaying] = useState(false)
+
+  // Calculate aspect ratio, default to 16:9 if dimensions unavailable
+  const aspectRatio = width && height ? `${width} / ${height}` : '16 / 9'
 
   if (!isPlaying) {
     return (
       <button
         onClick={() => setIsPlaying(true)}
-        className="relative w-full aspect-video max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden group"
+        style={{ aspectRatio }}
+        className="relative w-full max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden group"
       >
         <img src={thumbnail} alt="" className="w-full h-full object-cover" />
         <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
@@ -651,7 +689,8 @@ function VideoPlayer({ author, tweetId, thumbnail }: { author: string; tweetId: 
       src={proxyUrl}
       controls
       autoPlay
-      className="w-full aspect-video max-h-[50vh] md:max-h-none bg-black rounded-xl"
+      style={{ aspectRatio }}
+      className="w-full max-h-[50vh] md:max-h-none bg-black rounded-xl"
       poster={thumbnail}
     />
   )

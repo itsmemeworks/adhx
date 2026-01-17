@@ -4538,7 +4538,8 @@ Live now 🚀
                 class="px-4 pb-3"
               >
                 <button
-                  class="relative w-full aspect-video max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden group"
+                  class="relative w-full max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden group"
+                  style="aspect-ratio: 1280 / 720;"
                 >
                   <img
                     alt=""
@@ -10101,7 +10102,8 @@ Try it for free in our demo app (link in the thread).
                     class="px-3 pb-3"
                   >
                     <button
-                      class="relative w-full aspect-video max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden group"
+                      class="relative w-full max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden group"
+                      style="aspect-ratio: 972 / 1080;"
                     >
                       <img
                         alt=""
@@ -10785,7 +10787,8 @@ Hidden order.
                 class="px-4 pb-3"
               >
                 <button
-                  class="relative w-full aspect-video max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden group"
+                  class="relative w-full max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden group"
+                  style="aspect-ratio: 1080 / 1920;"
                 >
                   <img
                     alt=""
@@ -16376,7 +16379,8 @@ Live now 🚀
                 class="px-4 pb-3"
               >
                 <button
-                  class="relative w-full aspect-video max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden group"
+                  class="relative w-full max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden group"
+                  style="aspect-ratio: 1280 / 720;"
                 >
                   <img
                     alt=""
@@ -21779,7 +21783,8 @@ Try it for free in our demo app (link in the thread).
                     class="px-3 pb-3"
                   >
                     <button
-                      class="relative w-full aspect-video max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden group"
+                      class="relative w-full max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden group"
+                      style="aspect-ratio: 972 / 1080;"
                     >
                       <img
                         alt=""
@@ -22443,7 +22448,8 @@ Hidden order.
                 class="px-4 pb-3"
               >
                 <button
-                  class="relative w-full aspect-video max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden group"
+                  class="relative w-full max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden group"
+                  style="aspect-ratio: 1080 / 1920;"
                 >
                   <img
                     alt=""
