@@ -262,9 +262,9 @@ export function Header() {
   return (
     <>
       <header className="sticky top-0 z-50 bg-white dark:bg-gray-950 shadow-sm">
-        <div className="px-4 h-16 flex items-center justify-between gap-3 relative">
+        <div className="px-4 h-16 flex items-center justify-between gap-3">
           {/* Left section - Logo and Stats */}
-          <div className="flex items-center gap-4 flex-shrink-0 z-10">
+          <div className="flex items-center gap-4 flex-shrink-0">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2">
               <img
@@ -289,11 +289,11 @@ export function Header() {
             )}
           </div>
 
-          {/* Center section - Search (only show when authenticated) */}
+          {/* Center section - Search (desktop only, only show when authenticated) */}
           {authStatus?.authenticated && (
-            <div className="absolute left-1/2 -translate-x-1/2 w-full max-w-xl px-32 sm:px-40 md:px-48 lg:px-4">
+            <div className="hidden md:block flex-1 max-w-xl mx-4">
               <div className="relative">
-                <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   ref={searchInputRef}
                   type="text"
@@ -301,12 +301,12 @@ export function Header() {
                   onChange={(e) => setSearchValue(e.target.value)}
                   placeholder="Search"
                   aria-label="Search bookmarks"
-                  className="w-full h-10 sm:h-11 pl-9 sm:pl-11 pr-9 sm:pr-10 bg-gray-100 dark:bg-gray-800 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600 text-gray-900 dark:text-white placeholder-gray-500"
+                  className="w-full h-11 pl-11 pr-10 bg-gray-100 dark:bg-gray-800 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600 text-gray-900 dark:text-white placeholder-gray-500"
                 />
                 {searchValue && (
                   <button
                     onClick={clearSearch}
-                    className="absolute right-2 sm:right-3 inset-y-0 my-auto h-6 w-6 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors"
+                    className="absolute right-3 inset-y-0 my-auto h-6 w-6 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors"
                   >
                     <X className="w-4 h-4 text-gray-500" />
                   </button>
@@ -315,12 +315,12 @@ export function Header() {
             </div>
           )}
 
-          {/* Spacer to maintain layout */}
-          <div className="flex-1" />
+          {/* Spacer to maintain layout on mobile */}
+          <div className="flex-1 md:hidden" />
 
           {/* Right section - Actions (only show when authenticated) */}
           {authStatus?.authenticated && (
-            <div className="flex items-center gap-1 flex-shrink-0 z-10">
+            <div className="flex items-center gap-1 flex-shrink-0">
               {/* Sync Button */}
               <Tooltip content={cooldown.canSync ? 'Sync bookmarks' : `Available in ${formatCooldown(displayedCooldown)}`} placement="left">
                 <button
@@ -461,6 +461,31 @@ export function Header() {
             </div>
           )}
         </div>
+
+        {/* Mobile Search Row (only show when authenticated) */}
+        {authStatus?.authenticated && (
+          <div className="md:hidden px-4 pb-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                placeholder="Search"
+                aria-label="Search bookmarks"
+                className="w-full h-10 pl-9 pr-9 bg-gray-100 dark:bg-gray-800 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600 text-gray-900 dark:text-white placeholder-gray-500"
+              />
+              {searchValue && (
+                <button
+                  onClick={clearSearch}
+                  className="absolute right-2 inset-y-0 my-auto h-6 w-6 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors"
+                >
+                  <X className="w-4 h-4 text-gray-500" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Mobile Navigation */}
         {showMobileMenu && (

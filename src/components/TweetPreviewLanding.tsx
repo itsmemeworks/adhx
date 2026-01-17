@@ -1,16 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Search, Sparkles, Play, Zap, Eye, Maximize2, Minimize2, Plus, Loader2 } from 'lucide-react'
+import { ArrowRight, Search, Sparkles, Play, Zap, Eye, Maximize2, Minimize2, Plus, Loader2, Download, Share2, Check } from 'lucide-react'
 import { ADHX_PURPLE } from '@/lib/gestalt/theme'
 import { type FxTwitterResponse } from '@/lib/media/fxembed'
-import { renderArticleBlock } from '@/components/feed/utils'
+import { renderArticleBlock, handleShareMedia, isTouchDevice } from '@/components/feed/utils'
 import type { ArticleEntityMap } from '@/components/feed/types'
 import { FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
 import { XIcon } from '@/components/icons'
 import { AnimatedBackground, LandingAnimations } from '@/components/landing'
 import { formatCount, formatRelativeTime } from '@/lib/utils/format'
+import { cn } from '@/lib/utils'
 
 /** Tweet type extracted from FxTwitterResponse */
 type Tweet = NonNullable<FxTwitterResponse['tweet']>
@@ -84,6 +85,69 @@ function ReadingTools({
         </div>
       </div>
     </div>
+  )
+}
+
+/**
+ * MediaShareButton - Share/download button for media on landing page
+ * - Mobile: Shows Share icon, always visible, opens native share sheet
+ * - Desktop: Shows Download icon, appears on hover, downloads file
+ */
+interface MediaShareButtonProps {
+  url: string
+  filename: string
+  mimeType?: string
+  /** Use group-hover/img for multi-image galleries */
+  useImageGroupHover?: boolean
+}
+
+function MediaShareButton({ url, filename, mimeType = 'image/jpeg', useImageGroupHover = false }: MediaShareButtonProps): React.ReactElement {
+  const [isLoading, setIsLoading] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    setIsMobile(isTouchDevice())
+  }, [])
+
+  const handleClick = async (e: React.MouseEvent): Promise<void> => {
+    setIsLoading(true)
+    const result = await handleShareMedia(e, url, filename, mimeType)
+    setIsLoading(false)
+    if (result.success) {
+      setShowSuccess(true)
+      setTimeout(() => setShowSuccess(false), 1500)
+    }
+  }
+
+  // Mobile: always visible | Desktop: hover-visible
+  const visibilityClass = isMobile
+    ? 'opacity-100'
+    : useImageGroupHover
+      ? 'opacity-0 group-hover/img:opacity-100'
+      : 'opacity-0 group-hover:opacity-100'
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={isLoading}
+      className={cn(
+        'p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80',
+        visibilityClass
+      )}
+      title={isMobile ? 'Share' : 'Download'}
+      aria-label={isMobile ? 'Share media' : 'Download media'}
+    >
+      {isLoading ? (
+        <Loader2 className="w-4 h-4 text-white animate-spin" />
+      ) : showSuccess ? (
+        <Check className="w-4 h-4 text-white" />
+      ) : isMobile ? (
+        <Share2 className="w-4 h-4 text-white" />
+      ) : (
+        <Download className="w-4 h-4 text-white" />
+      )}
+    </button>
   )
 }
 
@@ -178,7 +242,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
           <div className="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start">
             {/* Tweet Card - Left Column - Fixed max heights for scrollable mobile, viewport-based for desktop */}
             <div className="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0">
-              <div className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 ${isExpanded ? '' : 'max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]'}`}>
+              <div className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 ${hasMedia || isExpanded ? '' : 'max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]'}`}>
                 {/* Author Header */}
                 <div className="p-4 pb-3">
                   <div className="flex items-center gap-3">
@@ -219,7 +283,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
 
                 {/* Scrollable Content Area - overflow-x-hidden prevents horizontal scroll on mobile */}
                 <div
-                  className={`flex-1 min-h-0 overflow-x-hidden w-full min-w-0 ${isExpanded ? '' : 'overflow-y-auto'}`}
+                  className={`flex-1 min-h-0 overflow-x-hidden w-full min-w-0 ${hasMedia || isExpanded ? '' : 'overflow-y-auto'}`}
                   style={{ fontFamily: `var(--font-${selectedFont})` }}
                 >
                 {/* Tweet Text or Article */}
@@ -345,19 +409,21 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                       {formatCount(tweet.views)}
                     </span>
                   )}
-                  {/* Expand/Collapse Toggle - icon only until desktop to avoid clipping */}
-                  <button
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    className="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                    title={isExpanded ? 'Collapse tweet' : 'Expand tweet'}
-                  >
-                    {isExpanded ? (
-                      <Minimize2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4" />
-                    ) : (
-                      <Maximize2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4" />
-                    )}
-                    <span className="text-xs hidden lg:inline">{isExpanded ? 'Collapse' : 'Expand'}</span>
-                  </button>
+                  {/* Expand/Collapse Toggle - only shown for text-only tweets (no media) */}
+                  {!hasMedia && (
+                    <button
+                      onClick={() => setIsExpanded(!isExpanded)}
+                      className="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                      title={isExpanded ? 'Collapse tweet' : 'Expand tweet'}
+                    >
+                      {isExpanded ? (
+                        <Minimize2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4" />
+                      ) : (
+                        <Maximize2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4" />
+                      )}
+                      <span className="text-xs hidden lg:inline">{isExpanded ? 'Collapse' : 'Expand'}</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -584,7 +650,7 @@ interface MediaGridProps {
 function MediaGrid({ photos, videos, author, tweetId }: MediaGridProps): React.ReactElement {
   const totalMedia = photos.length + videos.length
 
-  // Single media item - full width with responsive heights, max-w-full prevents horizontal overflow
+  // Single media item - full width, no max-height to show complete image
   if (totalMedia === 1) {
     if (videos.length > 0) {
       return (
@@ -598,8 +664,15 @@ function MediaGrid({ photos, videos, author, tweetId }: MediaGridProps): React.R
       )
     }
     return (
-      <div className="rounded-xl overflow-hidden">
-        <img src={photos[0].url} alt="Tweet media" className="w-full max-w-full object-cover max-h-[250px] sm:max-h-[300px] md:max-h-[350px] lg:max-h-[400px]" />
+      <div className="rounded-xl overflow-hidden relative group">
+        <img src={photos[0].url} alt="Tweet media" className="w-full max-w-full object-contain" />
+        <div className="absolute top-3 right-3">
+          <MediaShareButton
+            url={`/api/media/image?author=${encodeURIComponent(author)}&tweetId=${encodeURIComponent(tweetId)}&index=1`}
+            filename={`tweet-${tweetId}.jpg`}
+            mimeType="image/jpeg"
+          />
+        </div>
       </div>
     )
   }
@@ -619,7 +692,17 @@ function MediaGrid({ photos, videos, author, tweetId }: MediaGridProps): React.R
           />
         ))}
         {photos.map((photo, i) => (
-          <img key={`p-${i}`} src={photo.url} alt="" className="w-full h-32 sm:h-40 md:h-44 lg:h-48 object-cover" />
+          <div key={`p-${i}`} className="relative group/img">
+            <img src={photo.url} alt="" className="w-full h-32 sm:h-40 md:h-44 lg:h-48 object-cover" />
+            <div className="absolute top-2 right-2">
+              <MediaShareButton
+                url={`/api/media/image?author=${encodeURIComponent(author)}&tweetId=${encodeURIComponent(tweetId)}&index=${i + 1}`}
+                filename={`tweet-${tweetId}-${i + 1}.jpg`}
+                mimeType="image/jpeg"
+                useImageGroupHover
+              />
+            </div>
+          </div>
         ))}
       </div>
     )
@@ -639,7 +722,17 @@ function MediaGrid({ photos, videos, author, tweetId }: MediaGridProps): React.R
         />
       ))}
       {photos.slice(0, 4 - videos.length).map((photo, i) => (
-        <img key={`p-${i}`} src={photo.url} alt="" className="w-full h-28 sm:h-32 md:h-34 lg:h-36 object-cover" />
+        <div key={`p-${i}`} className="relative group/img">
+          <img src={photo.url} alt="" className="w-full h-28 sm:h-32 md:h-34 lg:h-36 object-cover" />
+          <div className="absolute top-2 right-2">
+            <MediaShareButton
+              url={`/api/media/image?author=${encodeURIComponent(author)}&tweetId=${encodeURIComponent(tweetId)}&index=${i + 1}`}
+              filename={`tweet-${tweetId}-${i + 1}.jpg`}
+              mimeType="image/jpeg"
+              useImageGroupHover
+            />
+          </div>
+        </div>
       ))}
     </div>
   )
@@ -664,35 +757,55 @@ function VideoPlayer({
   // Calculate aspect ratio, default to 16:9 if dimensions unavailable
   const aspectRatio = width && height ? `${width} / ${height}` : '16 / 9'
 
-  if (!isPlaying) {
-    return (
-      <button
-        onClick={() => setIsPlaying(true)}
-        style={{ aspectRatio }}
-        className="relative w-full max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden group"
-      >
-        <img src={thumbnail} alt="" className="w-full h-full object-cover" />
-        <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
-          <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-            <Play className="w-7 h-7 text-gray-900 ml-1" fill="currentColor" />
-          </div>
-        </div>
-      </button>
-    )
-  }
-
   // Use server-side video proxy to avoid CORS issues with video.twimg.com
   const proxyUrl = `/api/media/video?author=${encodeURIComponent(author)}&tweetId=${encodeURIComponent(tweetId)}&quality=hd`
 
+  if (!isPlaying) {
+    return (
+      <div className="relative group">
+        <button
+          onClick={() => setIsPlaying(true)}
+          style={{ aspectRatio }}
+          className="relative w-full max-h-[50vh] md:max-h-none bg-black rounded-xl overflow-hidden"
+        >
+          <img src={thumbnail} alt="" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
+            <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+              <Play className="w-7 h-7 text-gray-900 ml-1" fill="currentColor" />
+            </div>
+          </div>
+        </button>
+        {/* Share/Download button for video thumbnail */}
+        <div className="absolute top-3 right-3">
+          <MediaShareButton
+            url={proxyUrl}
+            filename={`tweet-${tweetId}.mp4`}
+            mimeType="video/mp4"
+          />
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <video
-      src={proxyUrl}
-      controls
-      autoPlay
-      style={{ aspectRatio }}
-      className="w-full max-h-[50vh] md:max-h-none bg-black rounded-xl"
-      poster={thumbnail}
-    />
+    <div className="relative group">
+      <video
+        src={proxyUrl}
+        controls
+        autoPlay
+        style={{ aspectRatio }}
+        className="w-full max-h-[50vh] md:max-h-none bg-black rounded-xl"
+        poster={thumbnail}
+      />
+      {/* Share/Download button for playing video */}
+      <div className="absolute top-3 right-3">
+        <MediaShareButton
+          url={proxyUrl}
+          filename={`tweet-${tweetId}.mp4`}
+          mimeType="video/mp4"
+        />
+      </div>
+    </div>
   )
 }
 

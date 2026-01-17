@@ -13,10 +13,12 @@ import {
   FileText,
   Download,
   Share2,
+  Loader2,
 } from 'lucide-react'
 import { AuthorAvatar } from './AuthorAvatar'
 import { TagInput, type TagInputHandle } from './TagInput'
-import { renderTextWithLinks, renderBionicTextWithLinks, renderArticleBlock, stripMediaUrls, handleDownloadMedia } from './utils'
+import { renderTextWithLinks, renderBionicTextWithLinks, renderArticleBlock, stripMediaUrls, handleShareMedia, isTouchDevice } from './utils'
+import { cn } from '@/lib/utils'
 import { usePreferences } from '@/lib/preferences-context'
 import type { FeedItem, TagItem } from './types'
 
@@ -281,19 +283,13 @@ function MediaLightboxContent({
               loop={primaryMedia.mediaType === 'animated_gif'}
               className="max-w-full max-h-[50vh] lg:max-h-[80vh] rounded-xl lg:rounded-2xl bg-black"
             />
-            {/* Download button for video */}
-            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button
-                onClick={(e) => handleDownloadMedia(
-                  e,
-                  `/api/media/video?author=${item.author}&tweetId=${item.id}&quality=full`,
-                  `tweet-${item.id}.mp4`
-                )}
-                className="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
-                title="Download"
-              >
-                <Download className="w-4 h-4 text-white" />
-              </button>
+            {/* Share/Download button for video */}
+            <div className="absolute top-3 right-3">
+              <MediaShareButton
+                url={`/api/media/video?author=${item.author}&tweetId=${item.id}&quality=full`}
+                filename={`tweet-${item.id}.mp4`}
+                mimeType="video/mp4"
+              />
             </div>
           </div>
         ) : item.media && item.media.length > 1 ? (
@@ -308,15 +304,14 @@ function MediaLightboxContent({
                     alt={`Image ${index + 1} of ${item.media!.length}`}
                     className="max-w-full max-h-[70vh] rounded-xl lg:rounded-2xl object-contain mx-auto"
                   />
-                  {/* Download button per image */}
-                  <div className="absolute top-3 right-3 opacity-0 group-hover/img:opacity-100 transition-opacity">
-                    <button
-                      onClick={(e) => handleDownloadMedia(e, media.url, `tweet-${item.id}-${index + 1}.jpg`)}
-                      className="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
-                      title="Download"
-                    >
-                      <Download className="w-4 h-4 text-white" />
-                    </button>
+                  {/* Share/Download button per image - uses proxy to avoid CORS */}
+                  <div className="absolute top-3 right-3">
+                    <MediaShareButton
+                      url={`/api/media/image?author=${item.author}&tweetId=${item.id}&index=${index + 1}`}
+                      filename={`tweet-${item.id}-${index + 1}.jpg`}
+                      mimeType="image/jpeg"
+                      useImageGroupHover
+                    />
                   </div>
                 </div>
               ))}
@@ -330,15 +325,13 @@ function MediaLightboxContent({
               alt=""
               className="max-w-full max-h-[50vh] lg:max-h-[80vh] rounded-xl lg:rounded-2xl object-contain"
             />
-            {/* Download button for single image */}
-            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button
-                onClick={(e) => handleDownloadMedia(e, primaryMedia.url, `tweet-${item.id}.jpg`)}
-                className="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
-                title="Download"
-              >
-                <Download className="w-4 h-4 text-white" />
-              </button>
+            {/* Share/Download button for single image - uses proxy to avoid CORS */}
+            <div className="absolute top-3 right-3">
+              <MediaShareButton
+                url={`/api/media/image?author=${item.author}&tweetId=${item.id}&index=1`}
+                filename={`tweet-${item.id}.jpg`}
+                mimeType="image/jpeg"
+              />
             </div>
           </div>
         )}
@@ -574,6 +567,69 @@ function BottomBar({
         </button>
       </div>
     </div>
+  )
+}
+
+/**
+ * MediaShareButton - Unified share/download button for media
+ * - Mobile (touch devices): Shows Share icon, always visible, opens native share sheet
+ * - Desktop (hover devices): Shows Download icon, appears on hover, downloads file
+ */
+interface MediaShareButtonProps {
+  url: string
+  filename: string
+  mimeType?: string
+  /** Use group-hover/img for multi-image galleries */
+  useImageGroupHover?: boolean
+}
+
+function MediaShareButton({ url, filename, mimeType = 'image/jpeg', useImageGroupHover = false }: MediaShareButtonProps): React.ReactElement {
+  const [isLoading, setIsLoading] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    setIsMobile(isTouchDevice())
+  }, [])
+
+  const handleClick = async (e: React.MouseEvent): Promise<void> => {
+    setIsLoading(true)
+    const result = await handleShareMedia(e, url, filename, mimeType)
+    setIsLoading(false)
+    if (result.success) {
+      setShowSuccess(true)
+      setTimeout(() => setShowSuccess(false), 1500)
+    }
+  }
+
+  // Mobile: always visible | Desktop: hover-visible
+  const visibilityClass = isMobile
+    ? 'opacity-100'
+    : useImageGroupHover
+      ? 'opacity-0 group-hover/img:opacity-100'
+      : 'opacity-0 group-hover:opacity-100'
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={isLoading}
+      className={cn(
+        'p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80',
+        visibilityClass
+      )}
+      title={isMobile ? 'Share' : 'Download'}
+      aria-label={isMobile ? 'Share media' : 'Download media'}
+    >
+      {isLoading ? (
+        <Loader2 className="w-4 h-4 text-white animate-spin" />
+      ) : showSuccess ? (
+        <Check className="w-4 h-4 text-white" />
+      ) : isMobile ? (
+        <Share2 className="w-4 h-4 text-white" />
+      ) : (
+        <Download className="w-4 h-4 text-white" />
+      )}
+    </button>
   )
 }
 
@@ -873,15 +929,13 @@ function ArticleContent({ item, bionicReading }: { item: FeedItem; bionicReading
             alt=""
             className="w-full rounded-xl object-cover max-h-64"
           />
-          {/* Download button - appears on hover */}
-          <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button
-              onClick={(e) => handleDownloadMedia(e, item.articlePreview!.imageUrl!, `article-${item.id}.jpg`)}
-              className="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
-              title="Download image"
-            >
-              <Download className="w-4 h-4 text-white" />
-            </button>
+          {/* Share/Download button - visible on mobile, hover on desktop */}
+          <div className="absolute top-3 right-3">
+            <MediaShareButton
+              url={item.articlePreview!.imageUrl!}
+              filename={`article-${item.id}.jpg`}
+              mimeType="image/jpeg"
+            />
           </div>
         </div>
       )}
