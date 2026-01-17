@@ -81,7 +81,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > '4
       class="flex flex-col lg:flex-row gap-4 lg:gap-6 items-center lg:items-start max-h-[85vh] overflow-y-auto lg:overflow-visible"
     >
       <div
-        class="w-full lg:flex-1 flex items-center justify-center order-1 lg:order-2 relative group"
+        class="w-full lg:flex-1 flex flex-col items-center justify-center order-1 lg:order-2 relative group"
       >
         <div
           class="flex flex-col gap-4 max-h-[50vh] lg:max-h-[80vh] overflow-y-auto py-2 px-2 article-scrollbar"
@@ -522,7 +522,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > '4
   <div
     class="hidden sm:block absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs"
   >
-    ← → navigate | R read | U unread | T tag | Q quoted | P parent | S share | X open | Esc close
+    ← → navigate | R read | U unread | T tag | Q quoted | P parent | H thread | S share | X open | Esc close
   </div>
 </div>
 `;
@@ -1398,7 +1398,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'a
   <div
     class="hidden sm:block absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs"
   >
-    ← → navigate | R read | U unread | T tag | Q quoted | P parent | S share | X open | Esc close
+    ← → navigate | R read | U unread | T tag | Q quoted | P parent | H thread | S share | X open | Esc close
   </div>
 </div>
 `;
@@ -3866,7 +3866,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'a
   <div
     class="hidden sm:block absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs"
   >
-    ← → navigate | R read | U unread | T tag | Q quoted | P parent | S share | X open | Esc close
+    ← → navigate | R read | U unread | T tag | Q quoted | P parent | H thread | S share | X open | Esc close
   </div>
 </div>
 `;
@@ -3952,7 +3952,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'e
       class="flex flex-col lg:flex-row gap-4 lg:gap-6 items-center lg:items-start max-h-[85vh] overflow-y-auto lg:overflow-visible"
     >
       <div
-        class="w-full lg:flex-1 flex items-center justify-center order-1 lg:order-2 relative group"
+        class="w-full lg:flex-1 flex flex-col items-center justify-center order-1 lg:order-2 relative group"
       >
         <div
           class="relative"
@@ -4273,7 +4273,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'e
   <div
     class="hidden sm:block absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs"
   >
-    ← → navigate | R read | U unread | T tag | Q quoted | P parent | S share | X open | Esc close
+    ← → navigate | R read | U unread | T tag | Q quoted | P parent | H thread | S share | X open | Esc close
   </div>
 </div>
 `;
@@ -4359,7 +4359,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'l
       class="flex flex-col lg:flex-row gap-4 lg:gap-6 items-center lg:items-start max-h-[85vh] overflow-y-auto lg:overflow-visible"
     >
       <div
-        class="w-full lg:flex-1 flex items-center justify-center order-1 lg:order-2 relative group"
+        class="w-full lg:flex-1 flex flex-col items-center justify-center order-1 lg:order-2 relative group"
       >
         <div
           class="relative"
@@ -4781,7 +4781,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'l
   <div
     class="hidden sm:block absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs"
   >
-    ← → navigate | R read | U unread | T tag | Q quoted | P parent | S share | X open | Esc close
+    ← → navigate | R read | U unread | T tag | Q quoted | P parent | H thread | S share | X open | Esc close
   </div>
 </div>
 `;
@@ -4867,7 +4867,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'l
       class="flex flex-col lg:flex-row gap-4 lg:gap-6 items-center lg:items-start max-h-[85vh] overflow-y-auto lg:overflow-visible"
     >
       <div
-        class="w-full lg:flex-1 flex items-center justify-center order-1 lg:order-2 relative group"
+        class="w-full lg:flex-1 flex flex-col items-center justify-center order-1 lg:order-2 relative group"
       >
         <div
           class="flex flex-col gap-4 max-h-[50vh] lg:max-h-[80vh] overflow-y-auto py-2 px-2 article-scrollbar"
@@ -5244,7 +5244,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'l
   <div
     class="hidden sm:block absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs"
   >
-    ← → navigate | R read | U unread | T tag | Q quoted | P parent | S share | X open | Esc close
+    ← → navigate | R read | U unread | T tag | Q quoted | P parent | H thread | S share | X open | Esc close
   </div>
 </div>
 `;
@@ -5891,7 +5891,7 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
   <div
     class="hidden sm:block absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs"
   >
-    ← → navigate | R read | U unread | T tag | Q quoted | P parent | S share | X open | Esc close
+    ← → navigate | R read | U unread | T tag | Q quoted | P parent | H thread | S share | X open | Esc close
   </div>
 </div>
 `;
@@ -6226,7 +6226,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'p
   <div
     class="hidden sm:block absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs"
   >
-    ← → navigate | R read | U unread | T tag | Q quoted | P parent | S share | X open | Esc close
+    ← → navigate | R read | U unread | T tag | Q quoted | P parent | H thread | S share | X open | Esc close
   </div>
 </div>
 `;
@@ -6669,7 +6669,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
   <div
     class="hidden sm:block absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs"
   >
-    ← → navigate | R read | U unread | T tag | Q quoted | P parent | S share | X open | Esc close
+    ← → navigate | R read | U unread | T tag | Q quoted | P parent | H thread | S share | X open | Esc close
   </div>
 </div>
 `;
@@ -7072,7 +7072,7 @@ This is not a coincidence.
   <div
     class="hidden sm:block absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs"
   >
-    ← → navigate | R read | U unread | T tag | Q quoted | P parent | S share | X open | Esc close
+    ← → navigate | R read | U unread | T tag | Q quoted | P parent | H thread | S share | X open | Esc close
   </div>
 </div>
 `;
@@ -7416,7 +7416,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'r
   <div
     class="hidden sm:block absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs"
   >
-    ← → navigate | R read | U unread | T tag | Q quoted | P parent | S share | X open | Esc close
+    ← → navigate | R read | U unread | T tag | Q quoted | P parent | H thread | S share | X open | Esc close
   </div>
 </div>
 `;
@@ -7823,7 +7823,7 @@ Try it for free in our demo app (link in the thread).
   <div
     class="hidden sm:block absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs"
   >
-    ← → navigate | R read | U unread | T tag | Q quoted | P parent | S share | X open | Esc close
+    ← → navigate | R read | U unread | T tag | Q quoted | P parent | H thread | S share | X open | Esc close
   </div>
 </div>
 `;
@@ -7909,7 +7909,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'v
       class="flex flex-col lg:flex-row gap-4 lg:gap-6 items-center lg:items-start max-h-[85vh] overflow-y-auto lg:overflow-visible"
     >
       <div
-        class="w-full lg:flex-1 flex items-center justify-center order-1 lg:order-2 relative group"
+        class="w-full lg:flex-1 flex flex-col items-center justify-center order-1 lg:order-2 relative group"
       >
         <div
           class="relative"
@@ -8220,7 +8220,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'v
   <div
     class="hidden sm:block absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs"
   >
-    ← → navigate | R read | U unread | T tag | Q quoted | P parent | S share | X open | Esc close
+    ← → navigate | R read | U unread | T tag | Q quoted | P parent | H thread | S share | X open | Esc close
   </div>
 </div>
 `;
@@ -8564,7 +8564,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'y
   <div
     class="hidden sm:block absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs"
   >
-    ← → navigate | R read | U unread | T tag | Q quoted | P parent | S share | X open | Esc close
+    ← → navigate | R read | U unread | T tag | Q quoted | P parent | H thread | S share | X open | Esc close
   </div>
 </div>
 `;

@@ -23,6 +23,7 @@ export const FULL_SCHEMA_SQL = `
     category TEXT DEFAULT 'tweet',
     is_reply INTEGER DEFAULT 0,
     reply_context TEXT,
+    in_reply_to_tweet_id TEXT,
     is_quote INTEGER DEFAULT 0,
     quote_context TEXT,
     quoted_tweet_id TEXT,
@@ -41,6 +42,7 @@ export const FULL_SCHEMA_SQL = `
   CREATE INDEX bookmarks_user_processed_at_idx ON bookmarks(user_id, processed_at);
   CREATE INDEX bookmarks_user_category_idx ON bookmarks(user_id, category);
   CREATE INDEX bookmarks_user_quoted_tweet_idx ON bookmarks(user_id, quoted_tweet_id);
+  CREATE INDEX bookmarks_user_in_reply_to_idx ON bookmarks(user_id, in_reply_to_tweet_id);
 
   CREATE TABLE bookmark_links (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

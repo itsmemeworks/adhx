@@ -115,6 +115,8 @@ export interface FeedItem {
   processedAt: string
   category?: string | null
   isRead: boolean
+  isReply?: boolean
+  inReplyToTweetId?: string | null // Parent tweet ID for thread traversal
   isQuote?: boolean
   quoteContext?: QuoteContext | null
   quotedTweetId?: string | null
@@ -186,6 +188,37 @@ export interface SyncProgress {
   total: number
   pagesProcessed?: number
   categorized?: number
+}
+
+/**
+ * Thread item for displaying tweet chains
+ */
+export interface ThreadItem {
+  id: string
+  text: string
+  author: string
+  authorName?: string | null
+  authorProfileImageUrl?: string | null
+  createdAt?: string | null
+  media?: MediaItem[] | null
+  /** Where this tweet came from: 'bookmarked' = in collection, 'fetched' = from API, 'external' = thread start by different author */
+  source: 'bookmarked' | 'fetched' | 'external'
+  /** 1-indexed position in the thread chain */
+  position: number
+}
+
+/**
+ * Response from the thread API endpoint
+ */
+export interface ThreadResponse {
+  /** Thread chain ordered from oldest to newest (thread start → current tweet) */
+  thread: ThreadItem[]
+  /** Position of the bookmarked tweet in the thread (1-indexed) */
+  currentPosition: number
+  /** True if we successfully reached the thread start */
+  isComplete: boolean
+  /** True if this is a self-reply thread (same author throughout) */
+  isSelfThread: boolean
 }
 
 /**

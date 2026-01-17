@@ -144,6 +144,9 @@ export interface FxTwitterResponse {
     retweets: number
     likes: number
     views?: number
+    // Reply information
+    replying_to?: string // Username being replied to (without @)
+    replying_to_status?: string // Parent tweet ID (may not be present)
     media?: {
       photos?: Array<{
         url: string

@@ -24,6 +24,7 @@ export const bookmarks = sqliteTable(
     // Reply/Quote/Retweet context
     isReply: integer('is_reply', { mode: 'boolean' }).default(false),
     replyContext: text('reply_context'),
+    inReplyToTweetId: text('in_reply_to_tweet_id'), // Parent tweet ID for thread traversal
     isQuote: integer('is_quote', { mode: 'boolean' }).default(false),
     quoteContext: text('quote_context'), // JSON (legacy)
     quotedTweetId: text('quoted_tweet_id'),
@@ -54,6 +55,7 @@ export const bookmarks = sqliteTable(
     userIdProcessedAtIdx: index('bookmarks_user_processed_at_idx').on(table.userId, table.processedAt),
     userIdCategoryIdx: index('bookmarks_user_category_idx').on(table.userId, table.category),
     userIdQuotedTweetIdx: index('bookmarks_user_quoted_tweet_idx').on(table.userId, table.quotedTweetId),
+    userIdInReplyToIdx: index('bookmarks_user_in_reply_to_idx').on(table.userId, table.inReplyToTweetId),
   })
 )
 

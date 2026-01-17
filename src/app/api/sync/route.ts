@@ -241,6 +241,8 @@ async function saveBookmark(
 
   // Check for reply/quote/retweet context
   const isReply = tweet.referencedTweets?.some((rt) => rt.type === 'replied_to') || false
+  const replyRef = tweet.referencedTweets?.find((rt) => rt.type === 'replied_to')
+  const inReplyToTweetId = replyRef?.id || null
   const isQuote = tweet.referencedTweets?.some((rt) => rt.type === 'quoted') || false
   const retweetRef = tweet.referencedTweets?.find((rt) => rt.type === 'retweeted')
   const isRetweet = !!retweetRef
@@ -509,6 +511,7 @@ async function saveBookmark(
     processedAt: now,
     category,
     isReply,
+    inReplyToTweetId, // Parent tweet ID for thread traversal
     isQuote,
     quoteContext,
     quotedTweetId, // Reference to the separately stored quoted tweet

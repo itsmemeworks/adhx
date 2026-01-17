@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Search, Sparkles, Play, Zap, Eye, Maximize2, Minimize2, Plus, Loader2 } from 'lucide-react'
+import { ArrowRight, Search, Sparkles, Play, Zap, Eye, Maximize2, Minimize2, Plus, Loader2, MessageCircle, ChevronUp, ChevronDown, ExternalLink } from 'lucide-react'
 import { ADHX_PURPLE } from '@/lib/gestalt/theme'
 import { type FxTwitterResponse } from '@/lib/media/fxembed'
 import { renderArticleBlock } from '@/components/feed/utils'
@@ -14,6 +14,78 @@ import { formatCount, formatRelativeTime } from '@/lib/utils/format'
 
 /** Tweet type extracted from FxTwitterResponse */
 type Tweet = NonNullable<FxTwitterResponse['tweet']>
+
+/** Thread item for displaying parent/child tweets in thread context */
+interface LandingThreadItem {
+  id: string
+  text: string
+  author: string
+  authorName?: string
+  authorProfileImageUrl?: string
+  createdAt?: string
+  media?: {
+    photos?: Array<{ url: string; width: number; height: number }>
+    videos?: Array<{ url: string; thumbnail_url: string; width: number; height: number }>
+  }
+}
+
+/** Fetch parent tweets to build thread context via FxTwitter API */
+async function fetchThreadContext(
+  tweetId: string,
+  author: string,
+  maxDepth: number = 5
+): Promise<{ parents: LandingThreadItem[]; isSelfThread: boolean }> {
+  const parents: LandingThreadItem[] = []
+  let currentAuthor = author
+  let currentTweetId = tweetId
+  let isSelfThread = true
+
+  for (let depth = 0; depth < maxDepth; depth++) {
+    try {
+      const response = await fetch(`https://api.fxtwitter.com/${currentAuthor}/status/${currentTweetId}`)
+      if (!response.ok) break
+
+      const data = await response.json() as FxTwitterResponse
+      const tweet = data.tweet
+      if (!tweet) break
+
+      // Check for parent tweet
+      const parentTweetId = tweet.replying_to_status
+      if (!parentTweetId) break
+
+      // Fetch the parent tweet
+      const parentResponse = await fetch(`https://api.fxtwitter.com/i/status/${parentTweetId}`)
+      if (!parentResponse.ok) break
+
+      const parentData = await parentResponse.json() as FxTwitterResponse
+      const parentTweet = parentData.tweet
+      if (!parentTweet) break
+
+      // Check if still same author
+      if (parentTweet.author.screen_name.toLowerCase() !== author.toLowerCase()) {
+        isSelfThread = false
+      }
+
+      parents.unshift({
+        id: parentTweet.id,
+        text: parentTweet.text,
+        author: parentTweet.author.screen_name,
+        authorName: parentTweet.author.name,
+        authorProfileImageUrl: parentTweet.author.avatar_url,
+        createdAt: parentTweet.created_at,
+        media: parentTweet.media,
+      })
+
+      // Move up the chain
+      currentTweetId = parentTweetId
+      currentAuthor = parentTweet.author.screen_name
+    } catch {
+      break
+    }
+  }
+
+  return { parents, isSelfThread }
+}
 
 interface TweetPreviewLandingProps {
   username: string
@@ -94,6 +166,31 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
   const [bionicReading, setBionicReading] = useState(false)
   const [selectedFont, setSelectedFont] = useState<BodyFont>('ibm-plex')
   const [isExpanded, setIsExpanded] = useState(false)
+  const [threadData, setThreadData] = useState<{ parents: LandingThreadItem[]; isSelfThread: boolean } | null>(null)
+  const [loadingThread, setLoadingThread] = useState(false)
+
+  // Check if this tweet is part of a thread (has parents OR has replies indicating thread continues)
+  const hasParent = Boolean(tweet.replying_to_status)
+  const hasReplies = (tweet.replies || 0) > 0
+
+  // Auto-fetch thread context on mount if this tweet has a parent
+  useEffect(() => {
+    if (!hasParent) return
+
+    const fetchThread = async () => {
+      setLoadingThread(true)
+      try {
+        const data = await fetchThreadContext(tweetId, username)
+        setThreadData(data)
+      } catch (error) {
+        console.error('Failed to fetch thread:', error)
+      } finally {
+        setLoadingThread(false)
+      }
+    }
+
+    fetchThread()
+  }, [tweetId, username, hasParent])
 
   const photos = tweet.media?.photos || []
   const videos = tweet.media?.videos || []
@@ -222,6 +319,25 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                   className={`flex-1 min-h-0 overflow-x-hidden w-full min-w-0 ${isExpanded ? '' : 'overflow-y-auto'}`}
                   style={{ fontFamily: `var(--font-${selectedFont})` }}
                 >
+                {/* Thread Context - Auto-loads when this tweet has parents */}
+                {(loadingThread || threadData) && (
+                  <div className="px-4 pt-2 pb-0">
+                    {loadingThread ? (
+                      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Loading thread...</span>
+                      </div>
+                    ) : threadData && threadData.parents.length > 0 ? (
+                      <ThreadContext
+                        parents={threadData.parents}
+                        isSelfThread={threadData.isSelfThread}
+                        currentAuthor={username}
+                        currentTweetId={tweetId}
+                      />
+                    ) : null}
+                  </div>
+                )}
+
                 {/* Tweet Text or Article */}
                 <div className="px-4 py-3 w-full min-w-0">
                   {tweet.article ? (
@@ -310,6 +426,22 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                       quoteAuthor={tweet.quote.author?.screen_name || ''}
                       quoteTweetId={tweet.quote.id}
                     />
+                  </div>
+                )}
+
+                {/* Thread continues indicator - shows when this tweet has replies */}
+                {hasReplies && (
+                  <div className="px-4 pb-3">
+                    <a
+                      href={`https://x.com/${username}/status/${tweetId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                    >
+                      <ChevronDown className="w-3.5 h-3.5" />
+                      <span>{tweet.replies} more below</span>
+                      <span className="text-gray-400 dark:text-gray-500">· View on X</span>
+                    </a>
                   </div>
                 )}
                 </div>
@@ -838,5 +970,211 @@ function ExternalLinkPreview({ external }: ExternalLinkPreviewProps): React.Reac
         )}
       </div>
     </a>
+  )
+}
+
+/** Thread context component - shows parent tweets in a thread */
+interface ThreadContextProps {
+  parents: LandingThreadItem[]
+  isSelfThread: boolean
+  currentAuthor: string
+  currentTweetId: string
+}
+
+function ThreadContext({ parents, isSelfThread: _isSelfThread, currentAuthor, currentTweetId: _currentTweetId }: ThreadContextProps): React.ReactElement {
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+  const hasParents = parents.length > 0
+  const allExpanded = expandedIds.size === parents.length
+
+  const handleToggleExpand = (id: string) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  const handleToggleAll = () => {
+    if (allExpanded) {
+      setExpandedIds(new Set())
+    } else {
+      setExpandedIds(new Set(parents.map(p => p.id)))
+    }
+  }
+
+  return (
+    <div className="mb-3 pb-3 border-b border-gray-200 dark:border-gray-700">
+      {/* Thread header with expand all toggle */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+          <MessageCircle className="w-3.5 h-3.5" />
+          <span>
+            {hasParents
+              ? `${parents.length} earlier in thread`
+              : 'Thread'}
+          </span>
+        </div>
+        {hasParents && (
+          <button
+            onClick={handleToggleAll}
+            className="text-xs text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors"
+          >
+            {allExpanded ? 'Collapse all' : 'Expand all'}
+          </button>
+        )}
+      </div>
+
+      {/* Parent tweets - expandable cards */}
+      {hasParents && (
+        <div className={`mb-2 ${allExpanded ? 'space-y-0' : 'space-y-1.5'}`}>
+          {parents.map((parent, index) => {
+            const isExpanded = expandedIds.has(parent.id)
+            const hasMedia = (parent.media?.photos?.length || 0) > 0 || (parent.media?.videos?.length || 0) > 0
+            const isFirst = index === 0
+            const isLast = index === parents.length - 1
+
+            return (
+              <div
+                key={parent.id}
+                className={`transition-all ${
+                  allExpanded
+                    ? `bg-white dark:bg-gray-800 ${isFirst ? 'rounded-t-lg' : ''} ${isLast ? 'rounded-b-lg' : ''} ${!isLast ? 'border-b border-gray-100 dark:border-gray-700' : ''}`
+                    : isExpanded
+                    ? 'bg-white dark:bg-gray-800 ring-1 ring-purple-200 dark:ring-purple-800 rounded-lg'
+                    : 'bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg'
+                }`}
+              >
+                {/* Clickable header */}
+                <button
+                  onClick={() => handleToggleExpand(parent.id)}
+                  className={`w-full flex items-start gap-2.5 p-2.5 text-left ${
+                    allExpanded && isExpanded ? 'pb-1' : ''
+                  }`}
+                >
+                  {/* Position badge - more prominent when expanded */}
+                  <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                    isExpanded
+                      ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                  }`}>
+                    {index + 1}
+                  </div>
+
+                  {/* Avatar */}
+                  {parent.authorProfileImageUrl && (
+                    <img
+                      src={parent.authorProfileImageUrl}
+                      alt=""
+                      className="w-6 h-6 rounded-full flex-shrink-0"
+                    />
+                  )}
+
+                  <div className="flex-1 min-w-0">
+                    {/* Author line */}
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className={`text-sm font-medium truncate transition-colors ${
+                        isExpanded
+                          ? 'text-purple-600 dark:text-purple-400'
+                          : 'text-gray-900 dark:text-white'
+                      }`}>
+                        {parent.authorName || parent.author}
+                      </span>
+                      {parent.author.toLowerCase() !== currentAuthor.toLowerCase() && (
+                        <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 flex-shrink-0">
+                          different author
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Tweet text */}
+                    <p className={`text-sm text-gray-600 dark:text-gray-400 ${
+                      isExpanded ? 'whitespace-pre-wrap' : 'line-clamp-1'
+                    }`}>
+                      {parent.text}
+                    </p>
+                  </div>
+
+                  {/* Expand/collapse indicator */}
+                  <div className="flex-shrink-0 text-gray-400 dark:text-gray-500">
+                    {isExpanded ? (
+                      <ChevronUp className="w-4 h-4" />
+                    ) : hasMedia ? (
+                      parent.media?.videos && parent.media.videos.length > 0 ? (
+                        <Play className="w-3.5 h-3.5" />
+                      ) : (
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="1.5" />
+                          <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M21 15l-5-5L5 21" />
+                        </svg>
+                      )
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    )}
+                  </div>
+                </button>
+
+                {/* Expanded content */}
+                {isExpanded && (
+                  <div className="px-2.5 pb-2.5 ml-[52px]">
+                    {/* Media */}
+                    {hasMedia && (
+                      <div className="mt-1 rounded-lg overflow-hidden">
+                        {parent.media?.videos && parent.media.videos.length > 0 ? (
+                          <VideoPlayer
+                            author={parent.author}
+                            tweetId={parent.id}
+                            thumbnail={parent.media.videos[0].thumbnail_url}
+                            width={parent.media.videos[0].width}
+                            height={parent.media.videos[0].height}
+                          />
+                        ) : parent.media?.photos && parent.media.photos.length > 0 ? (
+                          <div className={`grid gap-1 ${parent.media.photos.length > 1 ? 'grid-cols-2' : ''}`}>
+                            {parent.media.photos.slice(0, 4).map((photo, i) => (
+                              <img
+                                key={i}
+                                src={photo.url}
+                                alt=""
+                                className="w-full rounded-lg object-cover"
+                                style={{ maxHeight: parent.media!.photos!.length === 1 ? '250px' : '120px' }}
+                              />
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
+
+                    {/* Link to view this tweet's page */}
+                    <a
+                      href={`/${parent.author}/status/${parent.id}`}
+                      className="inline-flex items-center justify-center w-6 h-6 mt-2 rounded-full text-gray-400 dark:text-gray-500 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                      title="View full tweet"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Current tweet indicator */}
+      {hasParents && (
+        <div className="flex items-center gap-2.5 py-2 mb-2">
+          <div className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold bg-purple-600 dark:bg-purple-500 text-white">
+            {parents.length + 1}
+          </div>
+          <span className="text-xs font-medium text-purple-600 dark:text-purple-400">
+            You are here
+          </span>
+        </div>
+      )}
+    </div>
   )
 }

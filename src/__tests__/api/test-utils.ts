@@ -38,6 +38,7 @@ export function createTestDatabase(): BetterSQLite3Database<typeof schema> & { c
       category TEXT DEFAULT 'tweet',
       is_reply INTEGER DEFAULT 0,
       reply_context TEXT,
+      in_reply_to_tweet_id TEXT,
       is_quote INTEGER DEFAULT 0,
       quote_context TEXT,
       quoted_tweet_id TEXT,
