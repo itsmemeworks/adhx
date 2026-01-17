@@ -234,6 +234,42 @@ Open this to see the entire post
                   />
                 </div>
               </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/iamgdsa/status/2010782484728873387"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    50
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
+              </div>
             </div>
             <div
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
@@ -1437,6 +1473,42 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                     X Article
                   </div>
                 </div>
+              </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/aliniikk/status/2009347948816335031"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    240
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
               </div>
             </div>
             <div
@@ -3719,6 +3791,42 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </div>
                 </div>
               </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/NoahRyanCo/status/2008957369212866843"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    57
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
+              </div>
             </div>
             <div
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
@@ -4572,6 +4680,42 @@ Live now 🚀
                   </div>
                 </button>
               </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/moonpay/status/2009626024968118554"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    360
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
+              </div>
             </div>
             <div
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
@@ -5264,6 +5408,42 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                   />
                 </div>
               </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/maverickecom/status/2011489837094683034"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    1429
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
+              </div>
             </div>
             <div
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
@@ -5933,6 +6113,42 @@ His days are numbered
                     src="https://pbs.twimg.com/media/G-w24jMbQAQQCqp.png?name=orig"
                   />
                 </div>
+              </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/BasilTheGreat/status/2012044480556208542"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    103
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
               </div>
             </div>
             <div
@@ -6707,6 +6923,42 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                   </div>
                 </div>
               </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/_The_Prophet__/status/2011834234642841806"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    321
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
+              </div>
             </div>
             <div
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
@@ -7347,6 +7599,42 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 >
                   What movie is 10/10, yet hardly anyone has heard of it?
                 </p>
+              </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/TheCinesthetic/status/2010184900599583070"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    4995
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
               </div>
             </div>
             <div
@@ -8083,6 +8371,42 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                   </div>
                 </div>
               </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/Nate_Google_/status/2011791917122547826"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    16
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
+              </div>
             </div>
             <div
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
@@ -8769,6 +9093,42 @@ This is not a coincidence.
                   </div>
                 </div>
               </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/elonmusk/status/2012040892719169884"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    411
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
+              </div>
             </div>
             <div
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
@@ -9402,6 +9762,33 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               style="font-family: var(--font-ibm-plex);"
             >
               <div
+                class="px-4 pt-2 pb-0"
+              >
+                <div
+                  class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3"
+                >
+                  <svg
+                    class="lucide lucide-loader-circle w-4 h-4 animate-spin"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M21 12a9 9 0 1 1-6.219-8.56"
+                    />
+                  </svg>
+                  <span>
+                    Loading thread...
+                  </span>
+                </div>
+              </div>
+              <div
                 class="px-4 py-3 w-full min-w-0"
               >
                 <p
@@ -9409,6 +9796,42 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 >
                   Based on recent reports, the UK government has approved postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing reorganisation, like merging councils into unitary authorities. Up to 63 councils could delay by a year to manage resources and avoid electing soon-abolished bodies, affecting millions of voters. Critics from Tories and Reform UK claim it's to evade losses amid low Labour polls. Sources: Telegraph, ITV, http://GOV.UK.
                 </p>
+              </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/grok/status/2011596457824923855"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    13
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
               </div>
             </div>
             <div
@@ -10138,6 +10561,42 @@ Try it for free in our demo app (link in the thread).
                   </div>
                 </div>
               </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/swyx/status/2011861139689513314"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    24
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
+              </div>
             </div>
             <div
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
@@ -10821,6 +11280,42 @@ Hidden order.
                   </div>
                 </button>
               </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/Kekius_Sage/status/2011872260118716688"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    186
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
+              </div>
             </div>
             <div
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
@@ -11454,6 +11949,33 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               style="font-family: var(--font-ibm-plex);"
             >
               <div
+                class="px-4 pt-2 pb-0"
+              >
+                <div
+                  class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3"
+                >
+                  <svg
+                    class="lucide lucide-loader-circle w-4 h-4 animate-spin"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M21 12a9 9 0 1 1-6.219-8.56"
+                    />
+                  </svg>
+                  <span>
+                    Loading thread...
+                  </span>
+                </div>
+              </div>
+              <div
                 class="px-4 py-3 w-full min-w-0"
               >
                 <p
@@ -11461,6 +11983,42 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 >
                   link: https://www.youtube.com/watch?v=yGQb9KkvQ1Q
                 </p>
+              </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/skalskip92/status/1996677567642996772"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    10
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
               </div>
             </div>
             <div
@@ -12134,6 +12692,42 @@ Open this to see the entire post
                     src="https://pbs.twimg.com/media/G-e63eMXUAAQo4L.jpg?name=orig"
                   />
                 </div>
+              </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/iamgdsa/status/2010782484728873387"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    50
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
               </div>
             </div>
             <div
@@ -13318,6 +13912,42 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                     X Article
                   </div>
                 </div>
+              </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/aliniikk/status/2009347948816335031"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    240
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
               </div>
             </div>
             <div
@@ -15580,6 +16210,42 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </div>
                 </div>
               </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/NoahRyanCo/status/2008957369212866843"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    57
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
+              </div>
             </div>
             <div
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
@@ -16413,6 +17079,42 @@ Live now 🚀
                   </div>
                 </button>
               </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/moonpay/status/2009626024968118554"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    360
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
+              </div>
             </div>
             <div
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
@@ -17085,6 +17787,42 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                   />
                 </div>
               </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/maverickecom/status/2011489837094683034"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    1429
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
+              </div>
             </div>
             <div
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
@@ -17734,6 +18472,42 @@ His days are numbered
                     src="https://pbs.twimg.com/media/G-w24jMbQAQQCqp.png?name=orig"
                   />
                 </div>
+              </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/BasilTheGreat/status/2012044480556208542"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    103
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
               </div>
             </div>
             <div
@@ -18488,6 +19262,42 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                   </div>
                 </div>
               </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/_The_Prophet__/status/2011834234642841806"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    321
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
+              </div>
             </div>
             <div
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
@@ -19108,6 +19918,42 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 >
                   What movie is 10/10, yet hardly anyone has heard of it?
                 </p>
+              </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/TheCinesthetic/status/2010184900599583070"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    4995
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
               </div>
             </div>
             <div
@@ -19824,6 +20670,42 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                   </div>
                 </div>
               </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/Nate_Google_/status/2011791917122547826"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    16
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
+              </div>
             </div>
             <div
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
@@ -20490,6 +21372,42 @@ This is not a coincidence.
                   </div>
                 </div>
               </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/elonmusk/status/2012040892719169884"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    411
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
+              </div>
             </div>
             <div
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
@@ -21103,6 +22021,33 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               style="font-family: var(--font-ibm-plex);"
             >
               <div
+                class="px-4 pt-2 pb-0"
+              >
+                <div
+                  class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3"
+                >
+                  <svg
+                    class="lucide lucide-loader-circle w-4 h-4 animate-spin"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M21 12a9 9 0 1 1-6.219-8.56"
+                    />
+                  </svg>
+                  <span>
+                    Loading thread...
+                  </span>
+                </div>
+              </div>
+              <div
                 class="px-4 py-3 w-full min-w-0"
               >
                 <p
@@ -21110,6 +22055,42 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 >
                   Based on recent reports, the UK government has approved postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing reorganisation, like merging councils into unitary authorities. Up to 63 councils could delay by a year to manage resources and avoid electing soon-abolished bodies, affecting millions of voters. Critics from Tories and Reform UK claim it's to evade losses amid low Labour polls. Sources: Telegraph, ITV, http://GOV.UK.
                 </p>
+              </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/grok/status/2011596457824923855"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    13
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
               </div>
             </div>
             <div
@@ -21819,6 +22800,42 @@ Try it for free in our demo app (link in the thread).
                   </div>
                 </div>
               </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/swyx/status/2011861139689513314"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    24
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
+              </div>
             </div>
             <div
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
@@ -22482,6 +23499,42 @@ Hidden order.
                   </div>
                 </button>
               </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/Kekius_Sage/status/2011872260118716688"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    186
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
+              </div>
             </div>
             <div
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
@@ -23095,6 +24148,33 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               style="font-family: var(--font-ibm-plex);"
             >
               <div
+                class="px-4 pt-2 pb-0"
+              >
+                <div
+                  class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3"
+                >
+                  <svg
+                    class="lucide lucide-loader-circle w-4 h-4 animate-spin"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M21 12a9 9 0 1 1-6.219-8.56"
+                    />
+                  </svg>
+                  <span>
+                    Loading thread...
+                  </span>
+                </div>
+              </div>
+              <div
                 class="px-4 py-3 w-full min-w-0"
               >
                 <p
@@ -23102,6 +24182,42 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 >
                   link: https://www.youtube.com/watch?v=yGQb9KkvQ1Q
                 </p>
+              </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <a
+                  class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors py-2 border-t border-gray-100 dark:border-gray-700"
+                  href="https://x.com/skalskip92/status/1996677567642996772"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <svg
+                    class="lucide lucide-chevron-down w-3.5 h-3.5"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="m6 9 6 6 6-6"
+                    />
+                  </svg>
+                  <span>
+                    10
+                     more below
+                  </span>
+                  <span
+                    class="text-gray-400 dark:text-gray-500"
+                  >
+                    · View on X
+                  </span>
+                </a>
               </div>
             </div>
             <div

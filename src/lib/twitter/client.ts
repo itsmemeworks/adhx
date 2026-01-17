@@ -279,6 +279,10 @@ export async function fetchTweet(userId: string, tweetId: string): Promise<Twitt
           }
         : undefined,
       createdAt: tweet.created_at,
+      referencedTweets: tweet.referenced_tweets?.map((rt) => ({
+        type: rt.type as 'quoted' | 'replied_to' | 'retweeted',
+        id: rt.id,
+      })),
     }
   } catch (error) {
     console.error(`Failed to fetch tweet ${tweetId}:`, error)

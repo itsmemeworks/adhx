@@ -79,6 +79,10 @@ export async function POST(request: NextRequest) {
     // Create bookmark
     const now = new Date().toISOString()
 
+    // Process reply information (FxTwitter includes replying_to and replying_to_status)
+    const isReply = !!tweet.replying_to
+    const inReplyToTweetId = tweet.replying_to_status || null
+
     // Process quote tweet if present (FxTwitter includes quote data in tweet.quote)
     let isQuote = false
     let quoteContext: string | null = null
@@ -188,6 +192,8 @@ export async function POST(request: NextRequest) {
       processedAt: now,
       category,
       source, // 'manual' or 'url_prefix'
+      isReply,
+      inReplyToTweetId,
       isQuote,
       quoteContext,
       quotedTweetId,

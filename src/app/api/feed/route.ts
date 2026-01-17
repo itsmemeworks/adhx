@@ -289,6 +289,8 @@ export async function GET(request: NextRequest) {
       processedAt: string
       category: string | null
       isRead: boolean
+      isReply: boolean | null
+      inReplyToTweetId: string | null
       isQuote: boolean | null
       quoteContext: unknown
       quotedTweetId: string | null
@@ -408,6 +410,8 @@ export async function GET(request: NextRequest) {
         processedAt: bookmark.processedAt,
         category: effectiveCategory,
         isRead,
+        isReply: bookmark.isReply,
+        inReplyToTweetId: bookmark.inReplyToTweetId,
         isQuote: bookmark.isQuote,
         quoteContext,
         quotedTweetId: bookmark.quotedTweetId,

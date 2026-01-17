@@ -18,7 +18,8 @@ import { AuthorAvatar } from './AuthorAvatar'
 import { TagInput, type TagInputHandle } from './TagInput'
 import { renderTextWithLinks, renderBionicTextWithLinks, renderArticleBlock, stripMediaUrls, handleDownloadMedia } from './utils'
 import { usePreferences } from '@/lib/preferences-context'
-import type { FeedItem, TagItem } from './types'
+import { ThreadView } from './ThreadView'
+import type { FeedItem, TagItem, ThreadResponse, ThreadItem } from './types'
 
 interface LightboxProps {
   item: FeedItem
@@ -54,11 +55,55 @@ export function Lightbox({
   onNavigateToId,
 }: LightboxProps): React.ReactElement {
   const [showDopamine, setShowDopamine] = useState(false)
+  const [showThread, setShowThread] = useState(false)
+  const [threadData, setThreadData] = useState<ThreadResponse | null>(null)
+  const [loadingThread, setLoadingThread] = useState(false)
+  const [selectedThreadTweet, setSelectedThreadTweet] = useState<ThreadItem | null>(null)
   const tagInputRef = useRef<TagInputHandle>(null)
   const touchStartRef = useRef<{ x: number; y: number } | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const { preferences } = usePreferences()
   const bionicReading = preferences.bionicReading
+
+  // Check if this item is part of a thread (is a reply with known parent)
+  const isPartOfThread = Boolean(item.isReply && item.inReplyToTweetId)
+
+  // Reset thread state when item changes
+  useEffect(() => {
+    setShowThread(false)
+    setThreadData(null)
+    setSelectedThreadTweet(null)
+  }, [item.id])
+
+  // Fetch thread data
+  const handleToggleThread = async (): Promise<void> => {
+    if (!isPartOfThread) return
+
+    if (showThread) {
+      setShowThread(false)
+      setSelectedThreadTweet(null)
+      return
+    }
+
+    if (threadData) {
+      setShowThread(true)
+      return
+    }
+
+    setLoadingThread(true)
+    try {
+      const response = await fetch(`/api/threads/${item.id}`)
+      if (response.ok) {
+        const data = await response.json() as ThreadResponse
+        setThreadData(data)
+        setShowThread(true)
+      }
+    } catch (error) {
+      console.error('Failed to fetch thread:', error)
+    } finally {
+      setLoadingThread(false)
+    }
+  }
 
   useEffect(() => {
     setShowDopamine(false)
@@ -112,15 +157,22 @@ export function Lightbox({
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent): void {
+      if (document.activeElement?.tagName === 'INPUT') return
+
       if (e.key === 't' || e.key === 'T') {
-        if (document.activeElement?.tagName === 'INPUT') return
         e.preventDefault()
         tagInputRef.current?.focus()
+      }
+
+      // H for thread (history)
+      if ((e.key === 'h' || e.key === 'H') && isPartOfThread) {
+        e.preventDefault()
+        handleToggleThread()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  }, [isPartOfThread, handleToggleThread])
 
   function handleMarkReadWithAnimation(): void {
     if (item.isRead) {
@@ -201,6 +253,13 @@ export function Lightbox({
             tagInputRef={tagInputRef}
             bionicReading={bionicReading}
             onNavigateToId={onNavigateToId}
+            isPartOfThread={isPartOfThread}
+            showThread={showThread}
+            threadData={threadData}
+            loadingThread={loadingThread}
+            onToggleThread={handleToggleThread}
+            selectedThreadTweet={selectedThreadTweet}
+            onThreadTweetSelect={setSelectedThreadTweet}
           />
         ) : (
           <TextLightboxContent
@@ -214,13 +273,20 @@ export function Lightbox({
             tagInputRef={tagInputRef}
             bionicReading={bionicReading}
             onNavigateToId={onNavigateToId}
+            isPartOfThread={isPartOfThread}
+            showThread={showThread}
+            threadData={threadData}
+            loadingThread={loadingThread}
+            onToggleThread={handleToggleThread}
+            selectedThreadTweet={selectedThreadTweet}
+            onThreadTweetSelect={setSelectedThreadTweet}
           />
         )}
       </div>
 
       {/* Keyboard hint - hidden on mobile */}
       <div className="hidden sm:block absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs">
-        &larr; &rarr; navigate | R read | U unread | T tag | Q quoted | P parent | S share | X open | Esc close
+        &larr; &rarr; navigate | R read | U unread | T tag | Q quoted | P parent | H thread | S share | X open | Esc close
       </div>
     </div>
   )
@@ -237,12 +303,20 @@ interface LightboxContentProps {
   tagInputRef: React.RefObject<TagInputHandle | null>
   bionicReading: boolean
   onNavigateToId?: (id: string, fallbackUrl?: string) => boolean
+  // Thread props
+  isPartOfThread?: boolean
+  showThread?: boolean
+  threadData?: ThreadResponse | null
+  loadingThread?: boolean
+  onToggleThread?: () => void
+  selectedThreadTweet?: ThreadItem | null
+  onThreadTweetSelect?: (item: ThreadItem) => void
 }
 
 function MediaLightboxContent({
   item,
-  primaryMedia,
-  isVideo,
+  primaryMedia: _primaryMedia,
+  isVideo: _isVideo,
   showDopamine,
   markingRead,
   onMarkRead,
@@ -252,12 +326,29 @@ function MediaLightboxContent({
   tagInputRef,
   bionicReading,
   onNavigateToId,
+  isPartOfThread,
+  showThread,
+  threadData,
+  loadingThread,
+  onToggleThread,
+  selectedThreadTweet,
+  onThreadTweetSelect,
 }: LightboxContentProps & {
   primaryMedia: NonNullable<FeedItem['media']>[0]
   isVideo: boolean
 }): React.ReactElement {
   const hasMedia = item.media && item.media.length > 0
   const renderText = bionicReading ? renderBionicTextWithLinks : renderTextWithLinks
+
+  // Determine what media to display - selected thread tweet or current item
+  const displayItem = selectedThreadTweet || {
+    id: item.id,
+    author: item.author,
+    media: item.media
+  }
+  const displayMedia = displayItem.media?.[0]
+  const displayIsVideo = displayMedia?.mediaType === 'video' || displayMedia?.mediaType === 'animated_gif' || displayMedia?.mediaType === 'gif'
+  const displayHasMedia = displayItem.media && displayItem.media.length > 0
 
   // Handle parent navigation - parent component handles filter switching if item not in current view
   const handleNavigateToParent = (): void => {
@@ -267,18 +358,44 @@ function MediaLightboxContent({
     }
   }
 
+  // Handle thread item click - navigate to the tweet if it's in our collection
+  const handleThreadTweetClick = (id: string): void => {
+    if (onNavigateToId) {
+      onNavigateToId(id)
+    }
+  }
+
+  // Clear selection when clicking "Back to current"
+  const handleBackToCurrent = (): void => {
+    onThreadTweetSelect?.(null as unknown as ThreadItem)
+  }
+
   return (
     <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-center lg:items-start max-h-[85vh] overflow-y-auto lg:overflow-visible">
       {/* Media panel - shown first on mobile */}
-      <div className="w-full lg:flex-1 flex items-center justify-center order-1 lg:order-2 relative group">
-        {isVideo ? (
+      <div className="w-full lg:flex-1 flex flex-col items-center justify-center order-1 lg:order-2 relative group">
+        {/* Selected thread tweet indicator */}
+        {selectedThreadTweet && (
+          <div className="w-full mb-3 flex items-center justify-between px-4 py-2 bg-purple-500/90 text-white rounded-xl text-sm">
+            <span>Previewing: @{selectedThreadTweet.author}</span>
+            <button
+              onClick={handleBackToCurrent}
+              className="px-2 py-1 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
+            >
+              Back to current
+            </button>
+          </div>
+        )}
+
+        {displayHasMedia && displayMedia ? (
+          displayIsVideo ? (
           <div className="relative">
             <video
-              key={item.id}
-              src={`/api/media/video?author=${item.author}&tweetId=${item.id}&quality=full`}
+              key={displayItem.id}
+              src={`/api/media/video?author=${displayItem.author}&tweetId=${displayItem.id}&quality=full`}
               controls
               autoPlay
-              loop={primaryMedia.mediaType === 'animated_gif'}
+              loop={displayMedia.mediaType === 'animated_gif' || displayMedia.mediaType === 'gif'}
               className="max-w-full max-h-[50vh] lg:max-h-[80vh] rounded-xl lg:rounded-2xl bg-black"
             />
             {/* Download button for video */}
@@ -286,8 +403,8 @@ function MediaLightboxContent({
               <button
                 onClick={(e) => handleDownloadMedia(
                   e,
-                  `/api/media/video?author=${item.author}&tweetId=${item.id}&quality=full`,
-                  `tweet-${item.id}.mp4`
+                  `/api/media/video?author=${displayItem.author}&tweetId=${displayItem.id}&quality=full`,
+                  `tweet-${displayItem.id}.mp4`
                 )}
                 className="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
                 title="Download"
@@ -296,22 +413,22 @@ function MediaLightboxContent({
               </button>
             </div>
           </div>
-        ) : item.media && item.media.length > 1 ? (
+        ) : displayItem.media && displayItem.media.length > 1 ? (
           /* Multi-image: vertical scroll gallery */
           <div className="flex flex-col gap-4 max-h-[50vh] lg:max-h-[80vh] overflow-y-auto py-2 px-2 article-scrollbar">
-            {item.media
+            {displayItem.media
               .filter(m => m.mediaType === 'photo')
               .map((media, index) => (
                 <div key={media.id} className="relative group/img flex-shrink-0">
                   <img
                     src={media.url}
-                    alt={`Image ${index + 1} of ${item.media!.length}`}
+                    alt={`Image ${index + 1} of ${displayItem.media!.length}`}
                     className="max-w-full max-h-[70vh] rounded-xl lg:rounded-2xl object-contain mx-auto"
                   />
                   {/* Download button per image */}
                   <div className="absolute top-3 right-3 opacity-0 group-hover/img:opacity-100 transition-opacity">
                     <button
-                      onClick={(e) => handleDownloadMedia(e, media.url, `tweet-${item.id}-${index + 1}.jpg`)}
+                      onClick={(e) => handleDownloadMedia(e, media.url, `tweet-${displayItem.id}-${index + 1}.jpg`)}
                       className="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
                       title="Download"
                     >
@@ -325,15 +442,15 @@ function MediaLightboxContent({
           /* Single image */
           <div className="relative">
             <img
-              key={item.id}
-              src={primaryMedia.url}
+              key={displayItem.id}
+              src={displayMedia.url}
               alt=""
               className="max-w-full max-h-[50vh] lg:max-h-[80vh] rounded-xl lg:rounded-2xl object-contain"
             />
             {/* Download button for single image */}
             <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
-                onClick={(e) => handleDownloadMedia(e, primaryMedia.url, `tweet-${item.id}.jpg`)}
+                onClick={(e) => handleDownloadMedia(e, displayMedia.url, `tweet-${displayItem.id}.jpg`)}
                 className="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
                 title="Download"
               >
@@ -341,33 +458,96 @@ function MediaLightboxContent({
               </button>
             </div>
           </div>
+        )
+        ) : selectedThreadTweet ? (
+          /* Selected thread tweet has no media - show text preview */
+          <div className="w-full max-w-lg bg-white dark:bg-gray-800 rounded-2xl p-6 text-center">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <AuthorAvatar author={selectedThreadTweet.author} src={selectedThreadTweet.authorProfileImageUrl} size="md" />
+              <div className="text-left">
+                <div className="font-medium text-gray-900 dark:text-white">{selectedThreadTweet.authorName || selectedThreadTweet.author}</div>
+                <div className="text-sm text-gray-500">@{selectedThreadTweet.author}</div>
+              </div>
+            </div>
+            <p className="text-gray-700 dark:text-gray-300 text-lg leading-relaxed">
+              {renderText(selectedThreadTweet.text)}
+            </p>
+            <p className="text-sm text-gray-400 mt-4">This tweet has no media</p>
+          </div>
+        ) : (
+          /* Fallback - should not happen */
+          <div className="text-gray-500">No media available</div>
         )}
       </div>
 
       {/* Info panel - shown below media on mobile, left side on desktop */}
       <div className="w-full lg:w-80 flex-shrink-0 bg-white dark:bg-gray-900 rounded-xl lg:rounded-2xl p-4 lg:p-5 lg:max-h-[80vh] lg:overflow-y-auto flex flex-col order-2 lg:order-1">
-        {/* Parent banner - shows when this tweet was quoted by another */}
-        {item.parentTweets && item.parentTweets.length > 0 && (
+        {/* Thread banner - shows when this tweet is part of a thread */}
+        {isPartOfThread && (
           <button
-            onClick={handleNavigateToParent}
-            className="flex items-center justify-between px-3 py-2 mb-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-xs hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+            onClick={onToggleThread}
+            disabled={loadingThread}
+            className="group flex items-center justify-between w-full px-3 py-2.5 mb-3 bg-gradient-to-r from-purple-50 to-purple-100/50 dark:from-purple-900/20 dark:to-purple-800/10 rounded-xl text-sm hover:from-purple-100 hover:to-purple-100 dark:hover:from-purple-900/30 dark:hover:to-purple-800/20 transition-all disabled:opacity-50 border border-purple-200/50 dark:border-purple-700/30"
           >
-            <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
-              <Quote className="w-3 h-3" />
-              <span>Quoted by <strong>@{item.parentTweets[0].author}</strong></span>
+            <div className="flex items-center gap-2 text-purple-700 dark:text-purple-300">
+              <ThreadIconSmall className="w-4 h-4" />
+              <span className="font-medium">
+                {loadingThread ? 'Loading thread...' : showThread ? 'Hide thread' : 'View thread'}
+              </span>
+              {threadData && !loadingThread && (
+                <span className="text-purple-500 dark:text-purple-400 text-xs">
+                  {threadData.thread.length} {threadData.thread.length === 1 ? 'tweet' : 'tweets'}
+                </span>
+              )}
             </div>
-            <span className="text-blue-500">P</span>
+            <kbd className="px-1.5 py-0.5 text-xs font-mono bg-purple-200/50 dark:bg-purple-800/50 text-purple-600 dark:text-purple-300 rounded group-hover:bg-purple-200 dark:group-hover:bg-purple-800 transition-colors">
+              H
+            </kbd>
           </button>
         )}
-        <AuthorHeader item={item} />
-        {item.text && (
-          <p className="text-gray-900 dark:text-white text-sm leading-relaxed mb-4 line-clamp-4 lg:line-clamp-none">
-            {renderText(stripMediaUrls(item.text, !!hasMedia))}
-          </p>
+
+        {/* Thread view - shows when expanded */}
+        {showThread && threadData && (
+          <div className="mb-4 -mx-1 p-4 bg-gray-50/80 dark:bg-gray-800/30 rounded-xl max-h-[60vh] overflow-y-auto article-scrollbar border border-gray-100 dark:border-gray-700/50">
+            <ThreadView
+              thread={threadData.thread}
+              currentPosition={threadData.currentPosition}
+              isComplete={threadData.isComplete}
+              isSelfThread={threadData.isSelfThread}
+              onTweetClick={handleThreadTweetClick}
+              onTweetSelect={onThreadTweetSelect}
+              selectedId={selectedThreadTweet?.id}
+            />
+          </div>
         )}
-        {/* Embedded QuoteCard for quote tweets with media */}
-        {item.isQuote && (item.quotedTweet || item.quoteContext) && (
-          <QuoteCard item={item} onNavigateToId={onNavigateToId} compact />
+
+        {/* Only show author/text when thread is NOT expanded (they're visible in right panel) */}
+        {!showThread && (
+          <>
+            {/* Parent banner - shows when this tweet was quoted by another */}
+            {item.parentTweets && item.parentTweets.length > 0 && (
+              <button
+                onClick={handleNavigateToParent}
+                className="flex items-center justify-between px-3 py-2 mb-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-xs hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+              >
+                <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
+                  <Quote className="w-3 h-3" />
+                  <span>Quoted by <strong>@{item.parentTweets[0].author}</strong></span>
+                </div>
+                <span className="text-blue-500">P</span>
+              </button>
+            )}
+            <AuthorHeader item={item} />
+            {item.text && (
+              <p className="text-gray-900 dark:text-white text-sm leading-relaxed mb-4 line-clamp-4 lg:line-clamp-none">
+                {renderText(stripMediaUrls(item.text, !!hasMedia))}
+              </p>
+            )}
+            {/* Embedded QuoteCard for quote tweets with media */}
+            {item.isQuote && (item.quotedTweet || item.quoteContext) && (
+              <QuoteCard item={item} onNavigateToId={onNavigateToId} compact />
+            )}
+          </>
         )}
         <BottomBar
           item={item}
@@ -395,6 +575,13 @@ function TextLightboxContent({
   tagInputRef,
   bionicReading,
   onNavigateToId,
+  isPartOfThread,
+  showThread,
+  threadData,
+  loadingThread,
+  onToggleThread,
+  selectedThreadTweet,
+  onThreadTweetSelect,
 }: LightboxContentProps): React.ReactElement {
   const renderText = bionicReading ? renderBionicTextWithLinks : renderTextWithLinks
 
@@ -406,34 +593,85 @@ function TextLightboxContent({
     }
   }
 
+  // Handle thread item click - navigate to the tweet if it's in our collection
+  const handleThreadTweetClick = (id: string): void => {
+    if (onNavigateToId) {
+      onNavigateToId(id)
+    }
+  }
+
   return (
     <div className="w-full max-w-2xl mx-auto bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 flex flex-col max-h-[85vh] overflow-y-auto">
-      {/* Parent banner - shows when this tweet was quoted by another */}
-      {item.parentTweets && item.parentTweets.length > 0 && (
+      {/* Thread banner - shows when this tweet is part of a thread */}
+      {isPartOfThread && (
         <button
-          onClick={handleNavigateToParent}
-          className="flex items-center justify-between px-3 py-2 mb-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+          onClick={onToggleThread}
+          disabled={loadingThread}
+          className="group flex items-center justify-between w-full px-4 py-3 mb-4 bg-gradient-to-r from-purple-50 to-purple-100/50 dark:from-purple-900/20 dark:to-purple-800/10 rounded-xl text-sm hover:from-purple-100 hover:to-purple-100 dark:hover:from-purple-900/30 dark:hover:to-purple-800/20 transition-all disabled:opacity-50 border border-purple-200/50 dark:border-purple-700/30"
         >
-          <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
-            <Quote className="w-4 h-4" />
-            <span>Quoted by <strong>@{item.parentTweets[0].author}</strong></span>
+          <div className="flex items-center gap-2.5 text-purple-700 dark:text-purple-300">
+            <ThreadIcon className="w-5 h-5" />
+            <span className="font-medium">
+              {loadingThread ? 'Loading thread...' : showThread ? 'Hide thread' : 'View full thread'}
+            </span>
+            {threadData && !loadingThread && (
+              <span className="text-purple-500 dark:text-purple-400 text-xs">
+                {threadData.thread.length} {threadData.thread.length === 1 ? 'tweet' : 'tweets'}
+              </span>
+            )}
           </div>
-          <span className="text-xs text-blue-500">Press P to view</span>
+          <kbd className="px-2 py-1 text-xs font-mono bg-purple-200/50 dark:bg-purple-800/50 text-purple-600 dark:text-purple-300 rounded group-hover:bg-purple-200 dark:group-hover:bg-purple-800 transition-colors">
+            H
+          </kbd>
         </button>
       )}
 
-      <AuthorHeader item={item} />
-
-      {item.isRetweet && item.retweetContext ? (
-        <RetweetContent retweetContext={item.retweetContext} bionicReading={bionicReading} />
-      ) : item.isQuote && (item.quotedTweet || item.quoteContext) ? (
-        <TextQuoteContent item={item} bionicReading={bionicReading} onNavigateToId={onNavigateToId} />
-      ) : item.category === 'article' && (item.articlePreview || item.links?.[0]) ? (
-        <ArticleContent item={item} bionicReading={bionicReading} />
-      ) : (
-        <div className="max-h-[60vh] overflow-y-auto pr-2 -mr-2 article-scrollbar">
-          <p className="text-gray-900 dark:text-white text-lg leading-relaxed pb-4">{renderText(item.text)}</p>
+      {/* Thread view - shows when expanded */}
+      {showThread && threadData && (
+        <div className="mb-5 p-5 bg-gray-50/80 dark:bg-gray-800/30 rounded-xl max-h-[60vh] overflow-y-auto article-scrollbar border border-gray-100 dark:border-gray-700/50">
+          <ThreadView
+            thread={threadData.thread}
+            currentPosition={threadData.currentPosition}
+            isComplete={threadData.isComplete}
+            isSelfThread={threadData.isSelfThread}
+            onTweetClick={handleThreadTweetClick}
+            onTweetSelect={onThreadTweetSelect}
+            selectedId={selectedThreadTweet?.id}
+          />
         </div>
+      )}
+
+      {/* Only show content when thread is NOT expanded */}
+      {!showThread && (
+        <>
+          {/* Parent banner - shows when this tweet was quoted by another */}
+          {item.parentTweets && item.parentTweets.length > 0 && (
+            <button
+              onClick={handleNavigateToParent}
+              className="flex items-center justify-between px-3 py-2 mb-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+            >
+              <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
+                <Quote className="w-4 h-4" />
+                <span>Quoted by <strong>@{item.parentTweets[0].author}</strong></span>
+              </div>
+              <span className="text-xs text-blue-500">Press P to view</span>
+            </button>
+          )}
+
+          <AuthorHeader item={item} />
+
+          {item.isRetweet && item.retweetContext ? (
+            <RetweetContent retweetContext={item.retweetContext} bionicReading={bionicReading} />
+          ) : item.isQuote && (item.quotedTweet || item.quoteContext) ? (
+            <TextQuoteContent item={item} bionicReading={bionicReading} onNavigateToId={onNavigateToId} />
+          ) : item.category === 'article' && (item.articlePreview || item.links?.[0]) ? (
+            <ArticleContent item={item} bionicReading={bionicReading} />
+          ) : (
+            <div className="max-h-[60vh] overflow-y-auto pr-2 -mr-2 article-scrollbar">
+              <p className="text-gray-900 dark:text-white text-lg leading-relaxed pb-4">{renderText(item.text)}</p>
+            </div>
+          )}
+        </>
       )}
 
       <BottomBar
@@ -449,6 +687,28 @@ function TextLightboxContent({
     </div>
   )
 }
+
+/** Thread icon for the thread banner */
+function ThreadIcon({ className }: { className?: string }): React.ReactElement {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      <path d="M8 9h8" />
+      <path d="M8 13h6" />
+    </svg>
+  )
+}
+
+// Alias for compact sidebar usage
+const ThreadIconSmall = ThreadIcon
 
 function AuthorHeader({ item }: { item: FeedItem }): React.ReactElement {
   const [showCopied, setShowCopied] = useState(false)
