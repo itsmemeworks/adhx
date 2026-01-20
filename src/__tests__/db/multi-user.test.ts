@@ -395,6 +395,329 @@ describe('Multi-User Database Isolation', () => {
       expect(userAMediaCount).toHaveLength(3)
       expect(userBMediaCount).toHaveLength(1)
     })
+
+    it('prevents duplicate media for the same user (without onConflictDoNothing)', async () => {
+      const mediaId = `${SHARED_TWEET_ID}_photo_0`
+
+      // First insert succeeds
+      await db.insert(bookmarkMedia).values({
+        id: mediaId,
+        userId: USER_A,
+        bookmarkId: SHARED_TWEET_ID,
+        mediaType: 'photo',
+        originalUrl: 'https://example.com/photo.jpg',
+      })
+
+      // Second insert with same (userId, id) should fail
+      await expect(
+        db.insert(bookmarkMedia).values({
+          id: mediaId,
+          userId: USER_A,
+          bookmarkId: SHARED_TWEET_ID,
+          mediaType: 'photo',
+          originalUrl: 'https://example.com/photo.jpg',
+        })
+      ).rejects.toThrow(/UNIQUE constraint failed/)
+    })
+
+    it('handles duplicate media gracefully with onConflictDoNothing', async () => {
+      const mediaId = `${SHARED_TWEET_ID}_photo_0`
+
+      // First insert
+      await db.insert(bookmarkMedia).values({
+        id: mediaId,
+        userId: USER_A,
+        bookmarkId: SHARED_TWEET_ID,
+        mediaType: 'photo',
+        originalUrl: 'https://example.com/photo.jpg',
+      })
+
+      // Second insert with onConflictDoNothing should NOT throw
+      await db.insert(bookmarkMedia).values({
+        id: mediaId,
+        userId: USER_A,
+        bookmarkId: SHARED_TWEET_ID,
+        mediaType: 'photo',
+        originalUrl: 'https://example.com/photo.jpg',
+      }).onConflictDoNothing()
+
+      // Should still have only 1 media record
+      const media = await db
+        .select()
+        .from(bookmarkMedia)
+        .where(and(eq(bookmarkMedia.userId, USER_A), eq(bookmarkMedia.id, mediaId)))
+
+      expect(media).toHaveLength(1)
+    })
+
+    it('allows same media ID for different users with onConflictDoNothing', async () => {
+      const mediaId = `${SHARED_TWEET_ID}_photo_0`
+
+      // User A inserts media
+      await db.insert(bookmarkMedia).values({
+        id: mediaId,
+        userId: USER_A,
+        bookmarkId: SHARED_TWEET_ID,
+        mediaType: 'photo',
+        originalUrl: 'https://example.com/photo.jpg',
+      }).onConflictDoNothing()
+
+      // User B inserts same media ID (different composite key)
+      await db.insert(bookmarkMedia).values({
+        id: mediaId,
+        userId: USER_B,
+        bookmarkId: SHARED_TWEET_ID,
+        mediaType: 'photo',
+        originalUrl: 'https://example.com/photo.jpg',
+      }).onConflictDoNothing()
+
+      // User A inserts again (should no-op)
+      await db.insert(bookmarkMedia).values({
+        id: mediaId,
+        userId: USER_A,
+        bookmarkId: SHARED_TWEET_ID,
+        mediaType: 'photo',
+        originalUrl: 'https://example.com/photo.jpg',
+      }).onConflictDoNothing()
+
+      // Each user should have exactly 1 media record
+      const userAMedia = await db
+        .select()
+        .from(bookmarkMedia)
+        .where(eq(bookmarkMedia.userId, USER_A))
+
+      const userBMedia = await db
+        .select()
+        .from(bookmarkMedia)
+        .where(eq(bookmarkMedia.userId, USER_B))
+
+      expect(userAMedia).toHaveLength(1)
+      expect(userBMedia).toHaveLength(1)
+    })
+  })
+
+  // =========================================
+  // Concurrent Sync Simulation Tests
+  // =========================================
+  describe('Concurrent Sync Handling', () => {
+    const QUOTE_TWEET_ID = 'quote-tweet-123'
+    const QUOTED_TWEET_ID = 'quoted-tweet-456'
+
+    beforeEach(async () => {
+      // Set up a quote tweet scenario
+      await db.insert(bookmarks).values([
+        createTestBookmark(USER_A, QUOTE_TWEET_ID, {
+          isQuote: true,
+          quotedTweetId: QUOTED_TWEET_ID,
+        }),
+      ])
+    })
+
+    it('handles concurrent media inserts for quoted tweets safely', async () => {
+      // Insert the quoted tweet bookmark
+      await db.insert(bookmarks).values(
+        createTestBookmark(USER_A, QUOTED_TWEET_ID)
+      ).onConflictDoNothing()
+
+      // Simulate two concurrent sync processes trying to insert the same media
+      // This is what happens when user double-clicks sync button
+      const mediaInserts = [
+        db.insert(bookmarkMedia).values({
+          id: `${QUOTED_TWEET_ID}_photo_0`,
+          userId: USER_A,
+          bookmarkId: QUOTED_TWEET_ID,
+          mediaType: 'photo',
+          originalUrl: 'https://example.com/quoted-photo.jpg',
+          width: 800,
+          height: 600,
+        }).onConflictDoNothing(),
+        db.insert(bookmarkMedia).values({
+          id: `${QUOTED_TWEET_ID}_photo_0`,
+          userId: USER_A,
+          bookmarkId: QUOTED_TWEET_ID,
+          mediaType: 'photo',
+          originalUrl: 'https://example.com/quoted-photo.jpg',
+          width: 800,
+          height: 600,
+        }).onConflictDoNothing(),
+      ]
+
+      // Both should complete without error
+      await Promise.all(mediaInserts)
+
+      // Only one media record should exist
+      const media = await db
+        .select()
+        .from(bookmarkMedia)
+        .where(and(
+          eq(bookmarkMedia.userId, USER_A),
+          eq(bookmarkMedia.bookmarkId, QUOTED_TWEET_ID)
+        ))
+
+      expect(media).toHaveLength(1)
+      expect(media[0].id).toBe(`${QUOTED_TWEET_ID}_photo_0`)
+    })
+
+    it('handles concurrent video media inserts safely', async () => {
+      await db.insert(bookmarks).values(
+        createTestBookmark(USER_A, QUOTED_TWEET_ID)
+      ).onConflictDoNothing()
+
+      // Simulate concurrent video media inserts
+      const videoInserts = [
+        db.insert(bookmarkMedia).values({
+          id: `${QUOTED_TWEET_ID}_video_0`,
+          userId: USER_A,
+          bookmarkId: QUOTED_TWEET_ID,
+          mediaType: 'video',
+          originalUrl: 'https://example.com/video.mp4',
+          previewUrl: 'https://example.com/thumb.jpg',
+          width: 1920,
+          height: 1080,
+          durationMs: 30000,
+        }).onConflictDoNothing(),
+        db.insert(bookmarkMedia).values({
+          id: `${QUOTED_TWEET_ID}_video_0`,
+          userId: USER_A,
+          bookmarkId: QUOTED_TWEET_ID,
+          mediaType: 'video',
+          originalUrl: 'https://example.com/video.mp4',
+          previewUrl: 'https://example.com/thumb.jpg',
+          width: 1920,
+          height: 1080,
+          durationMs: 30000,
+        }).onConflictDoNothing(),
+      ]
+
+      await Promise.all(videoInserts)
+
+      const media = await db
+        .select()
+        .from(bookmarkMedia)
+        .where(and(
+          eq(bookmarkMedia.userId, USER_A),
+          eq(bookmarkMedia.bookmarkId, QUOTED_TWEET_ID)
+        ))
+
+      expect(media).toHaveLength(1)
+      expect(media[0].mediaType).toBe('video')
+    })
+
+    it('handles mixed photo and video concurrent inserts', async () => {
+      await db.insert(bookmarks).values(
+        createTestBookmark(USER_A, QUOTED_TWEET_ID)
+      ).onConflictDoNothing()
+
+      // Simulate a tweet with multiple media items being processed concurrently
+      const mediaInserts = [
+        // First sync process inserts photo
+        db.insert(bookmarkMedia).values({
+          id: `${QUOTED_TWEET_ID}_photo_0`,
+          userId: USER_A,
+          bookmarkId: QUOTED_TWEET_ID,
+          mediaType: 'photo',
+          originalUrl: 'https://example.com/photo1.jpg',
+        }).onConflictDoNothing(),
+        // Second sync process tries same photo
+        db.insert(bookmarkMedia).values({
+          id: `${QUOTED_TWEET_ID}_photo_0`,
+          userId: USER_A,
+          bookmarkId: QUOTED_TWEET_ID,
+          mediaType: 'photo',
+          originalUrl: 'https://example.com/photo1.jpg',
+        }).onConflictDoNothing(),
+        // First sync also inserts video
+        db.insert(bookmarkMedia).values({
+          id: `${QUOTED_TWEET_ID}_video_0`,
+          userId: USER_A,
+          bookmarkId: QUOTED_TWEET_ID,
+          mediaType: 'video',
+          originalUrl: 'https://example.com/video.mp4',
+        }).onConflictDoNothing(),
+        // Second sync tries same video
+        db.insert(bookmarkMedia).values({
+          id: `${QUOTED_TWEET_ID}_video_0`,
+          userId: USER_A,
+          bookmarkId: QUOTED_TWEET_ID,
+          mediaType: 'video',
+          originalUrl: 'https://example.com/video.mp4',
+        }).onConflictDoNothing(),
+      ]
+
+      await Promise.all(mediaInserts)
+
+      const media = await db
+        .select()
+        .from(bookmarkMedia)
+        .where(and(
+          eq(bookmarkMedia.userId, USER_A),
+          eq(bookmarkMedia.bookmarkId, QUOTED_TWEET_ID)
+        ))
+
+      // Should have exactly 2 media items (1 photo, 1 video)
+      expect(media).toHaveLength(2)
+      expect(media.map(m => m.mediaType).sort()).toEqual(['photo', 'video'])
+    })
+
+    it('isolates concurrent inserts between users', async () => {
+      // Both users bookmark a tweet that quotes the same tweet
+      await db.insert(bookmarks).values([
+        createTestBookmark(USER_A, QUOTED_TWEET_ID),
+        createTestBookmark(USER_B, QUOTED_TWEET_ID),
+      ]).onConflictDoNothing()
+
+      // Simulate both users syncing at the same time
+      const concurrentInserts = [
+        // User A's sync
+        db.insert(bookmarkMedia).values({
+          id: `${QUOTED_TWEET_ID}_photo_0`,
+          userId: USER_A,
+          bookmarkId: QUOTED_TWEET_ID,
+          mediaType: 'photo',
+          originalUrl: 'https://example.com/photo.jpg',
+        }).onConflictDoNothing(),
+        // User B's sync
+        db.insert(bookmarkMedia).values({
+          id: `${QUOTED_TWEET_ID}_photo_0`,
+          userId: USER_B,
+          bookmarkId: QUOTED_TWEET_ID,
+          mediaType: 'photo',
+          originalUrl: 'https://example.com/photo.jpg',
+        }).onConflictDoNothing(),
+        // User A's sync retry (double-click)
+        db.insert(bookmarkMedia).values({
+          id: `${QUOTED_TWEET_ID}_photo_0`,
+          userId: USER_A,
+          bookmarkId: QUOTED_TWEET_ID,
+          mediaType: 'photo',
+          originalUrl: 'https://example.com/photo.jpg',
+        }).onConflictDoNothing(),
+        // User B's sync retry
+        db.insert(bookmarkMedia).values({
+          id: `${QUOTED_TWEET_ID}_photo_0`,
+          userId: USER_B,
+          bookmarkId: QUOTED_TWEET_ID,
+          mediaType: 'photo',
+          originalUrl: 'https://example.com/photo.jpg',
+        }).onConflictDoNothing(),
+      ]
+
+      await Promise.all(concurrentInserts)
+
+      // Each user should have exactly 1 media record
+      const userAMedia = await db
+        .select()
+        .from(bookmarkMedia)
+        .where(eq(bookmarkMedia.userId, USER_A))
+
+      const userBMedia = await db
+        .select()
+        .from(bookmarkMedia)
+        .where(eq(bookmarkMedia.userId, USER_B))
+
+      expect(userAMedia).toHaveLength(1)
+      expect(userBMedia).toHaveLength(1)
+    })
   })
 
   // =========================================

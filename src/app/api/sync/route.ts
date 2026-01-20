@@ -394,7 +394,7 @@ async function saveBookmark(
                 originalUrl: photo.url,
                 width: photo.width,
                 height: photo.height,
-              })
+              }).onConflictDoNothing()
             }
           }
 
@@ -412,7 +412,7 @@ async function saveBookmark(
                 width: video.width,
                 height: video.height,
                 durationMs: video.duration ? video.duration * 1000 : null,
-              })
+              }).onConflictDoNothing()
             }
           }
 
@@ -553,7 +553,7 @@ async function saveBookmark(
         width: media.width || null,
         height: media.height || null,
         durationMs: media.durationMs || null,
-      })
+      }).onConflictDoNothing()
     }
   }
 
