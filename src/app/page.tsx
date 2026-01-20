@@ -17,6 +17,7 @@ import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Loader2, CheckCircle2 } from 'lucide-react'
 import { useTheme } from '@/lib/theme/context'
+import { XpToast, AchievementUnlockModal } from '@/components/gamification'
 
 function _FeedLoadingSkeleton(): React.ReactElement {
   return (
@@ -83,6 +84,17 @@ function FeedPageContent(): React.ReactElement {
   const [pendingNavigation, setPendingNavigation] = useState<{ id: string; fallbackUrl?: string } | null>(null)
   const prevLoadingRef = useRef(false)
   const [showShortcutsModal, setShowShortcutsModal] = useState(false)
+
+  // Gamification feedback state
+  const [xpToast, setXpToast] = useState<number | null>(null)
+  const [unlockedAchievements, setUnlockedAchievements] = useState<Array<{
+    id: string
+    name: string
+    description: string
+    icon: string
+    xpReward: number
+  }>>([])
+
 
   const selectedItem = selectedIndex !== null ? items[selectedIndex] : null
 
@@ -395,7 +407,8 @@ function FeedPageContent(): React.ReactElement {
         const item = items.find((i) => i.id === id)
         const method = item?.isRead ? 'DELETE' : 'POST'
 
-        await fetch(`/api/bookmarks/${id}/read`, { method })
+        const response = await fetch(`/api/bookmarks/${id}/read`, { method })
+        const data = await response.json()
 
         setItems((prev) => prev.map((i) => (i.id === id ? { ...i, isRead: !i.isRead } : i)))
         setStats((prev) => ({
@@ -403,6 +416,22 @@ function FeedPageContent(): React.ReactElement {
           unread: item?.isRead ? prev.unread + 1 : Math.max(0, prev.unread - 1),
         }))
         window.dispatchEvent(new CustomEvent('stats-updated'))
+
+        // Handle gamification feedback (only when marking as read, not unread)
+        if (method === 'POST' && data.gamification) {
+          // Show XP toast
+          if (data.gamification.xpGained > 0) {
+            setXpToast(data.gamification.xpGained)
+          }
+
+          // Show achievement unlock modal
+          if (data.gamification.newAchievements?.length > 0) {
+            // Delay slightly so XP toast shows first
+            setTimeout(() => {
+              setUnlockedAchievements(data.gamification.newAchievements)
+            }, 500)
+          }
+        }
       } catch (error) {
         console.error('Failed to mark as read:', error)
       } finally {
@@ -892,6 +921,18 @@ function FeedPageContent(): React.ReactElement {
         onClose={() => setShowShortcutsModal(false)}
         inFocusMode={selectedIndex !== null}
       />
+
+      {/* Gamification Feedback */}
+      {xpToast !== null && (
+        <XpToast xp={xpToast} onComplete={() => setXpToast(null)} />
+      )}
+
+      {unlockedAchievements.length > 0 && (
+        <AchievementUnlockModal
+          achievements={unlockedAchievements}
+          onClose={() => setUnlockedAchievements([])}
+        />
+      )}
     </div>
   )
 }

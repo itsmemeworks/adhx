@@ -241,6 +241,69 @@ export const syncLogs = sqliteTable(
 )
 
 // ===========================================
+// Gamification Tables
+// ===========================================
+
+// User gamification stats - tracks streaks, XP, level, lifetime metrics
+export const userGamification = sqliteTable('user_gamification', {
+  userId: text('user_id').primaryKey(),
+  currentStreak: integer('current_streak').default(0),
+  longestStreak: integer('longest_streak').default(0),
+  lastActiveDate: text('last_active_date'), // ISO date (YYYY-MM-DD)
+  totalXp: integer('total_xp').default(0),
+  level: integer('level').default(1),
+  lifetimeRead: integer('lifetime_read').default(0),
+  lifetimeBookmarked: integer('lifetime_bookmarked').default(0),
+  lifetimeTagged: integer('lifetime_tagged').default(0),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text('updated_at'),
+})
+
+// Unlocked achievements - tracks when users unlock achievements
+export const userAchievements = sqliteTable(
+  'user_achievements',
+  {
+    id: text('id').notNull(), // nanoid
+    userId: text('user_id').notNull(),
+    achievementId: text('achievement_id').notNull(), // e.g., 'first_hundred', 'speed_reader'
+    unlockedAt: text('unlocked_at').default(sql`CURRENT_TIMESTAMP`),
+    progress: integer('progress').default(0), // For partial progress tracking
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.achievementId] }),
+    userIdIdx: index('user_achievements_user_id_idx').on(table.userId),
+  })
+)
+
+// User profiles for public display
+export const userProfiles = sqliteTable('user_profiles', {
+  userId: text('user_id').primaryKey(),
+  displayName: text('display_name'),
+  bio: text('bio'), // max 160 chars (enforced in app)
+  isPublic: integer('is_public', { mode: 'boolean' }).default(false),
+  showStats: integer('show_stats', { mode: 'boolean' }).default(true),
+  showAchievements: integer('show_achievements', { mode: 'boolean' }).default(true),
+  featuredCollectionId: text('featured_collection_id'),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text('updated_at'),
+})
+
+// Follower relationships
+export const userFollows = sqliteTable(
+  'user_follows',
+  {
+    followerId: text('follower_id').notNull(),
+    followingId: text('following_id').notNull(),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.followerId, table.followingId] }),
+    followerIdx: index('user_follows_follower_idx').on(table.followerId),
+    followingIdx: index('user_follows_following_idx').on(table.followingId),
+  })
+)
+
+// ===========================================
 // Relations
 // ===========================================
 
@@ -318,3 +381,11 @@ export type NewUserPreference = typeof userPreferences.$inferInsert
 export type SyncLog = typeof syncLogs.$inferSelect
 export type NewSyncLog = typeof syncLogs.$inferInsert
 export type SyncState = typeof syncState.$inferSelect
+export type UserGamification = typeof userGamification.$inferSelect
+export type NewUserGamification = typeof userGamification.$inferInsert
+export type UserAchievement = typeof userAchievements.$inferSelect
+export type NewUserAchievement = typeof userAchievements.$inferInsert
+export type UserProfile = typeof userProfiles.$inferSelect
+export type NewUserProfile = typeof userProfiles.$inferInsert
+export type UserFollow = typeof userFollows.$inferSelect
+export type NewUserFollow = typeof userFollows.$inferInsert
