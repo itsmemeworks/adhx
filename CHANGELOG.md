@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.15.1](https://github.com/itsmemeworks/adhx/compare/v1.15.0...v1.15.1) (2026-01-20)
+
+
+### Bug Fixes
+
+* prevent unique constraint error on concurrent sync media inserts ([#76](https://github.com/itsmemeworks/adhx/issues/76)) ([6a8a61a](https://github.com/itsmemeworks/adhx/commit/6a8a61af6b5699796f451cde64c43e8640850fdb))
+
 ## [1.15.0](https://github.com/itsmemeworks/adhx/compare/v1.14.5...v1.15.0) (2026-01-17)
 
 
