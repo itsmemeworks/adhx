@@ -164,6 +164,51 @@ export const FULL_SCHEMA_SQL = `
     trigger_type TEXT
   );
   CREATE INDEX sync_logs_user_id_idx ON sync_logs(user_id);
+
+  CREATE TABLE user_gamification (
+    user_id TEXT PRIMARY KEY,
+    current_streak INTEGER DEFAULT 0,
+    longest_streak INTEGER DEFAULT 0,
+    last_active_date TEXT,
+    total_xp INTEGER DEFAULT 0,
+    level INTEGER DEFAULT 1,
+    lifetime_read INTEGER DEFAULT 0,
+    lifetime_bookmarked INTEGER DEFAULT 0,
+    lifetime_tagged INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT
+  );
+
+  CREATE TABLE user_achievements (
+    id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    achievement_id TEXT NOT NULL,
+    unlocked_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    progress INTEGER DEFAULT 0,
+    PRIMARY KEY (user_id, achievement_id)
+  );
+  CREATE INDEX user_achievements_user_id_idx ON user_achievements(user_id);
+
+  CREATE TABLE user_profiles (
+    user_id TEXT PRIMARY KEY,
+    display_name TEXT,
+    bio TEXT,
+    is_public INTEGER DEFAULT 0,
+    show_stats INTEGER DEFAULT 1,
+    show_achievements INTEGER DEFAULT 1,
+    featured_collection_id TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT
+  );
+
+  CREATE TABLE user_follows (
+    follower_id TEXT NOT NULL,
+    following_id TEXT NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (follower_id, following_id)
+  );
+  CREATE INDEX user_follows_follower_idx ON user_follows(follower_id);
+  CREATE INDEX user_follows_following_idx ON user_follows(following_id);
 `
 
 export interface TestDbInstance {

@@ -18,6 +18,8 @@ import {
   UserX,
   BookOpen,
   Type,
+  Trophy,
+  User,
 } from 'lucide-react'
 
 // X (formerly Twitter) logo component
@@ -32,6 +34,8 @@ import { SyncProgress } from '@/components/sync/SyncProgress'
 import { ADHX_PURPLE } from '@/lib/gestalt/theme'
 import { usePreferences, FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
+import { GamificationDashboard } from '@/components/gamification'
+import { ProfileSettings } from '@/components/settings/ProfileSettings'
 
 interface AuthStatus {
   authenticated: boolean
@@ -815,6 +819,40 @@ function SettingsPage() {
               </div>
             </div>
           </div>
+
+          {/* Gamification Dashboard */}
+          {authStatus?.authenticated && (
+            <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                  <Trophy className="h-5 w-5 text-amber-500" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Your Progress</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Level up by reading bookmarks</p>
+                </div>
+              </div>
+
+              <GamificationDashboard />
+            </div>
+          )}
+
+          {/* Public Profile Settings */}
+          {authStatus?.authenticated && (
+            <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                  <User className="h-5 w-5 text-green-500" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Public Profile</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Share your achievements with others</p>
+                </div>
+              </div>
+
+              <ProfileSettings />
+            </div>
+          )}
 
           {/* Danger Zone */}
           {authStatus?.authenticated && (

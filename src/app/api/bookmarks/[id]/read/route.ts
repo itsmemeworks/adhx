@@ -4,6 +4,7 @@ import { bookmarks, readStatus } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { metrics } from '@/lib/sentry'
+import { recordReadAction } from '@/lib/gamification'
 
 // POST /api/bookmarks/[id]/read - Mark bookmark as read
 export async function POST(
@@ -57,10 +58,26 @@ export async function POST(
     // Track read toggle
     metrics.bookmarkReadToggled(true)
 
+    // Record gamification action (XP, streaks, achievements)
+    const gamification = await recordReadAction(userId)
+
     return NextResponse.json({
       success: true,
       isRead: true,
       readAt,
+      gamification: {
+        xpGained: gamification.xpGained,
+        newLevel: gamification.newLevel,
+        currentStreak: gamification.streakUpdate.newStreak,
+        streakBroken: gamification.streakUpdate.streakBroken,
+        newAchievements: gamification.newAchievements.map((a) => ({
+          id: a.id,
+          name: a.name,
+          description: a.description,
+          icon: a.icon,
+          xpReward: a.xpReward,
+        })),
+      },
     })
   } catch (error) {
     console.error('Error marking bookmark as read:', error)
