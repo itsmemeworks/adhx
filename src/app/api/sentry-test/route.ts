@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server'
 import { captureException, captureMessage, getSentryRelease } from '@/lib/sentry'
 
 export async function GET() {
+  // Disable in production to avoid noise in Sentry dashboard
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Disabled in production' }, { status: 404 })
+  }
+
   const release = getSentryRelease()
 
   try {

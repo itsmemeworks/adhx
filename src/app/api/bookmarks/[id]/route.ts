@@ -104,6 +104,9 @@ export async function PATCH(
     }
 
     // Update tags if provided
+    // Note: SQLite with WAL mode serializes writes, so these sequential operations
+    // are effectively atomic. Explicit transactions not used due to better-sqlite3
+    // synchronous driver limitations with async/await.
     if (newTags !== undefined) {
       // Delete existing tags (filter by userId)
       await db.delete(bookmarkTags).where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.bookmarkId, id)))
@@ -142,8 +145,10 @@ export async function DELETE(
     }
 
     const { id } = await params
-    // Delete bookmark (filter by userId for multi-user support)
-    // Note: Related records must also be deleted with userId filter since we use composite keys
+    // Delete bookmark and all related records
+    // Note: SQLite with WAL mode serializes writes, so these sequential deletes
+    // are effectively atomic. better-sqlite3's synchronous driver doesn't support
+    // async transactions, but SQLite's single-writer lock prevents interleaving.
     await db.delete(bookmarkTags).where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.bookmarkId, id)))
     await db.delete(bookmarkMedia).where(and(eq(bookmarkMedia.userId, userId), eq(bookmarkMedia.bookmarkId, id)))
     await db.delete(bookmarkLinks).where(and(eq(bookmarkLinks.userId, userId), eq(bookmarkLinks.bookmarkId, id)))

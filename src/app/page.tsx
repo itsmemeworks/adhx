@@ -18,31 +18,6 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Loader2, CheckCircle2 } from 'lucide-react'
 import { useTheme } from '@/lib/theme/context'
 
-function _FeedLoadingSkeleton(): React.ReactElement {
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="flex items-center gap-2 mb-6">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-9 w-20 bg-gray-200 dark:bg-gray-800 rounded-full animate-pulse" />
-          ))}
-        </div>
-        <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4">
-          {Array.from({ length: 12 }).map((_, i) => (
-            <div key={i} className="mb-4 break-inside-avoid">
-              <div
-                className={`bg-gray-200 dark:bg-gray-800 rounded-2xl animate-pulse ${
-                  i % 3 === 0 ? 'h-80' : i % 3 === 1 ? 'h-48' : 'h-64'
-                }`}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
 export default function FeedPage(): React.ReactElement {
   return (
     <Suspense fallback={
@@ -76,12 +51,18 @@ function FeedPageContent(): React.ReactElement {
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [availableTags, setAvailableTags] = useState<TagItem[]>([])
   const [syncProgress, setSyncProgress] = useState<{ current: number; total: number; message?: string } | null>(null)
-  const [_isFirstLogin, setIsFirstLogin] = useState(false)
   const [showSyncModal, setShowSyncModal] = useState(false)
   const [streamedItems, setStreamedItems] = useState<FeedItem[]>([])
   const syncTriggeredRef = useRef(false)
   const [pendingNavigation, setPendingNavigation] = useState<{ id: string; fallbackUrl?: string } | null>(null)
   const prevLoadingRef = useRef(false)
+  // Track seen item IDs for O(1) duplicate detection during sync streaming
+  const seenItemIdsRef = useRef<Set<string>>(new Set())
+  // Track EventSource for cleanup on unmount to prevent memory leaks
+  const eventSourceRef = useRef<EventSource | null>(null)
+  // Ref to access current items without adding to useCallback deps
+  const itemsRef = useRef(items)
+  itemsRef.current = items
   const [showShortcutsModal, setShowShortcutsModal] = useState(false)
 
   const selectedItem = selectedIndex !== null ? items[selectedIndex] : null
@@ -101,6 +82,10 @@ function FeedPageContent(): React.ReactElement {
       // Cooldown passed - now start sync
       setIsSyncing(true)
       setSyncProgress({ current: 0, total: 0, message: 'Starting sync...' })
+      // Allow gallery to render streamed items immediately (fixes skeleton showing forever)
+      setLoading(false)
+      // Initialize seen IDs Set with current items for O(1) duplicate detection
+      seenItemIdsRef.current = new Set(itemsRef.current.map(i => i.id))
 
       // Show modal for first login, clear streamed items
       if (firstLogin) {
@@ -109,6 +94,7 @@ function FeedPageContent(): React.ReactElement {
       }
 
       const eventSource = new EventSource('/api/sync')
+      eventSourceRef.current = eventSource
 
       eventSource.addEventListener('start', () => {
         setSyncProgress({ current: 0, total: 0, message: 'Fetching bookmarks...' })
@@ -130,14 +116,14 @@ function FeedPageContent(): React.ReactElement {
         // Add streamed bookmark to gallery in real-time
         if (data.bookmark) {
           const feedItem = streamedBookmarkToFeedItem(data.bookmark as StreamedBookmark)
-          // Add to streamed items for modal view
-          setStreamedItems(prev => [feedItem, ...prev])
-          // Also add to main items array for immediate gallery update
-          setItems(prev => {
-            // Avoid duplicates
-            if (prev.some(i => i.id === feedItem.id)) return prev
-            return [feedItem, ...prev]
-          })
+          // O(1) duplicate check using Set
+          if (!seenItemIdsRef.current.has(feedItem.id)) {
+            seenItemIdsRef.current.add(feedItem.id)
+            // Add to streamed items for modal view
+            setStreamedItems(prev => [feedItem, ...prev])
+            // Add to main items array for immediate gallery update
+            setItems(prev => [feedItem, ...prev])
+          }
         }
       })
 
@@ -149,6 +135,7 @@ function FeedPageContent(): React.ReactElement {
           message: `Synced ${data.stats.new} new bookmarks!`,
         })
         eventSource.close()
+        eventSourceRef.current = null
         setIsSyncing(false)
         router.replace('/', { scroll: false })
         window.dispatchEvent(new CustomEvent('sync-complete'))
@@ -157,7 +144,6 @@ function FeedPageContent(): React.ReactElement {
         if (firstLogin) {
           setTimeout(() => {
             setShowSyncModal(false)
-            setIsFirstLogin(false)
             setSyncProgress(null)
           }, 2000)
         } else {
@@ -169,6 +155,7 @@ function FeedPageContent(): React.ReactElement {
         console.error('Sync error:', e)
         setSyncProgress({ current: 0, total: 0, message: 'Sync failed' })
         eventSource.close()
+        eventSourceRef.current = null
         setIsSyncing(false)
         setShowSyncModal(false)
         setTimeout(() => setSyncProgress(null), 3000)
@@ -176,6 +163,7 @@ function FeedPageContent(): React.ReactElement {
 
       eventSource.onerror = () => {
         eventSource.close()
+        eventSourceRef.current = null
         setIsSyncing(false)
         setShowSyncModal(false)
       }
@@ -187,6 +175,16 @@ function FeedPageContent(): React.ReactElement {
     }
   }, [isSyncing, router])
 
+  // Cleanup EventSource on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close()
+        eventSourceRef.current = null
+      }
+    }
+  }, [])
+
   useEffect(() => {
     async function checkAuth(): Promise<void> {
       try {
@@ -196,7 +194,6 @@ function FeedPageContent(): React.ReactElement {
 
         if (data.authenticated && searchParams.get('firstLogin') === 'true' && !syncTriggeredRef.current) {
           syncTriggeredRef.current = true
-          setIsFirstLogin(true)
           // Start sync with firstLogin=true to show full modal
           setTimeout(() => startSync(true), 500)
         }
