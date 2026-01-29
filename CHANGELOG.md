@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.17.0](https://github.com/itsmemeworks/adhx/compare/v1.16.1...v1.17.0) (2026-01-29)
+
+
+### Features
+
+* add paste-to-preview input on landing and preview pages ([#84](https://github.com/itsmemeworks/adhx/issues/84)) ([0134660](https://github.com/itsmemeworks/adhx/commit/01346606d8e316d930a170c020aeafd3f986b0ff))
+
 ## [1.16.1](https://github.com/itsmemeworks/adhx/compare/v1.16.0...v1.16.1) (2026-01-29)
 
 
