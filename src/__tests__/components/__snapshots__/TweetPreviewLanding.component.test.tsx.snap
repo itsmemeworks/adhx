@@ -724,7 +724,7 @@ Open this to see the entire post
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -750,27 +750,51 @@ Open this to see the entire post
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
         </div>
       </div>
@@ -2011,7 +2035,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -2037,27 +2061,51 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
           <div
             class="p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 hidden md:block mt-4"
@@ -4292,7 +4340,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -4318,27 +4366,51 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
           <div
             class="p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 hidden md:block mt-4"
@@ -5060,7 +5132,7 @@ Live now 🚀
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -5086,27 +5158,51 @@ Live now 🚀
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
         </div>
       </div>
@@ -5746,7 +5842,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -5772,27 +5868,51 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
         </div>
       </div>
@@ -6453,7 +6573,7 @@ His days are numbered
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -6479,27 +6599,51 @@ His days are numbered
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
         </div>
       </div>
@@ -7227,7 +7371,7 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -7253,27 +7397,51 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
         </div>
       </div>
@@ -7868,7 +8036,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -7894,27 +8062,51 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
         </div>
       </div>
@@ -8604,7 +8796,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -8630,27 +8822,51 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
         </div>
       </div>
@@ -9290,7 +9506,7 @@ This is not a coincidence.
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -9316,27 +9532,51 @@ This is not a coincidence.
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
         </div>
       </div>
@@ -9931,7 +10171,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -9957,27 +10197,51 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
         </div>
       </div>
@@ -10664,7 +10928,7 @@ Try it for free in our demo app (link in the thread).
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -10690,27 +10954,51 @@ Try it for free in our demo app (link in the thread).
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
         </div>
       </div>
@@ -11345,7 +11633,7 @@ Hidden order.
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -11371,27 +11659,51 @@ Hidden order.
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
         </div>
       </div>
@@ -11986,7 +12298,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -12012,27 +12324,51 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
         </div>
       </div>
@@ -12754,7 +13090,7 @@ Open this to see the entire post
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -12780,27 +13116,51 @@ Open this to see the entire post
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
         </div>
       </div>
@@ -14021,7 +14381,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -14047,27 +14407,51 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
           <div
             class="p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 hidden md:block mt-4"
@@ -16282,7 +16666,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -16308,27 +16692,51 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
           <div
             class="p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 hidden md:block mt-4"
@@ -17030,7 +17438,7 @@ Live now 🚀
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -17056,27 +17464,51 @@ Live now 🚀
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
         </div>
       </div>
@@ -17696,7 +18128,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -17722,27 +18154,51 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
         </div>
       </div>
@@ -18383,7 +18839,7 @@ His days are numbered
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -18409,27 +18865,51 @@ His days are numbered
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
         </div>
       </div>
@@ -19137,7 +19617,7 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -19163,27 +19643,51 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
         </div>
       </div>
@@ -19758,7 +20262,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -19784,27 +20288,51 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
         </div>
       </div>
@@ -20474,7 +21002,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -20500,27 +21028,51 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
         </div>
       </div>
@@ -21140,7 +21692,7 @@ This is not a coincidence.
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -21166,27 +21718,51 @@ This is not a coincidence.
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
         </div>
       </div>
@@ -21761,7 +22337,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -21787,27 +22363,51 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
         </div>
       </div>
@@ -22474,7 +23074,7 @@ Try it for free in our demo app (link in the thread).
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -22500,27 +23100,51 @@ Try it for free in our demo app (link in the thread).
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
         </div>
       </div>
@@ -23135,7 +23759,7 @@ Hidden order.
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -23161,27 +23785,51 @@ Hidden order.
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
         </div>
       </div>
@@ -23756,7 +24404,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             class="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400"
           >
             <div
-              class="flex items-start gap-3"
+              class="flex items-start gap-3 mb-4"
             >
               <div
                 class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center"
@@ -23782,27 +24430,51 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="font-medium text-gray-900 dark:text-white text-sm mb-1"
                 >
-                  Pro tip: The URL trick
+                  Preview another tweet
                 </p>
                 <p
                   class="text-sm text-gray-600 dark:text-gray-400"
                 >
-                  Just add 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    adh
-                  </code>
-                   before any 
-                  <code
-                    class="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs"
-                  >
-                    x.com
-                  </code>
-                   URL to save it instantly.
+                  Paste any X/Twitter link below
                 </p>
               </div>
             </div>
+            <form>
+              <div
+                class="flex gap-2"
+              >
+                <input
+                  class="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Paste an X link here..."
+                  type="text"
+                  value=""
+                />
+                <button
+                  class="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                  style="background-color: rgb(139, 92, 246);"
+                  type="submit"
+                >
+                  Go
+                </button>
+              </div>
+            </form>
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 mt-3"
+            >
+              Or use the URL trick: add 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                adh
+              </code>
+               before any 
+              <code
+                class="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono"
+              >
+                x.com
+              </code>
+               URL
+            </p>
           </div>
         </div>
       </div>

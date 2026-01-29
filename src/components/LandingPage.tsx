@@ -8,10 +8,44 @@ import { AnimatedBackground, LandingAnimations } from '@/components/landing'
 
 export function LandingPage() {
   const [isLoading, setIsLoading] = useState(false)
+  const [tweetUrl, setTweetUrl] = useState('')
+  const [urlError, setUrlError] = useState('')
 
   const handleLogin = () => {
     setIsLoading(true)
     window.location.href = '/api/auth/twitter'
+  }
+
+  // Pattern to extract username and tweet ID from x.com or twitter.com URLs
+  const tweetUrlPattern = /(?:https?:\/\/)?(?:www\.)?(?:x\.com|twitter\.com)\/(\w{1,15})\/status\/(\d+)/i
+
+  const parseAndNavigate = (url: string): boolean => {
+    const match = url.trim().match(tweetUrlPattern)
+    if (match) {
+      const [, username, tweetId] = match
+      window.location.href = `/${username}/status/${tweetId}`
+      return true
+    }
+    return false
+  }
+
+  const handleTweetUrlChange = (value: string) => {
+    setTweetUrl(value)
+    setUrlError('')
+
+    // Auto-navigate if a valid URL is pasted
+    if (value.includes('x.com/') || value.includes('twitter.com/')) {
+      parseAndNavigate(value)
+    }
+  }
+
+  const handleTweetUrlSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setUrlError('')
+
+    if (!parseAndNavigate(tweetUrl)) {
+      setUrlError("That's not a tweet link. But we appreciate the mystery.")
+    }
   }
 
   return (
@@ -72,26 +106,50 @@ export function LandingPage() {
         <div className="bg-gray-100 dark:bg-gray-800/50 rounded-3xl p-8 text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
             <Zap className="w-6 h-6" style={{ color: ADHX_PURPLE }} />
-            <h2 id="url-trick-title" className="text-lg font-semibold text-gray-900 dark:text-white">The URL Trick</h2>
+            <h2 id="url-trick-title" className="text-lg font-semibold text-gray-900 dark:text-white">Try It Now</h2>
           </div>
 
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Just add <span className="font-mono font-bold text-gray-900 dark:text-white">adh</span> before any x.com link to save it instantly.
+            Paste any X/Twitter link to preview it instantly.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 text-sm sm:text-base">
-            <div className="font-mono bg-white dark:bg-gray-900 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500">
-              x.com/user/status/123
+          <form onSubmit={handleTweetUrlSubmit} className="max-w-xl mx-auto">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <input
+                type="text"
+                value={tweetUrl}
+                onChange={(e) => handleTweetUrlChange(e.target.value)}
+                placeholder="Paste an X link here..."
+                className="flex-1 font-mono text-sm bg-white dark:bg-gray-900 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:border-transparent"
+                style={{ '--tw-ring-color': ADHX_PURPLE } as React.CSSProperties}
+              />
+              <button
+                type="submit"
+                className="px-6 py-3 text-white font-semibold rounded-xl transition-all hover:scale-105 hover:shadow-lg whitespace-nowrap"
+                style={{ backgroundColor: ADHX_PURPLE }}
+              >
+                Preview
+              </button>
             </div>
-            <ArrowRight className="w-5 h-5 text-gray-400 rotate-90 sm:rotate-0" />
-            <div className="font-mono bg-white dark:bg-gray-900 px-4 py-3 rounded-xl border-2 text-gray-900 dark:text-white" style={{ borderColor: ADHX_PURPLE }}>
-              <span style={{ color: ADHX_PURPLE }}>adh</span>x.com/user/status/123
+            {urlError && (
+              <p className="text-red-500 text-sm mt-2">{urlError}</p>
+            )}
+          </form>
+
+          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              Or use the URL trick: add <span className="font-mono font-bold text-gray-900 dark:text-white">adh</span> before any x.com link
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 text-sm">
+              <div className="font-mono bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500">
+                x.com/user/status/123
+              </div>
+              <ArrowRight className="w-4 h-4 text-gray-400 rotate-90 sm:rotate-0" />
+              <div className="font-mono bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border-2 text-gray-900 dark:text-white" style={{ borderColor: ADHX_PURPLE }}>
+                <span style={{ color: ADHX_PURPLE }}>adh</span>x.com/user/status/123
+              </div>
             </div>
           </div>
-
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-6">
-            That&apos;s it. Your future self will thank you. Probably.
-          </p>
         </div>
       </section>
 
