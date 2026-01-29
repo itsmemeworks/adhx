@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.16.0](https://github.com/itsmemeworks/adhx/compare/v1.15.1...v1.16.0) (2026-01-29)
+
+
+### Features
+
+* mobile filter dropdown, single tag selection, desktop download fix ([#79](https://github.com/itsmemeworks/adhx/issues/79)) ([6752668](https://github.com/itsmemeworks/adhx/commit/675266848212cbe7b79df53d57d619df89ff2ea0))
+
 ## [1.15.1](https://github.com/itsmemeworks/adhx/compare/v1.15.0...v1.15.1) (2026-01-20)
 
 
