@@ -87,23 +87,39 @@
   @apply bg-muted-foreground/50;
 }
 
-/* Dark article scrollbar for lightbox */
+/* Dark article scrollbar for lightbox - hidden on mobile */
+.article-scrollbar {
+  scrollbar-width: none; /* Firefox */
+}
+
 .article-scrollbar::-webkit-scrollbar {
-  width: 8px;
+  display: none; /* Hide on mobile by default */
 }
 
-.article-scrollbar::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
-}
+/* Show scrollbar on desktop (md breakpoint and up) */
+@media (min-width: 768px) {
+  .article-scrollbar {
+    scrollbar-width: thin;
+  }
 
-.article-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-}
+  .article-scrollbar::-webkit-scrollbar {
+    display: block;
+    width: 6px;
+  }
 
-.article-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  .article-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+  }
+
+  .article-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+  }
+
+  .article-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
 }
 
 /* Hide scrollbar for horizontal filter chips */
