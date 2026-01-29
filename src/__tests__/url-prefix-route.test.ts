@@ -257,20 +257,20 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
   })
 })
 
-describe('Middleware + Route Integration', () => {
+describe('Proxy + Route Integration', () => {
   /**
-   * These tests verify that the middleware regex and route validation
+   * These tests verify that the proxy regex and route validation
    * work together correctly for the URL prefix feature.
    *
    * IMPORTANT: Browsers normalize // to / in URL paths!
-   * Tests use single-slash format (https:/x.com) that middleware actually receives.
+   * Tests use single-slash format (https:/x.com) that proxy actually receives.
    */
 
   // Updated pattern to handle browser path normalization (// → /)
-  const middlewarePattern =
+  const proxyPattern =
     /^\/(https?:\/?\/?)?(?:www\.)?(x\.com|twitter\.com)\/(\w{1,15})\/status\/(\d+)/i
 
-  it('middleware extracts valid username and ID', () => {
+  it('proxy extracts valid username and ID', () => {
     const testCases = [
       {
         // Browser normalizes https://x.com to https:/x.com
@@ -291,14 +291,14 @@ describe('Middleware + Route Integration', () => {
     ]
 
     for (const { path, expectedUsername, expectedId } of testCases) {
-      const match = path.match(middlewarePattern)
+      const match = path.match(proxyPattern)
       expect(match).not.toBeNull()
       expect(match![3]).toBe(expectedUsername)
       expect(match![4]).toBe(expectedId)
     }
   })
 
-  it('middleware rejects invalid Twitter URLs', () => {
+  it('proxy rejects invalid Twitter URLs', () => {
     const invalidPaths = [
       '/https:/facebook.com/user/status/123', // wrong domain
       '/https:/x.com/user/posts/123', // wrong path structure
@@ -307,12 +307,12 @@ describe('Middleware + Route Integration', () => {
     ]
 
     for (const path of invalidPaths) {
-      const match = path.match(middlewarePattern)
+      const match = path.match(proxyPattern)
       // Should either not match or extract invalid data that route will reject
       if (match) {
         const username = match[3]
         const id = match[4]
-        // If middleware matches, the extracted values should be invalid
+        // If proxy matches, the extracted values should be invalid
         const usernameValid = /^\w{1,15}$/.test(username)
         const idValid = /^\d+$/.test(id)
         expect(usernameValid && idValid).toBe(false)
@@ -321,7 +321,7 @@ describe('Middleware + Route Integration', () => {
   })
 
   it('extracts params that pass route validation', () => {
-    // Test that middleware-extracted values pass the route's validation
+    // Test that proxy-extracted values pass the route's validation
     const routeUsernamePattern = /^\w{1,15}$/
     const routeIdPattern = /^\d+$/
 
@@ -332,7 +332,7 @@ describe('Middleware + Route Integration', () => {
     ]
 
     for (const path of validPaths) {
-      const match = path.match(middlewarePattern)
+      const match = path.match(proxyPattern)
       expect(match).not.toBeNull()
 
       const username = match![3]
