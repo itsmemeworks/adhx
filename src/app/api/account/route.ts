@@ -32,7 +32,9 @@ export async function DELETE() {
     }
 
     // Delete everything in order to respect foreign key constraints
-    // All deletes filtered by userId for multi-user data isolation
+    // Note: SQLite with WAL mode serializes writes. better-sqlite3's synchronous
+    // driver doesn't support async transactions, but SQLite's single-writer lock
+    // prevents interleaving. All deletes filtered by userId for multi-user isolation.
 
     // 1. Delete collection tweets (junction table)
     await db.delete(collectionTweets).where(eq(collectionTweets.userId, userId))

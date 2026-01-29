@@ -13,16 +13,17 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('light')
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light')
-
-  useEffect(() => {
-    // Load saved theme preference
-    const savedTheme = localStorage.getItem('theme') as Theme | null
-    if (savedTheme) {
-      setThemeState(savedTheme)
-    }
-  }, [])
+  // Initialize from localStorage to match blocking script in layout.tsx
+  // This prevents hydration mismatch and FOUC
+  const [theme, setThemeState] = useState<Theme>(() => {
+    if (typeof window === 'undefined') return 'light'
+    return (localStorage.getItem('theme') as Theme) || 'light'
+  })
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window === 'undefined') return 'light'
+    // Read what the blocking script already applied to avoid FOUC
+    return document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+  })
 
   useEffect(() => {
     const root = window.document.documentElement

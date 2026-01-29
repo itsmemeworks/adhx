@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Image, Play, FileText, Link as LinkIcon, Quote, Check, EyeOff } from 'lucide-react'
+import { Image, Play, Link as LinkIcon, Quote, Check, EyeOff } from 'lucide-react'
 import { AuthorAvatar } from './AuthorAvatar'
 import { renderTextWithLinks, renderBionicTextWithLinks } from './utils'
 import { usePreferences } from '@/lib/preferences-context'
+import { formatDurationMs } from '@/lib/utils/format'
 import type { FeedItem } from './types'
 
 interface FeedCardProps {
@@ -176,6 +177,12 @@ function MediaContent({ item, primaryMedia, isVideo, aspectRatio, isHovered, err
                 <Play className="h-6 w-6 text-white ml-1" fill="white" />
               </div>
             </div>
+            {/* Video duration badge */}
+            {primaryMedia.durationMs && (
+              <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-medium px-1.5 py-0.5 rounded">
+                {formatDurationMs(primaryMedia.durationMs)}
+              </div>
+            )}
           </>
         )}
       </div>
@@ -215,10 +222,27 @@ function ArticleCardContent({ item, articleDomain }: { item: FeedItem; articleDo
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/30" />
         </div>
       ) : item.isXArticle ? (
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900">
-          <div className="absolute inset-0 flex items-center justify-center opacity-10">
-            <FileText className="w-24 h-24 text-white" />
-          </div>
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+          {/* Subtle noise texture */}
+          <div
+            className="absolute inset-0 opacity-[0.15] mix-blend-overlay"
+            style={{ backgroundImage: NOISE_TEXTURE, backgroundSize: '100px 100px' }}
+          />
+          {/* Subtle diagonal lines pattern */}
+          <div
+            className="absolute inset-0 opacity-[0.03]"
+            style={{
+              backgroundImage: `repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(255,255,255,0.5) 10px,
+                rgba(255,255,255,0.5) 11px
+              )`,
+            }}
+          />
+          {/* Subtle glow accent */}
+          <div className="absolute -top-20 -right-20 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl" />
         </div>
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600" />

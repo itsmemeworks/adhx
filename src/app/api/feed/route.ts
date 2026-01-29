@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { bookmarks, bookmarkLinks, bookmarkMedia, readStatus, syncLogs, bookmarkTags } from '@/lib/db/schema'
+import { bookmarks, bookmarkLinks, bookmarkMedia, readStatus, syncLogs, bookmarkTags, collectionTweets } from '@/lib/db/schema'
 import { eq, desc, like, and, or, sql, count, notInArray, inArray, SQL, isNull, isNotNull } from 'drizzle-orm'
 import { resolveMediaUrl, getShareableUrl, getThumbnailUrl } from '@/lib/media/fxembed'
 import { expandUrls } from '@/lib/utils/url-expander'
@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
   const unreadOnly = searchParams.get('unreadOnly') !== 'false' // Default to true
   const search = searchParams.get('search')
   const tags = searchParams.getAll('tag') // Multiple tags via ?tag=foo&tag=bar
+  const collectionId = searchParams.get('collection') // Filter by collection
 
   const offset = (page - 1) * limit
 
@@ -123,6 +124,31 @@ export async function GET(request: NextRequest) {
     }
 
     // Tags will be loaded later only for the result set (not all tags upfront)
+
+    // Collection filter
+    if (collectionId) {
+      const collectionBookmarks = await db
+        .select({ bookmarkId: collectionTweets.bookmarkId })
+        .from(collectionTweets)
+        .where(and(
+          eq(collectionTweets.userId, userId),
+          eq(collectionTweets.collectionId, collectionId)
+        ))
+
+      const collectionBookmarkIds = collectionBookmarks.map((b) => b.bookmarkId)
+
+      if (collectionBookmarkIds.length > 0) {
+        conditions.push(inArray(bookmarks.id, collectionBookmarkIds))
+      } else {
+        // Collection is empty
+        return NextResponse.json({
+          items: [],
+          pagination: { page, limit, total: 0, totalPages: 0 },
+          stats: { total: 0, unread: 0 },
+          collectionId,
+        })
+      }
+    }
 
     // Build linksByBookmarkId and articleBookmarkIds from already-fetched allLinks
     const linksByBookmarkId = new Map<string, typeof allLinks>()
@@ -319,6 +345,7 @@ export async function GET(request: NextRequest) {
       isXArticle: boolean
       tags: string[]
       parentTweets: FeedItemResponse[] | null // Tweets that quote this one (for reverse navigation)
+      summary: string | null // AI-generated summary
     }
 
     // Helper function to build a FeedItem from a bookmark
@@ -421,6 +448,7 @@ export async function GET(request: NextRequest) {
         isXArticle,
         tags: tagsByBookmark.get(bookmark.id) || [],
         parentTweets: null as FeedItemResponse[] | null, // Will be populated below
+        summary: bookmark.summary,
       }
     }
 
@@ -436,29 +464,18 @@ export async function GET(request: NextRequest) {
       .map((item) => item.quotedTweetId!)
 
     if (quotedTweetIds.length > 0) {
-      // Fetch quoted bookmarks (filter by userId)
-      const quotedBookmarks = await db
-        .select()
-        .from(bookmarks)
-        .where(and(eq(bookmarks.userId, userId), inArray(bookmarks.id, quotedTweetIds)))
-
-      // Get media for quoted bookmarks (filter by userId)
-      const quotedMedia = await db
-        .select()
-        .from(bookmarkMedia)
-        .where(and(eq(bookmarkMedia.userId, userId), inArray(bookmarkMedia.bookmarkId, quotedTweetIds)))
+      // Fetch quoted bookmarks, media, and links in parallel (filter by userId)
+      const [quotedBookmarks, quotedMedia, quotedLinks] = await Promise.all([
+        db.select().from(bookmarks).where(and(eq(bookmarks.userId, userId), inArray(bookmarks.id, quotedTweetIds))),
+        db.select().from(bookmarkMedia).where(and(eq(bookmarkMedia.userId, userId), inArray(bookmarkMedia.bookmarkId, quotedTweetIds))),
+        db.select().from(bookmarkLinks).where(and(eq(bookmarkLinks.userId, userId), inArray(bookmarkLinks.bookmarkId, quotedTweetIds))),
+      ])
 
       for (const qm of quotedMedia) {
         const existing = mediaByBookmark.get(qm.bookmarkId) || []
         existing.push(qm)
         mediaByBookmark.set(qm.bookmarkId, existing)
       }
-
-      // Get links for quoted bookmarks (filter by userId)
-      const quotedLinks = await db
-        .select()
-        .from(bookmarkLinks)
-        .where(and(eq(bookmarkLinks.userId, userId), inArray(bookmarkLinks.bookmarkId, quotedTweetIds)))
 
       const quotedLinksByBookmark = new Map<string, typeof quotedLinks>()
       for (const ql of quotedLinks) {
@@ -497,24 +514,18 @@ export async function GET(request: NextRequest) {
         .where(and(eq(bookmarks.userId, userId), inArray(bookmarks.quotedTweetId, itemIds)))
 
       if (parentBookmarks.length > 0) {
-        // Get media for parent bookmarks (filter by userId)
+        // Get media and links for parent bookmarks in parallel (filter by userId)
         const parentIds = parentBookmarks.map((p) => p.id)
-        const parentMedia = await db
-          .select()
-          .from(bookmarkMedia)
-          .where(and(eq(bookmarkMedia.userId, userId), inArray(bookmarkMedia.bookmarkId, parentIds)))
+        const [parentMedia, parentLinks] = await Promise.all([
+          db.select().from(bookmarkMedia).where(and(eq(bookmarkMedia.userId, userId), inArray(bookmarkMedia.bookmarkId, parentIds))),
+          db.select().from(bookmarkLinks).where(and(eq(bookmarkLinks.userId, userId), inArray(bookmarkLinks.bookmarkId, parentIds))),
+        ])
 
         for (const pm of parentMedia) {
           const existing = mediaByBookmark.get(pm.bookmarkId) || []
           existing.push(pm)
           mediaByBookmark.set(pm.bookmarkId, existing)
         }
-
-        // Get links for parent bookmarks (filter by userId)
-        const parentLinks = await db
-          .select()
-          .from(bookmarkLinks)
-          .where(and(eq(bookmarkLinks.userId, userId), inArray(bookmarkLinks.bookmarkId, parentIds)))
 
         const parentLinksByBookmark = new Map<string, typeof parentLinks>()
         for (const pl of parentLinks) {

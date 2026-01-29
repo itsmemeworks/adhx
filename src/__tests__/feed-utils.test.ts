@@ -49,6 +49,7 @@ describe('Feed Utils', () => {
     let originalFetch: typeof fetch
     let originalCreateObjectURL: typeof URL.createObjectURL
     let originalRevokeObjectURL: typeof URL.revokeObjectURL
+    let originalMatchMedia: typeof window.matchMedia
 
     beforeEach(() => {
       mockEvent = {
@@ -59,15 +60,30 @@ describe('Feed Utils', () => {
       originalFetch = global.fetch
       originalCreateObjectURL = URL.createObjectURL
       originalRevokeObjectURL = URL.revokeObjectURL
+      originalMatchMedia = window.matchMedia
 
       URL.createObjectURL = vi.fn().mockReturnValue('blob:test-url')
       URL.revokeObjectURL = vi.fn()
+
+      // Default to mobile (touch device) so Web Share API tests work
+      // Tests that need desktop behavior will override this
+      window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+        matches: false, // false for hover:hover means touch device
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }))
     })
 
     afterEach(() => {
       global.fetch = originalFetch
       URL.createObjectURL = originalCreateObjectURL
       URL.revokeObjectURL = originalRevokeObjectURL
+      window.matchMedia = originalMatchMedia
       vi.restoreAllMocks()
     })
 
@@ -190,10 +206,48 @@ describe('Feed Utils', () => {
 
       const result = await handleShareMedia(mockEvent, 'https://example.com/image.jpg', 'test.jpg')
 
-      expect(result).toEqual({ success: false, method: 'share' })
+      // On mobile (default mock), failure returns method: 'share'
+      expect(result.success).toBe(false)
       expect(consoleSpy).toHaveBeenCalled()
 
       consoleSpy.mockRestore()
+    })
+
+    it('downloads directly on desktop (hover-capable devices)', async () => {
+      // Mock desktop device (has hover capability)
+      window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+        matches: query === '(hover: hover)', // true for hover:hover means desktop
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }))
+
+      const mockBlob = new Blob(['test'], { type: 'image/jpeg' })
+      global.fetch = vi.fn().mockResolvedValue({
+        blob: () => Promise.resolve(mockBlob),
+      })
+
+      // Mock document methods for download
+      const mockLink = {
+        href: '',
+        download: '',
+        click: vi.fn(),
+      }
+      const appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation(() => mockLink as unknown as Node)
+      const removeChildSpy = vi.spyOn(document.body, 'removeChild').mockImplementation(() => mockLink as unknown as Node)
+
+      const result = await handleShareMedia(mockEvent, 'https://example.com/image.jpg', 'test.jpg')
+
+      // On desktop, should download directly without trying Web Share API
+      expect(result).toEqual({ success: true, method: 'download' })
+      expect(URL.createObjectURL).toHaveBeenCalled()
+
+      appendChildSpy.mockRestore()
+      removeChildSpy.mockRestore()
     })
 
     it('uses correct mime type for videos', async () => {

@@ -205,6 +205,23 @@ export const collectionTweets = sqliteTable(
   })
 )
 
+// Tag shares - track which tags are shared publicly
+export const tagShares = sqliteTable(
+  'tag_shares',
+  {
+    userId: text('user_id').notNull(),
+    tag: text('tag').notNull(),
+    shareCode: text('share_code').notNull().unique(),
+    isPublic: integer('is_public', { mode: 'boolean' }).default(false),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at'),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.tag] }),
+    shareCodeIdx: index('tag_shares_share_code_idx').on(table.shareCode),
+  })
+)
+
 // User preferences - PK: (userId, key)
 export const userPreferences = sqliteTable(
   'user_preferences',
@@ -318,3 +335,5 @@ export type NewUserPreference = typeof userPreferences.$inferInsert
 export type SyncLog = typeof syncLogs.$inferSelect
 export type NewSyncLog = typeof syncLogs.$inferInsert
 export type SyncState = typeof syncState.$inferSelect
+export type TagShare = typeof tagShares.$inferSelect
+export type NewTagShare = typeof tagShares.$inferInsert

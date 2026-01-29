@@ -7,6 +7,7 @@ export interface MediaItem {
   mediaType: string
   width?: number | null
   height?: number | null
+  durationMs?: number | null
   url: string
   thumbnailUrl: string
   shareUrl: string
@@ -128,6 +129,7 @@ export interface FeedItem {
   isXArticle?: boolean
   tags: string[]
   parentTweets?: FeedItem[] | null // Tweets that quote this one (for reverse navigation)
+  summary?: string | null // AI-generated summary
 }
 
 export type FilterType = 'all' | 'photos' | 'videos' | 'text' | 'articles' | 'quoted' | 'manual'
@@ -135,6 +137,8 @@ export type FilterType = 'all' | 'photos' | 'videos' | 'text' | 'articles' | 'qu
 export interface TagItem {
   tag: string
   count: number
+  isPublic?: boolean
+  shareCode?: string | null
 }
 
 export const FILTER_OPTIONS: { value: FilterType; label: string }[] = [

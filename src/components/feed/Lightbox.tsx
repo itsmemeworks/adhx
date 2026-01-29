@@ -14,6 +14,7 @@ import {
   Download,
   Share2,
   Loader2,
+  Sparkles,
 } from 'lucide-react'
 import { AuthorAvatar } from './AuthorAvatar'
 import { TagInput, type TagInputHandle } from './TagInput'
@@ -21,6 +22,45 @@ import { renderTextWithLinks, renderBionicTextWithLinks, renderArticleBlock, str
 import { cn } from '@/lib/utils'
 import { usePreferences } from '@/lib/preferences-context'
 import type { FeedItem, TagItem } from './types'
+
+// Shared helper: Navigate to parent tweet that quoted this one
+function navigateToParent(
+  item: FeedItem,
+  onNavigateToId?: (id: string, fallbackUrl?: string) => boolean
+): void {
+  if (item.parentTweets?.[0]?.id && onNavigateToId) {
+    const parentTweet = item.parentTweets[0]
+    onNavigateToId(parentTweet.id, parentTweet.tweetUrl)
+  }
+}
+
+// Shared helper: Get thumbnail URL from quoted tweet data
+function getQuoteThumbnail(
+  quotedTweet?: FeedItem | null,
+  quoteContext?: FeedItem['quoteContext']
+): string | null {
+  // Media thumbnail from quotedTweet
+  if (quotedTweet?.media && quotedTweet.media.length > 0) {
+    const media = quotedTweet.media[0]
+    return media.thumbnailUrl || media.url
+  }
+  // Article image from quotedTweet
+  if (quotedTweet?.articlePreview?.imageUrl) {
+    return quotedTweet.articlePreview.imageUrl
+  }
+  // Article image from quoteContext
+  if (quoteContext?.article?.imageUrl) {
+    return quoteContext.article.imageUrl
+  }
+  // Fall back to media entities in articleContent
+  if (quotedTweet?.articleContent?.mediaEntities) {
+    const firstMediaId = Object.keys(quotedTweet.articleContent.mediaEntities)[0]
+    if (firstMediaId) {
+      return quotedTweet.articleContent.mediaEntities[firstMediaId]?.url || null
+    }
+  }
+  return null
+}
 
 interface LightboxProps {
   item: FeedItem
@@ -114,8 +154,8 @@ export function Lightbox({
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent): void {
+      if (document.activeElement?.tagName === 'INPUT') return
       if (e.key === 't' || e.key === 'T') {
-        if (document.activeElement?.tagName === 'INPUT') return
         e.preventDefault()
         tagInputRef.current?.focus()
       }
@@ -261,14 +301,6 @@ function MediaLightboxContent({
   const hasMedia = item.media && item.media.length > 0
   const renderText = bionicReading ? renderBionicTextWithLinks : renderTextWithLinks
 
-  // Handle parent navigation - parent component handles filter switching if item not in current view
-  const handleNavigateToParent = (): void => {
-    if (item.parentTweets?.[0]?.id && onNavigateToId) {
-      const parentTweet = item.parentTweets[0]
-      onNavigateToId(parentTweet.id, parentTweet.tweetUrl)
-    }
-  }
-
   return (
     <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-center lg:items-start max-h-[85vh] overflow-y-auto lg:overflow-visible">
       {/* Media panel - shown first on mobile */}
@@ -342,7 +374,7 @@ function MediaLightboxContent({
         {/* Parent banner - shows when this tweet was quoted by another */}
         {item.parentTweets && item.parentTweets.length > 0 && (
           <button
-            onClick={handleNavigateToParent}
+            onClick={() => navigateToParent(item, onNavigateToId)}
             className="flex items-center justify-between px-3 py-2 mb-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-xs hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
           >
             <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
@@ -358,6 +390,8 @@ function MediaLightboxContent({
             {renderText(stripMediaUrls(item.text, !!hasMedia))}
           </p>
         )}
+        {/* AI Summary */}
+        {item.summary && <SummarySection summary={item.summary} />}
         {/* Embedded QuoteCard for quote tweets with media */}
         {item.isQuote && (item.quotedTweet || item.quoteContext) && (
           <QuoteCard item={item} onNavigateToId={onNavigateToId} compact />
@@ -391,20 +425,12 @@ function TextLightboxContent({
 }: LightboxContentProps): React.ReactElement {
   const renderText = bionicReading ? renderBionicTextWithLinks : renderTextWithLinks
 
-  // Handle parent navigation - parent component handles filter switching if item not in current view
-  const handleNavigateToParent = (): void => {
-    if (item.parentTweets?.[0]?.id && onNavigateToId) {
-      const parentTweet = item.parentTweets[0]
-      onNavigateToId(parentTweet.id, parentTweet.tweetUrl)
-    }
-  }
-
   return (
     <div className="w-full max-w-2xl mx-auto bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 flex flex-col max-h-[85vh] overflow-y-auto">
       {/* Parent banner - shows when this tweet was quoted by another */}
       {item.parentTweets && item.parentTweets.length > 0 && (
         <button
-          onClick={handleNavigateToParent}
+          onClick={() => navigateToParent(item, onNavigateToId)}
           className="flex items-center justify-between px-3 py-2 mb-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
         >
           <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
@@ -416,6 +442,9 @@ function TextLightboxContent({
       )}
 
       <AuthorHeader item={item} />
+
+      {/* AI Summary */}
+      {item.summary && <SummarySection summary={item.summary} />}
 
       {item.isRetweet && item.retweetContext ? (
         <RetweetContent retweetContext={item.retweetContext} bionicReading={bionicReading} />
@@ -439,6 +468,18 @@ function TextLightboxContent({
         availableTags={availableTags}
         tagInputRef={tagInputRef}
       />
+    </div>
+  )
+}
+
+function SummarySection({ summary }: { summary: string }): React.ReactElement {
+  return (
+    <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800/30">
+      <div className="flex items-center gap-2 mb-2">
+        <Sparkles className="w-4 h-4 text-blue-500" />
+        <span className="text-xs font-medium text-blue-600 dark:text-blue-400">AI Summary</span>
+      </div>
+      <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{summary}</p>
     </div>
   )
 }
@@ -710,31 +751,8 @@ function QuoteCard({
   const quotedTweetUrl = quotedTweet?.tweetUrl || (quoteContext ? `https://x.com/${quoteContext.author}/status/${quoteContext.tweetId}` : '#')
 
   // Check for media/article in quoted tweet
-  const quotedHasMedia = quotedTweet?.media && quotedTweet.media.length > 0
   const quotedIsArticle = quotedTweet?.category === 'article' || quotedTweet?.articlePreview || quoteContext?.article
-
-  // Get thumbnail URL
-  const getThumbnail = (): string | null => {
-    if (quotedHasMedia && quotedTweet?.media?.[0]) {
-      const media = quotedTweet.media[0]
-      return media.thumbnailUrl || media.url
-    }
-    if (quotedTweet?.articlePreview?.imageUrl) {
-      return quotedTweet.articlePreview.imageUrl
-    }
-    if (quoteContext?.article?.imageUrl) {
-      return quoteContext.article.imageUrl
-    }
-    if (quotedTweet?.articleContent?.mediaEntities) {
-      const firstMediaId = Object.keys(quotedTweet.articleContent.mediaEntities)[0]
-      if (firstMediaId) {
-        return quotedTweet.articleContent.mediaEntities[firstMediaId]?.url || null
-      }
-    }
-    return null
-  }
-
-  const thumbnail = getThumbnail()
+  const thumbnail = getQuoteThumbnail(quotedTweet, quoteContext)
 
   const handleClick = (): void => {
     if (quotedTweetId && onNavigateToId) {
@@ -815,34 +833,8 @@ function TextQuoteContent({
   const quotedTweetUrl = quotedTweet?.tweetUrl || (quoteContext ? `https://x.com/${quoteContext.author}/status/${quoteContext.tweetId}` : '#')
 
   // Check for media/article in quoted tweet
-  const quotedHasMedia = quotedTweet?.media && quotedTweet.media.length > 0
   const quotedIsArticle = quotedTweet?.category === 'article' || quotedTweet?.articlePreview || quoteContext?.article
-
-  // Get thumbnail URL
-  const getThumbnail = (): string | null => {
-    // Media thumbnail
-    if (quotedHasMedia && quotedTweet?.media?.[0]) {
-      const media = quotedTweet.media[0]
-      return media.thumbnailUrl || media.url
-    }
-    // Article image
-    if (quotedTweet?.articlePreview?.imageUrl) {
-      return quotedTweet.articlePreview.imageUrl
-    }
-    if (quoteContext?.article?.imageUrl) {
-      return quoteContext.article.imageUrl
-    }
-    // Fall back to media entities
-    if (quotedTweet?.articleContent?.mediaEntities) {
-      const firstMediaId = Object.keys(quotedTweet.articleContent.mediaEntities)[0]
-      if (firstMediaId) {
-        return quotedTweet.articleContent.mediaEntities[firstMediaId]?.url || null
-      }
-    }
-    return null
-  }
-
-  const thumbnail = getThumbnail()
+  const thumbnail = getQuoteThumbnail(quotedTweet, quoteContext)
 
   // Handle quote card click - navigate internally or open externally
   const handleQuoteCardClick = (): void => {

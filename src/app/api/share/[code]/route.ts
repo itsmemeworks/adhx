@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { collections, collectionTweets, bookmarks, bookmarkMedia } from '@/lib/db/schema'
-import { eq, inArray, desc } from 'drizzle-orm'
+import { eq, and, inArray, desc } from 'drizzle-orm'
 import { resolveMediaUrl, getShareableUrl, getThumbnailUrl } from '@/lib/media/fxembed'
 
 // GET /api/share/[code] - Public access to a shared collection
@@ -49,17 +49,18 @@ export async function GET(
       })
     }
 
-    // Get bookmarks
+    // Get bookmarks - filter by collection owner's userId to prevent cross-user data leakage
+    const collectionOwnerId = collection.userId
     const bookmarkResults = await db
       .select()
       .from(bookmarks)
-      .where(inArray(bookmarks.id, bookmarkIds))
+      .where(and(eq(bookmarks.userId, collectionOwnerId), inArray(bookmarks.id, bookmarkIds)))
 
-    // Get media for all bookmarks
+    // Get media for all bookmarks - filter by collection owner's userId
     const mediaResults = await db
       .select()
       .from(bookmarkMedia)
-      .where(inArray(bookmarkMedia.bookmarkId, bookmarkIds))
+      .where(and(eq(bookmarkMedia.userId, collectionOwnerId), inArray(bookmarkMedia.bookmarkId, bookmarkIds)))
 
     // Build tweet objects with media (no read status for public view)
     const tweets = bookmarkResults.map((bookmark) => {

@@ -5,9 +5,21 @@ import { SignJWT, jwtVerify } from 'jose'
 const SESSION_COOKIE_NAME = 'adhx_session'
 const SESSION_MAX_AGE = 30 * 24 * 60 * 60 // 30 days in seconds
 
-// Use environment variable or fallback to a derived key (should be set in production)
+// Get session secret - fails fast if not configured in production
 const getSecretKey = () => {
-  const secret = process.env.SESSION_SECRET || process.env.TWITTER_CLIENT_SECRET || 'adhx-default-secret-change-in-production'
+  const secret = process.env.SESSION_SECRET || process.env.TWITTER_CLIENT_SECRET
+
+  if (!secret) {
+    // Allow missing secret in test environment only
+    if (process.env.NODE_ENV === 'test') {
+      return new TextEncoder().encode('test-secret-for-vitest-only')
+    }
+    throw new Error(
+      'SESSION_SECRET or TWITTER_CLIENT_SECRET environment variable is required. ' +
+      'Set one of these in your .env file to enable secure session handling.'
+    )
+  }
+
   return new TextEncoder().encode(secret)
 }
 
