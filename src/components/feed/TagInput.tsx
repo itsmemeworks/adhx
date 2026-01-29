@@ -135,7 +135,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
               onKeyDown={handleKeyDown}
               placeholder="add tag"
               maxLength={10}
-              className="w-12 bg-transparent text-sm sm:text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
+              className="w-12 bg-transparent text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
             />
             {newTag.trim() ? (
               <button
