@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.16.1](https://github.com/itsmemeworks/adhx/compare/v1.16.0...v1.16.1) (2026-01-29)
+
+
+### Bug Fixes
+
+* quoted media clipping, mobile input zoom, and header logo ([#81](https://github.com/itsmemeworks/adhx/issues/81)) ([f5a3659](https://github.com/itsmemeworks/adhx/commit/f5a3659b35331dc596ffc035e5e257c8d85903a1))
+
 ## [1.16.0](https://github.com/itsmemeworks/adhx/compare/v1.15.1...v1.16.0) (2026-01-29)
 
 
