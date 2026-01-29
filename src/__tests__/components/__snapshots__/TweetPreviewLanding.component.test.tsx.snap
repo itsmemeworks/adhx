@@ -6651,7 +6651,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
           >
             <div
               class="p-4 pb-3"
@@ -6707,7 +6707,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -6792,6 +6792,13 @@ Not by force. By frequency.
 
 The signal has been sent.
                 </p>
+              </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <div
+                  class="grid grid-cols-2 gap-1 rounded-xl overflow-hidden"
+                />
               </div>
               <div
                 class="px-4 pb-3"
@@ -6972,47 +6979,6 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                 </svg>
                 1.8M
               </span>
-              <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
-              >
-                <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="15 3 21 3 21 9"
-                  />
-                  <polyline
-                    points="9 21 3 21 3 15"
-                  />
-                  <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Expand
-                </span>
-              </button>
             </div>
           </div>
           <div
@@ -8100,7 +8066,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
           >
             <div
               class="p-4 pb-3"
@@ -8156,7 +8122,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -8169,6 +8135,13 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
 
 you’re welcome
                 </p>
+              </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <div
+                  class="grid grid-cols-2 gap-1 rounded-xl overflow-hidden"
+                />
               </div>
               <div
                 class="px-4 pb-3"
@@ -8383,47 +8356,6 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 </svg>
                 238.5K
               </span>
-              <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
-              >
-                <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="15 3 21 3 21 9"
-                  />
-                  <polyline
-                    points="9 21 3 21 3 15"
-                  />
-                  <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Expand
-                </span>
-              </button>
             </div>
           </div>
           <div
@@ -10197,7 +10129,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
           >
             <div
               class="p-4 pb-3"
@@ -10253,7 +10185,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -10264,6 +10196,13 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 >
                   insane how much goalposts have shifted that bfl can just drop a model that is ~10x better than Stable Diffusion while being ~as small and basically nobody bats an eye
                 </p>
+              </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <div
+                  class="grid grid-cols-2 gap-1 rounded-xl overflow-hidden"
+                />
               </div>
               <div
                 class="px-4 pb-3"
@@ -10477,47 +10416,6 @@ Try it for free in our demo app (link in the thread).
                 </svg>
                 71.3K
               </span>
-              <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
-              >
-                <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="15 3 21 3 21 9"
-                  />
-                  <polyline
-                    points="9 21 3 21 3 15"
-                  />
-                  <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Expand
-                </span>
-              </button>
             </div>
           </div>
           <div
@@ -18683,7 +18581,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
           >
             <div
               class="p-4 pb-3"
@@ -18739,7 +18637,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -18824,6 +18722,13 @@ Not by force. By frequency.
 
 The signal has been sent.
                 </p>
+              </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <div
+                  class="grid grid-cols-2 gap-1 rounded-xl overflow-hidden"
+                />
               </div>
               <div
                 class="px-4 pb-3"
@@ -19004,47 +18909,6 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                 </svg>
                 1.8M
               </span>
-              <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
-              >
-                <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="15 3 21 3 21 9"
-                  />
-                  <polyline
-                    points="9 21 3 21 3 15"
-                  />
-                  <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Expand
-                </span>
-              </button>
             </div>
           </div>
           <div
@@ -20092,7 +19956,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
           >
             <div
               class="p-4 pb-3"
@@ -20148,7 +20012,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -20161,6 +20025,13 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
 
 you’re welcome
                 </p>
+              </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <div
+                  class="grid grid-cols-2 gap-1 rounded-xl overflow-hidden"
+                />
               </div>
               <div
                 class="px-4 pb-3"
@@ -20375,47 +20246,6 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 </svg>
                 238.5K
               </span>
-              <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
-              >
-                <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="15 3 21 3 21 9"
-                  />
-                  <polyline
-                    points="9 21 3 21 3 15"
-                  />
-                  <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Expand
-                </span>
-              </button>
             </div>
           </div>
           <div
@@ -22129,7 +21959,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <div
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
           >
             <div
               class="p-4 pb-3"
@@ -22185,7 +22015,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </div>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -22196,6 +22026,13 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 >
                   insane how much goalposts have shifted that bfl can just drop a model that is ~10x better than Stable Diffusion while being ~as small and basically nobody bats an eye
                 </p>
+              </div>
+              <div
+                class="px-4 pb-3"
+              >
+                <div
+                  class="grid grid-cols-2 gap-1 rounded-xl overflow-hidden"
+                />
               </div>
               <div
                 class="px-4 pb-3"
@@ -22409,47 +22246,6 @@ Try it for free in our demo app (link in the thread).
                 </svg>
                 71.3K
               </span>
-              <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
-              >
-                <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="15 3 21 3 21 9"
-                  />
-                  <polyline
-                    points="9 21 3 21 3 15"
-                  />
-                  <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Expand
-                </span>
-              </button>
             </div>
           </div>
           <div
