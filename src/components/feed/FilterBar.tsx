@@ -115,7 +115,6 @@ export function FilterBar({
 }: FilterBarProps): React.ReactElement {
   const [showTagDropdown, setShowTagDropdown] = useState(false)
   const [showFilterDropdown, setShowFilterDropdown] = useState(false)
-  const [tagDropdownPos, setTagDropdownPos] = useState({ top: 0, left: 0 })
   const [filterDropdownPos, setFilterDropdownPos] = useState({ top: 0, left: 0 })
   const [focusedTagIndex, setFocusedTagIndex] = useState(-1)
   const tagButtonRef = useRef<HTMLButtonElement>(null)
@@ -132,9 +131,7 @@ export function FilterBar({
   // Listen for keyboard shortcut to toggle tag filter
   useEffect(() => {
     const handleToggleTagFilter = () => {
-      if (availableTags.length > 0 && tagButtonRef.current) {
-        const rect = tagButtonRef.current.getBoundingClientRect()
-        setTagDropdownPos({ top: rect.bottom + 4, left: rect.left })
+      if (availableTags.length > 0) {
         setShowTagDropdown((prev) => !prev)
       }
     }
@@ -206,10 +203,6 @@ export function FilterBar({
   }, [focusedTagIndex, showTagDropdown])
 
   function handleTagButtonClick(): void {
-    if (!showTagDropdown && tagButtonRef.current) {
-      const rect = tagButtonRef.current.getBoundingClientRect()
-      setTagDropdownPos({ top: rect.bottom + 4, left: rect.left })
-    }
     setShowTagDropdown(!showTagDropdown)
   }
 
@@ -275,12 +268,12 @@ export function FilterBar({
         </div>
 
         {/* Desktop Filter Chips */}
-        <div className="hidden sm:flex items-center gap-2 overflow-x-auto scrollbar-hide">
+        <div className="hidden sm:flex items-center gap-2 overflow-x-auto scrollbar-hide flex-shrink min-w-0">
           {FILTER_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               onClick={() => onFilterChange(opt.value)}
-              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0 ${
                 filter === opt.value
                   ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
@@ -307,9 +300,9 @@ export function FilterBar({
               >
                 <Tag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 {selectedTags.length > 0 ? (
-                  <span className="max-w-[80px] truncate">{selectedTags[0]}</span>
+                  <span className="max-w-[60px] sm:max-w-[80px] truncate">{selectedTags[0]}</span>
                 ) : (
-                  <span className="hidden sm:inline">Tags</span>
+                  <span>Tags</span>
                 )}
                 <ChevronDown className="w-3 h-3" />
               </button>
@@ -319,8 +312,7 @@ export function FilterBar({
                   <div className="fixed inset-0 z-[100]" onClick={() => setShowTagDropdown(false)} />
                   <div
                     ref={tagDropdownRef}
-                    className="fixed w-48 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-[101] max-h-64 overflow-y-auto"
-                    style={{ top: tagDropdownPos.top, left: tagDropdownPos.left }}
+                    className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-[101] max-h-64 overflow-y-auto"
                   >
                     {selectedTags.length > 0 && (
                       <button
