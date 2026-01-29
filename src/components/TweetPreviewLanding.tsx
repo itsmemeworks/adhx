@@ -158,6 +158,40 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
   const [bionicReading, setBionicReading] = useState(false)
   const [selectedFont, setSelectedFont] = useState<BodyFont>('ibm-plex')
   const [isExpanded, setIsExpanded] = useState(false)
+  const [tweetUrl, setTweetUrl] = useState('')
+  const [urlError, setUrlError] = useState('')
+
+  // Pattern to extract username and tweet ID from x.com or twitter.com URLs
+  const tweetUrlPattern = /(?:https?:\/\/)?(?:www\.)?(?:x\.com|twitter\.com)\/(\w{1,15})\/status\/(\d+)/i
+
+  const parseAndNavigate = (url: string): boolean => {
+    const match = url.trim().match(tweetUrlPattern)
+    if (match) {
+      const [, newUsername, newTweetId] = match
+      window.location.href = `/${newUsername}/status/${newTweetId}`
+      return true
+    }
+    return false
+  }
+
+  const handleTweetUrlChange = (value: string) => {
+    setTweetUrl(value)
+    setUrlError('')
+
+    // Auto-navigate if a valid URL is pasted
+    if (value.includes('x.com/') || value.includes('twitter.com/')) {
+      parseAndNavigate(value)
+    }
+  }
+
+  const handleTweetUrlSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setUrlError('')
+
+    if (!parseAndNavigate(tweetUrl)) {
+      setUrlError("That's not a tweet link. But we appreciate the mystery.")
+    }
+  }
 
   const photos = tweet.media?.photos || []
   const videos = tweet.media?.videos || []
@@ -581,21 +615,47 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                 )}
               </div>
 
-              {/* URL Trick Callout */}
+              {/* URL Trick Callout with Input */}
               <div className="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400">
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-3 mb-4">
                   <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center">
                     <Zap className="w-4 h-4 text-purple-600 dark:text-purple-300" />
                   </div>
                   <div>
                     <p className="font-medium text-gray-900 dark:text-white text-sm mb-1">
-                      Pro tip: The URL trick
+                      Preview another tweet
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Just add <code className="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs">adh</code> before any <code className="bg-purple-100 dark:bg-purple-800/50 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono text-xs">x.com</code> URL to save it instantly.
+                      Paste any X/Twitter link below
                     </p>
                   </div>
                 </div>
+
+                <form onSubmit={handleTweetUrlSubmit}>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={tweetUrl}
+                      onChange={(e) => handleTweetUrlChange(e.target.value)}
+                      placeholder="Paste an X link here..."
+                      className="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                    <button
+                      type="submit"
+                      className="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+                      style={{ backgroundColor: ADHX_PURPLE }}
+                    >
+                      Go
+                    </button>
+                  </div>
+                  {urlError && (
+                    <p className="text-red-500 text-xs mt-2">{urlError}</p>
+                  )}
+                </form>
+
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
+                  Or use the URL trick: add <code className="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono">adh</code> before any <code className="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono">x.com</code> URL
+                </p>
               </div>
 
               {/* ADHD Reading Tools - Below Pro tip (desktop only) */}

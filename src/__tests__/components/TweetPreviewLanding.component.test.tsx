@@ -274,7 +274,7 @@ describe('TweetPreviewLanding Component Snapshots', () => {
   })
 
   describe('URL trick callout', () => {
-    it('shows pro tip about URL prefix', () => {
+    it('shows preview input and URL trick hint', () => {
       const fixture = fixtures['plain-text']
 
       const { container } = render(
@@ -285,8 +285,10 @@ describe('TweetPreviewLanding Component Snapshots', () => {
         />
       )
 
-      expect(container.textContent).toContain('Pro tip')
+      expect(container.textContent).toContain('Preview another tweet')
       expect(container.textContent).toContain('adh')
+      // Check for input placeholder
+      expect(container.querySelector('input[placeholder*="Paste"]')).toBeTruthy()
     })
   })
 })
