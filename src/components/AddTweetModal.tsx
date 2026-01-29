@@ -141,7 +141,7 @@ export function AddTweetModal({ isOpen, onClose, onSuccess, onOpenTweet, initial
                   onPaste={handlePaste}
                   onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                   placeholder="https://x.com/user/status/123..."
-                  className="flex-1 px-3 py-2 bg-secondary rounded-md border border-input focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                  className="flex-1 px-3 py-2 bg-secondary rounded-md border border-input focus:outline-none focus:ring-2 focus:ring-primary text-base sm:text-sm"
                   disabled={state === 'loading'}
                 />
                 <button

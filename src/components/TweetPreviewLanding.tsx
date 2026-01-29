@@ -161,7 +161,9 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
 
   const photos = tweet.media?.photos || []
   const videos = tweet.media?.videos || []
-  const hasMedia = photos.length > 0 || videos.length > 0
+  const hasQuotedMedia = (tweet.quote?.media?.photos?.length ?? 0) > 0 ||
+                         (tweet.quote?.media?.videos?.length ?? 0) > 0
+  const hasMedia = photos.length > 0 || videos.length > 0 || hasQuotedMedia
 
   const handleLogin = () => {
     setIsLoading(true)

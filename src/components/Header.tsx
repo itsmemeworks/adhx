@@ -272,7 +272,7 @@ export function Header() {
                 alt="ADHX Logo"
                 className="w-10 h-10 object-contain"
               />
-              <span className="text-2xl font-indie-flower hidden sm:inline text-gray-900 dark:text-white">ADHX</span>
+              <span className="text-xl sm:text-2xl font-indie-flower text-gray-900 dark:text-white">ADHX</span>
             </Link>
 
             {/* Stats - only show when authenticated, hidden on mobile */}
