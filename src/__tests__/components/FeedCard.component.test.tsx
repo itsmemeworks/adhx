@@ -183,4 +183,100 @@ describe('FeedCard Component Snapshots', () => {
       expect(card?.className).toContain('shadow-')
     })
   })
+
+  describe('X Article background styling', () => {
+    it('article-no-header: uses dark gradient background (not blue)', () => {
+      const feedItem = fxTwitterToFeedItem(fixtures['article-no-header'])
+
+      const { container } = render(
+        <FeedCard
+          item={feedItem}
+          lastSyncAt={null}
+          onExpand={mockOnExpand}
+          onMarkRead={mockOnMarkRead}
+        />
+      )
+
+      // Should use dark gray gradient (from-gray-900), not the old blue gradient
+      const backgroundDiv = container.querySelector('.from-gray-900')
+      expect(backgroundDiv).toBeTruthy()
+
+      // Should NOT use the old blue gradient
+      const oldBlueGradient = container.querySelector('.from-blue-600')
+      expect(oldBlueGradient).toBeNull()
+    })
+
+    it('article-no-header: has noise texture overlay', () => {
+      const feedItem = fxTwitterToFeedItem(fixtures['article-no-header'])
+
+      const { container } = render(
+        <FeedCard
+          item={feedItem}
+          lastSyncAt={null}
+          onExpand={mockOnExpand}
+          onMarkRead={mockOnMarkRead}
+        />
+      )
+
+      // Should have mix-blend-overlay for noise texture
+      const noiseOverlay = container.querySelector('.mix-blend-overlay')
+      expect(noiseOverlay).toBeTruthy()
+    })
+
+    it('article-no-header: has blue glow accent', () => {
+      const feedItem = fxTwitterToFeedItem(fixtures['article-no-header'])
+
+      const { container } = render(
+        <FeedCard
+          item={feedItem}
+          lastSyncAt={null}
+          onExpand={mockOnExpand}
+          onMarkRead={mockOnMarkRead}
+        />
+      )
+
+      // Should have blue glow accent (bg-blue-500/20)
+      const glowAccent = container.querySelector('.bg-blue-500\\/20')
+      expect(glowAccent).toBeTruthy()
+    })
+
+    it('article-no-header: does NOT show FileText icon (old design)', () => {
+      const feedItem = fxTwitterToFeedItem(fixtures['article-no-header'])
+
+      const { container } = render(
+        <FeedCard
+          item={feedItem}
+          lastSyncAt={null}
+          onExpand={mockOnExpand}
+          onMarkRead={mockOnMarkRead}
+        />
+      )
+
+      // The old design had a w-24 h-24 FileText icon centered
+      // New design should not have this large centered icon
+      const largeIcon = container.querySelector('.w-24.h-24')
+      expect(largeIcon).toBeNull()
+    })
+
+    it('article-with-media: uses image background (not gradient)', () => {
+      const feedItem = fxTwitterToFeedItem(fixtures['article-with-media'])
+
+      const { container } = render(
+        <FeedCard
+          item={feedItem}
+          lastSyncAt={null}
+          onExpand={mockOnExpand}
+          onMarkRead={mockOnMarkRead}
+        />
+      )
+
+      // Articles with images should have an img element for the background
+      const img = container.querySelector('img')
+      expect(img).toBeTruthy()
+
+      // Should NOT use the dark gradient fallback
+      const darkGradient = container.querySelector('.from-gray-900.via-gray-800')
+      expect(darkGradient).toBeNull()
+    })
+  })
 })

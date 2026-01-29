@@ -12,8 +12,14 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
 import { Lightbox } from '@/components/feed/Lightbox'
+import { CollectionsProvider } from '@/lib/collections-context'
 import { fixtures, fixtureMetadata, type FixtureSlug } from '../fixtures/tweets'
 import { fxTwitterToFeedItem } from '../fixtures/tweets/helpers'
+
+// Wrapper component for tests that provides required context
+function TestWrapper({ children }: { children: React.ReactNode }) {
+  return <CollectionsProvider>{children}</CollectionsProvider>
+}
 
 // Mock handlers
 const mockOnClose = vi.fn()
@@ -39,13 +45,17 @@ const defaultProps = {
   ],
 }
 
+// Render helper that includes required providers
+const renderWithProviders = (ui: React.ReactElement) =>
+  render(ui, { wrapper: TestWrapper })
+
 describe('Lightbox Component Snapshots', () => {
   describe('Renders all fixture types correctly', () => {
     it.each(fixtureMetadata)('$slug: renders correctly', ({ slug }) => {
       const fixture = fixtures[slug as FixtureSlug]
       const feedItem = fxTwitterToFeedItem(fixture)
 
-      const { container } = render(
+      const { container } = renderWithProviders(
         <Lightbox
           item={feedItem}
           {...defaultProps}
@@ -61,7 +71,7 @@ describe('Lightbox Component Snapshots', () => {
     it('video-tweet: uses MediaLightboxContent (2-panel layout)', () => {
       const feedItem = fxTwitterToFeedItem(fixtures['video-tweet'])
 
-      const { container } = render(
+      const { container } = renderWithProviders(
         <Lightbox
           item={feedItem}
           {...defaultProps}
@@ -77,7 +87,7 @@ describe('Lightbox Component Snapshots', () => {
     it('4-images: renders multi-image gallery', () => {
       const feedItem = fxTwitterToFeedItem(fixtures['4-images'])
 
-      const { container } = render(
+      const { container } = renderWithProviders(
         <Lightbox
           item={feedItem}
           {...defaultProps}
@@ -94,7 +104,7 @@ describe('Lightbox Component Snapshots', () => {
     it('plain-text: uses TextLightboxContent (single panel)', () => {
       const feedItem = fxTwitterToFeedItem(fixtures['plain-text'])
 
-      const { container } = render(
+      const { container } = renderWithProviders(
         <Lightbox
           item={feedItem}
           {...defaultProps}
@@ -108,7 +118,7 @@ describe('Lightbox Component Snapshots', () => {
     it('article-with-media: shows ArticleContent', () => {
       const feedItem = fxTwitterToFeedItem(fixtures['article-with-media'])
 
-      const { container } = render(
+      const { container } = renderWithProviders(
         <Lightbox
           item={feedItem}
           {...defaultProps}
@@ -122,7 +132,7 @@ describe('Lightbox Component Snapshots', () => {
     it('quote-of-text-tweet: shows TextQuoteContent', () => {
       const feedItem = fxTwitterToFeedItem(fixtures['quote-of-text-tweet'])
 
-      const { container } = render(
+      const { container } = renderWithProviders(
         <Lightbox
           item={feedItem}
           {...defaultProps}
@@ -138,7 +148,7 @@ describe('Lightbox Component Snapshots', () => {
     it('shows counter with correct index/total', () => {
       const feedItem = fxTwitterToFeedItem(fixtures['plain-text'])
 
-      const { container } = render(
+      const { container } = renderWithProviders(
         <Lightbox
           item={feedItem}
           index={5}
@@ -161,7 +171,7 @@ describe('Lightbox Component Snapshots', () => {
     it('shows keyboard hints on desktop', () => {
       const feedItem = fxTwitterToFeedItem(fixtures['plain-text'])
 
-      const { container } = render(
+      const { container } = renderWithProviders(
         <Lightbox
           item={feedItem}
           {...defaultProps}
@@ -177,7 +187,7 @@ describe('Lightbox Component Snapshots', () => {
     it('displays author name and handle', () => {
       const feedItem = fxTwitterToFeedItem(fixtures['plain-text'])
 
-      const { container } = render(
+      const { container } = renderWithProviders(
         <Lightbox
           item={feedItem}
           {...defaultProps}
@@ -191,7 +201,7 @@ describe('Lightbox Component Snapshots', () => {
     it('shows external link to tweet', () => {
       const feedItem = fxTwitterToFeedItem(fixtures['plain-text'])
 
-      const { container } = render(
+      const { container } = renderWithProviders(
         <Lightbox
           item={feedItem}
           {...defaultProps}
@@ -209,7 +219,7 @@ describe('Lightbox Component Snapshots', () => {
       const feedItem = fxTwitterToFeedItem(fixtures['plain-text'])
       feedItem.isRead = false
 
-      const { container } = render(
+      const { container } = renderWithProviders(
         <Lightbox
           item={feedItem}
           {...defaultProps}
@@ -224,7 +234,7 @@ describe('Lightbox Component Snapshots', () => {
       const feedItem = fxTwitterToFeedItem(fixtures['plain-text'])
       feedItem.isRead = true
 
-      const { container } = render(
+      const { container } = renderWithProviders(
         <Lightbox
           item={feedItem}
           {...defaultProps}
@@ -241,7 +251,7 @@ describe('Lightbox Component Snapshots', () => {
       const feedItem = fxTwitterToFeedItem(fixtures['plain-text'])
       feedItem.tags = ['existing-tag']
 
-      const { container } = render(
+      const { container } = renderWithProviders(
         <Lightbox
           item={feedItem}
           {...defaultProps}

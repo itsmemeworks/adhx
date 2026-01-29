@@ -164,6 +164,17 @@ export const FULL_SCHEMA_SQL = `
     trigger_type TEXT
   );
   CREATE INDEX sync_logs_user_id_idx ON sync_logs(user_id);
+
+  CREATE TABLE tag_shares (
+    user_id TEXT NOT NULL,
+    tag TEXT NOT NULL,
+    share_code TEXT NOT NULL UNIQUE,
+    is_public INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT,
+    PRIMARY KEY (user_id, tag)
+  );
+  CREATE INDEX tag_shares_share_code_idx ON tag_shares(share_code);
 `
 
 export interface TestDbInstance {

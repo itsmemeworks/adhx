@@ -35,8 +35,9 @@ export async function handleDownloadMedia(e: React.MouseEvent, url: string, file
 }
 
 /**
- * Share or download media - uses Web Share API on mobile, falls back to download
+ * Share or download media - uses Web Share API on mobile, downloads directly on desktop
  * This enables native share sheets on touch devices (WhatsApp, Messages, etc.)
+ * Desktop browsers skip the share API entirely for a better UX
  */
 export async function handleShareMedia(
   e: React.MouseEvent,
@@ -47,6 +48,29 @@ export async function handleShareMedia(
   e.stopPropagation()
   e.preventDefault()
 
+  // Check device type FIRST - desktop should always download directly
+  // This fixes the issue where desktop Chrome supports navigator.canShare
+  // but shows a clunky share sheet instead of downloading
+  if (!isTouchDevice()) {
+    try {
+      const response = await fetch(url)
+      const blob = await response.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = blobUrl
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 100)
+      return { success: true, method: 'download' }
+    } catch (error) {
+      console.error('Download failed:', error)
+      return { success: false, method: 'download' }
+    }
+  }
+
+  // Mobile: try Web Share API, fall back to download
   try {
     const response = await fetch(url)
     const blob = await response.blob()
@@ -58,7 +82,7 @@ export async function handleShareMedia(
       return { success: true, method: 'share' }
     }
 
-    // Fallback to download for desktop or unsupported browsers
+    // Fallback to download for mobile browsers without share support
     const blobUrl = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = blobUrl

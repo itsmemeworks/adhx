@@ -38,3 +38,17 @@ export function truncate(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text
   return text.slice(0, maxLength - 1).trim() + '\u2026'
 }
+
+/**
+ * Format duration in milliseconds to MM:SS format
+ * @example formatDurationMs(125000) // "2:05"
+ * @example formatDurationMs(65000) // "1:05"
+ * @example formatDurationMs(null) // null
+ */
+export function formatDurationMs(ms: number | null | undefined): string | null {
+  if (!ms) return null
+  const totalSeconds = Math.floor(ms / 1000)
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+}

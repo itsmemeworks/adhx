@@ -14,6 +14,7 @@ import {
   Download,
   Share2,
   Loader2,
+  Sparkles,
 } from 'lucide-react'
 import { AuthorAvatar } from './AuthorAvatar'
 import { TagInput, type TagInputHandle } from './TagInput'
@@ -153,8 +154,8 @@ export function Lightbox({
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent): void {
+      if (document.activeElement?.tagName === 'INPUT') return
       if (e.key === 't' || e.key === 'T') {
-        if (document.activeElement?.tagName === 'INPUT') return
         e.preventDefault()
         tagInputRef.current?.focus()
       }
@@ -389,6 +390,8 @@ function MediaLightboxContent({
             {renderText(stripMediaUrls(item.text, !!hasMedia))}
           </p>
         )}
+        {/* AI Summary */}
+        {item.summary && <SummarySection summary={item.summary} />}
         {/* Embedded QuoteCard for quote tweets with media */}
         {item.isQuote && (item.quotedTweet || item.quoteContext) && (
           <QuoteCard item={item} onNavigateToId={onNavigateToId} compact />
@@ -440,6 +443,9 @@ function TextLightboxContent({
 
       <AuthorHeader item={item} />
 
+      {/* AI Summary */}
+      {item.summary && <SummarySection summary={item.summary} />}
+
       {item.isRetweet && item.retweetContext ? (
         <RetweetContent retweetContext={item.retweetContext} bionicReading={bionicReading} />
       ) : item.isQuote && (item.quotedTweet || item.quoteContext) ? (
@@ -462,6 +468,18 @@ function TextLightboxContent({
         availableTags={availableTags}
         tagInputRef={tagInputRef}
       />
+    </div>
+  )
+}
+
+function SummarySection({ summary }: { summary: string }): React.ReactElement {
+  return (
+    <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800/30">
+      <div className="flex items-center gap-2 mb-2">
+        <Sparkles className="w-4 h-4 text-blue-500" />
+        <span className="text-xs font-medium text-blue-600 dark:text-blue-400">AI Summary</span>
+      </div>
+      <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{summary}</p>
     </div>
   )
 }

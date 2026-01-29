@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, forwardRef, useImperativeHandle } from 'react'
+import { useState, useRef, forwardRef, useImperativeHandle, useEffect } from 'react'
 import { X, Plus, Tag } from 'lucide-react'
 import type { TagItem } from './types'
 
@@ -23,7 +23,9 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
   const [tagError, setTagError] = useState<string | null>(null)
   const [_addingTag, setAddingTag] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [focusedIndex, setFocusedIndex] = useState(-1)
   const inputRef = useRef<HTMLInputElement>(null)
+  const suggestionsRef = useRef<HTMLDivElement>(null)
 
   useImperativeHandle(ref, () => ({
     focus: () => inputRef.current?.focus(),
@@ -33,6 +35,38 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
     .filter(({ tag }) => !tags.includes(tag))
     .filter(({ tag }) => newTag && tag.toLowerCase().includes(newTag.toLowerCase()))
     .slice(0, 5)
+
+  // Reset focused index when suggestions change
+  useEffect(() => {
+    setFocusedIndex(-1)
+  }, [newTag])
+
+  // Handle keyboard navigation
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>): void {
+    if (!showSuggestions || suggestions.length === 0) return
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault()
+        setFocusedIndex((prev) => (prev + 1) % suggestions.length)
+        break
+      case 'ArrowUp':
+        e.preventDefault()
+        setFocusedIndex((prev) => (prev - 1 + suggestions.length) % suggestions.length)
+        break
+      case 'Enter':
+        if (focusedIndex >= 0 && focusedIndex < suggestions.length) {
+          e.preventDefault()
+          handleSelectSuggestion(suggestions[focusedIndex].tag)
+        }
+        break
+      case 'Escape':
+        e.preventDefault()
+        setShowSuggestions(false)
+        setFocusedIndex(-1)
+        break
+    }
+  }
 
   async function handleAddTag(e: React.FormEvent): Promise<void> {
     e.preventDefault()
@@ -98,6 +132,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
               }}
               onFocus={() => setShowSuggestions(true)}
               onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+              onKeyDown={handleKeyDown}
               placeholder="add tag"
               maxLength={10}
               className="w-12 bg-transparent text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
@@ -117,13 +152,20 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
           </span>
         </form>
         {showSuggestions && suggestions.length > 0 && (
-          <div className="absolute bottom-full left-0 mb-1 w-32 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg z-10">
-            {suggestions.map(({ tag, count }) => (
+          <div
+            ref={suggestionsRef}
+            className="absolute bottom-full left-0 mb-1 w-32 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg z-10"
+          >
+            {suggestions.map(({ tag, count }, index) => (
               <button
                 key={tag}
                 type="button"
                 onClick={() => handleSelectSuggestion(tag)}
-                className="w-full px-2 py-1.5 text-left text-xs text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 flex justify-between items-center"
+                className={`w-full px-2 py-1.5 text-left text-xs text-gray-900 dark:text-white flex justify-between items-center ${
+                  index === focusedIndex
+                    ? 'bg-blue-100 dark:bg-blue-900/50'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
               >
                 <span>{tag}</span>
                 <span className="text-gray-400 dark:text-gray-500">{count}</span>

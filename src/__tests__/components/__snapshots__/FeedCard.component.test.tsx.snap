@@ -86,40 +86,19 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
       class="relative min-h-[200px] overflow-hidden"
     >
       <div
-        class="absolute inset-0 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900"
+        class="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900"
       >
         <div
-          class="absolute inset-0 flex items-center justify-center opacity-10"
-        >
-          <svg
-            class="lucide lucide-file-text w-24 h-24 text-white"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
-            />
-            <path
-              d="M14 2v4a2 2 0 0 0 2 2h4"
-            />
-            <path
-              d="M10 9H8"
-            />
-            <path
-              d="M16 13H8"
-            />
-            <path
-              d="M16 17H8"
-            />
-          </svg>
-        </div>
+          class="absolute inset-0 opacity-[0.15] mix-blend-overlay"
+          style="background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"); background-size: 100px 100px;"
+        />
+        <div
+          class="absolute inset-0 opacity-[0.03]"
+          style="background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255, 255, 255, 0.5) 10px, rgba(255, 255, 255, 0.5) 11px);"
+        />
+        <div
+          class="absolute -top-20 -right-20 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl"
+        />
       </div>
       <div
         class="relative p-4 h-full flex flex-col"

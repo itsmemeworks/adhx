@@ -281,8 +281,21 @@ function FeedPageContent(): React.ReactElement {
     if (page > 1) fetchFeed(false)
   }, [page])
 
-  // Note: sync-complete fetch is now handled by the filter/isSyncing effect above
-  // When isSyncing changes to false, that effect triggers fetchFeed(true)
+  // Listen for sync-complete events from Header's SyncProgress component
+  // This is needed because Header-triggered syncs don't set isSyncing in this component
+  useEffect(() => {
+    const handleSyncComplete = () => {
+      // Only refetch if we're not currently syncing via our own startSync
+      // (which already handles the state update)
+      if (!isSyncing) {
+        fetchFeed(true)
+        fetchTags()
+      }
+    }
+
+    window.addEventListener('sync-complete', handleSyncComplete)
+    return () => window.removeEventListener('sync-complete', handleSyncComplete)
+  }, [fetchFeed, fetchTags, isSyncing])
 
   useEffect(() => {
     const handleTweetAdded = () => fetchFeed(true)
@@ -829,6 +842,12 @@ function FeedPageContent(): React.ReactElement {
           onSelectedTagsChange={setSelectedTags}
           availableTags={availableTags}
           stats={stats}
+          onTagUpdated={(tag, isPublic, shareCode) => {
+            // Update the local availableTags state with the new share info
+            setAvailableTags((prev) =>
+              prev.map((t) => (t.tag === tag ? { ...t, isPublic, shareCode } : t))
+            )
+          }}
         />
       </ErrorBoundary>
 

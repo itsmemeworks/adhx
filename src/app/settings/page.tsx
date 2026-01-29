@@ -18,6 +18,10 @@ import {
   UserX,
   BookOpen,
   Type,
+  Globe,
+  Lock,
+  Link as LinkIcon,
+  Check,
 } from 'lucide-react'
 
 // X (formerly Twitter) logo component
@@ -117,10 +121,12 @@ function SettingsPage() {
   const [latestLog, setLatestLog] = useState<SyncLog | null>(null)
 
   // Tag management state
-  const [tags, setTags] = useState<Array<{ tag: string; count: number }>>([])
+  const [tags, setTags] = useState<Array<{ tag: string; count: number; isPublic: boolean; shareCode: string | null }>>([])
   const [tagsLoading, setTagsLoading] = useState(true)
   const [deletingTag, setDeletingTag] = useState<string | null>(null)
   const [tagToDelete, setTagToDelete] = useState<string | null>(null)
+  const [togglingTag, setTogglingTag] = useState<string | null>(null)
+  const [copiedTag, setCopiedTag] = useState<string | null>(null)
 
   // Danger zone state
   const [showClearDataModal, setShowClearDataModal] = useState(false)
@@ -298,6 +304,40 @@ function SettingsPage() {
     } finally {
       setDeletingTag(null)
     }
+  }
+
+  async function toggleTagSharing(tag: string, currentlyPublic: boolean) {
+    setTogglingTag(tag)
+    try {
+      const response = await fetch('/api/tags', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tag, isPublic: !currentlyPublic }),
+      })
+      if (response.ok) {
+        const { shareCode, isPublic } = await response.json()
+        setTags((prev) =>
+          prev.map((t) => (t.tag === tag ? { ...t, isPublic, shareCode } : t))
+        )
+        setMessage({
+          type: 'success',
+          text: isPublic ? `Tag "${tag}" is now public` : `Tag "${tag}" is now private`,
+        })
+      } else {
+        throw new Error('Failed to update tag')
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Failed to update tag sharing' })
+    } finally {
+      setTogglingTag(null)
+    }
+  }
+
+  function copyShareLink(tag: string, shareCode: string) {
+    const url = `${window.location.origin}/t/${shareCode}`
+    navigator.clipboard.writeText(url)
+    setCopiedTag(tag)
+    setTimeout(() => setCopiedTag(null), 2000)
   }
 
   async function fetchSyncLogs() {
@@ -686,7 +726,7 @@ function SettingsPage() {
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Tag Management</h2>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {tags.length} tag{tags.length !== 1 ? 's' : ''} total
+                    {tags.length} tag{tags.length !== 1 ? 's' : ''} total • Share tags publicly
                   </p>
                 </div>
               </div>
@@ -694,7 +734,7 @@ function SettingsPage() {
               {tagsLoading ? (
                 <div className="space-y-2">
                   {[1, 2, 3].map((i) => (
-                    <div key={i} className="h-10 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+                    <div key={i} className="h-16 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
                   ))}
                 </div>
               ) : tags.length === 0 ? (
@@ -705,31 +745,72 @@ function SettingsPage() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {tags.map(({ tag, count }) => (
+                  {tags.map(({ tag, count, isPublic, shareCode }) => (
                     <div
                       key={tag}
-                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl group"
+                      className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl"
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded text-sm font-medium">
-                          {tag}
-                        </span>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          {count} bookmark{count !== 1 ? 's' : ''}
-                        </span>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded text-sm font-medium">
+                            {tag}
+                          </span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">
+                            {count} bookmark{count !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => setTagToDelete(tag)}
+                          disabled={deletingTag === tag}
+                          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50"
+                          title="Delete tag from all bookmarks"
+                        >
+                          {deletingTag === tag ? (
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </button>
                       </div>
-                      <button
-                        onClick={() => setTagToDelete(tag)}
-                        disabled={deletingTag === tag}
-                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
-                        title="Delete tag from all bookmarks"
-                      >
-                        {deletingTag === tag ? (
-                          <RefreshCw className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4" />
+                      {/* Share controls */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => toggleTagSharing(tag, isPublic)}
+                          disabled={togglingTag === tag}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                            isPublic
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                          }`}
+                        >
+                          {togglingTag === tag ? (
+                            <RefreshCw className="h-3 w-3 animate-spin" />
+                          ) : isPublic ? (
+                            <Globe className="h-3 w-3" />
+                          ) : (
+                            <Lock className="h-3 w-3" />
+                          )}
+                          {isPublic ? 'Public' : 'Private'}
+                        </button>
+                        {isPublic && shareCode && (
+                          <button
+                            onClick={() => copyShareLink(tag, shareCode)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                          >
+                            {copiedTag === tag ? (
+                              <>
+                                <Check className="h-3 w-3" />
+                                Copied!
+                              </>
+                            ) : (
+                              <>
+                                <LinkIcon className="h-3 w-3" />
+                                Copy Link
+                              </>
+                            )}
+                          </button>
                         )}
-                      </button>
+                      </div>
                     </div>
                   ))}
                 </div>

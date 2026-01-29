@@ -69,7 +69,7 @@ describe('API: /api/tags', () => {
       expect(data.tags).toEqual([])
     })
 
-    it('returns tags with counts, sorted by count descending', async () => {
+    it('returns tags with counts and share info, sorted by count descending', async () => {
       await testInstance.db.insert(schema.bookmarkTags).values([
         { userId: USER_A, bookmarkId: 't1', tag: 'work' },
         { userId: USER_A, bookmarkId: 't2', tag: 'work' },
@@ -84,9 +84,9 @@ describe('API: /api/tags', () => {
       const data = await response.json()
 
       expect(data.tags).toEqual([
-        { tag: 'work', count: 3 },
-        { tag: 'important', count: 2 },
-        { tag: 'later', count: 1 },
+        { tag: 'work', count: 3, isPublic: false, shareCode: null },
+        { tag: 'important', count: 2, isPublic: false, shareCode: null },
+        { tag: 'later', count: 1, isPublic: false, shareCode: null },
       ])
     })
 
@@ -110,7 +110,7 @@ describe('API: /api/tags', () => {
       const response = await GET()
       const data = await response.json()
 
-      expect(data.tags).toEqual([{ tag: 'usera', count: 1 }])
+      expect(data.tags).toEqual([{ tag: 'usera', count: 1, isPublic: false, shareCode: null }])
     })
   })
 

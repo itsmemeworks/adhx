@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { bookmarks, bookmarkLinks, bookmarkMedia, readStatus, syncLogs, bookmarkTags } from '@/lib/db/schema'
+import { bookmarks, bookmarkLinks, bookmarkMedia, readStatus, syncLogs, bookmarkTags, collectionTweets } from '@/lib/db/schema'
 import { eq, desc, like, and, or, sql, count, notInArray, inArray, SQL, isNull, isNotNull } from 'drizzle-orm'
 import { resolveMediaUrl, getShareableUrl, getThumbnailUrl } from '@/lib/media/fxembed'
 import { expandUrls } from '@/lib/utils/url-expander'
@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
   const unreadOnly = searchParams.get('unreadOnly') !== 'false' // Default to true
   const search = searchParams.get('search')
   const tags = searchParams.getAll('tag') // Multiple tags via ?tag=foo&tag=bar
+  const collectionId = searchParams.get('collection') // Filter by collection
 
   const offset = (page - 1) * limit
 
@@ -123,6 +124,31 @@ export async function GET(request: NextRequest) {
     }
 
     // Tags will be loaded later only for the result set (not all tags upfront)
+
+    // Collection filter
+    if (collectionId) {
+      const collectionBookmarks = await db
+        .select({ bookmarkId: collectionTweets.bookmarkId })
+        .from(collectionTweets)
+        .where(and(
+          eq(collectionTweets.userId, userId),
+          eq(collectionTweets.collectionId, collectionId)
+        ))
+
+      const collectionBookmarkIds = collectionBookmarks.map((b) => b.bookmarkId)
+
+      if (collectionBookmarkIds.length > 0) {
+        conditions.push(inArray(bookmarks.id, collectionBookmarkIds))
+      } else {
+        // Collection is empty
+        return NextResponse.json({
+          items: [],
+          pagination: { page, limit, total: 0, totalPages: 0 },
+          stats: { total: 0, unread: 0 },
+          collectionId,
+        })
+      }
+    }
 
     // Build linksByBookmarkId and articleBookmarkIds from already-fetched allLinks
     const linksByBookmarkId = new Map<string, typeof allLinks>()
@@ -319,6 +345,7 @@ export async function GET(request: NextRequest) {
       isXArticle: boolean
       tags: string[]
       parentTweets: FeedItemResponse[] | null // Tweets that quote this one (for reverse navigation)
+      summary: string | null // AI-generated summary
     }
 
     // Helper function to build a FeedItem from a bookmark
@@ -421,6 +448,7 @@ export async function GET(request: NextRequest) {
         isXArticle,
         tags: tagsByBookmark.get(bookmark.id) || [],
         parentTweets: null as FeedItemResponse[] | null, // Will be populated below
+        summary: bookmark.summary,
       }
     }
 
