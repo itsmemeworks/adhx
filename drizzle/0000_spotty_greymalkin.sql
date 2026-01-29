@@ -96,7 +96,7 @@ CREATE INDEX `collections_user_id_idx` ON `collections` (`user_id`);--> statemen
 CREATE TABLE `oauth_state` (
 	`state` text PRIMARY KEY NOT NULL,
 	`code_verifier` text NOT NULL,
-	`created_at` text DEFAULT '2026-01-14T16:34:44.103Z'
+	`created_at` text DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
 CREATE TABLE `oauth_tokens` (
@@ -107,7 +107,7 @@ CREATE TABLE `oauth_tokens` (
 	`refresh_token` text NOT NULL,
 	`expires_at` integer NOT NULL,
 	`scopes` text,
-	`created_at` text DEFAULT '2026-01-14T16:34:44.102Z',
+	`created_at` text DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` text
 );
 --> statement-breakpoint

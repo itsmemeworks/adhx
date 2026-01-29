@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "10261849-9ff3-49b6-b180-9639d4f61a80",
+  "id": "d375500b-0217-485b-84c6-14877e33a148",
   "prevId": "3cfeeec7-8c3f-4f75-ba61-53d8ee7b82db",
   "tables": {
     "bookmark_links": {
@@ -680,7 +680,7 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false,
-          "default": "'2026-01-29T16:06:51.842Z'"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {},
@@ -747,7 +747,7 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false,
-          "default": "'2026-01-29T16:06:51.841Z'"
+          "default": "CURRENT_TIMESTAMP"
         },
         "updated_at": {
           "name": "updated_at",

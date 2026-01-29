@@ -129,7 +129,7 @@ export const oauthTokens = sqliteTable('oauth_tokens', {
   refreshToken: text('refresh_token').notNull(),
   expiresAt: integer('expires_at').notNull(),
   scopes: text('scopes'),
-  createdAt: text('created_at').default(new Date().toISOString()),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text('updated_at'),
 })
 
@@ -137,7 +137,7 @@ export const oauthTokens = sqliteTable('oauth_tokens', {
 export const oauthState = sqliteTable('oauth_state', {
   state: text('state').primaryKey(),
   codeVerifier: text('code_verifier').notNull(),
-  createdAt: text('created_at').default(new Date().toISOString()),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 })
 
 // Sync state tracking - PK: (userId, key)
