@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
-import { getStoredTokens, isTokenExpired, getCurrentUser, refreshAccessToken } from '@/lib/auth/oauth'
+import { getStoredTokens, isTokenExpired, getCurrentUser, refreshAccessToken, deleteTokens } from '@/lib/auth/oauth'
 import { db } from '@/lib/db'
 import { oauthTokens } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
-import { getSession } from '@/lib/auth/session'
+import { getSession, clearSessionCookie } from '@/lib/auth/session'
 
 const CLIENT_ID = process.env.TWITTER_CLIENT_ID!
 const CLIENT_SECRET = process.env.TWITTER_CLIENT_SECRET!
@@ -54,7 +54,14 @@ export async function GET() {
         expired = false
       } catch (error) {
         console.error('Failed to refresh token:', error)
-        // Token refresh failed, keep showing as expired
+        // Token refresh failed - clear tokens and session, force re-auth
+        await deleteTokens(tokens.userId)
+        const response = NextResponse.json({
+          authenticated: false,
+          user: null,
+        })
+        clearSessionCookie(response)
+        return response
       }
     }
 

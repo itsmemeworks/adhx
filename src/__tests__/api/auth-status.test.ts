@@ -20,6 +20,16 @@ vi.mock('@/lib/db', () => ({
 vi.mock('@/lib/auth/session', () => ({
   getSession: vi.fn(() => Promise.resolve(mockSession)),
   getCurrentUserId: vi.fn(() => Promise.resolve(mockSession?.userId || null)),
+  clearSessionCookie: vi.fn((response) => {
+    // Mock implementation that sets cookie to empty value with expired date
+    response.cookies.set('adhx_session', '', {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 0,
+      path: '/',
+    })
+  }),
 }))
 
 // Mock fetch for Twitter API calls
@@ -139,7 +149,7 @@ describe('API: /api/auth/twitter/status', () => {
       )
     })
 
-    it('handles token refresh failure gracefully', async () => {
+    it('clears session and returns unauthenticated on refresh failure', async () => {
       // Mock failed token refresh
       mockFetch.mockResolvedValueOnce({
         ok: false,
@@ -151,8 +161,12 @@ describe('API: /api/auth/twitter/status', () => {
 
       expect(response.status).toBe(200)
       const data = await response.json()
-      expect(data.authenticated).toBe(true)
-      expect(data.tokenExpired).toBe(true) // Still shows as expired
+      // When refresh fails, user should be logged out to break error loop
+      expect(data.authenticated).toBe(false)
+      expect(data.user).toBeNull()
+      // Cookie should be cleared (set to empty value with expired date)
+      const sessionCookie = response.cookies.get('adhx_session')
+      expect(sessionCookie?.value).toBe('')
     })
   })
 
