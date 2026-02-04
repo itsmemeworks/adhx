@@ -38,6 +38,22 @@ describe('API: /api/tags', () => {
     mockUserId = USER_A
     vi.clearAllMocks()
 
+    // Seed oauth tokens for username lookup
+    await testInstance.db.insert(schema.oauthTokens).values({
+      userId: USER_A,
+      username: 'usera',
+      accessToken: 'token-a',
+      refreshToken: 'refresh-a',
+      expiresAt: Date.now() + 7200000,
+    })
+    await testInstance.db.insert(schema.oauthTokens).values({
+      userId: USER_B,
+      username: 'userb',
+      accessToken: 'token-b',
+      refreshToken: 'refresh-b',
+      expiresAt: Date.now() + 7200000,
+    })
+
     // Seed bookmarks
     await testInstance.db.insert(schema.bookmarks).values([
       createTestBookmark(USER_A, 't1'),
@@ -84,9 +100,9 @@ describe('API: /api/tags', () => {
       const data = await response.json()
 
       expect(data.tags).toEqual([
-        { tag: 'work', count: 3, isPublic: false, shareCode: null },
-        { tag: 'important', count: 2, isPublic: false, shareCode: null },
-        { tag: 'later', count: 1, isPublic: false, shareCode: null },
+        { tag: 'work', count: 3, isPublic: false, shareUrl: null },
+        { tag: 'important', count: 2, isPublic: false, shareUrl: null },
+        { tag: 'later', count: 1, isPublic: false, shareUrl: null },
       ])
     })
 
@@ -110,7 +126,7 @@ describe('API: /api/tags', () => {
       const response = await GET()
       const data = await response.json()
 
-      expect(data.tags).toEqual([{ tag: 'usera', count: 1, isPublic: false, shareCode: null }])
+      expect(data.tags).toEqual([{ tag: 'usera', count: 1, isPublic: false, shareUrl: null }])
     })
   })
 

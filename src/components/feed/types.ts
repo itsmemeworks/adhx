@@ -138,7 +138,7 @@ export interface TagItem {
   tag: string
   count: number
   isPublic?: boolean
-  shareCode?: string | null
+  shareUrl?: string | null
 }
 
 export const FILTER_OPTIONS: { value: FilterType; label: string }[] = [

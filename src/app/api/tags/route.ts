@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { bookmarkTags, tagShares } from '@/lib/db/schema'
+import { bookmarkTags, tagShares, oauthTokens } from '@/lib/db/schema'
 import { eq, sql, and } from 'drizzle-orm'
 import { getCurrentUserId } from '@/lib/auth/session'
+
+// Get username for a user (for constructing friendly share URLs)
+async function getUsername(userId: string): Promise<string | null> {
+  const [token] = await db
+    .select({ username: oauthTokens.username })
+    .from(oauthTokens)
+    .where(eq(oauthTokens.userId, userId))
+    .limit(1)
+  return token?.username ?? null
+}
 
 // Generate a short random code for sharing
 function generateShareCode(): string {
@@ -23,6 +33,9 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // Get username for constructing friendly share URLs
+  const username = await getUsername(userId)
+
   // Get all tags with counts for user's bookmarks
   const tags = await db
     .select({
@@ -40,14 +53,15 @@ export async function GET() {
     .from(tagShares)
     .where(eq(tagShares.userId, userId))
 
-  // Merge tags with share info
+  // Merge tags with share info, using friendly URLs
   const tagsWithShares = tags.map((t) => {
     const share = shares.find((s) => s.tag === t.tag)
     return {
       tag: t.tag,
       count: t.count,
       isPublic: share?.isPublic ?? false,
-      shareCode: share?.shareCode ?? null,
+      // Friendly URL format: /t/{username}/{tag}
+      shareUrl: share && username ? `/t/${username}/${t.tag}` : null,
     }
   })
 
@@ -66,6 +80,12 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Tag and isPublic are required' }, { status: 400 })
   }
 
+  // Get username for constructing friendly share URL
+  const username = await getUsername(userId)
+  if (!username) {
+    return NextResponse.json({ error: 'User not found' }, { status: 404 })
+  }
+
   // Check if share record exists
   const [existing] = await db
     .select()
@@ -73,18 +93,15 @@ export async function PATCH(request: NextRequest) {
     .where(and(eq(tagShares.userId, userId), eq(tagShares.tag, tag)))
     .limit(1)
 
-  let shareCode: string
-
   if (existing) {
     // Update existing share
     await db
       .update(tagShares)
       .set({ isPublic, updatedAt: new Date().toISOString() })
       .where(and(eq(tagShares.userId, userId), eq(tagShares.tag, tag)))
-    shareCode = existing.shareCode
   } else {
-    // Create new share with unique code
-    shareCode = generateShareCode()
+    // Create new share record (shareCode still stored for backward compatibility)
+    const shareCode = generateShareCode()
     await db.insert(tagShares).values({
       userId,
       tag,
@@ -94,7 +111,8 @@ export async function PATCH(request: NextRequest) {
     })
   }
 
-  return NextResponse.json({ success: true, shareCode, isPublic })
+  // Return friendly URL format: /t/{username}/{tag}
+  return NextResponse.json({ success: true, shareUrl: `/t/${username}/${tag}`, isPublic })
 }
 
 // DELETE /api/tags - Delete a tag from all bookmarks

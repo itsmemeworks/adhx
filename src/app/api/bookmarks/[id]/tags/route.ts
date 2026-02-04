@@ -4,22 +4,7 @@ import { bookmarkTags, bookmarks } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { metrics } from '@/lib/sentry'
-
-const MAX_TAG_LENGTH = 10
-
-/**
- * Sanitize tag input by replacing invalid characters with hyphens.
- * Only allows lowercase letters, numbers, hyphens, and underscores.
- * This provides better UX than rejecting invalid input.
- */
-function sanitizeTag(input: string): string {
-  return input
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9_-]/g, '-') // Replace invalid chars with hyphen
-    .replace(/-+/g, '-')          // Collapse multiple hyphens
-    .replace(/^-|-$/g, '')        // Remove leading/trailing hyphens
-}
+import { sanitizeTag } from '@/lib/utils/tag'
 
 // GET /api/bookmarks/[id]/tags - Get tags for a bookmark
 export async function GET(
@@ -76,13 +61,6 @@ export async function POST(
 
   if (cleanTag.length === 0) {
     return NextResponse.json({ error: 'Tag cannot be empty' }, { status: 400 })
-  }
-
-  if (cleanTag.length > MAX_TAG_LENGTH) {
-    return NextResponse.json(
-      { error: `Tag must be ${MAX_TAG_LENGTH} characters or less` },
-      { status: 400 }
-    )
   }
 
   // Verify bookmark belongs to user (strict userId check)

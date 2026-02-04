@@ -3,6 +3,7 @@
 import { useState, useRef, forwardRef, useImperativeHandle, useEffect } from 'react'
 import { X, Plus, Tag } from 'lucide-react'
 import type { TagItem } from './types'
+import { sanitizeTag } from '@/lib/utils/tag'
 
 export interface TagInputHandle {
   focus: () => void
@@ -26,6 +27,10 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
   const [focusedIndex, setFocusedIndex] = useState(-1)
   const inputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
+
+  // Show sanitized preview so users know what will be saved
+  const sanitizedPreview = sanitizeTag(newTag)
+  const showPreview = newTag.trim() !== '' && sanitizedPreview !== newTag.trim().toLowerCase()
 
   useImperativeHandle(ref, () => ({
     focus: () => inputRef.current?.focus(),
@@ -70,11 +75,9 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
 
   async function handleAddTag(e: React.FormEvent): Promise<void> {
     e.preventDefault()
-    const tag = newTag.trim().toLowerCase()
-    if (!tag) return
-
-    if (tag.length > 10) {
-      setTagError('Max 10 characters')
+    const tag = sanitizeTag(newTag)
+    if (!tag) {
+      setTagError('Invalid tag')
       return
     }
 
@@ -174,6 +177,9 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
           </div>
         )}
       </div>
+      {showPreview && sanitizedPreview && (
+        <span className="text-gray-400 dark:text-gray-500 text-xs">→ {sanitizedPreview}</span>
+      )}
       {tagError && <span className="text-red-500 dark:text-red-400 text-xs">{tagError}</span>}
     </div>
   )

@@ -27,13 +27,15 @@ interface SharedTweet {
 
 interface SharedTagData {
   tag: string
+  username: string
   tweets: SharedTweet[]
   tweetCount: number
 }
 
 export default function SharedTagPage() {
   const params = useParams()
-  const code = params.code as string
+  const username = params.username as string
+  const tag = params.tag as string
 
   const [data, setData] = useState<SharedTagData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -46,12 +48,12 @@ export default function SharedTagPage() {
     setCloneError(null)
 
     try {
-      const response = await fetch(`/api/share/tag/${code}/clone`, {
+      // Use the by-name clone endpoint
+      const response = await fetch(`/api/share/tag/by-name/${username}/${tag}/clone`, {
         method: 'POST',
       })
 
       if (response.status === 401) {
-        // Not authenticated - redirect to auth with return URL
         const returnUrl = encodeURIComponent(window.location.pathname)
         window.location.href = `/api/auth/twitter?returnUrl=${returnUrl}`
         return
@@ -63,7 +65,6 @@ export default function SharedTagPage() {
         return
       }
 
-      // Success - redirect to feed immediately
       window.location.href = '/'
     } catch {
       setCloneError('Failed to add to collection. Please try again.')
@@ -75,7 +76,7 @@ export default function SharedTagPage() {
   useEffect(() => {
     async function fetchTag() {
       try {
-        const response = await fetch(`/api/share/tag/${code}`)
+        const response = await fetch(`/api/share/tag/by-name/${username}/${tag}`)
         if (!response.ok) {
           if (response.status === 404) {
             setError('Tag not found')
@@ -95,10 +96,10 @@ export default function SharedTagPage() {
       }
     }
 
-    if (code) {
+    if (username && tag) {
       fetchTag()
     }
-  }, [code])
+  }, [username, tag])
 
   if (loading) {
     return (
@@ -177,7 +178,7 @@ export default function SharedTagPage() {
               <div>
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white">#{data.tag}</h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {data.tweetCount} bookmark{data.tweetCount !== 1 ? 's' : ''}
+                  by @{data.username} · {data.tweetCount} bookmark{data.tweetCount !== 1 ? 's' : ''}
                 </p>
               </div>
             </div>
@@ -238,7 +239,6 @@ function TweetCard({ tweet }: { tweet: SharedTweet }) {
       rel="noopener noreferrer"
       className="group block bg-white dark:bg-gray-900 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
     >
-      {/* Media */}
       {hasMedia ? (
         <div className="relative aspect-square bg-gray-100 dark:bg-gray-800">
           {primaryMedia.mediaType === 'video' || primaryMedia.mediaType === 'animated_gif' ? (
@@ -275,7 +275,6 @@ function TweetCard({ tweet }: { tweet: SharedTweet }) {
         </div>
       )}
 
-      {/* Info */}
       <div className="p-3">
         <div className="flex items-center gap-2 mb-2">
           {tweet.authorProfileImageUrl ? (

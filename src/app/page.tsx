@@ -842,10 +842,10 @@ function FeedPageContent(): React.ReactElement {
           onSelectedTagsChange={setSelectedTags}
           availableTags={availableTags}
           stats={stats}
-          onTagUpdated={(tag, isPublic, shareCode) => {
+          onTagUpdated={(tag, isPublic, shareUrl) => {
             // Update the local availableTags state with the new share info
             setAvailableTags((prev) =>
-              prev.map((t) => (t.tag === tag ? { ...t, isPublic, shareCode } : t))
+              prev.map((t) => (t.tag === tag ? { ...t, isPublic, shareUrl } : t))
             )
           }}
         />
