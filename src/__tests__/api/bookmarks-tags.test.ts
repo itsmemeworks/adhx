@@ -28,6 +28,7 @@ vi.mock('@/lib/sentry', () => ({
   metrics: {
     bookmarkTagged: vi.fn(),
   },
+  captureException: vi.fn(),
 }))
 
 function createRequest(method: string, body?: object): NextRequest {

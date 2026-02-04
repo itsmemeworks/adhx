@@ -27,6 +27,7 @@ vi.mock('@/lib/sentry', () => ({
   metrics: {
     bookmarkAdded: vi.fn(),
   },
+  captureException: vi.fn(),
 }))
 
 // Mock fetch for FxTwitter API

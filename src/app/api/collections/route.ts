@@ -4,6 +4,7 @@ import { collections } from '@/lib/db/schema'
 import { eq, desc, sql } from 'drizzle-orm'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { nanoid } from '@/lib/utils'
+import { captureException } from '@/lib/sentry'
 
 // GET /api/collections - List user's collections with tweet counts
 export async function GET() {
@@ -38,6 +39,7 @@ export async function GET() {
     return NextResponse.json({ collections: userCollections })
   } catch (error) {
     console.error('Error fetching collections:', error)
+    captureException(error, { endpoint: '/api/collections', method: 'GET' })
     return NextResponse.json({ error: 'Failed to fetch collections' }, { status: 500 })
   }
 }
@@ -87,6 +89,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error creating collection:', error)
+    captureException(error, { endpoint: '/api/collections', method: 'POST' })
     return NextResponse.json({ error: 'Failed to create collection' }, { status: 500 })
   }
 }

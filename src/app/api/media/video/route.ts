@@ -1,9 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { captureException } from '@/lib/sentry'
 
 // Simple in-memory cache for video URLs (survives for 1 hour)
 // Cache key includes quality for different variants
 const videoUrlCache = new Map<string, { url: string; timestamp: number }>()
 const CACHE_TTL = 60 * 60 * 1000 // 1 hour
+
+// SSRF Protection: Only allow fetching from trusted Twitter video domains
+const ALLOWED_VIDEO_DOMAINS = [
+  'video.twimg.com',
+  'pbs.twimg.com',
+  'abs.twimg.com',
+]
+
+/**
+ * Validate that a URL is from an allowed domain (SSRF protection)
+ */
+function isAllowedVideoUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    return ALLOWED_VIDEO_DOMAINS.some(
+      (domain) => parsed.hostname === domain || parsed.hostname.endsWith(`.${domain}`)
+    )
+  } catch {
+    return false
+  }
+}
 
 interface VideoFormat {
   url: string
@@ -108,6 +130,12 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // SSRF Protection: Validate video URL is from trusted domain before fetching
+    if (!isAllowedVideoUrl(videoUrl)) {
+      console.error(`SSRF blocked: Video URL from untrusted domain: ${videoUrl}`)
+      return NextResponse.json({ error: 'Invalid video source' }, { status: 403 })
+    }
+
     // Stream video through server instead of redirecting
     // This avoids 403 errors from direct browser requests to video.twimg.com
     const rangeHeader = request.headers.get('range')
@@ -145,6 +173,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error fetching video:', error)
+    captureException(error, { endpoint: '/api/media/video', author, tweetId })
     return NextResponse.json(
       { error: 'Failed to fetch video' },
       { status: 500 }
