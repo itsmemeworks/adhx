@@ -4,7 +4,7 @@
   "description": "Save now. Read never. Find always. A Twitter/X bookmark manager for people who bookmark everything and read nothing.",
   "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start",
     "lint": "eslint src/",

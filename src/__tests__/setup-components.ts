@@ -6,6 +6,9 @@
  */
 import { afterEach, vi } from 'vitest'
 
+// Set test environment variables for token encryption
+process.env.SESSION_SECRET = 'test-secret-for-unit-tests-minimum-32-chars-here'
+
 // Only add DOM matchers and cleanup when in browser environment
 if (typeof window !== 'undefined') {
   // Import jest-dom matchers for DOM assertions

@@ -133,14 +133,16 @@ describe('Twitter Client', () => {
       const { getTwitterClient } = await import('@/lib/twitter/client')
       await getTwitterClient('user-456')
 
-      // Verify tokens were updated
+      // Verify tokens were updated (they are now encrypted at rest)
       const [tokens] = await testInstance.db
         .select()
         .from(schema.oauthTokens)
         .where(require('drizzle-orm').eq(schema.oauthTokens.userId, 'user-456'))
 
-      expect(tokens.accessToken).toBe('brand-new-access-token')
-      expect(tokens.refreshToken).toBe('brand-new-refresh-token')
+      // Import decryption to verify stored tokens
+      const { safeDecryptToken } = await import('@/lib/auth/token-encryption')
+      expect(safeDecryptToken(tokens.accessToken)).toBe('brand-new-access-token')
+      expect(safeDecryptToken(tokens.refreshToken)).toBe('brand-new-refresh-token')
     })
   })
 

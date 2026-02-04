@@ -24,6 +24,31 @@ export const db = drizzle(sqlite, { schema })
 // Export raw sqlite for FTS5 operations (Drizzle doesn't support virtual tables natively)
 export const rawDb = sqlite
 
+/**
+ * Create a transaction wrapper for atomic multi-table operations.
+ * Uses better-sqlite3's synchronous transaction API for guaranteed atomicity.
+ *
+ * @example
+ * const deleteBookmark = createTransaction((userId: string, bookmarkId: string) => {
+ *   db.delete(bookmarkTags).where(...).run()
+ *   db.delete(bookmarks).where(...).run()
+ * })
+ * deleteBookmark(userId, bookmarkId)
+ */
+export function createTransaction<T extends unknown[], R>(
+  fn: (...args: T) => R
+): (...args: T) => R {
+  return sqlite.transaction(fn)
+}
+
+/**
+ * Run a function within a transaction (alternative API for async-like usage).
+ * Note: The function itself must be synchronous due to SQLite's nature.
+ */
+export function runInTransaction<R>(fn: () => R): R {
+  return sqlite.transaction(fn)()
+}
+
 // Close database on process exit
 process.on('exit', () => {
   sqlite.close()
