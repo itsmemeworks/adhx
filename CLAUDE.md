@@ -90,7 +90,7 @@ A Twitter/X bookmark manager for people who bookmark everything and read nothing
 pnpm install
 pnpm dev         # Start dev server at localhost:3000
 pnpm build       # Production build
-pnpm test        # Run all 372 tests
+pnpm test        # Run all 619 tests
 ```
 
 ## Tech Stack
@@ -130,6 +130,41 @@ if (!userId) {
 - Uses Drizzle ORM query builder (never raw SQL with interpolation)
 - All queries filter by `userId` for multi-user data isolation
 - **Multi-user schema**: All user-owned tables use composite primary keys `(userId, id)` to allow multiple users to bookmark the same tweet independently
+
+### Token Encryption
+OAuth tokens are encrypted at rest using AES-256-GCM:
+- **Key file**: `src/lib/auth/token-encryption.ts`
+- Encryption key derived from `SESSION_SECRET` or `TWITTER_CLIENT_SECRET`
+- Each token gets a unique IV (initialization vector)
+- Stored format: `iv:authTag:ciphertext` (base64 encoded)
+
+```typescript
+import { encryptToken, decryptToken } from '@/lib/auth/token-encryption'
+
+const encrypted = encryptToken(accessToken)  // Store this in DB
+const decrypted = decryptToken(encrypted)    // Use this for API calls
+```
+
+### Content Security Policy (CSP)
+Security headers configured in `next.config.js`:
+- Restricts script sources to self and trusted CDNs
+- Prevents clickjacking with `frame-ancestors 'self'`
+- Blocks mixed content
+- Configured for Twitter/X embed compatibility
+
+### Health Check Endpoint
+`/api/health` provides monitoring for Fly.io and external health checks:
+```json
+{
+  "status": "healthy",
+  "timestamp": "2026-02-04T17:34:51.608Z",
+  "version": "1.18.0",
+  "checks": {
+    "database": { "status": "healthy", "responseTime": "0ms" }
+  }
+}
+```
+Returns 503 if database is unreachable.
 
 ### Error Tracking & Metrics (Sentry)
 Error tracking and user behavior metrics via Sentry SDK 10.x.
@@ -241,6 +276,43 @@ Files:
 - `src/components/feed/Lightbox.tsx` - QuoteCard, TextQuoteContent components
 - `src/components/feed/types.ts` - FeedItem.quotedTweet, FeedItem.quoteContext types
 
+### Tag Sharing with Friendly URLs
+Users can share tag collections publicly via human-readable URLs:
+- **URL format**: `/t/{username}/{tag}` (e.g., `/t/weedauwl/claude-code`)
+- **Route**: `src/app/t/[username]/[tag]/page.tsx`
+- **API**: `src/app/api/share/tag/by-name/[username]/[tag]/route.ts`
+
+**Sharing flow:**
+1. User selects a tag in FilterBar and clicks "Make Public"
+2. API creates/updates `tagShares` record and returns friendly URL
+3. URL copied to clipboard automatically
+4. Anyone with the URL can view the collection
+5. Authenticated users can clone the collection to their account
+
+**Clone endpoint**: `/api/share/tag/by-name/[username]/[tag]/clone`
+- Copies all bookmarks, media, and links to the cloning user's account
+- Adds the tag to all cloned bookmarks
+- Skips bookmarks the user already has
+
+### Tag Sanitization
+Tags are sanitized before storage to ensure URL-safe, consistent naming:
+- **Utility**: `src/lib/utils/tag.ts`
+- Lowercase conversion
+- Invalid characters replaced with hyphens
+- Multiple hyphens collapsed
+- Leading/trailing hyphens removed
+- Maximum 10 characters (truncated, not rejected)
+
+```typescript
+import { sanitizeTag } from '@/lib/utils/tag'
+
+sanitizeTag('Test Tag!')     // → 'test-tag'
+sanitizeTag('Claude Code')   // → 'claude-cod' (truncated to 10)
+sanitizeTag('AI/ML')         // → 'ai-ml'
+```
+
+**UI Preview**: The `TagInput` component shows a real-time preview of the sanitized tag as users type (e.g., "Test Tag!" → "→ test-tag").
+
 ### Landing Page Optimization
 When unauthenticated, the app shows a landing page without making authenticated API calls:
 - `page.tsx` checks `isAuthenticated` before fetching feed
@@ -254,6 +326,25 @@ Centralized type definitions including:
 - `FeedItem` - Full bookmark data for display
 - `StreamedBookmark` - Lighter type for sync SSE events
 - `streamedBookmarkToFeedItem()` - Conversion helper
+
+### Feed API Performance
+The feed API (`/api/feed/route.ts`) uses optimized SQL queries to avoid N+1 problems:
+- Single query fetches bookmarks with tags via SQL subquery
+- Media and links fetched in bulk with `IN` clause
+- Read status joined efficiently
+
+```typescript
+// Tags fetched via subquery (avoids N+1)
+const tagsSubquery = db
+  .select({
+    bookmarkId: bookmarkTags.bookmarkId,
+    tags: sql<string>`GROUP_CONCAT(${bookmarkTags.tag})`.as('tags'),
+  })
+  .from(bookmarkTags)
+  .where(eq(bookmarkTags.userId, userId))
+  .groupBy(bookmarkTags.bookmarkId)
+  .as('tags_agg')
+```
 
 ### Media Handling
 FxTwitter (`api.fxtwitter.com`) provides reliable media URLs (Twitter has CORS issues).
@@ -282,6 +373,7 @@ Database location: `./data/adhdone.db`
 | `oauth_tokens` | `userId` | Twitter OAuth credentials |
 | `sync_logs` | `id` + `userId` | Sync history per user |
 | `collections` | `id` + `userId` | Custom bookmark collections |
+| `tag_shares` | `(userId, tag)` | Public tag sharing settings |
 
 **Why composite keys**: Allows User A and User B to both bookmark tweet X independently, with separate read status, tags, and preferences.
 
@@ -326,16 +418,18 @@ export async function GET() {
 
 | Route | Method | Auth | Description |
 |-------|--------|------|-------------|
+| `/api/health` | GET | No | Health check for monitoring |
 | `/api/feed` | GET | Yes | Main feed with filtering |
 | `/api/bookmarks/[id]/read` | POST/DELETE | Yes | Toggle read status |
-| `/api/bookmarks/[id]/tags` | PUT | Yes | Update tags |
+| `/api/bookmarks/[id]/tags` | POST/DELETE | Yes | Add/remove tags |
 | `/api/sync` | GET | Yes | SSE sync stream |
 | `/api/tweets/add` | POST | Yes | Add single tweet |
-| `/api/tags` | GET | Yes | List user's tags with counts and share status |
-| `/api/tags` | PATCH | Yes | Toggle tag public sharing |
+| `/api/tags` | GET | Yes | List user's tags with counts and share URLs |
+| `/api/tags` | PATCH | Yes | Toggle tag public sharing (returns `shareUrl`) |
 | `/api/tags` | DELETE | Yes | Delete tag from all bookmarks |
-| `/api/share/tag/[code]` | GET | No | View shared tag collection (public) |
-| `/api/share/tag/[code]/clone` | POST | Yes | Clone shared tag to user's account |
+| `/api/share/tag/by-name/[username]/[tag]` | GET | No | View shared tag collection (friendly URL) |
+| `/api/share/tag/by-name/[username]/[tag]/clone` | POST | Yes | Clone shared tag to user's account |
+| `/api/share/tag/[code]` | GET | No | View shared tag (legacy random code) |
 | `/api/auth/twitter` | GET | No | Start OAuth flow |
 | `/api/auth/twitter/callback` | GET | No | OAuth callback |
 | `/api/auth/twitter/status` | GET | No | Check auth status and refresh tokens |
@@ -397,7 +491,7 @@ The app will initialize a fresh SQLite database with the new schema. Users will 
 ## Testing
 
 ```bash
-pnpm test         # Run all 317 tests
+pnpm test         # Run all 619 tests
 pnpm test:watch   # Watch mode
 ```
 
@@ -424,6 +518,7 @@ API route tests in `src/__tests__/api/`:
 - `sync-cooldown.test.ts` - 15-minute sync rate limiting
 - `tweets-add.test.ts` - Manual tweet adding, URL parsing, categorization
 - `media-video.test.ts` - Video proxy, quality selection, range requests
+- `share-tag-clone.test.ts` - Tag sharing and cloning functionality
 
 All API tests verify multi-user isolation (User A's actions don't affect User B).
 
