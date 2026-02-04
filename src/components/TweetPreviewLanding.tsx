@@ -638,7 +638,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                       value={tweetUrl}
                       onChange={(e) => handleTweetUrlChange(e.target.value)}
                       placeholder="Paste an X link here..."
-                      className="flex-1 font-mono text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="flex-1 font-mono text-base sm:text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     />
                     <button
                       type="submit"

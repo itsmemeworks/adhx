@@ -553,10 +553,9 @@ function FeedPageContent(): React.ReactElement {
           break
         case 's':
         case 'S':
-          // Copy ADHX share link to clipboard
+          // Trigger share button animation (AuthorHeader listens for this event)
           if (selectedItem) {
-            const shareUrl = `${window.location.origin}/${selectedItem.author}/status/${selectedItem.id}`
-            navigator.clipboard.writeText(shareUrl)
+            window.dispatchEvent(new CustomEvent('trigger-share'))
           }
           break
         case 'g':

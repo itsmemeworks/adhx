@@ -120,7 +120,7 @@ export function LandingPage() {
                 value={tweetUrl}
                 onChange={(e) => handleTweetUrlChange(e.target.value)}
                 placeholder="Paste an X link here..."
-                className="flex-1 font-mono text-sm bg-white dark:bg-gray-900 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:border-transparent"
+                className="flex-1 font-mono text-base sm:text-sm bg-white dark:bg-gray-900 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:border-transparent"
                 style={{ '--tw-ring-color': ADHX_PURPLE } as React.CSSProperties}
               />
               <button

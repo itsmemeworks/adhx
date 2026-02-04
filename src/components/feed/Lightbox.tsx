@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   X,
   ExternalLink,
@@ -494,6 +494,23 @@ function AuthorHeader({ item }: { item: FeedItem }): React.ReactElement {
     return `${baseUrl}/${item.author}/status/${item.id}`
   }
 
+  // Core share logic - copies to clipboard and shows animation
+  const triggerShare = useCallback(async (): Promise<void> => {
+    const shareUrl = getAdhxShareUrl()
+    await navigator.clipboard.writeText(shareUrl)
+    setShowCopied(true)
+    setTimeout(() => setShowCopied(false), 1500)
+  }, [item.author, item.id])
+
+  // Listen for keyboard shortcut event (S key from page.tsx)
+  useEffect(() => {
+    const handleTriggerShare = (): void => {
+      triggerShare()
+    }
+    window.addEventListener('trigger-share', handleTriggerShare)
+    return () => window.removeEventListener('trigger-share', handleTriggerShare)
+  }, [triggerShare])
+
   const handleShare = async (e: React.MouseEvent): Promise<void> => {
     e.stopPropagation()
     const shareUrl = getAdhxShareUrl()
@@ -507,15 +524,11 @@ function AuthorHeader({ item }: { item: FeedItem }): React.ReactElement {
         await navigator.share({ url: shareUrl })
       } catch {
         // User cancelled or share failed - fall back to clipboard
-        await navigator.clipboard.writeText(shareUrl)
-        setShowCopied(true)
-        setTimeout(() => setShowCopied(false), 1500)
+        triggerShare()
       }
     } else {
       // Desktop: just copy to clipboard with satisfying feedback
-      await navigator.clipboard.writeText(shareUrl)
-      setShowCopied(true)
-      setTimeout(() => setShowCopied(false), 1500)
+      triggerShare()
     }
   }
 
