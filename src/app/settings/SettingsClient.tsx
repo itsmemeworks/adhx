@@ -22,6 +22,8 @@ import {
   Lock,
   Link as LinkIcon,
   Check,
+  Smartphone,
+  ExternalLink,
 } from 'lucide-react'
 
 // X (formerly Twitter) logo component
@@ -36,6 +38,9 @@ import { SyncProgress } from '@/components/sync/SyncProgress'
 import { ADHX_PURPLE } from '@/lib/gestalt/theme'
 import { usePreferences, FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
+import { isIOSDevice } from '@/components/feed/utils'
+
+const IOS_SHORTCUT_URL = 'https://www.icloud.com/shortcuts/b5f2a1999b734572961bdf2b063fce65'
 
 interface AuthStatus {
   authenticated: boolean
@@ -97,6 +102,57 @@ function SettingsLoadingSkeleton() {
             </div>
           ))}
         </div>
+      </div>
+    </div>
+  )
+}
+
+function IOSShortcutCard() {
+  const [isIOS, setIsIOS] = useState(false)
+
+  useEffect(() => {
+    setIsIOS(isIOSDevice())
+  }, [])
+
+  if (!isIOS) return null
+
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: `${ADHX_PURPLE}15` }}>
+          <Smartphone className="h-5 w-5" style={{ color: ADHX_PURPLE }} />
+        </div>
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">iOS Shortcut</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Share tweets without the X tax</p>
+        </div>
+      </div>
+
+      {/* Install section */}
+      <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl mb-4">
+        <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+          Share tweets without forcing people to log in. Hit share on any tweet → get a clean preview with full media. No login walls, no "sign up to see more" nonsense.
+        </p>
+        <a
+          href={IOS_SHORTCUT_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-5 py-2.5 text-white font-semibold rounded-full transition-all hover:opacity-90"
+          style={{ backgroundColor: ADHX_PURPLE }}
+        >
+          <ExternalLink className="w-4 h-4" />
+          Get the Shortcut
+        </a>
+      </div>
+
+      {/* How it works */}
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">How it works:</p>
+        <ol className="list-decimal list-inside text-sm text-gray-500 dark:text-gray-400 space-y-1.5 ml-1">
+          <li>See a tweet you want to share? Tap the share button</li>
+          <li>Select "ADHX Preview" from your shortcuts</li>
+          <li>Get a clean link with the full tweet + media. Send it anywhere!</li>
+        </ol>
       </div>
     </div>
   )
@@ -896,6 +952,9 @@ function SettingsPage() {
               </div>
             </div>
           </div>
+
+          {/* iOS Integration Card - Only shown on iOS devices */}
+          <IOSShortcutCard />
 
           {/* Danger Zone */}
           {authStatus?.authenticated && (

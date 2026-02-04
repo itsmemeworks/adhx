@@ -173,6 +173,36 @@ When generating Open Graph metadata for social unfurling, images are selected in
 4. External link thumbnail (`tweet.external.thumbnail_url`)
 5. Fallback to `/logo.png` for text-only tweets
 
+### iOS Shortcut Integration
+iOS users can share tweets via the native share sheet using an iOS Shortcut that transforms X/Twitter URLs to ADHX preview URLs.
+
+**Shortcut ID:** `b5f2a1999b734572961bdf2b063fce65`
+**iCloud URL:** `https://www.icloud.com/shortcuts/b5f2a1999b734572961bdf2b063fce65`
+
+**User flow:**
+1. User views tweet in Safari/X app
+2. Taps Share → selects "ADHX Preview" shortcut
+3. Shortcut transforms `x.com/user/status/123` → `adhx.com/user/status/123`
+4. Opens ADHX preview with full tweet content and media (no login walls)
+
+**Implementation:**
+- `src/components/feed/utils.tsx` - `isIOSDevice()` detects iOS (handles iPadOS 13+ edge case)
+- `src/components/LandingPage.tsx` - `IOSShortcutPromo` component (shown only on iOS)
+- `src/app/settings/SettingsClient.tsx` - `IOSShortcutCard` component (shown only on iOS)
+
+**iOS Detection Pattern:**
+```typescript
+export function isIOSDevice(): boolean {
+  if (typeof window === 'undefined') return false
+  const userAgent = navigator.userAgent || ''
+  // iPadOS 13+ reports as MacIntel but has touch
+  return /iPad|iPhone|iPod/.test(userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+}
+```
+
+Components use `useState(false)` + `useEffect` pattern to detect iOS client-side, preventing SSR hydration mismatches.
+
 ### Typography & Reading Preferences
 ADHD-friendly font system with user selection:
 - **Brand font**: Indie Flower (playful handwritten)

@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
-import { Bookmark, Search, Tag, Maximize2, ArrowRight, Zap } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Bookmark, Search, Tag, Maximize2, ArrowRight, Zap, Smartphone, ExternalLink } from 'lucide-react'
 import { ADHX_PURPLE } from '@/lib/gestalt/theme'
 import { XIcon } from '@/components/icons'
 import { AnimatedBackground, LandingAnimations } from '@/components/landing'
+import { isIOSDevice } from '@/components/feed/utils'
 
 export function LandingPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -153,6 +154,9 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* iOS Shortcut Promo - Only shown on iOS devices */}
+      <IOSShortcutPromo />
+
       {/* Features Section */}
       <section aria-labelledby="features-title" className="max-w-6xl mx-auto px-4 py-16">
         <h2 id="features-title" className="sr-only">Features</h2>
@@ -188,6 +192,54 @@ export function LandingPage() {
         </p>
       </footer>
     </div>
+  )
+}
+
+const IOS_SHORTCUT_URL = 'https://www.icloud.com/shortcuts/b5f2a1999b734572961bdf2b063fce65'
+
+function IOSShortcutPromo() {
+  const [isIOS, setIsIOS] = useState(false)
+
+  useEffect(() => {
+    setIsIOS(isIOSDevice())
+  }, [])
+
+  if (!isIOS) return null
+
+  return (
+    <section className="max-w-4xl mx-auto px-4 py-8">
+      <div className="bg-gray-100 dark:bg-gray-800/50 rounded-3xl p-6 sm:p-8">
+        <div className="flex flex-col sm:flex-row items-center gap-6">
+          {/* Icon */}
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0"
+            style={{ backgroundColor: `${ADHX_PURPLE}15` }}
+          >
+            <Smartphone className="w-8 h-8" style={{ color: ADHX_PURPLE }} />
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 text-center sm:text-left">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+              Share tweets without the X drama
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              Hit share on any tweet → get the full content with media, no login walls or algorithm nonsense. Perfect for sending tweets to friends who refuse to make an account.
+            </p>
+            <a
+              href={IOS_SHORTCUT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-6 py-3 text-white font-semibold rounded-full transition-all hover:scale-105 hover:shadow-lg"
+              style={{ backgroundColor: ADHX_PURPLE }}
+            >
+              <ExternalLink className="w-4 h-4" />
+              Get the Shortcut
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
   )
 }
 
