@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.18.1](https://github.com/itsmemeworks/adhx/compare/v1.18.0...v1.18.1) (2026-02-04)
+
+
+### Bug Fixes
+
+* performance, security, and code quality improvements ([#88](https://github.com/itsmemeworks/adhx/issues/88)) ([b2c3008](https://github.com/itsmemeworks/adhx/commit/b2c3008952b5f5b3f506b482fd32fa6f16bd95ec))
+
 ## [1.18.0](https://github.com/itsmemeworks/adhx/compare/v1.17.0...v1.18.0) (2026-02-04)
 
 
