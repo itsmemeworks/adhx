@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.19.0](https://github.com/itsmemeworks/adhx/compare/v1.18.2...v1.19.0) (2026-02-04)
+
+
+### Features
+
+* add ios shortcut installation for quick tweet sharing ([#93](https://github.com/itsmemeworks/adhx/issues/93)) ([5c525e3](https://github.com/itsmemeworks/adhx/commit/5c525e33b605609649bb29a925ab88ececb65cee))
+
 ## [1.18.2](https://github.com/itsmemeworks/adhx/compare/v1.18.1...v1.18.2) (2026-02-04)
 
 
