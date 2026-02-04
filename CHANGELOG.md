@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.18.0](https://github.com/itsmemeworks/adhx/compare/v1.17.0...v1.18.0) (2026-02-04)
+
+
+### Features
+
+* add clone collection feature for shared tags ([#86](https://github.com/itsmemeworks/adhx/issues/86)) ([7e1e9a6](https://github.com/itsmemeworks/adhx/commit/7e1e9a62f310141e662d76186ca441ac1885760a))
+
 ## [1.17.0](https://github.com/itsmemeworks/adhx/compare/v1.16.1...v1.17.0) (2026-01-29)
 
 
