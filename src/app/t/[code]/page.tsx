@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { Tag, ExternalLink, AlertCircle, Lock } from 'lucide-react'
+import { Tag, ExternalLink, AlertCircle, Lock, Play } from 'lucide-react'
 import Link from 'next/link'
 
 interface SharedTweet {
@@ -38,6 +38,39 @@ export default function SharedTagPage() {
   const [data, setData] = useState<SharedTagData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [cloning, setCloning] = useState(false)
+  const [cloneError, setCloneError] = useState<string | null>(null)
+
+  async function handleClone() {
+    setCloning(true)
+    setCloneError(null)
+
+    try {
+      const response = await fetch(`/api/share/tag/${code}/clone`, {
+        method: 'POST',
+      })
+
+      if (response.status === 401) {
+        // Not authenticated - redirect to auth with return URL
+        const returnUrl = encodeURIComponent(window.location.pathname)
+        window.location.href = `/api/auth/twitter?returnUrl=${returnUrl}`
+        return
+      }
+
+      if (!response.ok) {
+        const result = await response.json()
+        setCloneError(result.error || 'Failed to add to collection. Please try again.')
+        return
+      }
+
+      // Success - redirect to feed immediately
+      window.location.href = '/'
+    } catch {
+      setCloneError('Failed to add to collection. Please try again.')
+    } finally {
+      setCloning(false)
+    }
+  }
 
   useEffect(() => {
     async function fetchTag() {
@@ -148,13 +181,17 @@ export default function SharedTagPage() {
                 </p>
               </div>
             </div>
-            <Link
-              href="/"
-              className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full font-medium text-sm hover:opacity-90 transition-opacity"
+            <button
+              onClick={handleClone}
+              disabled={cloning}
+              className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full font-medium text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
             >
-              Try ADHX
-            </Link>
+              {cloning ? 'Adding...' : 'Add to My Collection'}
+            </button>
           </div>
+          {cloneError && (
+            <p className="text-red-500 text-sm mt-2 text-right">{cloneError}</p>
+          )}
         </div>
       </header>
 
@@ -213,7 +250,7 @@ function TweetCard({ tweet }: { tweet: SharedTweet }) {
               />
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="w-12 h-12 rounded-full bg-black/60 flex items-center justify-center">
-                  <div className="w-0 h-0 border-t-6 border-b-6 border-l-10 border-transparent border-l-white ml-1" />
+                  <Play className="h-6 w-6 text-white ml-1" fill="white" />
                 </div>
               </div>
             </div>

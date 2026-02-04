@@ -304,8 +304,14 @@ export async function GET() {
 | `/api/bookmarks/[id]/tags` | PUT | Yes | Update tags |
 | `/api/sync` | GET | Yes | SSE sync stream |
 | `/api/tweets/add` | POST | Yes | Add single tweet |
+| `/api/tags` | GET | Yes | List user's tags with counts and share status |
+| `/api/tags` | PATCH | Yes | Toggle tag public sharing |
+| `/api/tags` | DELETE | Yes | Delete tag from all bookmarks |
+| `/api/share/tag/[code]` | GET | No | View shared tag collection (public) |
+| `/api/share/tag/[code]/clone` | POST | Yes | Clone shared tag to user's account |
 | `/api/auth/twitter` | GET | No | Start OAuth flow |
 | `/api/auth/twitter/callback` | GET | No | OAuth callback |
+| `/api/auth/twitter/status` | GET | No | Check auth status and refresh tokens |
 
 ## Environment Variables
 
