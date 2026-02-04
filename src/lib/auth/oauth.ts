@@ -2,6 +2,7 @@ import crypto from 'crypto'
 import { db } from '@/lib/db'
 import { oauthState, oauthTokens } from '@/lib/db/schema'
 import { eq, lt } from 'drizzle-orm'
+import { encryptToken, safeDecryptToken } from './token-encryption'
 
 // OAuth 2.0 configuration
 const TWITTER_AUTH_URL = 'https://twitter.com/i/oauth2/authorize'
@@ -200,7 +201,7 @@ export async function getCurrentUser(accessToken: string): Promise<{
   }
 }
 
-// Save tokens to database
+// Save tokens to database (encrypted at rest)
 export async function saveTokens(
   userId: string,
   username: string,
@@ -213,14 +214,18 @@ export async function saveTokens(
   const expiresAt = Math.floor(Date.now() / 1000) + expiresIn
   const now = new Date().toISOString()
 
+  // Encrypt tokens before storage
+  const encryptedAccessToken = encryptToken(accessToken)
+  const encryptedRefreshToken = encryptToken(refreshToken)
+
   await db
     .insert(oauthTokens)
     .values({
       userId,
       username,
       profileImageUrl,
-      accessToken,
-      refreshToken,
+      accessToken: encryptedAccessToken,
+      refreshToken: encryptedRefreshToken,
       expiresAt,
       scopes,
       createdAt: now,
@@ -231,8 +236,8 @@ export async function saveTokens(
       set: {
         username,
         profileImageUrl,
-        accessToken,
-        refreshToken,
+        accessToken: encryptedAccessToken,
+        refreshToken: encryptedRefreshToken,
         expiresAt,
         scopes,
         updatedAt: now,
@@ -240,7 +245,7 @@ export async function saveTokens(
     })
 }
 
-// Get stored tokens for a specific user
+// Get stored tokens for a specific user (decrypted)
 export async function getStoredTokens(userId: string): Promise<{
   userId: string
   username: string | null
@@ -259,7 +264,13 @@ export async function getStoredTokens(userId: string): Promise<{
     return null
   }
 
-  return result[0]
+  const stored = result[0]
+  // Decrypt tokens (safeDecryptToken handles legacy plaintext tokens gracefully)
+  return {
+    ...stored,
+    accessToken: safeDecryptToken(stored.accessToken),
+    refreshToken: safeDecryptToken(stored.refreshToken),
+  }
 }
 
 // Check if tokens exist for a user (used to determine new vs returning user)

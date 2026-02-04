@@ -4,8 +4,7 @@ import { bookmarkTags, bookmarks } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { metrics } from '@/lib/sentry'
-
-const MAX_TAG_LENGTH = 10
+import { sanitizeTag } from '@/lib/utils/tag'
 
 // GET /api/bookmarks/[id]/tags - Get tags for a bookmark
 export async function GET(
@@ -57,17 +56,11 @@ export async function POST(
     return NextResponse.json({ error: 'Tag is required' }, { status: 400 })
   }
 
-  const cleanTag = tag.trim().toLowerCase()
+  // Sanitize: replace invalid chars with hyphens, collapse, trim
+  const cleanTag = sanitizeTag(tag)
 
   if (cleanTag.length === 0) {
     return NextResponse.json({ error: 'Tag cannot be empty' }, { status: 400 })
-  }
-
-  if (cleanTag.length > MAX_TAG_LENGTH) {
-    return NextResponse.json(
-      { error: `Tag must be ${MAX_TAG_LENGTH} characters or less` },
-      { status: 400 }
-    )
   }
 
   // Verify bookmark belongs to user (strict userId check)

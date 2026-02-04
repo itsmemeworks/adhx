@@ -12,7 +12,7 @@
  * - Media and link processing utilities
  */
 
-import type { FxTwitterResponse } from '@/lib/media/fxembed'
+import { fetchTweetData, type FxTwitterResponse } from '@/lib/media/fxembed'
 
 // ============================================================================
 // Types
@@ -493,27 +493,7 @@ export function isSelfLink(url: string): boolean {
 
 /**
  * Fetch tweet data from FxTwitter API.
- * This is the canonical function for fetching tweet enrichment data.
+ * Re-exports the canonical implementation from fxembed.ts which includes
+ * timeout handling and better error reporting.
  */
-export async function fetchTweetFromFxTwitter(
-  author: string,
-  tweetId: string
-): Promise<FxTwitterResponse | null> {
-  try {
-    const response = await fetch(`https://api.fxtwitter.com/${author}/status/${tweetId}`, {
-      headers: {
-        'User-Agent': 'ADHX/1.0',
-      },
-    })
-
-    if (!response.ok) {
-      console.error(`FxTwitter API error: ${response.status}`)
-      return null
-    }
-
-    return (await response.json()) as FxTwitterResponse
-  } catch (error) {
-    console.error('Failed to fetch tweet data from FxTwitter:', error)
-    return null
-  }
-}
+export const fetchTweetFromFxTwitter = fetchTweetData

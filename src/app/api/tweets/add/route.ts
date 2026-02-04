@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { bookmarks, bookmarkLinks, bookmarkMedia } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { metrics } from '@/lib/sentry'
+import { metrics, captureException } from '@/lib/sentry'
 import { getCurrentUserId } from '@/lib/auth/session'
 import {
   parseTweetUrl,
@@ -286,6 +286,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Failed to add tweet:', error)
+    captureException(error, { endpoint: '/api/tweets/add' })
     const message = error instanceof Error ? error.message : 'Failed to add tweet'
     return NextResponse.json({ error: message }, { status: 500 })
   }

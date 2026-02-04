@@ -7,7 +7,7 @@ import {
   hasExistingTokens,
 } from '@/lib/auth/oauth'
 import { setSessionCookie } from '@/lib/auth/session'
-import { metrics } from '@/lib/sentry'
+import { metrics, captureException } from '@/lib/sentry'
 
 const CLIENT_ID = process.env.TWITTER_CLIENT_ID!
 const CLIENT_SECRET = process.env.TWITTER_CLIENT_SECRET!
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
       tokens.scope
     )
 
-    console.log(`Successfully authenticated as @${user.username}`)
+    // Successfully authenticated - metrics are tracked below
 
     // Track successful auth completion
     metrics.authCompleted(isNewUser)
@@ -115,6 +115,7 @@ export async function GET(request: NextRequest) {
     return response
   } catch (err) {
     console.error('OAuth callback error:', err)
+    captureException(err, { endpoint: '/api/auth/twitter/callback' })
     const message = err instanceof Error ? err.message : 'Unknown error'
     metrics.authFailed(message)
     return NextResponse.redirect(

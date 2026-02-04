@@ -230,9 +230,10 @@ export function toBionicText(text: string): React.ReactNode {
 }
 
 /**
- * Render text with Bionic Reading and clickable links
+ * Render text with clickable links and optional Bionic Reading formatting
+ * @param bionicReading - When true, applies bionic formatting to text portions
  */
-export function renderBionicTextWithLinks(text: string, className?: string): React.ReactNode {
+export function renderTextWithLinks(text: string, className?: string, bionicReading?: boolean): React.ReactNode {
   const decodedText = decodeHtmlEntities(text)
   const lines = decodedText.split('\n')
   const urlPattern = /(https?:\/\/[^\s]+)/g
@@ -261,14 +262,22 @@ export function renderBionicTextWithLinks(text: string, className?: string): Rea
                   </a>
                 )
               }
-              // Apply bionic formatting to non-URL text
-              return <span key={i}>{toBionicText(part)}</span>
+              // Apply bionic formatting to non-URL text if enabled
+              return <span key={i}>{bionicReading ? toBionicText(part) : part}</span>
             })}
           </React.Fragment>
         )
       })}
     </span>
   )
+}
+
+/**
+ * Render text with Bionic Reading and clickable links
+ * @deprecated Use renderTextWithLinks(text, className, true) instead
+ */
+export function renderBionicTextWithLinks(text: string, className?: string): React.ReactNode {
+  return renderTextWithLinks(text, className, true)
 }
 
 /**
@@ -311,46 +320,6 @@ export function decodeHtmlEntities(text: string): string {
   return result
 }
 
-/**
- * Render text with clickable links and line breaks
- */
-export function renderTextWithLinks(text: string, className?: string): React.ReactNode {
-  const decodedText = decodeHtmlEntities(text)
-  const lines = decodedText.split('\n')
-  const urlPattern = /(https?:\/\/[^\s]+)/g
-
-  return (
-    <span className={className}>
-      {lines.map((line, lineIndex) => {
-        const parts = line.split(urlPattern)
-        return (
-          <React.Fragment key={lineIndex}>
-            {lineIndex > 0 && <br />}
-            {parts.map((part, i) => {
-              if (urlPattern.test(part)) {
-                urlPattern.lastIndex = 0
-                const displayUrl = part.length > 40 ? part.slice(0, 40) + '...' : part
-                return (
-                  <a
-                    key={i}
-                    href={part}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="text-blue-400 hover:text-blue-300 hover:underline break-all"
-                  >
-                    {displayUrl}
-                  </a>
-                )
-              }
-              return <span key={i}>{part}</span>
-            })}
-          </React.Fragment>
-        )
-      })}
-    </span>
-  )
-}
 
 /**
  * Render article text with inline styles and entity links

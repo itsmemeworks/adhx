@@ -26,6 +26,8 @@ vi.mock('@/lib/db', () => ({
   get db() {
     return testDb
   },
+  // runInTransaction uses better-sqlite3's transaction - for tests, just run the function directly
+  runInTransaction: <R>(fn: () => R): R => fn(),
 }))
 
 // Mock auth session
@@ -42,6 +44,7 @@ vi.mock('@/lib/sentry', () => ({
     bookmarkReadToggled: vi.fn(),
     bookmarkTagged: vi.fn(),
   },
+  captureException: vi.fn(),
 }))
 
 // Helper to create the test database

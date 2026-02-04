@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { db, runInTransaction } from '@/lib/db'
 import { bookmarks, bookmarkLinks, bookmarkTags, bookmarkMedia, readStatus } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { resolveMediaUrl, getShareableUrl, getThumbnailUrl } from '@/lib/media/fxembed'
 import { expandUrls } from '@/lib/utils/url-expander'
 import { getCurrentUserId } from '@/lib/auth/session'
+import { captureException } from '@/lib/sentry'
 
 // GET /api/bookmarks/[id] - Get single bookmark
 export async function GET(
@@ -72,6 +73,7 @@ export async function GET(
     })
   } catch (error) {
     console.error('Error fetching bookmark:', error)
+    captureException(error, { endpoint: '/api/bookmarks/[id]', method: 'GET' })
     return NextResponse.json(
       { error: 'Failed to fetch bookmark' },
       { status: 500 }
@@ -103,29 +105,29 @@ export async function PATCH(
       await db.update(bookmarks).set(updates).where(and(eq(bookmarks.userId, userId), eq(bookmarks.id, id)))
     }
 
-    // Update tags if provided
-    // Note: SQLite with WAL mode serializes writes, so these sequential operations
-    // are effectively atomic. Explicit transactions not used due to better-sqlite3
-    // synchronous driver limitations with async/await.
+    // Update tags if provided - use transaction for atomic delete + insert
     if (newTags !== undefined) {
-      // Delete existing tags (filter by userId)
-      await db.delete(bookmarkTags).where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.bookmarkId, id)))
+      runInTransaction(() => {
+        // Delete existing tags (filter by userId)
+        db.delete(bookmarkTags).where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.bookmarkId, id))).run()
 
-      // Insert new tags (include userId)
-      if (newTags.length > 0) {
-        await db.insert(bookmarkTags).values(
-          newTags.map((tag: string) => ({
-            userId,
-            bookmarkId: id,
-            tag,
-          }))
-        )
-      }
+        // Insert new tags (include userId)
+        if (newTags.length > 0) {
+          db.insert(bookmarkTags).values(
+            newTags.map((tag: string) => ({
+              userId,
+              bookmarkId: id,
+              tag,
+            }))
+          ).run()
+        }
+      })
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error updating bookmark:', error)
+    captureException(error, { endpoint: '/api/bookmarks/[id]', method: 'PATCH' })
     return NextResponse.json(
       { error: 'Failed to update bookmark' },
       { status: 500 }
@@ -145,19 +147,21 @@ export async function DELETE(
     }
 
     const { id } = await params
-    // Delete bookmark and all related records
-    // Note: SQLite with WAL mode serializes writes, so these sequential deletes
-    // are effectively atomic. better-sqlite3's synchronous driver doesn't support
-    // async transactions, but SQLite's single-writer lock prevents interleaving.
-    await db.delete(bookmarkTags).where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.bookmarkId, id)))
-    await db.delete(bookmarkMedia).where(and(eq(bookmarkMedia.userId, userId), eq(bookmarkMedia.bookmarkId, id)))
-    await db.delete(bookmarkLinks).where(and(eq(bookmarkLinks.userId, userId), eq(bookmarkLinks.bookmarkId, id)))
-    await db.delete(readStatus).where(and(eq(readStatus.userId, userId), eq(readStatus.bookmarkId, id)))
-    await db.delete(bookmarks).where(and(eq(bookmarks.userId, userId), eq(bookmarks.id, id)))
+
+    // Delete bookmark and all related records atomically using a transaction.
+    // This ensures all-or-nothing deletion - if any delete fails, all are rolled back.
+    runInTransaction(() => {
+      db.delete(bookmarkTags).where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.bookmarkId, id))).run()
+      db.delete(bookmarkMedia).where(and(eq(bookmarkMedia.userId, userId), eq(bookmarkMedia.bookmarkId, id))).run()
+      db.delete(bookmarkLinks).where(and(eq(bookmarkLinks.userId, userId), eq(bookmarkLinks.bookmarkId, id))).run()
+      db.delete(readStatus).where(and(eq(readStatus.userId, userId), eq(readStatus.bookmarkId, id))).run()
+      db.delete(bookmarks).where(and(eq(bookmarks.userId, userId), eq(bookmarks.id, id))).run()
+    })
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error deleting bookmark:', error)
+    captureException(error, { endpoint: '/api/bookmarks/[id]', method: 'DELETE' })
     return NextResponse.json(
       { error: 'Failed to delete bookmark' },
       { status: 500 }

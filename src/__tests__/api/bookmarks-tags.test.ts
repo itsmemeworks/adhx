@@ -28,6 +28,7 @@ vi.mock('@/lib/sentry', () => ({
   metrics: {
     bookmarkTagged: vi.fn(),
   },
+  captureException: vi.fn(),
 }))
 
 function createRequest(method: string, body?: object): NextRequest {
@@ -132,15 +133,17 @@ describe('API: /api/bookmarks/[id]/tags', () => {
       expect(data.error).toContain('empty')
     })
 
-    it('returns 400 when tag exceeds max length', async () => {
+    it('truncates tags that exceed max length', async () => {
       const { POST } = await import('@/app/api/bookmarks/[id]/tags/route')
       const response = await POST(createRequest('POST', { tag: 'verylongtag' }), {
         params: Promise.resolve({ id: 'tweet-1' }),
       })
 
-      expect(response.status).toBe(400)
+      // Tags are now truncated instead of rejected
+      expect(response.status).toBe(200)
       const data = await response.json()
-      expect(data.error).toContain('10 characters')
+      expect(data.success).toBe(true)
+      expect(data.tag).toBe('verylongta') // Truncated to 10 chars
     })
 
     it('adds tag to bookmark', async () => {

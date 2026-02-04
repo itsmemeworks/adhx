@@ -121,7 +121,7 @@ function SettingsPage() {
   const [latestLog, setLatestLog] = useState<SyncLog | null>(null)
 
   // Tag management state
-  const [tags, setTags] = useState<Array<{ tag: string; count: number; isPublic: boolean; shareCode: string | null }>>([])
+  const [tags, setTags] = useState<Array<{ tag: string; count: number; isPublic: boolean; shareUrl: string | null }>>([])
   const [tagsLoading, setTagsLoading] = useState(true)
   const [deletingTag, setDeletingTag] = useState<string | null>(null)
   const [tagToDelete, setTagToDelete] = useState<string | null>(null)
@@ -315,9 +315,9 @@ function SettingsPage() {
         body: JSON.stringify({ tag, isPublic: !currentlyPublic }),
       })
       if (response.ok) {
-        const { shareCode, isPublic } = await response.json()
+        const { shareUrl, isPublic } = await response.json()
         setTags((prev) =>
-          prev.map((t) => (t.tag === tag ? { ...t, isPublic, shareCode } : t))
+          prev.map((t) => (t.tag === tag ? { ...t, isPublic, shareUrl } : t))
         )
         setMessage({
           type: 'success',
@@ -333,8 +333,8 @@ function SettingsPage() {
     }
   }
 
-  function copyShareLink(tag: string, shareCode: string) {
-    const url = `${window.location.origin}/t/${shareCode}`
+  function copyShareLink(tag: string, shareUrl: string) {
+    const url = `${window.location.origin}${shareUrl}`
     navigator.clipboard.writeText(url)
     setCopiedTag(tag)
     setTimeout(() => setCopiedTag(null), 2000)
@@ -745,7 +745,7 @@ function SettingsPage() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {tags.map(({ tag, count, isPublic, shareCode }) => (
+                  {tags.map(({ tag, count, isPublic, shareUrl }) => (
                     <div
                       key={tag}
                       className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl"
@@ -792,9 +792,9 @@ function SettingsPage() {
                           )}
                           {isPublic ? 'Public' : 'Private'}
                         </button>
-                        {isPublic && shareCode && (
+                        {isPublic && shareUrl && (
                           <button
-                            onClick={() => copyShareLink(tag, shareCode)}
+                            onClick={() => copyShareLink(tag, shareUrl)}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
                           >
                             {copiedTag === tag ? (

@@ -23,6 +23,7 @@ vi.mock('@/lib/sentry', () => ({
     authCompleted: vi.fn(),
     trackUser: vi.fn(),
   },
+  captureException: vi.fn(),
 }))
 
 // Mock fetch for Twitter API

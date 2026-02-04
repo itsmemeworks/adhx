@@ -30,6 +30,7 @@ vi.mock('@/lib/sentry', () => ({
     accountCleared: vi.fn(),
     accountDeleted: vi.fn(),
   },
+  captureException: vi.fn(),
 }))
 
 async function seedUserData(userId: string) {

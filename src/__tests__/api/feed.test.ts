@@ -30,6 +30,7 @@ vi.mock('@/lib/sentry', () => ({
     feedFiltered: vi.fn(),
     trackUser: vi.fn(),
   },
+  captureException: vi.fn(),
 }))
 
 function createRequest(params: Record<string, string> = {}): NextRequest {

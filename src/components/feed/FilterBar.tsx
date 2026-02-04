@@ -13,7 +13,7 @@ interface FilterBarProps {
   onSelectedTagsChange: (tags: string[]) => void
   availableTags: TagItem[]
   stats: { total: number; unread: number }
-  onTagUpdated?: (tag: string, isPublic: boolean, shareCode: string) => void
+  onTagUpdated?: (tag: string, isPublic: boolean, shareUrl: string) => void
 }
 
 /**
@@ -27,13 +27,14 @@ function TagShareButton({
 }: {
   tag: string
   tagInfo: TagItem | undefined
-  onTagUpdated?: (tag: string, isPublic: boolean, shareCode: string) => void
+  onTagUpdated?: (tag: string, isPublic: boolean, shareUrl: string) => void
 }): React.ReactElement | null {
   const [copied, setCopied] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const shareUrl = tagInfo?.shareCode
-    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/t/${tagInfo.shareCode}`
+  // Use shareUrl directly from tagInfo (already includes full path like /t/username/tag)
+  const fullShareUrl = tagInfo?.shareUrl
+    ? `${typeof window !== 'undefined' ? window.location.origin : ''}${tagInfo.shareUrl}`
     : null
 
   const handleMakePublic = async () => {
@@ -47,8 +48,8 @@ function TagShareButton({
       if (!res.ok) throw new Error('Failed to make tag public')
       const data = await res.json()
 
-      // Copy URL to clipboard
-      const url = `${window.location.origin}/t/${data.shareCode}`
+      // Copy URL to clipboard - shareUrl already includes full path
+      const url = `${window.location.origin}${data.shareUrl}`
       try {
         await navigator.clipboard.writeText(url)
         setCopied(true)
@@ -57,8 +58,9 @@ function TagShareButton({
         // Clipboard failed - still update state, user can copy manually
       }
 
-      onTagUpdated?.(tag, true, data.shareCode)
+      onTagUpdated?.(tag, true, data.shareUrl)
     } catch (error) {
+       
       console.error('Failed to make tag public:', error)
     } finally {
       setLoading(false)
@@ -66,9 +68,9 @@ function TagShareButton({
   }
 
   const handleCopyUrl = async () => {
-    if (!shareUrl) return
+    if (!fullShareUrl) return
     try {
-      await navigator.clipboard.writeText(shareUrl)
+      await navigator.clipboard.writeText(fullShareUrl)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
@@ -76,7 +78,7 @@ function TagShareButton({
     }
   }
 
-  if (tagInfo?.isPublic && shareUrl) {
+  if (tagInfo?.isPublic && fullShareUrl) {
     return (
       <button
         onClick={handleCopyUrl}
