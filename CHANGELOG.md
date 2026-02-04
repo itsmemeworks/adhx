@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.18.2](https://github.com/itsmemeworks/adhx/compare/v1.18.1...v1.18.2) (2026-02-04)
+
+
+### Bug Fixes
+
+* prevent ios zoom on inputs and add share key visual feedback ([#92](https://github.com/itsmemeworks/adhx/issues/92)) ([ea17563](https://github.com/itsmemeworks/adhx/commit/ea1756386a4900db032bae2eb21594db3f49eb47))
+
+
+### Documentation
+
+* update documentation with new features and security improvements ([#90](https://github.com/itsmemeworks/adhx/issues/90)) ([b1d693e](https://github.com/itsmemeworks/adhx/commit/b1d693e0036ab886bcfefb0ff579270838b1c0dd))
+
 ## [1.18.1](https://github.com/itsmemeworks/adhx/compare/v1.18.0...v1.18.1) (2026-02-04)
 
 
