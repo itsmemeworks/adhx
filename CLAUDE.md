@@ -190,6 +190,33 @@ Files:
 Additional reading aids:
 - **Bionic Reading** - Bolds first part of each word to guide eyes
 
+### UI Patterns
+
+**Mobile Input Zoom Prevention:**
+iOS Safari auto-zooms when focusing inputs with `font-size < 16px`. Use responsive classes to maintain 16px on mobile while allowing smaller fonts on desktop:
+```tsx
+// ❌ Causes zoom on iOS
+className="text-xs ..."
+
+// ✅ 16px on mobile, 12px on sm+
+className="text-base sm:text-xs ..."
+```
+
+**Cross-Component Keyboard Feedback:**
+When keyboard shortcuts in `page.tsx` need to trigger UI feedback in child components (like button animations), use custom events:
+```tsx
+// In page.tsx (keyboard handler)
+window.dispatchEvent(new CustomEvent('trigger-share'))
+
+// In child component
+useEffect(() => {
+  const handler = () => triggerAnimation()
+  window.addEventListener('trigger-share', handler)
+  return () => window.removeEventListener('trigger-share', handler)
+}, [])
+```
+This avoids prop drilling and keeps keyboard logic centralized while allowing distributed UI responses.
+
 ### Main Feed (`src/app/page.tsx`)
 Client component with:
 - **FeedGrid**: Masonry gallery with FeedCard components

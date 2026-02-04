@@ -432,7 +432,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > '4
                     class="inline-flex items-center px-2 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded text-xs focus-within:border-blue-400 dark:focus-within:border-blue-500 transition-colors"
                   >
                     <input
-                      class="w-12 bg-transparent text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
+                      class="w-12 bg-transparent text-base sm:text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
                       maxlength="10"
                       placeholder="add tag"
                       type="text"
@@ -1309,7 +1309,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'a
                   class="inline-flex items-center px-2 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded text-xs focus-within:border-blue-400 dark:focus-within:border-blue-500 transition-colors"
                 >
                   <input
-                    class="w-12 bg-transparent text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
+                    class="w-12 bg-transparent text-base sm:text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
                     maxlength="10"
                     placeholder="add tag"
                     type="text"
@@ -3778,7 +3778,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'a
                   class="inline-flex items-center px-2 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded text-xs focus-within:border-blue-400 dark:focus-within:border-blue-500 transition-colors"
                 >
                   <input
-                    class="w-12 bg-transparent text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
+                    class="w-12 bg-transparent text-base sm:text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
                     maxlength="10"
                     placeholder="add tag"
                     type="text"
@@ -4185,7 +4185,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'e
                     class="inline-flex items-center px-2 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded text-xs focus-within:border-blue-400 dark:focus-within:border-blue-500 transition-colors"
                   >
                     <input
-                      class="w-12 bg-transparent text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
+                      class="w-12 bg-transparent text-base sm:text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
                       maxlength="10"
                       placeholder="add tag"
                       type="text"
@@ -4694,7 +4694,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'l
                     class="inline-flex items-center px-2 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded text-xs focus-within:border-blue-400 dark:focus-within:border-blue-500 transition-colors"
                   >
                     <input
-                      class="w-12 bg-transparent text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
+                      class="w-12 bg-transparent text-base sm:text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
                       maxlength="10"
                       placeholder="add tag"
                       type="text"
@@ -5159,7 +5159,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'l
                     class="inline-flex items-center px-2 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded text-xs focus-within:border-blue-400 dark:focus-within:border-blue-500 transition-colors"
                   >
                     <input
-                      class="w-12 bg-transparent text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
+                      class="w-12 bg-transparent text-base sm:text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
                       maxlength="10"
                       placeholder="add tag"
                       type="text"
@@ -5807,7 +5807,7 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                   class="inline-flex items-center px-2 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded text-xs focus-within:border-blue-400 dark:focus-within:border-blue-500 transition-colors"
                 >
                   <input
-                    class="w-12 bg-transparent text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
+                    class="w-12 bg-transparent text-base sm:text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
                     maxlength="10"
                     placeholder="add tag"
                     type="text"
@@ -6142,7 +6142,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'p
                   class="inline-flex items-center px-2 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded text-xs focus-within:border-blue-400 dark:focus-within:border-blue-500 transition-colors"
                 >
                   <input
-                    class="w-12 bg-transparent text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
+                    class="w-12 bg-transparent text-base sm:text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
                     maxlength="10"
                     placeholder="add tag"
                     type="text"
@@ -6585,7 +6585,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                   class="inline-flex items-center px-2 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded text-xs focus-within:border-blue-400 dark:focus-within:border-blue-500 transition-colors"
                 >
                   <input
-                    class="w-12 bg-transparent text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
+                    class="w-12 bg-transparent text-base sm:text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
                     maxlength="10"
                     placeholder="add tag"
                     type="text"
@@ -6988,7 +6988,7 @@ This is not a coincidence.
                   class="inline-flex items-center px-2 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded text-xs focus-within:border-blue-400 dark:focus-within:border-blue-500 transition-colors"
                 >
                   <input
-                    class="w-12 bg-transparent text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
+                    class="w-12 bg-transparent text-base sm:text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
                     maxlength="10"
                     placeholder="add tag"
                     type="text"
@@ -7332,7 +7332,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'r
                   class="inline-flex items-center px-2 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded text-xs focus-within:border-blue-400 dark:focus-within:border-blue-500 transition-colors"
                 >
                   <input
-                    class="w-12 bg-transparent text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
+                    class="w-12 bg-transparent text-base sm:text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
                     maxlength="10"
                     placeholder="add tag"
                     type="text"
@@ -7739,7 +7739,7 @@ Try it for free in our demo app (link in the thread).
                   class="inline-flex items-center px-2 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded text-xs focus-within:border-blue-400 dark:focus-within:border-blue-500 transition-colors"
                 >
                   <input
-                    class="w-12 bg-transparent text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
+                    class="w-12 bg-transparent text-base sm:text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
                     maxlength="10"
                     placeholder="add tag"
                     type="text"
@@ -8136,7 +8136,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'v
                     class="inline-flex items-center px-2 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded text-xs focus-within:border-blue-400 dark:focus-within:border-blue-500 transition-colors"
                   >
                     <input
-                      class="w-12 bg-transparent text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
+                      class="w-12 bg-transparent text-base sm:text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
                       maxlength="10"
                       placeholder="add tag"
                       type="text"
@@ -8481,7 +8481,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'y
                   class="inline-flex items-center px-2 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded text-xs focus-within:border-blue-400 dark:focus-within:border-blue-500 transition-colors"
                 >
                   <input
-                    class="w-12 bg-transparent text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
+                    class="w-12 bg-transparent text-base sm:text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
                     maxlength="10"
                     placeholder="add tag"
                     type="text"

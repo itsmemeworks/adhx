@@ -473,7 +473,7 @@ export function Header() {
                 onChange={(e) => setSearchValue(e.target.value)}
                 placeholder="Search"
                 aria-label="Search bookmarks"
-                className="w-full h-10 pl-9 pr-9 bg-gray-100 dark:bg-gray-800 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600 text-gray-900 dark:text-white placeholder-gray-500"
+                className="w-full h-10 pl-9 pr-9 bg-gray-100 dark:bg-gray-800 rounded-full text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600 text-gray-900 dark:text-white placeholder-gray-500"
               />
               {searchValue && (
                 <button
