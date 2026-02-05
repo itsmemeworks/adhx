@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.22.0](https://github.com/itsmemeworks/adhx/compare/v1.21.0...v1.22.0) (2026-02-05)
+
+
+### Features
+
+* add hls streaming support for long videos ([#107](https://github.com/itsmemeworks/adhx/issues/107)) ([021e0ee](https://github.com/itsmemeworks/adhx/commit/021e0eedfe1e470cd2e39982141fae219c6712ee))
+* add video downloads with mobile protection ([#109](https://github.com/itsmemeworks/adhx/issues/109)) ([43a4841](https://github.com/itsmemeworks/adhx/commit/43a4841dff74bd71b486ecd53980888893d4cbbf))
+
 ## [1.21.0](https://github.com/itsmemeworks/adhx/compare/v1.20.1...v1.21.0) (2026-02-05)
 
 
