@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     // Get video info to find the best MP4 URL
     const infoResponse = await fetch(
       `https://api.fxtwitter.com/${author}/status/${tweetId}`,
-      { headers: { 'User-Agent': 'ADHX/1.0' } }
+      { headers: { 'User-Agent': 'ADHX/1.0' }, signal: AbortSignal.timeout(10_000) }
     )
 
     if (!infoResponse.ok) {
@@ -59,12 +59,13 @@ export async function GET(request: NextRequest) {
 
     const videoUrl = selectedFormat.url
 
-    // Fetch the video with streaming
+    // Fetch the video with streaming (30s timeout for large files)
     const videoResponse = await fetch(videoUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
         'Referer': 'https://twitter.com/',
       },
+      signal: AbortSignal.timeout(30_000),
     })
 
     if (!videoResponse.ok || !videoResponse.body) {

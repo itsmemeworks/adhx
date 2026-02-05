@@ -34,35 +34,6 @@ export async function handleDownloadMedia(e: React.MouseEvent, url: string, file
   }
 }
 
-/**
- * Instant video download - uses streaming endpoint for immediate browser download with progress
- *
- * Unlike blob-based downloads, this:
- * 1. Starts the download instantly (no waiting for full file)
- * 2. Shows browser's native download progress
- * 3. Works for large files without memory issues
- */
-export function handleVideoDownload(
-  e: React.MouseEvent,
-  author: string,
-  tweetId: string,
-  quality: 'preview' | 'hd' | 'full' = 'hd'
-): void {
-  e.stopPropagation()
-  e.preventDefault()
-
-  // Use the streaming download endpoint - browser handles the rest
-  const downloadUrl = `/api/media/video/download?author=${encodeURIComponent(author)}&tweetId=${encodeURIComponent(tweetId)}&quality=${quality}`
-
-  // Create a hidden link and click it to trigger browser's download manager
-  const link = document.createElement('a')
-  link.href = downloadUrl
-  link.download = '' // Let the server set the filename via Content-Disposition
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-}
-
 // Size threshold for mobile video download/sharing (50MB)
 const MOBILE_VIDEO_SIZE_LIMIT = 50 * 1024 * 1024
 
@@ -144,7 +115,7 @@ export interface ShareMediaResult {
  * Desktop browsers skip the share API entirely for a better UX
  *
  * For videos on desktop: Uses streaming download endpoint for instant start with progress
- * For videos on mobile: Checks size first, warns if >25MB to avoid memory issues
+ * For videos on mobile: Checks size first, warns if >50MB to avoid memory issues
  * For images: Uses blob approach (small files, works everywhere)
  */
 export async function handleShareMedia(

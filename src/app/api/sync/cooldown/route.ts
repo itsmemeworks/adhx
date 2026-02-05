@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { syncLogs } from '@/lib/db/schema'
-import { eq, or, isNull, desc, and } from 'drizzle-orm'
+import { eq, desc, and } from 'drizzle-orm'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { getSyncCooldownMs } from '@/lib/sync/config'
 
@@ -18,7 +18,7 @@ export async function GET() {
     .where(
       and(
         eq(syncLogs.status, 'completed'),
-        or(eq(syncLogs.userId, userId), isNull(syncLogs.userId))
+        eq(syncLogs.userId, userId)
       )
     )
     .orderBy(desc(syncLogs.completedAt))

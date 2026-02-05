@@ -58,8 +58,14 @@ if (fs.existsSync(journalPath)) {
           .map((s) => s.trim())
           .filter((s) => s.length > 0)
 
-        for (const statement of statements) {
-          db.exec(statement)
+        try {
+          for (const statement of statements) {
+            db.exec(statement)
+          }
+        } catch (error) {
+          console.log(`[migrate] FAILED migration: ${entry.tag}`, error)
+          db.close()
+          process.exit(1)
         }
 
         // Record migration as applied

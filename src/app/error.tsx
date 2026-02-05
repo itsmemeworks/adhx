@@ -12,6 +12,8 @@ export default function Error({
   reset: () => void
 }) {
   useEffect(() => {
+    // Note: Server-side errors are captured by Sentry Node SDK before reaching this boundary.
+    // Client-only React errors log here but aren't sent to Sentry (no @sentry/browser installed).
     console.error('Application error:', error)
   }, [error])
 

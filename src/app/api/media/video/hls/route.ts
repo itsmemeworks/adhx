@@ -21,9 +21,13 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Validate URL is from Twitter's video CDN
+    // Validate URL is from Twitter's video CDN (strict domain check to prevent SSRF)
     const url = new URL(hlsUrl)
-    if (!url.hostname.includes('twimg.com') && !url.hostname.includes('twitter.com')) {
+    const isAllowed = url.hostname === 'video.twimg.com'
+      || url.hostname.endsWith('.twimg.com')
+      || url.hostname === 'twitter.com'
+      || url.hostname.endsWith('.twitter.com')
+    if (!isAllowed) {
       return NextResponse.json({ error: 'Invalid HLS URL' }, { status: 400 })
     }
 
@@ -34,6 +38,7 @@ export async function GET(request: NextRequest) {
         'Referer': 'https://twitter.com/',
         'Origin': 'https://twitter.com',
       },
+      signal: AbortSignal.timeout(10_000),
     })
 
     if (!response.ok) {

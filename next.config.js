@@ -62,7 +62,7 @@ const nextConfig = {
           key: 'Content-Security-Policy',
           value: [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+            "script-src 'self' 'unsafe-inline'",
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' https://pbs.twimg.com https://d.fxtwitter.com https://d.fixupx.com https://abs.twimg.com data: blob:",
             "media-src 'self' https://video.twimg.com https://*.twimg.com blob:",
