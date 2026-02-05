@@ -9,6 +9,7 @@ interface VideoPlayerProps {
   tweetId: string
   className?: string
   loop?: boolean
+  autoPlay?: boolean
   tweetUrl?: string
 }
 
@@ -32,15 +33,18 @@ export function VideoPlayer({
   tweetId,
   className = '',
   loop = false,
+  autoPlay = false,
   tweetUrl,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const hlsRef = useRef<Hls | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [ready, setReady] = useState(false) // Tracks if we've determined the playback strategy
   const [useHls, setUseHls] = useState(false)
   const [hlsUrl, setHlsUrl] = useState<string | null>(null)
 
+  // First effect: Determine playback strategy (HLS vs MP4)
   useEffect(() => {
     let mounted = true
 
@@ -60,20 +64,25 @@ export function VideoPlayer({
         if (!mounted) return
 
         if (info.requiresHls && info.hlsUrl) {
-          // Long video - use HLS streaming
+          // Long video - use HLS streaming via our proxy
+          // Direct access to video.twimg.com returns 403, so we proxy through our server
+          const proxiedHlsUrl = `/api/media/video/hls?url=${encodeURIComponent(info.hlsUrl)}`
           setUseHls(true)
-          setHlsUrl(info.hlsUrl)
+          setHlsUrl(proxiedHlsUrl)
         } else {
           // Short video - use regular proxy
           setUseHls(false)
           setLoading(false)
         }
+
+        setReady(true)
       } catch (err) {
         if (mounted) {
           console.error('Video init error:', err)
           // Fallback to proxy API on error
           setUseHls(false)
           setLoading(false)
+          setReady(true)
         }
       }
     }
@@ -85,14 +94,18 @@ export function VideoPlayer({
     }
   }, [author, tweetId])
 
-  // Initialize HLS.js when needed
+  // Second effect: Initialize HLS.js when needed
   useEffect(() => {
-    if (!useHls || !hlsUrl || !videoRef.current) return
+    if (!ready || !useHls || !hlsUrl || !videoRef.current) return
 
     const video = videoRef.current
 
-    // Check if browser supports HLS natively (Safari)
-    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    // Check if browser is Safari (not just HLS MIME type support)
+    // Chrome on Mac returns "maybe" for canPlayType but can't actually play HLS natively
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+    const canPlayHlsNatively = isSafari && video.canPlayType('application/vnd.apple.mpegurl')
+
+    if (canPlayHlsNatively) {
       // Safari can play HLS natively
       video.src = hlsUrl
       setLoading(false)
@@ -146,7 +159,7 @@ export function VideoPlayer({
       setError('Your browser does not support this video format')
       setLoading(false)
     }
-  }, [useHls, hlsUrl])
+  }, [ready, useHls, hlsUrl])
 
   // Show error state with fallback to X
   if (error) {
@@ -169,13 +182,17 @@ export function VideoPlayer({
     )
   }
 
-  // Video element - either HLS or regular proxy
-  const videoSrc = useHls ? undefined : `/api/media/video?author=${author}&tweetId=${tweetId}&quality=hd`
+  // Don't render video until we've determined the strategy
+  // For HLS: src is set by the useEffect after HLS.js attaches
+  // For MP4: src is set directly on the element
+  const videoSrc = ready && !useHls
+    ? `/api/media/video?author=${author}&tweetId=${tweetId}&quality=hd`
+    : undefined
 
   return (
     <div className="relative">
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-900 rounded-xl">
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-900 rounded-xl z-10">
           <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
         </div>
       )}
@@ -185,6 +202,7 @@ export function VideoPlayer({
         controls
         playsInline
         loop={loop}
+        autoPlay={autoPlay}
         className={className}
         onLoadedData={() => setLoading(false)}
         onError={() => {

@@ -388,8 +388,8 @@ FxTwitter (`api.fxtwitter.com`) provides reliable media URLs (Twitter has CORS i
 | Quality | Resolution | Bitrate | Use Case |
 |---------|------------|---------|----------|
 | `preview` | 360p | ~832kbps | Gallery hover preview |
-| `hd` | 720p | ~2Mbps | Focus mode playback |
-| `full` | 1080p | ~10Mbps | Download only |
+| `hd` | 720p | ~2Mbps | Focus mode playback, mobile download |
+| `full` | 1080p | ~10Mbps | Desktop download only |
 
 **Video Playback UX Patterns:**
 
@@ -400,9 +400,36 @@ FxTwitter (`api.fxtwitter.com`) provides reliable media URLs (Twitter has CORS i
 
 **Browser Autoplay Policy**: Modern browsers block autoplaying videos with sound. Gallery works because it's `muted`. Focus mode removes `autoPlay` so users click play and get sound immediately - this is intentional UX, not a workaround.
 
+**HLS Streaming for Long Videos:**
+Videos >5 minutes use HLS (HTTP Live Streaming) to avoid Fly.io's 60-second proxy timeout:
+- `src/app/api/media/video/info/route.ts` - Determines playback strategy (MP4 vs HLS)
+- `src/app/api/media/video/hls/route.ts` - Proxies m3u8 playlists, rewrites URLs
+- `src/app/api/media/video/hls/segment/route.ts` - Proxies video/audio segments
+- `src/components/feed/VideoPlayer.tsx` - Smart player with HLS.js for Chrome/Firefox
+
+**Why HLS proxy?** Twitter's video CDN (`video.twimg.com`) returns 403 for direct browser requests. Our server proxies with proper `User-Agent` and `Referer` headers.
+
+**Browser HLS Detection Gotcha:**
+```typescript
+// ❌ Wrong: Chrome on Mac returns truthy but can't play HLS natively
+const canPlay = video.canPlayType('application/vnd.apple.mpegurl')
+
+// ✅ Correct: Explicit Safari detection
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+const canPlayHlsNatively = isSafari && video.canPlayType('application/vnd.apple.mpegurl')
+```
+
+**Video Downloads:**
+- Desktop: `/api/media/video/download` endpoint with `Content-Disposition: attachment` for instant browser download with progress bar
+- Mobile: Limited to 50MB (HD quality check). Shows friendly "too thicc for your phone" message via `VideoDownloadBlocked` component when exceeded
+- Size estimation: `duration × bitrate / 8` (returned by `/api/media/video/info`)
+
 Key files:
 - `src/lib/media/fxembed.ts` - FxTwitter API types and URL builders
 - `src/app/api/media/video/route.ts` - Video proxy with quality selection
+- `src/app/api/media/video/download/route.ts` - Streaming download endpoint
+- `src/components/feed/VideoPlayer.tsx` - Smart video player (HLS/MP4 auto-selection)
+- `src/components/feed/utils.tsx` - `VideoDownloadBlocked` shared component, `handleShareMedia`
 - `src/components/feed/FeedCard.tsx` - Gallery video preview (muted autoplay)
 - `src/components/feed/Lightbox.tsx` - Focus mode video (click to play with sound)
 
@@ -500,6 +527,26 @@ SENTRY_ENVIRONMENT=       # 'staging' or 'production' (set in fly.toml/fly.produ
 ```
 
 ## CI/CD & Deployment
+
+### Development Workflow (IMPORTANT)
+
+**ALWAYS test locally before deploying:**
+1. Make changes locally
+2. Run `pnpm dev` and test the feature manually in the browser
+3. Verify the feature works as expected with real user interaction
+4. Run `pnpm test` and `pnpm typecheck` to ensure no regressions
+5. Only after local verification, create a PR
+
+**NEVER auto-deploy to production:**
+- Production deploys should be explicit, intentional actions
+- Always verify on staging first (adhx.fly.dev)
+- Use Fly CLI for production: `fly deploy --config fly.production.toml --app adhx-prod`
+
+**When debugging browser features:**
+- Use browser DevTools to inspect network requests and console logs
+- Add temporary `console.log` statements to trace execution flow
+- Test with real data, not just API responses
+- Remember that React state updates are batched - effects may not run immediately
 
 ### Deployment Environments
 

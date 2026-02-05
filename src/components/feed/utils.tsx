@@ -2,7 +2,7 @@
  * Utility functions for feed components
  */
 import React from 'react'
-import { Download } from 'lucide-react'
+import { Download, Monitor } from 'lucide-react'
 import type { ArticleContentBlock, ArticleEntityMap, MediaEntitiesMap } from './types'
 
 
@@ -35,23 +35,160 @@ export async function handleDownloadMedia(e: React.MouseEvent, url: string, file
 }
 
 /**
+ * Instant video download - uses streaming endpoint for immediate browser download with progress
+ *
+ * Unlike blob-based downloads, this:
+ * 1. Starts the download instantly (no waiting for full file)
+ * 2. Shows browser's native download progress
+ * 3. Works for large files without memory issues
+ */
+export function handleVideoDownload(
+  e: React.MouseEvent,
+  author: string,
+  tweetId: string,
+  quality: 'preview' | 'hd' | 'full' = 'hd'
+): void {
+  e.stopPropagation()
+  e.preventDefault()
+
+  // Use the streaming download endpoint - browser handles the rest
+  const downloadUrl = `/api/media/video/download?author=${encodeURIComponent(author)}&tweetId=${encodeURIComponent(tweetId)}&quality=${quality}`
+
+  // Create a hidden link and click it to trigger browser's download manager
+  const link = document.createElement('a')
+  link.href = downloadUrl
+  link.download = '' // Let the server set the filename via Content-Disposition
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
+
+// Size threshold for mobile video download/sharing (50MB)
+const MOBILE_VIDEO_SIZE_LIMIT = 50 * 1024 * 1024
+
+/**
+ * Format bytes to human-readable size string
+ */
+export function formatFileSize(bytes: number): string {
+  if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)}GB`
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(0)}MB`
+  return `${(bytes / 1024).toFixed(0)}KB`
+}
+
+/**
+ * Message shown when mobile user tries to download a video that's too large.
+ * Used in both Lightbox (focus mode) and TweetPreviewLanding (preview page).
+ */
+interface VideoDownloadBlockedProps {
+  estimatedSize: number
+  onDismiss: () => void
+  /** Compact mode for smaller containers (preview page) */
+  compact?: boolean
+  /** CSS aspect ratio for container sizing */
+  aspectRatio?: string
+}
+
+export function VideoDownloadBlocked({
+  estimatedSize,
+  onDismiss,
+  compact = false,
+  aspectRatio,
+}: VideoDownloadBlockedProps): React.ReactElement {
+  return (
+    <div
+      style={aspectRatio ? { aspectRatio } : undefined}
+      className={`flex flex-col items-center justify-center gap-4 bg-gray-900 w-full ${
+        compact
+          ? 'p-6 rounded-xl'
+          : 'p-8 rounded-xl lg:rounded-2xl max-w-md mx-auto'
+      }`}
+    >
+      <div className={`rounded-full bg-purple-500/20 flex items-center justify-center ${
+        compact ? 'w-16 h-16' : 'w-20 h-20'
+      }`}>
+        <Monitor className={compact ? 'w-8 h-8 text-purple-400' : 'w-10 h-10 text-purple-400'} />
+      </div>
+      <div className="text-center">
+        <p className={`text-white font-medium ${compact ? 'text-lg' : 'text-xl'}`}>
+          Whoa there, data hoarder! 📱
+        </p>
+        <p className={`text-gray-400 ${compact ? 'mt-1' : 'mt-2'}`}>
+          ~{formatFileSize(estimatedSize)}
+        </p>
+      </div>
+      <p className={`text-gray-400 text-center ${compact ? 'text-sm max-w-xs' : ''}`}>
+        This chunky boi is too thicc for your phone. Pop open your laptop for instant downloads with a progress bar and everything.
+      </p>
+      <button
+        onClick={onDismiss}
+        className={`mt-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-white font-medium transition-colors ${
+          compact ? 'px-5 py-2 text-sm' : 'px-6 py-2'
+        }`}
+      >
+        Fine, I&apos;ll watch it instead
+      </button>
+    </div>
+  )
+}
+
+export interface ShareMediaResult {
+  success: boolean
+  method: 'share' | 'download'
+  tooLargeForMobile?: boolean
+  estimatedSize?: number
+}
+
+/**
  * Share or download media - uses Web Share API on mobile, downloads directly on desktop
  * This enables native share sheets on touch devices (WhatsApp, Messages, etc.)
  * Desktop browsers skip the share API entirely for a better UX
+ *
+ * For videos on desktop: Uses streaming download endpoint for instant start with progress
+ * For videos on mobile: Checks size first, warns if >25MB to avoid memory issues
+ * For images: Uses blob approach (small files, works everywhere)
  */
 export async function handleShareMedia(
   e: React.MouseEvent,
   url: string,
   filename: string,
   mimeType: string = 'image/jpeg'
-): Promise<{ success: boolean; method: 'share' | 'download' }> {
+): Promise<ShareMediaResult> {
   e.stopPropagation()
   e.preventDefault()
+
+  const isVideo = mimeType.startsWith('video/')
+
+  // Extract author and tweetId from video proxy URL
+  const getVideoParams = () => {
+    const urlParams = new URL(url, window.location.origin).searchParams
+    return {
+      author: urlParams.get('author'),
+      tweetId: urlParams.get('tweetId'),
+    }
+  }
 
   // Check device type FIRST - desktop should always download directly
   // This fixes the issue where desktop Chrome supports navigator.canShare
   // but shows a clunky share sheet instead of downloading
   if (!isTouchDevice()) {
+    // For videos on desktop, use streaming download for instant start with progress
+    if (isVideo) {
+      const { author, tweetId } = getVideoParams()
+
+      if (author && tweetId) {
+        // Use the streaming download endpoint (HD quality for bandwidth efficiency)
+        const downloadUrl = `/api/media/video/download?author=${encodeURIComponent(author)}&tweetId=${encodeURIComponent(tweetId)}&quality=hd`
+        const link = document.createElement('a')
+        link.href = downloadUrl
+        link.download = '' // Server sets filename via Content-Disposition
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        return { success: true, method: 'download' }
+      }
+    }
+
+    // For images (and fallback for videos), use blob approach
     try {
       const response = await fetch(url)
       const blob = await response.blob()
@@ -67,6 +204,42 @@ export async function handleShareMedia(
     } catch (error) {
       console.error('Download failed:', error)
       return { success: false, method: 'download' }
+    }
+  }
+
+  // MOBILE: Check video size before attempting share
+  if (isVideo) {
+    const { author, tweetId } = getVideoParams()
+
+    if (author && tweetId) {
+      try {
+        // Fetch video info to check size
+        const infoResponse = await fetch(
+          `/api/media/video/info?author=${encodeURIComponent(author)}&tweetId=${encodeURIComponent(tweetId)}`
+        )
+
+        if (infoResponse.ok) {
+          const info = await infoResponse.json()
+          // Check HD quality size (720p) - reasonable for mobile sharing
+          // Falls back to full if HD not available
+          const hdFormat = info.formats?.find((f: { quality: string }) => f.quality === 'hd')
+          const fullFormat = info.formats?.find((f: { quality: string }) => f.quality === 'full')
+          const estimatedSize = hdFormat?.estimatedSize || fullFormat?.estimatedSize || 0
+
+          if (estimatedSize > MOBILE_VIDEO_SIZE_LIMIT) {
+            // Video too large for mobile - return warning
+            return {
+              success: false,
+              method: 'share',
+              tooLargeForMobile: true,
+              estimatedSize,
+            }
+          }
+        }
+      } catch (error) {
+        // If size check fails, proceed anyway (user can cancel if too slow)
+        console.warn('Failed to check video size:', error)
+      }
     }
   }
 
