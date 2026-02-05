@@ -130,6 +130,19 @@ if (!userId) {
 - Uses Drizzle ORM query builder (never raw SQL with interpolation)
 - All queries filter by `userId` for multi-user data isolation
 - **Multi-user schema**: All user-owned tables use composite primary keys `(userId, id)` to allow multiple users to bookmark the same tweet independently
+- **Transactions**: Use `runInTransaction()` from `@/lib/db` for atomic multi-table operations. Inside transactions, use synchronous `.run()` instead of `await`:
+
+```typescript
+import { db, runInTransaction } from '@/lib/db'
+
+// Atomic multi-table operation
+runInTransaction(() => {
+  db.delete(bookmarkTags).where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.bookmarkId, id))).run()
+  db.delete(bookmarks).where(and(eq(bookmarks.userId, userId), eq(bookmarks.id, id))).run()
+})
+```
+
+See `src/app/api/bookmarks/[id]/route.ts` and `src/app/api/account/clear/route.ts` for examples.
 
 ### Token Encryption
 OAuth tokens are encrypted at rest using AES-256-GCM:
@@ -147,10 +160,43 @@ const decrypted = decryptToken(encrypted)    // Use this for API calls
 
 ### Content Security Policy (CSP)
 Security headers configured in `next.config.js`:
-- Restricts script sources to self and trusted CDNs
-- Prevents clickjacking with `frame-ancestors 'self'`
+- `script-src 'self' 'unsafe-inline'` — no `unsafe-eval` (only needed by React Refresh in dev, not production)
+- `style-src 'self' 'unsafe-inline'` — required for Tailwind CSS
+- Prevents clickjacking with `frame-ancestors 'none'`
 - Blocks mixed content
 - Configured for Twitter/X embed compatibility
+
+**Do NOT add `'unsafe-eval'`** — it enables `eval()` and is a major XSS escalation vector.
+
+### SSRF Protection
+All media proxy endpoints validate URLs against a strict domain allowlist before fetching. **Never use `.includes()` for domain validation** — it allows bypass via `domain.evil.com`.
+
+```typescript
+// ❌ WRONG: allows twimg.com.evil.com
+if (hostname.includes('twimg.com')) { ... }
+
+// ✅ CORRECT: exact match + endsWith with dot prefix
+const isAllowed = hostname === 'video.twimg.com'
+  || hostname.endsWith('.twimg.com')
+  || hostname === 'twitter.com'
+  || hostname.endsWith('.twitter.com')
+```
+
+This pattern is used in:
+- `src/app/api/media/video/route.ts` — video proxy (allowlist array)
+- `src/app/api/media/video/hls/route.ts` — HLS playlist proxy
+- `src/app/api/media/video/hls/segment/route.ts` — HLS segment proxy
+
+### Multi-User Query Safety
+When querying tables with `userId`, never include `isNull(userId)` fallbacks for "legacy" data. This leaks data across users:
+
+```typescript
+// ❌ WRONG: includes other users' NULL-userId rows
+.where(or(eq(table.userId, userId), isNull(table.userId)))
+
+// ✅ CORRECT: strict user isolation
+.where(eq(table.userId, userId))
+```
 
 ### Health Check Endpoint
 `/api/health` provides monitoring for Fly.io and external health checks:
@@ -167,9 +213,14 @@ Security headers configured in `next.config.js`:
 Returns 503 if database is unreachable.
 
 ### Error Tracking & Metrics (Sentry)
-Error tracking and user behavior metrics via Sentry SDK 10.x.
+Error tracking and user behavior metrics via Sentry SDK 10.x (server-side only, `@sentry/node`).
 
 **Key file**: `src/lib/sentry.ts`
+
+**Configuration**:
+- `tracesSampleRate: 0.2` — 20% sampling to avoid quota issues at scale
+- `enabled` only in production (`NODE_ENV === 'production'`)
+- **PII protection**: User IDs are hashed before sending as metric attributes (never send raw `userId` to third parties)
 
 ```typescript
 import { captureException, metrics } from '@/lib/sentry'
@@ -182,7 +233,7 @@ metrics.authCompleted(isNewUser)
 metrics.syncCompleted(bookmarksCount, pagesCount, durationMs)
 metrics.bookmarkReadToggled(true)
 metrics.feedSearched(hasResults, resultCount)
-metrics.trackUser(userId)
+metrics.trackUser(userId) // Hashes userId internally
 ```
 
 **Available metrics**:
@@ -190,7 +241,32 @@ metrics.trackUser(userId)
 - `sync.*` - Sync operations (started, completed, failed, duration)
 - `bookmark.*` - User interactions (read_toggled, tagged, added, deleted)
 - `feed.*` - Feed usage (loaded, searched, filtered)
-- `users.daily_active` - DAU tracking
+- `users.daily_active` - DAU tracking (uses `user_hash`, not raw ID)
+
+**Error Boundaries**:
+- `src/app/error.tsx` — catches page-level React errors (client component). Server-side errors are captured by Sentry Node SDK before reaching this boundary. Client-only React errors log to console but aren't sent to Sentry (no `@sentry/browser` installed).
+- `src/app/global-error.tsx` — catches root layout crashes. Must provide its own `<html>` and `<body>` tags since the layout itself may have failed. Uses inline styles (no Tailwind available).
+
+## Resilience Patterns
+
+### External Fetch Timeouts
+All server-side `fetch()` calls to external services **must** include `signal: AbortSignal.timeout()`. Without timeouts, a hanging CDN connection exhausts Fly.io's connection pool.
+
+```typescript
+// API calls: 10 second timeout
+await fetch(url, { signal: AbortSignal.timeout(10_000) })
+
+// Large file downloads: 30 second timeout
+await fetch(videoUrl, { signal: AbortSignal.timeout(30_000) })
+```
+
+Applied in all media proxy routes:
+- `src/app/api/media/video/download/route.ts` — 10s for API, 30s for video
+- `src/app/api/media/video/hls/route.ts` — 10s for playlist
+- `src/app/api/media/video/hls/segment/route.ts` — 10s for segment
+
+### Migration Safety
+Database migrations (`src/lib/db/migrate.ts`) run at container startup. Each migration statement is wrapped in try/catch — on failure, the migration tag and error are logged, then `process.exit(1)` stops the container with a clear message rather than an opaque crash.
 
 ## Architecture
 
@@ -624,7 +700,7 @@ The app will initialize a fresh SQLite database with the new schema. Users will 
 ## Testing
 
 ```bash
-pnpm test         # Run all 619 tests
+pnpm test         # Run all 639 tests
 pnpm test:watch   # Watch mode
 ```
 
@@ -654,6 +730,19 @@ API route tests in `src/__tests__/api/`:
 - `share-tag-clone.test.ts` - Tag sharing and cloning functionality
 
 All API tests verify multi-user isolation (User A's actions don't affect User B).
+
+**Test mock pattern for `@/lib/db`**: When a route imports new exports from `@/lib/db` (like `runInTransaction`), the test mock must be updated to include them. Tests use `createTestDb()` from `setup.ts` which exposes `{ db, sqlite, close }`:
+
+```typescript
+vi.mock('@/lib/db', () => ({
+  get db() { return testInstance.db },
+  runInTransaction<R>(fn: () => R): R {
+    return testInstance.sqlite.transaction(fn)()
+  },
+}))
+```
+
+Forgetting to add new exports to mocks causes silent 500 errors in tests.
 
 ## Common Tasks
 

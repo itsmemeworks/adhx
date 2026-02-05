@@ -16,8 +16,8 @@ export function initSentry() {
     environment: process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV || 'development',
     // Release tracking - links errors to specific versions
     release: SENTRY_RELEASE ? `adhx@${SENTRY_RELEASE}` : undefined,
-    // Performance monitoring sample rate
-    tracesSampleRate: 1.0,
+    // Performance monitoring sample rate (20% provides good visibility without quota issues)
+    tracesSampleRate: 0.2,
     // Only send errors in production
     enabled: process.env.NODE_ENV === 'production',
     // Automatically capture unhandled promise rejections
@@ -199,9 +199,11 @@ export const metrics = {
       status: statusCode,
     }),
 
-  // Daily active users (track activity with user_id attribute for unique counting)
-  trackUser: (userId: string) =>
-    metricCount('users.daily_active', 1, { user_id: userId }),
+  // Daily active users (hashed for privacy - no raw PII sent to third parties)
+  trackUser: (userId: string) => {
+    const hash = userId.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0).toString(36)
+    metricCount('users.daily_active', 1, { user_hash: hash })
+  },
 }
 
 export { Sentry }
