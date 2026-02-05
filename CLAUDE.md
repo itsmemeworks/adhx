@@ -397,9 +397,28 @@ FxTwitter (`api.fxtwitter.com`) provides reliable media URLs (Twitter has CORS i
 - **Videos**: `/api/media/video?author=xxx&tweetId=xxx&quality=preview|hd|full`
 - **Photos**: `https://d.fixupx.com/{author}/status/{tweetId}/photo/{index}`
 
+**Video Quality Levels:**
+
+| Quality | Resolution | Bitrate | Use Case |
+|---------|------------|---------|----------|
+| `preview` | 360p | ~832kbps | Gallery hover preview |
+| `hd` | 720p | ~2Mbps | Focus mode playback |
+| `full` | 1080p | ~10Mbps | Download only |
+
+**Video Playback UX Patterns:**
+
+| Context | Attributes | Behavior | Why |
+|---------|------------|----------|-----|
+| Gallery hover | `muted autoPlay loop playsInline` | Silent auto-preview | Quick browse without disruption |
+| Focus mode | `controls playsInline` (no autoPlay) | Click to play with sound | Full viewing experience |
+
+**Browser Autoplay Policy**: Modern browsers block autoplaying videos with sound. Gallery works because it's `muted`. Focus mode removes `autoPlay` so users click play and get sound immediately - this is intentional UX, not a workaround.
+
 Key files:
 - `src/lib/media/fxembed.ts` - FxTwitter API types and URL builders
 - `src/app/api/media/video/route.ts` - Video proxy with quality selection
+- `src/components/feed/FeedCard.tsx` - Gallery video preview (muted autoplay)
+- `src/components/feed/Lightbox.tsx` - Focus mode video (click to play with sound)
 
 ### Database (SQLite + Drizzle)
 
