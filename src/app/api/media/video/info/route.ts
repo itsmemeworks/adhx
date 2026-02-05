@@ -18,6 +18,7 @@ interface VideoInfo {
     quality: 'preview' | 'hd' | 'full'
     bitrate: number
     url: string
+    estimatedSize: number // bytes, estimated from duration * bitrate
   }>
   thumbnail: string | null
   requiresHls: boolean // true if video is long (>5 min) and needs HLS
@@ -72,34 +73,44 @@ export async function GET(request: NextRequest) {
       .filter((f) => f.bitrate && f.url?.includes('.mp4'))
       .sort((a, b) => (a.bitrate || 0) - (b.bitrate || 0))
 
+    // Helper to estimate file size from bitrate and duration
+    // bitrate is in bits/sec, so divide by 8 for bytes, multiply by duration
+    const estimateSize = (bitrate: number) => Math.round((bitrate / 8) * duration)
+
     // Map to quality levels
     const qualityFormats: VideoInfo['formats'] = []
 
     if (mp4Formats.length > 0) {
       // Preview = lowest bitrate
+      const previewBitrate = mp4Formats[0].bitrate!
       qualityFormats.push({
         quality: 'preview',
-        bitrate: mp4Formats[0].bitrate!,
+        bitrate: previewBitrate,
         url: mp4Formats[0].url,
+        estimatedSize: estimateSize(previewBitrate),
       })
     }
 
     if (mp4Formats.length > 1) {
       // HD = second highest (typically 720p)
       const hdIndex = Math.max(0, mp4Formats.length - 2)
+      const hdBitrate = mp4Formats[hdIndex].bitrate!
       qualityFormats.push({
         quality: 'hd',
-        bitrate: mp4Formats[hdIndex].bitrate!,
+        bitrate: hdBitrate,
         url: mp4Formats[hdIndex].url,
+        estimatedSize: estimateSize(hdBitrate),
       })
     }
 
     if (mp4Formats.length > 0) {
       // Full = highest bitrate
+      const fullBitrate = mp4Formats[mp4Formats.length - 1].bitrate!
       qualityFormats.push({
         quality: 'full',
-        bitrate: mp4Formats[mp4Formats.length - 1].bitrate!,
+        bitrate: fullBitrate,
         url: mp4Formats[mp4Formats.length - 1].url,
+        estimatedSize: estimateSize(fullBitrate),
       })
     }
 

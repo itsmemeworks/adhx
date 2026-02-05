@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { ArrowRight, Search, Sparkles, Play, Zap, Eye, Maximize2, Minimize2, Plus, Loader2, Download, Share2, Check } from 'lucide-react'
 import { ADHX_PURPLE } from '@/lib/gestalt/theme'
 import { type FxTwitterResponse } from '@/lib/media/fxembed'
-import { renderArticleBlock, handleShareMedia, isTouchDevice } from '@/components/feed/utils'
+import { renderArticleBlock, handleShareMedia, isTouchDevice, VideoDownloadBlocked } from '@/components/feed/utils'
+import { VideoPlayer as SmartVideoPlayer } from '@/components/feed/VideoPlayer'
 import type { ArticleEntityMap } from '@/components/feed/types'
 import { FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
 import { XIcon } from '@/components/icons'
@@ -99,9 +100,11 @@ interface MediaShareButtonProps {
   mimeType?: string
   /** Use group-hover/img for multi-image galleries */
   useImageGroupHover?: boolean
+  /** Called when video is too large for mobile download */
+  onTooLargeForMobile?: (estimatedSize: number) => void
 }
 
-function MediaShareButton({ url, filename, mimeType = 'image/jpeg', useImageGroupHover = false }: MediaShareButtonProps): React.ReactElement {
+function MediaShareButton({ url, filename, mimeType = 'image/jpeg', useImageGroupHover = false, onTooLargeForMobile }: MediaShareButtonProps): React.ReactElement {
   const [isLoading, setIsLoading] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -114,6 +117,12 @@ function MediaShareButton({ url, filename, mimeType = 'image/jpeg', useImageGrou
     setIsLoading(true)
     const result = await handleShareMedia(e, url, filename, mimeType)
     setIsLoading(false)
+
+    if (result.tooLargeForMobile) {
+      onTooLargeForMobile?.(result.estimatedSize || 0)
+      return
+    }
+
     if (result.success) {
       setShowSuccess(true)
       setTimeout(() => setShowSuccess(false), 1500)
@@ -815,12 +824,25 @@ function VideoPlayer({
   height?: number
 }): React.ReactElement {
   const [isPlaying, setIsPlaying] = useState(false)
+  const [downloadBlockedSize, setDownloadBlockedSize] = useState<number | null>(null)
 
   // Calculate aspect ratio, default to 16:9 if dimensions unavailable
   const aspectRatio = width && height ? `${width} / ${height}` : '16 / 9'
 
   // Use server-side video proxy to avoid CORS issues with video.twimg.com
   const proxyUrl = `/api/media/video?author=${encodeURIComponent(author)}&tweetId=${encodeURIComponent(tweetId)}&quality=hd`
+
+  // Show funny message when download blocked on mobile
+  if (downloadBlockedSize !== null) {
+    return (
+      <VideoDownloadBlocked
+        estimatedSize={downloadBlockedSize}
+        onDismiss={() => setDownloadBlockedSize(null)}
+        compact
+        aspectRatio={aspectRatio}
+      />
+    )
+  }
 
   if (!isPlaying) {
     return (
@@ -843,6 +865,7 @@ function VideoPlayer({
             url={proxyUrl}
             filename={`tweet-${tweetId}.mp4`}
             mimeType="video/mp4"
+            onTooLargeForMobile={setDownloadBlockedSize}
           />
         </div>
       </div>
@@ -851,13 +874,12 @@ function VideoPlayer({
 
   return (
     <div className="relative group">
-      <video
-        src={proxyUrl}
-        controls
+      <SmartVideoPlayer
+        author={author}
+        tweetId={tweetId}
         autoPlay
-        style={{ aspectRatio }}
         className="w-full max-h-[50vh] md:max-h-none bg-black rounded-xl"
-        poster={thumbnail}
+        tweetUrl={`https://x.com/${author}/status/${tweetId}`}
       />
       {/* Share/Download button for playing video */}
       <div className="absolute top-3 right-3">
@@ -865,6 +887,7 @@ function VideoPlayer({
           url={proxyUrl}
           filename={`tweet-${tweetId}.mp4`}
           mimeType="video/mp4"
+          onTooLargeForMobile={setDownloadBlockedSize}
         />
       </div>
     </div>

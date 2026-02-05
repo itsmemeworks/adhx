@@ -3966,7 +3966,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'e
             class="relative"
           >
             <div
-              class="absolute inset-0 flex items-center justify-center bg-gray-900 rounded-xl"
+              class="absolute inset-0 flex items-center justify-center bg-gray-900 rounded-xl z-10"
             >
               <svg
                 class="lucide lucide-loader-circle w-8 h-8 text-gray-400 animate-spin"
@@ -3989,7 +3989,6 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'e
               class="max-w-full max-h-[50vh] lg:max-h-[80vh] rounded-xl lg:rounded-2xl bg-black"
               controls=""
               playsinline=""
-              src="/api/media/video?author=moonpay&tweetId=2009626024968118554&quality=hd"
             />
           </div>
           <div
@@ -7951,7 +7950,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'v
             class="relative"
           >
             <div
-              class="absolute inset-0 flex items-center justify-center bg-gray-900 rounded-xl"
+              class="absolute inset-0 flex items-center justify-center bg-gray-900 rounded-xl z-10"
             >
               <svg
                 class="lucide lucide-loader-circle w-8 h-8 text-gray-400 animate-spin"
@@ -7974,7 +7973,6 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'v
               class="max-w-full max-h-[50vh] lg:max-h-[80vh] rounded-xl lg:rounded-2xl bg-black"
               controls=""
               playsinline=""
-              src="/api/media/video?author=Kekius_Sage&tweetId=2011872260118716688&quality=hd"
             />
           </div>
           <div

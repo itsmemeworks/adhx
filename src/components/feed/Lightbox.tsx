@@ -19,7 +19,7 @@ import {
 import { AuthorAvatar } from './AuthorAvatar'
 import { TagInput, type TagInputHandle } from './TagInput'
 import { VideoPlayer } from './VideoPlayer'
-import { renderTextWithLinks, renderBionicTextWithLinks, renderArticleBlock, stripMediaUrls, handleShareMedia, isTouchDevice } from './utils'
+import { renderTextWithLinks, renderBionicTextWithLinks, renderArticleBlock, stripMediaUrls, handleShareMedia, isTouchDevice, VideoDownloadBlocked } from './utils'
 import { cn } from '@/lib/utils'
 import { usePreferences } from '@/lib/preferences-context'
 import type { FeedItem, TagItem } from './types'
@@ -301,12 +301,18 @@ function MediaLightboxContent({
 }): React.ReactElement {
   const hasMedia = item.media && item.media.length > 0
   const renderText = bionicReading ? renderBionicTextWithLinks : renderTextWithLinks
+  const [downloadBlockedSize, setDownloadBlockedSize] = useState<number | null>(null)
 
   return (
     <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-center lg:items-start max-h-[85vh] overflow-y-auto lg:overflow-visible">
       {/* Media panel - shown first on mobile */}
       <div className="w-full lg:flex-1 flex items-center justify-center order-1 lg:order-2 relative group">
-        {isVideo ? (
+        {isVideo && downloadBlockedSize !== null ? (
+          <VideoDownloadBlocked
+            estimatedSize={downloadBlockedSize}
+            onDismiss={() => setDownloadBlockedSize(null)}
+          />
+        ) : isVideo ? (
           <div className="relative">
             <VideoPlayer
               key={item.id}
@@ -322,6 +328,7 @@ function MediaLightboxContent({
                 url={`/api/media/video?author=${item.author}&tweetId=${item.id}&quality=hd`}
                 filename={`tweet-${item.id}.mp4`}
                 mimeType="video/mp4"
+                onTooLargeForMobile={setDownloadBlockedSize}
               />
             </div>
           </div>
@@ -636,9 +643,11 @@ interface MediaShareButtonProps {
   mimeType?: string
   /** Use group-hover/img for multi-image galleries */
   useImageGroupHover?: boolean
+  /** Called when video is too large for mobile download */
+  onTooLargeForMobile?: (estimatedSize: number) => void
 }
 
-function MediaShareButton({ url, filename, mimeType = 'image/jpeg', useImageGroupHover = false }: MediaShareButtonProps): React.ReactElement {
+function MediaShareButton({ url, filename, mimeType = 'image/jpeg', useImageGroupHover = false, onTooLargeForMobile }: MediaShareButtonProps): React.ReactElement {
   const [isLoading, setIsLoading] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -651,6 +660,13 @@ function MediaShareButton({ url, filename, mimeType = 'image/jpeg', useImageGrou
     setIsLoading(true)
     const result = await handleShareMedia(e, url, filename, mimeType)
     setIsLoading(false)
+
+    if (result.tooLargeForMobile) {
+      // Notify parent to show full-screen message instead of tooltip
+      onTooLargeForMobile?.(result.estimatedSize || 0)
+      return
+    }
+
     if (result.success) {
       setShowSuccess(true)
       setTimeout(() => setShowSuccess(false), 1500)
