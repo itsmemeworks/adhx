@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.20.1](https://github.com/itsmemeworks/adhx/compare/v1.20.0...v1.20.1) (2026-02-05)
+
+
+### Bug Fixes
+
+* remove unused og-image.svg ([#101](https://github.com/itsmemeworks/adhx/issues/101)) ([9857b79](https://github.com/itsmemeworks/adhx/commit/9857b79e2786ca06f1b051aa89b3ccbc4db29adf))
+
 ## [1.20.0](https://github.com/itsmemeworks/adhx/compare/v1.19.0...v1.20.0) (2026-02-05)
 
 
