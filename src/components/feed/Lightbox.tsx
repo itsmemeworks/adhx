@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { AuthorAvatar } from './AuthorAvatar'
 import { TagInput, type TagInputHandle } from './TagInput'
+import { VideoPlayer } from './VideoPlayer'
 import { renderTextWithLinks, renderBionicTextWithLinks, renderArticleBlock, stripMediaUrls, handleShareMedia, isTouchDevice } from './utils'
 import { cn } from '@/lib/utils'
 import { usePreferences } from '@/lib/preferences-context'
@@ -307,12 +308,12 @@ function MediaLightboxContent({
       <div className="w-full lg:flex-1 flex items-center justify-center order-1 lg:order-2 relative group">
         {isVideo ? (
           <div className="relative">
-            <video
+            <VideoPlayer
               key={item.id}
-              src={`/api/media/video?author=${item.author}&tweetId=${item.id}&quality=hd`}
-              controls
-              playsInline
+              author={item.author}
+              tweetId={item.id}
               loop={primaryMedia.mediaType === 'animated_gif'}
+              tweetUrl={item.tweetUrl}
               className="max-w-full max-h-[50vh] lg:max-h-[80vh] rounded-xl lg:rounded-2xl bg-black"
             />
             {/* Share/Download button for video */}
@@ -726,10 +727,10 @@ function RetweetContent({ retweetContext, bionicReading }: { retweetContext: Non
         )}
         {retweetContext.media?.videos && retweetContext.media.videos.length > 0 && (
           <div className="rounded-xl overflow-hidden">
-            <video
-              src={`/api/media/video?author=${retweetContext.author}&tweetId=${retweetContext.tweetId}&quality=hd`}
-              controls
-              playsInline
+            <VideoPlayer
+              author={retweetContext.author}
+              tweetId={retweetContext.tweetId}
+              tweetUrl={`https://x.com/${retweetContext.author}/status/${retweetContext.tweetId}`}
               className="w-full max-h-96"
             />
           </div>
