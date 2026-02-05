@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.22.1](https://github.com/itsmemeworks/adhx/compare/v1.22.0...v1.22.1) (2026-02-05)
+
+
+### Bug Fixes
+
+* production readiness hardening ([#110](https://github.com/itsmemeworks/adhx/issues/110)) ([77ffa0d](https://github.com/itsmemeworks/adhx/commit/77ffa0d9afd3c86aa61343f999e1c274f35e1da8))
+
 ## [1.22.0](https://github.com/itsmemeworks/adhx/compare/v1.21.0...v1.22.0) (2026-02-05)
 
 
