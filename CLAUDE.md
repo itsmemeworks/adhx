@@ -200,13 +200,28 @@ Users can save tweets by visiting `adhx.com/{username}/status/{id}`:
 - Authenticated: Adds tweet, redirects to `/?open={id}` (opens lightbox)
 - Unauthenticated: Shows `TweetPreviewLanding` with rich preview or `QuickAddLanding` as fallback
 
-**OG Image Selection** (`getOgImage()` in page.tsx):
+**OG Image Selection** (`getOgImage()` in `src/lib/utils/og-image.ts`):
 When generating Open Graph metadata for social unfurling, images are selected in priority order:
 1. Direct media (tweet's own photos/video thumbnails)
 2. Article cover image (X Articles `tweet.article.cover_media.media_info.original_img_url`)
 3. Quote tweet media (when parent has no media, use quoted tweet's photos/videos)
 4. External link thumbnail (`tweet.external.thumbnail_url`)
-5. Fallback to `/logo.png` for text-only tweets
+5. Fallback to `/og-logo.png` for text-only tweets
+
+### Branding Assets
+
+| File | Size | Purpose |
+|------|------|---------|
+| `public/logo.png` | 940KB | App logo for favicon and in-app display |
+| `public/og-logo.png` | 183KB, 1200×630 | OG image for social sharing (homepage + tweet fallback) |
+| `public/icon-192.png` | 36KB | PWA icon (small) |
+| `public/icon-512.png` | 166KB | PWA icon (large) |
+
+**OG Image Routes:**
+- `src/app/opengraph-image.tsx` - Serves `og-logo.png` for homepage OG
+- `src/app/twitter-image.tsx` - Serves `og-logo.png` for Twitter cards
+
+**Key distinction**: `logo.png` is the app logo (used on website/favicon). `og-logo.png` is the branded OG image (1200×630) used for all social sharing previews.
 
 ### iOS Shortcut Integration
 iOS users can share tweets via the native share sheet using an iOS Shortcut that transforms X/Twitter URLs to ADHX preview URLs.
