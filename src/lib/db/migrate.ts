@@ -63,8 +63,7 @@ if (fs.existsSync(journalPath)) {
             db.exec(statement)
           }
         } catch (error) {
-          console.error(`[migrate] FAILED migration: ${entry.tag}`)
-          console.error(`[migrate] Error:`, error)
+          console.log(`[migrate] FAILED migration: ${entry.tag}`, error)
           db.close()
           process.exit(1)
         }
