@@ -146,16 +146,16 @@ fly auth login
 
 ```bash
 # Create the app (first time only)
-fly apps create adhx
+fly apps create your-app-name
 
 # Create persistent volume for SQLite database
 fly volumes create adhx_data --region lhr --size 1
 
-# Set secrets
+# Set secrets (replace with your domain)
 fly secrets set TWITTER_CLIENT_ID=your_client_id
 fly secrets set TWITTER_CLIENT_SECRET=your_client_secret
 fly secrets set SESSION_SECRET=$(openssl rand -base64 32)
-fly secrets set NEXT_PUBLIC_APP_URL=https://adhx.fly.dev
+fly secrets set NEXT_PUBLIC_APP_URL=https://your-app-name.fly.dev
 
 # Deploy
 fly deploy
@@ -163,8 +163,10 @@ fly deploy
 
 ### Post-deployment
 
-1. Update your Twitter app's callback URL to `https://adhx.fly.dev/api/auth/twitter/callback`
-2. Visit `https://adhx.fly.dev` and connect your Twitter account
+1. Update your Twitter app's callback URL to match your domain:
+   - Local: `http://localhost:3000/api/auth/twitter/callback`
+   - Fly.io: `https://your-app-name.fly.dev/api/auth/twitter/callback`
+2. Visit your app URL and connect your Twitter account
 
 ### Automated Releases
 
