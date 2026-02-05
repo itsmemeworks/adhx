@@ -1,11 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Bookmark, Search, Tag, Maximize2, ArrowRight, Zap, Smartphone, ExternalLink } from 'lucide-react'
 import { ADHX_PURPLE } from '@/lib/gestalt/theme'
 import { XIcon } from '@/components/icons'
 import { AnimatedBackground, LandingAnimations } from '@/components/landing'
-import { isIOSDevice } from '@/components/feed/utils'
 
 export function LandingPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -154,8 +153,8 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* iOS Shortcut Promo - Only shown on iOS devices */}
-      <IOSShortcutPromo />
+      {/* iOS Shortcut Promo */}
+      <ShortcutPromo />
 
       {/* Features Section */}
       <section aria-labelledby="features-title" className="max-w-6xl mx-auto px-4 py-16">
@@ -195,17 +194,9 @@ export function LandingPage() {
   )
 }
 
-const IOS_SHORTCUT_URL = 'https://www.icloud.com/shortcuts/b5f2a1999b734572961bdf2b063fce65'
+const SHORTCUT_URL = 'https://www.icloud.com/shortcuts/0d187480099b4d34a745ec8750a4587b'
 
-function IOSShortcutPromo() {
-  const [isIOS, setIsIOS] = useState(false)
-
-  useEffect(() => {
-    setIsIOS(isIOSDevice())
-  }, [])
-
-  if (!isIOS) return null
-
+function ShortcutPromo() {
   return (
     <section className="max-w-4xl mx-auto px-4 py-8">
       <div className="bg-gray-100 dark:bg-gray-800/50 rounded-3xl p-6 sm:p-8">
@@ -227,7 +218,7 @@ function IOSShortcutPromo() {
               Hit share on any tweet → get the full content with media, no login walls or algorithm nonsense. Perfect for sending tweets to friends who refuse to make an account.
             </p>
             <a
-              href={IOS_SHORTCUT_URL}
+              href={SHORTCUT_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-6 py-3 text-white font-semibold rounded-full transition-all hover:scale-105 hover:shadow-lg"
