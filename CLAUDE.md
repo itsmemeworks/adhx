@@ -476,14 +476,39 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 SESSION_SECRET=           # For JWT signing (falls back to TWITTER_CLIENT_SECRET)
 SENTRY_DSN=               # Sentry error tracking DSN
 SENTRY_RELEASE=           # Set automatically in Docker builds
+SENTRY_ENVIRONMENT=       # 'staging' or 'production' (set in fly.toml/fly.production.toml)
 ```
 
 ## CI/CD & Deployment
 
+### Deployment Environments
+
+| Environment | App | URL | Config File | Volume |
+|-------------|-----|-----|-------------|--------|
+| Staging | `adhx` | adhx.fly.dev | `fly.toml` | `adhx_data` |
+| Production | `adhx-prod` | adhx.com | `fly.production.toml` | `adhx_prod_data` |
+
+**Deployment flow:**
+1. Code merged to main → Release-please creates version bump PR
+2. Version PR merged → **Auto-deploys to staging only**
+3. Verify staging works → Manual deploy to production
+
+```bash
+# Deploy to staging (default, also triggered by release-please)
+gh workflow run deploy.yml
+
+# Deploy to production (manual only, after verifying staging)
+gh workflow run deploy.yml -f environment=production
+
+# Check deployed versions
+curl -s https://adhx.fly.dev/api/health | jq .version  # staging
+curl -s https://adhx.com/api/health | jq .version      # production
+```
+
 ### GitHub Actions Workflows
 - **CI** (`.github/workflows/ci.yml`) - Runs on PRs: lint, typecheck, test, build
-- **Deploy** (`.github/workflows/deploy.yml`) - Deploys to Fly.io (triggered by release-please or manual dispatch)
-- **Release Please** (`.github/workflows/release-please.yml`) - Automated semantic versioning, triggers deploy via `workflow_dispatch`
+- **Deploy** (`.github/workflows/deploy.yml`) - Deploys to Fly.io with environment selection (staging/production)
+- **Release Please** (`.github/workflows/release-please.yml`) - Automated semantic versioning, triggers staging deploy via `workflow_dispatch`
 
 **Important**: GitHub doesn't fire `release: published` events when releases are created with `GITHUB_TOKEN` (security measure). The release-please workflow directly triggers deploy via `gh workflow run deploy.yml` instead.
 
@@ -492,28 +517,39 @@ Deployments automatically create Sentry releases for error tracking:
 - Version from `package.json` is passed as `SENTRY_RELEASE` build arg
 - Commits are associated with releases for "Suspect Commits" feature
 - Deploy notifications sent to Sentry after successful deployment
+- **Environment separation**: `SENTRY_ENVIRONMENT` env var tags errors as `staging` or `production`
+- Same Sentry project, filter by environment in Sentry UI
 
 ### Fly.io Secrets
-Required secrets on Fly.io (set via `fly secrets set`):
+Required secrets on **both** Fly.io apps (set via `fly secrets set --app <app-name>`):
 - `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET` - Twitter OAuth
-- `SENTRY_DSN` - Error tracking
-- `SESSION_SECRET` - JWT signing (optional)
+- `NEXT_PUBLIC_APP_URL` - `https://adhx.fly.dev` (staging) or `https://adhx.com` (production)
+- `SENTRY_DSN` - Error tracking (same DSN for both, separated by `SENTRY_ENVIRONMENT`)
+- `SESSION_SECRET` - JWT signing (generate unique per environment)
+
+**Twitter OAuth**: Both callback URLs must be registered in Twitter Developer Portal:
+- `https://adhx.fly.dev/api/auth/twitter/callback`
+- `https://adhx.com/api/auth/twitter/callback`
 
 ### Fresh Database Deployment (Major Schema Changes)
 For breaking schema changes (like switching to composite primary keys), deploy a fresh database:
 
 ```bash
-# Stop and destroy the machine
+# STAGING
 fly machines list --app adhx
 fly machines stop <machine-id> --app adhx
 fly machines destroy <machine-id> --app adhx --force
-
-# Delete and recreate the volume
 fly volumes delete <volume-id> --app adhx --yes
 fly volumes create adhx_data --region lhr --size 1 --app adhx
-
-# Trigger deploy (creates new machine with fresh DB)
 gh workflow run deploy.yml
+
+# PRODUCTION
+fly machines list --app adhx-prod
+fly machines stop <machine-id> --app adhx-prod
+fly machines destroy <machine-id> --app adhx-prod --force
+fly volumes delete <volume-id> --app adhx-prod --yes
+fly volumes create adhx_prod_data --region lhr --size 1 --app adhx-prod
+gh workflow run deploy.yml -f environment=production
 ```
 
 The app will initialize a fresh SQLite database with the new schema. Users will need to re-authenticate and sync their bookmarks.
