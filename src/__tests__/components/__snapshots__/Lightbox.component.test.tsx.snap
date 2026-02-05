@@ -3963,10 +3963,10 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'e
           class="relative"
         >
           <video
-            autoplay=""
             class="max-w-full max-h-[50vh] lg:max-h-[80vh] rounded-xl lg:rounded-2xl bg-black"
             controls=""
-            src="/api/media/video?author=moonpay&tweetId=2009626024968118554&quality=full"
+            playsinline=""
+            src="/api/media/video?author=moonpay&tweetId=2009626024968118554&quality=hd"
           />
           <div
             class="absolute top-3 right-3"
@@ -7924,10 +7924,10 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'v
           class="relative"
         >
           <video
-            autoplay=""
             class="max-w-full max-h-[50vh] lg:max-h-[80vh] rounded-xl lg:rounded-2xl bg-black"
             controls=""
-            src="/api/media/video?author=Kekius_Sage&tweetId=2011872260118716688&quality=full"
+            playsinline=""
+            src="/api/media/video?author=Kekius_Sage&tweetId=2011872260118716688&quality=hd"
           />
           <div
             class="absolute top-3 right-3"
