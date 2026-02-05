@@ -309,16 +309,16 @@ function MediaLightboxContent({
           <div className="relative">
             <video
               key={item.id}
-              src={`/api/media/video?author=${item.author}&tweetId=${item.id}&quality=full`}
+              src={`/api/media/video?author=${item.author}&tweetId=${item.id}&quality=hd`}
               controls
-              autoPlay
+              playsInline
               loop={primaryMedia.mediaType === 'animated_gif'}
               className="max-w-full max-h-[50vh] lg:max-h-[80vh] rounded-xl lg:rounded-2xl bg-black"
             />
             {/* Share/Download button for video */}
             <div className="absolute top-3 right-3">
               <MediaShareButton
-                url={`/api/media/video?author=${item.author}&tweetId=${item.id}&quality=full`}
+                url={`/api/media/video?author=${item.author}&tweetId=${item.id}&quality=hd`}
                 filename={`tweet-${item.id}.mp4`}
                 mimeType="video/mp4"
               />
@@ -729,6 +729,7 @@ function RetweetContent({ retweetContext, bionicReading }: { retweetContext: Non
             <video
               src={`/api/media/video?author=${retweetContext.author}&tweetId=${retweetContext.tweetId}&quality=hd`}
               controls
+              playsInline
               className="w-full max-h-96"
             />
           </div>
