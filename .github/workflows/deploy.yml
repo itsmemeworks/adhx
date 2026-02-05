@@ -1,13 +1,21 @@
 name: Deploy
 
 on:
-  # Manual trigger
+  # Manual trigger with environment selection
   workflow_dispatch:
     inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
       skip_sentry:
         description: 'Skip Sentry release creation'
         required: false
-        default: 'false'
+        default: false
         type: boolean
   # Triggered when a GitHub release is published (by release-please or fallback script)
   release:
@@ -15,15 +23,20 @@ on:
   # Called by release-please after a release is created
   workflow_call:
     inputs:
+      environment:
+        description: 'Deployment environment'
+        required: false
+        default: 'staging'
+        type: string
       skip_sentry:
         description: 'Skip Sentry release creation'
         required: false
         default: false
         type: boolean
 
-# Only allow one deploy at a time
+# Only allow one deploy per environment at a time
 concurrency:
-  group: deploy
+  group: deploy-${{ inputs.environment || 'staging' }}
   cancel-in-progress: false
 
 env:
@@ -39,6 +52,20 @@ jobs:
         with:
           fetch-depth: 0  # Full history for Sentry commit association
 
+      - name: Set environment variables
+        id: env
+        run: |
+          ENV="${{ inputs.environment || 'staging' }}"
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+
+          if [ "$ENV" = "production" ]; then
+            echo "config_file=fly.production.toml" >> $GITHUB_OUTPUT
+            echo "app_url=https://adhx.com" >> $GITHUB_OUTPUT
+          else
+            echo "config_file=fly.toml" >> $GITHUB_OUTPUT
+            echo "app_url=https://adhx.fly.dev" >> $GITHUB_OUTPUT
+          fi
+
       - name: Get version from package.json
         id: version
         run: |
@@ -52,30 +79,31 @@ jobs:
       - name: Deploy to Fly.io
         run: |
           flyctl deploy --remote-only \
+            --config ${{ steps.env.outputs.config_file }} \
             --build-arg SENTRY_RELEASE=${{ steps.version.outputs.version }}
 
       # Sentry release tracking
       - name: Create Sentry release
-        if: ${{ inputs.skip_sentry != 'true' && env.SENTRY_ORG != '' }}
+        if: ${{ inputs.skip_sentry != true && env.SENTRY_ORG != '' }}
         uses: getsentry/action-release@v1
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ env.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ env.SENTRY_PROJECT }}
         with:
-          environment: production
+          environment: ${{ steps.env.outputs.environment }}
           version: ${{ steps.version.outputs.release }}
           # Associate commits for "Suspect Commits" feature
           set_commits: auto
 
       - name: Notify Sentry of deployment
-        if: ${{ inputs.skip_sentry != 'true' && env.SENTRY_ORG != '' }}
+        if: ${{ inputs.skip_sentry != true && env.SENTRY_ORG != '' }}
         run: |
           curl -sL https://sentry.io/api/0/organizations/${{ env.SENTRY_ORG }}/releases/${{ steps.version.outputs.release }}/deploys/ \
             -H "Authorization: Bearer ${{ secrets.SENTRY_AUTH_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
-              "environment": "production",
+              "environment": "${{ steps.env.outputs.environment }}",
               "name": "Deploy ${{ steps.version.outputs.release }}"
             }' || echo "Deploy notification failed (non-fatal)"
 
@@ -85,5 +113,5 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Version**: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Sentry Release**: ${{ steps.version.outputs.release }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Environment**: production" >> $GITHUB_STEP_SUMMARY
-          echo "- **URL**: https://adhx.fly.dev" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${{ steps.env.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL**: ${{ steps.env.outputs.app_url }}" >> $GITHUB_STEP_SUMMARY
