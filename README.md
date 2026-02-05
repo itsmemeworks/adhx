@@ -155,7 +155,7 @@ fly volumes create adhx_data --region lhr --size 1
 fly secrets set TWITTER_CLIENT_ID=your_client_id
 fly secrets set TWITTER_CLIENT_SECRET=your_client_secret
 fly secrets set SESSION_SECRET=$(openssl rand -base64 32)
-fly secrets set NEXT_PUBLIC_APP_URL=https://adhx.fly.dev
+fly secrets set NEXT_PUBLIC_APP_URL=https://adhx.com
 
 # Deploy
 fly deploy
@@ -163,8 +163,8 @@ fly deploy
 
 ### Post-deployment
 
-1. Update your Twitter app's callback URL to `https://adhx.fly.dev/api/auth/twitter/callback`
-2. Visit `https://adhx.fly.dev` and connect your Twitter account
+1. Update your Twitter app's callback URL to `https://adhx.com/api/auth/twitter/callback`
+2. Visit `https://adhx.com` and connect your Twitter account
 
 ### Automated Releases
 
