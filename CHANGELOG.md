@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.20.0](https://github.com/itsmemeworks/adhx/compare/v1.19.0...v1.20.0) (2026-02-05)
+
+
+### Features
+
+* add github link to landing page header ([#100](https://github.com/itsmemeworks/adhx/issues/100)) ([dec968f](https://github.com/itsmemeworks/adhx/commit/dec968f4895329715bdca8a7788c2afc67b2b189))
+* add production deployment infrastructure for adhx.com ([#95](https://github.com/itsmemeworks/adhx/issues/95)) ([5c85315](https://github.com/itsmemeworks/adhx/commit/5c85315c7f980a470b7aae2e9ac4cd83084ffbcf))
+* update og image to use static og-logo.png ([#98](https://github.com/itsmemeworks/adhx/issues/98)) ([d6b1ea9](https://github.com/itsmemeworks/adhx/commit/d6b1ea9c6fd978bb44dbf243edc51b9c01dd7f7d))
+
+
+### Documentation
+
+* add branding assets section and fix og image references ([#99](https://github.com/itsmemeworks/adhx/issues/99)) ([3fa55e7](https://github.com/itsmemeworks/adhx/commit/3fa55e746dc9ae4da4e0b9179a76965f577fef25))
+* update deployment documentation with production infrastructure ([#97](https://github.com/itsmemeworks/adhx/issues/97)) ([b460a29](https://github.com/itsmemeworks/adhx/commit/b460a29a3f0dce221a74107b7d5bf36c5c6b5d14))
+
 ## [1.19.0](https://github.com/itsmemeworks/adhx/compare/v1.18.2...v1.19.0) (2026-02-04)
 
 
