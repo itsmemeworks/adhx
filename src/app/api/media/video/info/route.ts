@@ -73,46 +73,71 @@ export async function GET(request: NextRequest) {
       .filter((f) => f.bitrate && f.url?.includes('.mp4'))
       .sort((a, b) => (a.bitrate || 0) - (b.bitrate || 0))
 
-    // Helper to estimate file size from bitrate and duration
-    // bitrate is in bits/sec, so divide by 8 for bytes, multiply by duration
-    const estimateSize = (bitrate: number) => Math.round((bitrate / 8) * duration)
+    // Fetch actual file size via HEAD request (more accurate than bitrate estimation)
+    async function getActualSize(url: string): Promise<number> {
+      try {
+        const headResponse = await fetch(url, {
+          method: 'HEAD',
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+            Referer: 'https://twitter.com/',
+          },
+        })
+        if (headResponse.ok) {
+          const contentLength = headResponse.headers.get('content-length')
+          if (contentLength) {
+            return parseInt(contentLength, 10)
+          }
+        }
+      } catch {
+        // Fallback to bitrate estimation if HEAD fails
+      }
+      return 0
+    }
 
-    // Map to quality levels
+    // Map to quality levels and fetch actual sizes in parallel
     const qualityFormats: VideoInfo['formats'] = []
+    const sizePromises: Promise<number>[] = []
 
     if (mp4Formats.length > 0) {
       // Preview = lowest bitrate
-      const previewBitrate = mp4Formats[0].bitrate!
       qualityFormats.push({
         quality: 'preview',
-        bitrate: previewBitrate,
+        bitrate: mp4Formats[0].bitrate!,
         url: mp4Formats[0].url,
-        estimatedSize: estimateSize(previewBitrate),
+        estimatedSize: 0, // Will be filled in
       })
+      sizePromises.push(getActualSize(mp4Formats[0].url))
     }
 
     if (mp4Formats.length > 1) {
       // HD = second highest (typically 720p)
       const hdIndex = Math.max(0, mp4Formats.length - 2)
-      const hdBitrate = mp4Formats[hdIndex].bitrate!
       qualityFormats.push({
         quality: 'hd',
-        bitrate: hdBitrate,
+        bitrate: mp4Formats[hdIndex].bitrate!,
         url: mp4Formats[hdIndex].url,
-        estimatedSize: estimateSize(hdBitrate),
+        estimatedSize: 0, // Will be filled in
       })
+      sizePromises.push(getActualSize(mp4Formats[hdIndex].url))
     }
 
     if (mp4Formats.length > 0) {
       // Full = highest bitrate
-      const fullBitrate = mp4Formats[mp4Formats.length - 1].bitrate!
       qualityFormats.push({
         quality: 'full',
-        bitrate: fullBitrate,
+        bitrate: mp4Formats[mp4Formats.length - 1].bitrate!,
         url: mp4Formats[mp4Formats.length - 1].url,
-        estimatedSize: estimateSize(fullBitrate),
+        estimatedSize: 0, // Will be filled in
       })
+      sizePromises.push(getActualSize(mp4Formats[mp4Formats.length - 1].url))
     }
+
+    // Wait for all HEAD requests to complete
+    const sizes = await Promise.all(sizePromises)
+    sizes.forEach((size, i) => {
+      qualityFormats[i].estimatedSize = size
+    })
 
     // Videos > 5 minutes (300s) should use HLS to avoid proxy timeout
     const requiresHls = duration > 300 && hlsUrl !== null
