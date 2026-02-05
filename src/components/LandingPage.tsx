@@ -56,7 +56,7 @@ export function LandingPage() {
 
       {/* Hero Section */}
       <main>
-        <section aria-labelledby="hero-title" className="max-w-6xl mx-auto px-4 pt-20 pb-16">
+        <section aria-labelledby="hero-title" className="max-w-6xl mx-auto px-4 pt-12 pb-16">
           <div className="text-center">
           {/* Logo */}
           <div className="flex justify-center mb-3">
@@ -186,9 +186,9 @@ export function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="max-w-6xl mx-auto px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-        <p className="text-sm">
-          Your data stays private. We&apos;re too lazy to do anything sketchy with it anyway.
+      <footer className="max-w-6xl mx-auto px-4 py-8 text-center">
+        <p className="text-gray-400 dark:text-gray-500 font-indie-flower text-sm">
+          Save now. Read never. Find always.
         </p>
       </footer>
     </div>
