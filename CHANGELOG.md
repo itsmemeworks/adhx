@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.21.0](https://github.com/itsmemeworks/adhx/compare/v1.20.1...v1.21.0) (2026-02-05)
+
+
+### Features
+
+* update ios shortcut url and show to all devices ([#105](https://github.com/itsmemeworks/adhx/issues/105)) ([68f8ca6](https://github.com/itsmemeworks/adhx/commit/68f8ca6507c5b6a83b249e78a5be178805c4983d))
+
+
+### Bug Fixes
+
+* video playback in focus mode with sound ([#106](https://github.com/itsmemeworks/adhx/issues/106)) ([537ea78](https://github.com/itsmemeworks/adhx/commit/537ea78c1c3512d36e26e7d2fa74485ff53f2113))
+
+
+### Documentation
+
+* update production deployment to use fly cli ([#103](https://github.com/itsmemeworks/adhx/issues/103)) ([24ed2fa](https://github.com/itsmemeworks/adhx/commit/24ed2fa6c6474b62d4a86fdd6180816e35738db2))
+
 ## [1.20.1](https://github.com/itsmemeworks/adhx/compare/v1.20.0...v1.20.1) (2026-02-05)
 
 
