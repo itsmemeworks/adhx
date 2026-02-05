@@ -492,14 +492,14 @@ SENTRY_ENVIRONMENT=       # 'staging' or 'production' (set in fly.toml/fly.produ
 **Deployment flow:**
 1. Code merged to main → Release-please creates version bump PR
 2. Version PR merged → **Auto-deploys to staging only**
-3. Verify staging works → Manual deploy to production
+3. Verify staging works → Manual deploy to production via Fly CLI
 
 ```bash
 # Deploy to staging (default, also triggered by release-please)
 gh workflow run deploy.yml
 
-# Deploy to production (manual only, after verifying staging)
-gh workflow run deploy.yml -f environment=production
+# Deploy to production (via Fly CLI - GitHub Actions token doesn't have prod access)
+fly deploy --config fly.production.toml --app adhx-prod
 
 # Check deployed versions
 curl -s https://adhx.fly.dev/api/health | jq .version  # staging
