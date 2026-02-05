@@ -13,7 +13,7 @@ export function initSentry() {
 
   Sentry.init({
     dsn: SENTRY_DSN,
-    environment: process.env.NODE_ENV || 'development',
+    environment: process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV || 'development',
     // Release tracking - links errors to specific versions
     release: SENTRY_RELEASE ? `adhx@${SENTRY_RELEASE}` : undefined,
     // Performance monitoring sample rate

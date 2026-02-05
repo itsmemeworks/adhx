@@ -1,7 +1,7 @@
-# Fly.io configuration for ADHX
+# Fly.io configuration for ADHX Production
 # See https://fly.io/docs/reference/configuration/
 
-app = 'adhx'
+app = 'adhx-prod'
 primary_region = 'lhr'
 
 [build]
@@ -9,7 +9,7 @@ primary_region = 'lhr'
 [env]
   NODE_ENV = 'production'
   DATABASE_PATH = '/data/adhx.db'
-  SENTRY_ENVIRONMENT = 'staging'
+  SENTRY_ENVIRONMENT = 'production'
 
 [http_service]
   internal_port = 3000
@@ -34,5 +34,5 @@ primary_region = 'lhr'
   memory_mb = 1024
 
 [mounts]
-  source = 'adhx_data'
+  source = 'adhx_prod_data'
   destination = '/data'
