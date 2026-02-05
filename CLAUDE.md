@@ -224,10 +224,10 @@ When generating Open Graph metadata for social unfurling, images are selected in
 **Key distinction**: `logo.png` is the app logo (used on website/favicon). `og-logo.png` is the branded OG image (1200×630) used for all social sharing previews.
 
 ### iOS Shortcut Integration
-iOS users can share tweets via the native share sheet using an iOS Shortcut that transforms X/Twitter URLs to ADHX preview URLs.
+Users can share tweets via the iOS Shortcuts app, transforming X/Twitter URLs to ADHX preview URLs.
 
-**Shortcut ID:** `b5f2a1999b734572961bdf2b063fce65`
-**iCloud URL:** `https://www.icloud.com/shortcuts/b5f2a1999b734572961bdf2b063fce65`
+**Shortcut ID:** `0d187480099b4d34a745ec8750a4587b`
+**iCloud URL:** `https://www.icloud.com/shortcuts/0d187480099b4d34a745ec8750a4587b`
 
 **User flow:**
 1. User views tweet in Safari/X app
@@ -236,22 +236,8 @@ iOS users can share tweets via the native share sheet using an iOS Shortcut that
 4. Opens ADHX preview with full tweet content and media (no login walls)
 
 **Implementation:**
-- `src/components/feed/utils.tsx` - `isIOSDevice()` detects iOS (handles iPadOS 13+ edge case)
-- `src/components/LandingPage.tsx` - `IOSShortcutPromo` component (shown only on iOS)
-- `src/app/settings/SettingsClient.tsx` - `IOSShortcutCard` component (shown only on iOS)
-
-**iOS Detection Pattern:**
-```typescript
-export function isIOSDevice(): boolean {
-  if (typeof window === 'undefined') return false
-  const userAgent = navigator.userAgent || ''
-  // iPadOS 13+ reports as MacIntel but has touch
-  return /iPad|iPhone|iPod/.test(userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-}
-```
-
-Components use `useState(false)` + `useEffect` pattern to detect iOS client-side, preventing SSR hydration mismatches.
+- `src/components/LandingPage.tsx` - `ShortcutPromo` component (shown to all users)
+- `src/app/settings/SettingsClient.tsx` - `ShortcutCard` component (shown to all users)
 
 ### Typography & Reading Preferences
 ADHD-friendly font system with user selection:
@@ -525,14 +511,14 @@ SENTRY_ENVIRONMENT=       # 'staging' or 'production' (set in fly.toml/fly.produ
 **Deployment flow:**
 1. Code merged to main → Release-please creates version bump PR
 2. Version PR merged → **Auto-deploys to staging only**
-3. Verify staging works → Manual deploy to production
+3. Verify staging works → Manual deploy to production via Fly CLI
 
 ```bash
 # Deploy to staging (default, also triggered by release-please)
 gh workflow run deploy.yml
 
-# Deploy to production (manual only, after verifying staging)
-gh workflow run deploy.yml -f environment=production
+# Deploy to production (via Fly CLI - GitHub Actions token doesn't have prod access)
+fly deploy --config fly.production.toml --app adhx-prod
 
 # Check deployed versions
 curl -s https://adhx.fly.dev/api/health | jq .version  # staging
