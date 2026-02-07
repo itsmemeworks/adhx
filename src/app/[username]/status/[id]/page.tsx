@@ -4,8 +4,8 @@ import { getSession } from '@/lib/auth/session'
 import { QuickAddLanding } from '@/components/QuickAddLanding'
 import { TweetPreviewLanding } from '@/components/TweetPreviewLanding'
 import { fetchTweetData, type FxTwitterResponse } from '@/lib/media/fxembed'
-import { truncate, formatCount } from '@/lib/utils/format'
-import { getOgImage } from '@/lib/utils/og-image'
+import { truncate } from '@/lib/utils/format'
+import { getOgImages } from '@/lib/utils/og-image'
 
 type FxTweet = NonNullable<FxTwitterResponse['tweet']>
 
@@ -62,9 +62,9 @@ function buildJsonLd(tweet: FxTweet, baseUrl: string, username: string, id: stri
   }
 
   // Add image
-  const ogImage = getOgImage(tweet, baseUrl)
-  if (ogImage && !ogImage.endsWith('/og-logo.png')) {
-    jsonLd.image = ogImage
+  const ogImages = getOgImages(tweet, baseUrl)
+  if (ogImages[0] && !ogImages[0].url.endsWith('/og-logo.png')) {
+    jsonLd.image = ogImages[0].url
   }
 
   // Add video
@@ -121,6 +121,30 @@ export default async function QuickAddPage({ params }: Props) {
   return <QuickAddLanding username={username} tweetId={id} />
 }
 
+/**
+ * Build a rich OG description with quote tweet and external link context.
+ */
+function buildDescription(tweet: FxTweet): string {
+  const parts: string[] = []
+
+  // Main tweet text
+  const tweetText = tweet.text || tweet.article?.preview_text || tweet.article?.title || ''
+  if (tweetText) parts.push(tweetText)
+
+  // Quote tweet context
+  if (tweet.quote?.text) {
+    parts.push(`QT @${tweet.quote.author.screen_name}: "${truncate(tweet.quote.text, 120)}"`)
+  }
+
+  // External link title
+  if (tweet.external?.title) {
+    parts.push(`\u{1f517} ${tweet.external.title}`)
+  }
+
+  const joined = parts.join(' — ')
+  return truncate(joined, 500)
+}
+
 // Generate dynamic metadata for social unfurling
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username, id } = await params
@@ -145,38 +169,37 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const canonicalUrl = `${baseUrl}/${username}/status/${id}`
 
   // Build dynamic metadata with tweet content
   const isArticle = !!tweet.article?.title
   const tweetText = tweet.text || ''
   const articleTitle = tweet.article?.title || ''
-  const articlePreview = tweet.article?.preview_text || ''
 
-  // Choose best text source
-  const displayText = tweetText || articlePreview || articleTitle
-
-  // Build engagement suffix for social proof in unfurls
-  const engagementParts: string[] = []
-  if (tweet.likes >= 100) engagementParts.push(`${formatCount(tweet.likes)} likes`)
-  if (tweet.retweets >= 50) engagementParts.push(`${formatCount(tweet.retweets)} reposts`)
-  const engagementSuffix = engagementParts.length > 0 ? ` (${engagementParts.join(', ')})` : ''
-
-  // Expand description to 280 chars (full tweet length) + engagement
-  const maxDescLen = 280 - engagementSuffix.length
-  const description = truncate(displayText, maxDescLen) + engagementSuffix
+  const description = buildDescription(tweet)
 
   // Title: cleaner for articles, informative for regular tweets
   const title = isArticle
     ? `${articleTitle} - @${tweet.author.screen_name}`
     : `@${tweet.author.screen_name}: "${truncate(tweetText, 50)}" - Save to ADHX`
 
-  // Select best OG image
-  const ogImage = getOgImage(tweet, baseUrl)
+  // Select best OG images with real dimensions
+  const ogImages = getOgImages(tweet, baseUrl)
 
   // OG title: for articles use article title directly
   const ogTitle = isArticle
     ? articleTitle
     : `@${tweet.author.screen_name} on X`
+
+  // Build OG video tags for video tweets
+  const ogVideos = tweet.media?.videos?.length
+    ? tweet.media.videos.slice(0, 1).map((video) => ({
+        url: video.url,
+        width: video.width,
+        height: video.height,
+        type: 'video/mp4' as const,
+      }))
+    : undefined
 
   return {
     title,
@@ -186,25 +209,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: ogTitle,
       description,
       siteName: 'ADHX',
+      url: canonicalUrl,
       authors: [`https://x.com/${tweet.author.screen_name}`],
       publishedTime: tweet.created_at,
-      images: [
-        {
-          url: ogImage,
-          width: 1200,
-          height: 630,
-          alt: `Tweet by @${tweet.author.screen_name}`,
-        },
-      ],
+      images: ogImages.map((img) => ({
+        url: img.url,
+        ...(img.width && img.height ? { width: img.width, height: img.height } : {}),
+        alt: `Tweet by @${tweet.author.screen_name}`,
+      })),
+      videos: ogVideos,
     },
     twitter: {
       card: 'summary_large_image',
       title: isArticle ? articleTitle : `Save @${tweet.author.screen_name}'s tweet - ADHX`,
       description,
-      images: [ogImage],
+      images: [ogImages[0].url],
       creator: `@${tweet.author.screen_name}`,
     },
     alternates: {
+      canonical: canonicalUrl,
       types: {
         'application/json': `${baseUrl}/api/share/tweet/${username}/${id}`,
       },
