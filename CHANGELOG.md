@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.25.0](https://github.com/itsmemeworks/adhx/compare/v1.24.0...v1.25.0) (2026-02-07)
+
+
+### Features
+
+* maximize social unfurl richness for whatsapp and all platforms ([#117](https://github.com/itsmemeworks/adhx/issues/117)) ([41e63a6](https://github.com/itsmemeworks/adhx/commit/41e63a62f6d6c0b4d19dec2e91d049a6b12258bc))
+
 ## [1.24.0](https://github.com/itsmemeworks/adhx/compare/v1.23.0...v1.24.0) (2026-02-07)
 
 
