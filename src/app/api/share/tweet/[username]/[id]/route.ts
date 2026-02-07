@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchTweetData, type FxTwitterResponse } from '@/lib/media/fxembed'
 import { articleBlocksToMarkdown } from '@/lib/utils/article-text'
+import { db } from '@/lib/db'
+import { bookmarks, bookmarkTags, tagShares, oauthTokens } from '@/lib/db/schema'
+import { eq, and, sql } from 'drizzle-orm'
 
 type FxTweet = NonNullable<FxTwitterResponse['tweet']>
 
@@ -116,6 +119,67 @@ function buildTweetResponse(tweet: FxTweet) {
 }
 
 /**
+ * Build ADHX curation context for a tweet.
+ * Only exposes aggregate counts and public tag info — no user IDs.
+ */
+function buildAdhxContext(tweetId: string) {
+  try {
+    // Count distinct users who bookmarked this tweet
+    const [countResult] = db
+      .select({ count: sql<number>`COUNT(DISTINCT ${bookmarks.userId})` })
+      .from(bookmarks)
+      .where(eq(bookmarks.id, tweetId))
+      .all()
+
+    const savedByCount = countResult?.count ?? 0
+    if (savedByCount === 0) return null
+
+    // Find public tags containing this tweet
+    const publicTagResults = db
+      .select({
+        tag: tagShares.tag,
+        username: oauthTokens.username,
+      })
+      .from(bookmarkTags)
+      .innerJoin(
+        tagShares,
+        and(
+          eq(bookmarkTags.userId, tagShares.userId),
+          eq(bookmarkTags.tag, tagShares.tag),
+          eq(tagShares.isPublic, true)
+        )
+      )
+      .innerJoin(oauthTokens, eq(tagShares.userId, oauthTokens.userId))
+      .where(eq(bookmarkTags.bookmarkId, tweetId))
+      .all()
+
+    // Deduplicate (same tag+username could appear if multiple users tag the same tweet)
+    const seen = new Set<string>()
+    const publicTags = publicTagResults
+      .filter((r) => {
+        if (!r.username) return false
+        const key = `${r.username}/${r.tag}`
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
+      .map((r) => ({
+        tag: r.tag,
+        curator: r.username!,
+        url: `/t/${r.username}/${r.tag}`,
+      }))
+
+    return {
+      savedByCount,
+      publicTags,
+    }
+  } catch (error) {
+    console.error('Error building ADHX context:', error)
+    return null
+  }
+}
+
+/**
  * GET /api/share/tweet/[username]/[id]
  *
  * Public endpoint returning clean JSON for a tweet.
@@ -154,6 +218,15 @@ export async function GET(
     }
 
     const response = buildTweetResponse(data.tweet)
+
+    // Enrich with ADHX curation context
+    const adhxContext = buildAdhxContext(id)
+    if (adhxContext) {
+      response.adhxContext = {
+        ...adhxContext,
+        previewUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://adhx.com'}/${username}/status/${id}`,
+      }
+    }
 
     return NextResponse.json(response, {
       headers: {

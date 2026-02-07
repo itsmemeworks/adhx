@@ -1,0 +1,30 @@
+# ADHX
+
+> ADHX is a public Twitter/X content viewer and bookmark manager. Public tweet previews, curated tag collections, and structured tweet data are available without authentication.
+
+## Public APIs
+
+- [Tweet JSON](/api/share/tweet/{username}/{id}): Structured JSON for any tweet — author, text, engagement metrics, media URLs, article content as markdown, quote tweets, external links. 5-min cache. No auth required.
+- [Tag Collection](/api/share/tag/by-name/{username}/{tag}): All tweets in a user's public tag collection with full media metadata. No auth required.
+
+## Public Pages
+
+- [Tweet Previews](/{username}/status/{id}): Rich HTML preview of any tweet with Schema.org JSON-LD (SocialMediaPosting), OG tags, and semantic HTML. No login wall.
+- [Tag Collections](/t/{username}/{tag}): Browsable gallery of curated tweet collections organized by tag.
+
+## Content Types
+
+- Tweet text with expanded URLs
+- Author profiles (name, username, avatar)
+- Engagement metrics (likes, retweets, replies, views)
+- Photos and video thumbnails with direct media URLs
+- X Articles converted to clean markdown
+- Quote tweet chains
+- External link previews
+
+## Usage Notes
+
+- All public APIs return JSON with Cache-Control headers
+- No API key or authentication required for public content
+- Media URLs served via FxTwitter CDN proxies (no CORS issues)
+- Tweet preview pages include `<link rel="alternate" type="application/json">` pointing to the JSON API

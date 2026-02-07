@@ -90,7 +90,7 @@ A Twitter/X bookmark manager for people who bookmark everything and read nothing
 pnpm install
 pnpm dev         # Start dev server at localhost:3000
 pnpm build       # Production build
-pnpm test        # Run all 706 tests (40 test files)
+pnpm test        # Run all 719 tests (41 test files)
 ```
 
 ## Tech Stack
@@ -316,9 +316,30 @@ When generating Open Graph metadata for social unfurling, images are selected in
 - `articleBlocksToMarkdown()` converts X Article content blocks to clean markdown
 - Handles headings, paragraphs, images, tweets, and dividers
 
+**Tweet API Enrichment (`adhxContext`)**:
+The public tweet JSON API enriches responses with ADHX curation context when the tweet exists in the local database:
+- `savedByCount` — number of distinct ADHX users who bookmarked this tweet (no user IDs exposed)
+- `publicTags` — list of public tag collections containing this tweet (tag name, curator username, URL)
+- `previewUrl` — canonical ADHX preview URL for the tweet
+- Only appears when `savedByCount > 0`; private tags are never included
+
 Key files:
-- `src/app/api/share/tweet/[username]/[id]/route.ts` — Public tweet JSON API
+- `src/app/api/share/tweet/[username]/[id]/route.ts` — Public tweet JSON API + `adhxContext` enrichment
 - `src/lib/utils/article-text.ts` — Article content block → markdown conversion
+
+### LLM Discovery (`llms.txt`)
+`public/llms.txt` follows the [llmstxt.org](https://llmstxt.org/) standard. Declares ADHX's public APIs, content types, and usage patterns for AI agents. Served as a static file at `/llms.txt`.
+
+### Dynamic Sitemap
+`src/app/sitemap.ts` generates a dynamic sitemap including:
+- Homepage (priority 1)
+- All public tag collection pages at `/t/{username}/{tag}` (priority 0.7, daily)
+- All tweet preview URLs from public tags at `/{author}/status/{id}` (priority 0.5, weekly)
+- Tweet URLs are deduplicated across multiple tags
+- Private tags and their tweets are never included
+- Falls back to homepage-only if database queries fail (e.g., during static build)
+
+`public/robots.txt` includes `Allow: /t/` and `Allow: /api/share/` to explicitly permit crawling of public content routes while keeping `/api/` disallowed for authenticated endpoints.
 
 ### Save Methods (Platform-Aware)
 The app offers multiple ways to save tweets, shown contextually based on the user's platform:
@@ -746,7 +767,7 @@ The app will initialize a fresh SQLite database with the new schema. Users will 
 ## Testing
 
 ```bash
-pnpm test         # Run all 706 tests (40 test files)
+pnpm test         # Run all 719 tests (41 test files)
 pnpm test:watch   # Watch mode
 ```
 
@@ -767,6 +788,7 @@ Test files in `src/__tests__/`:
 - `url-prefix-route.test.ts` - URL prefix route parameter validation
 - `platform.test.ts` - Platform detection (iOS/Android/desktop, SSR safety)
 - `share-page.test.ts` - PWA Share Target URL parsing and redirect logic
+- `sitemap.test.ts` - Dynamic sitemap generation with public tags and deduplication
 - `utils.test.ts` - General utilities
 
 API route tests in `src/__tests__/api/`:
@@ -784,7 +806,7 @@ API route tests in `src/__tests__/api/`:
 - `media-video-info.test.ts` - Video info endpoint, HLS detection
 - `account.test.ts` - Account management (clear data, delete)
 - `share-tag-clone.test.ts` - Tag sharing and cloning functionality
-- `share-tweet.test.ts` - Public tweet JSON API
+- `share-tweet.test.ts` - Public tweet JSON API and adhxContext enrichment
 - `stats.test.ts` - User stats endpoint
 
 All API tests verify multi-user isolation (User A's actions don't affect User B).

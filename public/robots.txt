@@ -4,6 +4,10 @@
 User-agent: *
 Allow: /
 
+# Allow public content routes
+Allow: /t/
+Allow: /api/share/
+
 # Disallow private/API routes
 Disallow: /api/
 Disallow: /settings
