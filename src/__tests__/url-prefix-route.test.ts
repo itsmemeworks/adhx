@@ -181,7 +181,7 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
 
     it('truncates long tweet text in metadata', async () => {
       const { fetchTweetData } = await import('@/lib/media/fxembed')
-      const longText = 'A'.repeat(200) // Longer than 160 char limit
+      const longText = 'A'.repeat(300) // Longer than 280 char limit
 
       vi.mocked(fetchTweetData).mockResolvedValue({
         code: 200,
@@ -212,8 +212,8 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
         params: Promise.resolve({ username: 'user', id: '123' }),
       })
 
-      // Description should be truncated to 160 chars
-      expect(metadata.description!.length).toBeLessThanOrEqual(163) // 160 + "..."
+      // Description should be truncated to 280 chars (expanded for richer social unfurls)
+      expect(metadata.description!.length).toBeLessThanOrEqual(280)
     })
   })
 

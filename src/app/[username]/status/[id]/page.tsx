@@ -3,9 +3,11 @@ import { Metadata } from 'next'
 import { getSession } from '@/lib/auth/session'
 import { QuickAddLanding } from '@/components/QuickAddLanding'
 import { TweetPreviewLanding } from '@/components/TweetPreviewLanding'
-import { fetchTweetData } from '@/lib/media/fxembed'
-import { truncate } from '@/lib/utils/format'
+import { fetchTweetData, type FxTwitterResponse } from '@/lib/media/fxembed'
+import { truncate, formatCount } from '@/lib/utils/format'
 import { getOgImage } from '@/lib/utils/og-image'
+
+type FxTweet = NonNullable<FxTwitterResponse['tweet']>
 
 interface Props {
   params: Promise<{ username: string; id: string }>
@@ -20,6 +22,64 @@ async function getTweetData(username: string, tweetId: string) {
     console.error('Failed to fetch tweet preview:', error)
     return null
   }
+}
+
+/**
+ * Build Schema.org JSON-LD structured data for a tweet.
+ */
+function buildJsonLd(tweet: FxTweet, baseUrl: string, username: string, id: string) {
+  const jsonLd: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'SocialMediaPosting',
+    headline: tweet.article?.title || truncate(tweet.text || `Tweet by @${tweet.author.screen_name}`, 110),
+    articleBody: tweet.text || undefined,
+    author: {
+      '@type': 'Person',
+      name: tweet.author.name,
+      url: `https://x.com/${tweet.author.screen_name}`,
+      image: tweet.author.avatar_url,
+    },
+    datePublished: tweet.created_at,
+    url: tweet.url || `https://x.com/${username}/status/${id}`,
+    mainEntityOfPage: `${baseUrl}/${username}/status/${id}`,
+    interactionStatistic: [
+      {
+        '@type': 'InteractionCounter',
+        interactionType: 'https://schema.org/LikeAction',
+        userInteractionCount: tweet.likes,
+      },
+      {
+        '@type': 'InteractionCounter',
+        interactionType: 'https://schema.org/ShareAction',
+        userInteractionCount: tweet.retweets,
+      },
+      {
+        '@type': 'InteractionCounter',
+        interactionType: 'https://schema.org/CommentAction',
+        userInteractionCount: tweet.replies,
+      },
+    ],
+  }
+
+  // Add image
+  const ogImage = getOgImage(tweet, baseUrl)
+  if (ogImage && !ogImage.endsWith('/og-logo.png')) {
+    jsonLd.image = ogImage
+  }
+
+  // Add video
+  if (tweet.media?.videos?.[0]) {
+    const video = tweet.media.videos[0]
+    jsonLd.video = {
+      '@type': 'VideoObject',
+      contentUrl: video.url,
+      thumbnailUrl: video.thumbnail_url,
+      width: video.width,
+      height: video.height,
+    }
+  }
+
+  return jsonLd
 }
 
 export default async function QuickAddPage({ params }: Props) {
@@ -43,7 +103,18 @@ export default async function QuickAddPage({ params }: Props) {
 
   // Show rich preview if we have tweet data
   if (tweet) {
-    return <TweetPreviewLanding username={username} tweetId={id} tweet={tweet} isAuthenticated={!!session} />
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const jsonLd = buildJsonLd(tweet, baseUrl, username, id)
+
+    return (
+      <>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        <TweetPreviewLanding username={username} tweetId={id} tweet={tweet} isAuthenticated={!!session} />
+      </>
+    )
   }
 
   // Fallback: Show minimal landing page if FxTwitter API failed
@@ -73,33 +144,50 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
   }
 
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+
   // Build dynamic metadata with tweet content
-  // For article tweets, use article title/preview since tweet.text is often empty
   const isArticle = !!tweet.article?.title
   const tweetText = tweet.text || ''
   const articleTitle = tweet.article?.title || ''
   const articlePreview = tweet.article?.preview_text || ''
 
-  // Choose best text source: tweet text > article preview > article title
+  // Choose best text source
   const displayText = tweetText || articlePreview || articleTitle
-  const description = truncate(displayText, 160)
 
-  // Title shows article title if it's an article, otherwise tweet text
-  const titleContent = isArticle ? articleTitle : truncate(tweetText, 50)
-  const title = `@${tweet.author.screen_name}: "${truncate(titleContent, 50)}" - Save to ADHX`
+  // Build engagement suffix for social proof in unfurls
+  const engagementParts: string[] = []
+  if (tweet.likes >= 100) engagementParts.push(`${formatCount(tweet.likes)} likes`)
+  if (tweet.retweets >= 50) engagementParts.push(`${formatCount(tweet.retweets)} reposts`)
+  const engagementSuffix = engagementParts.length > 0 ? ` (${engagementParts.join(', ')})` : ''
 
-  // Select best OG image: direct media → article cover → quote media → external → logo
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  // Expand description to 280 chars (full tweet length) + engagement
+  const maxDescLen = 280 - engagementSuffix.length
+  const description = truncate(displayText, maxDescLen) + engagementSuffix
+
+  // Title: cleaner for articles, informative for regular tweets
+  const title = isArticle
+    ? `${articleTitle} - @${tweet.author.screen_name}`
+    : `@${tweet.author.screen_name}: "${truncate(tweetText, 50)}" - Save to ADHX`
+
+  // Select best OG image
   const ogImage = getOgImage(tweet, baseUrl)
+
+  // OG title: for articles use article title directly
+  const ogTitle = isArticle
+    ? articleTitle
+    : `@${tweet.author.screen_name} on X`
 
   return {
     title,
     description,
     openGraph: {
       type: 'article',
-      title: `@${tweet.author.screen_name} on X`,
+      title: ogTitle,
       description,
       siteName: 'ADHX',
+      authors: [`https://x.com/${tweet.author.screen_name}`],
+      publishedTime: tweet.created_at,
       images: [
         {
           url: ogImage,
@@ -111,10 +199,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     twitter: {
       card: 'summary_large_image',
-      title: `Save @${tweet.author.screen_name}'s tweet - ADHX`,
+      title: isArticle ? articleTitle : `Save @${tweet.author.screen_name}'s tweet - ADHX`,
       description,
       images: [ogImage],
-      creator: '@adhx_app',
+      creator: `@${tweet.author.screen_name}`,
+    },
+    alternates: {
+      types: {
+        'application/json': `${baseUrl}/api/share/tweet/${username}/${id}`,
+      },
     },
   }
 }

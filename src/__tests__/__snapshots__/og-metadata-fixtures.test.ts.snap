@@ -6,13 +6,16 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > '4-images':
 
 Dude spills some sauce on LinkedIn. 
 
-Open this to see the entire post",
+Open this to see the entire post (2.4K likes, 98 reposts)",
   "openGraph": {
+    "authors": [
+      "https://x.com/iamgdsa",
+    ],
     "description": "Apparently, a 19 year old built Wisprflow's UGC program to 500M views in 60 days.
 
 Dude spills some sauce on LinkedIn. 
 
-Open this to see the entire post",
+Open this to see the entire post (2.4K likes, 98 reposts)",
     "images": [
       {
         "height": 630,
@@ -20,6 +23,7 @@ Open this to see the entire post",
         "width": 1200,
       },
     ],
+    "publishedTime": "Mon Jan 12 18:34:37 +0000 2026",
     "siteName": "ADHX",
     "title": "@iamgdsa on X",
     "type": "article",
@@ -27,15 +31,16 @@ Open this to see the entire post",
   "title": "@iamgdsa: "Apparently, a 19 year old built Wisprflow's UGC p…" - Save to ADHX",
   "twitter": {
     "card": "summary_large_image",
+    "creator": "@iamgdsa",
     "description": "Apparently, a 19 year old built Wisprflow's UGC program to 500M views in 60 days.
 
 Dude spills some sauce on LinkedIn. 
 
-Open this to see the entire post",
+Open this to see the entire post (2.4K likes, 98 reposts)",
     "images": [
       "https://pbs.twimg.com/media/G-e63eNWkAATqEB.jpg",
     ],
-    "title": "@iamgdsa on X",
+    "title": "Save @iamgdsa's tweet - ADHX",
   },
 }
 `;
@@ -44,11 +49,14 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-no
 {
   "description": "human data will be a $1 trillion/year market
 This is not a short-term prediction. It is a structural claim about where the economy converges.
-To believe this,…",
+To believe this, you need to accept two assumptions: (4.8K likes, 629 reposts)",
   "openGraph": {
+    "authors": [
+      "https://x.com/aliniikk",
+    ],
     "description": "human data will be a $1 trillion/year market
 This is not a short-term prediction. It is a structural claim about where the economy converges.
-To believe this,…",
+To believe this, you need to accept two assumptions: (4.8K likes, 629 reposts)",
     "images": [
       {
         "height": 630,
@@ -56,29 +64,34 @@ To believe this,…",
         "width": 1200,
       },
     ],
+    "publishedTime": "Thu Jan 08 19:34:17 +0000 2026",
     "siteName": "ADHX",
-    "title": "@aliniikk on X",
+    "title": "human data will be a $1 trillion/year market",
     "type": "article",
   },
-  "title": "@aliniikk: "human data will be a $1 trillion/year market" - Save to ADHX",
+  "title": "human data will be a $1 trillion/year market - @aliniikk",
   "twitter": {
     "card": "summary_large_image",
+    "creator": "@aliniikk",
     "description": "human data will be a $1 trillion/year market
 This is not a short-term prediction. It is a structural claim about where the economy converges.
-To believe this,…",
+To believe this, you need to accept two assumptions: (4.8K likes, 629 reposts)",
     "images": [
       "https://adhx.com/og-logo.png",
     ],
-    "title": "@aliniikk on X",
+    "title": "human data will be a $1 trillion/year market",
   },
 }
 `;
 
 exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-with-media': generates valid metadata structure 1`] = `
 {
-  "description": "Guys. I finally did it. After years of fidgeting with macros, intermittent fasting, and diet “hacks”, I finally got hyperlean. My visceral fat vanished, muscle…",
+  "description": "Guys. I finally did it. After years of fidgeting with macros, intermittent fasting, and diet “hacks”, I finally got hyperlean. My visceral fat vanished, muscles are fuller, and vascularity is through (4.4K likes, 220 reposts)",
   "openGraph": {
-    "description": "Guys. I finally did it. After years of fidgeting with macros, intermittent fasting, and diet “hacks”, I finally got hyperlean. My visceral fat vanished, muscle…",
+    "authors": [
+      "https://x.com/NoahRyanCo",
+    ],
+    "description": "Guys. I finally did it. After years of fidgeting with macros, intermittent fasting, and diet “hacks”, I finally got hyperlean. My visceral fat vanished, muscles are fuller, and vascularity is through (4.4K likes, 220 reposts)",
     "images": [
       {
         "height": 630,
@@ -86,18 +99,20 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-wi
         "width": 1200,
       },
     ],
+    "publishedTime": "Wed Jan 07 17:42:16 +0000 2026",
     "siteName": "ADHX",
-    "title": "@NoahRyanCo on X",
+    "title": "How to Get Shredded (Without Even Trying)",
     "type": "article",
   },
-  "title": "@NoahRyanCo: "How to Get Shredded (Without Even Trying)" - Save to ADHX",
+  "title": "How to Get Shredded (Without Even Trying) - @NoahRyanCo",
   "twitter": {
     "card": "summary_large_image",
-    "description": "Guys. I finally did it. After years of fidgeting with macros, intermittent fasting, and diet “hacks”, I finally got hyperlean. My visceral fat vanished, muscle…",
+    "creator": "@NoahRyanCo",
+    "description": "Guys. I finally did it. After years of fidgeting with macros, intermittent fasting, and diet “hacks”, I finally got hyperlean. My visceral fat vanished, muscles are fuller, and vascularity is through (4.4K likes, 220 reposts)",
     "images": [
       "https://pbs.twimg.com/media/G-E_92mXcAALnrI.jpg",
     ],
-    "title": "@NoahRyanCo on X",
+    "title": "How to Get Shredded (Without Even Trying)",
   },
 }
 `;
@@ -108,13 +123,20 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'emoji-twee
 
 1️⃣ Claim your own named account in the Avici app
 
-2️⃣ Fund…",
+2️⃣ Fund fast via SEPA Instant, ACH, Wire, and Direct Deposit
+
+3️⃣ Take full self-custodial control of… (2.2K likes, 821 reposts)",
   "openGraph": {
+    "authors": [
+      "https://x.com/moonpay",
+    ],
     "description": "BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Named Virtual Accounts powered by @moonpay & @iron
 
 1️⃣ Claim your own named account in the Avici app
 
-2️⃣ Fund…",
+2️⃣ Fund fast via SEPA Instant, ACH, Wire, and Direct Deposit
+
+3️⃣ Take full self-custodial control of… (2.2K likes, 821 reposts)",
     "images": [
       {
         "height": 630,
@@ -122,6 +144,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'emoji-twee
         "width": 1200,
       },
     ],
+    "publishedTime": "Fri Jan 09 13:59:16 +0000 2026",
     "siteName": "ADHX",
     "title": "@moonpay on X",
     "type": "article",
@@ -129,15 +152,18 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'emoji-twee
   "title": "@moonpay: "BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Na…" - Save to ADHX",
   "twitter": {
     "card": "summary_large_image",
+    "creator": "@moonpay",
     "description": "BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Named Virtual Accounts powered by @moonpay & @iron
 
 1️⃣ Claim your own named account in the Avici app
 
-2️⃣ Fund…",
+2️⃣ Fund fast via SEPA Instant, ACH, Wire, and Direct Deposit
+
+3️⃣ Take full self-custodial control of… (2.2K likes, 821 reposts)",
     "images": [
       "https://pbs.twimg.com/amplify_video_thumb/2009617113384706048/img/uUdl5DT48QRZSEHb.jpg",
     ],
-    "title": "@moonpay on X",
+    "title": "Save @moonpay's tweet - ADHX",
   },
 }
 `;
@@ -146,11 +172,18 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-
 {
   "description": "Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory
 
-We built a fully automated system that repurposes, localizes, and launches winning TikTok Shop cont…",
+We built a fully automated system that repurposes, localizes, and launches winning TikTok Shop content across hundreds of creator-style accounts.
+
+It’s so effective it feels like running Facebo… (4.5K likes, 491 reposts)",
   "openGraph": {
+    "authors": [
+      "https://x.com/maverickecom",
+    ],
     "description": "Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory
 
-We built a fully automated system that repurposes, localizes, and launches winning TikTok Shop cont…",
+We built a fully automated system that repurposes, localizes, and launches winning TikTok Shop content across hundreds of creator-style accounts.
+
+It’s so effective it feels like running Facebo… (4.5K likes, 491 reposts)",
     "images": [
       {
         "height": 630,
@@ -158,6 +191,7 @@ We built a fully automated system that repurposes, localizes, and launches winni
         "width": 1200,
       },
     ],
+    "publishedTime": "Wed Jan 14 17:25:23 +0000 2026",
     "siteName": "ADHX",
     "title": "@maverickecom on X",
     "type": "article",
@@ -165,13 +199,16 @@ We built a fully automated system that repurposes, localizes, and launches winni
   "title": "@maverickecom: "Nano Banana + Fastmoss + Manus + Veo3 = AI Conten…" - Save to ADHX",
   "twitter": {
     "card": "summary_large_image",
+    "creator": "@maverickecom",
     "description": "Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory
 
-We built a fully automated system that repurposes, localizes, and launches winning TikTok Shop cont…",
+We built a fully automated system that repurposes, localizes, and launches winning TikTok Shop content across hundreds of creator-style accounts.
+
+It’s so effective it feels like running Facebo… (4.5K likes, 491 reposts)",
     "images": [
       "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg",
     ],
-    "title": "@maverickecom on X",
+    "title": "Save @maverickecom's tweet - ADHX",
   },
 }
 `;
@@ -182,13 +219,20 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-
 
 U.S state department made clear last night speaking on the UK and Keir Starmer ⬇️ 
 
-"The government has, indeed, repeat…",
+"The government has, indeed, repeatedly threatened to return Lucy Connolly to prison for benign political speech. 
+
+It also block… (3.0K likes, 538 reposts)",
   "openGraph": {
+    "authors": [
+      "https://x.com/BasilTheGreat",
+    ],
     "description": "🚨BREAKING: TRUMP FURIOUS WITH STARMER
 
 U.S state department made clear last night speaking on the UK and Keir Starmer ⬇️ 
 
-"The government has, indeed, repeat…",
+"The government has, indeed, repeatedly threatened to return Lucy Connolly to prison for benign political speech. 
+
+It also block… (3.0K likes, 538 reposts)",
     "images": [
       {
         "height": 630,
@@ -196,6 +240,7 @@ U.S state department made clear last night speaking on the UK and Keir Starmer �
         "width": 1200,
       },
     ],
+    "publishedTime": "Fri Jan 16 06:09:20 +0000 2026",
     "siteName": "ADHX",
     "title": "@BasilTheGreat on X",
     "type": "article",
@@ -205,15 +250,18 @@ U.S state department made clear last night speaking on the UK and Keir Starmer �
 U.S state…" - Save to ADHX",
   "twitter": {
     "card": "summary_large_image",
+    "creator": "@BasilTheGreat",
     "description": "🚨BREAKING: TRUMP FURIOUS WITH STARMER
 
 U.S state department made clear last night speaking on the UK and Keir Starmer ⬇️ 
 
-"The government has, indeed, repeat…",
+"The government has, indeed, repeatedly threatened to return Lucy Connolly to prison for benign political speech. 
+
+It also block… (3.0K likes, 538 reposts)",
     "images": [
       "https://pbs.twimg.com/media/G-w2zr6aEAAt-FN.png",
     ],
-    "title": "@BasilTheGreat on X",
+    "title": "Save @BasilTheGreat's tweet - ADHX",
   },
 }
 `;
@@ -226,15 +274,22 @@ The strike was real. The reversal was real.
 
 This is state-level controlled ignition.
 
-There was a greenlight. Then a…",
+There was a greenlight. Then a high-level override.
+Carrier strike groups moved. Bombers were armed.
+Evacuation flights were… (5.9K likes, 916 reposts)",
   "openGraph": {
+    "authors": [
+      "https://x.com/_The_Prophet__",
+    ],
     "description": "⚡️This is a live containment operation.
 
 The strike was real. The reversal was real.
 
 This is state-level controlled ignition.
 
-There was a greenlight. Then a…",
+There was a greenlight. Then a high-level override.
+Carrier strike groups moved. Bombers were armed.
+Evacuation flights were… (5.9K likes, 916 reposts)",
     "images": [
       {
         "height": 630,
@@ -242,6 +297,7 @@ There was a greenlight. Then a…",
         "width": 1200,
       },
     ],
+    "publishedTime": "Thu Jan 15 16:13:54 +0000 2026",
     "siteName": "ADHX",
     "title": "@_The_Prophet__ on X",
     "type": "article",
@@ -251,26 +307,32 @@ There was a greenlight. Then a…",
 The stri…" - Save to ADHX",
   "twitter": {
     "card": "summary_large_image",
+    "creator": "@_The_Prophet__",
     "description": "⚡️This is a live containment operation.
 
 The strike was real. The reversal was real.
 
 This is state-level controlled ignition.
 
-There was a greenlight. Then a…",
+There was a greenlight. Then a high-level override.
+Carrier strike groups moved. Bombers were armed.
+Evacuation flights were… (5.9K likes, 916 reposts)",
     "images": [
       "https://pbs.twimg.com/media/G-tNQK3akAAXwrR.jpg",
     ],
-    "title": "@_The_Prophet__ on X",
+    "title": "Save @_The_Prophet__'s tweet - ADHX",
   },
 }
 `;
 
 exports[`OG Metadata with Real Fixtures > Full metadata generation > 'plain-text': generates valid metadata structure 1`] = `
 {
-  "description": "What movie is 10/10, yet hardly anyone has heard of it?",
+  "description": "What movie is 10/10, yet hardly anyone has heard of it? (4.9K likes, 401 reposts)",
   "openGraph": {
-    "description": "What movie is 10/10, yet hardly anyone has heard of it?",
+    "authors": [
+      "https://x.com/TheCinesthetic",
+    ],
+    "description": "What movie is 10/10, yet hardly anyone has heard of it? (4.9K likes, 401 reposts)",
     "images": [
       {
         "height": 630,
@@ -278,6 +340,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'plain-text
         "width": 1200,
       },
     ],
+    "publishedTime": "Sun Jan 11 03:00:02 +0000 2026",
     "siteName": "ADHX",
     "title": "@TheCinesthetic on X",
     "type": "article",
@@ -285,11 +348,12 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'plain-text
   "title": "@TheCinesthetic: "What movie is 10/10, yet hardly anyone has heard…" - Save to ADHX",
   "twitter": {
     "card": "summary_large_image",
-    "description": "What movie is 10/10, yet hardly anyone has heard of it?",
+    "creator": "@TheCinesthetic",
+    "description": "What movie is 10/10, yet hardly anyone has heard of it? (4.9K likes, 401 reposts)",
     "images": [
       "https://adhx.com/og-logo.png",
     ],
-    "title": "@TheCinesthetic on X",
+    "title": "Save @TheCinesthetic's tweet - ADHX",
   },
 }
 `;
@@ -298,11 +362,14 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-i
 {
   "description": "for all of you guys that haven’t cracked organic yet
 
-you’re welcome",
+you’re welcome (1.1K likes)",
   "openGraph": {
+    "authors": [
+      "https://x.com/Nate_Google_",
+    ],
     "description": "for all of you guys that haven’t cracked organic yet
 
-you’re welcome",
+you’re welcome (1.1K likes)",
     "images": [
       {
         "height": 630,
@@ -310,6 +377,7 @@ you’re welcome",
         "width": 1200,
       },
     ],
+    "publishedTime": "Thu Jan 15 13:25:44 +0000 2026",
     "siteName": "ADHX",
     "title": "@Nate_Google_ on X",
     "type": "article",
@@ -317,22 +385,26 @@ you’re welcome",
   "title": "@Nate_Google_: "for all of you guys that haven’t cracked organic…" - Save to ADHX",
   "twitter": {
     "card": "summary_large_image",
+    "creator": "@Nate_Google_",
     "description": "for all of you guys that haven’t cracked organic yet
 
-you’re welcome",
+you’re welcome (1.1K likes)",
     "images": [
       "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg",
     ],
-    "title": "@Nate_Google_ on X",
+    "title": "Save @Nate_Google_'s tweet - ADHX",
   },
 }
 `;
 
 exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-text-tweet': generates valid metadata structure 1`] = `
 {
-  "description": "True",
+  "description": "True (3.2K likes, 423 reposts)",
   "openGraph": {
-    "description": "True",
+    "authors": [
+      "https://x.com/elonmusk",
+    ],
+    "description": "True (3.2K likes, 423 reposts)",
     "images": [
       {
         "height": 630,
@@ -340,6 +412,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-t
         "width": 1200,
       },
     ],
+    "publishedTime": "Fri Jan 16 05:55:05 +0000 2026",
     "siteName": "ADHX",
     "title": "@elonmusk on X",
     "type": "article",
@@ -347,20 +420,24 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-t
   "title": "@elonmusk: "True" - Save to ADHX",
   "twitter": {
     "card": "summary_large_image",
-    "description": "True",
+    "creator": "@elonmusk",
+    "description": "True (3.2K likes, 423 reposts)",
     "images": [
       "https://adhx.com/og-logo.png",
     ],
-    "title": "@elonmusk on X",
+    "title": "Save @elonmusk's tweet - ADHX",
   },
 }
 `;
 
 exports[`OG Metadata with Real Fixtures > Full metadata generation > 'reply-tweet': generates valid metadata structure 1`] = `
 {
-  "description": "Based on recent reports, the UK government has approved postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing reorg…",
+  "description": "Based on recent reports, the UK government has approved postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing reorganisation, like merging councils into unitary authorities. Up to 63 councils could delay by a year to manage… (114 likes)",
   "openGraph": {
-    "description": "Based on recent reports, the UK government has approved postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing reorg…",
+    "authors": [
+      "https://x.com/grok",
+    ],
+    "description": "Based on recent reports, the UK government has approved postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing reorganisation, like merging councils into unitary authorities. Up to 63 councils could delay by a year to manage… (114 likes)",
     "images": [
       {
         "height": 630,
@@ -368,6 +445,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'reply-twee
         "width": 1200,
       },
     ],
+    "publishedTime": "Thu Jan 15 00:29:03 +0000 2026",
     "siteName": "ADHX",
     "title": "@grok on X",
     "type": "article",
@@ -375,20 +453,24 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'reply-twee
   "title": "@grok: "Based on recent reports, the UK government has ap…" - Save to ADHX",
   "twitter": {
     "card": "summary_large_image",
-    "description": "Based on recent reports, the UK government has approved postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing reorg…",
+    "creator": "@grok",
+    "description": "Based on recent reports, the UK government has approved postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing reorganisation, like merging councils into unitary authorities. Up to 63 councils could delay by a year to manage… (114 likes)",
     "images": [
       "https://adhx.com/og-logo.png",
     ],
-    "title": "@grok on X",
+    "title": "Save @grok's tweet - ADHX",
   },
 }
 `;
 
 exports[`OG Metadata with Real Fixtures > Full metadata generation > 'text-quoting-video': generates valid metadata structure 1`] = `
 {
-  "description": "insane how much goalposts have shifted that bfl can just drop a model that is ~10x better than Stable Diffusion while being ~as small and basically nobody bats…",
+  "description": "insane how much goalposts have shifted that bfl can just drop a model that is ~10x better than Stable Diffusion while being ~as small and basically nobody bats an eye (636 likes)",
   "openGraph": {
-    "description": "insane how much goalposts have shifted that bfl can just drop a model that is ~10x better than Stable Diffusion while being ~as small and basically nobody bats…",
+    "authors": [
+      "https://x.com/swyx",
+    ],
+    "description": "insane how much goalposts have shifted that bfl can just drop a model that is ~10x better than Stable Diffusion while being ~as small and basically nobody bats an eye (636 likes)",
     "images": [
       {
         "height": 630,
@@ -396,6 +478,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'text-quoti
         "width": 1200,
       },
     ],
+    "publishedTime": "Thu Jan 15 18:00:48 +0000 2026",
     "siteName": "ADHX",
     "title": "@swyx on X",
     "type": "article",
@@ -403,11 +486,12 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'text-quoti
   "title": "@swyx: "insane how much goalposts have shifted that bfl c…" - Save to ADHX",
   "twitter": {
     "card": "summary_large_image",
-    "description": "insane how much goalposts have shifted that bfl can just drop a model that is ~10x better than Stable Diffusion while being ~as small and basically nobody bats…",
+    "creator": "@swyx",
+    "description": "insane how much goalposts have shifted that bfl can just drop a model that is ~10x better than Stable Diffusion while being ~as small and basically nobody bats an eye (636 likes)",
     "images": [
       "https://pbs.twimg.com/amplify_video_thumb/2011825767634911237/img/rRqDWGszLMh8F1zp.jpg",
     ],
-    "title": "@swyx on X",
+    "title": "Save @swyx's tweet - ADHX",
   },
 }
 `;
@@ -418,13 +502,16 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'video-twee
 
 Same numbers.
 Different geometry.
-Hidden order.",
+Hidden order. (3.6K likes, 592 reposts)",
   "openGraph": {
+    "authors": [
+      "https://x.com/Kekius_Sage",
+    ],
     "description": "Primes look chaotic in a line, but reveal structure when space curves.
 
 Same numbers.
 Different geometry.
-Hidden order.",
+Hidden order. (3.6K likes, 592 reposts)",
     "images": [
       {
         "height": 630,
@@ -432,6 +519,7 @@ Hidden order.",
         "width": 1200,
       },
     ],
+    "publishedTime": "Thu Jan 15 18:45:00 +0000 2026",
     "siteName": "ADHX",
     "title": "@Kekius_Sage on X",
     "type": "article",
@@ -439,24 +527,28 @@ Hidden order.",
   "title": "@Kekius_Sage: "Primes look chaotic in a line, but reveal structu…" - Save to ADHX",
   "twitter": {
     "card": "summary_large_image",
+    "creator": "@Kekius_Sage",
     "description": "Primes look chaotic in a line, but reveal structure when space curves.
 
 Same numbers.
 Different geometry.
-Hidden order.",
+Hidden order. (3.6K likes, 592 reposts)",
     "images": [
       "https://pbs.twimg.com/amplify_video_thumb/2011857732484423680/img/wFNhWwXUnF0woRwH.jpg",
     ],
-    "title": "@Kekius_Sage on X",
+    "title": "Save @Kekius_Sage's tweet - ADHX",
   },
 }
 `;
 
 exports[`OG Metadata with Real Fixtures > Full metadata generation > 'youtube-link': generates valid metadata structure 1`] = `
 {
-  "description": "link: https://www.youtube.com/watch?v=yGQb9KkvQ1Q",
+  "description": "link: https://www.youtube.com/watch?v=yGQb9KkvQ1Q (381 likes)",
   "openGraph": {
-    "description": "link: https://www.youtube.com/watch?v=yGQb9KkvQ1Q",
+    "authors": [
+      "https://x.com/skalskip92",
+    ],
+    "description": "link: https://www.youtube.com/watch?v=yGQb9KkvQ1Q (381 likes)",
     "images": [
       {
         "height": 630,
@@ -464,6 +556,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'youtube-li
         "width": 1200,
       },
     ],
+    "publishedTime": "Thu Dec 04 20:26:43 +0000 2025",
     "siteName": "ADHX",
     "title": "@skalskip92 on X",
     "type": "article",
@@ -471,11 +564,12 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'youtube-li
   "title": "@skalskip92: "link: https://www.youtube.com/watch?v=yGQb9KkvQ1Q" - Save to ADHX",
   "twitter": {
     "card": "summary_large_image",
-    "description": "link: https://www.youtube.com/watch?v=yGQb9KkvQ1Q",
+    "creator": "@skalskip92",
+    "description": "link: https://www.youtube.com/watch?v=yGQb9KkvQ1Q (381 likes)",
     "images": [
       "https://adhx.com/og-logo.png",
     ],
-    "title": "@skalskip92 on X",
+    "title": "Save @skalskip92's tweet - ADHX",
   },
 }
 `;
