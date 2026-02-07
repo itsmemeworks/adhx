@@ -90,7 +90,7 @@ A Twitter/X bookmark manager for people who bookmark everything and read nothing
 pnpm install
 pnpm dev         # Start dev server at localhost:3000
 pnpm build       # Production build
-pnpm test        # Run all 706 tests
+pnpm test        # Run all 706 tests (40 test files)
 ```
 
 ## Tech Stack
@@ -276,6 +276,12 @@ Users can save tweets by visiting `adhx.com/{username}/status/{id}`:
 - Authenticated: Adds tweet, redirects to `/?open={id}` (opens lightbox)
 - Unauthenticated: Shows `TweetPreviewLanding` with rich preview or `QuickAddLanding` as fallback
 
+**Preview page layout** (`src/components/TweetPreviewLanding.tsx`):
+- Tweet card with engagement stats, expand/collapse, and **Share** button (clipboard copy / Web Share API)
+- CTA: "Save this tweet" (unauthenticated) or "Add to Collection" (authenticated)
+- "Preview another tweet" URL input (positioned right after CTA for discoverability)
+- Benefits list (One place for everything, Media at your fingertips, etc.)
+
 **OG Image Selection** (`getOgImage()` in `src/lib/utils/og-image.ts`):
 When generating Open Graph metadata for social unfurling, images are selected in priority order:
 1. Direct media (tweet's own photos/video thumbnails)
@@ -314,21 +320,45 @@ Key files:
 - `src/app/api/share/tweet/[username]/[id]/route.ts` — Public tweet JSON API
 - `src/lib/utils/article-text.ts` — Article content block → markdown conversion
 
-### iOS Shortcut Integration
-Users can share tweets via the iOS Shortcuts app, transforming X/Twitter URLs to ADHX preview URLs.
+### Save Methods (Platform-Aware)
+The app offers multiple ways to save tweets, shown contextually based on the user's platform:
 
-**Shortcut ID:** `0d187480099b4d34a745ec8750a4587b`
-**iCloud URL:** `https://www.icloud.com/shortcuts/0d187480099b4d34a745ec8750a4587b`
+| Platform | Primary Method | Fallback |
+|----------|---------------|----------|
+| iOS | iOS Shortcut (Share Sheet) | URL prefix trick |
+| Desktop | Bookmarklet (drag to toolbar) | URL prefix trick |
+| Android | Bookmarklet + PWA Share Target | URL prefix trick |
 
-**User flow:**
-1. User views tweet in Safari/X app
-2. Taps Share → selects "ADHX Preview" shortcut
-3. Shortcut transforms `x.com/user/status/123` → `adhx.com/user/status/123`
-4. Opens ADHX preview with full tweet content and media (no login walls)
+**Platform detection** (`src/lib/platform.ts`):
+- `isIOSDevice()`, `isAndroidDevice()`, `getPlatformType()` → `'ios' | 'android' | 'desktop'`
+- SSR-safe (returns `'desktop'` when `window` is undefined)
+- Components use `useState` + `useEffect` to detect platform client-side
 
-**Implementation:**
-- `src/components/LandingPage.tsx` - `ShortcutPromo` component (shown to all users)
-- `src/app/settings/SettingsClient.tsx` - `ShortcutCard` component (shown to all users)
+**iOS Shortcut:**
+- Shortcut ID: `0d187480099b4d34a745ec8750a4587b`
+- iCloud URL: `https://www.icloud.com/shortcuts/0d187480099b4d34a745ec8750a4587b`
+- Transforms `x.com/user/status/123` → `adhx.com/user/status/123`
+
+**Bookmarklet** (desktop + Android):
+```
+javascript:void(location.href=location.href.replace(/(?:x|twitter)\.com/,'adhx.com'))
+```
+- One-click URL rewrite from x.com/twitter.com to adhx.com
+- Shown with copy-to-clipboard button and drag-to-toolbar instructions
+- No auth needed — redirects to preview page which handles auth/unauth
+
+**PWA Share Target** (Android):
+- `public/manifest.json` includes `share_target` config: `action: "/share"`, `method: "GET"`, `params: { url: "url" }`
+- `src/app/share/page.tsx` — client component that parses the shared URL, extracts username/id, redirects to `/{username}/status/{id}`
+- Shows "Not a tweet link" error for invalid URLs with link back to homepage
+- URL parsing utility: `src/lib/utils/parse-share-url.ts`
+
+**Implementation files:**
+- `src/lib/platform.ts` — Platform detection utilities
+- `src/components/LandingPage.tsx` — `ShortcutPromo` component (platform-aware)
+- `src/app/settings/SettingsClient.tsx` — `ShortcutCard` component (platform-aware)
+- `src/app/share/page.tsx` — PWA Share Target landing page
+- `src/lib/utils/parse-share-url.ts` — Tweet URL parsing for share target
 
 ### Typography & Reading Preferences
 ADHD-friendly font system with user selection:
@@ -716,7 +746,7 @@ The app will initialize a fresh SQLite database with the new schema. Users will 
 ## Testing
 
 ```bash
-pnpm test         # Run all 706 tests
+pnpm test         # Run all 706 tests (40 test files)
 pnpm test:watch   # Watch mode
 ```
 
@@ -735,6 +765,8 @@ Test files in `src/__tests__/`:
 - `feed-utils.test.ts` - Feed utility functions
 - `proxy.test.ts` - Media proxy URL validation
 - `url-prefix-route.test.ts` - URL prefix route parameter validation
+- `platform.test.ts` - Platform detection (iOS/Android/desktop, SSR safety)
+- `share-page.test.ts` - PWA Share Target URL parsing and redirect logic
 - `utils.test.ts` - General utilities
 
 API route tests in `src/__tests__/api/`:
