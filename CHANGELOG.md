@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.24.0](https://github.com/itsmemeworks/adhx/compare/v1.23.0...v1.24.0) (2026-02-07)
+
+
+### Features
+
+* agent-native foundation - llms.txt, dynamic sitemap, tweet api enrichment ([#116](https://github.com/itsmemeworks/adhx/issues/116)) ([4ee709a](https://github.com/itsmemeworks/adhx/commit/4ee709a18d4feecda81d32d66429f63179b2b0a0))
+* user journey optimization — bookmarklet, pwa share, platform detection, preview discoverability ([#114](https://github.com/itsmemeworks/adhx/issues/114)) ([d524aa9](https://github.com/itsmemeworks/adhx/commit/d524aa907ea20d33fcdafe27a960dd410ea22451))
+
 ## [1.23.0](https://github.com/itsmemeworks/adhx/compare/v1.22.1...v1.23.0) (2026-02-07)
 
 
