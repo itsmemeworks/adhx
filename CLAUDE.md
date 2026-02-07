@@ -90,7 +90,7 @@ A Twitter/X bookmark manager for people who bookmark everything and read nothing
 pnpm install
 pnpm dev         # Start dev server at localhost:3000
 pnpm build       # Production build
-pnpm test        # Run all 671 tests
+pnpm test        # Run all 706 tests
 ```
 
 ## Tech Stack
@@ -716,7 +716,7 @@ The app will initialize a fresh SQLite database with the new schema. Users will 
 ## Testing
 
 ```bash
-pnpm test         # Run all 671 tests
+pnpm test         # Run all 706 tests
 pnpm test:watch   # Watch mode
 ```
 
