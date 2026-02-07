@@ -180,6 +180,48 @@ Manual deploy: `gh workflow run deploy.yml`
 
 ---
 
+## 🤖 Claude Code Plugin
+
+ADHX ships as a [Claude Code plugin](https://docs.anthropic.com/en/docs/claude-code) that lets any AI agent fetch X/Twitter posts as clean JSON — no browser or scraping needed.
+
+### Install
+
+```bash
+# Add the ADHX marketplace
+/plugin marketplace add itsmemeworks/adhx
+
+# Install the plugin
+/plugin install adhx
+```
+
+Or install manually:
+
+```bash
+mkdir -p ~/.claude/skills/adhx
+curl -sL https://raw.githubusercontent.com/itsmemeworks/adhx/main/skills/adhx/SKILL.md \
+  -o ~/.claude/skills/adhx/SKILL.md
+```
+
+### Usage
+
+Once installed, paste any X link into Claude Code and ask it to read/summarize/analyze:
+
+```
+> Read this and give me the key takeaways https://x.com/dgt10011/status/2020167690560647464
+```
+
+Claude will automatically call the ADHX public API and return structured JSON with the full post content, author info, and engagement metrics — including long-form X Articles.
+
+### API
+
+```
+GET https://adhx.com/api/share/tweet/{username}/{statusId}
+```
+
+No auth required. Works with `x.com`, `twitter.com`, and `adhx.com` URLs.
+
+---
+
 ## 🤝 Contributing
 
 We welcome contributions! Whether you're fixing bugs, adding features, or just improving docs.

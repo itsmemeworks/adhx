@@ -1,0 +1,22 @@
+{
+  "name": "adhx",
+  "owner": {
+    "name": "ADHX"
+  },
+  "metadata": {
+    "description": "X/Twitter post reader for LLMs",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "adhx",
+      "source": "./",
+      "description": "Fetch X/Twitter posts as clean LLM-friendly JSON via the ADHX API",
+      "version": "1.0.0",
+      "license": "MIT",
+      "keywords": ["twitter", "x", "tweets", "llm", "api"],
+      "category": "integrations",
+      "tags": ["social-media", "twitter", "reading"]
+    }
+  ]
+}
