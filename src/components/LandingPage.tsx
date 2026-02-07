@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
-import { Bookmark, Search, Tag, Maximize2, ArrowRight, Zap, Smartphone, ExternalLink } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Bookmark, Search, Tag, Maximize2, ArrowRight, Zap, Smartphone, Monitor, ExternalLink, Copy, Check } from 'lucide-react'
 import { ADHX_PURPLE } from '@/lib/gestalt/theme'
 import { XIcon } from '@/components/icons'
 import { AnimatedBackground, LandingAnimations } from '@/components/landing'
+import { getPlatformType, type PlatformType } from '@/lib/platform'
 
 export function LandingPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -195,8 +196,22 @@ export function LandingPage() {
 }
 
 const SHORTCUT_URL = 'https://www.icloud.com/shortcuts/0d187480099b4d34a745ec8750a4587b'
+const BOOKMARKLET_CODE = `javascript:void(location.href=location.href.replace(/(?:x|twitter)\\.com/,'adhx.com'))`
 
 function ShortcutPromo() {
+  const [platform, setPlatform] = useState<PlatformType>('desktop')
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    setPlatform(getPlatformType())
+  }, [])
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(BOOKMARKLET_CODE)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   return (
     <section className="max-w-4xl mx-auto px-4 py-8">
       <div className="bg-gray-100 dark:bg-gray-800/50 rounded-3xl p-6 sm:p-8">
@@ -206,27 +221,62 @@ function ShortcutPromo() {
             className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0"
             style={{ backgroundColor: `${ADHX_PURPLE}15` }}
           >
-            <Smartphone className="w-8 h-8" style={{ color: ADHX_PURPLE }} />
+            {platform === 'ios' ? (
+              <Smartphone className="w-8 h-8" style={{ color: ADHX_PURPLE }} />
+            ) : (
+              <Monitor className="w-8 h-8" style={{ color: ADHX_PURPLE }} />
+            )}
           </div>
 
           {/* Content */}
           <div className="flex-1 text-center sm:text-left">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-              Share tweets without the X drama
+              {platform === 'ios' ? 'Share tweets without the X drama' : 'Save tweets with one click'}
             </h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Hit share on any tweet → get the full content with media, no login walls or algorithm nonsense. Perfect for sending tweets to friends who refuse to make an account.
-            </p>
-            <a
-              href={SHORTCUT_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 text-white font-semibold rounded-full transition-all hover:scale-105 hover:shadow-lg"
-              style={{ backgroundColor: ADHX_PURPLE }}
-            >
-              <ExternalLink className="w-4 h-4" />
-              Get the Shortcut
-            </a>
+
+            {platform === 'ios' ? (
+              <>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  Hit share on any tweet → get the full content with media, no login walls or algorithm nonsense. Perfect for sending tweets to friends who refuse to make an account.
+                </p>
+                <a
+                  href={SHORTCUT_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-6 py-3 text-white font-semibold rounded-full transition-all hover:scale-105 hover:shadow-lg"
+                  style={{ backgroundColor: ADHX_PURPLE }}
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Get the Shortcut
+                </a>
+              </>
+            ) : (
+              <>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  Drag this bookmarklet to your bookmarks bar. Click it on any X/Twitter page to instantly open it in ADHX.
+                </p>
+                <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-3 mb-4">
+                  <code className="text-xs text-gray-700 dark:text-gray-300 break-all select-all">
+                    {BOOKMARKLET_CODE}
+                  </code>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    onClick={handleCopy}
+                    className="inline-flex items-center gap-2 px-6 py-3 text-white font-semibold rounded-full transition-all hover:scale-105 hover:shadow-lg"
+                    style={{ backgroundColor: ADHX_PURPLE }}
+                  >
+                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    {copied ? 'Copied!' : 'Copy Bookmarklet'}
+                  </button>
+                </div>
+                {platform === 'android' && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">
+                    You can also install ADHX as a PWA from your browser menu for share sheet access.
+                  </p>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>

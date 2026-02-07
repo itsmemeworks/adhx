@@ -291,4 +291,74 @@ describe('TweetPreviewLanding Component Snapshots', () => {
       expect(container.querySelector('input[placeholder*="Paste"]')).toBeTruthy()
     })
   })
+
+  describe('Share preview button', () => {
+    it('renders share button in tweet card footer', () => {
+      const fixture = fixtures['plain-text']
+
+      const { container } = render(
+        <TweetPreviewLanding
+          username="TheCinesthetic"
+          tweetId="2010184900599583070"
+          tweet={fixture.tweet!}
+        />
+      )
+
+      const shareButton = container.querySelector('button[aria-label="Share this preview"]')
+      expect(shareButton).toBeTruthy()
+    })
+
+    it('share button is inside the tweet card footer', () => {
+      const fixture = fixtures['plain-text']
+
+      const { container } = render(
+        <TweetPreviewLanding
+          username="TheCinesthetic"
+          tweetId="2010184900599583070"
+          tweet={fixture.tweet!}
+        />
+      )
+
+      const footer = container.querySelector('article[data-content="tweet"] footer')
+      expect(footer).toBeTruthy()
+      const shareButton = footer!.querySelector('button[aria-label="Share this preview"]')
+      expect(shareButton).toBeTruthy()
+    })
+  })
+
+  describe('Preview another tweet position', () => {
+    it('preview section appears after CTA buttons in right column (desktop)', () => {
+      const fixture = fixtures['plain-text']
+
+      const { container } = render(
+        <TweetPreviewLanding
+          username="TheCinesthetic"
+          tweetId="2010184900599583070"
+          tweet={fixture.tweet!}
+        />
+      )
+
+      // The complementary section (right column) should have preview-another before benefits
+      const rightColumn = container.querySelector('[role="complementary"]')
+      expect(rightColumn).toBeTruthy()
+      const previewSection = rightColumn!.querySelector('[data-section="preview-another"]')
+      expect(previewSection).toBeTruthy()
+    })
+
+    it('preview section also appears in mobile position (after mobile CTA)', () => {
+      const fixture = fixtures['plain-text']
+
+      const { container } = render(
+        <TweetPreviewLanding
+          username="TheCinesthetic"
+          tweetId="2010184900599583070"
+          tweet={fixture.tweet!}
+        />
+      )
+
+      // There should be two preview-another sections (mobile + desktop)
+      const previewSections = container.querySelectorAll('[data-section="preview-another"]')
+      expect(previewSections.length).toBe(2)
+    })
+  })
 })

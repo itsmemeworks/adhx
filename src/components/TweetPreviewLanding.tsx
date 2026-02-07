@@ -169,6 +169,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
   const [isExpanded, setIsExpanded] = useState(false)
   const [tweetUrl, setTweetUrl] = useState('')
   const [urlError, setUrlError] = useState('')
+  const [shareStatus, setShareStatus] = useState<'idle' | 'shared' | 'copied'>('idle')
 
   // Pattern to extract username and tweet ID from x.com or twitter.com URLs
   const tweetUrlPattern = /(?:https?:\/\/)?(?:www\.)?(?:x\.com|twitter\.com)\/(\w{1,15})\/status\/(\d+)/i
@@ -242,6 +243,30 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
 
   const handleContinueToGallery = () => {
     router.push('/')
+  }
+
+  const handleSharePreview = async () => {
+    const url = window.location.href
+    const title = `${tweet.author?.name || username} on X — ADHX Preview`
+    try {
+      if (navigator.share) {
+        await navigator.share({ url, title })
+        setShareStatus('shared')
+      } else {
+        await navigator.clipboard.writeText(url)
+        setShareStatus('copied')
+      }
+    } catch {
+      // User cancelled share or clipboard failed — try clipboard as fallback
+      try {
+        await navigator.clipboard.writeText(url)
+        setShareStatus('copied')
+      } catch {
+        // Both failed, do nothing
+        return
+      }
+    }
+    setTimeout(() => setShareStatus('idle'), 2000)
   }
 
   return (
@@ -469,6 +494,28 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                       <span className="text-xs hidden lg:inline">{isExpanded ? 'Collapse' : 'Expand'}</span>
                     </button>
                   )}
+                  {/* Share Preview Button */}
+                  <button
+                    onClick={handleSharePreview}
+                    className={cn(
+                      'flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors',
+                      hasMedia ? 'ml-auto' : '',
+                      shareStatus !== 'idle'
+                        ? 'text-green-600 dark:text-green-400'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20'
+                    )}
+                    title="Share this preview"
+                    aria-label="Share this preview"
+                  >
+                    {shareStatus !== 'idle' ? (
+                      <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4" />
+                    ) : (
+                      <Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4" />
+                    )}
+                    <span className="text-xs hidden lg:inline">
+                      {shareStatus === 'shared' ? 'Shared!' : shareStatus === 'copied' ? 'Link copied!' : 'Share'}
+                    </span>
+                  </button>
                 </footer>
               </article>
 
@@ -542,29 +589,19 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                 )}
               </div>
 
+              {/* Preview Another Tweet - Mobile only (after CTA) */}
+              <PreviewAnotherTweet
+                tweetUrl={tweetUrl}
+                urlError={urlError}
+                onUrlChange={handleTweetUrlChange}
+                onSubmit={handleTweetUrlSubmit}
+                className="md:hidden mt-4"
+              />
+
             </div>
 
             {/* CTA Section - Right Column */}
             <div role="complementary" aria-label="ADHX features" className="animate-fade-in-up [animation-fill-mode:both] delay-200">
-              {/* Benefits - Tighter spacing on mobile */}
-              <div className="space-y-3 md:space-y-4 mb-6 md:mb-8">
-                <BenefitItem
-                  icon={<Sparkles className="w-5 h-5" />}
-                  title="One place for everything"
-                  description="Sync your X bookmarks, add tweets manually, organize with tags. Your chaos, contained."
-                />
-                <BenefitItem
-                  icon={<Zap className="w-5 h-5" />}
-                  title="Media at your fingertips"
-                  description="Full-screen viewer with one-click downloads. Save that meme before you forget."
-                />
-                <BenefitItem
-                  icon={<Search className="w-5 h-5" />}
-                  title="Actually find it later"
-                  description="Full-text search across your entire collection. That thread from 6 months ago? Found."
-                />
-              </div>
-
               {/* CTA Button - Desktop only (mobile CTA is above value props) */}
               <div className="hidden md:block space-y-3 animate-fade-in-up [animation-fill-mode:both] delay-300">
                 {isAuthenticated ? (
@@ -624,50 +661,35 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                 )}
               </div>
 
-              {/* URL Trick Callout with Input */}
-              <div className="mt-8 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400">
-                <div className="flex items-start gap-3 mb-4">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center">
-                    <Zap className="w-4 h-4 text-purple-600 dark:text-purple-300" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white text-sm mb-1">
-                      Preview another tweet
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Paste any X/Twitter link below
-                    </p>
-                  </div>
-                </div>
+              {/* Preview Another Tweet - Desktop only (after CTA, before benefits) */}
+              <PreviewAnotherTweet
+                tweetUrl={tweetUrl}
+                urlError={urlError}
+                onUrlChange={handleTweetUrlChange}
+                onSubmit={handleTweetUrlSubmit}
+                className="hidden md:block mt-6"
+              />
 
-                <form onSubmit={handleTweetUrlSubmit}>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={tweetUrl}
-                      onChange={(e) => handleTweetUrlChange(e.target.value)}
-                      placeholder="Paste an X link here..."
-                      className="flex-1 font-mono text-base sm:text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    />
-                    <button
-                      type="submit"
-                      className="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
-                      style={{ backgroundColor: ADHX_PURPLE }}
-                    >
-                      Go
-                    </button>
-                  </div>
-                  {urlError && (
-                    <p className="text-red-500 text-xs mt-2">{urlError}</p>
-                  )}
-                </form>
-
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
-                  Or use the URL trick: add <code className="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono">adh</code> before any <code className="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono">x.com</code> URL
-                </p>
+              {/* Benefits */}
+              <div className="space-y-3 md:space-y-4 mt-6 md:mt-8">
+                <BenefitItem
+                  icon={<Sparkles className="w-5 h-5" />}
+                  title="One place for everything"
+                  description="Sync your X bookmarks, add tweets manually, organize with tags. Your chaos, contained."
+                />
+                <BenefitItem
+                  icon={<Zap className="w-5 h-5" />}
+                  title="Media at your fingertips"
+                  description="Full-screen viewer with one-click downloads. Save that meme before you forget."
+                />
+                <BenefitItem
+                  icon={<Search className="w-5 h-5" />}
+                  title="Actually find it later"
+                  description="Full-text search across your entire collection. That thread from 6 months ago? Found."
+                />
               </div>
 
-              {/* ADHD Reading Tools - Below Pro tip (desktop only) */}
+              {/* ADHD Reading Tools - Below benefits (desktop only) */}
               {tweet.article && (
                 <ReadingTools
                   bionicReading={bionicReading}
@@ -706,6 +728,61 @@ function BenefitItem({ icon, title, description }: { icon: React.ReactNode; titl
         <h3 className="font-semibold text-gray-900 dark:text-white mb-0.5">{title}</h3>
         <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{description}</p>
       </div>
+    </div>
+  )
+}
+
+/** Preview another tweet section - URL input form for previewing different tweets */
+interface PreviewAnotherTweetProps {
+  tweetUrl: string
+  urlError: string
+  onUrlChange: (value: string) => void
+  onSubmit: (e: React.FormEvent) => void
+  className?: string
+}
+
+function PreviewAnotherTweet({ tweetUrl, urlError, onUrlChange, onSubmit, className }: PreviewAnotherTweetProps): React.ReactElement {
+  return (
+    <div data-section="preview-another" className={`p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400 ${className || ''}`}>
+      <div className="flex items-start gap-3 mb-4">
+        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center">
+          <Zap className="w-4 h-4 text-purple-600 dark:text-purple-300" />
+        </div>
+        <div>
+          <p className="font-medium text-gray-900 dark:text-white text-sm mb-1">
+            Preview another tweet
+          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Paste any X/Twitter link below
+          </p>
+        </div>
+      </div>
+
+      <form onSubmit={onSubmit}>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={tweetUrl}
+            onChange={(e) => onUrlChange(e.target.value)}
+            placeholder="Paste an X link here..."
+            className="flex-1 font-mono text-base sm:text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          />
+          <button
+            type="submit"
+            className="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
+            style={{ backgroundColor: ADHX_PURPLE }}
+          >
+            Go
+          </button>
+        </div>
+        {urlError && (
+          <p className="text-red-500 text-xs mt-2">{urlError}</p>
+        )}
+      </form>
+
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
+        Or use the URL trick: add <code className="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono">adh</code> before any <code className="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono">x.com</code> URL
+      </p>
     </div>
   )
 }
