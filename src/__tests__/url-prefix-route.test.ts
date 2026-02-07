@@ -212,8 +212,8 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
         params: Promise.resolve({ username: 'user', id: '123' }),
       })
 
-      // Description should be truncated to 280 chars (expanded for richer social unfurls)
-      expect(metadata.description!.length).toBeLessThanOrEqual(280)
+      // Description should be truncated to 500 chars (expanded for richer social unfurls)
+      expect(metadata.description!.length).toBeLessThanOrEqual(500)
     })
   })
 
