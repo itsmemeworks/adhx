@@ -1,0 +1,13 @@
+{
+  "name": "adhx",
+  "version": "1.0.0",
+  "description": "Fetch X/Twitter posts as clean LLM-friendly JSON. Paste any x.com link and get structured data with full content, author info, and engagement metrics.",
+  "author": {
+    "name": "ADHX",
+    "url": "https://adhx.com"
+  },
+  "homepage": "https://adhx.com",
+  "repository": "https://github.com/itsmemeworks/adhx",
+  "license": "MIT",
+  "keywords": ["twitter", "x", "tweets", "llm", "api"]
+}
