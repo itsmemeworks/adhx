@@ -1,18 +1,29 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { NextRequest } from 'next/server'
+import { createTestDb, type TestDbInstance, USER_A, USER_B } from './setup'
+import * as schema from '@/lib/db/schema'
 
 /**
  * API Route Tests: /api/share/tweet/[username]/[id]
  *
  * Tests the public tweet JSON API endpoint.
- * Validates parameter validation, FxTwitter data transformation, and caching headers.
+ * Validates parameter validation, FxTwitter data transformation, caching headers,
+ * and ADHX context enrichment.
  */
+
+let testInstance: TestDbInstance
 
 // Mock fetchTweetData
 const mockFetchTweetData = vi.fn()
 
 vi.mock('@/lib/media/fxembed', () => ({
   fetchTweetData: (...args: unknown[]) => mockFetchTweetData(...args),
+}))
+
+vi.mock('@/lib/db', () => ({
+  get db() {
+    return testInstance.db
+  },
 }))
 
 function createRequest(username: string, id: string): NextRequest {
@@ -46,7 +57,12 @@ function buildFxResponse(overrides: Record<string, unknown> = {}) {
 
 describe('API: /api/share/tweet/[username]/[id]', () => {
   beforeEach(() => {
+    testInstance = createTestDb()
     vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    testInstance.close()
   })
 
   describe('Parameter validation', () => {
@@ -310,6 +326,199 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
         { params: Promise.resolve({ username: 'testuser', id: '123' }) }
       )
       expect(response.headers.get('Cache-Control')).toBeNull()
+    })
+  })
+
+  describe('adhxContext enrichment', () => {
+    it('omits adhxContext when tweet has no ADHX saves', async () => {
+      mockFetchTweetData.mockResolvedValue(buildFxResponse())
+      const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
+      const response = await GET(
+        createRequest('testuser', '123456789'),
+        { params: Promise.resolve({ username: 'testuser', id: '123456789' }) }
+      )
+      const data = await response.json()
+      expect(data.adhxContext).toBeUndefined()
+    })
+
+    it('includes savedByCount for bookmarked tweets', async () => {
+      // Two users bookmark the same tweet
+      testInstance.db.insert(schema.bookmarks).values([
+        {
+          id: '123456789',
+          userId: USER_A,
+          author: 'testuser',
+          text: 'A tweet',
+          tweetUrl: 'https://x.com/testuser/status/123456789',
+          processedAt: new Date().toISOString(),
+        },
+        {
+          id: '123456789',
+          userId: USER_B,
+          author: 'testuser',
+          text: 'A tweet',
+          tweetUrl: 'https://x.com/testuser/status/123456789',
+          processedAt: new Date().toISOString(),
+        },
+      ]).run()
+
+      mockFetchTweetData.mockResolvedValue(buildFxResponse())
+      const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
+      const response = await GET(
+        createRequest('testuser', '123456789'),
+        { params: Promise.resolve({ username: 'testuser', id: '123456789' }) }
+      )
+      const data = await response.json()
+      expect(data.adhxContext).toBeDefined()
+      expect(data.adhxContext.savedByCount).toBe(2)
+    })
+
+    it('does not leak user IDs in adhxContext', async () => {
+      testInstance.db.insert(schema.bookmarks).values({
+        id: '123456789',
+        userId: USER_A,
+        author: 'testuser',
+        text: 'A tweet',
+        tweetUrl: 'https://x.com/testuser/status/123456789',
+        processedAt: new Date().toISOString(),
+      }).run()
+
+      mockFetchTweetData.mockResolvedValue(buildFxResponse())
+      const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
+      const response = await GET(
+        createRequest('testuser', '123456789'),
+        { params: Promise.resolve({ username: 'testuser', id: '123456789' }) }
+      )
+      const data = await response.json()
+      const json = JSON.stringify(data.adhxContext)
+      expect(json).not.toContain(USER_A)
+      expect(json).not.toContain(USER_B)
+    })
+
+    it('includes public tags in adhxContext', async () => {
+      testInstance.db.insert(schema.oauthTokens).values({
+        userId: USER_A,
+        username: 'alice',
+        accessToken: 'enc_token',
+        refreshToken: 'enc_refresh',
+        expiresAt: Date.now() + 3600000,
+      }).run()
+
+      testInstance.db.insert(schema.bookmarks).values({
+        id: '123456789',
+        userId: USER_A,
+        author: 'testuser',
+        text: 'A tweet',
+        tweetUrl: 'https://x.com/testuser/status/123456789',
+        processedAt: new Date().toISOString(),
+      }).run()
+
+      testInstance.db.insert(schema.bookmarkTags).values({
+        userId: USER_A,
+        bookmarkId: '123456789',
+        tag: 'ai-tools',
+      }).run()
+
+      testInstance.db.insert(schema.tagShares).values({
+        userId: USER_A,
+        tag: 'ai-tools',
+        shareCode: 'share-1',
+        isPublic: true,
+      }).run()
+
+      mockFetchTweetData.mockResolvedValue(buildFxResponse())
+      const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
+      const response = await GET(
+        createRequest('testuser', '123456789'),
+        { params: Promise.resolve({ username: 'testuser', id: '123456789' }) }
+      )
+      const data = await response.json()
+      expect(data.adhxContext.publicTags).toHaveLength(1)
+      expect(data.adhxContext.publicTags[0]).toEqual({
+        tag: 'ai-tools',
+        curator: 'alice',
+        url: '/t/alice/ai-tools',
+      })
+    })
+
+    it('excludes private tags from adhxContext', async () => {
+      testInstance.db.insert(schema.oauthTokens).values({
+        userId: USER_A,
+        username: 'alice',
+        accessToken: 'enc_token',
+        refreshToken: 'enc_refresh',
+        expiresAt: Date.now() + 3600000,
+      }).run()
+
+      testInstance.db.insert(schema.bookmarks).values({
+        id: '123456789',
+        userId: USER_A,
+        author: 'testuser',
+        text: 'A tweet',
+        tweetUrl: 'https://x.com/testuser/status/123456789',
+        processedAt: new Date().toISOString(),
+      }).run()
+
+      testInstance.db.insert(schema.bookmarkTags).values({
+        userId: USER_A,
+        bookmarkId: '123456789',
+        tag: 'private-tag',
+      }).run()
+
+      testInstance.db.insert(schema.tagShares).values({
+        userId: USER_A,
+        tag: 'private-tag',
+        shareCode: 'share-private',
+        isPublic: false,
+      }).run()
+
+      mockFetchTweetData.mockResolvedValue(buildFxResponse())
+      const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
+      const response = await GET(
+        createRequest('testuser', '123456789'),
+        { params: Promise.resolve({ username: 'testuser', id: '123456789' }) }
+      )
+      const data = await response.json()
+      expect(data.adhxContext.savedByCount).toBe(1)
+      expect(data.adhxContext.publicTags).toHaveLength(0)
+    })
+
+    it('includes previewUrl in adhxContext', async () => {
+      testInstance.db.insert(schema.bookmarks).values({
+        id: '123456789',
+        userId: USER_A,
+        author: 'testuser',
+        text: 'A tweet',
+        tweetUrl: 'https://x.com/testuser/status/123456789',
+        processedAt: new Date().toISOString(),
+      }).run()
+
+      mockFetchTweetData.mockResolvedValue(buildFxResponse())
+      const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
+      const response = await GET(
+        createRequest('testuser', '123456789'),
+        { params: Promise.resolve({ username: 'testuser', id: '123456789' }) }
+      )
+      const data = await response.json()
+      expect(data.adhxContext.previewUrl).toContain('/testuser/status/123456789')
+    })
+
+    it('counts saves from multiple users correctly', async () => {
+      const USER_C = 'user-c-789'
+      testInstance.db.insert(schema.bookmarks).values([
+        { id: '123456789', userId: USER_A, author: 'testuser', text: 'Tweet', tweetUrl: 'https://x.com/testuser/status/123456789', processedAt: new Date().toISOString() },
+        { id: '123456789', userId: USER_B, author: 'testuser', text: 'Tweet', tweetUrl: 'https://x.com/testuser/status/123456789', processedAt: new Date().toISOString() },
+        { id: '123456789', userId: USER_C, author: 'testuser', text: 'Tweet', tweetUrl: 'https://x.com/testuser/status/123456789', processedAt: new Date().toISOString() },
+      ]).run()
+
+      mockFetchTweetData.mockResolvedValue(buildFxResponse())
+      const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
+      const response = await GET(
+        createRequest('testuser', '123456789'),
+        { params: Promise.resolve({ username: 'testuser', id: '123456789' }) }
+      )
+      const data = await response.json()
+      expect(data.adhxContext.savedByCount).toBe(3)
     })
   })
 })
