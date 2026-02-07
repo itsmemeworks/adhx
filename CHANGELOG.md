@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.23.0](https://github.com/itsmemeworks/adhx/compare/v1.22.1...v1.23.0) (2026-02-07)
+
+
+### Features
+
+* add llm-friendly tweet previews with public api and structured data ([#112](https://github.com/itsmemeworks/adhx/issues/112)) ([3c8efe6](https://github.com/itsmemeworks/adhx/commit/3c8efe6ec493c40534855d6747b6c59012d85b6b))
+
 ## [1.22.1](https://github.com/itsmemeworks/adhx/compare/v1.22.0...v1.22.1) (2026-02-05)
 
 
