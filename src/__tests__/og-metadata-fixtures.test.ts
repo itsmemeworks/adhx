@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest'
 import { getOgImage } from '@/lib/utils/og-image'
-import { truncate } from '@/lib/utils/format'
+import { truncate, formatCount } from '@/lib/utils/format'
 import { fixtures, fixtureMetadata, type FixtureSlug } from './fixtures/tweets'
 
 const BASE_URL = 'https://adhx.com'
@@ -162,34 +162,51 @@ describe('OG Metadata with Real Fixtures', () => {
 
       // Choose best text source: tweet text > article preview > article title
       const displayText = tweetText || articlePreview || articleTitle
-      const description = truncate(displayText, 160)
 
-      // Title shows article title if it's an article, otherwise tweet text
-      const titleContent = isArticle ? articleTitle : truncate(tweetText, 50)
-      const title = `@${tweet.author.screen_name}: "${truncate(titleContent, 50)}" - Save to ADHX`
+      // Build engagement suffix for social proof
+      const engagementParts: string[] = []
+      if (tweet.likes >= 100) engagementParts.push(`${formatCount(tweet.likes)} likes`)
+      if (tweet.retweets >= 50) engagementParts.push(`${formatCount(tweet.retweets)} reposts`)
+      const engagementSuffix = engagementParts.length > 0 ? ` (${engagementParts.join(', ')})` : ''
+
+      const maxDescLen = 280 - engagementSuffix.length
+      const description = truncate(displayText, maxDescLen) + engagementSuffix
+
+      // Title: cleaner for articles, informative for regular tweets
+      const title = isArticle
+        ? `${articleTitle} - @${tweet.author.screen_name}`
+        : `@${tweet.author.screen_name}: "${truncate(tweetText, 50)}" - Save to ADHX`
       const ogImage = getOgImage(tweet, BASE_URL)
+
+      // OG title: for articles use article title directly
+      const ogTitle = isArticle
+        ? articleTitle
+        : `@${tweet.author.screen_name} on X`
 
       const metadata = {
         title,
         description,
         openGraph: {
           type: 'article',
-          title: `@${tweet.author.screen_name} on X`,
+          title: ogTitle,
           description,
           siteName: 'ADHX',
+          authors: [`https://x.com/${tweet.author.screen_name}`],
+          publishedTime: tweet.created_at,
           images: [{ url: ogImage, width: 1200, height: 630 }],
         },
         twitter: {
           card: 'summary_large_image',
-          title: `@${tweet.author.screen_name} on X`,
+          title: isArticle ? articleTitle : `Save @${tweet.author.screen_name}'s tweet - ADHX`,
           description,
           images: [ogImage],
+          creator: `@${tweet.author.screen_name}`,
         },
       }
 
       // Validate structure
       expect(metadata.title).toBeTruthy()
-      expect(metadata.description.length).toBeLessThanOrEqual(163) // 160 + "..."
+      expect(metadata.description.length).toBeLessThanOrEqual(280)
       expect(metadata.openGraph.images[0].url).toBeTruthy()
       expect(metadata.twitter.card).toBe('summary_large_image')
 

@@ -287,9 +287,9 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
           <div className="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start">
             {/* Tweet Card - Left Column - Fixed max heights for scrollable mobile, viewport-based for desktop */}
             <div className="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0">
-              <div className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 ${hasMedia || isExpanded ? '' : 'max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]'}`}>
+              <article data-content="tweet" className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 ${hasMedia || isExpanded ? '' : 'max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]'}`}>
                 {/* Author Header */}
-                <div className="p-4 pb-3">
+                <header className="p-4 pb-3">
                   <div className="flex items-center gap-3">
                     <a
                       href={`https://x.com/${tweet.author?.screen_name || username}`}
@@ -324,7 +324,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                       <XIcon className="w-3 h-3" />
                     </a>
                   </div>
-                </div>
+                </header>
 
                 {/* Scrollable Content Area - overflow-x-hidden prevents horizontal scroll on mobile */}
                 <div
@@ -425,7 +425,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                 {/* End Scrollable Content Area */}
 
                 {/* Engagement Stats - responsive: compact on mobile/tablet, normal on desktop */}
-                <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0">
+                <footer className="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0">
                   <span className="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5" title="Replies">
                     <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -469,8 +469,8 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                       <span className="text-xs hidden lg:inline">{isExpanded ? 'Collapse' : 'Expand'}</span>
                     </button>
                   )}
-                </div>
-              </div>
+                </footer>
+              </article>
 
               {/* ADHD Reading Tools - Mobile only, below tweet card for easy thumb access */}
               {tweet.article && (
@@ -545,7 +545,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
             </div>
 
             {/* CTA Section - Right Column */}
-            <div className="animate-fade-in-up [animation-fill-mode:both] delay-200">
+            <div role="complementary" aria-label="ADHX features" className="animate-fade-in-up [animation-fill-mode:both] delay-200">
               {/* Benefits - Tighter spacing on mobile */}
               <div className="space-y-3 md:space-y-4 mb-6 md:mb-8">
                 <BenefitItem

@@ -133,10 +133,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -188,7 +189,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
@@ -391,7 +392,7 @@ Open this to see the entire post
                 </div>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -476,8 +477,8 @@ Open this to see the entire post
                 </svg>
                 370.0K
               </span>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="md:hidden mt-4 space-y-3"
           >
@@ -533,7 +534,9 @@ Open this to see the entire post
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -945,10 +948,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -1000,7 +1004,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
@@ -1578,7 +1582,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 </div>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -1704,8 +1708,8 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   Expand
                 </span>
               </button>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 md:hidden mt-4"
           >
@@ -1844,7 +1848,9 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -2339,10 +2345,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -2394,7 +2401,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
@@ -3883,7 +3890,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 </div>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -4009,8 +4016,8 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   Expand
                 </span>
               </button>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 md:hidden mt-4"
           >
@@ -4149,7 +4156,9 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -4644,10 +4653,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -4699,7 +4709,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
@@ -4799,7 +4809,7 @@ Live now 🚀
                 </div>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -4884,8 +4894,8 @@ Live now 🚀
                 </svg>
                 446.6K
               </span>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="md:hidden mt-4 space-y-3"
           >
@@ -4941,7 +4951,9 @@ Live now 🚀
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -5353,10 +5365,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -5408,7 +5421,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
@@ -5509,7 +5522,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 </div>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -5594,8 +5607,8 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 </svg>
                 746.5K
               </span>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="md:hidden mt-4 space-y-3"
           >
@@ -5651,7 +5664,9 @@ PS – Repost for early access to the full TikTok Shop content factory system.
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -6063,10 +6078,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -6118,7 +6134,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
@@ -6240,7 +6256,7 @@ His days are numbered
                 </div>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -6325,8 +6341,8 @@ His days are numbered
                 </svg>
                 49.2K
               </span>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="md:hidden mt-4 space-y-3"
           >
@@ -6382,7 +6398,9 @@ His days are numbered
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -6794,10 +6812,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -6849,7 +6868,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
@@ -7038,7 +7057,7 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                 </div>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -7123,8 +7142,8 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                 </svg>
                 1.8M
               </span>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="md:hidden mt-4 space-y-3"
           >
@@ -7180,7 +7199,9 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -7592,10 +7613,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -7647,7 +7669,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
@@ -7662,7 +7684,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 </p>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -7788,8 +7810,8 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   Expand
                 </span>
               </button>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="md:hidden mt-4 space-y-3"
           >
@@ -7845,7 +7867,9 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -8257,10 +8281,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -8312,7 +8337,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
@@ -8463,7 +8488,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 </div>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -8548,8 +8573,8 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 </svg>
                 238.5K
               </span>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="md:hidden mt-4 space-y-3"
           >
@@ -8605,7 +8630,9 @@ PS – Repost for early access to the full TikTok Shop content factory system.
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -9017,10 +9044,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -9072,7 +9100,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
@@ -9132,7 +9160,7 @@ This is not a coincidence.
                 </div>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -9258,8 +9286,8 @@ This is not a coincidence.
                   Expand
                 </span>
               </button>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="md:hidden mt-4 space-y-3"
           >
@@ -9315,7 +9343,9 @@ This is not a coincidence.
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -9727,10 +9757,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -9782,7 +9813,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
@@ -9797,7 +9828,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 </p>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -9923,8 +9954,8 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   Expand
                 </span>
               </button>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="md:hidden mt-4 space-y-3"
           >
@@ -9980,7 +10011,9 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -10392,10 +10425,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -10447,7 +10481,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
@@ -10595,7 +10629,7 @@ Try it for free in our demo app (link in the thread).
                 </div>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -10680,8 +10714,8 @@ Try it for free in our demo app (link in the thread).
                 </svg>
                 71.3K
               </span>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="md:hidden mt-4 space-y-3"
           >
@@ -10737,7 +10771,9 @@ Try it for free in our demo app (link in the thread).
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -11149,10 +11185,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -11204,7 +11241,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
@@ -11300,7 +11337,7 @@ Hidden order.
                 </div>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -11385,8 +11422,8 @@ Hidden order.
                 </svg>
                 146.0K
               </span>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="md:hidden mt-4 space-y-3"
           >
@@ -11442,7 +11479,9 @@ Hidden order.
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -11854,10 +11893,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -11909,7 +11949,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
@@ -11924,7 +11964,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 </p>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -12050,8 +12090,8 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   Expand
                 </span>
               </button>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="md:hidden mt-4 space-y-3"
           >
@@ -12107,7 +12147,9 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -12519,10 +12561,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -12574,7 +12617,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
@@ -12777,7 +12820,7 @@ Open this to see the entire post
                 </div>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -12862,8 +12905,8 @@ Open this to see the entire post
                 </svg>
                 370.0K
               </span>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="md:hidden mt-4 space-y-3"
           >
@@ -12909,7 +12952,9 @@ Open this to see the entire post
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -13311,10 +13356,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -13366,7 +13412,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
@@ -13944,7 +13990,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 </div>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -14070,8 +14116,8 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   Expand
                 </span>
               </button>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 md:hidden mt-4"
           >
@@ -14200,7 +14246,9 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -14685,10 +14733,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -14740,7 +14789,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
@@ -16229,7 +16278,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 </div>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -16355,8 +16404,8 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   Expand
                 </span>
               </button>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 md:hidden mt-4"
           >
@@ -16485,7 +16534,9 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -16970,10 +17021,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -17025,7 +17077,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
@@ -17125,7 +17177,7 @@ Live now 🚀
                 </div>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -17210,8 +17262,8 @@ Live now 🚀
                 </svg>
                 446.6K
               </span>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="md:hidden mt-4 space-y-3"
           >
@@ -17257,7 +17309,9 @@ Live now 🚀
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -17659,10 +17713,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -17714,7 +17769,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
@@ -17815,7 +17870,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 </div>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -17900,8 +17955,8 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 </svg>
                 746.5K
               </span>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="md:hidden mt-4 space-y-3"
           >
@@ -17947,7 +18002,9 @@ PS – Repost for early access to the full TikTok Shop content factory system.
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -18349,10 +18406,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -18404,7 +18462,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
@@ -18526,7 +18584,7 @@ His days are numbered
                 </div>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -18611,8 +18669,8 @@ His days are numbered
                 </svg>
                 49.2K
               </span>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="md:hidden mt-4 space-y-3"
           >
@@ -18658,7 +18716,9 @@ His days are numbered
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -19060,10 +19120,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -19115,7 +19176,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
@@ -19304,7 +19365,7 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                 </div>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -19389,8 +19450,8 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                 </svg>
                 1.8M
               </span>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="md:hidden mt-4 space-y-3"
           >
@@ -19436,7 +19497,9 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -19838,10 +19901,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -19893,7 +19957,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
@@ -19908,7 +19972,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 </p>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -20034,8 +20098,8 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   Expand
                 </span>
               </button>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="md:hidden mt-4 space-y-3"
           >
@@ -20081,7 +20145,9 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -20483,10 +20549,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -20538,7 +20605,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
@@ -20689,7 +20756,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 </div>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -20774,8 +20841,8 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 </svg>
                 238.5K
               </span>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="md:hidden mt-4 space-y-3"
           >
@@ -20821,7 +20888,9 @@ PS – Repost for early access to the full TikTok Shop content factory system.
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -21223,10 +21292,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -21278,7 +21348,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
@@ -21338,7 +21408,7 @@ This is not a coincidence.
                 </div>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -21464,8 +21534,8 @@ This is not a coincidence.
                   Expand
                 </span>
               </button>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="md:hidden mt-4 space-y-3"
           >
@@ -21511,7 +21581,9 @@ This is not a coincidence.
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -21913,10 +21985,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -21968,7 +22041,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
@@ -21983,7 +22056,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 </p>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -22109,8 +22182,8 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   Expand
                 </span>
               </button>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="md:hidden mt-4 space-y-3"
           >
@@ -22156,7 +22229,9 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -22558,10 +22633,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -22613,7 +22689,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
@@ -22761,7 +22837,7 @@ Try it for free in our demo app (link in the thread).
                 </div>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -22846,8 +22922,8 @@ Try it for free in our demo app (link in the thread).
                 </svg>
                 71.3K
               </span>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="md:hidden mt-4 space-y-3"
           >
@@ -22893,7 +22969,9 @@ Try it for free in our demo app (link in the thread).
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -23295,10 +23373,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -23350,7 +23429,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
@@ -23446,7 +23525,7 @@ Hidden order.
                 </div>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -23531,8 +23610,8 @@ Hidden order.
                 </svg>
                 146.0K
               </span>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="md:hidden mt-4 space-y-3"
           >
@@ -23578,7 +23657,9 @@ Hidden order.
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
@@ -23980,10 +24061,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
-          <div
+          <article
             class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            data-content="tweet"
           >
-            <div
+            <header
               class="p-4 pb-3"
             >
               <div
@@ -24035,7 +24117,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   </svg>
                 </a>
               </div>
-            </div>
+            </header>
             <div
               class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
               style="font-family: var(--font-ibm-plex);"
@@ -24050,7 +24132,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 </p>
               </div>
             </div>
-            <div
+            <footer
               class="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0"
             >
               <span
@@ -24176,8 +24258,8 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   Expand
                 </span>
               </button>
-            </div>
-          </div>
+            </footer>
+          </article>
           <div
             class="md:hidden mt-4 space-y-3"
           >
@@ -24223,7 +24305,9 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           </div>
         </div>
         <div
+          aria-label="ADHX features"
           class="animate-fade-in-up [animation-fill-mode:both] delay-200"
+          role="complementary"
         >
           <div
             class="space-y-3 md:space-y-4 mb-6 md:mb-8"
