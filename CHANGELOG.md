@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.26.0](https://github.com/itsmemeworks/adhx/compare/v1.25.0...v1.26.0) (2026-02-07)
+
+
+### Features
+
+* add claude code plugin for llm-friendly tweet fetching ([#119](https://github.com/itsmemeworks/adhx/issues/119)) ([3e2a47f](https://github.com/itsmemeworks/adhx/commit/3e2a47ffc2f143f1a639de58e01607b3ae1e53e6))
+
 ## [1.25.0](https://github.com/itsmemeworks/adhx/compare/v1.24.0...v1.25.0) (2026-02-07)
 
 
