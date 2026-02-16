@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.27.0](https://github.com/itsmemeworks/adhx/compare/v1.26.0...v1.27.0) (2026-02-16)
+
+
+### Features
+
+* expand preview by default and use avatar og images for text-only tweets ([#121](https://github.com/itsmemeworks/adhx/issues/121)) ([6b60717](https://github.com/itsmemeworks/adhx/commit/6b60717c778d39d0f14292a12bf48263799b01d9))
+
 ## [1.26.0](https://github.com/itsmemeworks/adhx/compare/v1.25.0...v1.26.0) (2026-02-07)
 
 
