@@ -22,6 +22,16 @@ vi.mock('next/navigation', () => ({
   }),
 }))
 
+vi.mock('next/headers', () => ({
+  headers: vi.fn(() => Promise.resolve(new Headers())),
+}))
+
+vi.mock('@/lib/sentry', () => ({
+  metrics: {
+    shareTweetPreviewViewed: vi.fn(),
+  },
+}))
+
 // Mock React components
 vi.mock('@/components/QuickAddLanding', () => ({
   QuickAddLanding: () => null,

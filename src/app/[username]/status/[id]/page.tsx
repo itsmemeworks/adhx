@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { Metadata } from 'next'
 import { getSession } from '@/lib/auth/session'
 import { QuickAddLanding } from '@/components/QuickAddLanding'
@@ -6,6 +7,7 @@ import { TweetPreviewLanding } from '@/components/TweetPreviewLanding'
 import { fetchTweetData, type FxTwitterResponse } from '@/lib/media/fxembed'
 import { truncate } from '@/lib/utils/format'
 import { getOgImages } from '@/lib/utils/og-image'
+import { metrics } from '@/lib/sentry'
 
 type FxTweet = NonNullable<FxTwitterResponse['tweet']>
 
@@ -166,6 +168,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: `Save @${username}'s tweet - ADHX`,
       description: 'Save this tweet to your ADHX collection',
     }
+  }
+
+  // Track preview page impressions (unfurls + direct visits)
+  const headersList = await headers()
+  const ua = headersList.get('user-agent') || ''
+  const crawlerMatch = ua.match(/Slackbot|Discordbot|facebookexternalhit|Twitterbot|WhatsApp|Telegram|LinkedInBot|Googlebot|bingbot/i)
+  if (crawlerMatch) {
+    metrics.shareTweetPreviewViewed('crawler', crawlerMatch[0].toLowerCase())
+  } else {
+    metrics.shareTweetPreviewViewed('direct')
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'

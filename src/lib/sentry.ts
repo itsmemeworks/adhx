@@ -200,6 +200,11 @@ export const metrics = {
     }),
 
   // Sharing & public access
+  shareTweetPreviewViewed: (source: 'crawler' | 'direct', crawlerType?: string) =>
+    metricCount('share.tweet_preview_viewed', 1, {
+      source,
+      ...(crawlerType && { crawler_type: crawlerType }),
+    }),
   shareTagCollectionViewed: (tweetCount: number) =>
     metricCount('share.tag_collection_viewed', 1, { tweet_count: tweetCount }),
   shareTagCloned: (clonedCount: number) =>
