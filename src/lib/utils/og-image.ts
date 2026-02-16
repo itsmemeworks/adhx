@@ -96,8 +96,10 @@ export function getOgImages(tweet: FxTweet, baseUrl: string): OgImageResult[] {
   }
 
   // 5. Author avatar for text-only tweets
+  // Avatars are low-res (200×200 or 400×400). Explicit small dimensions tell
+  // crawlers (WhatsApp, iMessage, Slack, etc.) not to stretch them into banners.
   if (tweet.author?.avatar_url) {
-    return [{ url: tweet.author.avatar_url }]
+    return [{ url: tweet.author.avatar_url, width: 200, height: 200 }]
   }
 
   // 6. Fallback to optimized OG logo for tweets without avatar
