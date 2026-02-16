@@ -201,6 +201,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       }))
     : undefined
 
+  // Use small square card for avatar OG images (text-only tweets), large banner for everything else
+  const hasRichMedia = !!(
+    tweet.media?.photos?.length ||
+    tweet.media?.videos?.length ||
+    tweet.article?.cover_media?.media_info?.original_img_url ||
+    tweet.quote?.media?.photos?.[0]?.url ||
+    tweet.quote?.media?.videos?.[0]?.thumbnail_url ||
+    tweet.external?.thumbnail_url
+  )
+
   return {
     title,
     description,
@@ -220,7 +230,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       videos: ogVideos,
     },
     twitter: {
-      card: 'summary_large_image',
+      card: hasRichMedia ? 'summary_large_image' : 'summary',
       title: isArticle ? articleTitle : `Save @${tweet.author.screen_name}'s tweet - ADHX`,
       description,
       images: [ogImages[0].url],

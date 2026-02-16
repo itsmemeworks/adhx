@@ -288,7 +288,16 @@ When generating Open Graph metadata for social unfurling, images are selected in
 2. Article cover image (X Articles `tweet.article.cover_media.media_info.original_img_url`)
 3. Quote tweet media (when parent has no media, use quoted tweet's photos/videos)
 4. External link thumbnail (`tweet.external.thumbnail_url`)
-5. Fallback to `/og-logo.png` for text-only tweets
+5. Author avatar (`tweet.author.avatar_url`) for text-only tweets
+6. Fallback to `/og-logo.png` for tweets without avatar
+
+**Twitter Card Type** (`src/app/[username]/status/[id]/page.tsx`):
+- `summary_large_image` — tweets with rich media (photos, videos, article covers, external thumbnails)
+- `summary` — text-only tweets where OG image is the author's avatar (small square card fits avatars better than a stretched banner)
+
+**Preview Page Expand/Collapse** (`src/components/TweetPreviewLanding.tsx`):
+- Text-only tweets default to expanded on the preview page
+- User preference persisted via `localStorage` key `adhx-preview-collapsed`
 
 ### Branding Assets
 

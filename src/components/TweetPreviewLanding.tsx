@@ -166,10 +166,16 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
   const [isAdding, setIsAdding] = useState(false)
   const [bionicReading, setBionicReading] = useState(false)
   const [selectedFont, setSelectedFont] = useState<BodyFont>('ibm-plex')
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(true)
   const [tweetUrl, setTweetUrl] = useState('')
   const [urlError, setUrlError] = useState('')
   const [shareStatus, setShareStatus] = useState<'idle' | 'shared' | 'copied'>('idle')
+
+  // Read localStorage preference on mount (SSR-safe)
+  useEffect(() => {
+    const collapsed = localStorage.getItem('adhx-preview-collapsed')
+    if (collapsed === 'true') setIsExpanded(false)
+  }, [])
 
   // Pattern to extract username and tweet ID from x.com or twitter.com URLs
   const tweetUrlPattern = /(?:https?:\/\/)?(?:www\.)?(?:x\.com|twitter\.com)\/(\w{1,15})\/status\/(\d+)/i
@@ -482,7 +488,13 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                   {/* Expand/Collapse Toggle - only shown for text-only tweets (no media) */}
                   {!hasMedia && (
                     <button
-                      onClick={() => setIsExpanded(!isExpanded)}
+                      onClick={() => {
+                        setIsExpanded(prev => {
+                          const next = !prev
+                          localStorage.setItem('adhx-preview-collapsed', next ? 'false' : 'true')
+                          return next
+                        })
+                      }}
                       className="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                       title={isExpanded ? 'Collapse tweet' : 'Expand tweet'}
                     >

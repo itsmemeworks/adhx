@@ -60,7 +60,7 @@ To believe this, you need to accept two assumptions: (4.8K likes, 629 reposts)",
     "images": [
       {
         "height": 630,
-        "url": "https://adhx.com/og-logo.png",
+        "url": "https://pbs.twimg.com/profile_images/1987673473108582402/yFQu0vw1_200x200.jpg",
         "width": 1200,
       },
     ],
@@ -77,7 +77,7 @@ To believe this, you need to accept two assumptions: (4.8K likes, 629 reposts)",
 This is not a short-term prediction. It is a structural claim about where the economy converges.
 To believe this, you need to accept two assumptions: (4.8K likes, 629 reposts)",
     "images": [
-      "https://adhx.com/og-logo.png",
+      "https://pbs.twimg.com/profile_images/1987673473108582402/yFQu0vw1_200x200.jpg",
     ],
     "title": "human data will be a $1 trillion/year market",
   },
@@ -336,7 +336,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'plain-text
     "images": [
       {
         "height": 630,
-        "url": "https://adhx.com/og-logo.png",
+        "url": "https://pbs.twimg.com/profile_images/1385452682517745667/mfcIUnoX_200x200.jpg",
         "width": 1200,
       },
     ],
@@ -351,7 +351,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'plain-text
     "creator": "@TheCinesthetic",
     "description": "What movie is 10/10, yet hardly anyone has heard of it? (4.9K likes, 401 reposts)",
     "images": [
-      "https://adhx.com/og-logo.png",
+      "https://pbs.twimg.com/profile_images/1385452682517745667/mfcIUnoX_200x200.jpg",
     ],
     "title": "Save @TheCinesthetic's tweet - ADHX",
   },
@@ -408,7 +408,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-t
     "images": [
       {
         "height": 630,
-        "url": "https://adhx.com/og-logo.png",
+        "url": "https://pbs.twimg.com/profile_images/2008546467615580160/57KcqsTA_200x200.jpg",
         "width": 1200,
       },
     ],
@@ -423,7 +423,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-t
     "creator": "@elonmusk",
     "description": "True (3.2K likes, 423 reposts)",
     "images": [
-      "https://adhx.com/og-logo.png",
+      "https://pbs.twimg.com/profile_images/2008546467615580160/57KcqsTA_200x200.jpg",
     ],
     "title": "Save @elonmusk's tweet - ADHX",
   },
@@ -441,7 +441,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'reply-twee
     "images": [
       {
         "height": 630,
-        "url": "https://adhx.com/og-logo.png",
+        "url": "https://pbs.twimg.com/profile_images/1893219113717342208/Vgg2hEPa_200x200.jpg",
         "width": 1200,
       },
     ],
@@ -456,7 +456,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'reply-twee
     "creator": "@grok",
     "description": "Based on recent reports, the UK government has approved postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing reorganisation, like merging councils into unitary authorities. Up to 63 councils could delay by a year to manage… (114 likes)",
     "images": [
-      "https://adhx.com/og-logo.png",
+      "https://pbs.twimg.com/profile_images/1893219113717342208/Vgg2hEPa_200x200.jpg",
     ],
     "title": "Save @grok's tweet - ADHX",
   },
@@ -552,7 +552,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'youtube-li
     "images": [
       {
         "height": 630,
-        "url": "https://adhx.com/og-logo.png",
+        "url": "https://pbs.twimg.com/profile_images/1557421659925237763/RzJu2YI3_200x200.jpg",
         "width": 1200,
       },
     ],
@@ -567,7 +567,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'youtube-li
     "creator": "@skalskip92",
     "description": "link: https://www.youtube.com/watch?v=yGQb9KkvQ1Q (381 likes)",
     "images": [
-      "https://adhx.com/og-logo.png",
+      "https://pbs.twimg.com/profile_images/1557421659925237763/RzJu2YI3_200x200.jpg",
     ],
     "title": "Save @skalskip92's tweet - ADHX",
   },
@@ -583,7 +583,7 @@ exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image f
 
 exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'article-no-header': returns correct OG image 1`] = `
 {
-  "ogImage": "https://adhx.com/og-logo.png",
+  "ogImage": "https://pbs.twimg.com/profile_images/1987673473108582402/yFQu0vw1_200x200.jpg",
   "slug": "article-no-header",
 }
 `;
@@ -625,7 +625,7 @@ exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image f
 
 exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'plain-text': returns correct OG image 1`] = `
 {
-  "ogImage": "https://adhx.com/og-logo.png",
+  "ogImage": "https://pbs.twimg.com/profile_images/1385452682517745667/mfcIUnoX_200x200.jpg",
   "slug": "plain-text",
 }
 `;
@@ -639,14 +639,14 @@ exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image f
 
 exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'quote-of-text-tweet': returns correct OG image 1`] = `
 {
-  "ogImage": "https://adhx.com/og-logo.png",
+  "ogImage": "https://pbs.twimg.com/profile_images/2008546467615580160/57KcqsTA_200x200.jpg",
   "slug": "quote-of-text-tweet",
 }
 `;
 
 exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'reply-tweet': returns correct OG image 1`] = `
 {
-  "ogImage": "https://adhx.com/og-logo.png",
+  "ogImage": "https://pbs.twimg.com/profile_images/1893219113717342208/Vgg2hEPa_200x200.jpg",
   "slug": "reply-tweet",
 }
 `;
@@ -667,7 +667,7 @@ exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image f
 
 exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'youtube-link': returns correct OG image 1`] = `
 {
-  "ogImage": "https://adhx.com/og-logo.png",
+  "ogImage": "https://pbs.twimg.com/profile_images/1557421659925237763/RzJu2YI3_200x200.jpg",
   "slug": "youtube-link",
 }
 `;
