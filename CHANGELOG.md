@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.27.1](https://github.com/itsmemeworks/adhx/compare/v1.27.0...v1.27.1) (2026-02-16)
+
+
+### Bug Fixes
+
+* add explicit small dimensions for avatar og images ([#123](https://github.com/itsmemeworks/adhx/issues/123)) ([7d845f3](https://github.com/itsmemeworks/adhx/commit/7d845f3e6e4512f850cf6bdabeff050964086aac))
+
 ## [1.27.0](https://github.com/itsmemeworks/adhx/compare/v1.26.0...v1.27.0) (2026-02-16)
 
 
