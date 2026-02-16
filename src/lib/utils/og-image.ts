@@ -30,7 +30,8 @@ function stripTwitterMediaParams(url: string): string {
  * 2. Article cover image (X Articles)
  * 3. Quote tweet media (if parent has no media)
  * 4. External link thumbnail
- * 5. Fallback to logo
+ * 5. Author avatar (text-only tweets)
+ * 6. Fallback to logo
  *
  * Returns URL string for backward compatibility. Use getOgImages() for dimensions.
  */
@@ -94,7 +95,12 @@ export function getOgImages(tweet: FxTweet, baseUrl: string): OgImageResult[] {
     return [{ url: tweet.external.thumbnail_url }]
   }
 
-  // 5. Fallback to optimized OG logo for text-only tweets
+  // 5. Author avatar for text-only tweets
+  if (tweet.author?.avatar_url) {
+    return [{ url: tweet.author.avatar_url }]
+  }
+
+  // 6. Fallback to optimized OG logo for tweets without avatar
   // Using og-logo.png (150KB) instead of logo.png (918KB) for faster crawler fetches
   return [{ url: `${baseUrl}/og-logo.png`, width: 1200, height: 630 }]
 }

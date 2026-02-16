@@ -29,12 +29,14 @@ describe('OG Metadata with Real Fixtures', () => {
     })
   })
 
-  describe('Text tweets fallback to logo', () => {
-    it('plain-text: falls back to og-logo.png', () => {
+  describe('Text tweets use author avatar', () => {
+    it('plain-text: uses author avatar instead of logo', () => {
       const tweet = fixtures['plain-text'].tweet!
       const ogImage = getOgImage(tweet, BASE_URL)
 
-      expect(ogImage).toBe(`${BASE_URL}/og-logo.png`)
+      // Text-only tweets now use author avatar (priority 5) instead of logo
+      expect(ogImage).not.toBe(`${BASE_URL}/og-logo.png`)
+      expect(ogImage).toBe(tweet.author.avatar_url)
     })
   })
 

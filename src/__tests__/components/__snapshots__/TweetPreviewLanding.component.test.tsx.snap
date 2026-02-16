@@ -1078,7 +1078,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <article
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
             data-content="tweet"
           >
             <header
@@ -1135,7 +1135,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </header>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -1798,10 +1798,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </span>
               <button
                 class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
+                title="Collapse tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
+                  class="lucide lucide-minimize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -1813,16 +1813,16 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   xmlns="http://www.w3.org/2000/svg"
                 >
                   <polyline
-                    points="15 3 21 3 21 9"
+                    points="4 14 10 14 10 20"
                   />
                   <polyline
-                    points="9 21 3 21 3 15"
+                    points="20 10 14 10 14 4"
                   />
                   <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
+                    x1="14"
+                    x2="21"
+                    y1="10"
+                    y2="3"
                   />
                   <line
                     x1="3"
@@ -1834,7 +1834,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <span
                   class="text-xs hidden lg:inline"
                 >
-                  Expand
+                  Collapse
                 </span>
               </button>
               <button
@@ -2604,7 +2604,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <article
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
             data-content="tweet"
           >
             <header
@@ -2661,7 +2661,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </header>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -4235,10 +4235,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </span>
               <button
                 class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
+                title="Collapse tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
+                  class="lucide lucide-minimize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -4250,16 +4250,16 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   xmlns="http://www.w3.org/2000/svg"
                 >
                   <polyline
-                    points="15 3 21 3 21 9"
+                    points="4 14 10 14 10 20"
                   />
                   <polyline
-                    points="9 21 3 21 3 15"
+                    points="20 10 14 10 14 4"
                   />
                   <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
+                    x1="14"
+                    x2="21"
+                    y1="10"
+                    y2="3"
                   />
                   <line
                     x1="3"
@@ -4271,7 +4271,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <span
                   class="text-xs hidden lg:inline"
                 >
-                  Expand
+                  Collapse
                 </span>
               </button>
               <button
@@ -8517,7 +8517,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <article
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
             data-content="tweet"
           >
             <header
@@ -8574,7 +8574,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </header>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -8674,10 +8674,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </span>
               <button
                 class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
+                title="Collapse tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
+                  class="lucide lucide-minimize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -8689,16 +8689,16 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   xmlns="http://www.w3.org/2000/svg"
                 >
                   <polyline
-                    points="15 3 21 3 21 9"
+                    points="4 14 10 14 10 20"
                   />
                   <polyline
-                    points="9 21 3 21 3 15"
+                    points="20 10 14 10 14 4"
                   />
                   <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
+                    x1="14"
+                    x2="21"
+                    y1="10"
+                    y2="3"
                   />
                   <line
                     x1="3"
@@ -8710,7 +8710,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <span
                   class="text-xs hidden lg:inline"
                 >
-                  Expand
+                  Collapse
                 </span>
               </button>
               <button
@@ -10206,7 +10206,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <article
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
             data-content="tweet"
           >
             <header
@@ -10263,7 +10263,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </header>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -10408,10 +10408,10 @@ This is not a coincidence.
               </span>
               <button
                 class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
+                title="Collapse tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
+                  class="lucide lucide-minimize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -10423,16 +10423,16 @@ This is not a coincidence.
                   xmlns="http://www.w3.org/2000/svg"
                 >
                   <polyline
-                    points="15 3 21 3 21 9"
+                    points="4 14 10 14 10 20"
                   />
                   <polyline
-                    points="9 21 3 21 3 15"
+                    points="20 10 14 10 14 4"
                   />
                   <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
+                    x1="14"
+                    x2="21"
+                    y1="10"
+                    y2="3"
                   />
                   <line
                     x1="3"
@@ -10444,7 +10444,7 @@ This is not a coincidence.
                 <span
                   class="text-xs hidden lg:inline"
                 >
-                  Expand
+                  Collapse
                 </span>
               </button>
               <button
@@ -11048,7 +11048,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <article
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
             data-content="tweet"
           >
             <header
@@ -11105,7 +11105,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </header>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -11205,10 +11205,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </span>
               <button
                 class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
+                title="Collapse tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
+                  class="lucide lucide-minimize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -11220,16 +11220,16 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   xmlns="http://www.w3.org/2000/svg"
                 >
                   <polyline
-                    points="15 3 21 3 21 9"
+                    points="4 14 10 14 10 20"
                   />
                   <polyline
-                    points="9 21 3 21 3 15"
+                    points="20 10 14 10 14 4"
                   />
                   <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
+                    x1="14"
+                    x2="21"
+                    y1="10"
+                    y2="3"
                   />
                   <line
                     x1="3"
@@ -11241,7 +11241,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <span
                   class="text-xs hidden lg:inline"
                 >
-                  Expand
+                  Collapse
                 </span>
               </button>
               <button
@@ -13571,7 +13571,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <article
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
             data-content="tweet"
           >
             <header
@@ -13628,7 +13628,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </header>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -13728,10 +13728,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </span>
               <button
                 class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
+                title="Collapse tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
+                  class="lucide lucide-minimize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -13743,16 +13743,16 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   xmlns="http://www.w3.org/2000/svg"
                 >
                   <polyline
-                    points="15 3 21 3 21 9"
+                    points="4 14 10 14 10 20"
                   />
                   <polyline
-                    points="9 21 3 21 3 15"
+                    points="20 10 14 10 14 4"
                   />
                   <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
+                    x1="14"
+                    x2="21"
+                    y1="10"
+                    y2="3"
                   />
                   <line
                     x1="3"
@@ -13764,7 +13764,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <span
                   class="text-xs hidden lg:inline"
                 >
-                  Expand
+                  Collapse
                 </span>
               </button>
               <button
@@ -15292,7 +15292,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <article
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
             data-content="tweet"
           >
             <header
@@ -15349,7 +15349,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </header>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -16012,10 +16012,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </span>
               <button
                 class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
+                title="Collapse tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
+                  class="lucide lucide-minimize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -16027,16 +16027,16 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   xmlns="http://www.w3.org/2000/svg"
                 >
                   <polyline
-                    points="15 3 21 3 21 9"
+                    points="4 14 10 14 10 20"
                   />
                   <polyline
-                    points="9 21 3 21 3 15"
+                    points="20 10 14 10 14 4"
                   />
                   <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
+                    x1="14"
+                    x2="21"
+                    y1="10"
+                    y2="3"
                   />
                   <line
                     x1="3"
@@ -16048,7 +16048,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <span
                   class="text-xs hidden lg:inline"
                 >
-                  Expand
+                  Collapse
                 </span>
               </button>
               <button
@@ -16798,7 +16798,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <article
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
             data-content="tweet"
           >
             <header
@@ -16855,7 +16855,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </header>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -18429,10 +18429,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </span>
               <button
                 class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
+                title="Collapse tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
+                  class="lucide lucide-minimize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -18444,16 +18444,16 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   xmlns="http://www.w3.org/2000/svg"
                 >
                   <polyline
-                    points="15 3 21 3 21 9"
+                    points="4 14 10 14 10 20"
                   />
                   <polyline
-                    points="9 21 3 21 3 15"
+                    points="20 10 14 10 14 4"
                   />
                   <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
+                    x1="14"
+                    x2="21"
+                    y1="10"
+                    y2="3"
                   />
                   <line
                     x1="3"
@@ -18465,7 +18465,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <span
                   class="text-xs hidden lg:inline"
                 >
-                  Expand
+                  Collapse
                 </span>
               </button>
               <button
@@ -22611,7 +22611,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <article
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
             data-content="tweet"
           >
             <header
@@ -22668,7 +22668,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </header>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -22768,10 +22768,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </span>
               <button
                 class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
+                title="Collapse tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
+                  class="lucide lucide-minimize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -22783,16 +22783,16 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   xmlns="http://www.w3.org/2000/svg"
                 >
                   <polyline
-                    points="15 3 21 3 21 9"
+                    points="4 14 10 14 10 20"
                   />
                   <polyline
-                    points="9 21 3 21 3 15"
+                    points="20 10 14 10 14 4"
                   />
                   <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
+                    x1="14"
+                    x2="21"
+                    y1="10"
+                    y2="3"
                   />
                   <line
                     x1="3"
@@ -22804,7 +22804,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <span
                   class="text-xs hidden lg:inline"
                 >
-                  Expand
+                  Collapse
                 </span>
               </button>
               <button
@@ -24260,7 +24260,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <article
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
             data-content="tweet"
           >
             <header
@@ -24317,7 +24317,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </header>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -24462,10 +24462,10 @@ This is not a coincidence.
               </span>
               <button
                 class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
+                title="Collapse tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
+                  class="lucide lucide-minimize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -24477,16 +24477,16 @@ This is not a coincidence.
                   xmlns="http://www.w3.org/2000/svg"
                 >
                   <polyline
-                    points="15 3 21 3 21 9"
+                    points="4 14 10 14 10 20"
                   />
                   <polyline
-                    points="9 21 3 21 3 15"
+                    points="20 10 14 10 14 4"
                   />
                   <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
+                    x1="14"
+                    x2="21"
+                    y1="10"
+                    y2="3"
                   />
                   <line
                     x1="3"
@@ -24498,7 +24498,7 @@ This is not a coincidence.
                 <span
                   class="text-xs hidden lg:inline"
                 >
-                  Expand
+                  Collapse
                 </span>
               </button>
               <button
@@ -25082,7 +25082,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <article
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
             data-content="tweet"
           >
             <header
@@ -25139,7 +25139,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </header>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -25239,10 +25239,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </span>
               <button
                 class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
+                title="Collapse tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
+                  class="lucide lucide-minimize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -25254,16 +25254,16 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   xmlns="http://www.w3.org/2000/svg"
                 >
                   <polyline
-                    points="15 3 21 3 21 9"
+                    points="4 14 10 14 10 20"
                   />
                   <polyline
-                    points="9 21 3 21 3 15"
+                    points="20 10 14 10 14 4"
                   />
                   <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
+                    x1="14"
+                    x2="21"
+                    y1="10"
+                    y2="3"
                   />
                   <line
                     x1="3"
@@ -25275,7 +25275,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <span
                   class="text-xs hidden lg:inline"
                 >
-                  Expand
+                  Collapse
                 </span>
               </button>
               <button
@@ -27545,7 +27545,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           class="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0"
         >
           <article
-            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 "
             data-content="tweet"
           >
             <header
@@ -27602,7 +27602,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </div>
             </header>
             <div
-              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 overflow-y-auto"
+              class="flex-1 min-h-0 overflow-x-hidden w-full min-w-0 "
               style="font-family: var(--font-ibm-plex);"
             >
               <div
@@ -27702,10 +27702,10 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </span>
               <button
                 class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Expand tweet"
+                title="Collapse tweet"
               >
                 <svg
-                  class="lucide lucide-maximize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
+                  class="lucide lucide-minimize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
                   fill="none"
                   height="24"
                   stroke="currentColor"
@@ -27717,16 +27717,16 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   xmlns="http://www.w3.org/2000/svg"
                 >
                   <polyline
-                    points="15 3 21 3 21 9"
+                    points="4 14 10 14 10 20"
                   />
                   <polyline
-                    points="9 21 3 21 3 15"
+                    points="20 10 14 10 14 4"
                   />
                   <line
-                    x1="21"
-                    x2="14"
-                    y1="3"
-                    y2="10"
+                    x1="14"
+                    x2="21"
+                    y1="10"
+                    y2="3"
                   />
                   <line
                     x1="3"
@@ -27738,7 +27738,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <span
                   class="text-xs hidden lg:inline"
                 >
-                  Expand
+                  Collapse
                 </span>
               </button>
               <button

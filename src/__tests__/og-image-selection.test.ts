@@ -9,7 +9,8 @@ import { getOgImage } from '@/lib/utils/og-image'
  * 2. Article cover image (X Articles)
  * 3. Quote tweet media (if parent has no media)
  * 4. External link thumbnail
- * 5. Fallback to logo
+ * 5. Author avatar (text-only tweets)
+ * 6. Fallback to logo
  */
 
 const BASE_URL = 'https://example.com'
@@ -255,14 +256,14 @@ describe('getOgImage', () => {
     })
   })
 
-  describe('Priority 5: Fallback to logo', () => {
-    it('returns logo URL for text-only tweets', () => {
+  describe('Priority 5: Author avatar', () => {
+    it('returns author avatar URL for text-only tweets', () => {
       const tweet = createTweet({})
 
-      expect(getOgImage(tweet, BASE_URL)).toBe('https://example.com/og-logo.png')
+      expect(getOgImage(tweet, BASE_URL)).toBe('https://pbs.twimg.com/avatar.jpg')
     })
 
-    it('returns logo when media object exists but is empty', () => {
+    it('returns avatar when media object exists but is empty', () => {
       const tweet = createTweet({
         media: {
           photos: [],
@@ -270,10 +271,10 @@ describe('getOgImage', () => {
         },
       })
 
-      expect(getOgImage(tweet, BASE_URL)).toBe('https://example.com/og-logo.png')
+      expect(getOgImage(tweet, BASE_URL)).toBe('https://pbs.twimg.com/avatar.jpg')
     })
 
-    it('returns logo when quote exists but has no media', () => {
+    it('returns avatar when quote exists but has no media', () => {
       const tweet = createTweet({
         quote: {
           id: 'quote-123',
@@ -292,12 +293,26 @@ describe('getOgImage', () => {
         },
       })
 
+      expect(getOgImage(tweet, BASE_URL)).toBe('https://pbs.twimg.com/avatar.jpg')
+    })
+  })
+
+  describe('Priority 6: Fallback to logo', () => {
+    it('returns logo when tweet has no avatar', () => {
+      const tweet = createTweet({
+        author: {
+          id: 'author-id',
+          name: 'Test Author',
+          screen_name: 'testauthor',
+        },
+      })
+
       expect(getOgImage(tweet, BASE_URL)).toBe('https://example.com/og-logo.png')
     })
   })
 
   describe('Edge cases', () => {
-    it('handles article without cover_media', () => {
+    it('handles article without cover_media (falls back to avatar)', () => {
       const tweet = createTweet({
         article: {
           id: 'article-123',
@@ -305,10 +320,10 @@ describe('getOgImage', () => {
         },
       })
 
-      expect(getOgImage(tweet, BASE_URL)).toBe('https://example.com/og-logo.png')
+      expect(getOgImage(tweet, BASE_URL)).toBe('https://pbs.twimg.com/avatar.jpg')
     })
 
-    it('handles article with cover_media but no media_info', () => {
+    it('handles article with cover_media but no media_info (falls back to avatar)', () => {
       const tweet = createTweet({
         article: {
           id: 'article-123',
@@ -317,10 +332,10 @@ describe('getOgImage', () => {
         },
       })
 
-      expect(getOgImage(tweet, BASE_URL)).toBe('https://example.com/og-logo.png')
+      expect(getOgImage(tweet, BASE_URL)).toBe('https://pbs.twimg.com/avatar.jpg')
     })
 
-    it('handles external without thumbnail_url', () => {
+    it('handles external without thumbnail_url (falls back to avatar)', () => {
       const tweet = createTweet({
         external: {
           url: 'https://example.com/page',
@@ -330,7 +345,7 @@ describe('getOgImage', () => {
         },
       })
 
-      expect(getOgImage(tweet, BASE_URL)).toBe('https://example.com/og-logo.png')
+      expect(getOgImage(tweet, BASE_URL)).toBe('https://pbs.twimg.com/avatar.jpg')
     })
   })
 })
