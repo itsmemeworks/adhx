@@ -32,6 +32,7 @@ vi.mock('@/lib/sentry', () => ({
   metrics: {
     accountCleared: vi.fn(),
     accountDeleted: vi.fn(),
+    dataCleared: vi.fn(),
   },
   captureException: vi.fn(),
 }))

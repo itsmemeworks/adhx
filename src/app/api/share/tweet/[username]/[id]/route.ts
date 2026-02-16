@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { fetchTweetData, type FxTwitterResponse } from '@/lib/media/fxembed'
 import { articleBlocksToMarkdown } from '@/lib/utils/article-text'
 import { db } from '@/lib/db'
+import { metrics } from '@/lib/sentry'
 import { bookmarks, bookmarkTags, tagShares, oauthTokens } from '@/lib/db/schema'
 import { eq, and, sql } from 'drizzle-orm'
 
@@ -227,6 +228,8 @@ export async function GET(
         previewUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://adhx.com'}/${username}/status/${id}`,
       }
     }
+
+    metrics.shareTweetApiViewed(!!adhxContext)
 
     return NextResponse.json(response, {
       headers: {

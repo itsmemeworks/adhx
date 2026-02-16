@@ -66,6 +66,8 @@ export async function DELETE() {
     await deleteTokens(session.userId)
   }
 
+  metrics.accountLoggedOut()
+
   // Clear the session cookie
   const response = NextResponse.json({ success: true })
   clearSessionCookie(response)

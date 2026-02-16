@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { captureException } from '@/lib/sentry'
+import { captureException, metrics } from '@/lib/sentry'
 
 /**
  * Video Download Endpoint - Streams video with Content-Disposition for instant browser download
@@ -85,6 +85,8 @@ export async function GET(request: NextRequest) {
     if (contentLength) {
       headers.set('Content-Length', contentLength)
     }
+
+    metrics.mediaVideoDownloaded(quality)
 
     // Stream the video directly to the client
     return new Response(videoResponse.body, { headers })

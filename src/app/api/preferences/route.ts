@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { userPreferences } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { getCurrentUserId } from '@/lib/auth/session'
+import { metrics } from '@/lib/sentry'
 
 // GET /api/preferences - Get all user preferences
 export async function GET() {
@@ -62,6 +63,8 @@ export async function PATCH(request: NextRequest) {
           updatedAt: now,
         })
       }
+
+      metrics.settingsChanged(key, value)
     }
 
     return NextResponse.json({ success: true })

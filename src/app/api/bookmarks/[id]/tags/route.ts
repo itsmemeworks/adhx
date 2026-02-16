@@ -134,5 +134,7 @@ export async function DELETE(
     .delete(bookmarkTags)
     .where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.bookmarkId, id), eq(bookmarkTags.tag, tag)))
 
+  metrics.tagRemovedFromBookmark()
+
   return NextResponse.json({ success: true })
 }
