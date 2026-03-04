@@ -14,6 +14,7 @@ import {
   determineLinkType,
 } from '@/lib/tweets/processor'
 import { getSyncCooldownMs } from '@/lib/sync/config'
+import { normalizeEntityMap } from '@/lib/utils/article-text'
 
 // GET /api/sync - SSE endpoint for sync progress
 export async function GET(request: NextRequest) {
@@ -421,13 +422,7 @@ async function saveBookmark(
             // Build full article content with blocks, entityMap, and mediaEntities
             const articleContent = fxData.tweet.article.content ? {
               blocks: fxData.tweet.article.content.blocks,
-              // FxTwitter returns entityMap as array [{key, value}], convert to dictionary
-              entityMap: Array.isArray(fxData.tweet.article.content.entityMap)
-                ? fxData.tweet.article.content.entityMap.reduce((acc: Record<string, unknown>, item: { key: string; value: unknown }) => {
-                    acc[item.key] = item.value
-                    return acc
-                  }, {})
-                : (fxData.tweet.article.content.entityMap || {}),
+              entityMap: normalizeEntityMap(fxData.tweet.article.content.entityMap),
               // Include media_entities to map mediaId to actual image URLs
               mediaEntities: fxData.tweet.article.media_entities?.reduce((acc: Record<string, { url: string; width?: number; height?: number }>, entity: { media_id?: string; media_info?: { original_img_url?: string; original_img_width?: number; original_img_height?: number } }) => {
                 if (entity.media_id && entity.media_info?.original_img_url) {

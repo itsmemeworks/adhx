@@ -13,6 +13,7 @@
  */
 
 import { fetchTweetData, type FxTwitterResponse } from '@/lib/media/fxembed'
+import { normalizeEntityMap } from '@/lib/utils/article-text'
 
 // ============================================================================
 // Types
@@ -313,16 +314,7 @@ export function buildArticleContent(
 ): ArticleContent | null {
   if (!article.content) return null
 
-  // FxTwitter returns entityMap as array [{key, value}], convert to dictionary
-  const entityMap = Array.isArray(article.content.entityMap)
-    ? (article.content.entityMap as Array<{ key: string; value: unknown }>).reduce(
-        (acc, item) => {
-          acc[item.key] = item.value
-          return acc
-        },
-        {} as Record<string, unknown>
-      )
-    : article.content.entityMap || {}
+  const entityMap = normalizeEntityMap(article.content.entityMap)
 
   // Build mediaEntities mapping from media_entities array
   const mediaEntities = article.media_entities?.reduce(

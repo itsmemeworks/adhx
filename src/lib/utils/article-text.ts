@@ -32,6 +32,58 @@ type EntityMap = Record<string | number, EntityMapEntry>
 type MediaEntities = Record<string, { url: string; width?: number; height?: number }>
 
 /**
+ * Normalize FxTwitter entityMap to a flat dictionary.
+ *
+ * FxTwitter returns entityMap in multiple formats:
+ * 1. Array: [{key: "0", value: {type, data}}] → {"0": {type, data}}
+ * 2. Dict with wrappers: {"0": {key: "0", value: {type, data}}} → {"0": {type, data}}
+ * 3. Already normalized: {"0": {type, data}} → pass through
+ *
+ * Detection: an entry is a wrapper if it has a `value` property that is
+ * an object containing `type` or `data`.
+ */
+export function normalizeEntityMap(
+  entityMap: unknown
+): Record<string, unknown> {
+  if (!entityMap || typeof entityMap !== 'object') return {}
+
+  // Format 1: Array [{key, value}]
+  if (Array.isArray(entityMap)) {
+    return entityMap.reduce(
+      (acc: Record<string, unknown>, item: { key: string; value: unknown }) => {
+        acc[item.key] = item.value
+        return acc
+      },
+      {}
+    )
+  }
+
+  // Check first entry to detect format 2 vs 3
+  const entries = Object.entries(entityMap as Record<string, unknown>)
+  if (entries.length === 0) return {}
+
+  const [, firstValue] = entries[0]
+  if (
+    firstValue &&
+    typeof firstValue === 'object' &&
+    'value' in firstValue &&
+    firstValue.value &&
+    typeof firstValue.value === 'object' &&
+    ('type' in firstValue.value || 'data' in firstValue.value)
+  ) {
+    // Format 2: Dict with {key, value} wrappers
+    const result: Record<string, unknown> = {}
+    for (const [k, v] of entries) {
+      result[k] = (v as { value: unknown }).value
+    }
+    return result
+  }
+
+  // Format 3: Already normalized
+  return entityMap as Record<string, unknown>
+}
+
+/**
  * Apply inline styles (bold, italic) and entity links to text.
  * Returns markdown-formatted text.
  */
