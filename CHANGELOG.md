@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.28.0](https://github.com/itsmemeworks/adhx/compare/v1.27.2...v1.28.0) (2026-03-04)
+
+
+### Features
+
+* add comprehensive sentry metrics coverage ([#125](https://github.com/itsmemeworks/adhx/issues/125)) ([9e041bc](https://github.com/itsmemeworks/adhx/commit/9e041bccf2bd5ea2d62ea6fac6d7d753b80f156f))
+
 ## [1.27.2](https://github.com/itsmemeworks/adhx/compare/v1.27.1...v1.27.2) (2026-03-04)
 
 
