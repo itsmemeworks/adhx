@@ -4,7 +4,8 @@ import { Metadata } from 'next'
 import { getSession } from '@/lib/auth/session'
 import { QuickAddLanding } from '@/components/QuickAddLanding'
 import { TweetPreviewLanding } from '@/components/TweetPreviewLanding'
-import { fetchTweetData, type FxTwitterResponse } from '@/lib/media/fxembed'
+import { fetchTweetData, extractUrlsFromFacets, type FxTwitterResponse } from '@/lib/media/fxembed'
+import { fetchOgMetadata } from '@/lib/utils/og-fetch'
 import { truncate } from '@/lib/utils/format'
 import { getOgImages } from '@/lib/utils/og-image'
 import { metrics } from '@/lib/sentry'
@@ -112,6 +113,24 @@ export default async function QuickAddPage({ params }: Props) {
 
   // Check authentication
   const session = await getSession()
+
+  // Enrich tweet with OG metadata from facet URLs when external is null
+  if (tweet && !tweet.external && !tweet.article) {
+    const facetUrls = extractUrlsFromFacets(tweet)
+    if (facetUrls.length > 0) {
+      const og = await fetchOgMetadata(facetUrls[0].expanded_url)
+      if (og) {
+        tweet.external = {
+          url: facetUrls[0].url,
+          display_url: facetUrls[0].domain,
+          expanded_url: facetUrls[0].expanded_url,
+          title: og.title,
+          description: og.description,
+          thumbnail_url: og.image,
+        }
+      }
+    }
+  }
 
   // Show rich preview if we have tweet data
   if (tweet) {

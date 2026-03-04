@@ -8,6 +8,8 @@ import {
   getShareableUrl,
   getDownloadUrl,
   getThumbnailUrl,
+  extractUrlsFromFacets,
+  type FxTwitterResponse,
 } from '@/lib/media/fxembed'
 
 describe('FxEmbed URL utilities', () => {
@@ -144,6 +146,69 @@ describe('FxEmbed URL utilities', () => {
         mediaIndex: 1,
       }
       expect(getDownloadUrl(options)).toBe(getShareableUrl(options))
+    })
+  })
+
+  describe('extractUrlsFromFacets', () => {
+    function makeTweet(facets?: NonNullable<NonNullable<NonNullable<FxTwitterResponse['tweet']>['raw_text']>['facets']>): FxTwitterResponse['tweet'] {
+      return {
+        id: '123',
+        url: 'https://x.com/test/status/123',
+        text: 'Check this out',
+        raw_text: facets ? { text: 'Check this out', facets } : undefined,
+        author: { id: '1', name: 'Test', screen_name: 'test', avatar_url: '' },
+        created_at: '2024-01-01',
+        replies: 0,
+        retweets: 0,
+        likes: 0,
+      }
+    }
+
+    it('extracts URL facets with domain', () => {
+      const tweet = makeTweet([
+        { type: 'url', indices: [0, 23], original: 'https://t.co/abc', replacement: 'https://www.theblock.co/article/123', display: 'theblock.co/article/123' },
+      ])
+      const urls = extractUrlsFromFacets(tweet)
+      expect(urls).toEqual([
+        { url: 'https://t.co/abc', expanded_url: 'https://www.theblock.co/article/123', domain: 'theblock.co' },
+      ])
+    })
+
+    it('filters out tweet/status links', () => {
+      const tweet = makeTweet([
+        { type: 'url', indices: [0, 23], original: 'https://t.co/abc', replacement: 'https://x.com/user/status/456', display: 'x.com/user/status/456' },
+        { type: 'url', indices: [24, 47], original: 'https://t.co/def', replacement: 'https://example.com/page', display: 'example.com/page' },
+      ])
+      const urls = extractUrlsFromFacets(tweet)
+      expect(urls).toHaveLength(1)
+      expect(urls[0].expanded_url).toBe('https://example.com/page')
+    })
+
+    it('returns empty array when no facets', () => {
+      expect(extractUrlsFromFacets(makeTweet())).toEqual([])
+      expect(extractUrlsFromFacets(makeTweet([]))).toEqual([])
+    })
+
+    it('returns empty array for null tweet', () => {
+      expect(extractUrlsFromFacets(undefined)).toEqual([])
+    })
+
+    it('skips non-url facet types', () => {
+      const tweet = makeTweet([
+        { type: 'mention', indices: [0, 5], original: '@user', replacement: '@user', display: '@user' },
+        { type: 'url', indices: [6, 29], original: 'https://t.co/abc', replacement: 'https://example.com', display: 'example.com' },
+      ])
+      const urls = extractUrlsFromFacets(tweet)
+      expect(urls).toHaveLength(1)
+      expect(urls[0].domain).toBe('example.com')
+    })
+
+    it('strips www. from domain', () => {
+      const tweet = makeTweet([
+        { type: 'url', indices: [0, 23], original: 'https://t.co/abc', replacement: 'https://www.example.com/path', display: 'example.com/path' },
+      ])
+      const urls = extractUrlsFromFacets(tweet)
+      expect(urls[0].domain).toBe('example.com')
     })
   })
 
