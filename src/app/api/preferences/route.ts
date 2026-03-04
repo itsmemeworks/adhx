@@ -40,6 +40,7 @@ export async function PATCH(request: NextRequest) {
     const now = new Date().toISOString()
 
     // Update each provided preference (using composite key: userId + key)
+    const updatedKeys: string[] = []
     for (const [key, value] of Object.entries(body)) {
       if (typeof value !== 'string') continue
 
@@ -64,7 +65,11 @@ export async function PATCH(request: NextRequest) {
         })
       }
 
-      metrics.settingsChanged(key, value)
+      updatedKeys.push(key)
+    }
+
+    if (updatedKeys.length > 0) {
+      metrics.settingsChanged(updatedKeys.join(','), String(updatedKeys.length))
     }
 
     return NextResponse.json({ success: true })

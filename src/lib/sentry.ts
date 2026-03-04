@@ -188,8 +188,8 @@ export const metrics = {
     metricCount('feed.filtered', 1, { filter: filterType }),
 
   // Settings
-  settingsChanged: (setting: string, value: string) =>
-    metricCount('settings.changed', 1, { setting, value }),
+  settingsChanged: (settings: string, count: string) =>
+    metricCount('settings.changed', 1, { settings, count }),
   dataCleared: () => metricCount('settings.data_cleared'),
 
   // API performance

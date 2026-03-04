@@ -97,6 +97,16 @@ export default async function QuickAddPage({ params }: Props) {
     redirect('/')
   }
 
+  // Track preview page impressions (unfurls + direct visits)
+  const headersList = await headers()
+  const ua = headersList.get('user-agent') || ''
+  const crawlerMatch = ua.match(/Slackbot|Discordbot|facebookexternalhit|Twitterbot|WhatsApp|Telegram|LinkedInBot|Googlebot|bingbot/i)
+  if (crawlerMatch) {
+    metrics.shareTweetPreviewViewed('crawler', crawlerMatch[0].toLowerCase())
+  } else {
+    metrics.shareTweetPreviewViewed('direct')
+  }
+
   // Fetch tweet data server-side for rich preview
   const tweet = await getTweetData(username, id)
 
@@ -168,16 +178,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: `Save @${username}'s tweet - ADHX`,
       description: 'Save this tweet to your ADHX collection',
     }
-  }
-
-  // Track preview page impressions (unfurls + direct visits)
-  const headersList = await headers()
-  const ua = headersList.get('user-agent') || ''
-  const crawlerMatch = ua.match(/Slackbot|Discordbot|facebookexternalhit|Twitterbot|WhatsApp|Telegram|LinkedInBot|Googlebot|bingbot/i)
-  if (crawlerMatch) {
-    metrics.shareTweetPreviewViewed('crawler', crawlerMatch[0].toLowerCase())
-  } else {
-    metrics.shareTweetPreviewViewed('direct')
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
