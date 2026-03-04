@@ -9,6 +9,7 @@ import {
   fetchTweetFromFxTwitter,
   determineCategory,
 } from '@/lib/tweets/processor'
+import { normalizeEntityMap } from '@/lib/utils/article-text'
 
 // POST /api/tweets/add - Add a tweet by URL
 export async function POST(request: NextRequest) {
@@ -215,13 +216,7 @@ export async function POST(request: NextRequest) {
       // Build content JSON with mediaEntities for image URL mapping
       let contentJson: string | null = null
       if (tweet.article.content) {
-        // Convert entityMap from array [{key, value}] to dictionary if needed
-        const entityMap = Array.isArray(tweet.article.content.entityMap)
-          ? tweet.article.content.entityMap.reduce((acc: Record<string, unknown>, item: { key: string; value: unknown }) => {
-              acc[item.key] = item.value
-              return acc
-            }, {})
-          : (tweet.article.content.entityMap || {})
+        const entityMap = normalizeEntityMap(tweet.article.content.entityMap)
 
         // Build mediaEntities mapping from media_entities array
         const mediaEntities = tweet.article.media_entities?.reduce((acc: Record<string, { url: string; width?: number; height?: number }>, entity: { media_id: string; media_info?: { original_img_url?: string; original_img_width?: number; original_img_height?: number } }) => {

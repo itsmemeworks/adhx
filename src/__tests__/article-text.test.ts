@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { articleBlocksToMarkdown } from '@/lib/utils/article-text'
+import { articleBlocksToMarkdown, normalizeEntityMap } from '@/lib/utils/article-text'
 
 describe('articleBlocksToMarkdown', () => {
   it('converts header-one to # heading', () => {
@@ -202,5 +202,86 @@ describe('articleBlocksToMarkdown', () => {
     ]
     expect(articleBlocksToMarkdown(blocks, null, null)).toBe('Plain text.')
     expect(articleBlocksToMarkdown(blocks, undefined, undefined)).toBe('Plain text.')
+  })
+})
+
+describe('normalizeEntityMap', () => {
+  it('converts array format [{key, value}] to dictionary', () => {
+    const input = [
+      { key: '0', value: { type: 'MEDIA', data: { mediaItems: [{ mediaId: 'm1' }] } } },
+      { key: '1', value: { type: 'LINK', data: { url: 'https://example.com' } } },
+    ]
+    const result = normalizeEntityMap(input)
+    expect(result).toEqual({
+      '0': { type: 'MEDIA', data: { mediaItems: [{ mediaId: 'm1' }] } },
+      '1': { type: 'LINK', data: { url: 'https://example.com' } },
+    })
+  })
+
+  it('unwraps dict-with-wrappers format {"0": {key, value}}', () => {
+    const input = {
+      '0': { key: '0', value: { type: 'MEDIA', data: { mediaItems: [{ mediaId: 'm1' }] } } },
+      '1': { key: '1', value: { type: 'IMAGE', data: { src: 'https://example.com/img.jpg' } } },
+    }
+    const result = normalizeEntityMap(input)
+    expect(result).toEqual({
+      '0': { type: 'MEDIA', data: { mediaItems: [{ mediaId: 'm1' }] } },
+      '1': { type: 'IMAGE', data: { src: 'https://example.com/img.jpg' } },
+    })
+  })
+
+  it('passes through already-normalized dictionaries', () => {
+    const input = {
+      '0': { type: 'MEDIA', data: { mediaItems: [{ mediaId: 'm1' }] } },
+      '1': { type: 'LINK', data: { url: 'https://example.com' } },
+    }
+    const result = normalizeEntityMap(input)
+    expect(result).toEqual(input)
+  })
+
+  it('returns empty object for null', () => {
+    expect(normalizeEntityMap(null)).toEqual({})
+  })
+
+  it('returns empty object for undefined', () => {
+    expect(normalizeEntityMap(undefined)).toEqual({})
+  })
+
+  it('returns empty object for empty object', () => {
+    expect(normalizeEntityMap({})).toEqual({})
+  })
+
+  it('returns empty object for empty array', () => {
+    expect(normalizeEntityMap([])).toEqual({})
+  })
+
+  it('handles mixed entity types (MEDIA, LINK, IMAGE)', () => {
+    const input = {
+      '0': { key: '0', value: { type: 'MEDIA', data: { mediaItems: [{ mediaId: 'm1' }] } } },
+      '1': { key: '1', value: { type: 'LINK', data: { url: 'https://example.com' } } },
+      '2': { key: '2', value: { type: 'IMAGE', data: { src: 'https://example.com/img.jpg', alt: 'Photo' } } },
+    }
+    const result = normalizeEntityMap(input)
+    expect(result['0']).toEqual({ type: 'MEDIA', data: { mediaItems: [{ mediaId: 'm1' }] } })
+    expect(result['1']).toEqual({ type: 'LINK', data: { url: 'https://example.com' } })
+    expect(result['2']).toEqual({ type: 'IMAGE', data: { src: 'https://example.com/img.jpg', alt: 'Photo' } })
+  })
+
+  it('detects wrappers by value having type property', () => {
+    // Entry where value has 'type' but not 'data'
+    const input = {
+      '0': { key: '0', value: { type: 'LINK' } },
+    }
+    const result = normalizeEntityMap(input)
+    expect(result['0']).toEqual({ type: 'LINK' })
+  })
+
+  it('detects wrappers by value having data property', () => {
+    // Entry where value has 'data' but not 'type'
+    const input = {
+      '0': { key: '0', value: { data: { url: 'https://example.com' } } },
+    }
+    const result = normalizeEntityMap(input)
+    expect(result['0']).toEqual({ data: { url: 'https://example.com' } })
   })
 })
