@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.29.0](https://github.com/itsmemeworks/adhx/compare/v1.28.0...v1.29.0) (2026-03-04)
+
+
+### Features
+
+* extract external links from raw_text.facets with og enrichment ([#130](https://github.com/itsmemeworks/adhx/issues/130)) ([261a243](https://github.com/itsmemeworks/adhx/commit/261a24342fafd638891da051f1cb9bf189b50447))
+
 ## [1.28.0](https://github.com/itsmemeworks/adhx/compare/v1.27.2...v1.28.0) (2026-03-04)
 
 
