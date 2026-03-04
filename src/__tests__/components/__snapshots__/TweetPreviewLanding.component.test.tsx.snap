@@ -2694,6 +2694,54 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                         Guys. I finally did it. After years of fidgeting with macros, intermittent fasting, and diet “hacks”, I finally got hyperlean. My visceral fat vanished, muscles are fuller, and vascularity is through the roof. Its like I re-wrote my midwest corn-fed genetics.
                       </span>
                     </p>
+                    <figure
+                      class="my-6"
+                    >
+                      <div
+                        class="relative group"
+                      >
+                        <img
+                          alt=""
+                          class="w-full rounded-lg max-h-[600px] object-contain bg-gray-100 dark:bg-gray-800"
+                          loading="lazy"
+                          src="https://pbs.twimg.com/media/G-E9mcpXUAAhlxf.png"
+                        />
+                        <div
+                          class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <button
+                            class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                            title="Download image"
+                          >
+                            <svg
+                              class="lucide lucide-download w-4 h-4 text-white"
+                              fill="none"
+                              height="24"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                              width="24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                              />
+                              <polyline
+                                points="7 10 12 15 17 10"
+                              />
+                              <line
+                                x1="12"
+                                x2="12"
+                                y1="15"
+                                y2="3"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </figure>
                     <p
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
@@ -2722,6 +2770,54 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                         “uh oh, things are getting stressful. This must mean that food will be scarce soon. I'd better start saving some of the energy I eat for later” - Your Prehistoric physiology
                       </span>
                     </p>
+                    <figure
+                      class="my-6"
+                    >
+                      <div
+                        class="relative group"
+                      >
+                        <img
+                          alt=""
+                          class="w-full rounded-lg max-h-[600px] object-contain bg-gray-100 dark:bg-gray-800"
+                          loading="lazy"
+                          src="https://pbs.twimg.com/media/G-E_vA0XwAAdgMK.png"
+                        />
+                        <div
+                          class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <button
+                            class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                            title="Download image"
+                          >
+                            <svg
+                              class="lucide lucide-download w-4 h-4 text-white"
+                              fill="none"
+                              height="24"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                              width="24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                              />
+                              <polyline
+                                points="7 10 12 15 17 10"
+                              />
+                              <line
+                                x1="12"
+                                x2="12"
+                                y1="15"
+                                y2="3"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </figure>
                     <p
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
@@ -2729,6 +2825,59 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                         This is a genius survival mechanism, but we live in a world of abundance, not scarcity. Overnutrition kills more people than undernutrition. So we can either starve ourself, or we can teach our body that it doesn’t have to be stingy with its energy. Like a sugar baby with an old man’s AMEX. Spend those kcals.
                       </span>
                     </p>
+                    <figure
+                      class="my-6"
+                    >
+                      <div
+                        class="relative group"
+                      >
+                        <img
+                          alt="My metabolism right now"
+                          class="w-full rounded-lg max-h-[600px] object-contain bg-gray-100 dark:bg-gray-800"
+                          loading="lazy"
+                          src="https://pbs.twimg.com/media/G-E9scnX0AAhpgm.png"
+                        />
+                        <div
+                          class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <button
+                            class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                            title="Download image"
+                          >
+                            <svg
+                              class="lucide lucide-download w-4 h-4 text-white"
+                              fill="none"
+                              height="24"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                              width="24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                              />
+                              <polyline
+                                points="7 10 12 15 17 10"
+                              />
+                              <line
+                                x1="12"
+                                x2="12"
+                                y1="15"
+                                y2="3"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <figcaption
+                        class="text-center text-gray-500 dark:text-white/60 text-sm mt-2 italic"
+                      >
+                        My metabolism right now
+                      </figcaption>
+                    </figure>
                     <p
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
@@ -2752,6 +2901,54 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                         You get what I’m saying.
                       </span>
                     </p>
+                    <figure
+                      class="my-6"
+                    >
+                      <div
+                        class="relative group"
+                      >
+                        <img
+                          alt=""
+                          class="w-full rounded-lg max-h-[600px] object-contain bg-gray-100 dark:bg-gray-800"
+                          loading="lazy"
+                          src="https://pbs.twimg.com/media/G-E90WSXgAAB_wM.png"
+                        />
+                        <div
+                          class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <button
+                            class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                            title="Download image"
+                          >
+                            <svg
+                              class="lucide lucide-download w-4 h-4 text-white"
+                              fill="none"
+                              height="24"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                              width="24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                              />
+                              <polyline
+                                points="7 10 12 15 17 10"
+                              />
+                              <line
+                                x1="12"
+                                x2="12"
+                                y1="15"
+                                y2="3"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </figure>
                     <p
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
@@ -2798,7 +2995,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
                       <span>
-                        I’ve pieced this protocol together for my own use case & needs. But this concept of upregulating your metabolism is far from new. I’ve taken inspiration from Thermobolic’s Potato diet, Anabology’s Honey diet, And Ray Peat’s findings on metabolism. Check them out for more nuance.
+                        I’ve pieced this protocol together for my own use case & needs. But this concept of upregulating your metabolism is far from new. I’ve taken inspiration from 
+                      </span>
+                      <a
+                        class="text-blue-400 hover:text-blue-300 hover:underline"
+                        href="https://x.com/Thermobolic"
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        Thermobolic’s
+                      </a>
+                      <span>
+                         Potato diet, 
+                      </span>
+                      <a
+                        class="text-blue-400 hover:text-blue-300 hover:underline"
+                        href="https://x.com/anabology"
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        Anabology’s
+                      </a>
+                      <span>
+                         Honey diet, And Ray Peat’s findings on metabolism. Check them out for more nuance.
                       </span>
                     </p>
                     <p
@@ -2822,6 +3041,54 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                         Most importantly, it gave me an irreplicable lust for life. Childlike wonder. A twinkle in my eye
                       </span>
                     </p>
+                    <figure
+                      class="my-6"
+                    >
+                      <div
+                        class="relative group"
+                      >
+                        <img
+                          alt=""
+                          class="w-full rounded-lg max-h-[600px] object-contain bg-gray-100 dark:bg-gray-800"
+                          loading="lazy"
+                          src="https://pbs.twimg.com/media/G-E92cEXkAAoa1-.jpg"
+                        />
+                        <div
+                          class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <button
+                            class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                            title="Download image"
+                          >
+                            <svg
+                              class="lucide lucide-download w-4 h-4 text-white"
+                              fill="none"
+                              height="24"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                              width="24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                              />
+                              <polyline
+                                points="7 10 12 15 17 10"
+                              />
+                              <line
+                                x1="12"
+                                x2="12"
+                                y1="15"
+                                y2="3"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </figure>
                     <p
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
@@ -2843,6 +3110,59 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                         The gym-bro cutting method needs to die. Making yourself miserable for a bicep vein isn't worth giving yourself ED and irreparable hormonal damage. When you aggressively restrict calories, you're teaching your body to run on fumes:
                       </span>
                     </p>
+                    <figure
+                      class="my-6"
+                    >
+                      <div
+                        class="relative group"
+                      >
+                        <img
+                          alt="The modern gym-bro movement has been a disaster for the human race"
+                          class="w-full rounded-lg max-h-[600px] object-contain bg-gray-100 dark:bg-gray-800"
+                          loading="lazy"
+                          src="https://pbs.twimg.com/media/G-E95BYW8AAxtDU.png"
+                        />
+                        <div
+                          class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <button
+                            class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                            title="Download image"
+                          >
+                            <svg
+                              class="lucide lucide-download w-4 h-4 text-white"
+                              fill="none"
+                              height="24"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                              width="24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                              />
+                              <polyline
+                                points="7 10 12 15 17 10"
+                              />
+                              <line
+                                x1="12"
+                                x2="12"
+                                y1="15"
+                                y2="3"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <figcaption
+                        class="text-center text-gray-500 dark:text-white/60 text-sm mt-2 italic"
+                      >
+                        The modern gym-bro movement has been a disaster for the human race
+                      </figcaption>
+                    </figure>
                     <div
                       class="h-6"
                     />
@@ -3049,6 +3369,54 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                         This creates a perfect window for metabolic optimization. Your body’s a dry sponge, ready to soak up nutrients in the most efficient way possible. For this reason, we want only clean-burning carbohydrates
                       </span>
                     </p>
+                    <figure
+                      class="my-6"
+                    >
+                      <div
+                        class="relative group"
+                      >
+                        <img
+                          alt=""
+                          class="w-full rounded-lg max-h-[600px] object-contain bg-gray-100 dark:bg-gray-800"
+                          loading="lazy"
+                          src="https://pbs.twimg.com/media/G-E998xXAAAJLTL.jpg"
+                        />
+                        <div
+                          class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <button
+                            class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                            title="Download image"
+                          >
+                            <svg
+                              class="lucide lucide-download w-4 h-4 text-white"
+                              fill="none"
+                              height="24"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                              width="24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                              />
+                              <polyline
+                                points="7 10 12 15 17 10"
+                              />
+                              <line
+                                x1="12"
+                                x2="12"
+                                y1="15"
+                                y2="3"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </figure>
                     <p
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
@@ -3189,6 +3557,59 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                         Supports metabolic flexibility
                       </span>
                     </li>
+                    <figure
+                      class="my-6"
+                    >
+                      <div
+                        class="relative group"
+                      >
+                        <img
+                          alt="Two different paths to the same destination → ATP (energy)"
+                          class="w-full rounded-lg max-h-[600px] object-contain bg-gray-100 dark:bg-gray-800"
+                          loading="lazy"
+                          src="https://pbs.twimg.com/media/G-E-FdCXgAAwP0r.png"
+                        />
+                        <div
+                          class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <button
+                            class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                            title="Download image"
+                          >
+                            <svg
+                              class="lucide lucide-download w-4 h-4 text-white"
+                              fill="none"
+                              height="24"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                              width="24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                              />
+                              <polyline
+                                points="7 10 12 15 17 10"
+                              />
+                              <line
+                                x1="12"
+                                x2="12"
+                                y1="15"
+                                y2="3"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <figcaption
+                        class="text-center text-gray-500 dark:text-white/60 text-sm mt-2 italic"
+                      >
+                        Two different paths to the same destination → ATP (energy)
+                      </figcaption>
+                    </figure>
                     <p
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
@@ -3287,6 +3708,59 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                         Egg whites (cooked)
                       </span>
                     </li>
+                    <figure
+                      class="my-6"
+                    >
+                      <div
+                        class="relative group"
+                      >
+                        <img
+                          alt="FTN Lite: nonfat kefir, coconut flakes, berries, apple, honey, pine pollen"
+                          class="w-full rounded-lg max-h-[600px] object-contain bg-gray-100 dark:bg-gray-800"
+                          loading="lazy"
+                          src="https://pbs.twimg.com/media/G-E-OSBXUAAHQi8.jpg"
+                        />
+                        <div
+                          class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <button
+                            class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                            title="Download image"
+                          >
+                            <svg
+                              class="lucide lucide-download w-4 h-4 text-white"
+                              fill="none"
+                              height="24"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                              width="24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                              />
+                              <polyline
+                                points="7 10 12 15 17 10"
+                              />
+                              <line
+                                x1="12"
+                                x2="12"
+                                y1="15"
+                                y2="3"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <figcaption
+                        class="text-center text-gray-500 dark:text-white/60 text-sm mt-2 italic"
+                      >
+                        FTN Lite: nonfat kefir, coconut flakes, berries, apple, honey, pine pollen
+                      </figcaption>
+                    </figure>
                     <p
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
@@ -3525,6 +3999,59 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                         Rice noodles & Shrimp
                       </span>
                     </li>
+                    <figure
+                      class="my-6"
+                    >
+                      <div
+                        class="relative group"
+                      >
+                        <img
+                          alt="My go-to lunch / Pre-workout meal"
+                          class="w-full rounded-lg max-h-[600px] object-contain bg-gray-100 dark:bg-gray-800"
+                          loading="lazy"
+                          src="https://pbs.twimg.com/media/G-E-VmfXEAAYn1B.jpg"
+                        />
+                        <div
+                          class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <button
+                            class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                            title="Download image"
+                          >
+                            <svg
+                              class="lucide lucide-download w-4 h-4 text-white"
+                              fill="none"
+                              height="24"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                              width="24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                              />
+                              <polyline
+                                points="7 10 12 15 17 10"
+                              />
+                              <line
+                                x1="12"
+                                x2="12"
+                                y1="15"
+                                y2="3"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <figcaption
+                        class="text-center text-gray-500 dark:text-white/60 text-sm mt-2 italic"
+                      >
+                        My go-to lunch / Pre-workout meal
+                      </figcaption>
+                    </figure>
                     <p
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
@@ -3826,6 +4353,54 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                         Provide sustained energy for longer training sessions
                       </span>
                     </li>
+                    <figure
+                      class="my-6"
+                    >
+                      <div
+                        class="relative group"
+                      >
+                        <img
+                          alt=""
+                          class="w-full rounded-lg max-h-[600px] object-contain bg-gray-100 dark:bg-gray-800"
+                          loading="lazy"
+                          src="https://pbs.twimg.com/media/G-E-hkmWcAA0OHX.jpg"
+                        />
+                        <div
+                          class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <button
+                            class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                            title="Download image"
+                          >
+                            <svg
+                              class="lucide lucide-download w-4 h-4 text-white"
+                              fill="none"
+                              height="24"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                              width="24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                              />
+                              <polyline
+                                points="7 10 12 15 17 10"
+                              />
+                              <line
+                                x1="12"
+                                x2="12"
+                                y1="15"
+                                y2="3"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </figure>
                     <p
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
@@ -3893,7 +4468,18 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
                       <span>
-                        (If you read my super-rice recipe, you know how much of a cheat-code resistant starches are)
+                        (If you read my 
+                      </span>
+                      <a
+                        class="text-blue-400 hover:text-blue-300 hover:underline"
+                        href="https://www.noahryan.co/p/super-rice-recipe"
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        super-rice recipe
+                      </a>
+                      <span>
+                        , you know how much of a cheat-code resistant starches are)
                       </span>
                     </p>
                     <p
@@ -3959,6 +4545,59 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                         Strategic fat-loading enhances metabolic flexibility and ensures you’re getting essential nutrition foundations. Don’t skip this part.
                       </span>
                     </p>
+                    <figure
+                      class="my-6"
+                    >
+                      <div
+                        class="relative group"
+                      >
+                        <img
+                          alt="High-fat refeed: MUFAs, Omega 3s, Cholesterol. With pickled vegetables for digestion"
+                          class="w-full rounded-lg max-h-[600px] object-contain bg-gray-100 dark:bg-gray-800"
+                          loading="lazy"
+                          src="https://pbs.twimg.com/media/G-E-qG7XEAAkMIM.jpg"
+                        />
+                        <div
+                          class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <button
+                            class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                            title="Download image"
+                          >
+                            <svg
+                              class="lucide lucide-download w-4 h-4 text-white"
+                              fill="none"
+                              height="24"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                              width="24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                              />
+                              <polyline
+                                points="7 10 12 15 17 10"
+                              />
+                              <line
+                                x1="12"
+                                x2="12"
+                                y1="15"
+                                y2="3"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <figcaption
+                        class="text-center text-gray-500 dark:text-white/60 text-sm mt-2 italic"
+                      >
+                        High-fat refeed: MUFAs, Omega 3s, Cholesterol. With pickled vegetables for digestion
+                      </figcaption>
+                    </figure>
                     <p
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
@@ -4124,8 +4763,16 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
                       <span>
-                        This is part one of a 4 part series. You can read part 2 here
+                        This is part one of a 4 part series. 
                       </span>
+                      <a
+                        class="text-blue-400 hover:text-blue-300 hover:underline"
+                        href="https://www.noahryan.co/p/shredmaxxing-protocol-pt-2-supplement"
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        You can read part 2 here
+                      </a>
                     </p>
                     <div
                       class="h-6"
@@ -16888,6 +17535,54 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                         Guys. I finally did it. After years of fidgeting with macros, intermittent fasting, and diet “hacks”, I finally got hyperlean. My visceral fat vanished, muscles are fuller, and vascularity is through the roof. Its like I re-wrote my midwest corn-fed genetics.
                       </span>
                     </p>
+                    <figure
+                      class="my-6"
+                    >
+                      <div
+                        class="relative group"
+                      >
+                        <img
+                          alt=""
+                          class="w-full rounded-lg max-h-[600px] object-contain bg-gray-100 dark:bg-gray-800"
+                          loading="lazy"
+                          src="https://pbs.twimg.com/media/G-E9mcpXUAAhlxf.png"
+                        />
+                        <div
+                          class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <button
+                            class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                            title="Download image"
+                          >
+                            <svg
+                              class="lucide lucide-download w-4 h-4 text-white"
+                              fill="none"
+                              height="24"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                              width="24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                              />
+                              <polyline
+                                points="7 10 12 15 17 10"
+                              />
+                              <line
+                                x1="12"
+                                x2="12"
+                                y1="15"
+                                y2="3"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </figure>
                     <p
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
@@ -16916,6 +17611,54 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                         “uh oh, things are getting stressful. This must mean that food will be scarce soon. I'd better start saving some of the energy I eat for later” - Your Prehistoric physiology
                       </span>
                     </p>
+                    <figure
+                      class="my-6"
+                    >
+                      <div
+                        class="relative group"
+                      >
+                        <img
+                          alt=""
+                          class="w-full rounded-lg max-h-[600px] object-contain bg-gray-100 dark:bg-gray-800"
+                          loading="lazy"
+                          src="https://pbs.twimg.com/media/G-E_vA0XwAAdgMK.png"
+                        />
+                        <div
+                          class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <button
+                            class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                            title="Download image"
+                          >
+                            <svg
+                              class="lucide lucide-download w-4 h-4 text-white"
+                              fill="none"
+                              height="24"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                              width="24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                              />
+                              <polyline
+                                points="7 10 12 15 17 10"
+                              />
+                              <line
+                                x1="12"
+                                x2="12"
+                                y1="15"
+                                y2="3"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </figure>
                     <p
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
@@ -16923,6 +17666,59 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                         This is a genius survival mechanism, but we live in a world of abundance, not scarcity. Overnutrition kills more people than undernutrition. So we can either starve ourself, or we can teach our body that it doesn’t have to be stingy with its energy. Like a sugar baby with an old man’s AMEX. Spend those kcals.
                       </span>
                     </p>
+                    <figure
+                      class="my-6"
+                    >
+                      <div
+                        class="relative group"
+                      >
+                        <img
+                          alt="My metabolism right now"
+                          class="w-full rounded-lg max-h-[600px] object-contain bg-gray-100 dark:bg-gray-800"
+                          loading="lazy"
+                          src="https://pbs.twimg.com/media/G-E9scnX0AAhpgm.png"
+                        />
+                        <div
+                          class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <button
+                            class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                            title="Download image"
+                          >
+                            <svg
+                              class="lucide lucide-download w-4 h-4 text-white"
+                              fill="none"
+                              height="24"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                              width="24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                              />
+                              <polyline
+                                points="7 10 12 15 17 10"
+                              />
+                              <line
+                                x1="12"
+                                x2="12"
+                                y1="15"
+                                y2="3"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <figcaption
+                        class="text-center text-gray-500 dark:text-white/60 text-sm mt-2 italic"
+                      >
+                        My metabolism right now
+                      </figcaption>
+                    </figure>
                     <p
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
@@ -16946,6 +17742,54 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                         You get what I’m saying.
                       </span>
                     </p>
+                    <figure
+                      class="my-6"
+                    >
+                      <div
+                        class="relative group"
+                      >
+                        <img
+                          alt=""
+                          class="w-full rounded-lg max-h-[600px] object-contain bg-gray-100 dark:bg-gray-800"
+                          loading="lazy"
+                          src="https://pbs.twimg.com/media/G-E90WSXgAAB_wM.png"
+                        />
+                        <div
+                          class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <button
+                            class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                            title="Download image"
+                          >
+                            <svg
+                              class="lucide lucide-download w-4 h-4 text-white"
+                              fill="none"
+                              height="24"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                              width="24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                              />
+                              <polyline
+                                points="7 10 12 15 17 10"
+                              />
+                              <line
+                                x1="12"
+                                x2="12"
+                                y1="15"
+                                y2="3"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </figure>
                     <p
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
@@ -16992,7 +17836,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
                       <span>
-                        I’ve pieced this protocol together for my own use case & needs. But this concept of upregulating your metabolism is far from new. I’ve taken inspiration from Thermobolic’s Potato diet, Anabology’s Honey diet, And Ray Peat’s findings on metabolism. Check them out for more nuance.
+                        I’ve pieced this protocol together for my own use case & needs. But this concept of upregulating your metabolism is far from new. I’ve taken inspiration from 
+                      </span>
+                      <a
+                        class="text-blue-400 hover:text-blue-300 hover:underline"
+                        href="https://x.com/Thermobolic"
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        Thermobolic’s
+                      </a>
+                      <span>
+                         Potato diet, 
+                      </span>
+                      <a
+                        class="text-blue-400 hover:text-blue-300 hover:underline"
+                        href="https://x.com/anabology"
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        Anabology’s
+                      </a>
+                      <span>
+                         Honey diet, And Ray Peat’s findings on metabolism. Check them out for more nuance.
                       </span>
                     </p>
                     <p
@@ -17016,6 +17882,54 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                         Most importantly, it gave me an irreplicable lust for life. Childlike wonder. A twinkle in my eye
                       </span>
                     </p>
+                    <figure
+                      class="my-6"
+                    >
+                      <div
+                        class="relative group"
+                      >
+                        <img
+                          alt=""
+                          class="w-full rounded-lg max-h-[600px] object-contain bg-gray-100 dark:bg-gray-800"
+                          loading="lazy"
+                          src="https://pbs.twimg.com/media/G-E92cEXkAAoa1-.jpg"
+                        />
+                        <div
+                          class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <button
+                            class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                            title="Download image"
+                          >
+                            <svg
+                              class="lucide lucide-download w-4 h-4 text-white"
+                              fill="none"
+                              height="24"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                              width="24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                              />
+                              <polyline
+                                points="7 10 12 15 17 10"
+                              />
+                              <line
+                                x1="12"
+                                x2="12"
+                                y1="15"
+                                y2="3"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </figure>
                     <p
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
@@ -17037,6 +17951,59 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                         The gym-bro cutting method needs to die. Making yourself miserable for a bicep vein isn't worth giving yourself ED and irreparable hormonal damage. When you aggressively restrict calories, you're teaching your body to run on fumes:
                       </span>
                     </p>
+                    <figure
+                      class="my-6"
+                    >
+                      <div
+                        class="relative group"
+                      >
+                        <img
+                          alt="The modern gym-bro movement has been a disaster for the human race"
+                          class="w-full rounded-lg max-h-[600px] object-contain bg-gray-100 dark:bg-gray-800"
+                          loading="lazy"
+                          src="https://pbs.twimg.com/media/G-E95BYW8AAxtDU.png"
+                        />
+                        <div
+                          class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <button
+                            class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                            title="Download image"
+                          >
+                            <svg
+                              class="lucide lucide-download w-4 h-4 text-white"
+                              fill="none"
+                              height="24"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                              width="24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                              />
+                              <polyline
+                                points="7 10 12 15 17 10"
+                              />
+                              <line
+                                x1="12"
+                                x2="12"
+                                y1="15"
+                                y2="3"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <figcaption
+                        class="text-center text-gray-500 dark:text-white/60 text-sm mt-2 italic"
+                      >
+                        The modern gym-bro movement has been a disaster for the human race
+                      </figcaption>
+                    </figure>
                     <div
                       class="h-6"
                     />
@@ -17243,6 +18210,54 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                         This creates a perfect window for metabolic optimization. Your body’s a dry sponge, ready to soak up nutrients in the most efficient way possible. For this reason, we want only clean-burning carbohydrates
                       </span>
                     </p>
+                    <figure
+                      class="my-6"
+                    >
+                      <div
+                        class="relative group"
+                      >
+                        <img
+                          alt=""
+                          class="w-full rounded-lg max-h-[600px] object-contain bg-gray-100 dark:bg-gray-800"
+                          loading="lazy"
+                          src="https://pbs.twimg.com/media/G-E998xXAAAJLTL.jpg"
+                        />
+                        <div
+                          class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <button
+                            class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                            title="Download image"
+                          >
+                            <svg
+                              class="lucide lucide-download w-4 h-4 text-white"
+                              fill="none"
+                              height="24"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                              width="24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                              />
+                              <polyline
+                                points="7 10 12 15 17 10"
+                              />
+                              <line
+                                x1="12"
+                                x2="12"
+                                y1="15"
+                                y2="3"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </figure>
                     <p
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
@@ -17383,6 +18398,59 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                         Supports metabolic flexibility
                       </span>
                     </li>
+                    <figure
+                      class="my-6"
+                    >
+                      <div
+                        class="relative group"
+                      >
+                        <img
+                          alt="Two different paths to the same destination → ATP (energy)"
+                          class="w-full rounded-lg max-h-[600px] object-contain bg-gray-100 dark:bg-gray-800"
+                          loading="lazy"
+                          src="https://pbs.twimg.com/media/G-E-FdCXgAAwP0r.png"
+                        />
+                        <div
+                          class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <button
+                            class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                            title="Download image"
+                          >
+                            <svg
+                              class="lucide lucide-download w-4 h-4 text-white"
+                              fill="none"
+                              height="24"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                              width="24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                              />
+                              <polyline
+                                points="7 10 12 15 17 10"
+                              />
+                              <line
+                                x1="12"
+                                x2="12"
+                                y1="15"
+                                y2="3"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <figcaption
+                        class="text-center text-gray-500 dark:text-white/60 text-sm mt-2 italic"
+                      >
+                        Two different paths to the same destination → ATP (energy)
+                      </figcaption>
+                    </figure>
                     <p
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
@@ -17481,6 +18549,59 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                         Egg whites (cooked)
                       </span>
                     </li>
+                    <figure
+                      class="my-6"
+                    >
+                      <div
+                        class="relative group"
+                      >
+                        <img
+                          alt="FTN Lite: nonfat kefir, coconut flakes, berries, apple, honey, pine pollen"
+                          class="w-full rounded-lg max-h-[600px] object-contain bg-gray-100 dark:bg-gray-800"
+                          loading="lazy"
+                          src="https://pbs.twimg.com/media/G-E-OSBXUAAHQi8.jpg"
+                        />
+                        <div
+                          class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <button
+                            class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                            title="Download image"
+                          >
+                            <svg
+                              class="lucide lucide-download w-4 h-4 text-white"
+                              fill="none"
+                              height="24"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                              width="24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                              />
+                              <polyline
+                                points="7 10 12 15 17 10"
+                              />
+                              <line
+                                x1="12"
+                                x2="12"
+                                y1="15"
+                                y2="3"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <figcaption
+                        class="text-center text-gray-500 dark:text-white/60 text-sm mt-2 italic"
+                      >
+                        FTN Lite: nonfat kefir, coconut flakes, berries, apple, honey, pine pollen
+                      </figcaption>
+                    </figure>
                     <p
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
@@ -17719,6 +18840,59 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                         Rice noodles & Shrimp
                       </span>
                     </li>
+                    <figure
+                      class="my-6"
+                    >
+                      <div
+                        class="relative group"
+                      >
+                        <img
+                          alt="My go-to lunch / Pre-workout meal"
+                          class="w-full rounded-lg max-h-[600px] object-contain bg-gray-100 dark:bg-gray-800"
+                          loading="lazy"
+                          src="https://pbs.twimg.com/media/G-E-VmfXEAAYn1B.jpg"
+                        />
+                        <div
+                          class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <button
+                            class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                            title="Download image"
+                          >
+                            <svg
+                              class="lucide lucide-download w-4 h-4 text-white"
+                              fill="none"
+                              height="24"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                              width="24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                              />
+                              <polyline
+                                points="7 10 12 15 17 10"
+                              />
+                              <line
+                                x1="12"
+                                x2="12"
+                                y1="15"
+                                y2="3"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <figcaption
+                        class="text-center text-gray-500 dark:text-white/60 text-sm mt-2 italic"
+                      >
+                        My go-to lunch / Pre-workout meal
+                      </figcaption>
+                    </figure>
                     <p
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
@@ -18020,6 +19194,54 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                         Provide sustained energy for longer training sessions
                       </span>
                     </li>
+                    <figure
+                      class="my-6"
+                    >
+                      <div
+                        class="relative group"
+                      >
+                        <img
+                          alt=""
+                          class="w-full rounded-lg max-h-[600px] object-contain bg-gray-100 dark:bg-gray-800"
+                          loading="lazy"
+                          src="https://pbs.twimg.com/media/G-E-hkmWcAA0OHX.jpg"
+                        />
+                        <div
+                          class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <button
+                            class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                            title="Download image"
+                          >
+                            <svg
+                              class="lucide lucide-download w-4 h-4 text-white"
+                              fill="none"
+                              height="24"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                              width="24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                              />
+                              <polyline
+                                points="7 10 12 15 17 10"
+                              />
+                              <line
+                                x1="12"
+                                x2="12"
+                                y1="15"
+                                y2="3"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </figure>
                     <p
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
@@ -18087,7 +19309,18 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
                       <span>
-                        (If you read my super-rice recipe, you know how much of a cheat-code resistant starches are)
+                        (If you read my 
+                      </span>
+                      <a
+                        class="text-blue-400 hover:text-blue-300 hover:underline"
+                        href="https://www.noahryan.co/p/super-rice-recipe"
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        super-rice recipe
+                      </a>
+                      <span>
+                        , you know how much of a cheat-code resistant starches are)
                       </span>
                     </p>
                     <p
@@ -18153,6 +19386,59 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                         Strategic fat-loading enhances metabolic flexibility and ensures you’re getting essential nutrition foundations. Don’t skip this part.
                       </span>
                     </p>
+                    <figure
+                      class="my-6"
+                    >
+                      <div
+                        class="relative group"
+                      >
+                        <img
+                          alt="High-fat refeed: MUFAs, Omega 3s, Cholesterol. With pickled vegetables for digestion"
+                          class="w-full rounded-lg max-h-[600px] object-contain bg-gray-100 dark:bg-gray-800"
+                          loading="lazy"
+                          src="https://pbs.twimg.com/media/G-E-qG7XEAAkMIM.jpg"
+                        />
+                        <div
+                          class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <button
+                            class="p-2 bg-black/60 hover:bg-black/80 rounded-full transition-colors"
+                            title="Download image"
+                          >
+                            <svg
+                              class="lucide lucide-download w-4 h-4 text-white"
+                              fill="none"
+                              height="24"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                              width="24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                              />
+                              <polyline
+                                points="7 10 12 15 17 10"
+                              />
+                              <line
+                                x1="12"
+                                x2="12"
+                                y1="15"
+                                y2="3"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <figcaption
+                        class="text-center text-gray-500 dark:text-white/60 text-sm mt-2 italic"
+                      >
+                        High-fat refeed: MUFAs, Omega 3s, Cholesterol. With pickled vegetables for digestion
+                      </figcaption>
+                    </figure>
                     <p
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
@@ -18318,8 +19604,16 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                       class="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0"
                     >
                       <span>
-                        This is part one of a 4 part series. You can read part 2 here
+                        This is part one of a 4 part series. 
                       </span>
+                      <a
+                        class="text-blue-400 hover:text-blue-300 hover:underline"
+                        href="https://www.noahryan.co/p/shredmaxxing-protocol-pt-2-supplement"
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        You can read part 2 here
+                      </a>
                     </p>
                     <div
                       class="h-6"

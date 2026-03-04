@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchTweetData, type FxTwitterResponse } from '@/lib/media/fxembed'
-import { articleBlocksToMarkdown } from '@/lib/utils/article-text'
+import { articleBlocksToMarkdown, normalizeEntityMap } from '@/lib/utils/article-text'
 import { db } from '@/lib/db'
 import { bookmarks, bookmarkTags, tagShares, oauthTokens } from '@/lib/db/schema'
 import { eq, and, sql } from 'drizzle-orm'
@@ -14,15 +14,7 @@ function buildTweetResponse(tweet: FxTweet) {
   // Convert article content to markdown if present
   let articleContent: string | null = null
   if (tweet.article?.content?.blocks) {
-    const entityMap = Array.isArray(tweet.article.content.entityMap)
-      ? (tweet.article.content.entityMap as Array<{ key: string; value: unknown }>).reduce(
-          (acc: Record<string, unknown>, item) => {
-            acc[item.key] = item.value
-            return acc
-          },
-          {}
-        )
-      : tweet.article.content.entityMap || {}
+    const entityMap = normalizeEntityMap(tweet.article.content.entityMap)
 
     const mediaEntities = tweet.article.media_entities?.reduce(
       (acc: Record<string, { url: string; width?: number; height?: number }>, entity) => {
