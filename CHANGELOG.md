@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.27.2](https://github.com/itsmemeworks/adhx/compare/v1.27.1...v1.27.2) (2026-03-04)
+
+
+### Bug Fixes
+
+* normalize article entity map to handle all fxtwitter formats ([#127](https://github.com/itsmemeworks/adhx/issues/127)) ([8745bf2](https://github.com/itsmemeworks/adhx/commit/8745bf20e3e02023c69bb02ec4cd83c0143c9a67))
+
 ## [1.27.1](https://github.com/itsmemeworks/adhx/compare/v1.27.0...v1.27.1) (2026-02-16)
 
 
