@@ -15,6 +15,7 @@ import {
 import { eq } from 'drizzle-orm'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { runInTransaction } from '@/lib/db'
+import { metrics } from '@/lib/sentry'
 
 /**
  * POST /api/account/clear
@@ -48,6 +49,8 @@ export async function POST() {
       db.delete(syncState).where(eq(syncState.userId, userId)).run()
       db.delete(userPreferences).where(eq(userPreferences.userId, userId)).run()
     })
+
+    metrics.dataCleared()
 
     return NextResponse.json({
       success: true,

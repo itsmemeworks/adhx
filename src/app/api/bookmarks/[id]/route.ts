@@ -5,7 +5,7 @@ import { eq, and } from 'drizzle-orm'
 import { resolveMediaUrl, getShareableUrl, getThumbnailUrl } from '@/lib/media/fxembed'
 import { expandUrls } from '@/lib/utils/url-expander'
 import { getCurrentUserId } from '@/lib/auth/session'
-import { captureException } from '@/lib/sentry'
+import { captureException, metrics } from '@/lib/sentry'
 
 // GET /api/bookmarks/[id] - Get single bookmark
 export async function GET(
@@ -157,6 +157,8 @@ export async function DELETE(
       db.delete(readStatus).where(and(eq(readStatus.userId, userId), eq(readStatus.bookmarkId, id))).run()
       db.delete(bookmarks).where(and(eq(bookmarks.userId, userId), eq(bookmarks.id, id))).run()
     })
+
+    metrics.bookmarkDeleted()
 
     return NextResponse.json({ success: true })
   } catch (error) {

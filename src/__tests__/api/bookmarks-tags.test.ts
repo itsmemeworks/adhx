@@ -27,6 +27,7 @@ vi.mock('@/lib/auth/session', () => ({
 vi.mock('@/lib/sentry', () => ({
   metrics: {
     bookmarkTagged: vi.fn(),
+    tagRemovedFromBookmark: vi.fn(),
   },
   captureException: vi.fn(),
 }))

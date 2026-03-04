@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { userPreferences } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { getCurrentUserId } from '@/lib/auth/session'
+import { metrics } from '@/lib/sentry'
 
 // GET /api/preferences - Get all user preferences
 export async function GET() {
@@ -39,6 +40,7 @@ export async function PATCH(request: NextRequest) {
     const now = new Date().toISOString()
 
     // Update each provided preference (using composite key: userId + key)
+    const updatedKeys: string[] = []
     for (const [key, value] of Object.entries(body)) {
       if (typeof value !== 'string') continue
 
@@ -62,6 +64,12 @@ export async function PATCH(request: NextRequest) {
           updatedAt: now,
         })
       }
+
+      updatedKeys.push(key)
+    }
+
+    if (updatedKeys.length > 0) {
+      metrics.settingsChanged(updatedKeys.join(','), String(updatedKeys.length))
     }
 
     return NextResponse.json({ success: true })

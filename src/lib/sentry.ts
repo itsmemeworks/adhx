@@ -188,8 +188,8 @@ export const metrics = {
     metricCount('feed.filtered', 1, { filter: filterType }),
 
   // Settings
-  settingsChanged: (setting: string, value: string) =>
-    metricCount('settings.changed', 1, { setting, value }),
+  settingsChanged: (settings: string, count: string) =>
+    metricCount('settings.changed', 1, { settings, count }),
   dataCleared: () => metricCount('settings.data_cleared'),
 
   // API performance
@@ -198,6 +198,35 @@ export const metrics = {
       endpoint,
       status: statusCode,
     }),
+
+  // Sharing & public access
+  shareTweetPreviewViewed: (source: 'crawler' | 'direct', crawlerType?: string) =>
+    metricCount('share.tweet_preview_viewed', 1, {
+      source,
+      ...(crawlerType && { crawler_type: crawlerType }),
+    }),
+  shareTagCollectionViewed: (tweetCount: number) =>
+    metricCount('share.tag_collection_viewed', 1, { tweet_count: tweetCount }),
+  shareTagCloned: (clonedCount: number) =>
+    metricCount('share.tag_cloned', 1, { cloned_count: clonedCount }),
+  shareTweetApiViewed: (hasAdhxContext: boolean) =>
+    metricCount('share.tweet_api_viewed', 1, { has_adhx_context: hasAdhxContext }),
+
+  // Media
+  mediaVideoProxied: (quality: string) =>
+    metricCount('media.video_proxied', 1, { quality }),
+  mediaVideoDownloaded: (quality: string) =>
+    metricCount('media.video_downloaded', 1, { quality }),
+
+  // Tag management
+  tagShared: () => metricCount('tag.shared'),
+  tagUnshared: () => metricCount('tag.unshared'),
+  tagDeleted: () => metricCount('tag.deleted'),
+  tagRemovedFromBookmark: () => metricCount('tag.removed_from_bookmark'),
+
+  // Account lifecycle
+  accountLoggedOut: () => metricCount('account.logged_out'),
+  accountDeleted: () => metricCount('account.deleted'),
 
   // Daily active users (hashed for privacy - no raw PII sent to third parties)
   trackUser: (userId: string) => {

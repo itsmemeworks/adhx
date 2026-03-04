@@ -43,6 +43,7 @@ vi.mock('@/lib/sentry', () => ({
   metrics: {
     bookmarkReadToggled: vi.fn(),
     bookmarkTagged: vi.fn(),
+    bookmarkDeleted: vi.fn(),
   },
   captureException: vi.fn(),
 }))
