@@ -6,6 +6,7 @@ import { ArrowRight, Search, Sparkles, Play, Zap, Eye, Maximize2, Minimize2, Plu
 import { ADHX_PURPLE } from '@/lib/gestalt/theme'
 import { type FxTwitterResponse } from '@/lib/media/fxembed'
 import { renderArticleBlock, handleShareMedia, isTouchDevice, VideoDownloadBlocked } from '@/components/feed/utils'
+import { normalizeEntityMap } from '@/lib/utils/article-text'
 import { VideoPlayer as SmartVideoPlayer } from '@/components/feed/VideoPlayer'
 import type { ArticleEntityMap } from '@/components/feed/types'
 import { FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
@@ -385,8 +386,8 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                       {/* Full article content blocks */}
                       {tweet.article.content?.blocks && tweet.article.content.blocks.length > 0 ? (
                         <div className="text-sm [&>p]:mb-3 [&>h1]:mb-2 [&>h2]:mb-2 [&>h3]:mb-2 [&>ul]:mb-3 [&>ol]:mb-3">
-                          {tweet.article.content.blocks.map((block, i) => {
-                            // Build media entities map from article media_entities
+                          {(() => {
+                            const normalizedEntityMap = normalizeEntityMap(tweet.article!.content?.entityMap) as ArticleEntityMap | undefined
                             const mediaEntities = tweet.article?.media_entities?.reduce((acc, entity) => {
                               if (entity.media_id && entity.media_info?.original_img_url) {
                                 acc[entity.media_id] = {
@@ -398,14 +399,16 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                               return acc
                             }, {} as Record<string, { url: string; width?: number; height?: number }>)
 
-                            return renderArticleBlock(
-                              block,
-                              tweet.article!.content?.entityMap as ArticleEntityMap | undefined,
-                              i,
-                              mediaEntities,
-                              bionicReading
+                            return tweet.article!.content!.blocks.map((block, i) =>
+                              renderArticleBlock(
+                                block,
+                                normalizedEntityMap,
+                                i,
+                                mediaEntities,
+                                bionicReading
+                              )
                             )
-                          })}
+                          })()}
                         </div>
                       ) : tweet.article.preview_text ? (
                         <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">

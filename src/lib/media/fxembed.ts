@@ -10,6 +10,8 @@
  * - Embed:  https://fxtwitter.com/{author}/status/{tweetId}
  */
 
+import { normalizeEntityMap } from '@/lib/utils/article-text'
+
 export interface MediaUrlOptions {
   tweetId: string
   author: string
@@ -270,16 +272,12 @@ export interface FxTwitterResponse {
           entityRanges?: Array<{ key: number; length: number; offset: number }>
           inlineStyleRanges?: Array<{ length: number; offset: number; style: string }>
         }>
-        entityMap?: Record<string, {
-          type: string // 'IMAGE' | 'LINK' | etc
-          data: {
-            url?: string
-            src?: string
-            width?: number
-            height?: number
-            alt?: string
-          }
-        }>
+        // FxTwitter may return entityMap in multiple formats:
+        // - Array: [{key, value: {type, data}}]
+        // - Dict with wrappers: {"0": {key, value: {type, data}}}
+        // - Already normalized: {"0": {type, data}}
+        // Use normalizeEntityMap() before accessing entries.
+        entityMap?: unknown
       }
     }
   }
@@ -352,13 +350,7 @@ export function extractEnrichmentData(data: FxTwitterResponse) {
       // Include full article content with blocks, entityMap, and media_entities for rendering
       content: data.tweet.article.content ? {
         blocks: data.tweet.article.content.blocks,
-        // FxTwitter returns entityMap as array [{key, value}], convert to dictionary
-        entityMap: Array.isArray(data.tweet.article.content.entityMap)
-          ? data.tweet.article.content.entityMap.reduce((acc: Record<string, unknown>, item: { key: string; value: unknown }) => {
-              acc[item.key] = item.value
-              return acc
-            }, {})
-          : (data.tweet.article.content.entityMap || {}),
+        entityMap: normalizeEntityMap(data.tweet.article.content.entityMap),
         // Include media_entities to map mediaId to actual image URLs
         mediaEntities: data.tweet.article.media_entities?.reduce((acc: Record<string, { url: string; width?: number; height?: number }>, entity) => {
           if (entity.media_id && entity.media_info?.original_img_url) {
