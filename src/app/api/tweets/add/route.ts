@@ -9,6 +9,8 @@ import {
   fetchTweetFromFxTwitter,
   determineCategory,
 } from '@/lib/tweets/processor'
+import { extractUrlsFromFacets } from '@/lib/media/fxembed'
+import { fetchOgMetadata } from '@/lib/utils/og-fetch'
 import { normalizeEntityMap } from '@/lib/utils/article-text'
 
 // POST /api/tweets/add - Add a tweet by URL
@@ -251,7 +253,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Process other links if present (external URLs from tweet)
-    if (tweet.urls && Array.isArray(tweet.urls)) {
+    if (tweet.urls && Array.isArray(tweet.urls) && tweet.urls.length > 0) {
       for (const link of tweet.urls) {
         await db.insert(bookmarkLinks).values({
           userId,
@@ -259,6 +261,23 @@ export async function POST(request: NextRequest) {
           originalUrl: link.url,
           expandedUrl: link.expanded_url || link.url,
           domain: link.domain || null,
+        })
+      }
+    } else if (!tweet.article) {
+      // Fallback: extract URLs from raw_text.facets when tweet.urls is missing
+      const facetUrls = extractUrlsFromFacets(tweet)
+      for (const link of facetUrls) {
+        // Fetch OG metadata for rich link previews in the feed
+        const og = await fetchOgMetadata(link.expanded_url)
+        await db.insert(bookmarkLinks).values({
+          userId,
+          bookmarkId: parsed.tweetId,
+          originalUrl: link.url,
+          expandedUrl: link.expanded_url,
+          domain: link.domain || null,
+          previewTitle: og?.title || null,
+          previewDescription: og?.description || null,
+          previewImageUrl: og?.image || null,
         })
       }
     }

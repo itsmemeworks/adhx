@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, Search, Sparkles, Play, Zap, Eye, Maximize2, Minimize2, Plus, Loader2, Download, Share2, Check } from 'lucide-react'
 import { ADHX_PURPLE } from '@/lib/gestalt/theme'
 import { type FxTwitterResponse } from '@/lib/media/fxembed'
-import { renderArticleBlock, handleShareMedia, isTouchDevice, VideoDownloadBlocked } from '@/components/feed/utils'
+import { renderArticleBlock, renderTextWithLinks, handleShareMedia, isTouchDevice, VideoDownloadBlocked } from '@/components/feed/utils'
 import { normalizeEntityMap } from '@/lib/utils/article-text'
 import { VideoPlayer as SmartVideoPlayer } from '@/components/feed/VideoPlayer'
 import type { ArticleEntityMap } from '@/components/feed/types'
@@ -171,6 +171,8 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
   const [tweetUrl, setTweetUrl] = useState('')
   const [urlError, setUrlError] = useState('')
   const [shareStatus, setShareStatus] = useState<'idle' | 'shared' | 'copied'>('idle')
+  const [contentOverflows, setContentOverflows] = useState(false)
+  const articleRef = useRef<HTMLElement>(null)
 
   // Read localStorage preference on mount (SSR-safe)
   useEffect(() => {
@@ -215,6 +217,21 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
   const hasQuotedMedia = (tweet.quote?.media?.photos?.length ?? 0) > 0 ||
                          (tweet.quote?.media?.videos?.length ?? 0) > 0
   const hasMedia = photos.length > 0 || videos.length > 0 || hasQuotedMedia
+
+  // Check if content would overflow when collapsed (smallest breakpoint max-h is 400px)
+  // Show expand/collapse only when collapsing would actually clip content
+  // Uses ResizeObserver to re-check when child content changes (e.g. broken images removed)
+  useEffect(() => {
+    const el = articleRef.current
+    if (!el || hasMedia) return
+    const check = () => setContentOverflows(el.scrollHeight > 400)
+    check()
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(check)
+      observer.observe(el)
+      return () => observer.disconnect()
+    }
+  }, [hasMedia])
 
   const handleLogin = () => {
     setIsLoading(true)
@@ -319,7 +336,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
           <div className="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start">
             {/* Tweet Card - Left Column - Fixed max heights for scrollable mobile, viewport-based for desktop */}
             <div className="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0">
-              <article data-content="tweet" className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 ${hasMedia || isExpanded ? '' : 'max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]'}`}>
+              <article ref={articleRef} data-content="tweet" className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 ${hasMedia || isExpanded ? '' : 'max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]'}`}>
                 {/* Author Header */}
                 <header className="p-4 pb-3">
                   <div className="flex items-center gap-3">
@@ -426,7 +443,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                   ) : (
                     // Regular tweet text - break-all ensures long text wraps on mobile
                     <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]">
-                      {tweet.text}
+                      {renderTextWithLinks(tweet.text)}
                     </p>
                   )}
                 </div>
@@ -488,8 +505,8 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                       {formatCount(tweet.views)}
                     </span>
                   )}
-                  {/* Expand/Collapse Toggle - only shown for text-only tweets (no media) */}
-                  {!hasMedia && (
+                  {/* Expand/Collapse Toggle - only shown when content actually overflows */}
+                  {!hasMedia && (isExpanded || contentOverflows) && (
                     <button
                       onClick={() => {
                         setIsExpanded(prev => {
@@ -513,8 +530,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                   <button
                     onClick={handleSharePreview}
                     className={cn(
-                      'flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors',
-                      hasMedia ? 'ml-auto' : '',
+                      'ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors',
                       shareStatus !== 'idle'
                         ? 'text-green-600 dark:text-green-400'
                         : 'text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20'
@@ -1049,6 +1065,17 @@ interface ExternalLinkPreviewProps {
 }
 
 function ExternalLinkPreview({ external }: ExternalLinkPreviewProps): React.ReactElement {
+  const [imgFailed, setImgFailed] = useState(false)
+  const imgRef = useRef<HTMLImageElement>(null)
+
+  // Handle image errors that fire before hydration (SSR race condition)
+  useEffect(() => {
+    const img = imgRef.current
+    if (img && img.complete && img.naturalWidth === 0) {
+      setImgFailed(true)
+    }
+  }, [])
+
   // Detect if this is an article-type link (has title, description > 80 chars)
   const isArticle = Boolean(
     external.title &&
@@ -1056,6 +1083,7 @@ function ExternalLinkPreview({ external }: ExternalLinkPreviewProps): React.Reac
     external.description.length > 80
   )
 
+  const showImage = !!external.thumbnail_url && !imgFailed
   const url = external.expanded_url || external.url
 
   if (isArticle) {
@@ -1067,12 +1095,15 @@ function ExternalLinkPreview({ external }: ExternalLinkPreviewProps): React.Reac
         rel="noopener noreferrer"
         className="block rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group"
       >
-        {external.thumbnail_url && (
+        {showImage && (
           <div className="relative">
             <img
+              ref={imgRef}
               src={external.thumbnail_url}
               alt={external.title || 'Article preview'}
               className="w-full h-48 object-cover group-hover:scale-[1.02] transition-transform"
+              referrerPolicy="no-referrer"
+              onError={() => setImgFailed(true)}
             />
             {/* Gradient overlay for better text readability if text overlaps */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
@@ -1105,11 +1136,14 @@ function ExternalLinkPreview({ external }: ExternalLinkPreviewProps): React.Reac
       rel="noopener noreferrer"
       className="block rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
     >
-      {external.thumbnail_url && (
+      {showImage && (
         <img
+          ref={imgRef}
           src={external.thumbnail_url}
           alt={external.title || 'Link preview'}
           className="w-full h-40 object-cover"
+          referrerPolicy="no-referrer"
+          onError={() => setImgFailed(true)}
         />
       )}
       <div className="p-3">

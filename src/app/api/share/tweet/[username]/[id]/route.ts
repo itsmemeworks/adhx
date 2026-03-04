@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { fetchTweetData, type FxTwitterResponse } from '@/lib/media/fxembed'
+import { fetchTweetData, extractUrlsFromFacets, type FxTwitterResponse } from '@/lib/media/fxembed'
+import { fetchOgMetadata } from '@/lib/utils/og-fetch'
 import { articleBlocksToMarkdown, normalizeEntityMap } from '@/lib/utils/article-text'
 import { db } from '@/lib/db'
 import { metrics } from '@/lib/sentry'
@@ -210,7 +211,27 @@ export async function GET(
       )
     }
 
-    const response = buildTweetResponse(data.tweet)
+    const tweet = data.tweet
+
+    // Enrich external link from facets + OG metadata when FxTwitter returns external: null
+    if (!tweet.external && !tweet.article) {
+      const facetUrls = extractUrlsFromFacets(tweet)
+      if (facetUrls.length > 0) {
+        const og = await fetchOgMetadata(facetUrls[0].expanded_url)
+        if (og) {
+          tweet.external = {
+            url: facetUrls[0].url,
+            display_url: facetUrls[0].domain,
+            expanded_url: facetUrls[0].expanded_url,
+            title: og.title,
+            description: og.description,
+            thumbnail_url: og.image,
+          }
+        }
+      }
+    }
+
+    const response = buildTweetResponse(tweet)
 
     // Enrich with ADHX curation context
     const adhxContext = buildAdhxContext(id)

@@ -16,8 +16,16 @@ let testInstance: TestDbInstance
 // Mock fetchTweetData
 const mockFetchTweetData = vi.fn()
 
-vi.mock('@/lib/media/fxembed', () => ({
-  fetchTweetData: (...args: unknown[]) => mockFetchTweetData(...args),
+vi.mock('@/lib/media/fxembed', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/media/fxembed')>('@/lib/media/fxembed')
+  return {
+    ...actual,
+    fetchTweetData: (...args: unknown[]) => mockFetchTweetData(...args),
+  }
+})
+
+vi.mock('@/lib/utils/og-fetch', () => ({
+  fetchOgMetadata: vi.fn().mockResolvedValue(null),
 }))
 
 vi.mock('@/lib/db', () => ({

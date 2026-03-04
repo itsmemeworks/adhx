@@ -200,11 +200,23 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
-                  Apparently, a 19 year old built Wisprflow's UGC program to 500M views in 60 days.
-
-Dude spills some sauce on LinkedIn. 
-
-Open this to see the entire post
+                  <span>
+                    <span>
+                      Apparently, a 19 year old built Wisprflow's UGC program to 500M views in 60 days.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Dude spills some sauce on LinkedIn. 
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Open this to see the entire post
+                    </span>
+                  </span>
                 </p>
               </div>
               <div
@@ -479,7 +491,7 @@ Open this to see the entire post
               </span>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -1839,7 +1851,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </button>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -4923,7 +4935,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </button>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -5754,15 +5766,35 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
-                  BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Named Virtual Accounts powered by @moonpay & @iron
-
-1️⃣ Claim your own named account in the Avici app
-
-2️⃣ Fund fast via SEPA Instant, ACH, Wire, and Direct Deposit
-
-3️⃣ Take full self-custodial control of your money
-
-Live now 🚀
+                  <span>
+                    <span>
+                      BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Named Virtual Accounts powered by @moonpay & @iron
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      1️⃣ Claim your own named account in the Avici app
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      2️⃣ Fund fast via SEPA Instant, ACH, Wire, and Direct Deposit
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      3️⃣ Take full self-custodial control of your money
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Live now 🚀
+                    </span>
+                  </span>
                 </p>
               </div>
               <div
@@ -5930,7 +5962,7 @@ Live now 🚀
               </span>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -6595,45 +6627,137 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
-                  Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory
-
-We built a fully automated system that repurposes, localizes, and launches winning TikTok Shop content across hundreds of creator-style accounts.
-
-It’s so effective it feels like running Facebook ads in 2008. 
-
-- CPMs as low as $0.10
-- no reliance on paid ads 
-- no ghost creators
-- no wasted samples
-- no lost time 
-
-My $300/monthly tech stack which replaced $50k+ budget:
-
-- manus for product research and viral script ideas 
-- cruva / Fastmoss for recently viral content ideas from competitors 
-- nano banana pro for images 
-- kling 2.6 for video 
-- now using my own phone posting network for automated posting 
-
-Here’s how it works:
-•Each AI Agent spins up a TikTok Shop–ready profile, built to sell my products through shoppable videos.
-•Agents are prompted to research the niche, scrape winning TikTok Shop videos, and rebuild them with new hooks, angles, and UGC-style visuals tailored to your brand.
-•They create and post daily using my tech stack onto affiliate accounts 
-
-No touchpoints. No delays.
-
-Just shoppable videos going live and GMV compounding every week.
-
-Then we use an MPS (Multi-Platform Swarm) approach:
-
-once the concept works on TikTok Shop, we deploy hundreds of AI Agents to flood the niche with variations that all drive back to your Shop and Amazon listing.
-
-I’m giving you access to the full stack — the ai workflow, ready to plug into your TikTok Shop today.
-
-Comment “Workflow” and I’ll send you everything.
-(must be connected)
-
-PS – Repost for early access to the full TikTok Shop content factory system.
+                  <span>
+                    <span>
+                      Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      We built a fully automated system that repurposes, localizes, and launches winning TikTok Shop content across hundreds of creator-style accounts.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      It’s so effective it feels like running Facebook ads in 2008. 
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      - CPMs as low as $0.10
+                    </span>
+                    <br />
+                    <span>
+                      - no reliance on paid ads 
+                    </span>
+                    <br />
+                    <span>
+                      - no ghost creators
+                    </span>
+                    <br />
+                    <span>
+                      - no wasted samples
+                    </span>
+                    <br />
+                    <span>
+                      - no lost time 
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      My $300/monthly tech stack which replaced $50k+ budget:
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      - manus for product research and viral script ideas 
+                    </span>
+                    <br />
+                    <span>
+                      - cruva / Fastmoss for recently viral content ideas from competitors 
+                    </span>
+                    <br />
+                    <span>
+                      - nano banana pro for images 
+                    </span>
+                    <br />
+                    <span>
+                      - kling 2.6 for video 
+                    </span>
+                    <br />
+                    <span>
+                      - now using my own phone posting network for automated posting 
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Here’s how it works:
+                    </span>
+                    <br />
+                    <span>
+                      •Each AI Agent spins up a TikTok Shop–ready profile, built to sell my products through shoppable videos.
+                    </span>
+                    <br />
+                    <span>
+                      •Agents are prompted to research the niche, scrape winning TikTok Shop videos, and rebuild them with new hooks, angles, and UGC-style visuals tailored to your brand.
+                    </span>
+                    <br />
+                    <span>
+                      •They create and post daily using my tech stack onto affiliate accounts 
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      No touchpoints. No delays.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Just shoppable videos going live and GMV compounding every week.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Then we use an MPS (Multi-Platform Swarm) approach:
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      once the concept works on TikTok Shop, we deploy hundreds of AI Agents to flood the niche with variations that all drive back to your Shop and Amazon listing.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      I’m giving you access to the full stack — the ai workflow, ready to plug into your TikTok Shop today.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Comment “Workflow” and I’ll send you everything.
+                    </span>
+                    <br />
+                    <span>
+                      (must be connected)
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      PS – Repost for early access to the full TikTok Shop content factory system.
+                    </span>
+                  </span>
                 </p>
               </div>
               <div
@@ -6772,7 +6896,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
               </span>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -7437,18 +7561,45 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
-                  🚨BREAKING: TRUMP FURIOUS WITH STARMER
-
-U.S state department made clear last night speaking on the UK and Keir Starmer ⬇️ 
-
-"The government has, indeed, repeatedly threatened to return Lucy Connolly to prison for benign political speech. 
-
-It also blocked her from visiting the United States at our invitation. 
-
-It’s also cancelling local elections, and curbing the right to a jury trial."
-
-They know Starmer is a tyrant
-His days are numbered
+                  <span>
+                    <span>
+                      🚨BREAKING: TRUMP FURIOUS WITH STARMER
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      U.S state department made clear last night speaking on the UK and Keir Starmer ⬇️ 
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      "The government has, indeed, repeatedly threatened to return Lucy Connolly to prison for benign political speech. 
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      It also blocked her from visiting the United States at our invitation. 
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      It’s also cancelling local elections, and curbing the right to a jury trial."
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      They know Starmer is a tyrant
+                    </span>
+                    <br />
+                    <span>
+                      His days are numbered
+                    </span>
+                  </span>
                 </p>
               </div>
               <div
@@ -7635,7 +7786,7 @@ His days are numbered
               </span>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -8300,81 +8451,255 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
-                  ⚡️This is a live containment operation.
-
-The strike was real. The reversal was real.
-
-This is state-level controlled ignition.
-
-There was a greenlight. Then a high-level override.
-Carrier strike groups moved. Bombers were armed.
-Evacuation flights were ordered, then stood down.
-Chalk orders were issued. Logs show “mission called off.”
-The clock was ticking and the clock stopped.
-
-Why?
-
-Because something broke the symmetry.
-
-Trump went on camera. Iran halted executions.
-A backchannel was opened via Pakistan.
-Regional actors like Saudi Arabia, Egypt, and Qatar intervened to prevent use of airspace.
-A UN Security Council session was triggered mid-crisis.
-The airspace closure, the rerouted commercial flights, the military standby - all of it was real.
-The response was not symbolic. It was surgical.
-
-The deterrent message was delivered with maximum ambiguity.
-
-Iran blinked. Trump flexed. But neither side collapsed.
-
-This was a trial run.
-
-The US gained full-spectrum data on Iranian readiness.
-
-Command latency. Radar activation. Defensive posture.
-
-Iran showed its hand under pressure. 
-The Pentagon watched every move.
-What the US just did was a dry-run ignition protocol to test reflexes.
-And it worked.
-
-No bombs dropped. No martyrs made.
-
-But the field was mapped, the pressure applied, and the exit offered.
-
-Trump now controls the pace of escalation.
-Iran is buying time through signals and intermediaries.
-The Ayatollah is either evacuating or preparing an internal firewall.
-Both are collapse moves.
-
-The sanctions, the media leaks, the social media info war - they are not distractions.
-They are phase 2 of a psyops-led siege campaign.
-Collapse without a missile. Submission through saturation.
-
-This is war by other means.
-The strike is no longer the question.
-The strike is now leverage.
-
-Collapse has entered the slow spiral.
-No fundamental rescue exists inside Iran.
-Sanctions are deepening. Capital is fleeing.
-Water shortages, blackouts, repression - all accelerating.
-
-The regime is now hostage to its own stagnation.
-
-And everyone at the top of the game knows it.
-
-This was not about killing leaders.
-
-This was about proving who moves the sky.
-
-And now the whole world sees who moves it.
-
-The tempo of collapse has entered American control.
-
-Not by force. By frequency.
-
-The signal has been sent.
+                  <span>
+                    <span>
+                      ⚡️This is a live containment operation.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      The strike was real. The reversal was real.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      This is state-level controlled ignition.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      There was a greenlight. Then a high-level override.
+                    </span>
+                    <br />
+                    <span>
+                      Carrier strike groups moved. Bombers were armed.
+                    </span>
+                    <br />
+                    <span>
+                      Evacuation flights were ordered, then stood down.
+                    </span>
+                    <br />
+                    <span>
+                      Chalk orders were issued. Logs show “mission called off.”
+                    </span>
+                    <br />
+                    <span>
+                      The clock was ticking and the clock stopped.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Why?
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Because something broke the symmetry.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Trump went on camera. Iran halted executions.
+                    </span>
+                    <br />
+                    <span>
+                      A backchannel was opened via Pakistan.
+                    </span>
+                    <br />
+                    <span>
+                      Regional actors like Saudi Arabia, Egypt, and Qatar intervened to prevent use of airspace.
+                    </span>
+                    <br />
+                    <span>
+                      A UN Security Council session was triggered mid-crisis.
+                    </span>
+                    <br />
+                    <span>
+                      The airspace closure, the rerouted commercial flights, the military standby - all of it was real.
+                    </span>
+                    <br />
+                    <span>
+                      The response was not symbolic. It was surgical.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      The deterrent message was delivered with maximum ambiguity.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Iran blinked. Trump flexed. But neither side collapsed.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      This was a trial run.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      The US gained full-spectrum data on Iranian readiness.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Command latency. Radar activation. Defensive posture.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Iran showed its hand under pressure. 
+                    </span>
+                    <br />
+                    <span>
+                      The Pentagon watched every move.
+                    </span>
+                    <br />
+                    <span>
+                      What the US just did was a dry-run ignition protocol to test reflexes.
+                    </span>
+                    <br />
+                    <span>
+                      And it worked.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      No bombs dropped. No martyrs made.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      But the field was mapped, the pressure applied, and the exit offered.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Trump now controls the pace of escalation.
+                    </span>
+                    <br />
+                    <span>
+                      Iran is buying time through signals and intermediaries.
+                    </span>
+                    <br />
+                    <span>
+                      The Ayatollah is either evacuating or preparing an internal firewall.
+                    </span>
+                    <br />
+                    <span>
+                      Both are collapse moves.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      The sanctions, the media leaks, the social media info war - they are not distractions.
+                    </span>
+                    <br />
+                    <span>
+                      They are phase 2 of a psyops-led siege campaign.
+                    </span>
+                    <br />
+                    <span>
+                      Collapse without a missile. Submission through saturation.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      This is war by other means.
+                    </span>
+                    <br />
+                    <span>
+                      The strike is no longer the question.
+                    </span>
+                    <br />
+                    <span>
+                      The strike is now leverage.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Collapse has entered the slow spiral.
+                    </span>
+                    <br />
+                    <span>
+                      No fundamental rescue exists inside Iran.
+                    </span>
+                    <br />
+                    <span>
+                      Sanctions are deepening. Capital is fleeing.
+                    </span>
+                    <br />
+                    <span>
+                      Water shortages, blackouts, repression - all accelerating.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      The regime is now hostage to its own stagnation.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      And everyone at the top of the game knows it.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      This was not about killing leaders.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      This was about proving who moves the sky.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      And now the whole world sees who moves it.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      The tempo of collapse has entered American control.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Not by force. By frequency.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      The signal has been sent.
+                    </span>
+                  </span>
                 </p>
               </div>
               <div
@@ -8565,7 +8890,7 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
               </span>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -9230,7 +9555,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
-                  What movie is 10/10, yet hardly anyone has heard of it?
+                  <span>
+                    <span>
+                      What movie is 10/10, yet hardly anyone has heard of it?
+                    </span>
+                  </span>
                 </p>
               </div>
             </div>
@@ -9362,7 +9691,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </button>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -10027,9 +10356,17 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
-                  for all of you guys that haven’t cracked organic yet
-
-you’re welcome
+                  <span>
+                    <span>
+                      for all of you guys that haven’t cracked organic yet
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      you’re welcome
+                    </span>
+                  </span>
                 </p>
               </div>
               <div
@@ -10254,7 +10591,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
               </span>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -10919,7 +11256,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
-                  True
+                  <span>
+                    <span>
+                      True
+                    </span>
+                  </span>
                 </p>
               </div>
               <div
@@ -11096,7 +11437,7 @@ This is not a coincidence.
               </button>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -11761,7 +12102,20 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
-                  Based on recent reports, the UK government has approved postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing reorganisation, like merging councils into unitary authorities. Up to 63 councils could delay by a year to manage resources and avoid electing soon-abolished bodies, affecting millions of voters. Critics from Tories and Reform UK claim it's to evade losses amid low Labour polls. Sources: Telegraph, ITV, http://GOV.UK.
+                  <span>
+                    <span>
+                      Based on recent reports, the UK government has approved postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing reorganisation, like merging councils into unitary authorities. Up to 63 councils could delay by a year to manage resources and avoid electing soon-abolished bodies, affecting millions of voters. Critics from Tories and Reform UK claim it's to evade losses amid low Labour polls. Sources: Telegraph, ITV, 
+                    </span>
+                    <a
+                      class="text-blue-400 hover:text-blue-300 hover:underline break-all"
+                      href="http://GOV.UK."
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      http://GOV.UK.
+                    </a>
+                    <span />
+                  </span>
                 </p>
               </div>
             </div>
@@ -11893,7 +12247,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </button>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -12558,7 +12912,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
-                  insane how much goalposts have shifted that bfl can just drop a model that is ~10x better than Stable Diffusion while being ~as small and basically nobody bats an eye
+                  <span>
+                    <span>
+                      insane how much goalposts have shifted that bfl can just drop a model that is ~10x better than Stable Diffusion while being ~as small and basically nobody bats an eye
+                    </span>
+                  </span>
                 </p>
               </div>
               <div
@@ -12782,7 +13140,7 @@ Try it for free in our demo app (link in the thread).
               </span>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -13447,11 +13805,25 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
-                  Primes look chaotic in a line, but reveal structure when space curves.
-
-Same numbers.
-Different geometry.
-Hidden order.
+                  <span>
+                    <span>
+                      Primes look chaotic in a line, but reveal structure when space curves.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Same numbers.
+                    </span>
+                    <br />
+                    <span>
+                      Different geometry.
+                    </span>
+                    <br />
+                    <span>
+                      Hidden order.
+                    </span>
+                  </span>
                 </p>
               </div>
               <div
@@ -13619,7 +13991,7 @@ Hidden order.
               </span>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -14284,7 +14656,20 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
-                  link: https://www.youtube.com/watch?v=yGQb9KkvQ1Q
+                  <span>
+                    <span>
+                      link: 
+                    </span>
+                    <a
+                      class="text-blue-400 hover:text-blue-300 hover:underline break-all"
+                      href="https://www.youtube.com/watch?v=yGQb9KkvQ1Q"
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      https://www.youtube.com/watch?v=yGQb9Kkv...
+                    </a>
+                    <span />
+                  </span>
                 </p>
               </div>
             </div>
@@ -14416,7 +14801,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </button>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -15081,11 +15466,23 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
-                  Apparently, a 19 year old built Wisprflow's UGC program to 500M views in 60 days.
-
-Dude spills some sauce on LinkedIn. 
-
-Open this to see the entire post
+                  <span>
+                    <span>
+                      Apparently, a 19 year old built Wisprflow's UGC program to 500M views in 60 days.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Dude spills some sauce on LinkedIn. 
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Open this to see the entire post
+                    </span>
+                  </span>
                 </p>
               </div>
               <div
@@ -15360,7 +15757,7 @@ Open this to see the entire post
               </span>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -16700,7 +17097,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </button>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -19764,7 +20161,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </button>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -20575,15 +20972,35 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
-                  BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Named Virtual Accounts powered by @moonpay & @iron
-
-1️⃣ Claim your own named account in the Avici app
-
-2️⃣ Fund fast via SEPA Instant, ACH, Wire, and Direct Deposit
-
-3️⃣ Take full self-custodial control of your money
-
-Live now 🚀
+                  <span>
+                    <span>
+                      BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Named Virtual Accounts powered by @moonpay & @iron
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      1️⃣ Claim your own named account in the Avici app
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      2️⃣ Fund fast via SEPA Instant, ACH, Wire, and Direct Deposit
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      3️⃣ Take full self-custodial control of your money
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Live now 🚀
+                    </span>
+                  </span>
                 </p>
               </div>
               <div
@@ -20751,7 +21168,7 @@ Live now 🚀
               </span>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -21396,45 +21813,137 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
-                  Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory
-
-We built a fully automated system that repurposes, localizes, and launches winning TikTok Shop content across hundreds of creator-style accounts.
-
-It’s so effective it feels like running Facebook ads in 2008. 
-
-- CPMs as low as $0.10
-- no reliance on paid ads 
-- no ghost creators
-- no wasted samples
-- no lost time 
-
-My $300/monthly tech stack which replaced $50k+ budget:
-
-- manus for product research and viral script ideas 
-- cruva / Fastmoss for recently viral content ideas from competitors 
-- nano banana pro for images 
-- kling 2.6 for video 
-- now using my own phone posting network for automated posting 
-
-Here’s how it works:
-•Each AI Agent spins up a TikTok Shop–ready profile, built to sell my products through shoppable videos.
-•Agents are prompted to research the niche, scrape winning TikTok Shop videos, and rebuild them with new hooks, angles, and UGC-style visuals tailored to your brand.
-•They create and post daily using my tech stack onto affiliate accounts 
-
-No touchpoints. No delays.
-
-Just shoppable videos going live and GMV compounding every week.
-
-Then we use an MPS (Multi-Platform Swarm) approach:
-
-once the concept works on TikTok Shop, we deploy hundreds of AI Agents to flood the niche with variations that all drive back to your Shop and Amazon listing.
-
-I’m giving you access to the full stack — the ai workflow, ready to plug into your TikTok Shop today.
-
-Comment “Workflow” and I’ll send you everything.
-(must be connected)
-
-PS – Repost for early access to the full TikTok Shop content factory system.
+                  <span>
+                    <span>
+                      Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      We built a fully automated system that repurposes, localizes, and launches winning TikTok Shop content across hundreds of creator-style accounts.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      It’s so effective it feels like running Facebook ads in 2008. 
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      - CPMs as low as $0.10
+                    </span>
+                    <br />
+                    <span>
+                      - no reliance on paid ads 
+                    </span>
+                    <br />
+                    <span>
+                      - no ghost creators
+                    </span>
+                    <br />
+                    <span>
+                      - no wasted samples
+                    </span>
+                    <br />
+                    <span>
+                      - no lost time 
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      My $300/monthly tech stack which replaced $50k+ budget:
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      - manus for product research and viral script ideas 
+                    </span>
+                    <br />
+                    <span>
+                      - cruva / Fastmoss for recently viral content ideas from competitors 
+                    </span>
+                    <br />
+                    <span>
+                      - nano banana pro for images 
+                    </span>
+                    <br />
+                    <span>
+                      - kling 2.6 for video 
+                    </span>
+                    <br />
+                    <span>
+                      - now using my own phone posting network for automated posting 
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Here’s how it works:
+                    </span>
+                    <br />
+                    <span>
+                      •Each AI Agent spins up a TikTok Shop–ready profile, built to sell my products through shoppable videos.
+                    </span>
+                    <br />
+                    <span>
+                      •Agents are prompted to research the niche, scrape winning TikTok Shop videos, and rebuild them with new hooks, angles, and UGC-style visuals tailored to your brand.
+                    </span>
+                    <br />
+                    <span>
+                      •They create and post daily using my tech stack onto affiliate accounts 
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      No touchpoints. No delays.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Just shoppable videos going live and GMV compounding every week.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Then we use an MPS (Multi-Platform Swarm) approach:
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      once the concept works on TikTok Shop, we deploy hundreds of AI Agents to flood the niche with variations that all drive back to your Shop and Amazon listing.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      I’m giving you access to the full stack — the ai workflow, ready to plug into your TikTok Shop today.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Comment “Workflow” and I’ll send you everything.
+                    </span>
+                    <br />
+                    <span>
+                      (must be connected)
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      PS – Repost for early access to the full TikTok Shop content factory system.
+                    </span>
+                  </span>
                 </p>
               </div>
               <div
@@ -21573,7 +22082,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
               </span>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -22218,18 +22727,45 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
-                  🚨BREAKING: TRUMP FURIOUS WITH STARMER
-
-U.S state department made clear last night speaking on the UK and Keir Starmer ⬇️ 
-
-"The government has, indeed, repeatedly threatened to return Lucy Connolly to prison for benign political speech. 
-
-It also blocked her from visiting the United States at our invitation. 
-
-It’s also cancelling local elections, and curbing the right to a jury trial."
-
-They know Starmer is a tyrant
-His days are numbered
+                  <span>
+                    <span>
+                      🚨BREAKING: TRUMP FURIOUS WITH STARMER
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      U.S state department made clear last night speaking on the UK and Keir Starmer ⬇️ 
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      "The government has, indeed, repeatedly threatened to return Lucy Connolly to prison for benign political speech. 
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      It also blocked her from visiting the United States at our invitation. 
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      It’s also cancelling local elections, and curbing the right to a jury trial."
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      They know Starmer is a tyrant
+                    </span>
+                    <br />
+                    <span>
+                      His days are numbered
+                    </span>
+                  </span>
                 </p>
               </div>
               <div
@@ -22416,7 +22952,7 @@ His days are numbered
               </span>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -23061,81 +23597,255 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
-                  ⚡️This is a live containment operation.
-
-The strike was real. The reversal was real.
-
-This is state-level controlled ignition.
-
-There was a greenlight. Then a high-level override.
-Carrier strike groups moved. Bombers were armed.
-Evacuation flights were ordered, then stood down.
-Chalk orders were issued. Logs show “mission called off.”
-The clock was ticking and the clock stopped.
-
-Why?
-
-Because something broke the symmetry.
-
-Trump went on camera. Iran halted executions.
-A backchannel was opened via Pakistan.
-Regional actors like Saudi Arabia, Egypt, and Qatar intervened to prevent use of airspace.
-A UN Security Council session was triggered mid-crisis.
-The airspace closure, the rerouted commercial flights, the military standby - all of it was real.
-The response was not symbolic. It was surgical.
-
-The deterrent message was delivered with maximum ambiguity.
-
-Iran blinked. Trump flexed. But neither side collapsed.
-
-This was a trial run.
-
-The US gained full-spectrum data on Iranian readiness.
-
-Command latency. Radar activation. Defensive posture.
-
-Iran showed its hand under pressure. 
-The Pentagon watched every move.
-What the US just did was a dry-run ignition protocol to test reflexes.
-And it worked.
-
-No bombs dropped. No martyrs made.
-
-But the field was mapped, the pressure applied, and the exit offered.
-
-Trump now controls the pace of escalation.
-Iran is buying time through signals and intermediaries.
-The Ayatollah is either evacuating or preparing an internal firewall.
-Both are collapse moves.
-
-The sanctions, the media leaks, the social media info war - they are not distractions.
-They are phase 2 of a psyops-led siege campaign.
-Collapse without a missile. Submission through saturation.
-
-This is war by other means.
-The strike is no longer the question.
-The strike is now leverage.
-
-Collapse has entered the slow spiral.
-No fundamental rescue exists inside Iran.
-Sanctions are deepening. Capital is fleeing.
-Water shortages, blackouts, repression - all accelerating.
-
-The regime is now hostage to its own stagnation.
-
-And everyone at the top of the game knows it.
-
-This was not about killing leaders.
-
-This was about proving who moves the sky.
-
-And now the whole world sees who moves it.
-
-The tempo of collapse has entered American control.
-
-Not by force. By frequency.
-
-The signal has been sent.
+                  <span>
+                    <span>
+                      ⚡️This is a live containment operation.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      The strike was real. The reversal was real.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      This is state-level controlled ignition.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      There was a greenlight. Then a high-level override.
+                    </span>
+                    <br />
+                    <span>
+                      Carrier strike groups moved. Bombers were armed.
+                    </span>
+                    <br />
+                    <span>
+                      Evacuation flights were ordered, then stood down.
+                    </span>
+                    <br />
+                    <span>
+                      Chalk orders were issued. Logs show “mission called off.”
+                    </span>
+                    <br />
+                    <span>
+                      The clock was ticking and the clock stopped.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Why?
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Because something broke the symmetry.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Trump went on camera. Iran halted executions.
+                    </span>
+                    <br />
+                    <span>
+                      A backchannel was opened via Pakistan.
+                    </span>
+                    <br />
+                    <span>
+                      Regional actors like Saudi Arabia, Egypt, and Qatar intervened to prevent use of airspace.
+                    </span>
+                    <br />
+                    <span>
+                      A UN Security Council session was triggered mid-crisis.
+                    </span>
+                    <br />
+                    <span>
+                      The airspace closure, the rerouted commercial flights, the military standby - all of it was real.
+                    </span>
+                    <br />
+                    <span>
+                      The response was not symbolic. It was surgical.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      The deterrent message was delivered with maximum ambiguity.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Iran blinked. Trump flexed. But neither side collapsed.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      This was a trial run.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      The US gained full-spectrum data on Iranian readiness.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Command latency. Radar activation. Defensive posture.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Iran showed its hand under pressure. 
+                    </span>
+                    <br />
+                    <span>
+                      The Pentagon watched every move.
+                    </span>
+                    <br />
+                    <span>
+                      What the US just did was a dry-run ignition protocol to test reflexes.
+                    </span>
+                    <br />
+                    <span>
+                      And it worked.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      No bombs dropped. No martyrs made.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      But the field was mapped, the pressure applied, and the exit offered.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Trump now controls the pace of escalation.
+                    </span>
+                    <br />
+                    <span>
+                      Iran is buying time through signals and intermediaries.
+                    </span>
+                    <br />
+                    <span>
+                      The Ayatollah is either evacuating or preparing an internal firewall.
+                    </span>
+                    <br />
+                    <span>
+                      Both are collapse moves.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      The sanctions, the media leaks, the social media info war - they are not distractions.
+                    </span>
+                    <br />
+                    <span>
+                      They are phase 2 of a psyops-led siege campaign.
+                    </span>
+                    <br />
+                    <span>
+                      Collapse without a missile. Submission through saturation.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      This is war by other means.
+                    </span>
+                    <br />
+                    <span>
+                      The strike is no longer the question.
+                    </span>
+                    <br />
+                    <span>
+                      The strike is now leverage.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Collapse has entered the slow spiral.
+                    </span>
+                    <br />
+                    <span>
+                      No fundamental rescue exists inside Iran.
+                    </span>
+                    <br />
+                    <span>
+                      Sanctions are deepening. Capital is fleeing.
+                    </span>
+                    <br />
+                    <span>
+                      Water shortages, blackouts, repression - all accelerating.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      The regime is now hostage to its own stagnation.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      And everyone at the top of the game knows it.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      This was not about killing leaders.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      This was about proving who moves the sky.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      And now the whole world sees who moves it.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      The tempo of collapse has entered American control.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Not by force. By frequency.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      The signal has been sent.
+                    </span>
+                  </span>
                 </p>
               </div>
               <div
@@ -23326,7 +24036,7 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
               </span>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -23971,7 +24681,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
-                  What movie is 10/10, yet hardly anyone has heard of it?
+                  <span>
+                    <span>
+                      What movie is 10/10, yet hardly anyone has heard of it?
+                    </span>
+                  </span>
                 </p>
               </div>
             </div>
@@ -24103,7 +24817,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </button>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -24748,9 +25462,17 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
-                  for all of you guys that haven’t cracked organic yet
-
-you’re welcome
+                  <span>
+                    <span>
+                      for all of you guys that haven’t cracked organic yet
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      you’re welcome
+                    </span>
+                  </span>
                 </p>
               </div>
               <div
@@ -24975,7 +25697,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
               </span>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -25620,7 +26342,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
-                  True
+                  <span>
+                    <span>
+                      True
+                    </span>
+                  </span>
                 </p>
               </div>
               <div
@@ -25797,7 +26523,7 @@ This is not a coincidence.
               </button>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -26442,7 +27168,20 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
-                  Based on recent reports, the UK government has approved postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing reorganisation, like merging councils into unitary authorities. Up to 63 councils could delay by a year to manage resources and avoid electing soon-abolished bodies, affecting millions of voters. Critics from Tories and Reform UK claim it's to evade losses amid low Labour polls. Sources: Telegraph, ITV, http://GOV.UK.
+                  <span>
+                    <span>
+                      Based on recent reports, the UK government has approved postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing reorganisation, like merging councils into unitary authorities. Up to 63 councils could delay by a year to manage resources and avoid electing soon-abolished bodies, affecting millions of voters. Critics from Tories and Reform UK claim it's to evade losses amid low Labour polls. Sources: Telegraph, ITV, 
+                    </span>
+                    <a
+                      class="text-blue-400 hover:text-blue-300 hover:underline break-all"
+                      href="http://GOV.UK."
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      http://GOV.UK.
+                    </a>
+                    <span />
+                  </span>
                 </p>
               </div>
             </div>
@@ -26574,7 +27313,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </button>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -27219,7 +27958,11 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
-                  insane how much goalposts have shifted that bfl can just drop a model that is ~10x better than Stable Diffusion while being ~as small and basically nobody bats an eye
+                  <span>
+                    <span>
+                      insane how much goalposts have shifted that bfl can just drop a model that is ~10x better than Stable Diffusion while being ~as small and basically nobody bats an eye
+                    </span>
+                  </span>
                 </p>
               </div>
               <div
@@ -27443,7 +28186,7 @@ Try it for free in our demo app (link in the thread).
               </span>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -28088,11 +28831,25 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
-                  Primes look chaotic in a line, but reveal structure when space curves.
-
-Same numbers.
-Different geometry.
-Hidden order.
+                  <span>
+                    <span>
+                      Primes look chaotic in a line, but reveal structure when space curves.
+                    </span>
+                    <br />
+                    <span />
+                    <br />
+                    <span>
+                      Same numbers.
+                    </span>
+                    <br />
+                    <span>
+                      Different geometry.
+                    </span>
+                    <br />
+                    <span>
+                      Hidden order.
+                    </span>
+                  </span>
                 </p>
               </div>
               <div
@@ -28260,7 +29017,7 @@ Hidden order.
               </span>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -28905,7 +29662,20 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <p
                   class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]"
                 >
-                  link: https://www.youtube.com/watch?v=yGQb9KkvQ1Q
+                  <span>
+                    <span>
+                      link: 
+                    </span>
+                    <a
+                      class="text-blue-400 hover:text-blue-300 hover:underline break-all"
+                      href="https://www.youtube.com/watch?v=yGQb9KkvQ1Q"
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      https://www.youtube.com/watch?v=yGQb9Kkv...
+                    </a>
+                    <span />
+                  </span>
                 </p>
               </div>
             </div>
@@ -29037,7 +29807,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </button>
               <button
                 aria-label="Share this preview"
-                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg

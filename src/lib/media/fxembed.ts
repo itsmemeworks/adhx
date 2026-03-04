@@ -134,6 +134,16 @@ export interface FxTwitterResponse {
     id: string
     url: string
     text: string
+    raw_text?: {
+      text: string
+      facets?: Array<{
+        type: string
+        indices: [number, number]
+        original: string      // t.co URL
+        replacement: string   // expanded URL
+        display: string       // truncated display URL
+      }>
+    }
     author: {
       id: string
       name: string
@@ -281,6 +291,32 @@ export interface FxTwitterResponse {
       }
     }
   }
+}
+
+/**
+ * Extract URLs from raw_text.facets when tweet.urls is missing
+ * Filters out tweet/status links (those are quote tweets, not external links)
+ */
+export function extractUrlsFromFacets(tweet: FxTwitterResponse['tweet']): Array<{
+  url: string           // t.co original
+  expanded_url: string  // full expanded URL
+  domain: string
+}> {
+  if (!tweet?.raw_text?.facets) return []
+
+  return tweet.raw_text.facets
+    .filter(f => f.type === 'url' && f.replacement && !/\/status\//.test(f.replacement))
+    .map(f => {
+      let domain = ''
+      try {
+        domain = new URL(f.replacement).hostname.replace(/^www\./, '')
+      } catch { /* invalid URL */ }
+      return {
+        url: f.original,
+        expanded_url: f.replacement,
+        domain,
+      }
+    })
 }
 
 /**
