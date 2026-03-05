@@ -3,7 +3,6 @@ import { db } from '@/lib/db'
 import { tagShares, bookmarkTags, bookmarks, bookmarkMedia, oauthTokens } from '@/lib/db/schema'
 import { eq, and, inArray, desc } from 'drizzle-orm'
 import { resolveMediaUrl, getShareableUrl, getThumbnailUrl } from '@/lib/media/fxembed'
-import { metrics } from '@/lib/sentry'
 
 /**
  * GET /api/share/tag/by-name/[username]/[tag]
@@ -110,8 +109,6 @@ export async function GET(
         media,
       }
     })
-
-    metrics.shareTagCollectionViewed(tweets.length)
 
     return NextResponse.json({
       tag: tagName,

@@ -16,15 +16,10 @@ export function initSentry() {
     environment: process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV || 'development',
     // Release tracking - links errors to specific versions
     release: SENTRY_RELEASE ? `adhx@${SENTRY_RELEASE}` : undefined,
+    // Performance monitoring sample rate (20% provides good visibility without quota issues)
+    tracesSampleRate: 0.2,
     // Only send errors in production
     enabled: process.env.NODE_ENV === 'production',
-    // Skip OpenTelemetry setup entirely — Sentry's OTel HTTP instrumentation
-    // wraps http.request with Proxy apply traps. Turbopack splits these across
-    // server and SSR chunks, and the two proxies reference each other, causing
-    // infinite Object.apply recursion (RangeError: Maximum call stack size exceeded).
-    // We only use Sentry for error capture + custom metrics, not tracing.
-    skipOpenTelemetrySetup: true,
-    registerEsmLoaderHooks: false,
     // Automatically capture unhandled promise rejections
     integrations: [
       Sentry.onUnhandledRejectionIntegration({ mode: 'warn' }),
@@ -193,8 +188,8 @@ export const metrics = {
     metricCount('feed.filtered', 1, { filter: filterType }),
 
   // Settings
-  settingsChanged: (settings: string, count: string) =>
-    metricCount('settings.changed', 1, { settings, count }),
+  settingsChanged: (setting: string, value: string) =>
+    metricCount('settings.changed', 1, { setting, value }),
   dataCleared: () => metricCount('settings.data_cleared'),
 
   // API performance
@@ -203,35 +198,6 @@ export const metrics = {
       endpoint,
       status: statusCode,
     }),
-
-  // Sharing & public access
-  shareTweetPreviewViewed: (source: 'crawler' | 'direct', crawlerType?: string) =>
-    metricCount('share.tweet_preview_viewed', 1, {
-      source,
-      ...(crawlerType && { crawler_type: crawlerType }),
-    }),
-  shareTagCollectionViewed: (tweetCount: number) =>
-    metricCount('share.tag_collection_viewed', 1, { tweet_count: tweetCount }),
-  shareTagCloned: (clonedCount: number) =>
-    metricCount('share.tag_cloned', 1, { cloned_count: clonedCount }),
-  shareTweetApiViewed: (hasAdhxContext: boolean) =>
-    metricCount('share.tweet_api_viewed', 1, { has_adhx_context: hasAdhxContext }),
-
-  // Media
-  mediaVideoProxied: (quality: string) =>
-    metricCount('media.video_proxied', 1, { quality }),
-  mediaVideoDownloaded: (quality: string) =>
-    metricCount('media.video_downloaded', 1, { quality }),
-
-  // Tag management
-  tagShared: () => metricCount('tag.shared'),
-  tagUnshared: () => metricCount('tag.unshared'),
-  tagDeleted: () => metricCount('tag.deleted'),
-  tagRemovedFromBookmark: () => metricCount('tag.removed_from_bookmark'),
-
-  // Account lifecycle
-  accountLoggedOut: () => metricCount('account.logged_out'),
-  accountDeleted: () => metricCount('account.deleted'),
 
   // Daily active users (hashed for privacy - no raw PII sent to third parties)
   trackUser: (userId: string) => {

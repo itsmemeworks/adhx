@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { captureException, metrics } from '@/lib/sentry'
+import { captureException } from '@/lib/sentry'
 
 // Simple in-memory cache for video URLs (survives for 1 hour)
 // Cache key includes quality for different variants
@@ -166,8 +166,6 @@ export async function GET(request: NextRequest) {
     if (contentRange) {
       responseHeaders['Content-Range'] = contentRange
     }
-
-    metrics.mediaVideoProxied(quality)
 
     return new Response(videoResponse.body, {
       status: videoResponse.status,

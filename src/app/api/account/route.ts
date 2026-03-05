@@ -15,7 +15,6 @@ import {
 } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { getCurrentUserId } from '@/lib/auth/session'
-import { metrics } from '@/lib/sentry'
 
 /**
  * DELETE /api/account
@@ -69,8 +68,6 @@ export async function DELETE() {
 
     // 11. Delete OAuth tokens (this logs the user out)
     await db.delete(oauthTokens).where(eq(oauthTokens.userId, userId))
-
-    metrics.accountDeleted()
 
     return NextResponse.json({
       success: true,
