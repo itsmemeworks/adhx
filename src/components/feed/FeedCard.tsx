@@ -1,16 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import { Image, Play, Link as LinkIcon, Quote, Check, EyeOff } from 'lucide-react'
+import { Image, Play, Link as LinkIcon, Check, EyeOff } from 'lucide-react'
 import { AuthorAvatar } from './AuthorAvatar'
 import { renderTextWithLinks, renderBionicTextWithLinks } from './utils'
 import { usePreferences } from '@/lib/preferences-context'
-import { formatDurationMs } from '@/lib/utils/format'
+import { formatDurationMs, formatCompactRelativeTime } from '@/lib/utils/format'
 import type { FeedItem } from './types'
 
 interface FeedCardProps {
   item: FeedItem
   lastSyncAt: string | null
+  sortField: 'processedAt' | 'createdAt'
   onExpand: () => void
   onMarkRead: () => void
   unreadOnly?: boolean
@@ -23,6 +24,7 @@ const NOISE_TEXTURE = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmln
 export function FeedCard({
   item,
   lastSyncAt,
+  sortField,
   onExpand,
   onMarkRead,
   unreadOnly,
@@ -39,6 +41,7 @@ export function FeedCard({
   const hasMedia = item.media && item.media.length > 0
   const primaryMedia = hasMedia ? item.media![0] : null
   const isVideo = primaryMedia?.mediaType === 'video' || primaryMedia?.mediaType === 'animated_gif'
+  const isGif = primaryMedia?.mediaType === 'animated_gif'
   const isArticle = item.category === 'article'
   const isQuote = item.isQuote && item.quoteContext
   const isNew = lastSyncAt && item.processedAt >= lastSyncAt
@@ -71,6 +74,18 @@ export function FeedCard({
     ? 'shadow-[0_0_8px_2px_rgba(245,158,11,0.4),0_0_20px_4px_rgba(245,158,11,0.25),0_0_35px_8px_rgba(245,158,11,0.1)] dark:shadow-[0_0_8px_2px_rgba(250,204,21,0.4),0_0_20px_4px_rgba(250,204,21,0.25),0_0_35px_8px_rgba(250,204,21,0.1)]'
     : ''
 
+  const timeDate = sortField === 'createdAt' && item.createdAt ? item.createdAt : item.processedAt
+  const timeBadge = formatCompactRelativeTime(timeDate)
+
+  // Category label for gallery display
+  const categoryLabel = item.isXArticle ? 'X Article'
+    : isArticle ? 'Article'
+    : isGif ? 'GIF'
+    : isVideo ? 'Video'
+    : isQuote ? 'Quote'
+    : hasMedia ? (item.media!.length > 1 ? 'Photos' : 'Photo')
+    : 'Text'
+
   return (
     <div className={`mb-4 break-inside-avoid transition-all duration-300 ${isExiting ? 'opacity-0 scale-95 -translate-y-2' : ''}`}>
       <div
@@ -79,6 +94,18 @@ export function FeedCard({
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
+        {/* Top gradient overlay with badges */}
+        <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none">
+          <div className="flex items-start justify-between p-3">
+            <span className="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full">
+              {categoryLabel}
+            </span>
+            <span className="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full">
+              {timeBadge}
+            </span>
+          </div>
+        </div>
+
         {/* Content based on type */}
         {hasMedia && primaryMedia ? (
           <MediaContent
@@ -205,7 +232,7 @@ function MediaContent({ item, primaryMedia, isVideo, aspectRatio, isHovered, err
       {!loaded && <div className="absolute inset-0 bg-gray-200 dark:bg-gray-700 animate-pulse" />}
       {/* Multi-image badge */}
       {imageCount > 1 && (
-        <div className="absolute top-2 right-2 bg-black/70 text-white text-xs font-medium px-2 py-0.5 rounded-full">
+        <div className="absolute top-10 right-4 bg-black/70 text-white text-xs font-medium px-2 py-0.5 rounded-full">
           1/{imageCount}
         </div>
       )}
@@ -247,12 +274,8 @@ function ArticleCardContent({ item, articleDomain }: { item: FeedItem; articleDo
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600" />
       )}
-      <div className="relative p-4 h-full flex flex-col">
-        {item.isXArticle ? (
-          <span className="self-start text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full mb-2">
-            X Article
-          </span>
-        ) : (
+      <div className="relative p-4 pt-8 h-full flex flex-col">
+        {!item.isXArticle && (
           <div className="flex items-center gap-2 mb-2">
             <LinkIcon className="w-3.5 h-3.5 text-white/70" />
             <a
@@ -281,13 +304,9 @@ type RenderTextFn = (text: string, className?: string) => React.ReactNode
 
 function QuoteCardContent({ item, renderText }: { item: FeedItem; renderText: RenderTextFn }): React.ReactElement {
   return (
-    <div className="relative p-4 bg-white dark:bg-gradient-to-br dark:from-gray-700 dark:to-gray-900 min-h-[200px]">
+    <div className="relative p-4 pt-8 bg-white dark:bg-gradient-to-br dark:from-gray-700 dark:to-gray-900 min-h-[200px]">
       <div className="absolute inset-0 opacity-[0.02] dark:opacity-[0.08] pointer-events-none" style={{ backgroundImage: NOISE_TEXTURE }} />
       <div className="relative z-10">
-        <div className="flex items-center gap-1 mb-2">
-          <Quote className="w-3.5 h-3.5 text-gray-500 dark:text-white/50" />
-          <span className="text-gray-500 dark:text-white/50 text-xs">Quote</span>
-        </div>
         <p className="text-gray-800 dark:text-white text-sm mb-3 line-clamp-3">{renderText(item.text)}</p>
         <div className="bg-gray-100 dark:bg-white/10 rounded-lg p-3">
           <p className="text-gray-600 dark:text-white/80 text-xs mb-1">@{item.quoteContext!.author}</p>
@@ -300,7 +319,7 @@ function QuoteCardContent({ item, renderText }: { item: FeedItem; renderText: Re
 
 function TextCardContent({ item, renderText }: { item: FeedItem; renderText: RenderTextFn }): React.ReactElement {
   return (
-    <div className="relative p-4 bg-white dark:bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 min-h-[150px] max-h-[300px] overflow-hidden">
+    <div className="relative p-4 pt-8 bg-white dark:bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 min-h-[150px] max-h-[300px] overflow-hidden">
       <div className="absolute inset-0 opacity-[0.02] dark:opacity-[0.08] pointer-events-none" style={{ backgroundImage: NOISE_TEXTURE }} />
       <div className="relative z-10">
         <p className="text-gray-800 dark:text-white text-sm leading-relaxed line-clamp-[12]">{renderText(item.text)}</p>

@@ -153,6 +153,7 @@ describe('API: /api/auth/twitter/status', () => {
       // Mock failed token refresh
       mockFetch.mockResolvedValueOnce({
         ok: false,
+        status: 400,
         text: () => Promise.resolve('Invalid refresh token'),
       })
 
@@ -209,9 +210,10 @@ describe('API: /api/auth/twitter/status', () => {
     })
 
     it('continues without profile image on fetch failure', async () => {
-      // Mock failed Twitter API call
+      // Mock failed Twitter API call (getCurrentUser uses fetchWithRetry which checks status)
       mockFetch.mockResolvedValueOnce({
         ok: false,
+        status: 403,
         text: () => Promise.resolve('API error'),
       })
 

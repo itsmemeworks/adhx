@@ -10,6 +10,7 @@ interface FeedGridProps {
   loading: boolean
   hasMore: boolean
   lastSyncAt: string | null
+  sortField: 'processedAt' | 'createdAt'
   unreadOnly: boolean
   stats: { total: number; unread: number }
   onExpand: (index: number) => void
@@ -24,6 +25,7 @@ export function FeedGrid({
   loading,
   hasMore,
   lastSyncAt,
+  sortField,
   unreadOnly,
   stats,
   onExpand,
@@ -48,6 +50,7 @@ export function FeedGrid({
             key={item.id}
             item={item}
             lastSyncAt={lastSyncAt}
+            sortField={sortField}
             onExpand={() => onExpand(index)}
             onMarkRead={() => onMarkRead(item.id)}
             unreadOnly={unreadOnly}

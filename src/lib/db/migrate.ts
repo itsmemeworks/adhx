@@ -147,6 +147,30 @@ db.exec(`
 `)
 
 console.log('[migrate] Indexes created')
+
+// Normalize non-ISO created_at dates (Twitter format like "Wed Jan 28 02:28:44 +0000 2026")
+// to ISO 8601 format for correct string-based sorting
+try {
+  const nonIsoRows = db.prepare(
+    `SELECT rowid, created_at FROM bookmarks WHERE created_at IS NOT NULL AND created_at NOT LIKE '____-%'`
+  ).all() as { rowid: number; created_at: string }[]
+
+  if (nonIsoRows.length > 0) {
+    const update = db.prepare('UPDATE bookmarks SET created_at = ? WHERE rowid = ?')
+    const normalize = db.transaction(() => {
+      for (const row of nonIsoRows) {
+        const parsed = new Date(row.created_at)
+        if (!isNaN(parsed.getTime())) {
+          update.run(parsed.toISOString(), row.rowid)
+        }
+      }
+    })
+    normalize()
+    console.log(`[migrate] Normalized ${nonIsoRows.length} non-ISO created_at dates`)
+  }
+} catch (error) {
+  console.log('[migrate] Warning: failed to normalize created_at dates', error)
+}
 console.log(`[migrate] Database ready at: ${path.resolve(DB_PATH)}`)
 
 db.close()

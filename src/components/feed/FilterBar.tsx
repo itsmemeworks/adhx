@@ -1,12 +1,16 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react'
-import { Tag, Eye, EyeOff, Globe, Link, Check, Filter, ChevronDown } from 'lucide-react'
-import { FILTER_OPTIONS, type FilterType, type TagItem } from './types'
+import { Tag, Eye, EyeOff, Globe, Link, Check, Filter, ChevronDown, ArrowUpDown, ArrowDown, ArrowUp } from 'lucide-react'
+import { FILTER_OPTIONS, type FilterType, type SortType, type SortDirection, type TagItem } from './types'
 
 interface FilterBarProps {
   filter: FilterType
   onFilterChange: (filter: FilterType) => void
+  sort: SortType
+  onSortChange: (sort: SortType) => void
+  sortDirection: SortDirection
+  onSortDirectionChange: (dir: SortDirection) => void
   unreadOnly: boolean
   onUnreadOnlyChange: (unreadOnly: boolean) => void
   selectedTags: string[]
@@ -107,6 +111,10 @@ function TagShareButton({
 export function FilterBar({
   filter,
   onFilterChange,
+  sort,
+  onSortChange,
+  sortDirection,
+  onSortDirectionChange,
   unreadOnly,
   onUnreadOnlyChange,
   selectedTags,
@@ -369,6 +377,39 @@ export function FilterBar({
               onTagUpdated={onTagUpdated}
             />
           )}
+
+          {/* Sort Controls */}
+          <div className="flex items-center gap-0.5 flex-shrink-0">
+            {/* Sort Field Toggle */}
+            <button
+              onClick={() => onSortChange(sort === 'added' ? 'posted' : 'added')}
+              className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-l-full text-xs sm:text-sm font-medium transition-colors ${
+                sort === 'posted'
+                  ? 'bg-amber-500 text-white'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+              }`}
+              title={sort === 'added' ? 'Sort by tweet date' : 'Sort by added date'}
+            >
+              <ArrowUpDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">{sort === 'added' ? 'Added' : 'Posted'}</span>
+            </button>
+            {/* Sort Direction Toggle */}
+            <button
+              onClick={() => onSortDirectionChange(sortDirection === 'desc' ? 'asc' : 'desc')}
+              className={`p-1.5 sm:p-2 rounded-r-full transition-colors ${
+                sort === 'posted'
+                  ? 'bg-amber-500 text-white hover:bg-amber-600'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+              }`}
+              title={sortDirection === 'desc' ? 'Newest first (click for oldest)' : 'Oldest first (click for newest)'}
+            >
+              {sortDirection === 'desc' ? (
+                <ArrowDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              ) : (
+                <ArrowUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              )}
+            </button>
+          </div>
 
           {/* Unread Toggle */}
           <button

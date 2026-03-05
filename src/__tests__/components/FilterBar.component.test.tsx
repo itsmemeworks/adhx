@@ -34,6 +34,10 @@ Object.defineProperty(window, 'matchMedia', {
 const defaultProps = {
   filter: 'all' as FilterType,
   onFilterChange: vi.fn(),
+  sort: 'added' as const,
+  onSortChange: vi.fn(),
+  sortDirection: 'desc' as const,
+  onSortDirectionChange: vi.fn(),
   unreadOnly: false,
   onUnreadOnlyChange: vi.fn(),
   selectedTags: [] as string[],

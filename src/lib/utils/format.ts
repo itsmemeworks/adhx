@@ -45,6 +45,33 @@ export function truncate(text: string, maxLength: number): string {
  * @example formatDurationMs(65000) // "1:05"
  * @example formatDurationMs(null) // null
  */
+/**
+ * Format a date as compact relative time (no "ago" suffix)
+ * @example formatCompactRelativeTime('2024-01-10T12:00:00Z') // "5d"
+ */
+export function formatCompactRelativeTime(dateStr: string): string {
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / (1000 * 60))
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+  if (diffMins < 1) return 'now'
+  if (diffMins < 60) return `${diffMins}m`
+  if (diffHours < 24) return `${diffHours}h`
+  if (diffDays < 7) return `${diffDays}d`
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w`
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo`
+  return `${Math.floor(diffDays / 365)}y`
+}
+
+/**
+ * Format duration in milliseconds to MM:SS format
+ * @example formatDurationMs(125000) // "2:05"
+ * @example formatDurationMs(65000) // "1:05"
+ * @example formatDurationMs(null) // null
+ */
 export function formatDurationMs(ms: number | null | undefined): string | null {
   if (!ms) return null
   const totalSeconds = Math.floor(ms / 1000)

@@ -116,6 +116,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose, inFocusMode = false }:
                 <Row keys={['b']} label="Sync bookmarks" />
                 <Row keys={['u']} label="Toggle unread only" />
                 <Row keys={['t']} label="Open tags filter" />
+                <Row keys={['o']} label="Toggle sort order" />
                 <Row keys={['d']} label="Toggle dark mode" />
                 <Row keys={['?']} label="Show this help" />
               </div>

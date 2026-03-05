@@ -323,6 +323,147 @@ describe('API: /api/feed', () => {
     })
   })
 
+  describe('Sort', () => {
+    it('sorts by processedAt desc by default', async () => {
+      await testInstance.db.insert(schema.bookmarks).values([
+        createTestBookmark(USER_A, 'tweet-old', {
+          processedAt: '2024-01-01T00:00:00Z',
+          createdAt: '2024-06-01T00:00:00Z',
+        }),
+        createTestBookmark(USER_A, 'tweet-new', {
+          processedAt: '2024-06-01T00:00:00Z',
+          createdAt: '2024-01-01T00:00:00Z',
+        }),
+      ])
+
+      const { GET } = await import('@/app/api/feed/route')
+      const response = await GET(createRequest({ unreadOnly: 'false' }))
+      const data = await response.json()
+
+      expect(data.items[0].id).toBe('tweet-new') // newer processedAt first
+      expect(data.items[1].id).toBe('tweet-old')
+    })
+
+    it('sorts by createdAt desc when sort=posted', async () => {
+      await testInstance.db.insert(schema.bookmarks).values([
+        createTestBookmark(USER_A, 'tweet-old-post', {
+          processedAt: '2024-06-01T00:00:00Z',
+          createdAt: '2024-01-01T00:00:00Z',
+        }),
+        createTestBookmark(USER_A, 'tweet-new-post', {
+          processedAt: '2024-01-01T00:00:00Z',
+          createdAt: '2024-06-01T00:00:00Z',
+        }),
+      ])
+
+      const { GET } = await import('@/app/api/feed/route')
+      const response = await GET(createRequest({ sort: 'posted', unreadOnly: 'false' }))
+      const data = await response.json()
+
+      expect(data.items[0].id).toBe('tweet-new-post') // newer createdAt first
+      expect(data.items[1].id).toBe('tweet-old-post')
+    })
+
+    it('sorts by processedAt asc when sortDir=asc', async () => {
+      await testInstance.db.insert(schema.bookmarks).values([
+        createTestBookmark(USER_A, 'tweet-old', {
+          processedAt: '2024-01-01T00:00:00Z',
+        }),
+        createTestBookmark(USER_A, 'tweet-new', {
+          processedAt: '2024-06-01T00:00:00Z',
+        }),
+      ])
+
+      const { GET } = await import('@/app/api/feed/route')
+      const response = await GET(createRequest({ sortDir: 'asc', unreadOnly: 'false' }))
+      const data = await response.json()
+
+      expect(data.items[0].id).toBe('tweet-old') // older processedAt first
+      expect(data.items[1].id).toBe('tweet-new')
+    })
+
+    it('sorts by createdAt asc when sort=posted&sortDir=asc', async () => {
+      await testInstance.db.insert(schema.bookmarks).values([
+        createTestBookmark(USER_A, 'tweet-old-post', {
+          processedAt: '2024-06-01T00:00:00Z',
+          createdAt: '2024-01-01T00:00:00Z',
+        }),
+        createTestBookmark(USER_A, 'tweet-new-post', {
+          processedAt: '2024-01-01T00:00:00Z',
+          createdAt: '2024-06-01T00:00:00Z',
+        }),
+      ])
+
+      const { GET } = await import('@/app/api/feed/route')
+      const response = await GET(createRequest({ sort: 'posted', sortDir: 'asc', unreadOnly: 'false' }))
+      const data = await response.json()
+
+      expect(data.items[0].id).toBe('tweet-old-post') // older createdAt first
+      expect(data.items[1].id).toBe('tweet-new-post')
+    })
+
+    it('defaults to desc when sortDir is invalid', async () => {
+      await testInstance.db.insert(schema.bookmarks).values([
+        createTestBookmark(USER_A, 'tweet-old', {
+          processedAt: '2024-01-01T00:00:00Z',
+        }),
+        createTestBookmark(USER_A, 'tweet-new', {
+          processedAt: '2024-06-01T00:00:00Z',
+        }),
+      ])
+
+      const { GET } = await import('@/app/api/feed/route')
+      const response = await GET(createRequest({ sortDir: 'invalid', unreadOnly: 'false' }))
+      const data = await response.json()
+
+      expect(data.items[0].id).toBe('tweet-new') // desc by default
+      expect(data.items[1].id).toBe('tweet-old')
+    })
+
+    it('ISO createdAt values sort correctly with posted sort', async () => {
+      // Regression test: non-ISO dates (like Twitter format) caused incorrect sort
+      await testInstance.db.insert(schema.bookmarks).values([
+        createTestBookmark(USER_A, 'tweet-jan', {
+          createdAt: '2024-01-15T10:00:00.000Z',
+        }),
+        createTestBookmark(USER_A, 'tweet-mar', {
+          createdAt: '2024-03-15T10:00:00.000Z',
+        }),
+        createTestBookmark(USER_A, 'tweet-feb', {
+          createdAt: '2024-02-15T10:00:00.000Z',
+        }),
+      ])
+
+      const { GET } = await import('@/app/api/feed/route')
+      const response = await GET(createRequest({ sort: 'posted', unreadOnly: 'false' }))
+      const data = await response.json()
+
+      expect(data.items[0].id).toBe('tweet-mar')
+      expect(data.items[1].id).toBe('tweet-feb')
+      expect(data.items[2].id).toBe('tweet-jan')
+    })
+
+    it('null createdAt sorts last when sort=posted', async () => {
+      await testInstance.db.insert(schema.bookmarks).values([
+        createTestBookmark(USER_A, 'tweet-no-date', {
+          processedAt: '2024-06-01T00:00:00Z',
+          createdAt: null,
+        }),
+        createTestBookmark(USER_A, 'tweet-with-date', {
+          processedAt: '2024-01-01T00:00:00Z',
+          createdAt: '2024-03-01T00:00:00Z',
+        }),
+      ])
+
+      const { GET } = await import('@/app/api/feed/route')
+      const response = await GET(createRequest({ sort: 'posted', unreadOnly: 'false' }))
+      const data = await response.json()
+
+      expect(data.items[0].id).toBe('tweet-with-date')
+      expect(data.items[1].id).toBe('tweet-no-date') // null sorts last
+    })
+  })
+
   describe('Manual filter', () => {
     beforeEach(async () => {
       await testInstance.db.insert(schema.bookmarks).values([

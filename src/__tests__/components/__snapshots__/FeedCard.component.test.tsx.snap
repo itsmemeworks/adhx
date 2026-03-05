@@ -8,6 +8,24 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > '4
     class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
   >
     <div
+      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
+    >
+      <div
+        class="flex items-start justify-between p-3"
+      >
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          Photos
+        </span>
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          now
+        </span>
+      </div>
+    </div>
+    <div
       class="relative"
     >
       <img
@@ -21,7 +39,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > '4
         class="absolute inset-0 bg-gray-200 dark:bg-gray-700 animate-pulse"
       />
       <div
-        class="absolute top-2 right-2 bg-black/70 text-white text-xs font-medium px-2 py-0.5 rounded-full"
+        class="absolute top-10 right-4 bg-black/70 text-white text-xs font-medium px-2 py-0.5 rounded-full"
       >
         1/
         4
@@ -83,6 +101,24 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
     class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
   >
     <div
+      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
+    >
+      <div
+        class="flex items-start justify-between p-3"
+      >
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          X Article
+        </span>
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          now
+        </span>
+      </div>
+    </div>
+    <div
       class="relative min-h-[200px] overflow-hidden"
     >
       <div
@@ -101,13 +137,8 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
         />
       </div>
       <div
-        class="relative p-4 h-full flex flex-col"
+        class="relative p-4 pt-8 h-full flex flex-col"
       >
-        <span
-          class="self-start text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full mb-2"
-        >
-          X Article
-        </span>
         <h3
           class="text-white font-semibold text-sm line-clamp-2 mb-1"
         >
@@ -178,6 +209,24 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
     class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
   >
     <div
+      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
+    >
+      <div
+        class="flex items-start justify-between p-3"
+      >
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          X Article
+        </span>
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          now
+        </span>
+      </div>
+    </div>
+    <div
       class="relative min-h-[200px] overflow-hidden"
     >
       <div
@@ -193,13 +242,8 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
         />
       </div>
       <div
-        class="relative p-4 h-full flex flex-col"
+        class="relative p-4 pt-8 h-full flex flex-col"
       >
-        <span
-          class="self-start text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full mb-2"
-        >
-          X Article
-        </span>
         <h3
           class="text-white font-semibold text-sm line-clamp-2 mb-1"
         >
@@ -267,6 +311,24 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'e
   <div
     class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
   >
+    <div
+      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
+    >
+      <div
+        class="flex items-start justify-between p-3"
+      >
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          Video
+        </span>
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          now
+        </span>
+      </div>
+    </div>
     <div
       class="relative"
     >
@@ -357,6 +419,24 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
     class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
   >
     <div
+      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
+    >
+      <div
+        class="flex items-start justify-between p-3"
+      >
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          Photo
+        </span>
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          now
+        </span>
+      </div>
+    </div>
+    <div
       class="relative"
     >
       <img
@@ -426,6 +506,24 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
     class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
   >
     <div
+      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
+    >
+      <div
+        class="flex items-start justify-between p-3"
+      >
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          Photos
+        </span>
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          now
+        </span>
+      </div>
+    </div>
+    <div
       class="relative"
     >
       <img
@@ -439,7 +537,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
         class="absolute inset-0 bg-gray-200 dark:bg-gray-700 animate-pulse"
       />
       <div
-        class="absolute top-2 right-2 bg-black/70 text-white text-xs font-medium px-2 py-0.5 rounded-full"
+        class="absolute top-10 right-4 bg-black/70 text-white text-xs font-medium px-2 py-0.5 rounded-full"
       >
         1/
         2
@@ -501,7 +599,25 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
     class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
   >
     <div
-      class="relative p-4 bg-white dark:bg-gradient-to-br dark:from-gray-700 dark:to-gray-900 min-h-[200px]"
+      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
+    >
+      <div
+        class="flex items-start justify-between p-3"
+      >
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          Quote
+        </span>
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          now
+        </span>
+      </div>
+    </div>
+    <div
+      class="relative p-4 pt-8 bg-white dark:bg-gradient-to-br dark:from-gray-700 dark:to-gray-900 min-h-[200px]"
     >
       <div
         class="absolute inset-0 opacity-[0.02] dark:opacity-[0.08] pointer-events-none"
@@ -510,34 +626,6 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
       <div
         class="relative z-10"
       >
-        <div
-          class="flex items-center gap-1 mb-2"
-        >
-          <svg
-            class="lucide lucide-quote w-3.5 h-3.5 text-gray-500 dark:text-white/50"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"
-            />
-            <path
-              d="M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"
-            />
-          </svg>
-          <span
-            class="text-gray-500 dark:text-white/50 text-xs"
-          >
-            Quote
-          </span>
-        </div>
         <p
           class="text-gray-800 dark:text-white text-sm mb-3 line-clamp-3"
         >
@@ -887,7 +975,25 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'p
     class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
   >
     <div
-      class="relative p-4 bg-white dark:bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 min-h-[150px] max-h-[300px] overflow-hidden"
+      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
+    >
+      <div
+        class="flex items-start justify-between p-3"
+      >
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          Text
+        </span>
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          now
+        </span>
+      </div>
+    </div>
+    <div
+      class="relative p-4 pt-8 bg-white dark:bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 min-h-[150px] max-h-[300px] overflow-hidden"
     >
       <div
         class="absolute inset-0 opacity-[0.02] dark:opacity-[0.08] pointer-events-none"
@@ -966,7 +1072,25 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
     class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
   >
     <div
-      class="relative p-4 bg-white dark:bg-gradient-to-br dark:from-gray-700 dark:to-gray-900 min-h-[200px]"
+      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
+    >
+      <div
+        class="flex items-start justify-between p-3"
+      >
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          Quote
+        </span>
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          now
+        </span>
+      </div>
+    </div>
+    <div
+      class="relative p-4 pt-8 bg-white dark:bg-gradient-to-br dark:from-gray-700 dark:to-gray-900 min-h-[200px]"
     >
       <div
         class="absolute inset-0 opacity-[0.02] dark:opacity-[0.08] pointer-events-none"
@@ -975,34 +1099,6 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
       <div
         class="relative z-10"
       >
-        <div
-          class="flex items-center gap-1 mb-2"
-        >
-          <svg
-            class="lucide lucide-quote w-3.5 h-3.5 text-gray-500 dark:text-white/50"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"
-            />
-            <path
-              d="M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"
-            />
-          </svg>
-          <span
-            class="text-gray-500 dark:text-white/50 text-xs"
-          >
-            Quote
-          </span>
-        </div>
         <p
           class="text-gray-800 dark:text-white text-sm mb-3 line-clamp-3"
         >
@@ -1221,7 +1317,25 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
     class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
   >
     <div
-      class="relative p-4 bg-white dark:bg-gradient-to-br dark:from-gray-700 dark:to-gray-900 min-h-[200px]"
+      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
+    >
+      <div
+        class="flex items-start justify-between p-3"
+      >
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          Quote
+        </span>
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          now
+        </span>
+      </div>
+    </div>
+    <div
+      class="relative p-4 pt-8 bg-white dark:bg-gradient-to-br dark:from-gray-700 dark:to-gray-900 min-h-[200px]"
     >
       <div
         class="absolute inset-0 opacity-[0.02] dark:opacity-[0.08] pointer-events-none"
@@ -1230,34 +1344,6 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
       <div
         class="relative z-10"
       >
-        <div
-          class="flex items-center gap-1 mb-2"
-        >
-          <svg
-            class="lucide lucide-quote w-3.5 h-3.5 text-gray-500 dark:text-white/50"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"
-            />
-            <path
-              d="M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"
-            />
-          </svg>
-          <span
-            class="text-gray-500 dark:text-white/50 text-xs"
-          >
-            Quote
-          </span>
-        </div>
         <p
           class="text-gray-800 dark:text-white text-sm mb-3 line-clamp-3"
         >
@@ -1356,7 +1442,25 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'r
     class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
   >
     <div
-      class="relative p-4 bg-white dark:bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 min-h-[150px] max-h-[300px] overflow-hidden"
+      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
+    >
+      <div
+        class="flex items-start justify-between p-3"
+      >
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          Text
+        </span>
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          now
+        </span>
+      </div>
+    </div>
+    <div
+      class="relative p-4 pt-8 bg-white dark:bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 min-h-[150px] max-h-[300px] overflow-hidden"
     >
       <div
         class="absolute inset-0 opacity-[0.02] dark:opacity-[0.08] pointer-events-none"
@@ -1444,7 +1548,25 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 't
     class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
   >
     <div
-      class="relative p-4 bg-white dark:bg-gradient-to-br dark:from-gray-700 dark:to-gray-900 min-h-[200px]"
+      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
+    >
+      <div
+        class="flex items-start justify-between p-3"
+      >
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          Quote
+        </span>
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          now
+        </span>
+      </div>
+    </div>
+    <div
+      class="relative p-4 pt-8 bg-white dark:bg-gradient-to-br dark:from-gray-700 dark:to-gray-900 min-h-[200px]"
     >
       <div
         class="absolute inset-0 opacity-[0.02] dark:opacity-[0.08] pointer-events-none"
@@ -1453,34 +1575,6 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 't
       <div
         class="relative z-10"
       >
-        <div
-          class="flex items-center gap-1 mb-2"
-        >
-          <svg
-            class="lucide lucide-quote w-3.5 h-3.5 text-gray-500 dark:text-white/50"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"
-            />
-            <path
-              d="M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"
-            />
-          </svg>
-          <span
-            class="text-gray-500 dark:text-white/50 text-xs"
-          >
-            Quote
-          </span>
-        </div>
         <p
           class="text-gray-800 dark:text-white text-sm mb-3 line-clamp-3"
         >
@@ -1591,6 +1685,24 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'v
     class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
   >
     <div
+      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
+    >
+      <div
+        class="flex items-start justify-between p-3"
+      >
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          Video
+        </span>
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          now
+        </span>
+      </div>
+    </div>
+    <div
       class="relative"
     >
       <img
@@ -1680,7 +1792,25 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'y
     class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
   >
     <div
-      class="relative p-4 bg-white dark:bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 min-h-[150px] max-h-[300px] overflow-hidden"
+      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
+    >
+      <div
+        class="flex items-start justify-between p-3"
+      >
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          Text
+        </span>
+        <span
+          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+        >
+          now
+        </span>
+      </div>
+    </div>
+    <div
+      class="relative p-4 pt-8 bg-white dark:bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 min-h-[150px] max-h-[300px] overflow-hidden"
     >
       <div
         class="absolute inset-0 opacity-[0.02] dark:opacity-[0.08] pointer-events-none"
