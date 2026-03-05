@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.30.0](https://github.com/itsmemeworks/adhx/compare/v1.29.1...v1.30.0) (2026-03-05)
+
+
+### Features
+
+* gallery category badges, sort direction, and posted sort fix ([#134](https://github.com/itsmemeworks/adhx/issues/134)) ([d3e6257](https://github.com/itsmemeworks/adhx/commit/d3e62576643ef150afd7f5e2844447ea2542ed6d))
+
 ## [1.29.1](https://github.com/itsmemeworks/adhx/compare/v1.29.0...v1.29.1) (2026-03-05)
 
 
