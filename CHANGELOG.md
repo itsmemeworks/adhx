@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.30.3](https://github.com/itsmemeworks/adhx/compare/v1.30.2...v1.30.3) (2026-03-05)
+
+
+### Bug Fixes
+
+* revert sentry metrics additions that cause turbopack crash ([#140](https://github.com/itsmemeworks/adhx/issues/140)) ([26b5da5](https://github.com/itsmemeworks/adhx/commit/26b5da51d972ffbc4158cc14f1aa7f2070a1fa74))
+
 ## [1.30.2](https://github.com/itsmemeworks/adhx/compare/v1.30.1...v1.30.2) (2026-03-05)
 
 
