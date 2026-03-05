@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.30.2](https://github.com/itsmemeworks/adhx/compare/v1.30.1...v1.30.2) (2026-03-05)
+
+
+### Bug Fixes
+
+* skip otel setup to prevent turbopack proxy crash ([#138](https://github.com/itsmemeworks/adhx/issues/138)) ([91218af](https://github.com/itsmemeworks/adhx/commit/91218afb1dc71f63c2764834556f92cfc14d37fc))
+
 ## [1.30.1](https://github.com/itsmemeworks/adhx/compare/v1.30.0...v1.30.1) (2026-03-05)
 
 
