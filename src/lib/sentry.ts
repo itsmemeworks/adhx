@@ -20,6 +20,10 @@ export function initSentry() {
     tracesSampleRate: 0.2,
     // Only send errors in production
     enabled: process.env.NODE_ENV === 'production',
+    // Disable import-in-the-middle ESM hooks — they conflict with Turbopack's
+    // module proxy system, causing infinite Object.apply recursion between
+    // server and SSR chunks (RangeError: Maximum call stack size exceeded)
+    registerEsmLoaderHooks: false,
     // Automatically capture unhandled promise rejections
     integrations: [
       Sentry.onUnhandledRejectionIntegration({ mode: 'warn' }),

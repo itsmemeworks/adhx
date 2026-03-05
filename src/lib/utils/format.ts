@@ -40,12 +40,6 @@ export function truncate(text: string, maxLength: number): string {
 }
 
 /**
- * Format duration in milliseconds to MM:SS format
- * @example formatDurationMs(125000) // "2:05"
- * @example formatDurationMs(65000) // "1:05"
- * @example formatDurationMs(null) // null
- */
-/**
  * Format a date as compact relative time (no "ago" suffix)
  * @example formatCompactRelativeTime('2024-01-10T12:00:00Z') // "5d"
  */
