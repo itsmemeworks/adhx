@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 /**
@@ -12,9 +13,13 @@ vi.mock('@/lib/auth/session', () => ({
   getSession: vi.fn(() => Promise.resolve(null)),
 }))
 
-vi.mock('@/lib/media/fxembed', () => ({
-  fetchTweetData: vi.fn(),
-}))
+vi.mock('@/lib/media/fxembed', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/media/fxembed')>()
+  return {
+    ...actual,
+    fetchTweetData: vi.fn(),
+  }
+})
 
 vi.mock('next/navigation', () => ({
   redirect: vi.fn((url: string) => {
@@ -30,6 +35,10 @@ vi.mock('@/lib/sentry', () => ({
   metrics: {
     shareTweetPreviewViewed: vi.fn(),
   },
+}))
+
+vi.mock('@/lib/utils/og-fetch', () => ({
+  fetchOgMetadata: vi.fn().mockResolvedValue(null),
 }))
 
 // Mock React components
@@ -263,6 +272,135 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
       })
 
       expect(result).not.toBeNull()
+    })
+
+    // Regression: RSC serialization crash prevention
+    // Sentry SDK wraps fetch responses with Proxy. When Turbopack serializes
+    // Proxy-wrapped objects across the RSC boundary, it recurses infinitely.
+    // Fix: deep-clone tweet with JSON.parse(JSON.stringify()) before passing
+    // to the client component.
+    it('deep-clones tweet before passing to TweetPreviewLanding (prevents RSC crash)', async () => {
+      const { fetchTweetData } = await import('@/lib/media/fxembed')
+
+      const originalTweet = {
+        id: '999888777',
+        url: 'https://x.com/testuser/status/999888777',
+        text: 'Test tweet for serialization safety',
+        author: {
+          id: '42',
+          name: 'Test User',
+          screen_name: 'testuser',
+          avatar_url: 'https://example.com/avatar.jpg',
+        },
+        created_at: '2024-01-01T00:00:00Z',
+        replies: 10,
+        retweets: 5,
+        likes: 100,
+        views: 1000,
+      }
+
+      vi.mocked(fetchTweetData).mockResolvedValue({
+        code: 200,
+        message: 'OK',
+        tweet: originalTweet,
+      })
+
+      const QuickAddPage = (await import('@/app/[username]/status/[id]/page'))
+        .default
+
+      const result = await QuickAddPage({
+        params: Promise.resolve({ username: 'testuser', id: '999888777' }),
+      })
+
+      // Walk the React element tree to find TweetPreviewLanding's tweet prop
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const fragment = result as React.ReactElement<any>
+      const children = React.Children.toArray(fragment.props.children)
+      const previewElement = children.find(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (child): child is React.ReactElement<any> =>
+          React.isValidElement(child) && (child.type as { name?: string })?.name === 'TweetPreviewLanding'
+      )
+
+      expect(previewElement).toBeTruthy()
+      const receivedTweet = previewElement!.props.tweet
+
+      // Must NOT be the same object reference (deep clone required)
+      expect(receivedTweet).not.toBe(originalTweet)
+
+      // But must have the same content
+      expect(receivedTweet).toEqual(originalTweet)
+    })
+
+    it('deep-clone survives enrichment with OG metadata from facets', async () => {
+      const { fetchTweetData } = await import('@/lib/media/fxembed')
+      const { fetchOgMetadata } = await import('@/lib/utils/og-fetch')
+
+      const tweetWithFacets = {
+        id: '111222333',
+        url: 'https://x.com/testuser/status/111222333',
+        text: 'Check this out https://t.co/abc123',
+        raw_text: {
+          text: 'Check this out https://t.co/abc123',
+          facets: [{
+            type: 'url',
+            indices: [15, 38] as [number, number],
+            original: 'https://t.co/abc123',
+            replacement: 'https://example.com/article',
+            display: 'example.com/article',
+          }],
+        },
+        author: {
+          id: '42',
+          name: 'Test User',
+          screen_name: 'testuser',
+          avatar_url: 'https://example.com/avatar.jpg',
+        },
+        created_at: '2024-01-01T00:00:00Z',
+        replies: 0,
+        retweets: 0,
+        likes: 0,
+        views: 0,
+      }
+
+      vi.mocked(fetchTweetData).mockResolvedValue({
+        code: 200,
+        message: 'OK',
+        tweet: tweetWithFacets,
+      })
+
+      vi.mocked(fetchOgMetadata).mockResolvedValue({
+        title: 'Example Article',
+        description: 'An example article',
+        image: 'https://example.com/og.jpg',
+      })
+
+      const QuickAddPage = (await import('@/app/[username]/status/[id]/page'))
+        .default
+
+      const result = await QuickAddPage({
+        params: Promise.resolve({ username: 'testuser', id: '111222333' }),
+      })
+
+      // Walk the React element tree to find TweetPreviewLanding's tweet prop
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const fragment = result as React.ReactElement<any>
+      const children = React.Children.toArray(fragment.props.children)
+      const previewElement = children.find(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (child): child is React.ReactElement<any> =>
+          React.isValidElement(child) && (child.type as { name?: string })?.name === 'TweetPreviewLanding'
+      )
+
+      expect(previewElement).toBeTruthy()
+      const receivedTweet = previewElement!.props.tweet
+
+      // Must NOT be the same reference (deep clone)
+      expect(receivedTweet).not.toBe(tweetWithFacets)
+
+      // Should have the enriched external property from OG metadata
+      expect(receivedTweet.external).toBeDefined()
+      expect(receivedTweet.external.title).toBe('Example Article')
     })
   })
 })
