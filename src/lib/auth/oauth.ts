@@ -4,6 +4,42 @@ import { oauthState, oauthTokens } from '@/lib/db/schema'
 import { eq, lt } from 'drizzle-orm'
 import { encryptToken, safeDecryptToken } from './token-encryption'
 
+// Retry helper for idempotent Twitter API calls (GET only).
+// Non-idempotent operations (token exchange, refresh) must NOT retry
+// because auth codes are single-use and refresh tokens rotate on each use.
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+): Promise<Response> {
+  const maxRetries = 3
+  let lastError: unknown
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: AbortSignal.timeout(10_000),
+      })
+
+      if (response.ok || attempt === maxRetries || response.status < 500) {
+        return response
+      }
+
+      // Drain body to release the socket before retrying
+      await response.body?.cancel()
+    } catch (error) {
+      // Network errors (DNS, TCP reset, timeout) — retry these too
+      if (attempt === maxRetries) throw error
+      lastError = error
+    }
+
+    // Exponential backoff: 1s, 2s, 4s
+    await new Promise(resolve => setTimeout(resolve, 1000 * (1 << attempt)))
+  }
+
+  throw lastError
+}
+
 // OAuth 2.0 configuration
 const TWITTER_AUTH_URL = 'https://twitter.com/i/oauth2/authorize'
 const TWITTER_TOKEN_URL = 'https://api.twitter.com/2/oauth2/token'
@@ -111,6 +147,7 @@ export async function exchangeCodeForTokens(
       Authorization: `Basic ${credentials}`,
     },
     body: params.toString(),
+    signal: AbortSignal.timeout(10_000),
   })
 
   if (!response.ok) {
@@ -153,6 +190,7 @@ export async function refreshAccessToken(
       Authorization: `Basic ${credentials}`,
     },
     body: params.toString(),
+    signal: AbortSignal.timeout(10_000),
   })
 
   if (!response.ok) {
@@ -176,7 +214,7 @@ export async function getCurrentUser(accessToken: string): Promise<{
   name: string
   profileImageUrl: string | null
 }> {
-  const response = await fetch('https://api.twitter.com/2/users/me?user.fields=profile_image_url', {
+  const response = await fetchWithRetry('https://api.twitter.com/2/users/me?user.fields=profile_image_url', {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },

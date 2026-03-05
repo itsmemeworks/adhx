@@ -134,6 +134,10 @@ export interface FeedItem {
 
 export type FilterType = 'all' | 'photos' | 'videos' | 'text' | 'articles' | 'quoted' | 'manual'
 
+export type SortType = 'added' | 'posted'
+
+export type SortDirection = 'desc' | 'asc'
+
 export interface TagItem {
   tag: string
   count: number

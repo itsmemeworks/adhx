@@ -31,6 +31,7 @@ describe('FeedCard Component Snapshots', () => {
         <FeedCard
           item={feedItem}
           lastSyncAt={null}
+          sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
         />
@@ -49,6 +50,7 @@ describe('FeedCard Component Snapshots', () => {
         <FeedCard
           item={feedItem}
           lastSyncAt={null}
+          sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
         />
@@ -65,6 +67,7 @@ describe('FeedCard Component Snapshots', () => {
         <FeedCard
           item={feedItem}
           lastSyncAt={null}
+          sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
         />
@@ -82,6 +85,7 @@ describe('FeedCard Component Snapshots', () => {
         <FeedCard
           item={feedItem}
           lastSyncAt={null}
+          sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
         />
@@ -98,6 +102,7 @@ describe('FeedCard Component Snapshots', () => {
         <FeedCard
           item={feedItem}
           lastSyncAt={null}
+          sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
         />
@@ -114,6 +119,7 @@ describe('FeedCard Component Snapshots', () => {
         <FeedCard
           item={feedItem}
           lastSyncAt={null}
+          sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
         />
@@ -134,6 +140,7 @@ describe('FeedCard Component Snapshots', () => {
         <FeedCard
           item={feedItem}
           lastSyncAt={null}
+          sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
         />
@@ -152,6 +159,7 @@ describe('FeedCard Component Snapshots', () => {
         <FeedCard
           item={feedItem}
           lastSyncAt={null}
+          sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
         />
@@ -173,6 +181,7 @@ describe('FeedCard Component Snapshots', () => {
         <FeedCard
           item={feedItem}
           lastSyncAt={oldSyncTime}
+          sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
         />
@@ -192,6 +201,7 @@ describe('FeedCard Component Snapshots', () => {
         <FeedCard
           item={feedItem}
           lastSyncAt={null}
+          sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
         />
@@ -213,6 +223,7 @@ describe('FeedCard Component Snapshots', () => {
         <FeedCard
           item={feedItem}
           lastSyncAt={null}
+          sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
         />
@@ -230,6 +241,7 @@ describe('FeedCard Component Snapshots', () => {
         <FeedCard
           item={feedItem}
           lastSyncAt={null}
+          sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
         />
@@ -247,6 +259,7 @@ describe('FeedCard Component Snapshots', () => {
         <FeedCard
           item={feedItem}
           lastSyncAt={null}
+          sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
         />
@@ -265,6 +278,7 @@ describe('FeedCard Component Snapshots', () => {
         <FeedCard
           item={feedItem}
           lastSyncAt={null}
+          sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
         />

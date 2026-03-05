@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { formatCount, formatRelativeTime, truncate } from '@/lib/utils/format'
+import { formatCount, formatRelativeTime, formatCompactRelativeTime, truncate } from '@/lib/utils/format'
 
 /**
  * Format Utilities Tests
@@ -92,6 +92,72 @@ describe('formatRelativeTime', () => {
     // Note: 2024-06-14T23:59:59.999Z is only ~12 hours before 2024-06-15T12:00:00Z
     // so it's still "Today" (diffDays = 0) since we count full 24-hour periods
     expect(formatRelativeTime('2024-06-14T23:59:59.999Z')).toBe('Today')
+  })
+})
+
+describe('formatCompactRelativeTime', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2024-06-15T12:00:00Z'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('formats less than 1 minute as "now"', () => {
+    expect(formatCompactRelativeTime('2024-06-15T11:59:30Z')).toBe('now')
+    expect(formatCompactRelativeTime('2024-06-15T11:59:59Z')).toBe('now')
+  })
+
+  it('formats minutes (1-59)', () => {
+    expect(formatCompactRelativeTime('2024-06-15T11:30:00Z')).toBe('30m')
+    expect(formatCompactRelativeTime('2024-06-15T11:45:00Z')).toBe('15m')
+    expect(formatCompactRelativeTime('2024-06-15T11:01:00Z')).toBe('59m')
+  })
+
+  it('formats hours (1-23)', () => {
+    expect(formatCompactRelativeTime('2024-06-15T09:00:00Z')).toBe('3h')
+    expect(formatCompactRelativeTime('2024-06-15T11:00:00Z')).toBe('1h')
+    expect(formatCompactRelativeTime('2024-06-14T13:00:00Z')).toBe('23h')
+  })
+
+  it('formats days (1-6)', () => {
+    expect(formatCompactRelativeTime('2024-06-14T12:00:00Z')).toBe('1d')
+    expect(formatCompactRelativeTime('2024-06-13T12:00:00Z')).toBe('2d')
+    expect(formatCompactRelativeTime('2024-06-09T12:00:00Z')).toBe('6d')
+  })
+
+  it('formats weeks (1-4)', () => {
+    expect(formatCompactRelativeTime('2024-06-08T12:00:00Z')).toBe('1w')
+    expect(formatCompactRelativeTime('2024-06-01T12:00:00Z')).toBe('2w')
+    expect(formatCompactRelativeTime('2024-05-17T12:00:00Z')).toBe('4w')
+  })
+
+  it('formats months (1-11)', () => {
+    expect(formatCompactRelativeTime('2024-05-15T12:00:00Z')).toBe('1mo')
+    expect(formatCompactRelativeTime('2024-03-15T12:00:00Z')).toBe('3mo')
+    expect(formatCompactRelativeTime('2023-07-15T12:00:00Z')).toBe('11mo')
+  })
+
+  it('formats years (1+)', () => {
+    expect(formatCompactRelativeTime('2023-06-15T12:00:00Z')).toBe('1y')
+    expect(formatCompactRelativeTime('2022-06-15T12:00:00Z')).toBe('2y')
+    expect(formatCompactRelativeTime('2019-06-15T12:00:00Z')).toBe('5y')
+  })
+
+  it('does not include "ago" suffix', () => {
+    const result = formatCompactRelativeTime('2024-06-10T12:00:00Z')
+    expect(result).toBe('5d')
+    expect(result).not.toContain('ago')
+  })
+
+  it('boundary: exactly 1 minute shows "1m" not "now"', () => {
+    expect(formatCompactRelativeTime('2024-06-15T11:59:00Z')).toBe('1m')
+  })
+
+  it('boundary: exactly 60 minutes shows "1h" not "60m"', () => {
+    expect(formatCompactRelativeTime('2024-06-15T11:00:00Z')).toBe('1h')
   })
 })
 

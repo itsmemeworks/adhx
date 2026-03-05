@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { bookmarks, bookmarkLinks, bookmarkMedia, readStatus, syncLogs, bookmarkTags, collectionTweets } from '@/lib/db/schema'
-import { eq, desc, like, and, or, sql, count, inArray, SQL, isNull } from 'drizzle-orm'
+import { eq, desc, asc, like, and, or, sql, count, inArray, SQL, isNull } from 'drizzle-orm'
 import { resolveMediaUrl, getShareableUrl, getThumbnailUrl } from '@/lib/media/fxembed'
 import { expandUrls } from '@/lib/utils/url-expander'
 import { getCurrentUserId } from '@/lib/auth/session'
@@ -35,6 +35,8 @@ export async function GET(request: NextRequest) {
   const unreadOnly = searchParams.get('unreadOnly') !== 'false' // Default to true
   const search = searchParams.get('search')
   const tags = searchParams.getAll('tag') // Multiple tags via ?tag=foo&tag=bar
+  const sort = searchParams.get('sort') || 'added' // 'added' or 'posted'
+  const sortDir = searchParams.get('sortDir') === 'asc' ? 'asc' : 'desc' // default desc (newest first)
   const collectionId = searchParams.get('collection') // Filter by collection
 
   const offset = (page - 1) * limit
@@ -179,7 +181,7 @@ export async function GET(request: NextRequest) {
     // Get total count and paginated results in parallel
     const [totalResult, results] = await Promise.all([
       db.select({ count: count() }).from(bookmarks).where(whereClause),
-      db.select().from(bookmarks).where(whereClause).orderBy(desc(bookmarks.processedAt)).limit(limit).offset(offset),
+      db.select().from(bookmarks).where(whereClause).orderBy((sortDir === 'asc' ? asc : desc)(sort === 'posted' ? bookmarks.createdAt : bookmarks.processedAt)).limit(limit).offset(offset),
     ])
 
     const total = totalResult[0]?.count || 0

@@ -9,6 +9,8 @@ import {
   Lightbox,
   type FeedItem,
   type FilterType,
+  type SortType,
+  type SortDirection,
   type TagItem,
   type StreamedBookmark,
   streamedBookmarkToFeedItem,
@@ -38,6 +40,8 @@ function FeedPageContent(): React.ReactElement {
   const [items, setItems] = useState<FeedItem[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<FilterType>((searchParams.get('filter') as FilterType) || 'all')
+  const [sort, setSort] = useState<SortType>((searchParams.get('sort') as SortType) || 'added')
+  const [sortDirection, setSortDirection] = useState<SortDirection>((searchParams.get('sortDir') as SortDirection) || 'desc')
   const [unreadOnly, setUnreadOnly] = useState(searchParams.get('unreadOnly') !== 'false')
   const [search, setSearch] = useState(searchParams.get('search') || '')
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
@@ -228,6 +232,8 @@ function FeedPageContent(): React.ReactElement {
           filter,
           unreadOnly: unreadOnly.toString(),
         })
+        if (sort !== 'added') params.set('sort', sort)
+        if (sortDirection !== 'desc') params.set('sortDir', sortDirection)
         if (search) params.set('search', search)
         selectedTags.forEach((tag) => params.append('tag', tag))
 
@@ -249,15 +255,19 @@ function FeedPageContent(): React.ReactElement {
         setLoading(false)
       }
     },
-    [filter, unreadOnly, search, page, selectedTags]
+    [filter, sort, sortDirection, unreadOnly, search, page, selectedTags]
   )
 
   useEffect(() => {
     const urlFilter = (searchParams.get('filter') as FilterType) || 'all'
+    const urlSort = (searchParams.get('sort') as SortType) || 'added'
+    const urlSortDir = (searchParams.get('sortDir') as SortDirection) || 'desc'
     const urlUnreadOnly = searchParams.get('unreadOnly') !== 'false'
     const urlSearch = searchParams.get('search') || ''
 
     if (urlFilter !== filter) setFilter(urlFilter)
+    if (urlSort !== sort) setSort(urlSort)
+    if (urlSortDir !== sortDirection) setSortDirection(urlSortDir)
     if (urlUnreadOnly !== unreadOnly) setUnreadOnly(urlUnreadOnly)
     if (urlSearch !== search) setSearch(urlSearch)
   }, [searchParams])
@@ -269,7 +279,7 @@ function FeedPageContent(): React.ReactElement {
     // and sync-complete will trigger a proper fetch when done
     if (isSyncing) return
     fetchFeed(true)
-  }, [filter, unreadOnly, search, selectedTags, isSyncing, isAuthenticated])
+  }, [filter, sort, sortDirection, unreadOnly, search, selectedTags, isSyncing, isAuthenticated])
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -330,11 +340,13 @@ function FeedPageContent(): React.ReactElement {
   useEffect(() => {
     const params = new URLSearchParams()
     if (filter !== 'all') params.set('filter', filter)
+    if (sort !== 'added') params.set('sort', sort)
+    if (sortDirection !== 'desc') params.set('sortDir', sortDirection)
     if (!unreadOnly) params.set('unreadOnly', 'false')
     if (search) params.set('search', search)
     const queryString = params.toString()
     router.replace(queryString ? `?${queryString}` : '/', { scroll: false })
-  }, [filter, unreadOnly, search, router])
+  }, [filter, sort, sortDirection, unreadOnly, search, router])
 
   // Handle ?open=tweetId URL parameter to open a specific tweet in lightbox
   useEffect(() => {
@@ -661,6 +673,11 @@ function FeedPageContent(): React.ReactElement {
           e.preventDefault()
           window.dispatchEvent(new CustomEvent('toggle-tag-filter'))
           break
+        case 'o':
+        case 'O':
+          e.preventDefault()
+          setSort((prev) => (prev === 'added' ? 'posted' : 'added'))
+          break
         case 'd':
         case 'D':
           e.preventDefault()
@@ -835,6 +852,10 @@ function FeedPageContent(): React.ReactElement {
         <FilterBar
           filter={filter}
           onFilterChange={setFilter}
+          sort={sort}
+          onSortChange={setSort}
+          sortDirection={sortDirection}
+          onSortDirectionChange={setSortDirection}
           unreadOnly={unreadOnly}
           onUnreadOnlyChange={setUnreadOnly}
           selectedTags={selectedTags}
@@ -857,6 +878,7 @@ function FeedPageContent(): React.ReactElement {
             loading={loading}
             hasMore={hasMore}
             lastSyncAt={lastSyncAt}
+            sortField={sort === 'posted' ? 'createdAt' : 'processedAt'}
             unreadOnly={unreadOnly}
             stats={stats}
             onExpand={setSelectedIndex}

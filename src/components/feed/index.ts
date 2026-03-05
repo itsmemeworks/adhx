@@ -10,6 +10,8 @@ export { TagInput } from './TagInput'
 export type {
   FeedItem,
   FilterType,
+  SortType,
+  SortDirection,
   MediaItem,
   LinkItem,
   QuoteContext,
