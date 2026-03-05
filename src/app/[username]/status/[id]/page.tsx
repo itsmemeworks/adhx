@@ -143,7 +143,7 @@ export default async function QuickAddPage({ params }: Props) {
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-        <TweetPreviewLanding username={username} tweetId={id} tweet={tweet} isAuthenticated={!!session} />
+        <TweetPreviewLanding username={username} tweetId={id} tweet={JSON.parse(JSON.stringify(tweet))} isAuthenticated={!!session} />
       </>
     )
   }

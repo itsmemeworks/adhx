@@ -173,6 +173,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
   const [shareStatus, setShareStatus] = useState<'idle' | 'shared' | 'copied'>('idle')
   const [contentOverflows, setContentOverflows] = useState(false)
   const articleRef = useRef<HTMLElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
 
   // Read localStorage preference on mount (SSR-safe)
   useEffect(() => {
@@ -218,17 +219,32 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                          (tweet.quote?.media?.videos?.length ?? 0) > 0
   const hasMedia = photos.length > 0 || videos.length > 0 || hasQuotedMedia
 
-  // Check if content would overflow when collapsed (smallest breakpoint max-h is 400px)
-  // Show expand/collapse only when collapsing would actually clip content
-  // Uses ResizeObserver to re-check when child content changes (e.g. broken images removed)
+  // Check if collapsing would actually clip content at the current viewport.
+  // The collapsed max-h varies by breakpoint: 400/450/500/653px.
+  // Only show expand/collapse when content is taller than that threshold,
+  // or when the content div is already scrolling internally (collapsed state).
   useEffect(() => {
-    const el = articleRef.current
-    if (!el || hasMedia) return
-    const check = () => setContentOverflows(el.scrollHeight > 400)
+    const article = articleRef.current
+    const content = contentRef.current
+    if (!article || hasMedia) return
+    const getCollapsedMaxH = () => {
+      if (typeof window === 'undefined') return 400
+      if (window.matchMedia('(min-width: 1024px)').matches) return 653
+      if (window.matchMedia('(min-width: 768px)').matches) return 500
+      if (window.matchMedia('(min-width: 640px)').matches) return 450
+      return 400
+    }
+    const check = () => {
+      const maxH = getCollapsedMaxH()
+      const articleOverflows = article.scrollHeight > maxH
+      const contentScrolls = content ? content.scrollHeight > content.clientHeight : false
+      setContentOverflows(articleOverflows || contentScrolls)
+    }
     check()
     if (typeof ResizeObserver !== 'undefined') {
       const observer = new ResizeObserver(check)
-      observer.observe(el)
+      observer.observe(article)
+      if (content) observer.observe(content)
       return () => observer.disconnect()
     }
   }, [hasMedia])
@@ -377,6 +393,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
 
                 {/* Scrollable Content Area - overflow-x-hidden prevents horizontal scroll on mobile */}
                 <div
+                  ref={contentRef}
                   className={`flex-1 min-h-0 overflow-x-hidden w-full min-w-0 ${hasMedia || isExpanded ? '' : 'overflow-y-auto'}`}
                   style={{ fontFamily: `var(--font-${selectedFont})` }}
                 >
@@ -506,7 +523,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                     </span>
                   )}
                   {/* Expand/Collapse Toggle - only shown when content actually overflows */}
-                  {!hasMedia && (isExpanded || contentOverflows) && (
+                  {!hasMedia && contentOverflows && (
                     <button
                       onClick={() => {
                         setIsExpanded(prev => {
@@ -530,7 +547,8 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                   <button
                     onClick={handleSharePreview}
                     className={cn(
-                      'ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors',
+                      'flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors',
+                      (!hasMedia && contentOverflows) ? '' : 'ml-auto',
                       shareStatus !== 'idle'
                         ? 'text-green-600 dark:text-green-400'
                         : 'text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20'

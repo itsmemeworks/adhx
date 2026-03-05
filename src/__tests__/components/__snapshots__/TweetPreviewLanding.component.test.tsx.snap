@@ -491,7 +491,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </span>
               <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -1809,49 +1809,8 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 2.7M
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Collapse tweet"
-              >
-                <svg
-                  class="lucide lucide-minimize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="4 14 10 14 10 20"
-                  />
-                  <polyline
-                    points="20 10 14 10 14 4"
-                  />
-                  <line
-                    x1="14"
-                    x2="21"
-                    y1="10"
-                    y2="3"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Collapse
-                </span>
-              </button>
-              <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -4893,49 +4852,8 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 780.5K
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Collapse tweet"
-              >
-                <svg
-                  class="lucide lucide-minimize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="4 14 10 14 10 20"
-                  />
-                  <polyline
-                    points="20 10 14 10 14 4"
-                  />
-                  <line
-                    x1="14"
-                    x2="21"
-                    y1="10"
-                    y2="3"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Collapse
-                </span>
-              </button>
-              <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -5962,7 +5880,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </span>
               <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -6896,7 +6814,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </span>
               <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -7786,7 +7704,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </span>
               <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -8890,7 +8808,7 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
               </span>
               <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -9649,49 +9567,8 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 23.3M
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Collapse tweet"
-              >
-                <svg
-                  class="lucide lucide-minimize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="4 14 10 14 10 20"
-                  />
-                  <polyline
-                    points="20 10 14 10 14 4"
-                  />
-                  <line
-                    x1="14"
-                    x2="21"
-                    y1="10"
-                    y2="3"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Collapse
-                </span>
-              </button>
-              <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -10591,7 +10468,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
               </span>
               <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -11395,49 +11272,8 @@ This is not a coincidence.
                 1.8M
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Collapse tweet"
-              >
-                <svg
-                  class="lucide lucide-minimize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="4 14 10 14 10 20"
-                  />
-                  <polyline
-                    points="20 10 14 10 14 4"
-                  />
-                  <line
-                    x1="14"
-                    x2="21"
-                    y1="10"
-                    y2="3"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Collapse
-                </span>
-              </button>
-              <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -12205,49 +12041,8 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 20.0K
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Collapse tweet"
-              >
-                <svg
-                  class="lucide lucide-minimize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="4 14 10 14 10 20"
-                  />
-                  <polyline
-                    points="20 10 14 10 14 4"
-                  />
-                  <line
-                    x1="14"
-                    x2="21"
-                    y1="10"
-                    y2="3"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Collapse
-                </span>
-              </button>
-              <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -13140,7 +12935,7 @@ Try it for free in our demo app (link in the thread).
               </span>
               <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -13991,7 +13786,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </span>
               <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -14759,49 +14554,8 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 55.5K
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Collapse tweet"
-              >
-                <svg
-                  class="lucide lucide-minimize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="4 14 10 14 10 20"
-                  />
-                  <polyline
-                    points="20 10 14 10 14 4"
-                  />
-                  <line
-                    x1="14"
-                    x2="21"
-                    y1="10"
-                    y2="3"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Collapse
-                </span>
-              </button>
-              <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -15757,7 +15511,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </span>
               <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -17055,49 +16809,8 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 2.7M
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Collapse tweet"
-              >
-                <svg
-                  class="lucide lucide-minimize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="4 14 10 14 10 20"
-                  />
-                  <polyline
-                    points="20 10 14 10 14 4"
-                  />
-                  <line
-                    x1="14"
-                    x2="21"
-                    y1="10"
-                    y2="3"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Collapse
-                </span>
-              </button>
-              <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -20119,49 +19832,8 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 780.5K
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Collapse tweet"
-              >
-                <svg
-                  class="lucide lucide-minimize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="4 14 10 14 10 20"
-                  />
-                  <polyline
-                    points="20 10 14 10 14 4"
-                  />
-                  <line
-                    x1="14"
-                    x2="21"
-                    y1="10"
-                    y2="3"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Collapse
-                </span>
-              </button>
-              <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -21168,7 +20840,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </span>
               <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -22082,7 +21754,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </span>
               <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -22952,7 +22624,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </span>
               <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -24036,7 +23708,7 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
               </span>
               <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -24775,49 +24447,8 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 23.3M
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Collapse tweet"
-              >
-                <svg
-                  class="lucide lucide-minimize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="4 14 10 14 10 20"
-                  />
-                  <polyline
-                    points="20 10 14 10 14 4"
-                  />
-                  <line
-                    x1="14"
-                    x2="21"
-                    y1="10"
-                    y2="3"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Collapse
-                </span>
-              </button>
-              <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -25697,7 +25328,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
               </span>
               <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -26481,49 +26112,8 @@ This is not a coincidence.
                 1.8M
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Collapse tweet"
-              >
-                <svg
-                  class="lucide lucide-minimize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="4 14 10 14 10 20"
-                  />
-                  <polyline
-                    points="20 10 14 10 14 4"
-                  />
-                  <line
-                    x1="14"
-                    x2="21"
-                    y1="10"
-                    y2="3"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Collapse
-                </span>
-              </button>
-              <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -27271,49 +26861,8 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 20.0K
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Collapse tweet"
-              >
-                <svg
-                  class="lucide lucide-minimize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="4 14 10 14 10 20"
-                  />
-                  <polyline
-                    points="20 10 14 10 14 4"
-                  />
-                  <line
-                    x1="14"
-                    x2="21"
-                    y1="10"
-                    y2="3"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Collapse
-                </span>
-              </button>
-              <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -28186,7 +27735,7 @@ Try it for free in our demo app (link in the thread).
               </span>
               <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -29017,7 +28566,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               </span>
               <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
@@ -29765,49 +29314,8 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 55.5K
               </span>
               <button
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                title="Collapse tweet"
-              >
-                <svg
-                  class="lucide lucide-minimize2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <polyline
-                    points="4 14 10 14 10 20"
-                  />
-                  <polyline
-                    points="20 10 14 10 14 4"
-                  />
-                  <line
-                    x1="14"
-                    x2="21"
-                    y1="10"
-                    y2="3"
-                  />
-                  <line
-                    x1="3"
-                    x2="10"
-                    y1="21"
-                    y2="14"
-                  />
-                </svg>
-                <span
-                  class="text-xs hidden lg:inline"
-                >
-                  Collapse
-                </span>
-              </button>
-              <button
                 aria-label="Share this preview"
-                class="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                class="flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors ml-auto text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 title="Share this preview"
               >
                 <svg
