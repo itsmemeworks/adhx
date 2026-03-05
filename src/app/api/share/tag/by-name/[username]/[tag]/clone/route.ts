@@ -3,7 +3,6 @@ import { db } from '@/lib/db'
 import { tagShares, bookmarkTags, bookmarks, bookmarkMedia, bookmarkLinks, oauthTokens } from '@/lib/db/schema'
 import { eq, and, inArray } from 'drizzle-orm'
 import { getCurrentUserId } from '@/lib/auth/session'
-import { metrics } from '@/lib/sentry'
 
 /**
  * POST /api/share/tag/by-name/[username]/[tag]/clone
@@ -155,8 +154,6 @@ export async function POST(
         // Ignore duplicate tag errors
       }
     }
-
-    metrics.shareTagCloned(newBookmarks.length)
 
     return NextResponse.json({
       success: true,

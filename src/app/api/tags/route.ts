@@ -3,7 +3,6 @@ import { db } from '@/lib/db'
 import { bookmarkTags, tagShares, oauthTokens } from '@/lib/db/schema'
 import { eq, sql, and } from 'drizzle-orm'
 import { getCurrentUserId } from '@/lib/auth/session'
-import { metrics } from '@/lib/sentry'
 
 // Get username for a user (for constructing friendly share URLs)
 async function getUsername(userId: string): Promise<string | null> {
@@ -112,12 +111,6 @@ export async function PATCH(request: NextRequest) {
     })
   }
 
-  if (isPublic) {
-    metrics.tagShared()
-  } else {
-    metrics.tagUnshared()
-  }
-
   // Return friendly URL format: /t/{username}/{tag}
   return NextResponse.json({ success: true, shareUrl: `/t/${username}/${tag}`, isPublic })
 }
@@ -149,8 +142,6 @@ export async function DELETE(request: NextRequest) {
       eq(tagShares.tag, tag)
     )
   )
-
-  metrics.tagDeleted()
 
   return NextResponse.json({ success: true })
 }

@@ -69,7 +69,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (updatedKeys.length > 0) {
-      metrics.settingsChanged(updatedKeys.join(','), String(updatedKeys.length))
+      metrics.settingsChanged(updatedKeys.join(','), updatedKeys.length.toString())
     }
 
     return NextResponse.json({ success: true })
