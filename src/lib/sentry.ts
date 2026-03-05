@@ -16,13 +16,14 @@ export function initSentry() {
     environment: process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV || 'development',
     // Release tracking - links errors to specific versions
     release: SENTRY_RELEASE ? `adhx@${SENTRY_RELEASE}` : undefined,
-    // Performance monitoring sample rate (20% provides good visibility without quota issues)
-    tracesSampleRate: 0.2,
     // Only send errors in production
     enabled: process.env.NODE_ENV === 'production',
-    // Disable import-in-the-middle ESM hooks — they conflict with Turbopack's
-    // module proxy system, causing infinite Object.apply recursion between
-    // server and SSR chunks (RangeError: Maximum call stack size exceeded)
+    // Skip OpenTelemetry setup entirely — Sentry's OTel HTTP instrumentation
+    // wraps http.request with Proxy apply traps. Turbopack splits these across
+    // server and SSR chunks, and the two proxies reference each other, causing
+    // infinite Object.apply recursion (RangeError: Maximum call stack size exceeded).
+    // We only use Sentry for error capture + custom metrics, not tracing.
+    skipOpenTelemetrySetup: true,
     registerEsmLoaderHooks: false,
     // Automatically capture unhandled promise rejections
     integrations: [
