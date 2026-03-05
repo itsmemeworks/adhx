@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.30.1](https://github.com/itsmemeworks/adhx/compare/v1.30.0...v1.30.1) (2026-03-05)
+
+
+### Bug Fixes
+
+* disable sentry esm loader hooks to prevent turbopack proxy crash ([#136](https://github.com/itsmemeworks/adhx/issues/136)) ([d71825e](https://github.com/itsmemeworks/adhx/commit/d71825ef19c21b007fb352b0c4ff7151d1db7cad))
+
 ## [1.30.0](https://github.com/itsmemeworks/adhx/compare/v1.29.1...v1.30.0) (2026-03-05)
 
 
