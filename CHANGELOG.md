@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.29.1](https://github.com/itsmemeworks/adhx/compare/v1.29.0...v1.29.1) (2026-03-05)
+
+
+### Bug Fixes
+
+* rsc serialization crash and expand/share button layout bugs ([#132](https://github.com/itsmemeworks/adhx/issues/132)) ([da2296c](https://github.com/itsmemeworks/adhx/commit/da2296c7698c7e4f9d99f39928555ffac38af705))
+
 ## [1.29.0](https://github.com/itsmemeworks/adhx/compare/v1.28.0...v1.29.0) (2026-03-04)
 
 
