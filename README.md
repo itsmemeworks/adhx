@@ -180,37 +180,65 @@ Manual deploy: `gh workflow run deploy.yml`
 
 ---
 
-## 🤖 Claude Code Plugin
+## 🤖 Agent Skill (works with any agent)
 
-ADHX ships as a [Claude Code plugin](https://docs.anthropic.com/en/docs/claude-code) that lets any AI agent fetch X/Twitter posts as clean JSON — no browser or scraping needed.
+ADHX ships as an [Agent Skill](https://agentskills.io) — an open, portable format for giving AI agents new capabilities. Paste any X/Twitter link into your agent of choice and it can fetch the post as clean JSON, no browser or scraping needed.
+
+The `adhx` skill follows the [agentskills.io specification](https://agentskills.io/specification), so it works across **any skills-compatible agent**, including: Claude Code, Claude, Cursor, Gemini CLI, OpenCode, OpenAI Codex, GitHub Copilot, Goose, Kiro, VS Code (Copilot), Letta, Factory, Roo Code, Amp, and more.
+
+📂 Skill source: [`skills/adhx/SKILL.md`](skills/adhx/SKILL.md)
 
 ### Install
 
-```bash
-# Add the ADHX marketplace
-/plugin marketplace add itsmemeworks/adhx
+The skill is a single folder you drop into your agent's skills directory. Location varies by agent:
 
-# Install the plugin
+| Agent | Skills directory |
+|-------|------------------|
+| Claude Code | `~/.claude/skills/` |
+| Claude (web/desktop) | Settings → Skills → Upload |
+| Cursor | `.cursor/skills/` (project) or `~/.cursor/skills/` (global) |
+| Gemini CLI | `~/.gemini/skills/` |
+| OpenCode | `~/.config/opencode/skills/` |
+| OpenAI Codex | `~/.codex/skills/` |
+| GitHub Copilot / VS Code | `.github/skills/` (workspace) |
+| Goose | `~/.config/goose/skills/` |
+
+> Check your agent's docs if your client isn't listed — the install path may differ, but the skill file itself is identical everywhere.
+
+**One-line install** (replace `<SKILLS_DIR>` with the path from the table above):
+
+```bash
+mkdir -p <SKILLS_DIR>/adhx && \
+  curl -sL https://raw.githubusercontent.com/itsmemeworks/adhx/main/skills/adhx/SKILL.md \
+  -o <SKILLS_DIR>/adhx/SKILL.md
+```
+
+**Claude Code marketplace** (shortcut for Claude Code users):
+
+```bash
+/plugin marketplace add itsmemeworks/adhx
 /plugin install adhx
 ```
 
-Or install manually:
+### Update
+
+Re-run the same install command — it overwrites the existing `SKILL.md` with the latest version. For the Claude Code marketplace install, use `/plugin update adhx`.
 
 ```bash
-mkdir -p ~/.claude/skills/adhx
+# Example for Claude Code
 curl -sL https://raw.githubusercontent.com/itsmemeworks/adhx/main/skills/adhx/SKILL.md \
   -o ~/.claude/skills/adhx/SKILL.md
 ```
 
 ### Usage
 
-Once installed, paste any X link into Claude Code and ask it to read/summarize/analyze:
+Once installed, paste any X link into your agent and ask it to read/summarize/analyze:
 
 ```
 > Read this and give me the key takeaways https://x.com/dgt10011/status/2020167690560647464
 ```
 
-Claude will automatically call the ADHX public API and return structured JSON with the full post content, author info, and engagement metrics — including long-form X Articles.
+The agent will automatically call the ADHX public API and return structured JSON with the full post content, author info, and engagement metrics — including long-form X Articles.
 
 ### API
 
