@@ -1,13 +1,8 @@
 ---
 name: adhx
-description: Fetch X/Twitter posts as clean LLM-friendly JSON via the ADHX API. Converts any x.com, twitter.com, or adhx.com link into structured data with full article content, author info, and engagement metrics. Use when a user shares an X/Twitter link and wants to read, analyze, or summarize the post.
-triggers:
-  - x.com
-  - twitter.com
-  - adhx.com
-  - tweet
-  - read this post
-  - read this tweet
+description: Fetch X/Twitter posts as clean LLM-friendly JSON via the ADHX API. Converts any x.com, twitter.com, or adhx.com link into structured data with full article content, author info, and engagement metrics. Use when a user shares an X/Twitter link (x.com, twitter.com, adhx.com) and wants to read, analyze, or summarize the post or tweet.
+metadata:
+  source_url: https://github.com/itsmemeworks/adhx
 ---
 
 # ADHX - X/Twitter Post Reader
