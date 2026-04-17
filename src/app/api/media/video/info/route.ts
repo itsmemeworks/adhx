@@ -9,7 +9,9 @@ const CACHE_TTL = 60 * 60 * 1000
 
 // Videos longer than this use HLS (chunked) instead of a single long MP4 proxy stream.
 // HLS parallelizes segment fetches and avoids tying up a Fly.io proxy connection.
-const HLS_DURATION_THRESHOLD_SECONDS = 60
+// Below 10s, MP4 through the proxy wins — single range request beats HLS's
+// extra playlist + segment round trips.
+const HLS_DURATION_THRESHOLD_SECONDS = 10
 
 interface VideoFormat {
   bitrate: number | null

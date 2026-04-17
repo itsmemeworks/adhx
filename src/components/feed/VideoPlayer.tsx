@@ -29,7 +29,7 @@ interface VideoInfo {
 // Must match HLS_DURATION_THRESHOLD_SECONDS in /api/media/video/info.
 // Kept in sync manually; changing one without the other only affects preflight
 // behavior (correctness still holds — the server makes the final call).
-const MP4_FAST_PATH_MAX_DURATION = 60
+const MP4_FAST_PATH_MAX_DURATION = 10
 
 /**
  * Smart video player that automatically handles both short and long videos.
