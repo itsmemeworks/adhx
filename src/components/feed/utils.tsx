@@ -184,9 +184,10 @@ export async function handleShareMedia(
 
     if (author && tweetId) {
       try {
-        // Fetch video info to check size
+        // Fetch video info to check size. withSizes=true triggers HEAD requests
+        // upstream so we get actual byte counts — playback flow skips this.
         const infoResponse = await fetch(
-          `/api/media/video/info?author=${encodeURIComponent(author)}&tweetId=${encodeURIComponent(tweetId)}`
+          `/api/media/video/info?author=${encodeURIComponent(author)}&tweetId=${encodeURIComponent(tweetId)}&withSizes=true`
         )
 
         if (infoResponse.ok) {

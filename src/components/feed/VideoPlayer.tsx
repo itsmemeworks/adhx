@@ -11,6 +11,13 @@ interface VideoPlayerProps {
   loop?: boolean
   autoPlay?: boolean
   tweetUrl?: string
+  /**
+   * If provided and below the HLS threshold, the player skips the /info preflight
+   * and streams MP4 directly — saving a round trip (plus any HEAD measurements).
+   * When the duration crosses the threshold we still hit /info to get the HLS URL.
+   */
+  duration?: number
+  poster?: string
 }
 
 interface VideoInfo {
@@ -18,6 +25,11 @@ interface VideoInfo {
   hlsUrl: string | null
   requiresHls: boolean
 }
+
+// Must match HLS_DURATION_THRESHOLD_SECONDS in /api/media/video/info.
+// Kept in sync manually; changing one without the other only affects preflight
+// behavior (correctness still holds — the server makes the final call).
+const MP4_FAST_PATH_MAX_DURATION = 10
 
 /**
  * Smart video player that automatically handles both short and long videos.
@@ -35,17 +47,26 @@ export function VideoPlayer({
   loop = false,
   autoPlay = false,
   tweetUrl,
+  duration,
+  poster,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const hlsRef = useRef<Hls | null>(null)
-  const [loading, setLoading] = useState(true)
+  // Known-short videos can skip the /info preflight and start streaming immediately.
+  const canSkipPreflight = typeof duration === 'number' && duration > 0 && duration <= MP4_FAST_PATH_MAX_DURATION
+  const [loading, setLoading] = useState(!canSkipPreflight)
   const [error, setError] = useState<string | null>(null)
-  const [ready, setReady] = useState(false) // Tracks if we've determined the playback strategy
+  const [ready, setReady] = useState(canSkipPreflight) // Tracks if we've determined the playback strategy
   const [useHls, setUseHls] = useState(false)
   const [hlsUrl, setHlsUrl] = useState<string | null>(null)
 
   // First effect: Determine playback strategy (HLS vs MP4)
   useEffect(() => {
+    if (canSkipPreflight) {
+      // Short video with known duration — MP4 proxy is fine, no /info call needed
+      return
+    }
+
     let mounted = true
 
     async function initVideo() {
@@ -92,7 +113,7 @@ export function VideoPlayer({
     return () => {
       mounted = false
     }
-  }, [author, tweetId])
+  }, [author, tweetId, canSkipPreflight])
 
   // Second effect: Initialize HLS.js when needed
   useEffect(() => {
@@ -199,10 +220,12 @@ export function VideoPlayer({
       <video
         ref={videoRef}
         src={videoSrc}
+        poster={poster}
         controls
         playsInline
         loop={loop}
         autoPlay={autoPlay}
+        preload="auto"
         className={className}
         onLoadedData={() => setLoading(false)}
         onError={() => {
