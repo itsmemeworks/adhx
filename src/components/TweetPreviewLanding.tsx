@@ -839,7 +839,7 @@ function PreviewAnotherTweet({ tweetUrl, urlError, onUrlChange, onSubmit, classN
 /** Media grid component for displaying tweet photos and videos */
 interface MediaGridProps {
   photos: Array<{ url: string; width: number; height: number }>
-  videos: Array<{ url: string; thumbnail_url: string; width: number; height: number }>
+  videos: Array<{ url: string; thumbnail_url: string; width: number; height: number; duration?: number }>
   author: string
   tweetId: string
 }
@@ -857,6 +857,7 @@ function MediaGrid({ photos, videos, author, tweetId }: MediaGridProps): React.R
           thumbnail={videos[0].thumbnail_url}
           width={videos[0].width}
           height={videos[0].height}
+          duration={videos[0].duration}
         />
       )
     }
@@ -886,6 +887,7 @@ function MediaGrid({ photos, videos, author, tweetId }: MediaGridProps): React.R
             thumbnail={video.thumbnail_url}
             width={video.width}
             height={video.height}
+            duration={video.duration}
           />
         ))}
         {photos.map((photo, i) => (
@@ -942,12 +944,14 @@ function VideoPlayer({
   thumbnail,
   width,
   height,
+  duration,
 }: {
   author: string
   tweetId: string
   thumbnail: string
   width?: number
   height?: number
+  duration?: number
 }): React.ReactElement {
   const [isPlaying, setIsPlaying] = useState(false)
   const [downloadBlockedSize, setDownloadBlockedSize] = useState<number | null>(null)
@@ -1004,6 +1008,8 @@ function VideoPlayer({
         author={author}
         tweetId={tweetId}
         autoPlay
+        duration={duration}
+        poster={thumbnail}
         className="w-full max-h-[50vh] md:max-h-none bg-black rounded-xl"
         tweetUrl={`https://x.com/${author}/status/${tweetId}`}
       />

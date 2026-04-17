@@ -67,6 +67,7 @@ export async function GET(request: NextRequest) {
         headers: {
           'User-Agent': 'ADHX/1.0',
         },
+        signal: AbortSignal.timeout(10_000),
       })
 
       if (!response.ok) {
@@ -90,17 +91,19 @@ export async function GET(request: NextRequest) {
           // Sort by bitrate ascending
           formats.sort((a, b) => (a.bitrate || 0) - (b.bitrate || 0))
 
+          // Index-based selection matches /api/media/video/info so the "hd" label
+          // points at the same format in both endpoints. That keeps download-gate
+          // size estimates consistent with what actually streams, and avoids pushing
+          // a 720p file through the proxy when the player asks for "hd".
           switch (quality) {
             case 'preview':
-              // Pick ~360p (lowest MP4) for fast preview
+              // Lowest bitrate
               videoUrl = formats[0]?.url || videoUrl
               break
             case 'hd':
-              // Pick ~720p (second highest or middle quality)
-              // Typically: 256k, 832k, 2176k, 10368k
-              // We want 2176k (720p)
-              const hdFormat = formats.find((f: VideoFormat) => (f.bitrate || 0) >= 1500000 && (f.bitrate || 0) <= 3000000)
-              videoUrl = hdFormat?.url || formats[formats.length - 2]?.url || videoUrl
+              // Second-highest bitrate (typically ~360p for 3-format tweets,
+              // ~720p for 4-format tweets). Matches info endpoint.
+              videoUrl = formats[Math.max(0, formats.length - 2)]?.url || videoUrl
               break
             case 'full':
             default:
@@ -144,6 +147,8 @@ export async function GET(request: NextRequest) {
         'User-Agent': 'ADHX/1.0',
         ...(rangeHeader && { 'Range': rangeHeader }),
       },
+      // Large file download — if the upstream CDN hangs, don't tie up the proxy forever
+      signal: AbortSignal.timeout(30_000),
     })
 
     if (!videoResponse.ok && videoResponse.status !== 206) {

@@ -89,24 +89,30 @@ describe('API: /api/media/video/info', () => {
   })
 
   describe('Short video response', () => {
-    it('returns requiresHls: false for videos under 5 minutes', async () => {
-      // Mock FxTwitter API
+    // 120s duration is above the new 60s HLS threshold, but mockShortVideoResponse
+    // has no m3u8 URL, so requiresHls should stay false.
+    const veryShortVideoResponse = {
+      tweet: {
+        media: {
+          videos: [
+            {
+              duration: 30,
+              url: 'https://video.twimg.com/default.mp4',
+              formats: [
+                { url: 'https://video.twimg.com/360p.mp4', bitrate: 832000, container: 'mp4' },
+                { url: 'https://video.twimg.com/720p.mp4', bitrate: 2176000, container: 'mp4' },
+                { url: 'https://video.twimg.com/1080p.mp4', bitrate: 10368000, container: 'mp4' },
+              ],
+            },
+          ],
+        },
+      },
+    }
+
+    it('returns requiresHls: false for videos under the HLS threshold', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockShortVideoResponse),
-      })
-      // Mock HEAD requests for file sizes (3 formats)
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        headers: new Headers({ 'content-length': '5000000' }),
-      })
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        headers: new Headers({ 'content-length': '15000000' }),
-      })
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        headers: new Headers({ 'content-length': '50000000' }),
+        json: () => Promise.resolve(veryShortVideoResponse),
       })
 
       const { GET } = await import('@/app/api/media/video/info/route')
@@ -116,10 +122,28 @@ describe('API: /api/media/video/info', () => {
       const data = await response.json()
       expect(data.requiresHls).toBe(false)
       expect(data.hlsUrl).toBeNull()
-      expect(data.duration).toBe(120)
+      expect(data.duration).toBe(30)
     })
 
-    it('fetches actual file sizes via HEAD requests', async () => {
+    it('does not make HEAD requests by default (bitrate estimation)', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(veryShortVideoResponse),
+      })
+
+      const { GET } = await import('@/app/api/media/video/info/route')
+      const response = await GET(createRequest({ author: 'user', tweetId: '123' }))
+
+      expect(response.status).toBe(200)
+      const headCalls = mockFetch.mock.calls.filter((call) => call[1]?.method === 'HEAD')
+      expect(headCalls).toHaveLength(0)
+
+      const data = await response.json()
+      // Sizes should still be populated via bitrate * duration
+      expect(data.formats[0].estimatedSize).toBeGreaterThan(0)
+    })
+
+    it('fetches actual file sizes via HEAD requests when withSizes=true', async () => {
       // Mock FxTwitter API
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -140,7 +164,7 @@ describe('API: /api/media/video/info', () => {
       })
 
       const { GET } = await import('@/app/api/media/video/info/route')
-      const response = await GET(createRequest({ author: 'user', tweetId: '123' }))
+      const response = await GET(createRequest({ author: 'user', tweetId: '123', withSizes: 'true' }))
 
       const data = await response.json()
       expect(data.formats).toHaveLength(3)
@@ -156,7 +180,7 @@ describe('API: /api/media/video/info', () => {
       expect(fullFormat.estimatedSize).toBe(150000000)
     })
 
-    it('makes HEAD requests with proper headers', async () => {
+    it('makes HEAD requests with proper headers when withSizes=true', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockShortVideoResponse),
@@ -168,7 +192,7 @@ describe('API: /api/media/video/info', () => {
       })
 
       const { GET } = await import('@/app/api/media/video/info/route')
-      await GET(createRequest({ author: 'user', tweetId: '123' }))
+      await GET(createRequest({ author: 'user', tweetId: '123', withSizes: 'true' }))
 
       // Verify HEAD requests were made with correct headers
       const headCalls = mockFetch.mock.calls.filter(
@@ -181,15 +205,10 @@ describe('API: /api/media/video/info', () => {
   })
 
   describe('Long video response', () => {
-    it('returns requiresHls: true for videos over 5 minutes with m3u8 URL', async () => {
+    it('returns requiresHls: true for long videos with m3u8 URL', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockLongVideoResponse),
-      })
-      // Mock HEAD requests
-      mockFetch.mockResolvedValue({
-        ok: true,
-        headers: new Headers({ 'content-length': '100000000' }),
       })
 
       const { GET } = await import('@/app/api/media/video/info/route')
@@ -202,7 +221,7 @@ describe('API: /api/media/video/info', () => {
       expect(data.duration).toBe(1200)
     })
 
-    it('returns actual file sizes for long videos', async () => {
+    it('returns actual file sizes for long videos when withSizes=true', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockLongVideoResponse),
@@ -222,7 +241,7 @@ describe('API: /api/media/video/info', () => {
       })
 
       const { GET } = await import('@/app/api/media/video/info/route')
-      const response = await GET(createRequest({ author: 'user', tweetId: '123' }))
+      const response = await GET(createRequest({ author: 'user', tweetId: '123', withSizes: 'true' }))
 
       const data = await response.json()
 

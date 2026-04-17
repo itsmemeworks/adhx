@@ -3989,6 +3989,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'e
               class="max-w-full max-h-[50vh] lg:max-h-[80vh] rounded-xl lg:rounded-2xl bg-black"
               controls=""
               playsinline=""
+              preload="auto"
             />
           </div>
           <div
@@ -7973,6 +7974,7 @@ exports[`Lightbox Component Snapshots > Renders all fixture types correctly > 'v
               class="max-w-full max-h-[50vh] lg:max-h-[80vh] rounded-xl lg:rounded-2xl bg-black"
               controls=""
               playsinline=""
+              preload="auto"
             />
           </div>
           <div
