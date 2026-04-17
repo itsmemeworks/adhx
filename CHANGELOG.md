@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.30.4](https://github.com/itsmemeworks/adhx/compare/v1.30.3...v1.30.4) (2026-04-17)
+
+
+### Performance Improvements
+
+* speed up video playback on tweet preview pages ([#143](https://github.com/itsmemeworks/adhx/issues/143)) ([e3f2dc7](https://github.com/itsmemeworks/adhx/commit/e3f2dc7d2732c6add2c816b6e2733c54017b1883))
+
 ## [1.30.3](https://github.com/itsmemeworks/adhx/compare/v1.30.2...v1.30.3) (2026-03-05)
 
 
