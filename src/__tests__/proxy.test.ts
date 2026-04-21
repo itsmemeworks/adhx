@@ -236,4 +236,95 @@ describe('Proxy: URL Normalization', () => {
       )
     })
   })
+
+  describe('Pasted Instagram URLs', () => {
+    it('redirects https:/www.instagram.com/reels/{id} to /reels/{id}', () => {
+      const request = createRequest(
+        '/https:/www.instagram.com/reels/DXVsqQ7CSXw'
+      )
+      const response = proxy(request)
+
+      expect(response.status).toBe(307)
+      expect(response.headers.get('location')).toBe(
+        'https://adhx.com/reels/DXVsqQ7CSXw'
+      )
+    })
+
+    it('redirects singular /reel/ URLs to plural /reels/', () => {
+      const request = createRequest(
+        '/https:/www.instagram.com/reel/DXVsqQ7CSXw'
+      )
+      const response = proxy(request)
+
+      expect(response.status).toBe(307)
+      expect(response.headers.get('location')).toBe(
+        'https://adhx.com/reels/DXVsqQ7CSXw'
+      )
+    })
+
+    it('redirects /p/ (post) URLs to /reels/{id}', () => {
+      const request = createRequest(
+        '/https:/www.instagram.com/p/DXVsqQ7CSXw'
+      )
+      const response = proxy(request)
+
+      expect(response.status).toBe(307)
+      expect(response.headers.get('location')).toBe(
+        'https://adhx.com/reels/DXVsqQ7CSXw'
+      )
+    })
+
+    it('redirects without protocol', () => {
+      const request = createRequest('/instagram.com/reels/DXVsqQ7CSXw')
+      const response = proxy(request)
+
+      expect(response.status).toBe(307)
+      expect(response.headers.get('location')).toBe(
+        'https://adhx.com/reels/DXVsqQ7CSXw'
+      )
+    })
+
+    it('strips trailing path segments (e.g. /comments, /likes)', () => {
+      const request = createRequest(
+        '/https:/www.instagram.com/reels/DXVsqQ7CSXw/comments'
+      )
+      const response = proxy(request)
+
+      expect(response.status).toBe(307)
+      expect(response.headers.get('location')).toBe(
+        'https://adhx.com/reels/DXVsqQ7CSXw'
+      )
+    })
+
+    it('preserves query parameters', () => {
+      const request = createRequest(
+        '/https:/www.instagram.com/reels/DXVsqQ7CSXw?igsh=abc123'
+      )
+      const response = proxy(request)
+
+      expect(response.status).toBe(307)
+      expect(response.headers.get('location')).toBe(
+        'https://adhx.com/reels/DXVsqQ7CSXw?igsh=abc123'
+      )
+    })
+
+    it('is case-insensitive on the domain', () => {
+      const request = createRequest(
+        '/https:/WWW.Instagram.COM/Reels/DXVsqQ7CSXw'
+      )
+      const response = proxy(request)
+
+      expect(response.status).toBe(307)
+      expect(response.headers.get('location')).toBe(
+        'https://adhx.com/reels/DXVsqQ7CSXw'
+      )
+    })
+
+    it('passes through the clean /reels/{id} path (no loop)', () => {
+      const request = createRequest('/reels/DXVsqQ7CSXw')
+      const response = proxy(request)
+
+      expect(response.headers.get('location')).toBeNull()
+    })
+  })
 })
