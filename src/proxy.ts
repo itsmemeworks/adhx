@@ -2,37 +2,43 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 /**
- * Proxy to handle pasted Twitter/X URLs
+ * Proxy to handle pasted social URLs.
  *
  * Users might paste full URLs like:
  *   adhx.com/https://x.com/user/status/123
  *   adhx.com/https://twitter.com/user/status/123
  *   adhx.com/x.com/user/status/123
+ *   adhx.com/https://www.instagram.com/reels/DXVsqQ7CSXw/
+ *   adhx.com/instagram.com/p/DXVsqQ7CSXw/
  *
- * This proxy extracts the username and tweet ID and redirects
- * to the clean format: adhx.com/user/status/123
+ * Extracted IDs are redirected to the clean route format:
+ *   - X / Twitter  →  /{username}/status/{id}
+ *   - Instagram    →  /reels/{id}
  */
 
-// Pattern to match Twitter/X URLs in the path
-// Captures: protocol (optional), domain, username, tweet ID
-// Note: Browsers normalize // to / in paths, so https://x.com becomes https:/x.com
+// Browsers normalize `//` → `/` in paths, so `https://x.com` becomes `https:/x.com`.
 const TWITTER_URL_PATTERN =
   /^\/(https?:\/?\/?)?(?:www\.)?(x\.com|twitter\.com)\/(\w{1,15})\/status\/(\d+)/i
+
+const INSTAGRAM_URL_PATTERN =
+  /^\/(?:https?:\/?\/?)?(?:www\.)?instagram\.com\/(?:reels?|p)\/([A-Za-z0-9_-]+)/i
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  const match = pathname.match(TWITTER_URL_PATTERN)
-
-  if (match) {
-    const [, , , username, tweetId] = match
-
-    // Redirect to clean URL format
+  const tweetMatch = pathname.match(TWITTER_URL_PATTERN)
+  if (tweetMatch) {
+    const [, , , username, tweetId] = tweetMatch
     const cleanUrl = new URL(`/${username}/status/${tweetId}`, request.url)
-
-    // Preserve any query params
     cleanUrl.search = request.nextUrl.search
+    return NextResponse.redirect(cleanUrl, { status: 307 })
+  }
 
+  const reelMatch = pathname.match(INSTAGRAM_URL_PATTERN)
+  if (reelMatch) {
+    const [, reelId] = reelMatch
+    const cleanUrl = new URL(`/reels/${reelId}`, request.url)
+    cleanUrl.search = request.nextUrl.search
     return NextResponse.redirect(cleanUrl, { status: 307 })
   }
 
