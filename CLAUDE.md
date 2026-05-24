@@ -400,7 +400,7 @@ The app offers multiple ways to save tweets, shown contextually based on the use
 
 **Bookmarklet** (desktop + Android):
 ```
-javascript:void(location.href=location.href.replace(/(?:x|twitter)\.com/,'adhx.com'))
+javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tiktok)\.com/,'adhx.com'))
 ```
 - One-click URL rewrite from x.com/twitter.com to adhx.com
 - Shown with copy-to-clipboard button and drag-to-toolbar instructions

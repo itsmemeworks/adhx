@@ -236,7 +236,7 @@ export function LandingPage() {
 }
 
 const SHORTCUT_URL = 'https://www.icloud.com/shortcuts/0d187480099b4d34a745ec8750a4587b'
-const BOOKMARKLET_CODE = `javascript:void(location.href=location.href.replace(/(?:x|twitter)\\.com/,'adhx.com'))`
+const BOOKMARKLET_CODE = `javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tiktok)\\.com/,'adhx.com'))`
 
 function ShortcutPromo() {
   const [platform, setPlatform] = useState<PlatformType>('desktop')
@@ -293,7 +293,7 @@ function ShortcutPromo() {
             ) : (
               <>
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  Drag this bookmarklet to your bookmarks bar. Click it on any X/Twitter page to instantly open it in ADHX.
+                  Drag this bookmarklet to your bookmarks bar. Click it on any X, Instagram, or TikTok page to instantly open it in ADHX.
                 </p>
                 <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-3 mb-4">
                   <code className="text-xs text-gray-700 dark:text-gray-300 break-all select-all">
