@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.31.0](https://github.com/itsmemeworks/adhx/compare/v1.30.4...v1.31.0) (2026-05-24)
+
+
+### Features
+
+* extend url-prefix proxy to instagram reels ([#146](https://github.com/itsmemeworks/adhx/issues/146)) ([8fe2b12](https://github.com/itsmemeworks/adhx/commit/8fe2b123fc0ac9841d5a76351bdd0f8d016ad19f))
+
 ## [1.30.4](https://github.com/itsmemeworks/adhx/compare/v1.30.3...v1.30.4) (2026-04-17)
 
 
