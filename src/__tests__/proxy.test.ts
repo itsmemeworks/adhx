@@ -237,6 +237,57 @@ describe('Proxy: URL Normalization', () => {
     })
   })
 
+  describe('Pasted TikTok URLs', () => {
+    it('redirects https:/www.tiktok.com/@user/video/{id} to /@user/video/{id}', () => {
+      const request = createRequest(
+        '/https:/www.tiktok.com/@sophieraiin/video/7619017281691045134',
+      )
+      const response = proxy(request)
+
+      expect(response.status).toBe(307)
+      expect(response.headers.get('location')).toBe(
+        'https://adhx.com/@sophieraiin/video/7619017281691045134',
+      )
+    })
+
+    it('redirects URLs without protocol', () => {
+      const request = createRequest('/tiktok.com/@user/video/7619017281691045134')
+      const response = proxy(request)
+      expect(response.status).toBe(307)
+      expect(response.headers.get('location')).toBe(
+        'https://adhx.com/@user/video/7619017281691045134',
+      )
+    })
+
+    it('redirects vm. and m. subdomain URLs', () => {
+      for (const sub of ['vm.', 'm.']) {
+        const request = createRequest(`/https:/${sub}tiktok.com/@user/video/7619017281691045134`)
+        const response = proxy(request)
+        expect(response.status).toBe(307)
+        expect(response.headers.get('location')).toBe(
+          'https://adhx.com/@user/video/7619017281691045134',
+        )
+      }
+    })
+
+    it('preserves query parameters', () => {
+      const request = createRequest(
+        '/https:/www.tiktok.com/@user/video/7619017281691045134?lang=en',
+      )
+      const response = proxy(request)
+      expect(response.status).toBe(307)
+      expect(response.headers.get('location')).toBe(
+        'https://adhx.com/@user/video/7619017281691045134?lang=en',
+      )
+    })
+
+    it('passes through the clean /@user/video/{id} path (no loop)', () => {
+      const request = createRequest('/@sophieraiin/video/7619017281691045134')
+      const response = proxy(request)
+      expect(response.headers.get('location')).toBeNull()
+    })
+  })
+
   describe('Pasted Instagram URLs', () => {
     it('redirects https:/www.instagram.com/reels/{id} to /reels/{id}', () => {
       const request = createRequest(
