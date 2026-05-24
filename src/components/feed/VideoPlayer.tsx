@@ -18,6 +18,12 @@ interface VideoPlayerProps {
    */
   duration?: number
   poster?: string
+  /**
+   * Platform of the bookmark. Twitter uses the FxEmbed /info → MP4|HLS flow.
+   * Instagram and TikTok stream through our own proxies — no /info preflight,
+   * no HLS branch (mirror videos are short).
+   */
+  platform?: 'twitter' | 'instagram' | 'tiktok'
 }
 
 interface VideoInfo {
@@ -49,11 +55,14 @@ export function VideoPlayer({
   tweetUrl,
   duration,
   poster,
+  platform = 'twitter',
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const hlsRef = useRef<Hls | null>(null)
+  // Non-Twitter platforms always skip the preflight (no HLS, no /info endpoint).
+  const nonTwitter = platform !== 'twitter'
   // Known-short videos can skip the /info preflight and start streaming immediately.
-  const canSkipPreflight = typeof duration === 'number' && duration > 0 && duration <= MP4_FAST_PATH_MAX_DURATION
+  const canSkipPreflight = nonTwitter || (typeof duration === 'number' && duration > 0 && duration <= MP4_FAST_PATH_MAX_DURATION)
   const [loading, setLoading] = useState(!canSkipPreflight)
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState(canSkipPreflight) // Tracks if we've determined the playback strategy
@@ -207,7 +216,11 @@ export function VideoPlayer({
   // For HLS: src is set by the useEffect after HLS.js attaches
   // For MP4: src is set directly on the element
   const videoSrc = ready && !useHls
-    ? `/api/media/video?author=${author}&tweetId=${tweetId}&quality=hd`
+    ? platform === 'instagram'
+      ? `/api/media/instagram/video?id=${encodeURIComponent(tweetId)}`
+      : platform === 'tiktok'
+        ? `/api/media/tiktok/video?username=${encodeURIComponent(author)}&id=${encodeURIComponent(tweetId)}`
+        : `/api/media/video?author=${author}&tweetId=${tweetId}&quality=hd`
     : undefined
 
   return (

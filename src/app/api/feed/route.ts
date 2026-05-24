@@ -309,9 +309,47 @@ export async function GET(request: NextRequest) {
       isRead: boolean,
       isArticle: boolean
     ): FeedItemResponse {
-      // Build media with FxEmbed URLs
+      // Build media URLs — platform-aware. Twitter uses FxEmbed; Instagram and
+      // TikTok stream through our own proxy routes (CDN URLs require referer/sig
+      // headers that only the proxy adds).
       const mediaWithUrls = bookmarkMedia.map((m, index) => {
         const mediaType = m.mediaType as 'photo' | 'video' | 'animated_gif'
+
+        if (bookmark.platform === 'instagram') {
+          const streamUrl = `/api/media/instagram/video?id=${encodeURIComponent(bookmark.id)}`
+          const downloadUrl = `/api/media/instagram/video/download?id=${encodeURIComponent(bookmark.id)}`
+          return {
+            id: m.id,
+            mediaType: m.mediaType,
+            width: m.width,
+            height: m.height,
+            durationMs: m.durationMs,
+            altText: m.altText,
+            url: streamUrl,
+            thumbnailUrl: m.previewUrl || streamUrl,
+            shareUrl: downloadUrl,
+          }
+        }
+
+        if (bookmark.platform === 'tiktok') {
+          const streamUrl = `/api/media/tiktok/video?username=${encodeURIComponent(bookmark.author)}&id=${encodeURIComponent(bookmark.id)}`
+          const downloadUrl = `/api/media/tiktok/video/download?username=${encodeURIComponent(bookmark.author)}&id=${encodeURIComponent(bookmark.id)}`
+          return {
+            id: m.id,
+            mediaType: m.mediaType,
+            width: m.width,
+            height: m.height,
+            durationMs: m.durationMs,
+            altText: m.altText,
+            url: streamUrl,
+            // tnktok doesn't expose a thumbnail — fall back to the video URL
+            // (browsers render the first frame on a <video> element).
+            thumbnailUrl: m.previewUrl || streamUrl,
+            shareUrl: downloadUrl,
+          }
+        }
+
+        // Twitter / default — existing FxEmbed flow
         const urlOptions = {
           tweetId: bookmark.id,
           author: bookmark.author,

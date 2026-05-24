@@ -318,6 +318,7 @@ function MediaLightboxContent({
               key={item.id}
               author={item.author}
               tweetId={item.id}
+              platform={item.platform}
               loop={primaryMedia.mediaType === 'animated_gif'}
               tweetUrl={item.tweetUrl}
               className="max-w-full max-h-[50vh] lg:max-h-[80vh] rounded-xl lg:rounded-2xl bg-black"
@@ -325,8 +326,20 @@ function MediaLightboxContent({
             {/* Share/Download button for video */}
             <div className="absolute top-3 right-3">
               <MediaShareButton
-                url={`/api/media/video?author=${item.author}&tweetId=${item.id}&quality=hd`}
-                filename={`tweet-${item.id}.mp4`}
+                url={
+                  item.platform === 'instagram'
+                    ? `/api/media/instagram/video?id=${encodeURIComponent(item.id)}`
+                    : item.platform === 'tiktok'
+                      ? `/api/media/tiktok/video?username=${encodeURIComponent(item.author)}&id=${encodeURIComponent(item.id)}`
+                      : `/api/media/video?author=${item.author}&tweetId=${item.id}&quality=hd`
+                }
+                filename={
+                  item.platform === 'instagram'
+                    ? `instagram-${item.id}.mp4`
+                    : item.platform === 'tiktok'
+                      ? `tiktok-${item.author}-${item.id}.mp4`
+                      : `tweet-${item.id}.mp4`
+                }
                 mimeType="video/mp4"
                 onTooLargeForMobile={setDownloadBlockedSize}
               />
