@@ -1,12 +1,57 @@
 'use client'
 
 import { useState } from 'react'
-import { Image, Play, Link as LinkIcon, Check, EyeOff } from 'lucide-react'
+import { Image, Play, Link as LinkIcon, Check, EyeOff, Instagram } from 'lucide-react'
 import { AuthorAvatar } from './AuthorAvatar'
 import { renderTextWithLinks, renderBionicTextWithLinks } from './utils'
 import { usePreferences } from '@/lib/preferences-context'
 import { formatDurationMs, formatCompactRelativeTime } from '@/lib/utils/format'
 import type { FeedItem } from './types'
+
+/**
+ * Inline TikTok glyph — lucide doesn't ship one. Sized to match the lucide
+ * Instagram icon for visual parity in the platform badge.
+ */
+function TikTokIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+      <path d="M19.589 6.686a4.793 4.793 0 0 1-3.77-4.245V2h-3.445v13.672a2.896 2.896 0 0 1-5.201 1.743 2.896 2.896 0 0 1 2.342-4.585c.28 0 .55.04.808.115V9.435a6.327 6.327 0 0 0-.808-.051 6.272 6.272 0 0 0-6.272 6.272A6.272 6.272 0 0 0 9.515 22h.005a6.272 6.272 0 0 0 6.272-6.272V8.687a8.182 8.182 0 0 0 4.773 1.526V6.78a4.795 4.795 0 0 1-.976-.094z" />
+    </svg>
+  )
+}
+
+/** Small platform badge overlay (top-right of FeedCard) for non-Twitter items. */
+function PlatformBadge({ platform }: { platform: FeedItem['platform'] }) {
+  if (!platform || platform === 'twitter') return null
+
+  if (platform === 'instagram') {
+    return (
+      <span
+        className="inline-flex items-center justify-center w-5 h-5 rounded-full text-white"
+        style={{
+          background:
+            'linear-gradient(135deg, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%)',
+        }}
+        title="Instagram"
+      >
+        <Instagram className="w-3 h-3" />
+      </span>
+    )
+  }
+
+  if (platform === 'tiktok') {
+    return (
+      <span
+        className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-black text-white"
+        title="TikTok"
+      >
+        <TikTokIcon className="w-3 h-3" />
+      </span>
+    )
+  }
+
+  return null
+}
 
 interface FeedCardProps {
   item: FeedItem
@@ -78,7 +123,9 @@ export function FeedCard({
   const timeBadge = formatCompactRelativeTime(timeDate)
 
   // Category label for gallery display
-  const categoryLabel = item.isXArticle ? 'X Article'
+  const categoryLabel = item.platform === 'instagram' ? 'Reel'
+    : item.platform === 'tiktok' ? 'TikTok'
+    : item.isXArticle ? 'X Article'
     : isArticle ? 'Article'
     : isGif ? 'GIF'
     : isVideo ? 'Video'
@@ -97,8 +144,11 @@ export function FeedCard({
         {/* Top gradient overlay with badges */}
         <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none">
           <div className="flex items-start justify-between p-3">
-            <span className="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full">
-              {categoryLabel}
+            <span className="flex items-center gap-1.5">
+              <PlatformBadge platform={item.platform} />
+              <span className="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full">
+                {categoryLabel}
+              </span>
             </span>
             <span className="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full">
               {timeBadge}

@@ -5,23 +5,27 @@ import { relations, sql } from 'drizzle-orm'
 // MULTI-USER SCHEMA - Composite Primary Keys
 // ===========================================
 
-// Main bookmarks table - PK: (userId, id)
-// Each user has their own copy of bookmarks
+// Main bookmarks table - PK: (userId, platform, id)
+// `platform` is one of 'twitter' | 'instagram' | 'tiktok' — added so a TikTok
+// video id (numeric, 19 digits) can't collide with a tweet id (also numeric,
+// 18-19 digits). All bookmark-derived tables (tags/media/links/read_status/
+// collection_tweets) carry platform too so the foreign-key tuple matches.
 export const bookmarks = sqliteTable(
   'bookmarks',
   {
-    id: text('id').notNull(), // Tweet ID
+    id: text('id').notNull(), // Source-native ID (tweet id, reel shortcode, tiktok video id)
     userId: text('user_id').notNull(), // Owner of the bookmark
+    platform: text('platform').notNull().default('twitter'), // 'twitter' | 'instagram' | 'tiktok'
     author: text('author').notNull(),
     authorName: text('author_name'),
     authorProfileImageUrl: text('author_profile_image_url'),
     text: text('text').notNull(),
-    tweetUrl: text('tweet_url').notNull(),
-    createdAt: text('created_at'), // ISO timestamp from Twitter
+    tweetUrl: text('tweet_url').notNull(), // Source URL (kept name for back-compat; works for any platform)
+    createdAt: text('created_at'), // ISO timestamp from the source
     processedAt: text('processed_at').notNull(),
     category: text('category').default('tweet'),
 
-    // Reply/Quote/Retweet context
+    // Reply/Quote/Retweet context (Twitter-specific; null for IG/TikTok)
     isReply: integer('is_reply', { mode: 'boolean' }).default(false),
     replyContext: text('reply_context'),
     isQuote: integer('is_quote', { mode: 'boolean' }).default(false),
@@ -40,29 +44,31 @@ export const bookmarks = sqliteTable(
     // AI-generated summary
     summary: text('summary'),
 
-    // How this bookmark was added: 'sync', 'manual', 'url_prefix'
+    // How this bookmark was added: 'sync', 'manual', 'url_prefix', 'quoted'
     source: text('source').default('sync'),
 
     // Original JSON for debugging
     rawJson: text('raw_json'),
   },
   (table) => ({
-    pk: primaryKey({ columns: [table.userId, table.id] }),
+    pk: primaryKey({ columns: [table.userId, table.platform, table.id] }),
     userIdIdx: index('bookmarks_user_id_idx').on(table.userId),
     processedAtIdx: index('bookmarks_processed_at_idx').on(table.processedAt),
     // Composite indexes for common query patterns
     userIdProcessedAtIdx: index('bookmarks_user_processed_at_idx').on(table.userId, table.processedAt),
     userIdCategoryIdx: index('bookmarks_user_category_idx').on(table.userId, table.category),
+    userIdPlatformIdx: index('bookmarks_user_platform_idx').on(table.userId, table.platform),
     userIdQuotedTweetIdx: index('bookmarks_user_quoted_tweet_idx').on(table.userId, table.quotedTweetId),
   })
 )
 
-// Links associated with bookmarks - includes userId for queries
+// Links associated with bookmarks - includes userId + platform for FK lookup
 export const bookmarkLinks = sqliteTable(
   'bookmark_links',
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
-    userId: text('user_id').notNull(), // For easy filtering
+    userId: text('user_id').notNull(),
+    platform: text('platform').notNull().default('twitter'),
     bookmarkId: text('bookmark_id').notNull(),
     originalUrl: text('original_url'),
     expandedUrl: text('expanded_url').notNull(),
@@ -74,32 +80,33 @@ export const bookmarkLinks = sqliteTable(
     previewImageUrl: text('preview_image_url'),
   },
   (table) => ({
-    userBookmarkIdx: index('bookmark_links_user_bookmark_idx').on(table.userId, table.bookmarkId),
+    userBookmarkIdx: index('bookmark_links_user_bookmark_idx').on(table.userId, table.platform, table.bookmarkId),
   })
 )
 
-// Tags - PK: (userId, bookmarkId, tag)
-// Each user has their own tags for their bookmarks
+// Tags - PK: (userId, platform, bookmarkId, tag)
+// Tags are per-bookmark-per-user; platform is part of the FK tuple.
 export const bookmarkTags = sqliteTable(
   'bookmark_tags',
   {
     userId: text('user_id').notNull(),
+    platform: text('platform').notNull().default('twitter'),
     bookmarkId: text('bookmark_id').notNull(),
     tag: text('tag').notNull(),
   },
   (table) => ({
-    pk: primaryKey({ columns: [table.userId, table.bookmarkId, table.tag] }),
+    pk: primaryKey({ columns: [table.userId, table.platform, table.bookmarkId, table.tag] }),
     userIdIdx: index('bookmark_tags_user_id_idx').on(table.userId),
   })
 )
 
-// Media attachments - PK: (userId, id)
-// Each user has their own media records
+// Media attachments - PK: (userId, platform, id)
 export const bookmarkMedia = sqliteTable(
   'bookmark_media',
   {
-    id: text('id').notNull(), // {tweetId}_{mediaKey}
+    id: text('id').notNull(), // {sourceId}_{mediaKey}
     userId: text('user_id').notNull(),
+    platform: text('platform').notNull().default('twitter'),
     bookmarkId: text('bookmark_id').notNull(),
     mediaType: text('media_type').notNull(),
     originalUrl: text('original_url').notNull(),
@@ -115,8 +122,8 @@ export const bookmarkMedia = sqliteTable(
     altText: text('alt_text'),
   },
   (table) => ({
-    pk: primaryKey({ columns: [table.userId, table.id] }),
-    userBookmarkIdx: index('bookmark_media_user_bookmark_idx').on(table.userId, table.bookmarkId),
+    pk: primaryKey({ columns: [table.userId, table.platform, table.id] }),
+    userBookmarkIdx: index('bookmark_media_user_bookmark_idx').on(table.userId, table.platform, table.bookmarkId),
   })
 )
 
@@ -154,18 +161,17 @@ export const syncState = sqliteTable(
   })
 )
 
-// Read status - PK: (userId, bookmarkId)
-// Each user has their own read/unread status
+// Read status - PK: (userId, platform, bookmarkId)
 export const readStatus = sqliteTable(
   'read_status',
   {
     userId: text('user_id').notNull(),
+    platform: text('platform').notNull().default('twitter'),
     bookmarkId: text('bookmark_id').notNull(),
     readAt: text('read_at').notNull(),
   },
   (table) => ({
-    pk: primaryKey({ columns: [table.userId, table.bookmarkId] }),
-    // Index for counting read items per user
+    pk: primaryKey({ columns: [table.userId, table.platform, table.bookmarkId] }),
     userIdIdx: index('read_status_user_id_idx').on(table.userId),
   })
 )
@@ -190,18 +196,19 @@ export const collections = sqliteTable(
   })
 )
 
-// Tweets in collections - PK: (userId, collectionId, bookmarkId)
+// Tweets in collections - PK: (userId, collectionId, platform, bookmarkId)
 export const collectionTweets = sqliteTable(
   'collection_tweets',
   {
     userId: text('user_id').notNull(),
     collectionId: text('collection_id').notNull(),
+    platform: text('platform').notNull().default('twitter'),
     bookmarkId: text('bookmark_id').notNull(),
     addedAt: text('added_at').default(sql`CURRENT_TIMESTAMP`),
     notes: text('notes'),
   },
   (table) => ({
-    pk: primaryKey({ columns: [table.userId, table.collectionId, table.bookmarkId] }),
+    pk: primaryKey({ columns: [table.userId, table.collectionId, table.platform, table.bookmarkId] }),
   })
 )
 
@@ -271,29 +278,29 @@ export const bookmarksRelations = relations(bookmarks, ({ many, one }) => ({
 
 export const bookmarkLinksRelations = relations(bookmarkLinks, ({ one }) => ({
   bookmark: one(bookmarks, {
-    fields: [bookmarkLinks.userId, bookmarkLinks.bookmarkId],
-    references: [bookmarks.userId, bookmarks.id],
+    fields: [bookmarkLinks.userId, bookmarkLinks.platform, bookmarkLinks.bookmarkId],
+    references: [bookmarks.userId, bookmarks.platform, bookmarks.id],
   }),
 }))
 
 export const bookmarkTagsRelations = relations(bookmarkTags, ({ one }) => ({
   bookmark: one(bookmarks, {
-    fields: [bookmarkTags.userId, bookmarkTags.bookmarkId],
-    references: [bookmarks.userId, bookmarks.id],
+    fields: [bookmarkTags.userId, bookmarkTags.platform, bookmarkTags.bookmarkId],
+    references: [bookmarks.userId, bookmarks.platform, bookmarks.id],
   }),
 }))
 
 export const bookmarkMediaRelations = relations(bookmarkMedia, ({ one }) => ({
   bookmark: one(bookmarks, {
-    fields: [bookmarkMedia.userId, bookmarkMedia.bookmarkId],
-    references: [bookmarks.userId, bookmarks.id],
+    fields: [bookmarkMedia.userId, bookmarkMedia.platform, bookmarkMedia.bookmarkId],
+    references: [bookmarks.userId, bookmarks.platform, bookmarks.id],
   }),
 }))
 
 export const readStatusRelations = relations(readStatus, ({ one }) => ({
   bookmark: one(bookmarks, {
-    fields: [readStatus.userId, readStatus.bookmarkId],
-    references: [bookmarks.userId, bookmarks.id],
+    fields: [readStatus.userId, readStatus.platform, readStatus.bookmarkId],
+    references: [bookmarks.userId, bookmarks.platform, bookmarks.id],
   }),
 }))
 
@@ -307,8 +314,8 @@ export const collectionTweetsRelations = relations(collectionTweets, ({ one }) =
     references: [collections.id],
   }),
   bookmark: one(bookmarks, {
-    fields: [collectionTweets.userId, collectionTweets.bookmarkId],
-    references: [bookmarks.userId, bookmarks.id],
+    fields: [collectionTweets.userId, collectionTweets.platform, collectionTweets.bookmarkId],
+    references: [bookmarks.userId, bookmarks.platform, bookmarks.id],
   }),
 }))
 

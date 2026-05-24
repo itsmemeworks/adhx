@@ -28,6 +28,7 @@ export function createTestDatabase(): BetterSQLite3Database<typeof schema> & { c
     CREATE TABLE bookmarks (
       id TEXT NOT NULL,
       user_id TEXT NOT NULL,
+      platform TEXT NOT NULL DEFAULT 'twitter',
       author TEXT NOT NULL,
       author_name TEXT,
       author_profile_image_url TEXT,
@@ -48,7 +49,7 @@ export function createTestDatabase(): BetterSQLite3Database<typeof schema> & { c
       needs_transcript INTEGER DEFAULT 0,
       summary TEXT,
       raw_json TEXT,
-      PRIMARY KEY (user_id, id)
+      PRIMARY KEY (user_id, platform, id)
     );
     CREATE INDEX bookmarks_user_id_idx ON bookmarks(user_id);
     CREATE INDEX bookmarks_processed_at_idx ON bookmarks(processed_at);
@@ -56,6 +57,7 @@ export function createTestDatabase(): BetterSQLite3Database<typeof schema> & { c
     CREATE TABLE bookmark_links (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id TEXT NOT NULL,
+      platform TEXT NOT NULL DEFAULT 'twitter',
       bookmark_id TEXT NOT NULL,
       original_url TEXT,
       expanded_url TEXT NOT NULL,
@@ -66,19 +68,21 @@ export function createTestDatabase(): BetterSQLite3Database<typeof schema> & { c
       preview_description TEXT,
       preview_image_url TEXT
     );
-    CREATE INDEX bookmark_links_user_bookmark_idx ON bookmark_links(user_id, bookmark_id);
+    CREATE INDEX bookmark_links_user_bookmark_idx ON bookmark_links(user_id, platform, bookmark_id);
 
     CREATE TABLE bookmark_tags (
       user_id TEXT NOT NULL,
+      platform TEXT NOT NULL DEFAULT 'twitter',
       bookmark_id TEXT NOT NULL,
       tag TEXT NOT NULL,
-      PRIMARY KEY (user_id, bookmark_id, tag)
+      PRIMARY KEY (user_id, platform, bookmark_id, tag)
     );
     CREATE INDEX bookmark_tags_user_id_idx ON bookmark_tags(user_id);
 
     CREATE TABLE bookmark_media (
       id TEXT NOT NULL,
       user_id TEXT NOT NULL,
+      platform TEXT NOT NULL DEFAULT 'twitter',
       bookmark_id TEXT NOT NULL,
       media_type TEXT NOT NULL,
       original_url TEXT NOT NULL,
@@ -92,15 +96,16 @@ export function createTestDatabase(): BetterSQLite3Database<typeof schema> & { c
       duration_ms INTEGER,
       file_size_bytes INTEGER,
       alt_text TEXT,
-      PRIMARY KEY (user_id, id)
+      PRIMARY KEY (user_id, platform, id)
     );
-    CREATE INDEX bookmark_media_user_bookmark_idx ON bookmark_media(user_id, bookmark_id);
+    CREATE INDEX bookmark_media_user_bookmark_idx ON bookmark_media(user_id, platform, bookmark_id);
 
     CREATE TABLE read_status (
       user_id TEXT NOT NULL,
+      platform TEXT NOT NULL DEFAULT 'twitter',
       bookmark_id TEXT NOT NULL,
       read_at TEXT NOT NULL,
-      PRIMARY KEY (user_id, bookmark_id)
+      PRIMARY KEY (user_id, platform, bookmark_id)
     );
 
     CREATE TABLE user_preferences (
@@ -148,10 +153,11 @@ export function createTestDatabase(): BetterSQLite3Database<typeof schema> & { c
     CREATE TABLE collection_tweets (
       user_id TEXT NOT NULL,
       collection_id TEXT NOT NULL,
+      platform TEXT NOT NULL DEFAULT 'twitter',
       bookmark_id TEXT NOT NULL,
       added_at TEXT DEFAULT CURRENT_TIMESTAMP,
       notes TEXT,
-      PRIMARY KEY (user_id, collection_id, bookmark_id)
+      PRIMARY KEY (user_id, collection_id, platform, bookmark_id)
     );
 
     CREATE TABLE sync_logs (

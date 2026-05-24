@@ -1,19 +1,26 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   ArrowRight,
+  Check,
   Download,
   ExternalLink,
   Instagram,
   Loader2,
   Play,
+  Plus,
   Search,
+  Share2,
   Sparkles,
   Zap,
 } from 'lucide-react'
 import { ADHX_PURPLE } from '@/lib/gestalt/theme'
 import { AnimatedBackground, LandingAnimations } from '@/components/landing'
+import { isTouchDevice } from '@/components/feed/utils'
+import { XIcon } from '@/components/icons'
+import { cn } from '@/lib/utils'
 
 interface InstagramPreviewLandingProps {
   reelId: string
@@ -22,6 +29,7 @@ interface InstagramPreviewLandingProps {
   imageUrl?: string
   author?: string
   hasVideo: boolean
+  isAuthenticated?: boolean
 }
 
 export function InstagramPreviewLanding({
@@ -31,24 +39,20 @@ export function InstagramPreviewLanding({
   imageUrl,
   author,
   hasVideo,
+  isAuthenticated = false,
 }: InstagramPreviewLandingProps) {
-  const [downloading, setDownloading] = useState(false)
+  const router = useRouter()
   const [isPlaying, setIsPlaying] = useState(false)
   const [reelUrl, setReelUrl] = useState('')
   const [urlError, setUrlError] = useState('')
+  const [connecting, setConnecting] = useState(false)
+  const [adding, setAdding] = useState(false)
 
   const instagramUrl = `https://www.instagram.com/reel/${reelId}/`
   const streamUrl = `/api/media/instagram/video?id=${encodeURIComponent(reelId)}`
   const downloadUrl = `/api/media/instagram/video/download?id=${encodeURIComponent(reelId)}`
 
-  const handleDownload = () => {
-    setDownloading(true)
-    window.location.href = downloadUrl
-    setTimeout(() => setDownloading(false), 4000)
-  }
-
-  // Instagram Reel/post URL pattern: /reel/, /reels/, or /p/
-  const reelUrlPattern = /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:reel|reels|p)\/([A-Za-z0-9_-]+)/i
+  const reelUrlPattern = /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:reels?|p)\/([A-Za-z0-9_-]+)/i
 
   const parseAndNavigate = (url: string): boolean => {
     const match = url.trim().match(reelUrlPattern)
@@ -62,9 +66,7 @@ export function InstagramPreviewLanding({
   const handleReelUrlChange = (value: string) => {
     setReelUrl(value)
     setUrlError('')
-    if (value.includes('instagram.com/')) {
-      parseAndNavigate(value)
-    }
+    if (value.includes('instagram.com/')) parseAndNavigate(value)
   }
 
   const handleReelUrlSubmit = (e: React.FormEvent) => {
@@ -75,48 +77,53 @@ export function InstagramPreviewLanding({
     }
   }
 
+  const handleConnect = () => {
+    setConnecting(true)
+    const returnUrl = encodeURIComponent(window.location.pathname)
+    window.location.href = `/api/auth/twitter?returnUrl=${returnUrl}`
+  }
+
+  const handleAddToCollection = async () => {
+    setAdding(true)
+    try {
+      const response = await fetch('/api/bookmarks/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: instagramUrl,
+          source: 'url_prefix',
+        }),
+      })
+      const data = await response.json()
+      if (data.success) {
+        router.push(`/?added=success&platform=instagram&id=${reelId}`)
+      } else if (data.isDuplicate) {
+        router.push(`/?added=duplicate&platform=instagram&id=${reelId}`)
+      } else {
+        router.push(`/?added=error&error=${encodeURIComponent(data.error || 'Failed to save')}`)
+      }
+    } catch (error) {
+      router.push(`/?added=error&error=${encodeURIComponent(error instanceof Error ? error.message : 'Failed to save')}`)
+    }
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900 relative overflow-x-hidden">
       <LandingAnimations />
       <AnimatedBackground />
 
-      <header className="relative z-10 p-4 sm:p-6">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <a href="/" className="flex items-center gap-2 group">
-            <img
-              src="/logo.png"
-              alt="ADHX Logo"
-              className="w-10 h-10 object-contain group-hover:scale-110 transition-transform"
-            />
-            <span className="text-2xl font-indie-flower text-gray-900 dark:text-white">ADHX</span>
-          </a>
-          <a
-            href="/"
-            className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-          >
-            Learn more →
-          </a>
-        </div>
-      </header>
-
-      <main className="relative z-10 px-4 sm:px-6 pb-6 md:flex-1">
+      <main className="relative z-10 px-4 sm:px-6 pb-6 md:flex-1 pt-4 sm:pt-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-4 md:mb-6 lg:mb-8 animate-fade-in-up [animation-fill-mode:both]">
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-3">
-              {hasVideo ? 'Grab this Reel?' : 'Instagram preview'}
+              Found something good?
             </h1>
             <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              <span className="sm:hidden">
-                {hasVideo ? 'One tap. MP4 in your Downloads.' : 'No video available.'}
-              </span>
+              <span className="sm:hidden">Save it now before you forget.</span>
               <span className="hidden sm:inline">
-                {hasVideo ? (
-                  <>
-                    One tap and it&apos;s yours — <span className="text-purple-600 dark:text-purple-400 font-medium">no account, no app, no screen-record</span>.
-                  </>
-                ) : (
-                  'No video available for this post.'
-                )}
+                Save it now before{' '}
+                <span className="text-purple-600 dark:text-purple-400 font-medium">47 browser tabs</span>{' '}
+                make you forget.
               </span>
             </p>
           </div>
@@ -166,6 +173,15 @@ export function InstagramPreviewLanding({
                     </a>
                   </div>
                 </header>
+
+                {/* Caption — placed above media to match X tweet text/media order */}
+                {(description || title) && (
+                  <div className="px-4 py-3">
+                    <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]">
+                      {description || title}
+                    </p>
+                  </div>
+                )}
 
                 {(imageUrl || hasVideo) && (
                   <div className="px-4 pb-3">
@@ -217,33 +233,58 @@ export function InstagramPreviewLanding({
                           )}
                         </>
                       )}
+                      {/* Floating share/download button — same pattern as TweetPreviewLanding */}
+                      {hasVideo && (
+                        <div className="absolute top-3 right-3 pointer-events-auto">
+                          <ReelShareButton
+                            reelId={reelId}
+                            streamUrl={streamUrl}
+                            downloadUrl={downloadUrl}
+                          />
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
-
-                {(description || title) && (
-                  <div className="px-4 pb-4">
-                    <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed text-sm [overflow-wrap:anywhere] line-clamp-6">
-                      {description || title}
-                    </p>
                   </div>
                 )}
 
                 {!imageUrl && !description && !title && (
                   <div className="px-4 pb-4 text-center text-gray-500 dark:text-gray-400 text-sm">
-                    <p className="mb-1">Reel ID: <code className="font-mono">{reelId}</code></p>
-                    <p className="text-xs">This Reel couldn&apos;t be previewed — it may be private, removed, or the embed service is down.</p>
+                    <p className="mb-1">
+                      Reel ID: <code className="font-mono">{reelId}</code>
+                    </p>
+                    <p className="text-xs">
+                      This Reel couldn&apos;t be previewed — it may be private, removed, or the embed service is down.
+                    </p>
                   </div>
                 )}
+
+                {/* Footer — engagement-stats equivalent for parity with X tweet card */}
+                <footer className="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0">
+                  <span className="flex items-center gap-1.5">
+                    <Instagram className="w-4 h-4" />
+                    Instagram Reel
+                  </span>
+                  <a
+                    href={instagramUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                    title="View on Instagram"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span className="text-xs hidden lg:inline">View on Instagram</span>
+                  </a>
+                </footer>
               </article>
 
-              {/* Mobile CTA — right below the card, above benefits */}
               <div className="md:hidden mt-4 space-y-3">
-                <PrimaryCta
+                <SidebarCta
+                  isAuthenticated={isAuthenticated}
                   hasVideo={hasVideo}
-                  downloading={downloading}
-                  onDownload={handleDownload}
-                  instagramUrl={instagramUrl}
+                  adding={adding}
+                  connecting={connecting}
+                  onAdd={handleAddToCollection}
+                  onConnect={handleConnect}
                 />
               </div>
 
@@ -256,18 +297,20 @@ export function InstagramPreviewLanding({
               />
             </div>
 
-            {/* CTA + benefits — right column */}
+            {/* Sidebar — right column */}
             <div
               role="complementary"
               aria-label="ADHX features"
               className="animate-fade-in-up [animation-fill-mode:both] delay-200"
             >
               <div className="hidden md:block space-y-3 animate-fade-in-up [animation-fill-mode:both] delay-300">
-                <PrimaryCta
+                <SidebarCta
+                  isAuthenticated={isAuthenticated}
                   hasVideo={hasVideo}
-                  downloading={downloading}
-                  onDownload={handleDownload}
-                  instagramUrl={instagramUrl}
+                  adding={adding}
+                  connecting={connecting}
+                  onAdd={handleAddToCollection}
+                  onConnect={handleConnect}
                 />
               </div>
 
@@ -310,64 +353,144 @@ export function InstagramPreviewLanding({
   )
 }
 
-function PrimaryCta({
-  hasVideo,
-  downloading,
-  onDownload,
-  instagramUrl,
+function ReelShareButton({
+  reelId,
+  streamUrl,
+  downloadUrl,
 }: {
-  hasVideo: boolean
-  downloading: boolean
-  onDownload: () => void
-  instagramUrl: string
+  reelId: string
+  streamUrl: string
+  downloadUrl: string
 }) {
-  if (!hasVideo) {
+  const [isLoading, setIsLoading] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    setIsMobile(isTouchDevice())
+  }, [])
+
+  const handleClick = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    setIsLoading(true)
+    try {
+      if (isMobile && typeof navigator.share === 'function') {
+        await navigator.share({
+          url: new URL(streamUrl, window.location.origin).toString(),
+          title: `Instagram Reel ${reelId}`,
+        })
+        setShowSuccess(true)
+      } else {
+        const link = document.createElement('a')
+        link.href = downloadUrl
+        link.download = ''
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        setShowSuccess(true)
+      }
+    } catch {
+      // User cancelled share sheet or download failed — silently reset
+    } finally {
+      setIsLoading(false)
+      setTimeout(() => setShowSuccess(false), 1500)
+    }
+  }
+
+  const visibilityClass = isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={isLoading}
+      className={cn(
+        'p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80',
+        visibilityClass,
+      )}
+      title={isMobile ? 'Share' : 'Download'}
+      aria-label={isMobile ? 'Share Reel' : 'Download Reel'}
+    >
+      {isLoading ? (
+        <Loader2 className="w-4 h-4 text-white animate-spin" />
+      ) : showSuccess ? (
+        <Check className="w-4 h-4 text-white" />
+      ) : isMobile ? (
+        <Share2 className="w-4 h-4 text-white" />
+      ) : (
+        <Download className="w-4 h-4 text-white" />
+      )}
+    </button>
+  )
+}
+
+function SidebarCta({
+  isAuthenticated,
+  hasVideo,
+  adding,
+  connecting,
+  onAdd,
+  onConnect,
+}: {
+  isAuthenticated: boolean
+  hasVideo: boolean
+  adding: boolean
+  connecting: boolean
+  onAdd: () => void
+  onConnect: () => void
+}) {
+  if (isAuthenticated) {
     return (
-      <a
-        href={instagramUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-[1.02] hover:shadow-xl"
-        style={{ backgroundColor: ADHX_PURPLE }}
-      >
-        <ExternalLink className="w-5 h-5" />
-        Open on Instagram
-        <ArrowRight className="w-5 h-5" />
-      </a>
+      <>
+        <button
+          onClick={onAdd}
+          disabled={adding || !hasVideo}
+          className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-[1.02] hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ backgroundColor: ADHX_PURPLE }}
+        >
+          {adding ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Adding...
+            </>
+          ) : (
+            <>
+              <Plus className="w-5 h-5" />
+              Add to Collection
+              <ArrowRight className="w-5 h-5" />
+            </>
+          )}
+        </button>
+        <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+          Save this Reel to your ADHX collection. Private to you.
+        </p>
+      </>
     )
   }
 
   return (
     <>
       <button
-        onClick={onDownload}
-        disabled={downloading}
+        onClick={onConnect}
+        disabled={connecting}
         className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-[1.02] hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
         style={{ backgroundColor: ADHX_PURPLE }}
       >
-        {downloading ? (
+        {connecting ? (
           <>
             <Loader2 className="w-5 h-5 animate-spin" />
-            Starting download…
+            Connecting...
           </>
         ) : (
           <>
-            <Download className="w-5 h-5" />
-            Download MP4
+            <XIcon className="w-5 h-5" />
+            Start saving with ADHX
+            <ArrowRight className="w-5 h-5" />
           </>
         )}
       </button>
-      <a
-        href={instagramUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 text-lg font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 rounded-full transition-all hover:bg-gray-200 dark:hover:bg-gray-700"
-      >
-        <ExternalLink className="w-5 h-5" />
-        View on Instagram
-      </a>
       <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-        Free. No account. No watermark.
+        Save Reels, tweets, and articles in one place. Free forever.
       </p>
     </>
   )

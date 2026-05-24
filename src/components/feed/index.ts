@@ -10,6 +10,8 @@ export { TagInput } from './TagInput'
 export type {
   FeedItem,
   FilterType,
+  Platform,
+  PlatformFilter,
   SortType,
   SortDirection,
   MediaItem,
@@ -25,7 +27,7 @@ export type {
   StreamedBookmark,
   SyncProgress,
 } from './types'
-export { FILTER_OPTIONS, streamedBookmarkToFeedItem } from './types'
+export { FILTER_OPTIONS, PLATFORM_OPTIONS, streamedBookmarkToFeedItem } from './types'
 
 // Utils
 export { renderTextWithLinks, renderArticleBlock, renderStyledText, stripMediaUrls, decodeHtmlEntities } from './utils'

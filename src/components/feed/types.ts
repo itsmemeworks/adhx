@@ -105,8 +105,11 @@ export interface ArticleContent {
   mediaEntities?: MediaEntitiesMap
 }
 
+export type Platform = 'twitter' | 'instagram' | 'tiktok'
+
 export interface FeedItem {
   id: string
+  platform?: Platform // 'twitter' (default) | 'instagram' | 'tiktok'
   author: string
   authorName?: string | null
   authorProfileImageUrl?: string | null
@@ -133,6 +136,15 @@ export interface FeedItem {
 }
 
 export type FilterType = 'all' | 'photos' | 'videos' | 'text' | 'articles' | 'quoted' | 'manual'
+
+export type PlatformFilter = 'all' | 'twitter' | 'instagram' | 'tiktok'
+
+export const PLATFORM_OPTIONS: { value: PlatformFilter; label: string }[] = [
+  { value: 'all', label: 'All platforms' },
+  { value: 'twitter', label: 'X / Twitter' },
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'tiktok', label: 'TikTok' },
+]
 
 export type SortType = 'added' | 'posted'
 
@@ -161,6 +173,7 @@ export const FILTER_OPTIONS: { value: FilterType; label: string }[] = [
  */
 export interface StreamedBookmark {
   id: string
+  platform?: Platform
   author: string
   authorName: string | null
   authorProfileImageUrl: string | null
@@ -202,6 +215,7 @@ export interface SyncProgress {
 export function streamedBookmarkToFeedItem(bookmark: StreamedBookmark): FeedItem {
   return {
     id: bookmark.id,
+    platform: bookmark.platform || 'twitter',
     author: bookmark.author,
     authorName: bookmark.authorName,
     authorProfileImageUrl: bookmark.authorProfileImageUrl,

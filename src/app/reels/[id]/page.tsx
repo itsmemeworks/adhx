@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { Metadata } from 'next'
 import { InstagramPreviewLanding } from '@/components/InstagramPreviewLanding'
 import { fetchReelMetadata, isValidReelId } from '@/lib/media/instafix'
+import { getSession } from '@/lib/auth/session'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -14,7 +15,10 @@ export default async function ReelPreviewPage({ params }: Props) {
     redirect('/')
   }
 
-  const meta = await fetchReelMetadata(id)
+  const [meta, session] = await Promise.all([
+    fetchReelMetadata(id),
+    getSession(),
+  ])
 
   return (
     <InstagramPreviewLanding
@@ -24,6 +28,7 @@ export default async function ReelPreviewPage({ params }: Props) {
       imageUrl={meta?.imageUrl}
       author={meta?.author}
       hasVideo={!!meta?.videoUrl}
+      isAuthenticated={!!session}
     />
   )
 }

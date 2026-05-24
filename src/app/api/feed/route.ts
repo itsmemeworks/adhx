@@ -9,6 +9,7 @@ import { selectArticleLink, buildArticlePreview, parseArticleContent } from '@/l
 import { metrics, captureException } from '@/lib/sentry'
 
 export type FilterType = 'all' | 'photos' | 'videos' | 'text' | 'articles' | 'quoted' | 'manual'
+export type PlatformFilter = 'all' | 'twitter' | 'instagram' | 'tiktok'
 
 /**
  * Escape LIKE pattern metacharacters to prevent injection.
@@ -38,6 +39,7 @@ export async function GET(request: NextRequest) {
   const sort = searchParams.get('sort') || 'added' // 'added' or 'posted'
   const sortDir = searchParams.get('sortDir') === 'asc' ? 'asc' : 'desc' // default desc (newest first)
   const collectionId = searchParams.get('collection') // Filter by collection
+  const platformFilter = (searchParams.get('platform') || 'all') as PlatformFilter // 'all' | 'twitter' | 'instagram' | 'tiktok'
 
   const offset = (page - 1) * limit
 
@@ -48,13 +50,18 @@ export async function GET(request: NextRequest) {
     // Filter by user ID for multi-user support
     conditions.push(eq(bookmarks.userId, userId))
 
+    // Platform filter (X / Instagram / TikTok / all)
+    if (platformFilter !== 'all') {
+      conditions.push(eq(bookmarks.platform, platformFilter))
+    }
+
     // Search filter - use SQL for efficiency
     if (search) {
       const safeSearch = escapeLikePattern(search)
 
-      // Subquery: Find bookmark IDs with matching article titles/descriptions
+      // Subquery: Find (bookmarkId, platform) pairs with matching article titles/descriptions
       const articleMatchSubquery = sql`(
-        SELECT DISTINCT ${bookmarkLinks.bookmarkId}
+        SELECT DISTINCT ${bookmarkLinks.bookmarkId}, ${bookmarkLinks.platform}
         FROM ${bookmarkLinks}
         WHERE ${bookmarkLinks.userId} = ${userId}
         AND (
@@ -68,7 +75,7 @@ export async function GET(request: NextRequest) {
           like(bookmarks.text, `%${safeSearch}%`),
           like(bookmarks.author, `%${safeSearch}%`),
           like(bookmarks.authorName, `%${safeSearch}%`),
-          sql`${bookmarks.id} IN ${articleMatchSubquery}`
+          sql`(${bookmarks.id}, ${bookmarks.platform}) IN ${articleMatchSubquery}`
         )!
       )
     }
@@ -77,67 +84,64 @@ export async function GET(request: NextRequest) {
     if (tags.length > 0) {
       const normalizedTags = tags.map((t) => t.toLowerCase())
 
-      // Subquery: Find bookmarks with ALL requested tags using GROUP BY/HAVING
       const tagMatchSubquery = sql`(
-        SELECT ${bookmarkTags.bookmarkId}
+        SELECT ${bookmarkTags.bookmarkId}, ${bookmarkTags.platform}
         FROM ${bookmarkTags}
         WHERE ${bookmarkTags.userId} = ${userId}
         AND ${bookmarkTags.tag} IN ${normalizedTags}
-        GROUP BY ${bookmarkTags.bookmarkId}
+        GROUP BY ${bookmarkTags.bookmarkId}, ${bookmarkTags.platform}
         HAVING COUNT(DISTINCT ${bookmarkTags.tag}) = ${normalizedTags.length}
       )`
 
-      conditions.push(sql`${bookmarks.id} IN ${tagMatchSubquery}`)
+      conditions.push(sql`(${bookmarks.id}, ${bookmarks.platform}) IN ${tagMatchSubquery}`)
     }
 
     // Collection filter
     if (collectionId) {
       const collectionSubquery = sql`(
-        SELECT ${collectionTweets.bookmarkId}
+        SELECT ${collectionTweets.bookmarkId}, ${collectionTweets.platform}
         FROM ${collectionTweets}
         WHERE ${collectionTweets.userId} = ${userId}
         AND ${collectionTweets.collectionId} = ${collectionId}
       )`
-      conditions.push(sql`${bookmarks.id} IN ${collectionSubquery}`)
+      conditions.push(sql`(${bookmarks.id}, ${bookmarks.platform}) IN ${collectionSubquery}`)
     }
 
-    // Media type filters using subqueries
+    // Media type filters using subqueries (composite key prevents cross-platform id collisions)
     if (filter === 'photos') {
       const photoSubquery = sql`(
-        SELECT DISTINCT ${bookmarkMedia.bookmarkId}
+        SELECT DISTINCT ${bookmarkMedia.bookmarkId}, ${bookmarkMedia.platform}
         FROM ${bookmarkMedia}
         WHERE ${bookmarkMedia.userId} = ${userId}
         AND ${bookmarkMedia.mediaType} = 'photo'
       )`
-      conditions.push(sql`${bookmarks.id} IN ${photoSubquery}`)
+      conditions.push(sql`(${bookmarks.id}, ${bookmarks.platform}) IN ${photoSubquery}`)
     } else if (filter === 'videos') {
       const videoSubquery = sql`(
-        SELECT DISTINCT ${bookmarkMedia.bookmarkId}
+        SELECT DISTINCT ${bookmarkMedia.bookmarkId}, ${bookmarkMedia.platform}
         FROM ${bookmarkMedia}
         WHERE ${bookmarkMedia.userId} = ${userId}
         AND ${bookmarkMedia.mediaType} IN ('video', 'animated_gif')
       )`
-      conditions.push(sql`${bookmarks.id} IN ${videoSubquery}`)
+      conditions.push(sql`(${bookmarks.id}, ${bookmarks.platform}) IN ${videoSubquery}`)
     } else if (filter === 'text') {
-      // Bookmarks WITHOUT media AND not articles
       const mediaSubquery = sql`(
-        SELECT DISTINCT ${bookmarkMedia.bookmarkId}
+        SELECT DISTINCT ${bookmarkMedia.bookmarkId}, ${bookmarkMedia.platform}
         FROM ${bookmarkMedia}
         WHERE ${bookmarkMedia.userId} = ${userId}
       )`
       const articleSubquery = sql`(
-        SELECT DISTINCT ${bookmarkLinks.bookmarkId}
+        SELECT DISTINCT ${bookmarkLinks.bookmarkId}, ${bookmarkLinks.platform}
         FROM ${bookmarkLinks}
         WHERE ${bookmarkLinks.userId} = ${userId}
         AND (${bookmarkLinks.expandedUrl} LIKE '%/article/%' OR ${bookmarkLinks.expandedUrl} LIKE '%/i/article/%')
       )`
-      conditions.push(sql`${bookmarks.id} NOT IN ${mediaSubquery}`)
-      conditions.push(sql`${bookmarks.id} NOT IN ${articleSubquery}`)
+      conditions.push(sql`(${bookmarks.id}, ${bookmarks.platform}) NOT IN ${mediaSubquery}`)
+      conditions.push(sql`(${bookmarks.id}, ${bookmarks.platform}) NOT IN ${articleSubquery}`)
       conditions.push(or(isNull(bookmarks.category), sql`${bookmarks.category} != 'article'`)!)
     } else if (filter === 'articles') {
-      // Bookmarks with category 'article' OR links containing /article/
       const articleSubquery = sql`(
-        SELECT DISTINCT ${bookmarkLinks.bookmarkId}
+        SELECT DISTINCT ${bookmarkLinks.bookmarkId}, ${bookmarkLinks.platform}
         FROM ${bookmarkLinks}
         WHERE ${bookmarkLinks.userId} = ${userId}
         AND (${bookmarkLinks.expandedUrl} LIKE '%/article/%' OR ${bookmarkLinks.expandedUrl} LIKE '%/i/article/%')
@@ -145,11 +149,11 @@ export async function GET(request: NextRequest) {
       conditions.push(
         or(
           eq(bookmarks.category, 'article'),
-          sql`${bookmarks.id} IN ${articleSubquery}`
+          sql`(${bookmarks.id}, ${bookmarks.platform}) IN ${articleSubquery}`
         )!
       )
     } else if (filter === 'quoted') {
-      // Bookmarks that are quoted by another bookmark
+      // Quote relations are Twitter-only — quotedTweetId always references a tweet
       const quotedSubquery = sql`(
         SELECT DISTINCT ${bookmarks.quotedTweetId}
         FROM ${bookmarks}
@@ -157,6 +161,7 @@ export async function GET(request: NextRequest) {
         AND ${bookmarks.quotedTweetId} IS NOT NULL
       )`
       conditions.push(sql`${bookmarks.id} IN ${quotedSubquery}`)
+      conditions.push(eq(bookmarks.platform, 'twitter'))
     } else if (filter === 'manual') {
       conditions.push(
         or(
@@ -166,14 +171,14 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Unread filter using subquery
+    // Unread filter — composite key (bookmarkId, platform) matches read_status PK
     if (unreadOnly) {
       const readSubquery = sql`(
-        SELECT ${readStatus.bookmarkId}
+        SELECT ${readStatus.bookmarkId}, ${readStatus.platform}
         FROM ${readStatus}
         WHERE ${readStatus.userId} = ${userId}
       )`
-      conditions.push(sql`${bookmarks.id} NOT IN ${readSubquery}`)
+      conditions.push(sql`(${bookmarks.id}, ${bookmarks.platform}) NOT IN ${readSubquery}`)
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined
@@ -207,45 +212,52 @@ export async function GET(request: NextRequest) {
     // Get IDs for batch fetching
     const bookmarkIds = results.map((b) => b.id)
 
+    // Composite lookup key (platform + id) prevents collisions across platforms
+    const compositeKey = (platform: string, id: string) => `${platform}:${id}`
+
     // Batch fetch all related data for result set only (not ALL user data)
     const [media, links, resultTags, readStatusRecords] = await Promise.all([
       db.select().from(bookmarkMedia).where(and(eq(bookmarkMedia.userId, userId), inArray(bookmarkMedia.bookmarkId, bookmarkIds))),
       db.select().from(bookmarkLinks).where(and(eq(bookmarkLinks.userId, userId), inArray(bookmarkLinks.bookmarkId, bookmarkIds))),
       db.select().from(bookmarkTags).where(and(eq(bookmarkTags.userId, userId), inArray(bookmarkTags.bookmarkId, bookmarkIds))),
-      db.select({ bookmarkId: readStatus.bookmarkId }).from(readStatus).where(and(eq(readStatus.userId, userId), inArray(readStatus.bookmarkId, bookmarkIds))),
+      db.select({ bookmarkId: readStatus.bookmarkId, platform: readStatus.platform }).from(readStatus).where(and(eq(readStatus.userId, userId), inArray(readStatus.bookmarkId, bookmarkIds))),
     ])
 
-    // Build lookup maps
+    // Build lookup maps keyed by composite (platform + bookmarkId)
     const mediaByBookmark = new Map<string, typeof media>()
     for (const m of media) {
-      const existing = mediaByBookmark.get(m.bookmarkId) || []
+      const key = compositeKey(m.platform, m.bookmarkId)
+      const existing = mediaByBookmark.get(key) || []
       existing.push(m)
-      mediaByBookmark.set(m.bookmarkId, existing)
+      mediaByBookmark.set(key, existing)
     }
 
     const linksByBookmark = new Map<string, typeof links>()
-    const articleBookmarkIds = new Set<string>()
+    const articleKeys = new Set<string>()
     for (const link of links) {
-      const existing = linksByBookmark.get(link.bookmarkId) || []
+      const key = compositeKey(link.platform, link.bookmarkId)
+      const existing = linksByBookmark.get(key) || []
       existing.push(link)
-      linksByBookmark.set(link.bookmarkId, existing)
+      linksByBookmark.set(key, existing)
       if (link.expandedUrl?.includes('/article/') || link.expandedUrl?.includes('/i/article/')) {
-        articleBookmarkIds.add(link.bookmarkId)
+        articleKeys.add(key)
       }
     }
 
     const tagsByBookmark = new Map<string, string[]>()
     for (const t of resultTags) {
-      const existing = tagsByBookmark.get(t.bookmarkId) || []
+      const key = compositeKey(t.platform, t.bookmarkId)
+      const existing = tagsByBookmark.get(key) || []
       existing.push(t.tag)
-      tagsByBookmark.set(t.bookmarkId, existing)
+      tagsByBookmark.set(key, existing)
     }
 
-    const readIds = new Set(readStatusRecords.map((r) => r.bookmarkId))
+    const readKeys = new Set(readStatusRecords.map((r) => compositeKey(r.platform, r.bookmarkId)))
 
     // Define the feed item type
     type FeedItemResponse = {
       id: string
+      platform: string
       author: string
       authorName: string | null
       authorProfileImageUrl: string | null
@@ -367,6 +379,7 @@ export async function GET(request: NextRequest) {
 
       return {
         id: bookmark.id,
+        platform: bookmark.platform,
         author: bookmark.author,
         authorName: bookmark.authorName,
         authorProfileImageUrl: bookmark.authorProfileImageUrl,
@@ -393,15 +406,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Build feed items
+    // Build feed items (keyed by composite platform+id)
     const items = results.map((bookmark) => {
+      const key = compositeKey(bookmark.platform, bookmark.id)
       return buildFeedItem(
         bookmark,
-        linksByBookmark.get(bookmark.id) || [],
-        mediaByBookmark.get(bookmark.id) || [],
-        tagsByBookmark.get(bookmark.id) || [],
-        readIds.has(bookmark.id),
-        articleBookmarkIds.has(bookmark.id)
+        linksByBookmark.get(key) || [],
+        mediaByBookmark.get(key) || [],
+        tagsByBookmark.get(key) || [],
+        readKeys.has(key),
+        articleKeys.has(key)
       )
     })
 
@@ -412,16 +426,15 @@ export async function GET(request: NextRequest) {
       .filter((id) => !bookmarkIds.includes(id)) // Don't refetch if already in result set
 
     if (quotedTweetIds.length > 0) {
-      // Fetch quoted bookmarks, media, links, and tags in parallel
+      // Quotes are Twitter-only (quotedTweetId always references a tweet)
       const [quotedBookmarks, quotedMedia, quotedLinks, quotedTags, quotedRead] = await Promise.all([
-        db.select().from(bookmarks).where(and(eq(bookmarks.userId, userId), inArray(bookmarks.id, quotedTweetIds))),
-        db.select().from(bookmarkMedia).where(and(eq(bookmarkMedia.userId, userId), inArray(bookmarkMedia.bookmarkId, quotedTweetIds))),
-        db.select().from(bookmarkLinks).where(and(eq(bookmarkLinks.userId, userId), inArray(bookmarkLinks.bookmarkId, quotedTweetIds))),
-        db.select().from(bookmarkTags).where(and(eq(bookmarkTags.userId, userId), inArray(bookmarkTags.bookmarkId, quotedTweetIds))),
-        db.select({ bookmarkId: readStatus.bookmarkId }).from(readStatus).where(and(eq(readStatus.userId, userId), inArray(readStatus.bookmarkId, quotedTweetIds))),
+        db.select().from(bookmarks).where(and(eq(bookmarks.userId, userId), eq(bookmarks.platform, 'twitter'), inArray(bookmarks.id, quotedTweetIds))),
+        db.select().from(bookmarkMedia).where(and(eq(bookmarkMedia.userId, userId), eq(bookmarkMedia.platform, 'twitter'), inArray(bookmarkMedia.bookmarkId, quotedTweetIds))),
+        db.select().from(bookmarkLinks).where(and(eq(bookmarkLinks.userId, userId), eq(bookmarkLinks.platform, 'twitter'), inArray(bookmarkLinks.bookmarkId, quotedTweetIds))),
+        db.select().from(bookmarkTags).where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.platform, 'twitter'), inArray(bookmarkTags.bookmarkId, quotedTweetIds))),
+        db.select({ bookmarkId: readStatus.bookmarkId }).from(readStatus).where(and(eq(readStatus.userId, userId), eq(readStatus.platform, 'twitter'), inArray(readStatus.bookmarkId, quotedTweetIds))),
       ])
 
-      // Build lookup maps for quoted tweets
       const quotedMediaByBookmark = new Map<string, typeof quotedMedia>()
       for (const qm of quotedMedia) {
         const existing = quotedMediaByBookmark.get(qm.bookmarkId) || []
@@ -449,7 +462,6 @@ export async function GET(request: NextRequest) {
 
       const quotedReadIds = new Set(quotedRead.map((r) => r.bookmarkId))
 
-      // Build quoted tweet FeedItems
       const quotedItemMap = new Map<string, FeedItemResponse>()
       for (const qb of quotedBookmarks) {
         quotedItemMap.set(qb.id, buildFeedItem(
@@ -462,7 +474,6 @@ export async function GET(request: NextRequest) {
         ))
       }
 
-      // Attach quoted tweets to parent items
       for (const item of items) {
         if (item.quotedTweetId && quotedItemMap.has(item.quotedTweetId)) {
           item.quotedTweet = quotedItemMap.get(item.quotedTweetId)!
@@ -470,22 +481,23 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Fetch parent tweets for items that are quoted by other bookmarks
-    const itemIds = items.map((item) => item.id)
-    const parentBookmarks = await db
-      .select()
-      .from(bookmarks)
-      .where(and(eq(bookmarks.userId, userId), inArray(bookmarks.quotedTweetId, itemIds)))
+    // Fetch parent tweets for items that are quoted by other bookmarks (Twitter-only)
+    const itemIds = items.filter((i) => i.platform === 'twitter').map((item) => item.id)
+    const parentBookmarks = itemIds.length > 0
+      ? await db
+          .select()
+          .from(bookmarks)
+          .where(and(eq(bookmarks.userId, userId), eq(bookmarks.platform, 'twitter'), inArray(bookmarks.quotedTweetId, itemIds)))
+      : []
 
     if (parentBookmarks.length > 0) {
       const parentIds = parentBookmarks.map((p) => p.id)
 
-      // Fetch related data for parent bookmarks in parallel
       const [parentMedia, parentLinks, parentTags, parentRead] = await Promise.all([
-        db.select().from(bookmarkMedia).where(and(eq(bookmarkMedia.userId, userId), inArray(bookmarkMedia.bookmarkId, parentIds))),
-        db.select().from(bookmarkLinks).where(and(eq(bookmarkLinks.userId, userId), inArray(bookmarkLinks.bookmarkId, parentIds))),
-        db.select().from(bookmarkTags).where(and(eq(bookmarkTags.userId, userId), inArray(bookmarkTags.bookmarkId, parentIds))),
-        db.select({ bookmarkId: readStatus.bookmarkId }).from(readStatus).where(and(eq(readStatus.userId, userId), inArray(readStatus.bookmarkId, parentIds))),
+        db.select().from(bookmarkMedia).where(and(eq(bookmarkMedia.userId, userId), eq(bookmarkMedia.platform, 'twitter'), inArray(bookmarkMedia.bookmarkId, parentIds))),
+        db.select().from(bookmarkLinks).where(and(eq(bookmarkLinks.userId, userId), eq(bookmarkLinks.platform, 'twitter'), inArray(bookmarkLinks.bookmarkId, parentIds))),
+        db.select().from(bookmarkTags).where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.platform, 'twitter'), inArray(bookmarkTags.bookmarkId, parentIds))),
+        db.select({ bookmarkId: readStatus.bookmarkId }).from(readStatus).where(and(eq(readStatus.userId, userId), eq(readStatus.platform, 'twitter'), inArray(readStatus.bookmarkId, parentIds))),
       ])
 
       // Build lookup maps

@@ -6,6 +6,7 @@ import {
   isValidUsername,
   isValidVideoId,
 } from '@/lib/media/tnktok'
+import { getSession } from '@/lib/auth/session'
 
 interface Props {
   params: Promise<{ username: string; id: string }>
@@ -25,7 +26,10 @@ export default async function TikTokPreviewPage({ params }: Props) {
     redirect('/')
   }
 
-  const meta = await fetchTikTokMetadata(handle, id)
+  const [meta, session] = await Promise.all([
+    fetchTikTokMetadata(handle, id),
+    getSession(),
+  ])
 
   return (
     <TikTokPreviewLanding
@@ -35,6 +39,7 @@ export default async function TikTokPreviewPage({ params }: Props) {
       author={meta?.author}
       description={meta?.description}
       hasVideo={!!meta?.videoUrl}
+      isAuthenticated={!!session}
     />
   )
 }

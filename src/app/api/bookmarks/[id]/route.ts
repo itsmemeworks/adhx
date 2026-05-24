@@ -7,7 +7,7 @@ import { expandUrls } from '@/lib/utils/url-expander'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { captureException, metrics } from '@/lib/sentry'
 
-// GET /api/bookmarks/[id] - Get single bookmark
+// GET /api/bookmarks/[id]?platform=twitter|instagram|tiktok - Get single bookmark
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -19,22 +19,23 @@ export async function GET(
     }
 
     const { id } = await params
+    const platform = request.nextUrl.searchParams.get('platform') || 'twitter'
     const [bookmark] = await db
       .select()
       .from(bookmarks)
-      .where(and(eq(bookmarks.userId, userId), eq(bookmarks.id, id)))
+      .where(and(eq(bookmarks.userId, userId), eq(bookmarks.platform, platform), eq(bookmarks.id, id)))
       .limit(1)
 
     if (!bookmark) {
       return NextResponse.json({ error: 'Bookmark not found' }, { status: 404 })
     }
 
-    // Get related data (all filtered by userId for multi-user support)
+    // Get related data (filtered by composite key: userId + platform + bookmarkId)
     const [links, tags, media, readStatusRecord] = await Promise.all([
-      db.select().from(bookmarkLinks).where(and(eq(bookmarkLinks.userId, userId), eq(bookmarkLinks.bookmarkId, id))),
-      db.select().from(bookmarkTags).where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.bookmarkId, id))),
-      db.select().from(bookmarkMedia).where(and(eq(bookmarkMedia.userId, userId), eq(bookmarkMedia.bookmarkId, id))),
-      db.select().from(readStatus).where(and(eq(readStatus.userId, userId), eq(readStatus.bookmarkId, id))).limit(1),
+      db.select().from(bookmarkLinks).where(and(eq(bookmarkLinks.userId, userId), eq(bookmarkLinks.platform, platform), eq(bookmarkLinks.bookmarkId, id))),
+      db.select().from(bookmarkTags).where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.platform, platform), eq(bookmarkTags.bookmarkId, id))),
+      db.select().from(bookmarkMedia).where(and(eq(bookmarkMedia.userId, userId), eq(bookmarkMedia.platform, platform), eq(bookmarkMedia.bookmarkId, id))),
+      db.select().from(readStatus).where(and(eq(readStatus.userId, userId), eq(readStatus.platform, platform), eq(readStatus.bookmarkId, id))).limit(1),
     ])
 
     // Add FxEmbed URLs to media
@@ -93,29 +94,29 @@ export async function PATCH(
     }
 
     const { id } = await params
+    const platform = request.nextUrl.searchParams.get('platform') || 'twitter'
     const body = await request.json()
     const { category, summary, tags: newTags } = body
 
-    // Update bookmark (filter by userId for multi-user support)
+    // Update bookmark (filter by composite key)
     const updates: Record<string, string> = {}
     if (category) updates.category = category
     if (summary !== undefined) updates.summary = summary
 
     if (Object.keys(updates).length > 0) {
-      await db.update(bookmarks).set(updates).where(and(eq(bookmarks.userId, userId), eq(bookmarks.id, id)))
+      await db.update(bookmarks).set(updates).where(and(eq(bookmarks.userId, userId), eq(bookmarks.platform, platform), eq(bookmarks.id, id)))
     }
 
     // Update tags if provided - use transaction for atomic delete + insert
     if (newTags !== undefined) {
       runInTransaction(() => {
-        // Delete existing tags (filter by userId)
-        db.delete(bookmarkTags).where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.bookmarkId, id))).run()
+        db.delete(bookmarkTags).where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.platform, platform), eq(bookmarkTags.bookmarkId, id))).run()
 
-        // Insert new tags (include userId)
         if (newTags.length > 0) {
           db.insert(bookmarkTags).values(
             newTags.map((tag: string) => ({
               userId,
+              platform,
               bookmarkId: id,
               tag,
             }))
@@ -147,15 +148,16 @@ export async function DELETE(
     }
 
     const { id } = await params
+    const platform = request.nextUrl.searchParams.get('platform') || 'twitter'
 
     // Delete bookmark and all related records atomically using a transaction.
     // This ensures all-or-nothing deletion - if any delete fails, all are rolled back.
     runInTransaction(() => {
-      db.delete(bookmarkTags).where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.bookmarkId, id))).run()
-      db.delete(bookmarkMedia).where(and(eq(bookmarkMedia.userId, userId), eq(bookmarkMedia.bookmarkId, id))).run()
-      db.delete(bookmarkLinks).where(and(eq(bookmarkLinks.userId, userId), eq(bookmarkLinks.bookmarkId, id))).run()
-      db.delete(readStatus).where(and(eq(readStatus.userId, userId), eq(readStatus.bookmarkId, id))).run()
-      db.delete(bookmarks).where(and(eq(bookmarks.userId, userId), eq(bookmarks.id, id))).run()
+      db.delete(bookmarkTags).where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.platform, platform), eq(bookmarkTags.bookmarkId, id))).run()
+      db.delete(bookmarkMedia).where(and(eq(bookmarkMedia.userId, userId), eq(bookmarkMedia.platform, platform), eq(bookmarkMedia.bookmarkId, id))).run()
+      db.delete(bookmarkLinks).where(and(eq(bookmarkLinks.userId, userId), eq(bookmarkLinks.platform, platform), eq(bookmarkLinks.bookmarkId, id))).run()
+      db.delete(readStatus).where(and(eq(readStatus.userId, userId), eq(readStatus.platform, platform), eq(readStatus.bookmarkId, id))).run()
+      db.delete(bookmarks).where(and(eq(bookmarks.userId, userId), eq(bookmarks.platform, platform), eq(bookmarks.id, id))).run()
     })
 
     metrics.bookmarkDeleted()

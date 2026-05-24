@@ -5,40 +5,41 @@ import { eq, and } from 'drizzle-orm'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { metrics } from '@/lib/sentry'
 
-// POST /api/bookmarks/[id]/read - Mark bookmark as read
+function getPlatform(request: NextRequest): string {
+  return request.nextUrl.searchParams.get('platform') || 'twitter'
+}
+
+// POST /api/bookmarks/[id]/read?platform=... - Mark bookmark as read
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Verify authentication
     const userId = await getCurrentUserId()
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { id } = await params
+    const platform = getPlatform(request)
 
-    // Verify bookmark exists and belongs to this user
     const [bookmark] = await db
       .select({ id: bookmarks.id })
       .from(bookmarks)
-      .where(and(eq(bookmarks.id, id), eq(bookmarks.userId, userId)))
+      .where(and(eq(bookmarks.userId, userId), eq(bookmarks.platform, platform), eq(bookmarks.id, id)))
       .limit(1)
 
     if (!bookmark) {
       return NextResponse.json({ error: 'Bookmark not found' }, { status: 404 })
     }
 
-    // Check if already read (composite key: userId + bookmarkId)
     const [existing] = await db
       .select()
       .from(readStatus)
-      .where(and(eq(readStatus.userId, userId), eq(readStatus.bookmarkId, id)))
+      .where(and(eq(readStatus.userId, userId), eq(readStatus.platform, platform), eq(readStatus.bookmarkId, id)))
       .limit(1)
 
     if (existing) {
-      // Already marked as read
       return NextResponse.json({
         success: true,
         isRead: true,
@@ -46,72 +47,58 @@ export async function POST(
       })
     }
 
-    // Mark as read (include userId for composite key)
     const readAt = new Date().toISOString()
     await db.insert(readStatus).values({
       userId,
+      platform,
       bookmarkId: id,
       readAt,
     })
 
-    // Track read toggle
     metrics.bookmarkReadToggled(true)
 
-    return NextResponse.json({
-      success: true,
-      isRead: true,
-      readAt,
-    })
+    return NextResponse.json({ success: true, isRead: true, readAt })
   } catch (error) {
     console.error('Error marking bookmark as read:', error)
-    return NextResponse.json(
-      { error: 'Failed to mark as read' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to mark as read' }, { status: 500 })
   }
 }
 
-// DELETE /api/bookmarks/[id]/read - Mark bookmark as unread
+// DELETE /api/bookmarks/[id]/read?platform=... - Mark bookmark as unread
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Verify authentication
     const userId = await getCurrentUserId()
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { id } = await params
+    const platform = getPlatform(request)
 
-    // Verify bookmark belongs to this user before modifying
     const [bookmark] = await db
       .select({ id: bookmarks.id })
       .from(bookmarks)
-      .where(and(eq(bookmarks.id, id), eq(bookmarks.userId, userId)))
+      .where(and(eq(bookmarks.userId, userId), eq(bookmarks.platform, platform), eq(bookmarks.id, id)))
       .limit(1)
 
     if (!bookmark) {
       return NextResponse.json({ error: 'Bookmark not found' }, { status: 404 })
     }
 
-    // Delete read status (filter by userId for composite key)
-    await db.delete(readStatus).where(and(eq(readStatus.userId, userId), eq(readStatus.bookmarkId, id)))
+    await db.delete(readStatus).where(and(
+      eq(readStatus.userId, userId),
+      eq(readStatus.platform, platform),
+      eq(readStatus.bookmarkId, id),
+    ))
 
-    // Track unread toggle
     metrics.bookmarkReadToggled(false)
 
-    return NextResponse.json({
-      success: true,
-      isRead: false,
-      readAt: null,
-    })
+    return NextResponse.json({ success: true, isRead: false, readAt: null })
   } catch (error) {
     console.error('Error marking bookmark as unread:', error)
-    return NextResponse.json(
-      { error: 'Failed to mark as unread' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to mark as unread' }, { status: 500 })
   }
 }

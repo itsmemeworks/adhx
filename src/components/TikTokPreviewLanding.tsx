@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   ArrowRight,
   Check,
@@ -8,6 +9,7 @@ import {
   ExternalLink,
   Loader2,
   Play,
+  Plus,
   Search,
   Share2,
   Sparkles,
@@ -26,6 +28,7 @@ interface TikTokPreviewLandingProps {
   author?: string
   description?: string
   hasVideo: boolean
+  isAuthenticated?: boolean
 }
 
 export function TikTokPreviewLanding({
@@ -35,11 +38,14 @@ export function TikTokPreviewLanding({
   author,
   description,
   hasVideo,
+  isAuthenticated = false,
 }: TikTokPreviewLandingProps) {
+  const router = useRouter()
   const [isPlaying, setIsPlaying] = useState(false)
   const [linkInput, setLinkInput] = useState('')
   const [urlError, setUrlError] = useState('')
   const [connecting, setConnecting] = useState(false)
+  const [adding, setAdding] = useState(false)
 
   const handle = username.startsWith('@') ? username.slice(1) : username
   const tiktokUrl = `https://www.tiktok.com/@${handle}/video/${videoId}`
@@ -76,6 +82,30 @@ export function TikTokPreviewLanding({
     setConnecting(true)
     const returnUrl = encodeURIComponent(window.location.pathname)
     window.location.href = `/api/auth/twitter?returnUrl=${returnUrl}`
+  }
+
+  const handleAddToCollection = async () => {
+    setAdding(true)
+    try {
+      const response = await fetch('/api/bookmarks/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: tiktokUrl,
+          source: 'url_prefix',
+        }),
+      })
+      const data = await response.json()
+      if (data.success) {
+        router.push(`/?added=success&platform=tiktok&id=${videoId}`)
+      } else if (data.isDuplicate) {
+        router.push(`/?added=duplicate&platform=tiktok&id=${videoId}`)
+      } else {
+        router.push(`/?added=error&error=${encodeURIComponent(data.error || 'Failed to save')}`)
+      }
+    } catch (error) {
+      router.push(`/?added=error&error=${encodeURIComponent(error instanceof Error ? error.message : 'Failed to save')}`)
+    }
   }
 
   return (
@@ -219,7 +249,14 @@ export function TikTokPreviewLanding({
               </article>
 
               <div className="md:hidden mt-4 space-y-3">
-                <ConnectCta connecting={connecting} onConnect={handleConnect} />
+                <SidebarCta
+                  isAuthenticated={isAuthenticated}
+                  hasVideo={hasVideo}
+                  adding={adding}
+                  connecting={connecting}
+                  onAdd={handleAddToCollection}
+                  onConnect={handleConnect}
+                />
               </div>
 
               <PreviewAnotherTikTok
@@ -238,7 +275,14 @@ export function TikTokPreviewLanding({
               className="animate-fade-in-up [animation-fill-mode:both] delay-200"
             >
               <div className="hidden md:block space-y-3 animate-fade-in-up [animation-fill-mode:both] delay-300">
-                <ConnectCta connecting={connecting} onConnect={handleConnect} />
+                <SidebarCta
+                  isAuthenticated={isAuthenticated}
+                  hasVideo={hasVideo}
+                  adding={adding}
+                  connecting={connecting}
+                  onAdd={handleAddToCollection}
+                  onConnect={handleConnect}
+                />
               </div>
 
               <PreviewAnotherTikTok
@@ -378,7 +422,50 @@ function TikTokShareButton({
   )
 }
 
-function ConnectCta({ connecting, onConnect }: { connecting: boolean; onConnect: () => void }) {
+function SidebarCta({
+  isAuthenticated,
+  hasVideo,
+  adding,
+  connecting,
+  onAdd,
+  onConnect,
+}: {
+  isAuthenticated: boolean
+  hasVideo: boolean
+  adding: boolean
+  connecting: boolean
+  onAdd: () => void
+  onConnect: () => void
+}) {
+  if (isAuthenticated) {
+    return (
+      <>
+        <button
+          onClick={onAdd}
+          disabled={adding || !hasVideo}
+          className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-[1.02] hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ backgroundColor: ADHX_PURPLE }}
+        >
+          {adding ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Adding...
+            </>
+          ) : (
+            <>
+              <Plus className="w-5 h-5" />
+              Add to Collection
+              <ArrowRight className="w-5 h-5" />
+            </>
+          )}
+        </button>
+        <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+          Save this TikTok to your ADHX collection. Private to you.
+        </p>
+      </>
+    )
+  }
+
   return (
     <>
       <button
