@@ -318,6 +318,7 @@ export async function GET(request: NextRequest) {
         if (bookmark.platform === 'instagram') {
           const streamUrl = `/api/media/instagram/video?id=${encodeURIComponent(bookmark.id)}`
           const downloadUrl = `/api/media/instagram/video/download?id=${encodeURIComponent(bookmark.id)}`
+          const thumbnailUrl = `/api/media/instagram/thumbnail?id=${encodeURIComponent(bookmark.id)}`
           return {
             id: m.id,
             mediaType: m.mediaType,
@@ -326,7 +327,7 @@ export async function GET(request: NextRequest) {
             durationMs: m.durationMs,
             altText: m.altText,
             url: streamUrl,
-            thumbnailUrl: m.previewUrl || streamUrl,
+            thumbnailUrl,
             shareUrl: downloadUrl,
           }
         }
@@ -334,6 +335,7 @@ export async function GET(request: NextRequest) {
         if (bookmark.platform === 'tiktok') {
           const streamUrl = `/api/media/tiktok/video?username=${encodeURIComponent(bookmark.author)}&id=${encodeURIComponent(bookmark.id)}`
           const downloadUrl = `/api/media/tiktok/video/download?username=${encodeURIComponent(bookmark.author)}&id=${encodeURIComponent(bookmark.id)}`
+          const thumbnailUrl = `/api/media/tiktok/thumbnail?username=${encodeURIComponent(bookmark.author)}&id=${encodeURIComponent(bookmark.id)}`
           return {
             id: m.id,
             mediaType: m.mediaType,
@@ -342,9 +344,7 @@ export async function GET(request: NextRequest) {
             durationMs: m.durationMs,
             altText: m.altText,
             url: streamUrl,
-            // tnktok doesn't expose a thumbnail — fall back to the video URL
-            // (browsers render the first frame on a <video> element).
-            thumbnailUrl: m.previewUrl || streamUrl,
+            thumbnailUrl,
             shareUrl: downloadUrl,
           }
         }

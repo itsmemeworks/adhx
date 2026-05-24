@@ -228,11 +228,18 @@ function MediaContent({ item, primaryMedia, isVideo, aspectRatio, isHovered, err
   }
 
   if (isVideo) {
+    // Hover preview only works for Twitter (its proxy exposes a 360p `quality=preview`
+    // tier). Instagram/TikTok proxies serve a single quality, so for non-Twitter
+    // we keep the thumbnail on hover instead of swapping to the heavier stream.
+    const hoverVideoUrl =
+      item.platform === 'twitter' || !item.platform
+        ? `/api/media/video?author=${item.author}&tweetId=${item.id}&quality=preview`
+        : null
     return (
       <div className="relative">
-        {isHovered ? (
+        {isHovered && hoverVideoUrl ? (
           <video
-            src={`/api/media/video?author=${item.author}&tweetId=${item.id}&quality=preview`}
+            src={hoverVideoUrl}
             muted
             loop
             playsInline
@@ -247,6 +254,7 @@ function MediaContent({ item, primaryMedia, isVideo, aspectRatio, isHovered, err
               alt=""
               className="w-full object-cover bg-black"
               style={style}
+              referrerPolicy="no-referrer"
               onError={onError}
             />
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
