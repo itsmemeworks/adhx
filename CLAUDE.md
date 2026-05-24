@@ -33,7 +33,7 @@ Use org `your-org` and project `your-project`.
 
 **Save now. Read never. Find always.**
 
-A Twitter/X bookmark manager for people who bookmark everything and read nothing. Built with Next.js 15.
+A Twitter/X bookmark manager for people who bookmark everything and read nothing. Built with Next.js 16. Also previews and downloads Instagram Reels and TikTok videos via the same URL-prefix trick.
 
 ## Architecture Overview
 
@@ -88,14 +88,14 @@ A Twitter/X bookmark manager for people who bookmark everything and read nothing
 
 ```bash
 pnpm install
-pnpm dev         # Start dev server at localhost:3000
+pnpm dev         # Start dev server at localhost:3001
 pnpm build       # Production build
-pnpm test        # Run all 719 tests (41 test files)
+pnpm test        # Run all 847 tests (46 test files)
 ```
 
 ## Tech Stack
 
-- **Framework**: Next.js 15.5 (App Router) + React 19
+- **Framework**: Next.js 16 (App Router) + React 19
 - **Database**: SQLite via better-sqlite3 + Drizzle ORM 0.45
 - **Styling**: Tailwind CSS 3.4 + clsx + tailwind-merge
 - **Twitter API**: twitter-api-v2 with OAuth 2.0 PKCE
@@ -271,10 +271,39 @@ Database migrations (`src/lib/db/migrate.ts`) run at container startup. Each mig
 ## Architecture
 
 ### URL Prefix Feature
-Users can save tweets by visiting `adhx.com/{username}/status/{id}`:
-- Route: `src/app/[username]/status/[id]/page.tsx`
+Users can preview tweets, Reels, and TikToks by replacing the host in any link with `adhx.com`:
+
+| Source URL | Becomes | Route |
+|---|---|---|
+| `x.com/{user}/status/{id}` | `adhx.com/{user}/status/{id}` | `src/app/[username]/status/[id]/page.tsx` |
+| `instagram.com/reels/{id}` | `adhx.com/reels/{id}` | `src/app/reels/[id]/page.tsx` |
+| `instagram.com/reel/{id}` | `adhx.com/reel/{id}` | `src/app/reel/[id]/page.tsx` |
+| `tiktok.com/@{user}/video/{id}` | `adhx.com/@{user}/video/{id}` | `src/app/[username]/video/[id]/page.tsx` |
+
+Users can also paste the **full** source URL after `adhx.com/` — `src/proxy.ts` (Next.js middleware) rewrites these via 307 redirect:
+- `adhx.com/https://x.com/{user}/status/{id}` → `/{user}/status/{id}`
+- `adhx.com/https://www.instagram.com/reels/{id}` → `/reels/{id}`
+- `adhx.com/https://www.tiktok.com/@{user}/video/{id}` → `/@{user}/video/{id}`
+
+All work with or without protocol, browser path normalization (`//` → `/`), trailing path segments, and platform-specific subdomains (e.g. `vm.tiktok.com`, `m.tiktok.com`).
+
+**Tweet preview** (`src/components/TweetPreviewLanding.tsx`):
 - Authenticated: Adds tweet, redirects to `/?open={id}` (opens lightbox)
-- Unauthenticated: Shows `TweetPreviewLanding` with rich preview or `QuickAddLanding` as fallback
+- Unauthenticated: Shows rich preview with engagement stats, expand/collapse, and **Share** button
+- "Preview another tweet" URL input — accepts X, Instagram, and TikTok URLs
+
+**Reel preview** (`src/components/InstagramPreviewLanding.tsx`):
+- Resolves metadata via InstaFix mirrors (`toinstagram.com` → `uuinstagram.com`).
+- Direct Instagram CDN URLs 403 to non-Instagram clients, so we proxy through the mirror's `/videos/{id}/1` endpoint (`src/lib/media/instafix.ts`).
+
+**TikTok preview** (`src/components/TikTokPreviewLanding.tsx`):
+- Resolves metadata via `tnktok.com` (fxTikTok). The mirror's `/generate/video/{id}.mp4` endpoint 302-redirects to the real TikTok CDN (`tiktokcdn-us.com` / `tiktokcdn-eu.com`) with proper signing — we stream straight through (`src/lib/media/tnktok.ts`).
+- Custom inline SVG glyph for the TikTok logo (lucide doesn't ship one).
+- Note: Next.js URL-encodes `@` in dynamic params, so `params.username` arrives as `%40user`. Decode before validation.
+
+All three preview components share the same shell (hero + two-column grid + sidebar + footer) and the floating share/download button pattern (hover-reveal desktop, always-visible mobile). The card content is source-specific because data shapes diverge.
+
+**AppShell** suppresses the global Header for these preview paths via the `isFullWidth` regex — see `src/components/AppShell.tsx`. Add new preview paths there to avoid the double-header issue.
 
 **Preview page layout** (`src/components/TweetPreviewLanding.tsx`):
 - Tweet card with engagement stats, expand/collapse, and **Share** button (clipboard copy / Web Share API)
@@ -662,6 +691,10 @@ export async function GET() {
 | `/api/auth/twitter` | GET | No | Start OAuth flow |
 | `/api/auth/twitter/callback` | GET | No | OAuth callback |
 | `/api/auth/twitter/status` | GET | No | Check auth status and refresh tokens |
+| `/api/media/instagram/video` | GET | No | Stream Instagram Reel MP4 inline (Range supported) |
+| `/api/media/instagram/video/download` | GET | No | Stream Reel MP4 with `Content-Disposition: attachment` |
+| `/api/media/tiktok/video` | GET | No | Stream TikTok MP4 inline (Range supported) |
+| `/api/media/tiktok/video/download` | GET | No | Stream TikTok MP4 with `Content-Disposition: attachment` |
 
 ## Environment Variables
 

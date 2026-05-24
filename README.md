@@ -7,7 +7,7 @@
 
 > **Save now. Read never. Find always.**
 
-For people who bookmark everything and read nothing. A Twitter/X bookmark manager that actually helps you find that tweet you saved 6 months ago.
+For people who bookmark everything and read nothing. A Twitter/X bookmark manager that actually helps you find that tweet you saved 6 months ago — and previews/downloads Instagram Reels and TikToks with the same one-tap UX.
 
 <p align="center">
   <img src="https://img.shields.io/badge/Bookmarks_Saved-∞-8B5CF6?style=for-the-badge" alt="Bookmarks Saved: Infinite" />
@@ -18,15 +18,23 @@ For people who bookmark everything and read nothing. A Twitter/X bookmark manage
 
 ## ⚡ Quick Add: URL Prefix
 
-Save tweets instantly by adding `adh` before any x.com URL:
+Save tweets, preview Instagram Reels, or grab TikToks instantly by replacing the host in any link with `adhx.com`:
 
 ```
-x.com/user/status/123456789
-  ↓
-adhx.com/user/status/123456789
+x.com/user/status/123              instagram.com/reels/abc            tiktok.com/@user/video/123
+  ↓                                  ↓                                   ↓
+adhx.com/user/status/123          adhx.com/reels/abc                  adhx.com/@user/video/123
 ```
 
-The tweet is saved to your collection and opens in the lightbox. It's that easy. Your future self will thank you. Probably.
+You can also paste the full URL after `adhx.com/` — the middleware proxy (`src/proxy.ts`) handles every shape:
+
+```
+adhx.com/https://x.com/user/status/123              → /user/status/123
+adhx.com/https://www.instagram.com/reels/abc        → /reels/abc
+adhx.com/https://www.tiktok.com/@user/video/123     → /@user/video/123
+```
+
+Tweets land in your collection and open in the lightbox. Reels and TikToks render a public preview with inline playback and a one-tap MP4 download (no account needed).
 
 ---
 
@@ -35,6 +43,7 @@ The tweet is saved to your collection and opens in the lightbox. It's that easy.
 | Feature | Description |
 |---------|-------------|
 | 🐿️ **Hoard Mode** | Sync up to 800 bookmarks from Twitter/X. No judgment here. |
+| 🎬 **Reel & TikTok Downloader** | Paste any Instagram Reel or TikTok URL → preview inline + download the MP4 in one tap. No account, no watermark. |
 | 🖼️ **Gallery View** | Visual masonry grid with hover previews for videos |
 | 🔍 **Actually Find Stuff** | Full-text search that works. Revolutionary, we know. |
 | 🏷️ **Tag Everything** | Custom tags to organize your chaos (or don't, we won't tell) |
@@ -73,7 +82,7 @@ cp .env.example .env
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and connect your Twitter/X account.
+Open [http://localhost:3001](http://localhost:3001) and connect your Twitter/X account.
 
 ### Environment Variables
 
@@ -106,12 +115,13 @@ SESSION_SECRET=your-secret-key-here
 
 | Layer | Technology |
 |-------|------------|
-| **Framework** | Next.js 15 (App Router) + React 19 |
+| **Framework** | Next.js 16 (App Router) + React 19 |
 | **Database** | SQLite + Drizzle ORM (multi-user ready) |
 | **Styling** | Tailwind CSS |
 | **Auth** | Twitter OAuth 2.0 PKCE + JWT sessions |
+| **Media** | FxTwitter for X, InstaFix for Instagram Reels, fxTikTok for TikToks |
 | **Deployment** | Fly.io with automated releases |
-| **Testing** | Vitest |
+| **Testing** | Vitest (800+ tests) |
 
 ---
 
