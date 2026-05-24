@@ -44,6 +44,7 @@ Tweets land in your collection and open in the lightbox. Reels and TikToks rende
 |---------|-------------|
 | 🐿️ **Hoard Mode** | Sync up to 800 bookmarks from Twitter/X. No judgment here. |
 | 🎬 **Reel & TikTok Downloader** | Paste any Instagram Reel or TikTok URL → preview inline + download the MP4 in one tap. No account, no watermark. |
+| 💾 **Save Across Platforms** | Add Reels and TikToks to your collection alongside tweets. Same feed, one search, platform badges keep things straight. |
 | 🖼️ **Gallery View** | Visual masonry grid with hover previews for videos |
 | 🔍 **Actually Find Stuff** | Full-text search that works. Revolutionary, we know. |
 | 🏷️ **Tag Everything** | Custom tags to organize your chaos (or don't, we won't tell) |

@@ -303,6 +303,8 @@ All work with or without protocol, browser path normalization (`//` → `/`), tr
 
 All three preview components share the same shell (hero + two-column grid + sidebar + footer) and the floating share/download button pattern (hover-reveal desktop, always-visible mobile). The card content is source-specific because data shapes diverge.
 
+**Save-to-collection**: when the visiting user is authenticated, all three preview pages show an "Add to Collection" button that POSTs to `/api/bookmarks/add` and redirects to `/?added=success&platform=...&id=...`. Saved Reels and TikToks land in the same feed as tweets, distinguished by the platform badge on the FeedCard.
+
 **AppShell** suppresses the global Header for these preview paths via the `isFullWidth` regex — see `src/components/AppShell.tsx`. Add new preview paths there to avoid the double-header issue.
 
 **Preview page layout** (`src/components/TweetPreviewLanding.tsx`):
@@ -467,7 +469,8 @@ This avoids prop drilling and keeps keyboard logic centralized while allowing di
 Client component with:
 - **FeedGrid**: Masonry gallery with FeedCard components
 - **Lightbox**: Full-screen modal with keyboard navigation (←→, R/U for read/unread, Esc)
-- **FilterBar**: Category filters and search
+- **FilterBar**: Category filters + **platform filter** (All / X / Instagram / TikTok) + tags + search
+- **FeedCard platform badge**: non-Twitter items show a small platform glyph (Instagram gradient / TikTok cyan-red SVG) alongside the category label ("Reel" / "TikTok")
 
 ### Quote Tweet Handling
 Quote tweets display embedded content showing the quoted tweet. Two data sources:
@@ -621,18 +624,19 @@ Database location: `./data/adhdone.db`
 
 | Table | Primary Key | Description |
 |-------|-------------|-------------|
-| `bookmarks` | `(userId, id)` | Main tweet data - same tweet can exist for multiple users |
-| `bookmark_tags` | `(userId, bookmarkId, tag)` | Tags are per-user, not shared globally |
-| `bookmark_media` | `(userId, id)` | Media attachments per user |
-| `bookmark_links` | `id` (auto) + `userId` | URLs with enrichment data |
-| `read_status` | `(userId, bookmarkId)` | Read/unread tracking per user |
+| `bookmarks` | `(userId, platform, id)` | Main bookmark data — same source id can exist for multiple users AND across platforms (tweet 123 ≠ tiktok 123) |
+| `bookmark_tags` | `(userId, platform, bookmarkId, tag)` | Tags are per-user, per-platform |
+| `bookmark_media` | `(userId, platform, id)` | Media attachments |
+| `bookmark_links` | `id` (auto) + `userId` + `platform` | URLs with enrichment data |
+| `read_status` | `(userId, platform, bookmarkId)` | Read/unread tracking |
 | `user_preferences` | `(userId, key)` | User settings (theme, font, etc.) |
 | `oauth_tokens` | `userId` | Twitter OAuth credentials |
 | `sync_logs` | `id` + `userId` | Sync history per user |
 | `collections` | `id` + `userId` | Custom bookmark collections |
+| `collection_tweets` | `(userId, collectionId, platform, bookmarkId)` | Bookmarks in collections |
 | `tag_shares` | `(userId, tag)` | Public tag sharing settings |
 
-**Why composite keys**: Allows User A and User B to both bookmark tweet X independently, with separate read status, tags, and preferences.
+**Why composite keys with `platform`**: Allows User A and User B to both bookmark tweet X independently (multi-user), AND lets the same numeric id exist across platforms without collision (a TikTok video id and a tweet id can both be 19 digits). `platform` is one of `twitter` | `instagram` | `tiktok`, default `twitter`. Every query that filters by `bookmarkId` must also filter by `platform`.
 
 Schema modifications: Edit `src/lib/db/schema.ts`, then run `pnpm drizzle-kit push:sqlite`
 
@@ -680,7 +684,8 @@ export async function GET() {
 | `/api/bookmarks/[id]/read` | POST/DELETE | Yes | Toggle read status |
 | `/api/bookmarks/[id]/tags` | POST/DELETE | Yes | Add/remove tags |
 | `/api/sync` | GET | Yes | SSE sync stream |
-| `/api/tweets/add` | POST | Yes | Add single tweet |
+| `/api/tweets/add` | POST | Yes | Add single tweet (Twitter-only, delegates from `/api/bookmarks/add`) |
+| `/api/bookmarks/add` | POST | Yes | Platform-agnostic add — accepts X / Instagram / TikTok URLs, dispatches to the right resolver |
 | `/api/tags` | GET | Yes | List user's tags with counts and share URLs |
 | `/api/tags` | PATCH | Yes | Toggle tag public sharing (returns `shareUrl`) |
 | `/api/tags` | DELETE | Yes | Delete tag from all bookmarks |
