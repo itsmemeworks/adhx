@@ -52,10 +52,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
         if (tagged.length === 0) continue
 
         const bookmarkIds = tagged.map((t) => t.bookmarkId)
+        // Only Twitter bookmarks map to /{author}/status/{id}. Reels and TikToks
+        // live at other routes, so exclude them from the tweet sitemap.
         const tweetsInTag = db
           .select({ id: bookmarks.id, author: bookmarks.author })
           .from(bookmarks)
-          .where(and(eq(bookmarks.userId, share.userId), inArray(bookmarks.id, bookmarkIds)))
+          .where(and(
+            eq(bookmarks.userId, share.userId),
+            eq(bookmarks.platform, 'twitter'),
+            inArray(bookmarks.id, bookmarkIds)
+          ))
           .all()
 
         for (const tweet of tweetsInTag) {
