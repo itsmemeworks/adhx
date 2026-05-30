@@ -1,6 +1,7 @@
 'use client'
 
-import { Image } from 'lucide-react'
+import { useEffect, useRef } from 'react'
+import { Image, Loader2 } from 'lucide-react'
 import { FeedCard } from './FeedCard'
 import { ADHX_PURPLE } from '@/lib/gestalt/theme'
 import type { FeedItem } from './types'
@@ -34,6 +35,33 @@ export function FeedGrid({
   onLoadMore,
   onShowAll,
 }: FeedGridProps): React.ReactElement {
+  // Infinite scroll: a sentinel below the grid triggers onLoadMore when it
+  // scrolls into view. Latest loading/hasMore/onLoadMore are read through a
+  // ref so the observer doesn't need re-creating on every render.
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  const loadStateRef = useRef({ loading, hasMore, onLoadMore })
+  loadStateRef.current = { loading, hasMore, onLoadMore }
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    if (!sentinel) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const { loading: isLoading, hasMore: more, onLoadMore: load } = loadStateRef.current
+        if (entries[0]?.isIntersecting && more && !isLoading) {
+          load()
+        }
+      },
+      // Start loading before the sentinel is fully visible so content is
+      // ready by the time the user reaches the bottom.
+      { rootMargin: '600px 0px' }
+    )
+
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [])
+
   if (loading && items.length === 0) {
     return <LoadingSkeleton />
   }
@@ -60,16 +88,28 @@ export function FeedGrid({
       </div>
 
       {hasMore && (
-        <div className="mt-8 text-center">
-          <button
-            onClick={onLoadMore}
-            disabled={loading}
-            className="px-8 py-3 rounded-full font-semibold text-white transition-opacity disabled:opacity-50"
-            style={{ backgroundColor: ADHX_PURPLE }}
-          >
-            {loading ? 'Loading...' : 'Load more'}
-          </button>
-        </div>
+        <>
+          {/* Sentinel — when this scrolls into view, the next page auto-loads */}
+          <div ref={sentinelRef} aria-hidden className="h-px w-full" />
+          <div className="mt-8 flex flex-col items-center gap-3">
+            {loading ? (
+              <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm">Loading more…</span>
+              </div>
+            ) : (
+              // Fallback for keyboard users / when the observer can't fire
+              // (e.g. very tall viewport, reduced-motion auto-scroll off).
+              <button
+                onClick={onLoadMore}
+                className="px-8 py-3 rounded-full font-semibold text-white transition-opacity hover:opacity-90"
+                style={{ backgroundColor: ADHX_PURPLE }}
+              >
+                Load more
+              </button>
+            )}
+          </div>
+        </>
       )}
     </>
   )
