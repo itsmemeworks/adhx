@@ -438,9 +438,9 @@ function FeedPageContent(): React.ReactElement {
       } else {
         setItems((prev) => prev.map((i) => (i.id === id ? { ...i, isRead: true } : i)))
       }
-      if (action === 'archive') {
-        setStats((prev) => ({ ...prev, unread: Math.max(0, prev.unread - 1) }))
-      }
+      // Triage queue items are always unread, so both archiving and deleting
+      // one drops the unread count.
+      setStats((prev) => ({ ...prev, unread: Math.max(0, prev.unread - 1) }))
     },
     [unreadOnly],
   )
