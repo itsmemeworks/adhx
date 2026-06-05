@@ -127,12 +127,16 @@ export function Header() {
     const addedState = searchParams.get('added') as 'success' | 'duplicate' | 'error' | null
     if (!addedState) return
 
-    // Build the result from URL params
+    // Tweet previews pass ?tweetId=&author=&text=; Instagram/TikTok previews
+    // pass ?platform=&id= (no author/text). Accept either id param.
+    const bookmarkId = searchParams.get('tweetId') || searchParams.get('id')
+
     const result: AddTweetResult = {
       state: addedState,
-      bookmark: searchParams.get('tweetId') ? {
-        id: searchParams.get('tweetId')!,
-        author: searchParams.get('author') || 'unknown',
+      platform: searchParams.get('platform') || (searchParams.get('tweetId') ? 'twitter' : undefined),
+      bookmark: bookmarkId ? {
+        id: bookmarkId,
+        author: searchParams.get('author') || '',
         text: searchParams.get('text') || '',
       } : undefined,
       error: searchParams.get('error') || undefined,
@@ -145,6 +149,8 @@ export function Header() {
     const params = new URLSearchParams(window.location.search)
     params.delete('added')
     params.delete('tweetId')
+    params.delete('id')
+    params.delete('platform')
     params.delete('author')
     params.delete('text')
     params.delete('error')
