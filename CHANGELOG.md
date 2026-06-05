@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.32.1](https://github.com/itsmemeworks/adhx/compare/v1.32.0...v1.32.1) (2026-06-05)
+
+
+### Bug Fixes
+
+* **db:** make platform migration work on existing databases ([#153](https://github.com/itsmemeworks/adhx/issues/153)) ([805142b](https://github.com/itsmemeworks/adhx/commit/805142b33e3f2461a137a5982c56c983c5b4cd7d))
+
 ## [1.32.0](https://github.com/itsmemeworks/adhx/compare/v1.31.0...v1.32.0) (2026-06-05)
 
 
