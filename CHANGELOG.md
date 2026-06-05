@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.32.2](https://github.com/itsmemeworks/adhx/compare/v1.32.1...v1.32.2) (2026-06-05)
+
+
+### Bug Fixes
+
+* **db:** use drop index if exists in platform migration ([#155](https://github.com/itsmemeworks/adhx/issues/155)) ([23fae45](https://github.com/itsmemeworks/adhx/commit/23fae45f2106907482f4c39434bfe4cf05119514))
+
+## [1.32.1](https://github.com/itsmemeworks/adhx/compare/v1.32.0...v1.32.1) (2026-06-05)
+
+
+### Bug Fixes
+
+* **db:** make platform migration work on existing databases ([#153](https://github.com/itsmemeworks/adhx/issues/153)) ([805142b](https://github.com/itsmemeworks/adhx/commit/805142b33e3f2461a137a5982c56c983c5b4cd7d))
+
+## [1.32.0](https://github.com/itsmemeworks/adhx/compare/v1.31.0...v1.32.0) (2026-06-05)
+
+
+### Features
+
+* instagram reels + tiktok — preview, download, save-to-collection & feed polish ([#150](https://github.com/itsmemeworks/adhx/issues/150)) ([9cc7001](https://github.com/itsmemeworks/adhx/commit/9cc70019c200763b178b52fd17be252ba2e7d088))
+
 ## [1.31.0](https://github.com/itsmemeworks/adhx/compare/v1.30.4...v1.31.0) (2026-05-24)
 
 
