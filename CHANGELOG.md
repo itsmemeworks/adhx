@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.32.3](https://github.com/itsmemeworks/adhx/compare/v1.32.2...v1.32.3) (2026-06-05)
+
+
+### Bug Fixes
+
+* **deps:** resolve all open dependabot advisories ([#152](https://github.com/itsmemeworks/adhx/issues/152)) ([bb4e8e4](https://github.com/itsmemeworks/adhx/commit/bb4e8e47d4fcaa744fd54034ceb3083d05a3ff77))
+
 ## [1.32.2](https://github.com/itsmemeworks/adhx/compare/v1.32.1...v1.32.2) (2026-06-05)
 
 
