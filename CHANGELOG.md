@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.32.5](https://github.com/itsmemeworks/adhx/compare/v1.32.4...v1.32.5) (2026-06-05)
+
+
+### Bug Fixes
+
+* **instagram:** degrade reels to poster + caption + link-out ([#161](https://github.com/itsmemeworks/adhx/issues/161)) ([a114da6](https://github.com/itsmemeworks/adhx/commit/a114da66c1787c087a5201107269565f75f40dbc))
+* **tiktok:** support vm./vt. short links ([#160](https://github.com/itsmemeworks/adhx/issues/160)) ([a3f1fae](https://github.com/itsmemeworks/adhx/commit/a3f1faebae0388d5eb6a7dec2551114b388ee037))
+
 ## [1.32.4](https://github.com/itsmemeworks/adhx/compare/v1.32.3...v1.32.4) (2026-06-05)
 
 
