@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.32.0](https://github.com/itsmemeworks/adhx/compare/v1.31.0...v1.32.0) (2026-06-05)
+
+
+### Features
+
+* instagram reels + tiktok — preview, download, save-to-collection & feed polish ([#150](https://github.com/itsmemeworks/adhx/issues/150)) ([9cc7001](https://github.com/itsmemeworks/adhx/commit/9cc70019c200763b178b52fd17be252ba2e7d088))
+
 ## [1.31.0](https://github.com/itsmemeworks/adhx/compare/v1.30.4...v1.31.0) (2026-05-24)
 
 
