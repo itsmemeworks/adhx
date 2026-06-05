@@ -783,7 +783,7 @@ function RetweetContent({ retweetContext, bionicReading }: { retweetContext: Non
 }
 
 // Reusable QuoteCard component for displaying embedded quoted tweets
-function QuoteCard({
+export function QuoteCard({
   item,
   onNavigateToId,
   compact = false,

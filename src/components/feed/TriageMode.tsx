@@ -9,14 +9,48 @@ import {
   Flame,
   Undo2,
   ExternalLink,
-  Play,
+  Instagram,
   Loader2,
   Sparkles,
   PartyPopper,
 } from 'lucide-react'
 import type { FeedItem } from './types'
 import { AuthorAvatar } from './AuthorAvatar'
+import { QuoteCard } from './Lightbox'
 import { renderTextWithLinks, stripMediaUrls, isTouchDevice } from './utils'
+import { XIcon } from '@/components/icons'
+
+/** Inline TikTok glyph (lucide ships none) — matches the FeedCard badge. */
+function TikTokGlyph({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M19.589 6.686a4.793 4.793 0 0 1-3.77-4.245V2h-3.445v13.672a2.896 2.896 0 0 1-5.201 1.743 2.896 2.896 0 0 1 2.342-4.585c.28 0 .55.04.808.115V9.435a6.327 6.327 0 0 0-.808-.051 6.272 6.272 0 0 0-6.272 6.272A6.272 6.272 0 0 0 9.515 22h.005a6.272 6.272 0 0 0 6.272-6.272V8.687a8.182 8.182 0 0 0 4.773 1.526V6.78a4.795 4.795 0 0 1-.976-.094z" />
+    </svg>
+  )
+}
+
+/** Clear "which platform" wordmark, top-right of the card (à la X's "𝕏.com"). */
+function PlatformWordmark({ platform }: { platform?: FeedItem['platform'] }) {
+  if (platform === 'instagram') {
+    return (
+      <span className="flex items-center gap-1 font-semibold text-gray-900 dark:text-white">
+        <Instagram className="w-4 h-4" /> Instagram
+      </span>
+    )
+  }
+  if (platform === 'tiktok') {
+    return (
+      <span className="flex items-center gap-1 font-semibold text-gray-900 dark:text-white">
+        <TikTokGlyph className="w-4 h-4" /> TikTok
+      </span>
+    )
+  }
+  return (
+    <span className="flex items-center gap-0.5 font-bold text-gray-900 dark:text-white">
+      <XIcon className="w-3.5 h-3.5" /><span>.com</span>
+    </span>
+  )
+}
 
 /** User's LOCAL calendar day as YYYY-MM-DD (streaks are per the user's days). */
 function localToday(): string {
@@ -312,7 +346,11 @@ export function TriageMode({
         ) : finished ? (
           <FinishCard total={total} streak={streak} onClose={onClose} />
         ) : current ? (
-          <div className="w-full max-w-md flex flex-col items-center gap-4">
+          <div
+            className={`w-full flex flex-col items-center gap-4 ${
+              current.media?.length ? 'max-w-md lg:max-w-4xl' : 'max-w-md lg:max-w-xl'
+            }`}
+          >
             <div
               className="w-full select-none touch-pan-y"
               style={{
@@ -428,76 +466,111 @@ function TriageCard({ item }: { item: FeedItem }) {
   const media = item.media?.[0]
   const isVideo = media?.mediaType === 'video' || media?.mediaType === 'animated_gif'
   const text = stripMediaUrls(item.text || '', !!media)
-  const platformLabel =
-    item.platform === 'instagram' ? 'Reel' : item.platform === 'tiktok' ? 'TikTok' : null
+  const hasQuote = !!(item.isQuote && (item.quotedTweet || item.quoteContext))
+
+  // Autoplay (muted) for video. Twitter streams the light 360p preview tier;
+  // TikTok uses its own proxy. Instagram is poster-only (degraded).
+  const videoSrc = isVideo
+    ? item.platform === 'tiktok'
+      ? media!.url
+      : `/api/media/video?author=${encodeURIComponent(item.author)}&tweetId=${encodeURIComponent(item.id)}&quality=preview`
+    : null
+
+  const created = item.createdAt
+    ? new Date(item.createdAt).toLocaleString(undefined, {
+        hour: '2-digit',
+        minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      })
+    : null
 
   return (
-    <article className="w-full bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden max-h-[62vh] flex flex-col">
-      <header className="flex items-center gap-3 p-3 flex-shrink-0">
-        <AuthorAvatar src={item.authorProfileImageUrl} author={item.author} size="md" />
-        <div className="min-w-0 flex-1">
-          <p className="font-semibold text-gray-900 dark:text-white truncate">
-            {item.authorName || item.author}
-          </p>
-          <p className="text-xs text-gray-500 truncate">
-            @{item.author}
-            {platformLabel ? ` · ${platformLabel}` : ''}
-          </p>
-        </div>
-        <a
-          href={item.tweetUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-          aria-label="Open source"
-        >
-          <ExternalLink className="w-4 h-4" />
-        </a>
-      </header>
-
-      <div className="overflow-y-auto px-3 pb-3 flex flex-col gap-3">
-        {text && (
-          <p className="text-[15px] leading-relaxed text-gray-800 dark:text-gray-100 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
-            {renderTextWithLinks(text)}
-          </p>
-        )}
-
-        {item.summary && (
-          <div className="flex items-start gap-2 p-2.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-            <Sparkles className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-gray-700 dark:text-gray-300">{item.summary}</p>
-          </div>
-        )}
-
-        {media?.thumbnailUrl && (
-          <div className="relative rounded-xl overflow-hidden bg-black">
-            <img
-              src={media.thumbnailUrl}
-              alt=""
-              className="w-full max-h-[34vh] object-cover"
-              referrerPolicy="no-referrer"
+    // Media on top (portrait) / left (landscape); content card below / right.
+    <div className="w-full flex flex-col lg:flex-row gap-3 lg:gap-4 lg:items-stretch">
+      {media?.thumbnailUrl && (
+        <div className="lg:w-[42%] flex-shrink-0 flex items-center justify-center">
+          {videoSrc ? (
+            <video
+              key={item.id}
+              src={videoSrc}
+              poster={media.thumbnailUrl}
+              muted
+              loop
+              autoPlay
+              playsInline
+              className="w-full max-h-[36vh] lg:max-h-[74vh] rounded-2xl object-contain bg-black"
             />
-            {isVideo && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="w-12 h-12 bg-black/60 rounded-full flex items-center justify-center">
-                  <Play className="w-6 h-6 text-white ml-0.5" fill="white" />
-                </span>
-              </div>
-            )}
-          </div>
-        )}
+          ) : (
+            <a href={item.tweetUrl} target="_blank" rel="noopener noreferrer" className="block w-full">
+              <img
+                src={media.thumbnailUrl}
+                alt=""
+                className="w-full max-h-[36vh] lg:max-h-[74vh] rounded-2xl object-contain bg-black"
+                referrerPolicy="no-referrer"
+              />
+            </a>
+          )}
+        </div>
+      )}
 
-        {item.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {item.tags.map((t) => (
-              <span key={t} className="px-2 py-0.5 text-xs rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
-                #{t}
-              </span>
-            ))}
+      <article className="flex-1 min-w-0 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl flex flex-col max-h-[42vh] lg:max-h-[74vh] overflow-hidden">
+        <header className="flex items-start gap-3 p-4 pb-2 flex-shrink-0">
+          <AuthorAvatar src={item.authorProfileImageUrl} author={item.author} size="md" />
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-gray-900 dark:text-white truncate">
+              {item.authorName || item.author}
+            </p>
+            <p className="text-sm text-gray-500 truncate">@{item.author}</p>
           </div>
-        )}
-      </div>
-    </article>
+          {/* Clear platform indicator (links to source). */}
+          <a
+            href={item.tweetUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-sm hover:opacity-80 flex-shrink-0"
+            title="Open source"
+          >
+            <PlatformWordmark platform={item.platform} />
+            <ExternalLink className="w-3.5 h-3.5 text-gray-400" />
+          </a>
+        </header>
+
+        <div className="overflow-y-auto px-4 pb-4 flex flex-col gap-3">
+          {text && (
+            <p className="text-[15px] leading-relaxed text-gray-800 dark:text-gray-100 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+              {renderTextWithLinks(text)}
+            </p>
+          )}
+
+          {hasQuote && <QuoteCard item={item} compact />}
+
+          {item.summary && (
+            <div className="flex items-start gap-2 p-2.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <Sparkles className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-gray-700 dark:text-gray-300">{item.summary}</p>
+            </div>
+          )}
+
+          {created && (
+            <p className="text-xs text-gray-400 dark:text-gray-500 border-t border-gray-100 dark:border-gray-800 pt-2">
+              {created}
+            </p>
+          )}
+
+          {item.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {item.tags.map((t) => (
+                <span key={t} className="px-2 py-0.5 text-xs rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
+                  #{t}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </article>
+    </div>
   )
 }
 
