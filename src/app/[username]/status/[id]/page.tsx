@@ -182,8 +182,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // Fallback metadata if tweet fetch fails
   if (!tweet) {
     return {
-      title: `Save @${username}'s tweet - ADHX`,
-      description: 'Save this tweet to your ADHX collection',
+      title: `Preview @${username}'s tweet`,
+      description: 'Preview this tweet on ADHX',
     }
   }
 
@@ -197,18 +197,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const description = buildDescription(tweet)
 
-  // Title: cleaner for articles, informative for regular tweets
+  // Page <title>: article title or the tweet text (the site name "ADHX" is
+  // carried by og:site_name / the app, so don't repeat it here).
   const title = isArticle
     ? `${articleTitle} - @${tweet.author.screen_name}`
-    : `@${tweet.author.screen_name}: "${truncate(tweetText, 50)}" - Save to ADHX`
+    : `@${tweet.author.screen_name}: "${truncate(tweetText, 50)}"`
 
   // Select best OG images with real dimensions
   const ogImages = getOgImages(tweet, baseUrl)
 
-  // OG title: for articles use article title directly
-  const ogTitle = isArticle
-    ? articleTitle
-    : `@${tweet.author.screen_name} on X`
+  // Unfurl headline (og + twitter). "Preview", not "Save", and no "ADHX"
+  // suffix — apps already render og:site_name="ADHX" as a separate label,
+  // so appending it duplicated the word in the card (e.g. on Telegram).
+  const ogTitle = isArticle ? articleTitle : `Preview @${tweet.author.screen_name}'s tweet`
 
   // Build OG video tags for video tweets
   const ogVideos = tweet.media?.videos?.length
@@ -250,7 +251,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     twitter: {
       card: hasRichMedia ? 'summary_large_image' : 'summary',
-      title: isArticle ? articleTitle : `Save @${tweet.author.screen_name}'s tweet - ADHX`,
+      title: ogTitle,
       description,
       images: [ogImages[0].url],
       creator: `@${tweet.author.screen_name}`,

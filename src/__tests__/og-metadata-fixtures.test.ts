@@ -177,13 +177,11 @@ describe('OG Metadata with Real Fixtures', () => {
       // Title: cleaner for articles, informative for regular tweets
       const title = isArticle
         ? `${articleTitle} - @${tweet.author.screen_name}`
-        : `@${tweet.author.screen_name}: "${truncate(tweetText, 50)}" - Save to ADHX`
+        : `@${tweet.author.screen_name}: "${truncate(tweetText, 50)}"`
       const ogImage = getOgImage(tweet, BASE_URL)
 
-      // OG title: for articles use article title directly
-      const ogTitle = isArticle
-        ? articleTitle
-        : `@${tweet.author.screen_name} on X`
+      // Unfurl headline (og + twitter): "Preview", no duplicated "ADHX".
+      const ogTitle = isArticle ? articleTitle : `Preview @${tweet.author.screen_name}'s tweet`
 
       const metadata = {
         title,
@@ -199,7 +197,7 @@ describe('OG Metadata with Real Fixtures', () => {
         },
         twitter: {
           card: 'summary_large_image',
-          title: isArticle ? articleTitle : `Save @${tweet.author.screen_name}'s tweet - ADHX`,
+          title: ogTitle,
           description,
           images: [ogImage],
           creator: `@${tweet.author.screen_name}`,

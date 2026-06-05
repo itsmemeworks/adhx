@@ -48,26 +48,29 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const meta = await fetchReelMetadata(id)
 
   const who = meta?.authorName || meta?.author
-  const title = who ? `${who} on Instagram — Save to ADHX` : 'Instagram Reel — Save to ADHX'
-  const description = meta?.caption || meta?.description || 'Save this Instagram Reel to your ADHX collection.'
+  // Page <title> for the browser tab; unfurl headline says "Preview" (the
+  // "ADHX" label comes from og:site_name, so don't repeat it in the title).
+  const pageTitle = who ? `${who} on Instagram` : 'Instagram Reel'
+  const headline = who ? `Preview ${who}'s reel` : 'Preview this Instagram reel'
+  const description = meta?.caption || meta?.description || 'Preview this Instagram Reel on ADHX.'
   const image = meta?.imageUrl
     ? `${baseUrl}/api/media/instagram/thumbnail?id=${encodeURIComponent(id)}`
     : `${baseUrl}/og-logo.png`
 
   return {
-    title,
+    title: pageTitle,
     description,
     openGraph: {
       type: 'article',
-      title,
+      title: headline,
       description,
       siteName: 'ADHX',
       url: canonicalUrl,
-      images: [{ url: image, alt: title }],
+      images: [{ url: image, alt: headline }],
     },
     twitter: {
       card: 'summary_large_image',
-      title,
+      title: headline,
       description,
       images: [image],
     },
