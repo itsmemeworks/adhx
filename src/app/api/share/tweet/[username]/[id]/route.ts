@@ -117,11 +117,13 @@ function buildTweetResponse(tweet: FxTweet) {
  */
 function buildAdhxContext(tweetId: string) {
   try {
-    // Count distinct users who bookmarked this tweet
+    // Count distinct users who bookmarked this tweet.
+    // Scope to platform='twitter' — this is the tweet share endpoint, and a
+    // numeric TikTok id could otherwise collide with a tweet id.
     const [countResult] = db
       .select({ count: sql<number>`COUNT(DISTINCT ${bookmarks.userId})` })
       .from(bookmarks)
-      .where(eq(bookmarks.id, tweetId))
+      .where(and(eq(bookmarks.id, tweetId), eq(bookmarks.platform, 'twitter')))
       .all()
 
     const savedByCount = countResult?.count ?? 0
@@ -143,7 +145,7 @@ function buildAdhxContext(tweetId: string) {
         )
       )
       .innerJoin(oauthTokens, eq(tagShares.userId, oauthTokens.userId))
-      .where(eq(bookmarkTags.bookmarkId, tweetId))
+      .where(and(eq(bookmarkTags.bookmarkId, tweetId), eq(bookmarkTags.platform, 'twitter')))
       .all()
 
     // Deduplicate (same tag+username could appear if multiple users tag the same tweet)

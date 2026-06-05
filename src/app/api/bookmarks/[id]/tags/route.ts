@@ -6,7 +6,11 @@ import { getCurrentUserId } from '@/lib/auth/session'
 import { metrics } from '@/lib/sentry'
 import { sanitizeTag } from '@/lib/utils/tag'
 
-// GET /api/bookmarks/[id]/tags - Get tags for a bookmark
+function getPlatform(request: NextRequest): string {
+  return request.nextUrl.searchParams.get('platform') || 'twitter'
+}
+
+// GET /api/bookmarks/[id]/tags?platform=... - Get tags for a bookmark
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -17,28 +21,27 @@ export async function GET(
   }
 
   const { id } = await params
+  const platform = getPlatform(request)
 
-  // Verify bookmark belongs to user (strict userId check)
   const [bookmark] = await db
     .select({ id: bookmarks.id })
     .from(bookmarks)
-    .where(and(eq(bookmarks.id, id), eq(bookmarks.userId, userId)))
+    .where(and(eq(bookmarks.userId, userId), eq(bookmarks.platform, platform), eq(bookmarks.id, id)))
     .limit(1)
 
   if (!bookmark) {
     return NextResponse.json({ error: 'Bookmark not found' }, { status: 404 })
   }
 
-  // Get tags (filter by userId for composite key)
   const tags = await db
     .select({ tag: bookmarkTags.tag })
     .from(bookmarkTags)
-    .where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.bookmarkId, id)))
+    .where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.platform, platform), eq(bookmarkTags.bookmarkId, id)))
 
   return NextResponse.json({ tags: tags.map((t) => t.tag) })
 }
 
-// POST /api/bookmarks/[id]/tags - Add tag to bookmark
+// POST /api/bookmarks/[id]/tags?platform=... - Add tag to bookmark
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -49,51 +52,45 @@ export async function POST(
   }
 
   const { id } = await params
+  const platform = getPlatform(request)
   const { tag } = await request.json()
 
-  // Validate tag
   if (!tag || typeof tag !== 'string') {
     return NextResponse.json({ error: 'Tag is required' }, { status: 400 })
   }
 
-  // Sanitize: replace invalid chars with hyphens, collapse, trim
   const cleanTag = sanitizeTag(tag)
-
   if (cleanTag.length === 0) {
     return NextResponse.json({ error: 'Tag cannot be empty' }, { status: 400 })
   }
 
-  // Verify bookmark belongs to user (strict userId check)
   const [bookmark] = await db
     .select({ id: bookmarks.id })
     .from(bookmarks)
-    .where(and(eq(bookmarks.id, id), eq(bookmarks.userId, userId)))
+    .where(and(eq(bookmarks.userId, userId), eq(bookmarks.platform, platform), eq(bookmarks.id, id)))
     .limit(1)
 
   if (!bookmark) {
     return NextResponse.json({ error: 'Bookmark not found' }, { status: 404 })
   }
 
-  // Insert tag with userId (composite key: userId + bookmarkId + tag)
   try {
     await db.insert(bookmarkTags).values({
       userId,
+      platform,
       bookmarkId: id,
       tag: cleanTag,
     })
 
-    // Get updated tag count for this bookmark (filter by userId)
     const allTags = await db
       .select({ tag: bookmarkTags.tag })
       .from(bookmarkTags)
-      .where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.bookmarkId, id)))
+      .where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.platform, platform), eq(bookmarkTags.bookmarkId, id)))
 
-    // Track tag addition
     metrics.bookmarkTagged(allTags.length)
   } catch (error: unknown) {
-    // Check if it's a unique constraint error (tag already exists)
     if ((error as { code?: string }).code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {
-      return NextResponse.json({ success: true, tag: cleanTag }) // Already exists, return success
+      return NextResponse.json({ success: true, tag: cleanTag })
     }
     throw error
   }
@@ -101,7 +98,7 @@ export async function POST(
   return NextResponse.json({ success: true, tag: cleanTag })
 }
 
-// DELETE /api/bookmarks/[id]/tags - Remove tag from bookmark
+// DELETE /api/bookmarks/[id]/tags?platform=... - Remove tag from bookmark
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -112,27 +109,31 @@ export async function DELETE(
   }
 
   const { id } = await params
+  const platform = getPlatform(request)
   const { tag } = await request.json()
 
   if (!tag) {
     return NextResponse.json({ error: 'Tag is required' }, { status: 400 })
   }
 
-  // Verify bookmark belongs to user (strict userId check)
   const [bookmark] = await db
     .select({ id: bookmarks.id })
     .from(bookmarks)
-    .where(and(eq(bookmarks.id, id), eq(bookmarks.userId, userId)))
+    .where(and(eq(bookmarks.userId, userId), eq(bookmarks.platform, platform), eq(bookmarks.id, id)))
     .limit(1)
 
   if (!bookmark) {
     return NextResponse.json({ error: 'Bookmark not found' }, { status: 404 })
   }
 
-  // Delete tag (use userId for composite key)
   await db
     .delete(bookmarkTags)
-    .where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.bookmarkId, id), eq(bookmarkTags.tag, tag)))
+    .where(and(
+      eq(bookmarkTags.userId, userId),
+      eq(bookmarkTags.platform, platform),
+      eq(bookmarkTags.bookmarkId, id),
+      eq(bookmarkTags.tag, tag),
+    ))
 
   return NextResponse.json({ success: true })
 }

@@ -26,7 +26,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
   // Full-width pages without header (public share pages, URL prefix quick-add pages)
-  const isFullWidth = pathname.startsWith('/share/') || /^\/\w+\/status\/\d+$/.test(pathname)
+  const isFullWidth =
+    pathname.startsWith('/share/') ||
+    /^\/\w+\/status\/\d+$/.test(pathname) ||
+    /^\/reels?\/[A-Za-z0-9_-]+$/.test(pathname) ||
+    /^\/@?[A-Za-z0-9._]+\/video\/\d+$/.test(pathname)
 
   if (isFullWidth) {
     return <>{children}</>

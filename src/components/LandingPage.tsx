@@ -17,16 +17,33 @@ export function LandingPage() {
     window.location.href = '/api/auth/twitter'
   }
 
-  // Pattern to extract username and tweet ID from x.com or twitter.com URLs
+  // Patterns for all three supported sources
   const tweetUrlPattern = /(?:https?:\/\/)?(?:www\.)?(?:x\.com|twitter\.com)\/(\w{1,15})\/status\/(\d+)/i
+  const reelUrlPattern = /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:reels?|p)\/([A-Za-z0-9_-]+)/i
+  const tiktokUrlPattern = /(?:https?:\/\/)?(?:www\.|vm\.|m\.)?tiktok\.com\/@([A-Za-z0-9._]{1,30})\/video\/(\d{6,25})/i
 
   const parseAndNavigate = (url: string): boolean => {
-    const match = url.trim().match(tweetUrlPattern)
-    if (match) {
-      const [, username, tweetId] = match
+    const trimmed = url.trim()
+
+    const tweetMatch = trimmed.match(tweetUrlPattern)
+    if (tweetMatch) {
+      const [, username, tweetId] = tweetMatch
       window.location.href = `/${username}/status/${tweetId}`
       return true
     }
+
+    const reelMatch = trimmed.match(reelUrlPattern)
+    if (reelMatch) {
+      window.location.href = `/reels/${reelMatch[1]}`
+      return true
+    }
+
+    const tiktokMatch = trimmed.match(tiktokUrlPattern)
+    if (tiktokMatch) {
+      window.location.href = `/@${tiktokMatch[1]}/video/${tiktokMatch[2]}`
+      return true
+    }
+
     return false
   }
 
@@ -34,8 +51,13 @@ export function LandingPage() {
     setTweetUrl(value)
     setUrlError('')
 
-    // Auto-navigate if a valid URL is pasted
-    if (value.includes('x.com/') || value.includes('twitter.com/')) {
+    // Auto-navigate as soon as a known host appears in the input
+    if (
+      value.includes('x.com/') ||
+      value.includes('twitter.com/') ||
+      value.includes('instagram.com/') ||
+      value.includes('tiktok.com/')
+    ) {
       parseAndNavigate(value)
     }
   }
@@ -45,7 +67,7 @@ export function LandingPage() {
     setUrlError('')
 
     if (!parseAndNavigate(tweetUrl)) {
-      setUrlError("That's not a tweet link. But we appreciate the mystery.")
+      setUrlError("That's not an X, Instagram, or TikTok link. But we appreciate the mystery.")
     }
   }
 
@@ -111,7 +133,7 @@ export function LandingPage() {
           </div>
 
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Paste any X/Twitter link to preview it instantly.
+            Paste any X, Instagram, or TikTok link to preview it instantly.
           </p>
 
           <form onSubmit={handleTweetUrlSubmit} className="max-w-xl mx-auto">
@@ -120,7 +142,7 @@ export function LandingPage() {
                 type="text"
                 value={tweetUrl}
                 onChange={(e) => handleTweetUrlChange(e.target.value)}
-                placeholder="Paste an X link here..."
+                placeholder="Paste an X, Instagram, or TikTok link here..."
                 className="flex-1 font-mono text-base sm:text-sm bg-white dark:bg-gray-900 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:border-transparent"
                 style={{ '--tw-ring-color': ADHX_PURPLE } as React.CSSProperties}
               />
@@ -137,9 +159,9 @@ export function LandingPage() {
             )}
           </form>
 
-          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              Or use the URL trick: add <span className="font-mono font-bold text-gray-900 dark:text-white">adh</span> before any x.com link
+          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 space-y-3">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Or use the URL trick — works for X, Instagram, and TikTok:
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 text-sm">
               <div className="font-mono bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500">
@@ -148,6 +170,24 @@ export function LandingPage() {
               <ArrowRight className="w-4 h-4 text-gray-400 rotate-90 sm:rotate-0" />
               <div className="font-mono bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border-2 text-gray-900 dark:text-white" style={{ borderColor: ADHX_PURPLE }}>
                 <span style={{ color: ADHX_PURPLE }}>adh</span>x.com/user/status/123
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 text-sm">
+              <div className="font-mono bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500">
+                instagram.com/reels/abc
+              </div>
+              <ArrowRight className="w-4 h-4 text-gray-400 rotate-90 sm:rotate-0" />
+              <div className="font-mono bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border-2 text-gray-900 dark:text-white" style={{ borderColor: ADHX_PURPLE }}>
+                <span style={{ color: ADHX_PURPLE }}>adh</span>x.com/reels/abc
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 text-sm">
+              <div className="font-mono bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500">
+                tiktok.com/@user/video/123
+              </div>
+              <ArrowRight className="w-4 h-4 text-gray-400 rotate-90 sm:rotate-0" />
+              <div className="font-mono bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border-2 text-gray-900 dark:text-white" style={{ borderColor: ADHX_PURPLE }}>
+                <span style={{ color: ADHX_PURPLE }}>adh</span>x.com/@user/video/123
               </div>
             </div>
           </div>
@@ -196,7 +236,7 @@ export function LandingPage() {
 }
 
 const SHORTCUT_URL = 'https://www.icloud.com/shortcuts/0d187480099b4d34a745ec8750a4587b'
-const BOOKMARKLET_CODE = `javascript:void(location.href=location.href.replace(/(?:x|twitter)\\.com/,'adhx.com'))`
+const BOOKMARKLET_CODE = `javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tiktok)\\.com/,'adhx.com'))`
 
 function ShortcutPromo() {
   const [platform, setPlatform] = useState<PlatformType>('desktop')
@@ -253,7 +293,7 @@ function ShortcutPromo() {
             ) : (
               <>
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  Drag this bookmarklet to your bookmarks bar. Click it on any X/Twitter page to instantly open it in ADHX.
+                  Drag this bookmarklet to your bookmarks bar. Click it on any X, Instagram, or TikTok page to instantly open it in ADHX.
                 </p>
                 <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-3 mb-4">
                   <code className="text-xs text-gray-700 dark:text-gray-300 break-all select-all">

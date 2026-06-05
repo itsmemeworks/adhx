@@ -57,6 +57,7 @@ function createTestDatabase() {
     CREATE TABLE bookmarks (
       id TEXT NOT NULL,
       user_id TEXT NOT NULL,
+      platform TEXT NOT NULL DEFAULT 'twitter',
       author TEXT NOT NULL,
       author_name TEXT,
       author_profile_image_url TEXT,
@@ -78,12 +79,13 @@ function createTestDatabase() {
       summary TEXT,
       source TEXT DEFAULT 'sync',
       raw_json TEXT,
-      PRIMARY KEY (user_id, id)
+      PRIMARY KEY (user_id, platform, id)
     );
 
     CREATE TABLE bookmark_links (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id TEXT NOT NULL,
+      platform TEXT NOT NULL DEFAULT 'twitter',
       bookmark_id TEXT NOT NULL,
       original_url TEXT,
       expanded_url TEXT NOT NULL,
@@ -97,14 +99,16 @@ function createTestDatabase() {
 
     CREATE TABLE bookmark_tags (
       user_id TEXT NOT NULL,
+      platform TEXT NOT NULL DEFAULT 'twitter',
       bookmark_id TEXT NOT NULL,
       tag TEXT NOT NULL,
-      PRIMARY KEY (user_id, bookmark_id, tag)
+      PRIMARY KEY (user_id, platform, bookmark_id, tag)
     );
 
     CREATE TABLE bookmark_media (
       id TEXT NOT NULL,
       user_id TEXT NOT NULL,
+      platform TEXT NOT NULL DEFAULT 'twitter',
       bookmark_id TEXT NOT NULL,
       media_type TEXT NOT NULL,
       original_url TEXT NOT NULL,
@@ -118,14 +122,15 @@ function createTestDatabase() {
       duration_ms INTEGER,
       file_size_bytes INTEGER,
       alt_text TEXT,
-      PRIMARY KEY (user_id, id)
+      PRIMARY KEY (user_id, platform, id)
     );
 
     CREATE TABLE read_status (
       user_id TEXT NOT NULL,
+      platform TEXT NOT NULL DEFAULT 'twitter',
       bookmark_id TEXT NOT NULL,
       read_at TEXT NOT NULL,
-      PRIMARY KEY (user_id, bookmark_id)
+      PRIMARY KEY (user_id, platform, bookmark_id)
     );
   `)
 

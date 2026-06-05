@@ -9,6 +9,7 @@ import {
   Lightbox,
   type FeedItem,
   type FilterType,
+  type PlatformFilter,
   type SortType,
   type SortDirection,
   type TagItem,
@@ -40,6 +41,7 @@ function FeedPageContent(): React.ReactElement {
   const [items, setItems] = useState<FeedItem[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<FilterType>((searchParams.get('filter') as FilterType) || 'all')
+  const [platformFilter, setPlatformFilter] = useState<PlatformFilter>((searchParams.get('platform') as PlatformFilter) || 'all')
   const [sort, setSort] = useState<SortType>((searchParams.get('sort') as SortType) || 'added')
   const [sortDirection, setSortDirection] = useState<SortDirection>((searchParams.get('sortDir') as SortDirection) || 'desc')
   const [unreadOnly, setUnreadOnly] = useState(searchParams.get('unreadOnly') !== 'false')
@@ -232,6 +234,7 @@ function FeedPageContent(): React.ReactElement {
           filter,
           unreadOnly: unreadOnly.toString(),
         })
+        if (platformFilter !== 'all') params.set('platform', platformFilter)
         if (sort !== 'added') params.set('sort', sort)
         if (sortDirection !== 'desc') params.set('sortDir', sortDirection)
         if (search) params.set('search', search)
@@ -255,7 +258,7 @@ function FeedPageContent(): React.ReactElement {
         setLoading(false)
       }
     },
-    [filter, sort, sortDirection, unreadOnly, search, page, selectedTags]
+    [filter, platformFilter, sort, sortDirection, unreadOnly, search, page, selectedTags]
   )
 
   useEffect(() => {
@@ -279,7 +282,7 @@ function FeedPageContent(): React.ReactElement {
     // and sync-complete will trigger a proper fetch when done
     if (isSyncing) return
     fetchFeed(true)
-  }, [filter, sort, sortDirection, unreadOnly, search, selectedTags, isSyncing, isAuthenticated])
+  }, [filter, platformFilter, sort, sortDirection, unreadOnly, search, selectedTags, isSyncing, isAuthenticated])
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -340,13 +343,14 @@ function FeedPageContent(): React.ReactElement {
   useEffect(() => {
     const params = new URLSearchParams()
     if (filter !== 'all') params.set('filter', filter)
+    if (platformFilter !== 'all') params.set('platform', platformFilter)
     if (sort !== 'added') params.set('sort', sort)
     if (sortDirection !== 'desc') params.set('sortDir', sortDirection)
     if (!unreadOnly) params.set('unreadOnly', 'false')
     if (search) params.set('search', search)
     const queryString = params.toString()
     router.replace(queryString ? `?${queryString}` : '/', { scroll: false })
-  }, [filter, sort, sortDirection, unreadOnly, search, router])
+  }, [filter, platformFilter, sort, sortDirection, unreadOnly, search, router])
 
   // Handle ?open=tweetId URL parameter to open a specific tweet in lightbox
   useEffect(() => {
@@ -852,6 +856,8 @@ function FeedPageContent(): React.ReactElement {
         <FilterBar
           filter={filter}
           onFilterChange={setFilter}
+          platform={platformFilter}
+          onPlatformChange={setPlatformFilter}
           sort={sort}
           onSortChange={setSort}
           sortDirection={sortDirection}

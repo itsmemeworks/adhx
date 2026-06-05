@@ -33,7 +33,7 @@ Use org `your-org` and project `your-project`.
 
 **Save now. Read never. Find always.**
 
-A Twitter/X bookmark manager for people who bookmark everything and read nothing. Built with Next.js 15.
+A Twitter/X bookmark manager for people who bookmark everything and read nothing. Built with Next.js 16. Also previews and downloads Instagram Reels and TikTok videos via the same URL-prefix trick.
 
 ## Architecture Overview
 
@@ -88,14 +88,14 @@ A Twitter/X bookmark manager for people who bookmark everything and read nothing
 
 ```bash
 pnpm install
-pnpm dev         # Start dev server at localhost:3000
+pnpm dev         # Start dev server at localhost:3001
 pnpm build       # Production build
-pnpm test        # Run all 719 tests (41 test files)
+pnpm test        # Run all 847 tests (46 test files)
 ```
 
 ## Tech Stack
 
-- **Framework**: Next.js 15.5 (App Router) + React 19
+- **Framework**: Next.js 16 (App Router) + React 19
 - **Database**: SQLite via better-sqlite3 + Drizzle ORM 0.45
 - **Styling**: Tailwind CSS 3.4 + clsx + tailwind-merge
 - **Twitter API**: twitter-api-v2 with OAuth 2.0 PKCE
@@ -271,10 +271,41 @@ Database migrations (`src/lib/db/migrate.ts`) run at container startup. Each mig
 ## Architecture
 
 ### URL Prefix Feature
-Users can save tweets by visiting `adhx.com/{username}/status/{id}`:
-- Route: `src/app/[username]/status/[id]/page.tsx`
+Users can preview tweets, Reels, and TikToks by replacing the host in any link with `adhx.com`:
+
+| Source URL | Becomes | Route |
+|---|---|---|
+| `x.com/{user}/status/{id}` | `adhx.com/{user}/status/{id}` | `src/app/[username]/status/[id]/page.tsx` |
+| `instagram.com/reels/{id}` | `adhx.com/reels/{id}` | `src/app/reels/[id]/page.tsx` |
+| `instagram.com/reel/{id}` | `adhx.com/reel/{id}` | `src/app/reel/[id]/page.tsx` |
+| `tiktok.com/@{user}/video/{id}` | `adhx.com/@{user}/video/{id}` | `src/app/[username]/video/[id]/page.tsx` |
+
+Users can also paste the **full** source URL after `adhx.com/` — `src/proxy.ts` (Next.js middleware) rewrites these via 307 redirect:
+- `adhx.com/https://x.com/{user}/status/{id}` → `/{user}/status/{id}`
+- `adhx.com/https://www.instagram.com/reels/{id}` → `/reels/{id}`
+- `adhx.com/https://www.tiktok.com/@{user}/video/{id}` → `/@{user}/video/{id}`
+
+All work with or without protocol, browser path normalization (`//` → `/`), trailing path segments, and platform-specific subdomains (e.g. `vm.tiktok.com`, `m.tiktok.com`).
+
+**Tweet preview** (`src/components/TweetPreviewLanding.tsx`):
 - Authenticated: Adds tweet, redirects to `/?open={id}` (opens lightbox)
-- Unauthenticated: Shows `TweetPreviewLanding` with rich preview or `QuickAddLanding` as fallback
+- Unauthenticated: Shows rich preview with engagement stats, expand/collapse, and **Share** button
+- "Preview another tweet" URL input — accepts X, Instagram, and TikTok URLs
+
+**Reel preview** (`src/components/InstagramPreviewLanding.tsx`):
+- Resolves metadata via InstaFix mirrors (`toinstagram.com` → `uuinstagram.com`).
+- Direct Instagram CDN URLs 403 to non-Instagram clients, so we proxy through the mirror's `/videos/{id}/1` endpoint (`src/lib/media/instafix.ts`).
+
+**TikTok preview** (`src/components/TikTokPreviewLanding.tsx`):
+- Resolves metadata via `tnktok.com` (fxTikTok). The mirror's `/generate/video/{id}.mp4` endpoint 302-redirects to the real TikTok CDN (`tiktokcdn-us.com` / `tiktokcdn-eu.com`) with proper signing — we stream straight through (`src/lib/media/tnktok.ts`).
+- Custom inline SVG glyph for the TikTok logo (lucide doesn't ship one).
+- Note: Next.js URL-encodes `@` in dynamic params, so `params.username` arrives as `%40user`. Decode before validation.
+
+All three preview components share the same shell (hero + two-column grid + sidebar + footer) and the floating share/download button pattern (hover-reveal desktop, always-visible mobile). The card content is source-specific because data shapes diverge.
+
+**Save-to-collection**: when the visiting user is authenticated, all three preview pages show an "Add to Collection" button that POSTs to `/api/bookmarks/add` and redirects to `/?added=success&platform=...&id=...`. Saved Reels and TikToks land in the same feed as tweets, distinguished by the platform badge on the FeedCard.
+
+**AppShell** suppresses the global Header for these preview paths via the `isFullWidth` regex — see `src/components/AppShell.tsx`. Add new preview paths there to avoid the double-header issue.
 
 **Preview page layout** (`src/components/TweetPreviewLanding.tsx`):
 - Tweet card with engagement stats, expand/collapse, and **Share** button (clipboard copy / Web Share API)
@@ -371,7 +402,7 @@ The app offers multiple ways to save tweets, shown contextually based on the use
 
 **Bookmarklet** (desktop + Android):
 ```
-javascript:void(location.href=location.href.replace(/(?:x|twitter)\.com/,'adhx.com'))
+javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tiktok)\.com/,'adhx.com'))
 ```
 - One-click URL rewrite from x.com/twitter.com to adhx.com
 - Shown with copy-to-clipboard button and drag-to-toolbar instructions
@@ -438,7 +469,8 @@ This avoids prop drilling and keeps keyboard logic centralized while allowing di
 Client component with:
 - **FeedGrid**: Masonry gallery with FeedCard components
 - **Lightbox**: Full-screen modal with keyboard navigation (←→, R/U for read/unread, Esc)
-- **FilterBar**: Category filters and search
+- **FilterBar**: Category filters + **platform filter** (All / X / Instagram / TikTok) + tags + search
+- **FeedCard platform badge**: non-Twitter items show a small platform glyph (Instagram gradient / TikTok cyan-red SVG) alongside the category label ("Reel" / "TikTok")
 
 ### Quote Tweet Handling
 Quote tweets display embedded content showing the quoted tweet. Two data sources:
@@ -592,18 +624,19 @@ Database location: `./data/adhdone.db`
 
 | Table | Primary Key | Description |
 |-------|-------------|-------------|
-| `bookmarks` | `(userId, id)` | Main tweet data - same tweet can exist for multiple users |
-| `bookmark_tags` | `(userId, bookmarkId, tag)` | Tags are per-user, not shared globally |
-| `bookmark_media` | `(userId, id)` | Media attachments per user |
-| `bookmark_links` | `id` (auto) + `userId` | URLs with enrichment data |
-| `read_status` | `(userId, bookmarkId)` | Read/unread tracking per user |
+| `bookmarks` | `(userId, platform, id)` | Main bookmark data — same source id can exist for multiple users AND across platforms (tweet 123 ≠ tiktok 123) |
+| `bookmark_tags` | `(userId, platform, bookmarkId, tag)` | Tags are per-user, per-platform |
+| `bookmark_media` | `(userId, platform, id)` | Media attachments |
+| `bookmark_links` | `id` (auto) + `userId` + `platform` | URLs with enrichment data |
+| `read_status` | `(userId, platform, bookmarkId)` | Read/unread tracking |
 | `user_preferences` | `(userId, key)` | User settings (theme, font, etc.) |
 | `oauth_tokens` | `userId` | Twitter OAuth credentials |
 | `sync_logs` | `id` + `userId` | Sync history per user |
 | `collections` | `id` + `userId` | Custom bookmark collections |
+| `collection_tweets` | `(userId, collectionId, platform, bookmarkId)` | Bookmarks in collections |
 | `tag_shares` | `(userId, tag)` | Public tag sharing settings |
 
-**Why composite keys**: Allows User A and User B to both bookmark tweet X independently, with separate read status, tags, and preferences.
+**Why composite keys with `platform`**: Allows User A and User B to both bookmark tweet X independently (multi-user), AND lets the same numeric id exist across platforms without collision (a TikTok video id and a tweet id can both be 19 digits). `platform` is one of `twitter` | `instagram` | `tiktok`, default `twitter`. Every query that filters by `bookmarkId` must also filter by `platform`.
 
 Schema modifications: Edit `src/lib/db/schema.ts`, then run `pnpm drizzle-kit push:sqlite`
 
@@ -651,7 +684,8 @@ export async function GET() {
 | `/api/bookmarks/[id]/read` | POST/DELETE | Yes | Toggle read status |
 | `/api/bookmarks/[id]/tags` | POST/DELETE | Yes | Add/remove tags |
 | `/api/sync` | GET | Yes | SSE sync stream |
-| `/api/tweets/add` | POST | Yes | Add single tweet |
+| `/api/tweets/add` | POST | Yes | Add single tweet (Twitter-only, delegates from `/api/bookmarks/add`) |
+| `/api/bookmarks/add` | POST | Yes | Platform-agnostic add — accepts X / Instagram / TikTok URLs, dispatches to the right resolver |
 | `/api/tags` | GET | Yes | List user's tags with counts and share URLs |
 | `/api/tags` | PATCH | Yes | Toggle tag public sharing (returns `shareUrl`) |
 | `/api/tags` | DELETE | Yes | Delete tag from all bookmarks |
@@ -662,6 +696,10 @@ export async function GET() {
 | `/api/auth/twitter` | GET | No | Start OAuth flow |
 | `/api/auth/twitter/callback` | GET | No | OAuth callback |
 | `/api/auth/twitter/status` | GET | No | Check auth status and refresh tokens |
+| `/api/media/instagram/video` | GET | No | Stream Instagram Reel MP4 inline (Range supported) |
+| `/api/media/instagram/video/download` | GET | No | Stream Reel MP4 with `Content-Disposition: attachment` |
+| `/api/media/tiktok/video` | GET | No | Stream TikTok MP4 inline (Range supported) |
+| `/api/media/tiktok/video/download` | GET | No | Stream TikTok MP4 with `Content-Disposition: attachment` |
 
 ## Environment Variables
 

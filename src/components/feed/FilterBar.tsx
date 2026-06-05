@@ -1,12 +1,15 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react'
-import { Tag, Eye, EyeOff, Globe, Link, Check, Filter, ChevronDown, ArrowUpDown, ArrowDown, ArrowUp } from 'lucide-react'
-import { FILTER_OPTIONS, type FilterType, type SortType, type SortDirection, type TagItem } from './types'
+import { Tag, Eye, EyeOff, Globe, Link, Check, Filter, ChevronDown, ArrowUpDown, ArrowDown, ArrowUp, Instagram } from 'lucide-react'
+import { FILTER_OPTIONS, PLATFORM_OPTIONS, type FilterType, type SortType, type SortDirection, type TagItem, type PlatformFilter } from './types'
+import { XIcon } from '@/components/icons'
 
 interface FilterBarProps {
   filter: FilterType
   onFilterChange: (filter: FilterType) => void
+  platform?: PlatformFilter
+  onPlatformChange?: (platform: PlatformFilter) => void
   sort: SortType
   onSortChange: (sort: SortType) => void
   sortDirection: SortDirection
@@ -18,6 +21,22 @@ interface FilterBarProps {
   availableTags: TagItem[]
   stats: { total: number; unread: number }
   onTagUpdated?: (tag: string, isPublic: boolean, shareUrl: string) => void
+}
+
+/** Compact TikTok glyph for the platform filter chip. */
+function TikTokGlyph({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+      <path d="M19.589 6.686a4.793 4.793 0 0 1-3.77-4.245V2h-3.445v13.672a2.896 2.896 0 0 1-5.201 1.743 2.896 2.896 0 0 1 2.342-4.585c.28 0 .55.04.808.115V9.435a6.327 6.327 0 0 0-.808-.051 6.272 6.272 0 0 0-6.272 6.272A6.272 6.272 0 0 0 9.515 22h.005a6.272 6.272 0 0 0 6.272-6.272V8.687a8.182 8.182 0 0 0 4.773 1.526V6.78a4.795 4.795 0 0 1-.976-.094z" />
+    </svg>
+  )
+}
+
+function PlatformIcon({ value, className }: { value: PlatformFilter; className?: string }) {
+  if (value === 'twitter') return <XIcon className={className} />
+  if (value === 'instagram') return <Instagram className={className} />
+  if (value === 'tiktok') return <TikTokGlyph className={className} />
+  return null
 }
 
 /**
@@ -111,6 +130,8 @@ function TagShareButton({
 export function FilterBar({
   filter,
   onFilterChange,
+  platform = 'all',
+  onPlatformChange,
   sort,
   onSortChange,
   sortDirection,
@@ -123,6 +144,9 @@ export function FilterBar({
   stats,
   onTagUpdated,
 }: FilterBarProps): React.ReactElement {
+  const [showPlatformDropdown, setShowPlatformDropdown] = useState(false)
+  const platformButtonRef = useRef<HTMLButtonElement>(null)
+  const currentPlatform = PLATFORM_OPTIONS.find((o) => o.value === platform) || PLATFORM_OPTIONS[0]
   const [showTagDropdown, setShowTagDropdown] = useState(false)
   const [showFilterDropdown, setShowFilterDropdown] = useState(false)
   const [filterDropdownPos, setFilterDropdownPos] = useState({ top: 0, left: 0 })
@@ -294,8 +318,53 @@ export function FilterBar({
           ))}
         </div>
 
-        {/* Right side: Tags + Unread */}
+        {/* Right side: Platform + Tags + Unread */}
         <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Platform Filter Dropdown */}
+          {onPlatformChange && (
+            <div className="relative">
+              <button
+                ref={platformButtonRef}
+                onClick={() => setShowPlatformDropdown((v) => !v)}
+                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-colors ${
+                  platform !== 'all'
+                    ? 'bg-purple-500 text-white'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+                title="Filter by platform"
+              >
+                {platform !== 'all' && <PlatformIcon value={platform} className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                <span className="max-w-[80px] truncate">{currentPlatform.label}</span>
+                <ChevronDown className="w-3 h-3" />
+              </button>
+
+              {showPlatformDropdown && (
+                <>
+                  <div className="fixed inset-0 z-[100]" onClick={() => setShowPlatformDropdown(false)} />
+                  <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-[101]">
+                    {PLATFORM_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => {
+                          onPlatformChange(opt.value)
+                          setShowPlatformDropdown(false)
+                        }}
+                        className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 ${
+                          platform === opt.value
+                            ? 'text-purple-500 font-medium'
+                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                        }`}
+                      >
+                        <PlatformIcon value={opt.value} className="w-4 h-4 flex-shrink-0" />
+                        <span>{opt.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           {/* Tag Filter Dropdown */}
           {availableTags.length > 0 && (
             <div className="relative">

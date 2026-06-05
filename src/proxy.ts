@@ -10,10 +10,13 @@ import type { NextRequest } from 'next/server'
  *   adhx.com/x.com/user/status/123
  *   adhx.com/https://www.instagram.com/reels/DXVsqQ7CSXw/
  *   adhx.com/instagram.com/p/DXVsqQ7CSXw/
+ *   adhx.com/https://www.tiktok.com/@user/video/7619017281691045134
+ *   adhx.com/tiktok.com/@user/video/123
  *
  * Extracted IDs are redirected to the clean route format:
  *   - X / Twitter  →  /{username}/status/{id}
  *   - Instagram    →  /reels/{id}
+ *   - TikTok       →  /@{username}/video/{id}
  */
 
 // Browsers normalize `//` → `/` in paths, so `https://x.com` becomes `https:/x.com`.
@@ -22,6 +25,9 @@ const TWITTER_URL_PATTERN =
 
 const INSTAGRAM_URL_PATTERN =
   /^\/(?:https?:\/?\/?)?(?:www\.)?instagram\.com\/(?:reels?|p)\/([A-Za-z0-9_-]+)/i
+
+const TIKTOK_URL_PATTERN =
+  /^\/(?:https?:\/?\/?)?(?:www\.|vm\.|m\.)?tiktok\.com\/@?([A-Za-z0-9._]{1,30})\/video\/(\d{6,25})/i
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -38,6 +44,14 @@ export function proxy(request: NextRequest) {
   if (reelMatch) {
     const [, reelId] = reelMatch
     const cleanUrl = new URL(`/reels/${reelId}`, request.url)
+    cleanUrl.search = request.nextUrl.search
+    return NextResponse.redirect(cleanUrl, { status: 307 })
+  }
+
+  const tiktokMatch = pathname.match(TIKTOK_URL_PATTERN)
+  if (tiktokMatch) {
+    const [, tiktokUsername, tiktokVideoId] = tiktokMatch
+    const cleanUrl = new URL(`/@${tiktokUsername}/video/${tiktokVideoId}`, request.url)
     cleanUrl.search = request.nextUrl.search
     return NextResponse.redirect(cleanUrl, { status: 307 })
   }
