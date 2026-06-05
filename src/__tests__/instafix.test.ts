@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { fetchReelMetadata, isAllowedVideoUrl, isValidReelId } from '@/lib/media/instafix'
+import { fetchReelMetadata, isAllowedImageUrl, isValidReelId } from '@/lib/media/instafix'
 
 const mockFetch = vi.fn()
 global.fetch = mockFetch as unknown as typeof fetch
@@ -25,209 +25,135 @@ function htmlResponse(html: string) {
 }
 
 function notFoundResponse() {
-  return {
-    ok: false,
-    status: 404,
-    headers: new Headers({ 'content-type': 'text/html' }),
-    body: null,
-  }
+  return { ok: false, status: 404, headers: new Headers({ 'content-type': 'text/html' }), body: null }
 }
 
-const CDN_VIDEO = 'https://scontent-lhr8-1.cdninstagram.com/v/video.mp4?e=123'
-const CDN_IMAGE = 'https://scontent.cdninstagram.com/v/thumb.jpg'
+const CDN_IMAGE = 'https://scontent-lhr6-1.cdninstagram.com/v/t51.71878-15/503057746_n.jpg?stp=x&_nc=1'
 
+// Mirrors the OG tags Instagram serves to a Twitterbot UA for a public reel.
 const validHtml = `
   <html><head>
-  <meta property="og:video:secure_url" content="${CDN_VIDEO}" />
   <meta property="og:image" content="${CDN_IMAGE}" />
-  <meta property="og:title" content="Cool Reel" />
-  <meta property="og:description" content="A description" />
+  <meta property="og:title" content="Penny Lane on Instagram: &quot;PLEASE VOTE FOR ME&quot;" />
+  <meta property="og:description" content="34K likes, 419 comments - pennylaneisthename on August 31, 2023: caption" />
+  <meta name="twitter:title" content="Penny Lane (@pennylaneisthename) &#x2022; Instagram reel" />
   </head></html>
 `
 
-describe('isAllowedVideoUrl', () => {
-  it('accepts cdninstagram.com and subdomains', () => {
-    expect(isAllowedVideoUrl('https://scontent.cdninstagram.com/v/x.mp4')).toBe(true)
-    expect(isAllowedVideoUrl('https://cdninstagram.com/v/x.mp4')).toBe(true)
-    expect(isAllowedVideoUrl('https://scontent-lhr8-1.cdninstagram.com/v/x.mp4')).toBe(true)
-  })
-
-  it('accepts fbcdn.net and subdomains', () => {
-    expect(isAllowedVideoUrl('https://scontent.xx.fbcdn.net/v/x.mp4')).toBe(true)
-  })
-
-  it('accepts trusted mirror proxy hosts', () => {
-    expect(isAllowedVideoUrl('https://toinstagram.com/videos/abc/1')).toBe(true)
-    expect(isAllowedVideoUrl('https://cp.toinstagram.com/payload.mp4')).toBe(true)
-    expect(isAllowedVideoUrl('https://uuinstagram.com/videos/abc/1')).toBe(true)
+describe('isAllowedImageUrl', () => {
+  it('accepts cdninstagram.com and fbcdn.net (and subdomains)', () => {
+    expect(isAllowedImageUrl('https://scontent.cdninstagram.com/v/x.jpg')).toBe(true)
+    expect(isAllowedImageUrl('https://cdninstagram.com/v/x.jpg')).toBe(true)
+    expect(isAllowedImageUrl('https://scontent-lhr6-1.cdninstagram.com/v/x.jpg')).toBe(true)
+    expect(isAllowedImageUrl('https://scontent.xx.fbcdn.net/v/x.jpg')).toBe(true)
   })
 
   it('rejects lookalike hosts (SSRF: subdomain suffix attack)', () => {
-    expect(isAllowedVideoUrl('https://cdninstagram.com.evil.com/x.mp4')).toBe(false)
-    expect(isAllowedVideoUrl('https://evilcdninstagram.com/x.mp4')).toBe(false)
-    expect(isAllowedVideoUrl('https://fake-fbcdn.net/x.mp4')).toBe(false)
-    expect(isAllowedVideoUrl('https://toinstagram.com.evil.com/x.mp4')).toBe(false)
+    expect(isAllowedImageUrl('https://cdninstagram.com.evil.com/x.jpg')).toBe(false)
+    expect(isAllowedImageUrl('https://evilcdninstagram.com/x.jpg')).toBe(false)
+    expect(isAllowedImageUrl('https://fake-fbcdn.net/x.jpg')).toBe(false)
   })
 
-  it('rejects http (only https)', () => {
-    expect(isAllowedVideoUrl('http://scontent.cdninstagram.com/x.mp4')).toBe(false)
-  })
-
-  it('rejects malformed URLs', () => {
-    expect(isAllowedVideoUrl('not a url')).toBe(false)
-    expect(isAllowedVideoUrl('')).toBe(false)
+  it('rejects http and malformed URLs', () => {
+    expect(isAllowedImageUrl('http://scontent.cdninstagram.com/x.jpg')).toBe(false)
+    expect(isAllowedImageUrl('not a url')).toBe(false)
+    expect(isAllowedImageUrl('')).toBe(false)
   })
 })
 
 describe('isValidReelId', () => {
   it('accepts standard Reel shortcodes', () => {
-    expect(isValidReelId('DXVsqQ7CSXw')).toBe(true)
+    expect(isValidReelId('Cwnj8o6pKbn')).toBe(true)
     expect(isValidReelId('AbC_123-xy')).toBe(true)
   })
 
   it('rejects obviously bad ids', () => {
     expect(isValidReelId('')).toBe(false)
-    expect(isValidReelId('abc')).toBe(false) // too short
+    expect(isValidReelId('abc')).toBe(false)
     expect(isValidReelId('../../../etc/passwd')).toBe(false)
-    expect(isValidReelId('a'.repeat(30))).toBe(false) // too long
+    expect(isValidReelId('a'.repeat(30))).toBe(false)
   })
 })
 
-describe('fetchReelMetadata', () => {
-  beforeEach(() => {
-    mockFetch.mockReset()
-  })
+describe('fetchReelMetadata (Instagram-direct, no video)', () => {
+  beforeEach(() => mockFetch.mockReset())
 
   it('returns null for invalid ids without hitting the network', async () => {
-    const result = await fetchReelMetadata('../etc')
-    expect(result).toBeNull()
+    expect(await fetchReelMetadata('../etc')).toBeNull()
     expect(mockFetch).not.toHaveBeenCalled()
   })
 
-  it('parses OG tags from the first successful mirror', async () => {
+  it('parses poster, caption and author from Instagram OG tags', async () => {
     mockFetch.mockResolvedValueOnce(htmlResponse(validHtml))
 
-    const result = await fetchReelMetadata('DXVsqQ7CSXw')
+    const result = await fetchReelMetadata('Cwnj8o6pKbn')
 
     expect(result).toEqual({
-      videoUrl: CDN_VIDEO,
       imageUrl: CDN_IMAGE,
-      title: 'Cool Reel',
-      description: 'A description',
-      author: undefined,
+      caption: 'PLEASE VOTE FOR ME',
+      description: '34K likes, 419 comments - pennylaneisthename on August 31, 2023: caption',
+      author: '@pennylaneisthename',
+      authorName: 'Penny Lane',
     })
-    // Should hit /p/ path on the first mirror.
+    // Hits instagram.com directly on the /reel/ path first.
     expect(mockFetch).toHaveBeenCalledTimes(1)
-    expect(mockFetch.mock.calls[0][0]).toContain('/p/DXVsqQ7CSXw')
+    expect(mockFetch.mock.calls[0][0]).toBe('https://www.instagram.com/reel/Cwnj8o6pKbn/')
   })
 
-  it('falls back to /reels/ path when /p/ fails', async () => {
-    mockFetch
-      .mockResolvedValueOnce(notFoundResponse()) // /p/ fails on first mirror
-      .mockResolvedValueOnce(htmlResponse(validHtml)) // /reels/ succeeds
-
-    const result = await fetchReelMetadata('DXVsqQ7CSXw')
-
-    expect(result?.videoUrl).toBe(CDN_VIDEO)
-    expect(mockFetch).toHaveBeenCalledTimes(2)
-    expect(mockFetch.mock.calls[1][0]).toContain('/reels/DXVsqQ7CSXw')
+  it('never exposes a video URL (Instagram no longer resolvable to MP4)', async () => {
+    mockFetch.mockResolvedValueOnce(htmlResponse(validHtml))
+    const result = await fetchReelMetadata('Cwnj8o6pKbn')
+    expect(result).not.toHaveProperty('videoUrl')
   })
 
-  it('tries the next mirror when both paths fail on the first', async () => {
-    mockFetch
-      .mockResolvedValueOnce(notFoundResponse())
-      .mockResolvedValueOnce(notFoundResponse())
-      .mockResolvedValueOnce(htmlResponse(validHtml))
-
-    const result = await fetchReelMetadata('DXVsqQ7CSXw')
-
-    expect(result?.videoUrl).toBe(CDN_VIDEO)
-    // First mirror both paths, then second mirror /p/ succeeds.
-    expect(mockFetch).toHaveBeenCalledTimes(3)
-    expect(new URL(mockFetch.mock.calls[0][0]).host).toBe('toinstagram.com')
-    expect(new URL(mockFetch.mock.calls[2][0]).host).toBe('uuinstagram.com')
-  })
-
-  it('rejects non-Instagram video URLs (SSRF defense)', async () => {
+  it('drops a thumbnail that is not on an allowlisted CDN host (SSRF defense)', async () => {
     const evilHtml = `
       <html><head>
-      <meta property="og:video:secure_url" content="https://evil.com/payload.mp4" />
       <meta property="og:image" content="https://evil.com/thumb.jpg" />
+      <meta property="og:title" content="X on Instagram: hello" />
       </head></html>
     `
-    // All 4 mirror+path combinations return the evil HTML; none should be accepted.
-    for (let i = 0; i < 4; i++) mockFetch.mockResolvedValueOnce(htmlResponse(evilHtml))
-
-    const result = await fetchReelMetadata('DXVsqQ7CSXw')
-    expect(result).toBeNull()
+    mockFetch.mockResolvedValueOnce(htmlResponse(evilHtml))
+    const result = await fetchReelMetadata('Cwnj8o6pKbn')
+    expect(result?.imageUrl).toBeUndefined()
+    expect(result?.caption).toBe('hello')
   })
 
-  it('returns null when og:video is absent', async () => {
-    const noVideoHtml = `
-      <html><head>
-      <meta property="og:image" content="${CDN_IMAGE}" />
-      <meta property="og:title" content="Photo post" />
-      </head></html>
-    `
-    for (let i = 0; i < 4; i++) mockFetch.mockResolvedValueOnce(htmlResponse(noVideoHtml))
+  it('falls back to the /p/ path when /reel/ yields nothing', async () => {
+    mockFetch
+      .mockResolvedValueOnce(notFoundResponse())
+      .mockResolvedValueOnce(htmlResponse(validHtml))
 
-    const result = await fetchReelMetadata('DXVsqQ7CSXw')
-    expect(result).toBeNull()
+    const result = await fetchReelMetadata('Cwnj8o6pKbn')
+    expect(result?.author).toBe('@pennylaneisthename')
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+    expect(mockFetch.mock.calls[1][0]).toBe('https://www.instagram.com/p/Cwnj8o6pKbn/')
   })
 
-  it('resolves relative video URLs against the mirror origin', async () => {
-    // This is the real-world InstaFix behavior: og:video is a relative path
-    // pointing back to the mirror's own /videos/ proxy endpoint.
-    const html = `
-      <html><head>
-      <meta name="twitter:title" content="@some_user" />
-      <meta name="twitter:player:stream" content="/videos/DXVsqQ7CSXw/1" />
-      <meta name="twitter:player:stream:content_type" content="video/mp4" />
-      <meta property="og:video" content="/videos/DXVsqQ7CSXw/1" />
-      <meta property="og:video:secure_url" content="/videos/DXVsqQ7CSXw/1" />
-      <meta property="og:description" content="Caption text" />
-      </head></html>
-    `
-    mockFetch.mockResolvedValueOnce(htmlResponse(html))
-
-    const result = await fetchReelMetadata('DXVsqQ7CSXw')
-    expect(result?.videoUrl).toBe('https://toinstagram.com/videos/DXVsqQ7CSXw/1')
-    expect(result?.author).toBe('@some_user')
-    expect(result?.description).toBe('Caption text')
+  it('returns null when Instagram serves no usable OG tags', async () => {
+    mockFetch
+      .mockResolvedValueOnce(htmlResponse('<html><head></head></html>'))
+      .mockResolvedValueOnce(htmlResponse('<html><head></head></html>'))
+    expect(await fetchReelMetadata('Cwnj8o6pKbn')).toBeNull()
   })
 
-  it('survives per-mirror network errors and keeps trying', async () => {
+  it('survives network errors and returns null', async () => {
+    // Both paths (/reel/ then /p/) reject; each is caught and yields null.
     mockFetch
       .mockRejectedValueOnce(new Error('ECONNREFUSED'))
       .mockRejectedValueOnce(new Error('ECONNREFUSED'))
-      .mockResolvedValueOnce(htmlResponse(validHtml))
-
-    const result = await fetchReelMetadata('DXVsqQ7CSXw')
-    expect(result?.videoUrl).toBe(CDN_VIDEO)
+    expect(await fetchReelMetadata('Cwnj8o6pKbn')).toBeNull()
   })
 
-  it('falls through to og:video when og:video:secure_url is missing', async () => {
+  it('decodes HTML entities in the caption', async () => {
     const html = `
       <html><head>
-      <meta property="og:video" content="${CDN_VIDEO}" />
       <meta property="og:image" content="${CDN_IMAGE}" />
+      <meta property="og:title" content="Bob on Instagram: caption &amp; &quot;quoted&quot;" />
       </head></html>
     `
     mockFetch.mockResolvedValueOnce(htmlResponse(html))
-    const result = await fetchReelMetadata('DXVsqQ7CSXw')
-    expect(result?.videoUrl).toBe(CDN_VIDEO)
-  })
-
-  it('decodes HTML entities in meta content', async () => {
-    const html = `
-      <html><head>
-      <meta property="og:video:secure_url" content="${CDN_VIDEO}&amp;sig=abc" />
-      <meta property="og:title" content="Title &amp; caption &quot;quoted&quot;" />
-      </head></html>
-    `
-    mockFetch.mockResolvedValueOnce(htmlResponse(html))
-    const result = await fetchReelMetadata('DXVsqQ7CSXw')
-    expect(result?.videoUrl).toBe(`${CDN_VIDEO}&sig=abc`)
-    expect(result?.title).toBe('Title & caption "quoted"')
+    const result = await fetchReelMetadata('Cwnj8o6pKbn')
+    expect(result?.caption).toBe('caption & "quoted"')
   })
 })

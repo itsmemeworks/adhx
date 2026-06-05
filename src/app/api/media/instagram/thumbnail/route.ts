@@ -1,29 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { captureException } from '@/lib/sentry'
-import { isValidReelId } from '@/lib/media/instafix'
+import { fetchReelMetadata, isAllowedImageUrl, isValidReelId } from '@/lib/media/instafix'
 
 /**
  * Instagram Reel thumbnail proxy.
  *
  * GET /api/media/instagram/thumbnail?id={reelId}
  *
- * Two-mirror reality: `toinstagram.com` (our primary metadata source) only
- * exposes `og:video`. `uuinstagram.com` only exposes `og:image` (pointing
- * at `scontent-*.cdninstagram.com`). So we use toinstagram for video URLs
- * (see `fetchReelMetadata`) and uuinstagram here for thumbnails.
+ * Resolves the Reel's `og:image` fresh from Instagram (see fetchReelMetadata)
+ * and re-serves it from our origin. Two reasons for the proxy:
+ *   1. The `og:image` CDN URL is signed and expires, so we can't store it on a
+ *      bookmark — re-resolving per request keeps saved Reels' posters working.
+ *   2. Keeps the (allowlisted) CDN host out of the client and gives us caching.
  *
- * Instagram CDN returns 403 to cross-origin browser image loads, so the
- * server fetches with proper UA + Referer and re-serves from our origin.
- *
- * In-memory cache for the resolved CDN URL avoids hammering uuinstagram
+ * Short in-memory cache of the resolved CDN URL avoids re-scraping Instagram
  * for every gallery view of the same Reel.
  */
 
 const thumbnailUrlCache = new Map<string, { url: string; ts: number }>()
-const CACHE_TTL = 60 * 60 * 1000
-
-const OG_IMAGE_RE =
-  /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i
+const CACHE_TTL = 30 * 60 * 1000 // 30 min — under the signed-URL expiry window
 
 export async function GET(request: NextRequest) {
   const id = request.nextUrl.searchParams.get('id')
@@ -40,37 +35,11 @@ export async function GET(request: NextRequest) {
     }
 
     if (!cdnUrl) {
-      // Try uuinstagram /p/{id} first (more reliable than /reels/ per upstream)
-      const mirrorResponse = await fetch(`https://uuinstagram.com/p/${id}`, {
-        signal: AbortSignal.timeout(8_000),
-        headers: { 'User-Agent': 'Twitterbot/1.0', Accept: 'text/html' },
-        redirect: 'follow',
-      })
-
-      if (!mirrorResponse.ok) {
-        return NextResponse.json({ error: 'Mirror unavailable' }, { status: 502 })
+      const meta = await fetchReelMetadata(id)
+      if (!meta?.imageUrl) {
+        return NextResponse.json({ error: 'No thumbnail available' }, { status: 404 })
       }
-
-      // uuinstagram returns the full IG page (~850KB) — bail early at </head>
-      const reader = mirrorResponse.body?.getReader()
-      if (!reader) return NextResponse.json({ error: 'No body' }, { status: 502 })
-      let html = ''
-      const decoder = new TextDecoder()
-      const maxBytes = 512 * 1024
-      while (html.length < maxBytes) {
-        const { done, value } = await reader.read()
-        if (done) break
-        html += decoder.decode(value, { stream: true })
-        if (html.includes('</head>')) break
-      }
-      reader.cancel().catch(() => {})
-
-      const match = html.match(OG_IMAGE_RE)
-      if (!match) {
-        return NextResponse.json({ error: 'No thumbnail in mirror response' }, { status: 404 })
-      }
-
-      cdnUrl = match[1].replace(/&amp;/g, '&').replace(/&#x27;/g, "'")
+      cdnUrl = meta.imageUrl
       thumbnailUrlCache.set(id, { url: cdnUrl, ts: Date.now() })
 
       if (thumbnailUrlCache.size > 1000) {
@@ -79,6 +48,11 @@ export async function GET(request: NextRequest) {
           if (now - v.ts > CACHE_TTL) thumbnailUrlCache.delete(k)
         }
       }
+    }
+
+    // Defense-in-depth: never fetch a URL that isn't an allowlisted IG CDN host.
+    if (!isAllowedImageUrl(cdnUrl)) {
+      return NextResponse.json({ error: 'Untrusted thumbnail source' }, { status: 403 })
     }
 
     const imageResponse = await fetch(cdnUrl, {
@@ -91,6 +65,9 @@ export async function GET(request: NextRequest) {
     })
 
     if (!imageResponse.ok || !imageResponse.body) {
+      // The signed URL may have expired between resolve and fetch — drop the
+      // cache entry so the next request re-resolves.
+      thumbnailUrlCache.delete(id)
       return NextResponse.json({ error: 'Failed to fetch thumbnail' }, { status: 502 })
     }
 

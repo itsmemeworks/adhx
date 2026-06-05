@@ -23,11 +23,12 @@ export default async function ReelPreviewPage({ params }: Props) {
   return (
     <InstagramPreviewLanding
       reelId={id}
-      title={meta?.title}
+      caption={meta?.caption}
       description={meta?.description}
-      imageUrl={meta?.imageUrl}
+      // Served via the proxy (re-resolves the signed CDN URL fresh).
+      imageUrl={meta?.imageUrl ? `/api/media/instagram/thumbnail?id=${encodeURIComponent(id)}` : undefined}
       author={meta?.author}
-      hasVideo={!!meta?.videoUrl}
+      authorName={meta?.authorName}
       isAuthenticated={!!session}
     />
   )
@@ -46,15 +47,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const canonicalUrl = `${baseUrl}/reels/${id}`
   const meta = await fetchReelMetadata(id)
 
-  const title = meta?.title || `Instagram Reel — Download on ADHX`
-  const description = meta?.description || 'Download this Instagram Reel as MP4.'
-  const image = meta?.imageUrl || `${baseUrl}/og-logo.png`
+  const who = meta?.authorName || meta?.author
+  const title = who ? `${who} on Instagram — Save to ADHX` : 'Instagram Reel — Save to ADHX'
+  const description = meta?.caption || meta?.description || 'Save this Instagram Reel to your ADHX collection.'
+  const image = meta?.imageUrl
+    ? `${baseUrl}/api/media/instagram/thumbnail?id=${encodeURIComponent(id)}`
+    : `${baseUrl}/og-logo.png`
 
   return {
     title,
     description,
     openGraph: {
-      type: 'video.other',
+      type: 'article',
       title,
       description,
       siteName: 'ADHX',

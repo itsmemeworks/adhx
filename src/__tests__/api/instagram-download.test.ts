@@ -1,147 +1,36 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { NextRequest } from 'next/server'
 
 /**
- * API Route Tests: /api/media/instagram/video/download
+ * API Route Tests: Instagram video + download endpoints.
  *
- * Streams Instagram Reel videos through the server with
- * Content-Disposition: attachment for instant browser downloads.
+ * Instagram video is no longer resolvable (the InstaFix mirrors are dead and
+ * Instagram exposes no og:video), so both endpoints are degraded to a stable
+ * 410 Gone. See src/lib/media/instafix.ts.
  */
 
-const mockFetchReelMetadata = vi.fn()
-
-vi.mock('@/lib/media/instafix', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/media/instafix')>(
-    '@/lib/media/instafix',
-  )
-  return {
-    ...actual,
-    fetchReelMetadata: mockFetchReelMetadata,
-  }
-})
-
-const mockFetch = vi.fn()
-global.fetch = mockFetch as unknown as typeof fetch
-
-function createRequest(id: string | null): NextRequest {
-  const url = new URL('http://localhost:3000/api/media/instagram/video/download')
+function createRequest(path: string, id: string | null): NextRequest {
+  const url = new URL(`http://localhost:3000${path}`)
   if (id !== null) url.searchParams.set('id', id)
   return new NextRequest(url)
 }
 
-const VALID_ID = 'DXVsqQ7CSXw'
-const CDN_VIDEO = 'https://scontent-lhr8-1.cdninstagram.com/v/video.mp4'
+describe('Instagram video endpoints (degraded)', () => {
+  it('video route returns 410 with a link-out message', async () => {
+    const { GET } = await import('@/app/api/media/instagram/video/route')
+    const response = await GET(createRequest('/api/media/instagram/video', 'DXVsqQ7CSXw'))
 
-describe('API: /api/media/instagram/video/download', () => {
-  beforeEach(() => {
-    mockFetchReelMetadata.mockReset()
-    mockFetch.mockReset()
-    vi.resetModules()
+    expect(response.status).toBe(410)
+    const data = await response.json()
+    expect(data.error).toMatch(/instagram/i)
   })
 
-  describe('Input validation', () => {
-    it('returns 400 when id is missing', async () => {
-      const { GET } = await import('@/app/api/media/instagram/video/download/route')
-      const response = await GET(createRequest(null))
+  it('download route returns 410 with a link-out message', async () => {
+    const { GET } = await import('@/app/api/media/instagram/video/download/route')
+    const response = await GET(createRequest('/api/media/instagram/video/download', 'DXVsqQ7CSXw'))
 
-      expect(response.status).toBe(400)
-      const data = await response.json()
-      expect(data.error).toContain('Missing or invalid id')
-    })
-
-    it('returns 400 when id has an unsafe shape', async () => {
-      const { GET } = await import('@/app/api/media/instagram/video/download/route')
-      const response = await GET(createRequest('../../../etc/passwd'))
-
-      expect(response.status).toBe(400)
-    })
-  })
-
-  describe('Metadata resolution', () => {
-    it('returns 404 when the reel cannot be resolved', async () => {
-      mockFetchReelMetadata.mockResolvedValueOnce(null)
-
-      const { GET } = await import('@/app/api/media/instagram/video/download/route')
-      const response = await GET(createRequest(VALID_ID))
-
-      expect(response.status).toBe(404)
-      const data = await response.json()
-      expect(data.error).toContain('not found')
-    })
-
-    it('returns 403 when the resolved URL is not on the CDN allowlist', async () => {
-      mockFetchReelMetadata.mockResolvedValueOnce({
-        videoUrl: 'https://evil.com/payload.mp4',
-      })
-
-      const { GET } = await import('@/app/api/media/instagram/video/download/route')
-      const response = await GET(createRequest(VALID_ID))
-
-      expect(response.status).toBe(403)
-      expect(mockFetch).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('Download streaming', () => {
-    it('sets Content-Disposition attachment with instagram-{id}.mp4 filename', async () => {
-      mockFetchReelMetadata.mockResolvedValueOnce({ videoUrl: CDN_VIDEO })
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        body: new ReadableStream(),
-        headers: new Headers({
-          'content-type': 'video/mp4',
-          'content-length': '1048576',
-        }),
-      })
-
-      const { GET } = await import('@/app/api/media/instagram/video/download/route')
-      const response = await GET(createRequest(VALID_ID))
-
-      expect(response.status).toBe(200)
-      expect(response.headers.get('content-disposition')).toBe(
-        `attachment; filename="instagram-${VALID_ID}.mp4"`,
-      )
-      expect(response.headers.get('content-type')).toBe('video/mp4')
-      expect(response.headers.get('content-length')).toBe('1048576')
-    })
-
-    it('returns 502 when the upstream CDN fetch fails', async () => {
-      mockFetchReelMetadata.mockResolvedValueOnce({ videoUrl: CDN_VIDEO })
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        status: 403,
-        body: null,
-        headers: new Headers(),
-      })
-
-      const { GET } = await import('@/app/api/media/instagram/video/download/route')
-      const response = await GET(createRequest(VALID_ID))
-
-      expect(response.status).toBe(502)
-      const data = await response.json()
-      expect(data.error).toContain('Failed to fetch video')
-    })
-
-    it('uses a 30s timeout and browser-like UA on the upstream fetch', async () => {
-      mockFetchReelMetadata.mockResolvedValueOnce({ videoUrl: CDN_VIDEO })
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        body: new ReadableStream(),
-        headers: new Headers({ 'content-type': 'video/mp4' }),
-      })
-
-      const { GET } = await import('@/app/api/media/instagram/video/download/route')
-      await GET(createRequest(VALID_ID))
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        CDN_VIDEO,
-        expect.objectContaining({
-          signal: expect.any(AbortSignal),
-          headers: expect.objectContaining({
-            'User-Agent': expect.stringContaining('Mozilla'),
-          }),
-        }),
-      )
-    })
+    expect(response.status).toBe(410)
+    const data = await response.json()
+    expect(data.error).toMatch(/instagram/i)
   })
 })

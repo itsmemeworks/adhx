@@ -103,32 +103,35 @@ async function addInstagramReel(userId: string, reelId: string, source: string) 
   }
 
   const now = new Date().toISOString()
-  const author = (meta.author || '').replace(/^@/, '') || 'instagram'
-  const reelUrl = `https://www.instagram.com/reels/${reelId}/`
+  const handle = (meta.author || '').replace(/^@/, '') || 'instagram'
+  const reelUrl = `https://www.instagram.com/reel/${reelId}/`
 
   await db.insert(bookmarks).values({
     id: reelId,
     userId,
     platform: 'instagram',
-    author,
-    authorName: meta.author || null,
+    author: handle,
+    authorName: meta.authorName || meta.author || null,
     authorProfileImageUrl: null,
-    text: meta.description || meta.title || '',
+    text: meta.caption || meta.description || '',
     tweetUrl: reelUrl,
     processedAt: now,
     category: 'video',
     source,
   })
 
-  if (meta.videoUrl) {
+  // Instagram is degraded to poster + caption + link-out (no video). Store a
+  // photo media row so the gallery renders the poster; the actual image is
+  // served fresh via the thumbnail proxy (the stored CDN URL is signed/expiring).
+  if (meta.imageUrl) {
     await db.insert(bookmarkMedia).values({
-      id: `${reelId}_video_0`,
+      id: `${reelId}_photo_0`,
       userId,
       platform: 'instagram',
       bookmarkId: reelId,
-      mediaType: 'video',
-      originalUrl: meta.videoUrl,
-      previewUrl: meta.imageUrl || null,
+      mediaType: 'photo',
+      originalUrl: meta.imageUrl,
+      previewUrl: meta.imageUrl,
     }).onConflictDoNothing()
   }
 

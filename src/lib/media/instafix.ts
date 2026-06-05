@@ -1,61 +1,50 @@
 /**
- * Instagram metadata via InstaFix-style mirrors.
+ * Instagram Reel/post metadata — Instagram-direct (degraded, no video).
  *
- * Instagram has no public JSON API for Reel content. InstaFix mirrors
- * (toinstagram.com, uuinstagram.com, and forks) serve HTML with OpenGraph
- * tags — the Instagram analog of FxTwitter.
+ * History: ADHX used to resolve a streamable MP4 via InstaFix-style mirrors
+ * (toinstagram.com / uuinstagram.com). Those mirrors are dead as of mid-2026 —
+ * the upstream Wikidepia/InstaFix project was archived 2026-04-02 and the
+ * forks now 302-redirect to instagram.com because Instagram cut off the
+ * anonymous scraping they relied on. No drop-in replacement exists.
  *
- * Two real-world quirks this module handles:
+ * What still works: Instagram's own pages serve OpenGraph tags to bots
+ * (Twitterbot UA) — `og:image` (thumbnail), `og:title`/`og:description`
+ * (caption + engagement), and `twitter:title` (author). It does NOT expose
+ * `og:video`. So we degrade gracefully: poster + caption + author + a
+ * link out to Instagram. No inline playback, no MP4 download.
  *
- * 1. The `og:video` URL is **relative** (e.g. `/videos/{id}/1`) and points
- *    back to the mirror's own streaming endpoint. Direct Instagram CDN URLs
- *    return 403 to any client that isn't Instagram-authenticated, so we have
- *    no choice but to proxy through the mirror.
- *
- * 2. InstaFix has a known issue where `/reel/` variants sometimes fail to
- *    render while `/p/` works (upstream issue #93), so we try both per
- *    mirror before falling through.
- *
- * The upstream project (Wikidepia/InstaFix) was archived 2026-04-02 and
- * individual mirrors come and go. We treat any video URL not on our trust
- * list as hostile (SSRF guard).
+ * The `og:image` URL is a signed `*.cdninstagram.com` link that expires, so
+ * callers that need a durable thumbnail should go through the thumbnail proxy
+ * (`/api/media/instagram/thumbnail?id=`), which re-resolves it fresh.
  */
 
-// Ordered by observed reliability as of 2026-04-21.
-const MIRRORS = ['https://toinstagram.com', 'https://uuinstagram.com'] as const
-
-// Hosts we trust to return a streamable MP4. Direct CDN hosts are here for
-// completeness (some mirrors do serve direct links), but in practice the
-// mirror's own /videos/ proxy is what works.
-const ALLOWED_VIDEO_HOSTS = [
-  'cdninstagram.com',
-  'fbcdn.net',
-  'toinstagram.com',
-  'uuinstagram.com',
-] as const
+// Hosts we trust to serve a Reel thumbnail (SSRF allowlist for the proxy).
+const ALLOWED_IMAGE_HOSTS = ['cdninstagram.com', 'fbcdn.net'] as const
 
 const ID_PATTERN = /^[A-Za-z0-9_-]{5,20}$/
 
 export interface ReelMetadata {
-  /** A streamable URL — either an Instagram CDN link or a trusted mirror's video proxy. */
-  videoUrl: string
+  /** Thumbnail URL on a `*.cdninstagram.com` host (signed, expiring). */
   imageUrl?: string
-  title?: string
+  /** Cleaned caption text. */
+  caption?: string
+  /** Raw `og:description` (e.g. "34K likes, 419 comments - user on …: caption"). */
   description?: string
-  /** Instagram handle, e.g. `@username`, when the mirror exposes it. */
+  /** Instagram handle, e.g. `@username`. */
   author?: string
+  /** Display name, e.g. "Penny Lane". */
+  authorName?: string
 }
 
 /**
- * Whether a URL points at a trusted video source — either Meta's CDN or
- * one of the mirror video proxies. Exact-match or dot-prefixed subdomain
- * (never `.includes()` — that's an SSRF footgun).
+ * Whether a URL points at a trusted Instagram image host. Exact-match or
+ * dot-prefixed subdomain (never `.includes()` — that's an SSRF footgun).
  */
-export function isAllowedVideoUrl(url: string): boolean {
+export function isAllowedImageUrl(url: string): boolean {
   try {
     const parsed = new URL(url)
     if (parsed.protocol !== 'https:') return false
-    return ALLOWED_VIDEO_HOSTS.some(
+    return ALLOWED_IMAGE_HOSTS.some(
       (host) => parsed.hostname === host || parsed.hostname.endsWith(`.${host}`),
     )
   } catch {
@@ -69,31 +58,26 @@ export function isValidReelId(id: string): boolean {
 }
 
 /**
- * Resolve a Reel's direct video URL + metadata via an InstaFix mirror.
- *
- * We try `/p/` first (more reliable per upstream issue #93), then `/reels/`,
- * per mirror. First mirror that yields a trusted video URL wins.
+ * Resolve a Reel's poster + caption + author from Instagram's own OG tags.
+ * Returns null only when the post is unavailable (private/removed) or
+ * Instagram served nothing usable.
  */
 export async function fetchReelMetadata(id: string): Promise<ReelMetadata | null> {
   if (!isValidReelId(id)) return null
 
-  for (const mirror of MIRRORS) {
-    for (const path of [`/p/${id}`, `/reels/${id}`]) {
-      const meta = await tryMirror(mirror, path)
-      if (meta) return meta
-    }
+  for (const path of [`/reel/${id}/`, `/p/${id}/`]) {
+    const meta = await fetchFromInstagram(path)
+    if (meta) return meta
   }
   return null
 }
 
-async function tryMirror(mirror: string, path: string): Promise<ReelMetadata | null> {
+async function fetchFromInstagram(path: string): Promise<ReelMetadata | null> {
   try {
-    const response = await fetch(`${mirror}${path}`, {
+    const response = await fetch(`https://www.instagram.com${path}`, {
       signal: AbortSignal.timeout(8_000),
-      headers: {
-        'User-Agent': 'Twitterbot/1.0',
-        Accept: 'text/html',
-      },
+      // Instagram serves OG tags to recognised crawlers, not to plain browsers.
+      headers: { 'User-Agent': 'Twitterbot/1.0', Accept: 'text/html' },
       redirect: 'follow',
     })
 
@@ -104,9 +88,10 @@ async function tryMirror(mirror: string, path: string): Promise<ReelMetadata | n
     const reader = response.body?.getReader()
     if (!reader) return null
 
+    // Instagram's HTML is ~800KB but the OG tags live in <head>; bail early.
     let html = ''
     const decoder = new TextDecoder()
-    const maxBytes = 256 * 1024
+    const maxBytes = 512 * 1024
     while (html.length < maxBytes) {
       const { done, value } = await reader.read()
       if (done) break
@@ -115,55 +100,65 @@ async function tryMirror(mirror: string, path: string): Promise<ReelMetadata | n
     }
     reader.cancel().catch(() => {})
 
-    return parseReelOg(html, mirror)
+    return parseInstagramOg(html)
   } catch {
     return null
   }
 }
 
-function parseReelOg(html: string, mirrorOrigin: string): ReelMetadata | null {
-  const rawVideo =
-    getMeta(html, 'og:video:secure_url') ||
-    getMeta(html, 'og:video') ||
-    getMeta(html, 'twitter:player:stream')
+function parseInstagramOg(html: string): ReelMetadata | null {
+  const rawImage = getMeta(html, 'og:image') || getMeta(html, 'twitter:image')
+  const ogTitle = getMeta(html, 'og:title')
+  const twitterTitle = getMeta(html, 'twitter:title')
+  const description = getMeta(html, 'og:description') || getMeta(html, 'twitter:description')
 
-  if (!rawVideo) return null
+  // Nothing usable → treat as unavailable.
+  if (!rawImage && !ogTitle && !description) return null
 
-  // Mirror OG tags typically use a path like `/videos/{id}/1` — resolve
-  // against the mirror origin so the caller gets an absolute URL.
-  const resolved = resolveAgainstOrigin(rawVideo, mirrorOrigin)
-  if (!resolved || !isAllowedVideoUrl(resolved)) return null
+  const imageUrl = rawImage && isAllowedImageUrl(rawImage) ? rawImage : undefined
 
   return {
-    videoUrl: resolved,
-    imageUrl: pickAbsolute(
-      getMeta(html, 'og:image') || getMeta(html, 'twitter:image'),
-      mirrorOrigin,
-    ),
-    title: getMeta(html, 'og:title') || getMeta(html, 'twitter:title'),
-    description: getMeta(html, 'og:description') || getMeta(html, 'twitter:description'),
-    author: parseAuthor(getMeta(html, 'twitter:title')),
+    imageUrl,
+    caption: parseCaption(ogTitle) || description,
+    description,
+    author: parseHandle(twitterTitle) || parseHandle(ogTitle) || parseHandle(description),
+    authorName: parseDisplayName(twitterTitle) || parseDisplayName(ogTitle),
   }
 }
 
-function resolveAgainstOrigin(url: string, origin: string): string | null {
-  try {
-    return new URL(url, origin).toString()
-  } catch {
-    return null
+/**
+ * og:title is e.g. `Penny Lane on Instagram: "PLEASE VOTE FOR ME…"`.
+ * Strip the `<name> on Instagram:` prefix and surrounding quotes.
+ */
+function parseCaption(ogTitle: string | undefined): string | undefined {
+  if (!ogTitle) return undefined
+  let s = ogTitle.replace(/^.*?\s+on Instagram:\s*/i, '').trim()
+  // Strip wrapping quotes only when the whole caption is quoted — don't clip a
+  // caption that merely ends with a quote (e.g. `say "hi"`).
+  if (/^["“]/.test(s) && /["”]$/.test(s)) {
+    s = s.slice(1, -1).trim()
   }
+  return s || undefined
 }
 
-function pickAbsolute(url: string | undefined, origin: string): string | undefined {
-  if (!url) return undefined
-  const resolved = resolveAgainstOrigin(url, origin)
-  return resolved || undefined
+/** Pull an `@handle` out of an OG string. */
+function parseHandle(text: string | undefined): string | undefined {
+  if (!text) return undefined
+  const m = text.match(/@([A-Za-z0-9._]+)/)
+  return m ? `@${m[1]}` : undefined
 }
 
-function parseAuthor(twitterTitle: string | undefined): string | undefined {
-  if (!twitterTitle) return undefined
-  const match = twitterTitle.match(/@([A-Za-z0-9._]+)/)
-  return match ? `@${match[1]}` : undefined
+/**
+ * Display name from `twitter:title` ("Penny Lane (@handle) • Instagram reel")
+ * or `og:title` ("Penny Lane on Instagram: …").
+ */
+function parseDisplayName(title: string | undefined): string | undefined {
+  if (!title) return undefined
+  const paren = title.match(/^(.+?)\s*\(@[A-Za-z0-9._]+\)/)
+  if (paren) return paren[1].trim() || undefined
+  const onIg = title.match(/^(.+?)\s+on Instagram:/i)
+  if (onIg) return onIg[1].trim() || undefined
+  return undefined
 }
 
 function getMeta(html: string, property: string): string | undefined {
@@ -180,11 +175,24 @@ function getMeta(html: string, property: string): string | undefined {
 
 function decodeHtmlEntities(str: string): string {
   return str
-    .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
-    .replace(/&#x27;/g, "'")
-    .replace(/&#x2F;/g, '/')
+    .replace(/&#x27;/gi, "'")
+    .replace(/&#x2F;/gi, '/')
+    // Numeric entities (emoji etc.) — IG captions are full of these.
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => codePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => codePoint(parseInt(d, 10)))
+    // Ampersand last, so it doesn't corrupt the entities above.
+    .replace(/&amp;/g, '&')
+}
+
+function codePoint(n: number): string {
+  if (!Number.isFinite(n) || n < 0 || n > 0x10ffff) return ''
+  try {
+    return String.fromCodePoint(n)
+  } catch {
+    return ''
+  }
 }

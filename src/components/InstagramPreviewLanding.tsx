@@ -1,56 +1,47 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ArrowRight,
-  Check,
-  Download,
   ExternalLink,
   Instagram,
   Loader2,
-  Play,
   Plus,
   Search,
-  Share2,
   Sparkles,
   Zap,
 } from 'lucide-react'
 import { ADHX_PURPLE } from '@/lib/gestalt/theme'
 import { AnimatedBackground, LandingAnimations } from '@/components/landing'
-import { isTouchDevice } from '@/components/feed/utils'
 import { XIcon } from '@/components/icons'
-import { cn } from '@/lib/utils'
 
 interface InstagramPreviewLandingProps {
   reelId: string
-  title?: string
+  caption?: string
   description?: string
   imageUrl?: string
   author?: string
-  hasVideo: boolean
+  authorName?: string
   isAuthenticated?: boolean
 }
 
 export function InstagramPreviewLanding({
   reelId,
-  title,
+  caption,
   description,
   imageUrl,
   author,
-  hasVideo,
+  authorName,
   isAuthenticated = false,
 }: InstagramPreviewLandingProps) {
   const router = useRouter()
-  const [isPlaying, setIsPlaying] = useState(false)
   const [reelUrl, setReelUrl] = useState('')
   const [urlError, setUrlError] = useState('')
   const [connecting, setConnecting] = useState(false)
   const [adding, setAdding] = useState(false)
 
   const instagramUrl = `https://www.instagram.com/reel/${reelId}/`
-  const streamUrl = `/api/media/instagram/video?id=${encodeURIComponent(reelId)}`
-  const downloadUrl = `/api/media/instagram/video/download?id=${encodeURIComponent(reelId)}`
 
   const reelUrlPattern = /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:reels?|p)\/([A-Za-z0-9_-]+)/i
 
@@ -154,10 +145,10 @@ export function InstagramPreviewLanding({
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-gray-900 dark:text-white truncate group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
-                          {author || 'Instagram'}
+                          {authorName || author || 'Instagram'}
                         </p>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {author ? 'on Instagram' : `Reel · ${reelId}`}
+                          {author ? `${author} · on Instagram` : `Reel · ${reelId}`}
                         </p>
                       </div>
                     </a>
@@ -175,85 +166,49 @@ export function InstagramPreviewLanding({
                 </header>
 
                 {/* Caption — placed above media to match X tweet text/media order */}
-                {(description || title) && (
+                {(caption || description) && (
                   <div className="px-4 py-3">
                     <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]">
-                      {description || title}
+                      {caption || description}
                     </p>
                   </div>
                 )}
 
-                {(imageUrl || hasVideo) && (
+                {/* Poster — Instagram no longer exposes a playable video, so the
+                    Reel degrades to a thumbnail that links out to Instagram. */}
+                {imageUrl && (
                   <div className="px-4 pb-3">
-                    <div
+                    <a
+                      href={instagramUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="relative block rounded-xl overflow-hidden bg-black group w-full"
                       style={{ aspectRatio: '9 / 16' }}
+                      aria-label="View on Instagram"
                     >
-                      {isPlaying && hasVideo ? (
-                        <video
-                          src={streamUrl}
-                          poster={imageUrl}
-                          controls
-                          autoPlay
-                          playsInline
-                          className="w-full h-full object-contain bg-black"
-                        />
-                      ) : (
-                        <>
-                          {imageUrl ? (
-                            <img
-                              src={imageUrl}
-                              alt={description || 'Instagram Reel thumbnail'}
-                              className="w-full h-full object-cover"
-                              referrerPolicy="no-referrer"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-900 to-pink-900">
-                              <Instagram className="w-16 h-16 text-white/40" />
-                            </div>
-                          )}
-                          {hasVideo ? (
-                            <button
-                              onClick={() => setIsPlaying(true)}
-                              className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors"
-                              aria-label="Play video"
-                            >
-                              <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                                <Play className="w-7 h-7 text-gray-900 ml-1" fill="currentColor" />
-                              </div>
-                            </button>
-                          ) : (
-                            <a
-                              href={instagramUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="absolute inset-0"
-                              aria-label="Open on Instagram"
-                            />
-                          )}
-                        </>
-                      )}
-                      {/* Floating share/download button — same pattern as TweetPreviewLanding */}
-                      {hasVideo && (
-                        <div className="absolute top-3 right-3 pointer-events-auto">
-                          <ReelShareButton
-                            reelId={reelId}
-                            streamUrl={streamUrl}
-                            downloadUrl={downloadUrl}
-                          />
-                        </div>
-                      )}
-                    </div>
+                      <img
+                        src={imageUrl}
+                        alt={caption || 'Instagram Reel thumbnail'}
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/30 transition-colors">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/70 text-white text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                          <ExternalLink className="w-4 h-4" />
+                          View on Instagram
+                        </span>
+                      </div>
+                    </a>
                   </div>
                 )}
 
-                {!imageUrl && !description && !title && (
+                {!imageUrl && !caption && !description && (
                   <div className="px-4 pb-4 text-center text-gray-500 dark:text-gray-400 text-sm">
                     <p className="mb-1">
                       Reel ID: <code className="font-mono">{reelId}</code>
                     </p>
                     <p className="text-xs">
-                      This Reel couldn&apos;t be previewed — it may be private, removed, or the embed service is down.
+                      We couldn&apos;t pull a preview for this Reel — open it on Instagram below. You can still save it to your collection.
                     </p>
                   </div>
                 )}
@@ -280,7 +235,6 @@ export function InstagramPreviewLanding({
               <div className="md:hidden mt-4 space-y-3">
                 <SidebarCta
                   isAuthenticated={isAuthenticated}
-                  hasVideo={hasVideo}
                   adding={adding}
                   connecting={connecting}
                   onAdd={handleAddToCollection}
@@ -306,7 +260,6 @@ export function InstagramPreviewLanding({
               <div className="hidden md:block space-y-3 animate-fade-in-up [animation-fill-mode:both] delay-300">
                 <SidebarCta
                   isAuthenticated={isAuthenticated}
-                  hasVideo={hasVideo}
                   adding={adding}
                   connecting={connecting}
                   onAdd={handleAddToCollection}
@@ -330,8 +283,8 @@ export function InstagramPreviewLanding({
                 />
                 <BenefitItem
                   icon={<Zap className="w-5 h-5" />}
-                  title="Download in one tap"
-                  description="MP4 straight to your device. No account. No app. No screen-record workaround."
+                  title="Save it before it vanishes"
+                  description="Poster, caption, and a link back to the source — saved to your collection in one tap."
                 />
                 <BenefitItem
                   icon={<Search className="w-5 h-5" />}
@@ -353,87 +306,14 @@ export function InstagramPreviewLanding({
   )
 }
 
-function ReelShareButton({
-  reelId,
-  streamUrl,
-  downloadUrl,
-}: {
-  reelId: string
-  streamUrl: string
-  downloadUrl: string
-}) {
-  const [isLoading, setIsLoading] = useState(false)
-  const [showSuccess, setShowSuccess] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    setIsMobile(isTouchDevice())
-  }, [])
-
-  const handleClick = async (e: React.MouseEvent) => {
-    e.stopPropagation()
-    e.preventDefault()
-    setIsLoading(true)
-    try {
-      if (isMobile && typeof navigator.share === 'function') {
-        await navigator.share({
-          url: new URL(streamUrl, window.location.origin).toString(),
-          title: `Instagram Reel ${reelId}`,
-        })
-        setShowSuccess(true)
-      } else {
-        const link = document.createElement('a')
-        link.href = downloadUrl
-        link.download = ''
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        setShowSuccess(true)
-      }
-    } catch {
-      // User cancelled share sheet or download failed — silently reset
-    } finally {
-      setIsLoading(false)
-      setTimeout(() => setShowSuccess(false), 1500)
-    }
-  }
-
-  const visibilityClass = isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-
-  return (
-    <button
-      onClick={handleClick}
-      disabled={isLoading}
-      className={cn(
-        'p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80',
-        visibilityClass,
-      )}
-      title={isMobile ? 'Share' : 'Download'}
-      aria-label={isMobile ? 'Share Reel' : 'Download Reel'}
-    >
-      {isLoading ? (
-        <Loader2 className="w-4 h-4 text-white animate-spin" />
-      ) : showSuccess ? (
-        <Check className="w-4 h-4 text-white" />
-      ) : isMobile ? (
-        <Share2 className="w-4 h-4 text-white" />
-      ) : (
-        <Download className="w-4 h-4 text-white" />
-      )}
-    </button>
-  )
-}
-
 function SidebarCta({
   isAuthenticated,
-  hasVideo,
   adding,
   connecting,
   onAdd,
   onConnect,
 }: {
   isAuthenticated: boolean
-  hasVideo: boolean
   adding: boolean
   connecting: boolean
   onAdd: () => void
@@ -444,7 +324,7 @@ function SidebarCta({
       <>
         <button
           onClick={onAdd}
-          disabled={adding || !hasVideo}
+          disabled={adding}
           className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-[1.02] hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ backgroundColor: ADHX_PURPLE }}
         >

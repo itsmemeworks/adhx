@@ -378,13 +378,26 @@ function MediaLightboxContent({
               alt=""
               className="max-w-full max-h-[50vh] lg:max-h-[80vh] rounded-xl lg:rounded-2xl object-contain"
             />
-            {/* Share/Download button for single image - uses proxy to avoid CORS */}
+            {/* Instagram is degraded to poster + link-out (no downloadable media);
+                Twitter single images keep the share/download button. */}
             <div className="absolute top-3 right-3">
-              <MediaShareButton
-                url={`/api/media/image?author=${item.author}&tweetId=${item.id}&index=1`}
-                filename={`tweet-${item.id}.jpg`}
-                mimeType="image/jpeg"
-              />
+              {item.platform === 'instagram' ? (
+                <a
+                  href={item.tweetUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/70 hover:bg-black/80 text-white text-xs font-medium transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  View on Instagram
+                </a>
+              ) : (
+                <MediaShareButton
+                  url={`/api/media/image?author=${item.author}&tweetId=${item.id}&index=1`}
+                  filename={`tweet-${item.id}.jpg`}
+                  mimeType="image/jpeg"
+                />
+              )}
             </div>
           </div>
         )}
