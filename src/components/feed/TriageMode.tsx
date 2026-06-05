@@ -487,10 +487,12 @@ function TriageCard({ item }: { item: FeedItem }) {
     : null
 
   return (
-    // Media on top (portrait) / left (landscape); content card below / right.
-    <div className="w-full flex flex-col lg:flex-row gap-3 lg:gap-4 lg:items-stretch">
+    // Media is the hero (as large as the viewport allows); the content card is
+    // a compact, content-hugging panel — below in portrait, beside in landscape.
+    // items-center (not stretch) so the card never stretches into white space.
+    <div className="w-full flex flex-col lg:flex-row gap-3 lg:gap-5 items-center justify-center">
       {media?.thumbnailUrl && (
-        <div className="lg:w-[42%] flex-shrink-0 flex items-center justify-center">
+        <div className="flex-1 min-w-0 w-full flex items-center justify-center">
           {videoSrc ? (
             <video
               key={item.id}
@@ -500,14 +502,14 @@ function TriageCard({ item }: { item: FeedItem }) {
               loop
               autoPlay
               playsInline
-              className="w-full max-h-[36vh] lg:max-h-[74vh] rounded-2xl object-contain bg-black"
+              className="max-w-full w-auto max-h-[50vh] lg:max-h-[84vh] rounded-2xl object-contain bg-black"
             />
           ) : (
             <a href={item.tweetUrl} target="_blank" rel="noopener noreferrer" className="block w-full">
               <img
                 src={media.thumbnailUrl}
                 alt=""
-                className="w-full max-h-[36vh] lg:max-h-[74vh] rounded-2xl object-contain bg-black"
+                className="max-w-full w-auto max-h-[50vh] lg:max-h-[84vh] rounded-2xl object-contain bg-black"
                 referrerPolicy="no-referrer"
               />
             </a>
@@ -515,7 +517,7 @@ function TriageCard({ item }: { item: FeedItem }) {
         </div>
       )}
 
-      <article className="flex-1 min-w-0 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl flex flex-col max-h-[42vh] lg:max-h-[74vh] overflow-hidden">
+      <article className={`w-full ${media ? "lg:w-[340px]" : "lg:max-w-xl"} flex-shrink-0 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl flex flex-col max-h-[32vh] lg:max-h-[84vh] overflow-hidden`}>
         <header className="flex items-start gap-3 p-4 pb-2 flex-shrink-0">
           <AuthorAvatar src={item.authorProfileImageUrl} author={item.author} size="md" />
           <div className="min-w-0 flex-1">
