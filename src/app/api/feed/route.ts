@@ -316,19 +316,22 @@ export async function GET(request: NextRequest) {
         const mediaType = m.mediaType as 'photo' | 'video' | 'animated_gif'
 
         if (bookmark.platform === 'instagram') {
-          const streamUrl = `/api/media/instagram/video?id=${encodeURIComponent(bookmark.id)}`
-          const downloadUrl = `/api/media/instagram/video/download?id=${encodeURIComponent(bookmark.id)}`
+          // Degraded: Instagram video is no longer resolvable, so a Reel is a
+          // poster + caption + link-out. Force 'photo' (covers older saves
+          // stored as 'video') so the gallery renders an image, not a player.
+          // The thumbnail proxy re-resolves the signed CDN URL fresh per view.
           const thumbnailUrl = `/api/media/instagram/thumbnail?id=${encodeURIComponent(bookmark.id)}`
           return {
             id: m.id,
-            mediaType: m.mediaType,
+            mediaType: 'photo' as const,
             width: m.width,
             height: m.height,
-            durationMs: m.durationMs,
+            durationMs: null,
             altText: m.altText,
-            url: streamUrl,
+            url: thumbnailUrl,
             thumbnailUrl,
-            shareUrl: downloadUrl,
+            // No downloadable media — "share" is the Instagram link itself.
+            shareUrl: bookmark.tweetUrl,
           }
         }
 
