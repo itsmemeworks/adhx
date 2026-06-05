@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { X, Check, Clock, Trash2, Flame, Undo2, Loader2, PartyPopper } from 'lucide-react'
+import { X, Check, Clock, Trash2, Flame, Undo2, PartyPopper } from 'lucide-react'
 import type { FeedItem } from './types'
 import { MediaCard } from './MediaCard'
 import { isTouchDevice } from './utils'
@@ -20,13 +20,15 @@ interface Streak {
 interface TriageModeProps {
   isOpen: boolean
   onClose: () => void
-  filter: string
-  platformFilter: string
-  search: string
-  selectedTags: string[]
+  /** Snapshot of the queue to triage (taken when opened). */
+  initialQueue: FeedItem[]
+  /** Where to start in the queue (gallery click jumps to the clicked item). */
+  startIndex: number
   availableTags: { tag: string; count: number }[]
   /** Notify the feed so it can drop archived/deleted items without a refetch. */
   onItemResolved?: (id: string, action: 'archive' | 'delete') => void
+  onTagAdd?: (id: string, tag: string) => void
+  onTagRemove?: (id: string, tag: string) => void
 }
 
 type UndoAction =
@@ -39,16 +41,15 @@ const SWIPE_THRESHOLD = 90
 export function TriageMode({
   isOpen,
   onClose,
-  filter,
-  platformFilter,
-  search,
-  selectedTags,
+  initialQueue,
+  startIndex,
   availableTags,
   onItemResolved,
+  onTagAdd,
+  onTagRemove,
 }: TriageModeProps) {
   const [queue, setQueue] = useState<FeedItem[]>([])
   const [index, setIndex] = useState(0)
-  const [loading, setLoading] = useState(true)
   const [streak, setStreak] = useState<Streak>({ current: 0, longest: 0 })
   const [celebrate, setCelebrate] = useState<string | null>(null)
   const [undo, setUndo] = useState<UndoAction | null>(null)
@@ -63,38 +64,25 @@ export function TriageMode({
   const total = queue.length
   const done = Math.min(index, total)
   const current = index < queue.length ? queue[index] : null
-  const finished = !loading && index >= queue.length
+  const finished = index >= queue.length
 
-  // --- load queue + streak on open ---
+  // --- seed queue from the snapshot on open; load streak for display ---
   useEffect(() => {
     if (!isOpen) return
     setIsTouch(isTouchDevice())
-    let cancelled = false
-    setLoading(true)
+    setQueue(initialQueue)
+    setIndex(startIndex)
     recordedRef.current = false
 
-    const params = new URLSearchParams({ unreadOnly: 'true', limit: '100' })
-    if (filter !== 'all') params.set('filter', filter)
-    if (platformFilter !== 'all') params.set('platform', platformFilter)
-    if (search) params.set('search', search)
-    selectedTags.forEach((t) => params.append('tag', t))
-
-    Promise.all([
-      fetch(`/api/feed?${params}`).then((r) => (r.ok ? r.json() : { items: [] })),
-      fetch(`/api/triage/streak?today=${localToday()}`).then((r) => (r.ok ? r.json() : null)),
-    ])
-      .then(([feed, s]) => {
-        if (cancelled) return
-        setQueue(feed.items || [])
-        setIndex(0)
-        if (s) setStreak({ current: s.current ?? 0, longest: s.longest ?? 0 })
-      })
-      .finally(() => !cancelled && setLoading(false))
-
+    let cancelled = false
+    fetch(`/api/triage/streak?today=${localToday()}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((s) => !cancelled && s && setStreak({ current: s.current ?? 0, longest: s.longest ?? 0 }))
+      .catch(() => {})
     return () => {
       cancelled = true
     }
-  }, [isOpen, filter, platformFilter, search, selectedTags])
+  }, [isOpen, initialQueue, startIndex])
 
   // --- record a triage day on the first action of the session ---
   const recordStreak = useCallback(() => {
@@ -180,21 +168,22 @@ export function TriageMode({
     setUndo(null)
   }, [undo])
 
-  const quickTag = useCallback(
+  const addTag = useCallback(
+    (tag: string) => {
+      if (!current || current.tags.includes(tag)) return
+      onTagAdd?.(current.id, tag)
+      setQueue((q) => q.map((it, i) => (i === index ? { ...it, tags: [...it.tags, tag] } : it)))
+    },
+    [current, index, onTagAdd],
+  )
+
+  const removeTag = useCallback(
     (tag: string) => {
       if (!current) return
-      fetch(`/api/bookmarks/${current.id}/tags`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tag }),
-      }).catch(() => {})
-      setQueue((q) =>
-        q.map((it, i) =>
-          i === index && !it.tags.includes(tag) ? { ...it, tags: [...it.tags, tag] } : it,
-        ),
-      )
+      onTagRemove?.(current.id, tag)
+      setQueue((q) => q.map((it, i) => (i === index ? { ...it, tags: it.tags.filter((t) => t !== tag) } : it)))
     },
-    [current, index],
+    [current, index, onTagRemove],
   )
 
   // --- keyboard ---
@@ -269,7 +258,8 @@ export function TriageMode({
       : undefined
 
   return (
-    <div className="fixed inset-0 z-50 bg-gray-950/80 backdrop-blur-sm flex flex-col">
+    // Click anywhere on the backdrop (outside the card/actions) to close.
+    <div className="fixed inset-0 z-50 bg-gray-950/80 backdrop-blur-sm flex flex-col" onClick={onClose}>
       {/* Header: progress + streak + close */}
       <div className="flex items-center gap-3 px-4 py-3 text-white">
         <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-full" aria-label="Exit triage">
@@ -295,14 +285,15 @@ export function TriageMode({
 
       {/* Body */}
       <div className="flex-1 flex items-center justify-center px-4 pb-4 overflow-hidden">
-        {loading ? (
-          <Loader2 className="w-8 h-8 text-white/70 animate-spin" />
-        ) : finished ? (
-          <FinishCard total={total} streak={streak} onClose={onClose} />
+        {finished ? (
+          <div onClick={(e) => e.stopPropagation()}>
+            <FinishCard total={total} streak={streak} onClose={onClose} />
+          </div>
         ) : current ? (
           <div
+            onClick={(e) => e.stopPropagation()}
             className={`w-full flex flex-col items-center gap-4 ${
-              current.media?.length ? 'max-w-md lg:max-w-4xl' : 'max-w-md lg:max-w-xl'
+              current.media?.length || current.articlePreview?.imageUrl ? 'max-w-md lg:max-w-4xl' : 'max-w-md lg:max-w-xl'
             }`}
           >
             <div
@@ -316,30 +307,33 @@ export function TriageMode({
               onTouchMove={onTouchMove}
               onTouchEnd={onTouchEnd}
             >
-              <MediaCard item={current} videoMode="preview" />
+              <MediaCard item={current} />
             </div>
 
-            {/* Quick tags */}
-            {availableTags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 justify-center max-w-md">
-                {availableTags.slice(0, 6).map(({ tag }) => {
-                  const applied = current.tags.includes(tag)
-                  return (
-                    <button
-                      key={tag}
-                      onClick={() => quickTag(tag)}
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                        applied
-                          ? 'bg-purple-500 text-white'
-                          : 'bg-white/10 text-white/80 hover:bg-white/20'
-                      }`}
-                    >
-                      {applied ? '✓ ' : '#'}{tag}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
+            {/* Tags: applied (tap to remove) + a few suggestions (tap to add) */}
+            <div className="flex flex-wrap gap-1.5 justify-center max-w-lg">
+              {current.tags.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => removeTag(t)}
+                  className="px-2.5 py-1 rounded-full text-xs font-medium bg-purple-500 text-white hover:bg-purple-600 flex items-center gap-1 transition-colors"
+                >
+                  #{t} <X className="w-3 h-3" />
+                </button>
+              ))}
+              {availableTags
+                .filter((a) => !current.tags.includes(a.tag))
+                .slice(0, 6)
+                .map(({ tag }) => (
+                  <button
+                    key={tag}
+                    onClick={() => addTag(tag)}
+                    className="px-2.5 py-1 rounded-full text-xs font-medium bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition-colors"
+                  >
+                    + {tag}
+                  </button>
+                ))}
+            </div>
 
             {/* Action bar */}
             <div className="flex items-center gap-3">
@@ -359,7 +353,10 @@ export function TriageMode({
 
       {/* Undo toast */}
       {undo && !finished && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-white text-gray-900 px-4 py-2 rounded-full shadow-lg text-sm">
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-white text-gray-900 px-4 py-2 rounded-full shadow-lg text-sm"
+        >
           <span>
             {undo.type === 'archive' ? 'Archived' : undo.type === 'delete' ? 'Deleted' : 'Kept'}
           </span>

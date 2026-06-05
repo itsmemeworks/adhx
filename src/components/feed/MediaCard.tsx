@@ -1,21 +1,16 @@
 'use client'
 
-import { ExternalLink, Instagram, Sparkles } from 'lucide-react'
+import { ExternalLink, Instagram, Sparkles, FileText } from 'lucide-react'
 import type { FeedItem } from './types'
 import { AuthorAvatar } from './AuthorAvatar'
-import { VideoPlayer } from './VideoPlayer'
 import { renderTextWithLinks, stripMediaUrls } from './utils'
 import { XIcon } from '@/components/icons'
 
 /**
- * Shared media-first card used by both the triage queue and the gallery
- * single-item viewer. Media is the hero; the content card hugs its text.
- *
- * `videoMode`:
- *   - 'preview' (triage): muted, looped, 360p autoplay — fast scanning.
- *   - 'full' (browse):    the real VideoPlayer with controls + sound + HD/HLS.
+ * Shared media-first card (the single triage/gallery view).
+ * Media is the hero; the content card hugs its text and aligns to the top.
+ * Videos autoplay muted (with controls, so they can be unmuted/scrubbed).
  */
-export type VideoMode = 'preview' | 'full'
 
 /** Inline TikTok glyph (lucide ships none). */
 function TikTokGlyph({ className }: { className?: string }) {
@@ -50,7 +45,6 @@ function PlatformWordmark({ platform }: { platform?: FeedItem['platform'] }) {
   )
 }
 
-/** Best available thumbnail for a quoted tweet. */
 function quoteThumb(item: FeedItem): string | null {
   const q = item.quotedTweet
   const qc = item.quoteContext
@@ -63,18 +57,15 @@ function quoteThumb(item: FeedItem): string | null {
   return null
 }
 
-/** Compact quoted-tweet preview (author + text + thumbnail). */
 function QuotedPreview({ item }: { item: FeedItem }) {
   const q = item.quotedTweet
   const qc = item.quoteContext
   if (!q && !qc) return null
-
   const name = q?.authorName || q?.author || qc?.authorName || qc?.author || 'unknown'
   const handle = q?.author || qc?.author || ''
   const text = q?.text || qc?.text || ''
   const thumb = quoteThumb(item)
   const href = q?.tweetUrl || (handle ? `https://x.com/${handle}/status/${qc?.tweetId ?? ''}` : undefined)
-
   return (
     <a
       href={href}
@@ -100,30 +91,19 @@ function QuotedPreview({ item }: { item: FeedItem }) {
   )
 }
 
-function MediaPanel({ item, videoMode }: { item: FeedItem; videoMode: VideoMode }) {
-  const all = item.media ?? []
-  const primary = all[0]
-  if (!primary?.thumbnailUrl) return null
+/** The poster image to use as the hero when there's no first-class media. */
+function heroImageUrl(item: FeedItem): string | null {
+  if (item.media?.[0]?.thumbnailUrl) return item.media[0].thumbnailUrl
+  if (item.articlePreview?.imageUrl) return item.articlePreview.imageUrl
+  return null
+}
 
-  const isVideo = primary.mediaType === 'video' || primary.mediaType === 'animated_gif'
+function MediaPanel({ item }: { item: FeedItem }) {
+  const primary = item.media?.[0]
+  const isVideo = primary?.mediaType === 'video' || primary?.mediaType === 'animated_gif'
   const heightClass = 'max-h-[50vh] lg:max-h-[84vh]'
 
-  if (isVideo) {
-    if (videoMode === 'full') {
-      // Real player: HD, sound, controls, HLS for long videos.
-      return (
-        <VideoPlayer
-          key={item.id}
-          author={item.author}
-          tweetId={item.id}
-          platform={item.platform}
-          tweetUrl={item.tweetUrl}
-          loop={primary.mediaType === 'animated_gif'}
-          className={`max-w-full w-auto ${heightClass} rounded-2xl bg-black`}
-        />
-      )
-    }
-    // Preview: muted autoplay. Twitter uses the light 360p tier; TikTok its own.
+  if (isVideo && primary) {
     const src =
       item.platform === 'tiktok'
         ? primary.url
@@ -133,24 +113,24 @@ function MediaPanel({ item, videoMode }: { item: FeedItem; videoMode: VideoMode 
         key={item.id}
         src={src}
         poster={primary.thumbnailUrl}
+        controls
+        autoPlay
         muted
         loop
-        autoPlay
         playsInline
         className={`max-w-full w-auto ${heightClass} rounded-2xl object-contain bg-black`}
       />
     )
   }
 
-  const photos = all.filter((m) => m.mediaType === 'photo')
-  // Multi-image: horizontal snap carousel (full mode shows full-res urls).
+  const photos = (item.media ?? []).filter((m) => m.mediaType === 'photo')
   if (photos.length > 1) {
     return (
       <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory rounded-2xl max-w-full">
         {photos.map((p, i) => (
           <img
             key={p.id}
-            src={videoMode === 'full' ? p.url : p.thumbnailUrl}
+            src={p.url}
             alt={`Image ${i + 1} of ${photos.length}`}
             className={`snap-center ${heightClass} w-auto max-w-full object-contain rounded-2xl bg-black flex-shrink-0`}
             referrerPolicy="no-referrer"
@@ -160,28 +140,29 @@ function MediaPanel({ item, videoMode }: { item: FeedItem; videoMode: VideoMode 
     )
   }
 
-  const single = (
-    <img
-      src={videoMode === 'full' ? primary.url : primary.thumbnailUrl}
-      alt=""
-      className={`max-w-full w-auto ${heightClass} rounded-2xl object-contain bg-black`}
-      referrerPolicy="no-referrer"
-    />
-  )
-  // In preview mode the image links out; in full mode it's just shown.
-  return videoMode === 'full' ? (
-    single
-  ) : (
-    <a href={item.tweetUrl} target="_blank" rel="noopener noreferrer" className="block">
-      {single}
+  const img = heroImageUrl(item)
+  if (!img) return null
+  const href = item.articlePreview?.url || item.tweetUrl
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" className="block">
+      <img
+        src={primary?.url || img}
+        alt=""
+        className={`max-w-full w-auto ${heightClass} rounded-2xl object-contain bg-black`}
+        referrerPolicy="no-referrer"
+      />
     </a>
   )
 }
 
-export function MediaCard({ item, videoMode = 'preview' }: { item: FeedItem; videoMode?: VideoMode }) {
-  const media = item.media?.[0]
-  const text = stripMediaUrls(item.text || '', !!media)
+export function MediaCard({ item }: { item: FeedItem }) {
+  const hasMedia = !!heroImageUrl(item)
+  const text = stripMediaUrls(item.text || '', !!item.media?.[0])
   const hasQuote = !!(item.isQuote && (item.quotedTweet || item.quoteContext))
+  const article = item.articlePreview
+  // Show an article block when this is an X Article / link-article and we
+  // aren't already showing its text as the body.
+  const showArticle = !!(article && (article.title || article.description))
   const created = item.createdAt
     ? new Date(item.createdAt).toLocaleString(undefined, {
         hour: '2-digit',
@@ -193,15 +174,16 @@ export function MediaCard({ item, videoMode = 'preview' }: { item: FeedItem; vid
     : null
 
   return (
-    <div className="w-full flex flex-col lg:flex-row gap-3 lg:gap-5 items-center justify-center">
-      {media?.thumbnailUrl && (
-        <div className="flex-1 min-w-0 w-full flex items-center justify-center">
-          <MediaPanel item={item} videoMode={videoMode} />
+    // items-start so the content card's top lines up with the media's top.
+    <div className="w-full flex flex-col lg:flex-row gap-3 lg:gap-4 items-center lg:items-start justify-center">
+      {hasMedia && (
+        <div className="flex-1 min-w-0 w-full flex items-start justify-center">
+          <MediaPanel item={item} />
         </div>
       )}
 
       <article
-        className={`w-full ${media ? 'lg:w-[340px]' : 'lg:max-w-xl'} flex-shrink-0 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl flex flex-col max-h-[32vh] lg:max-h-[84vh] overflow-hidden`}
+        className={`w-full ${hasMedia ? 'lg:w-[340px]' : 'lg:max-w-xl'} flex-shrink-0 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl flex flex-col max-h-[32vh] lg:max-h-[84vh] overflow-hidden`}
       >
         <header className="flex items-start gap-3 p-4 pb-2 flex-shrink-0">
           <AuthorAvatar src={item.authorProfileImageUrl} author={item.author} size="md" />
@@ -228,6 +210,28 @@ export function MediaCard({ item, videoMode = 'preview' }: { item: FeedItem; vid
             <p className="text-[15px] leading-relaxed text-gray-800 dark:text-gray-100 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
               {renderTextWithLinks(text)}
             </p>
+          )}
+
+          {showArticle && (
+            <a
+              href={article!.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block rounded-xl border border-gray-200 dark:border-gray-700 p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+            >
+              <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
+                <FileText className="w-3.5 h-3.5" />
+                {article!.domain || 'Article'}
+              </div>
+              {article!.title && (
+                <p className="font-semibold text-gray-900 dark:text-white leading-snug">{article!.title}</p>
+              )}
+              {article!.description && (
+                <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-3 mt-1">
+                  {article!.description}
+                </p>
+              )}
+            </a>
           )}
 
           {hasQuote && <QuotedPreview item={item} />}

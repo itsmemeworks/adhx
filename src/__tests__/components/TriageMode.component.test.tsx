@@ -1,9 +1,8 @@
 /**
  * @vitest-environment jsdom
  *
- * TriageMode interaction tests — drive the archive/keep/undo logic with a
- * mocked fetch (queue load, streak, and action endpoints), since the live
- * logged-in UI can't be exercised headlessly.
+ * TriageMode — drives archive/keep/undo/keyboard against an in-memory queue
+ * snapshot (it no longer fetches; the page passes the queue + start index).
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
@@ -29,90 +28,89 @@ const item = (id: string, text: string): FeedItem =>
 const mockFetch = vi.fn()
 global.fetch = mockFetch as unknown as typeof fetch
 
-function routeMock(queue: FeedItem[]) {
+function routeMock() {
   mockFetch.mockImplementation((url: string, opts?: { method?: string }) => {
     const u = String(url)
-    if (u.startsWith('/api/feed')) return Promise.resolve({ ok: true, json: async () => ({ items: queue }) })
     if (u.startsWith('/api/triage/streak')) {
-      const body = opts?.method === 'POST'
-        ? { current: 1, longest: 1, grew: 1 }
-        : { current: 0, longest: 0, lastActiveDate: null }
+      const body = opts?.method === 'POST' ? { current: 1, longest: 1, grew: 1 } : { current: 0, longest: 0 }
       return Promise.resolve({ ok: true, json: async () => body })
     }
-    // action endpoints (read / delete / tags)
     return Promise.resolve({ ok: true, json: async () => ({ success: true }) })
   })
 }
 
-const baseProps = {
-  isOpen: true,
+const base = {
+  isOpen: true as const,
   onClose: vi.fn(),
-  filter: 'all',
-  platformFilter: 'all',
-  search: '',
-  selectedTags: [],
+  startIndex: 0,
   availableTags: [],
 }
 
 describe('TriageMode', () => {
   beforeEach(() => mockFetch.mockReset())
 
-  it('loads the unread queue and shows the first card + progress', async () => {
-    routeMock([item('1', 'first tweet'), item('2', 'second tweet')])
-    render(<TriageMode {...baseProps} />)
+  it('renders the first card of the queue + progress', async () => {
+    routeMock()
+    render(<TriageMode {...base} initialQueue={[item('1', 'first tweet'), item('2', 'second tweet')]} />)
     expect(await screen.findByText('first tweet')).toBeInTheDocument()
     expect(screen.getByText('0 / 2')).toBeInTheDocument()
   })
 
-  it('archives a card: calls the read endpoint, advances, and notifies the feed', async () => {
+  it('honors startIndex (gallery jumps to the clicked item)', async () => {
+    routeMock()
+    render(
+      <TriageMode {...base} startIndex={1} initialQueue={[item('1', 'first tweet'), item('2', 'second tweet')]} />,
+    )
+    expect(await screen.findByText('second tweet')).toBeInTheDocument()
+    expect(screen.getByText('1 / 2')).toBeInTheDocument()
+  })
+
+  it('archive marks read, advances, records the streak, and notifies the feed', async () => {
+    routeMock()
     const onItemResolved = vi.fn()
-    routeMock([item('1', 'first tweet'), item('2', 'second tweet')])
-    render(<TriageMode {...baseProps} onItemResolved={onItemResolved} />)
+    render(
+      <TriageMode
+        {...base}
+        initialQueue={[item('1', 'first tweet'), item('2', 'second tweet')]}
+        onItemResolved={onItemResolved}
+      />,
+    )
     await screen.findByText('first tweet')
-
     fireEvent.click(screen.getByLabelText('Archive'))
-
     await waitFor(() =>
       expect(mockFetch).toHaveBeenCalledWith('/api/bookmarks/1/read', expect.objectContaining({ method: 'POST' })),
     )
     expect(onItemResolved).toHaveBeenCalledWith('1', 'archive')
-    // advances to the next card
     expect(await screen.findByText('second tweet')).toBeInTheDocument()
-    // records the streak day
     expect(mockFetch).toHaveBeenCalledWith('/api/triage/streak', expect.objectContaining({ method: 'POST' }))
   })
 
-  it('undo reverts an archive (un-reads it) and returns to the card', async () => {
-    routeMock([item('1', 'first tweet'), item('2', 'second tweet')])
-    render(<TriageMode {...baseProps} />)
+  it('undo reverts an archive', async () => {
+    routeMock()
+    render(<TriageMode {...base} initialQueue={[item('1', 'first tweet'), item('2', 'second tweet')]} />)
     await screen.findByText('first tweet')
-
     fireEvent.click(screen.getByLabelText('Archive'))
     await screen.findByText('second tweet')
-
     fireEvent.click(screen.getByText('Undo'))
-
     await waitFor(() =>
       expect(mockFetch).toHaveBeenCalledWith('/api/bookmarks/1/read', expect.objectContaining({ method: 'DELETE' })),
     )
     expect(await screen.findByText('first tweet')).toBeInTheDocument()
   })
 
-  it('right-arrow key archives the current card', async () => {
-    routeMock([item('1', 'first tweet'), item('2', 'second tweet')])
-    render(<TriageMode {...baseProps} />)
+  it('ArrowRight archives via keyboard', async () => {
+    routeMock()
+    render(<TriageMode {...base} initialQueue={[item('1', 'first tweet'), item('2', 'second tweet')]} />)
     await screen.findByText('first tweet')
-
     fireEvent.keyDown(window, { key: 'ArrowRight' })
-
     await waitFor(() =>
       expect(mockFetch).toHaveBeenCalledWith('/api/bookmarks/1/read', expect.objectContaining({ method: 'POST' })),
     )
   })
 
-  it('shows the finish card when the queue is empty', async () => {
-    routeMock([])
-    render(<TriageMode {...baseProps} />)
+  it('shows the finish card for an empty queue', async () => {
+    routeMock()
+    render(<TriageMode {...base} initialQueue={[]} />)
     expect(await screen.findByText('Nothing to triage')).toBeInTheDocument()
   })
 })

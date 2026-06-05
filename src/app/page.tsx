@@ -6,7 +6,6 @@ import { LandingPage } from '@/components/LandingPage'
 import {
   FeedGrid,
   FilterBar,
-  CardViewer,
   type FeedItem,
   type FilterType,
   type PlatformFilter,
@@ -47,7 +46,8 @@ function FeedPageContent(): React.ReactElement {
   const [sortDirection, setSortDirection] = useState<SortDirection>((searchParams.get('sortDir') as SortDirection) || 'desc')
   const [unreadOnly, setUnreadOnly] = useState(searchParams.get('unreadOnly') !== 'false')
   const [search, setSearch] = useState(searchParams.get('search') || '')
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+  const [triageQueue, setTriageQueue] = useState<FeedItem[]>([])
+  const [triageStart, setTriageStart] = useState(0)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const [stats, setStats] = useState({ total: 0, unread: 0 })
@@ -74,7 +74,12 @@ function FeedPageContent(): React.ReactElement {
   itemsRef.current = items
   const [showShortcutsModal, setShowShortcutsModal] = useState(false)
 
-  const selectedItem = selectedIndex !== null ? items[selectedIndex] : null
+  // Open the unified triage viewer on a snapshot of the queue at a given index.
+  const openTriage = useCallback((queue: FeedItem[], start: number) => {
+    setTriageQueue(queue)
+    setTriageStart(Math.max(0, start))
+    setTriageOpen(true)
+  }, [])
 
   const startSync = useCallback(async (firstLogin = false) => {
     if (isSyncing) return
@@ -329,14 +334,10 @@ function FeedPageContent(): React.ReactElement {
     if (pendingNavigation && wasLoading && !loading && items.length > 0) {
       const targetIndex = items.findIndex((i) => i.id === pendingNavigation.id)
       if (targetIndex !== -1) {
-        setSelectedIndex(targetIndex)
+        openTriage(items, targetIndex)
       } else if (pendingNavigation.fallbackUrl) {
         // Parent tweet not in user's collection - open externally as fallback
-        window.open(pendingNavigation.fallbackUrl, '_blank')
-        setSelectedIndex(null)
-      } else {
-        // No fallback URL available - just close lightbox
-        setSelectedIndex(null)
+        window.open(pendingNavigation.fallbackUrl, "_blank")
       }
       // Clear pending navigation regardless of outcome
       setPendingNavigation(null)
@@ -369,7 +370,7 @@ function FeedPageContent(): React.ReactElement {
     // Try to find it in current items first
     const currentIndex = items.findIndex((i) => i.id === openId)
     if (currentIndex !== -1) {
-      setSelectedIndex(currentIndex)
+      openTriage(items, currentIndex)
       return
     }
 
@@ -406,7 +407,7 @@ function FeedPageContent(): React.ReactElement {
       setTimeout(() => {
         const newIndex = items.findIndex((i) => i.id === tweetId)
         if (newIndex !== -1) {
-          setSelectedIndex(newIndex)
+          openTriage(items, newIndex)
         } else {
           // If not found in current view, use pending navigation
           setPendingNavigation({ id: tweetId })
@@ -510,7 +511,7 @@ function FeedPageContent(): React.ReactElement {
   // Global keyboard shortcuts (when lightbox is NOT open)
   useEffect(() => {
     // Skip if lightbox is open (those shortcuts are handled above) or shortcuts modal is open
-    if (selectedIndex !== null || showShortcutsModal) return
+    if (triageOpen || showShortcutsModal) return
     // Skip if not authenticated
     if (!isAuthenticated) return
 
@@ -585,7 +586,7 @@ function FeedPageContent(): React.ReactElement {
           // Focus mode - open first item
           e.preventDefault()
           if (items.length > 0) {
-            setSelectedIndex(0)
+            openTriage(items, 0)
           }
           break
         case 't':
@@ -615,7 +616,7 @@ function FeedPageContent(): React.ReactElement {
 
     window.addEventListener('keydown', handleGlobalKeyDown)
     return () => window.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [selectedIndex, isAuthenticated, router, showShortcutsModal, items.length, resolvedTheme, setTheme])
+  }, [triageOpen, isAuthenticated, router, showShortcutsModal, items.length, resolvedTheme, setTheme])
 
   function loadMore(): void {
     if (!loading && hasMore) {
@@ -797,7 +798,7 @@ function FeedPageContent(): React.ReactElement {
         {stats.unread > 0 && (
           <div className="mb-4 flex justify-center">
             <button
-              onClick={() => setTriageOpen(true)}
+              onClick={() => openTriage(items.filter((i) => !i.isRead), 0)}
               className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full font-semibold text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-lg hover:scale-[1.02] transition-all"
             >
               <Zap className="w-4 h-4" />
@@ -819,7 +820,7 @@ function FeedPageContent(): React.ReactElement {
             sortField={sort === 'posted' ? 'createdAt' : 'processedAt'}
             unreadOnly={unreadOnly}
             stats={stats}
-            onExpand={setSelectedIndex}
+            onExpand={(idx) => openTriage(items, idx)}
             onMarkRead={handleMarkAsRead}
             onRemove={(id) => setItems((prev) => prev.filter((i) => i.id !== id))}
             onLoadMore={loadMore}
@@ -835,48 +836,20 @@ function FeedPageContent(): React.ReactElement {
             setTriageOpen(false)
             refreshStreak()
           }}
-          filter={filter}
-          platformFilter={platformFilter}
-          search={search}
-          selectedTags={selectedTags}
+          initialQueue={triageQueue}
+          startIndex={triageStart}
           availableTags={availableTags}
           onItemResolved={handleTriageResolved}
+          onTagAdd={(id, tag) => handleAddTag(id, tag)}
+          onTagRemove={(id, tag) => handleRemoveTag(id, tag)}
         />
       </ErrorBoundary>
-
-      {selectedItem && selectedIndex !== null && (
-        <ErrorBoundary componentName="CardViewer">
-          <CardViewer
-            item={selectedItem}
-            index={selectedIndex}
-            total={items.length}
-            onClose={() => setSelectedIndex(null)}
-            onPrev={() => setSelectedIndex(selectedIndex > 0 ? selectedIndex - 1 : items.length - 1)}
-            onNext={() => setSelectedIndex(selectedIndex < items.length - 1 ? selectedIndex + 1 : 0)}
-            onMarkRead={() => handleMarkAsRead(selectedItem.id)}
-            markingRead={markingRead}
-            onTagAdd={(tag) => handleAddTag(selectedItem.id, tag)}
-            onTagRemove={(tag) => handleRemoveTag(selectedItem.id, tag)}
-            availableTags={availableTags}
-            onRemoveItem={() => {
-              const id = selectedItem.id
-              const wasUnread = !selectedItem.isRead
-              const newLen = items.length - 1
-              setItems((prev) => prev.filter((i) => i.id !== id))
-              setSelectedIndex((idx) =>
-                newLen <= 0 ? null : idx !== null && idx >= newLen ? newLen - 1 : idx,
-              )
-              if (wasUnread) setStats((s) => ({ ...s, unread: Math.max(0, s.unread - 1) }))
-            }}
-          />
-        </ErrorBoundary>
-      )}
 
       {/* Keyboard Shortcuts Modal */}
       <KeyboardShortcutsModal
         isOpen={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        inFocusMode={selectedIndex !== null}
+        inFocusMode={triageOpen}
       />
     </div>
   )
