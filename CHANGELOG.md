@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.32.4](https://github.com/itsmemeworks/adhx/compare/v1.32.3...v1.32.4) (2026-06-05)
+
+
+### Bug Fixes
+
+* **feed:** support instagram + tiktok in add-to-collection modal ([#158](https://github.com/itsmemeworks/adhx/issues/158)) ([6a86e38](https://github.com/itsmemeworks/adhx/commit/6a86e38fc2fae1dd51003d359a1a328ffc8614cb))
+
 ## [1.32.3](https://github.com/itsmemeworks/adhx/compare/v1.32.2...v1.32.3) (2026-06-05)
 
 
