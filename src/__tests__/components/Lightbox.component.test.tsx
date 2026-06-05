@@ -1,4 +1,6 @@
 /**
+ * @vitest-environment jsdom
+ *
  * Lightbox Component Snapshot Tests
  *
  * Tests the Lightbox component rendering with real tweet fixtures.

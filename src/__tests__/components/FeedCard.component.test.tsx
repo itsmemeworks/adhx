@@ -1,4 +1,6 @@
 /**
+ * @vitest-environment jsdom
+ *
  * FeedCard Component Snapshot Tests
  *
  * Tests the FeedCard component rendering with real tweet fixtures.

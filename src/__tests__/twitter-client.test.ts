@@ -25,7 +25,12 @@ const mockTwitterApi = {
 }
 
 vi.mock('twitter-api-v2', () => ({
-  TwitterApi: vi.fn(() => mockTwitterApi),
+  // Regular function (not an arrow) so it's usable with `new` — Vitest 4
+  // forwards `new` to the mock implementation, and arrow functions are not
+  // constructable.
+  TwitterApi: vi.fn(function () {
+    return mockTwitterApi
+  }),
 }))
 
 // Mock fetch for token refresh

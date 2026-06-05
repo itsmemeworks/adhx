@@ -1,4 +1,6 @@
 /**
+ * @vitest-environment jsdom
+ *
  * FilterBar Component Tests
  *
  * Tests for the FilterBar component including:
