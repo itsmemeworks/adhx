@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.32.2](https://github.com/itsmemeworks/adhx/compare/v1.32.1...v1.32.2) (2026-06-05)
+
+
+### Bug Fixes
+
+* **db:** use drop index if exists in platform migration ([#155](https://github.com/itsmemeworks/adhx/issues/155)) ([23fae45](https://github.com/itsmemeworks/adhx/commit/23fae45f2106907482f4c39434bfe4cf05119514))
+
 ## [1.32.1](https://github.com/itsmemeworks/adhx/compare/v1.32.0...v1.32.1) (2026-06-05)
 
 
