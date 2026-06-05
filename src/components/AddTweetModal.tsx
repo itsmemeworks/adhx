@@ -215,7 +215,7 @@ export function AddTweetModal({ isOpen, onClose, onSuccess, onOpenTweet, initial
               <Copy className="w-12 h-12 text-yellow-500 mx-auto mb-3" />
               <p className="font-medium text-lg mb-2">Already Saved</p>
               <p className="text-sm text-muted-foreground">
-                This {platformNoun(platform).toLowerCase()} is already in your collection.
+                This {platformNoun(platform)} is already in your collection.
               </p>
               {addedBookmark?.author && (
                 <div className="bg-secondary/50 rounded-lg p-3 text-left mt-4">
