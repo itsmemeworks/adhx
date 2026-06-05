@@ -1,4 +1,4 @@
-DROP INDEX `bookmark_links_user_bookmark_idx`;--> statement-breakpoint
+DROP INDEX IF EXISTS `bookmark_links_user_bookmark_idx`;--> statement-breakpoint
 ALTER TABLE `bookmark_links` ADD `platform` text DEFAULT 'twitter' NOT NULL;--> statement-breakpoint
 CREATE INDEX `bookmark_links_user_bookmark_idx` ON `bookmark_links` (`user_id`,`platform`,`bookmark_id`);--> statement-breakpoint
 PRAGMA foreign_keys=OFF;--> statement-breakpoint
