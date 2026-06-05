@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment jsdom
+ */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { handleShareMedia, isTouchDevice } from '@/components/feed/utils'
 

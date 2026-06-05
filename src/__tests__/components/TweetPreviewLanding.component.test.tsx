@@ -1,4 +1,6 @@
 /**
+ * @vitest-environment jsdom
+ *
  * TweetPreviewLanding Component Snapshot Tests
  *
  * Tests the share page preview component with real tweet fixtures.
