@@ -18,7 +18,8 @@ import {
 } from '@/components/feed'
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { Loader2, CheckCircle2 } from 'lucide-react'
+import { Loader2, CheckCircle2, Zap, Flame } from 'lucide-react'
+import { TriageMode } from '@/components/feed/TriageMode'
 import { useTheme } from '@/lib/theme/context'
 
 export default function FeedPage(): React.ReactElement {
@@ -50,6 +51,8 @@ function FeedPageContent(): React.ReactElement {
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const [stats, setStats] = useState({ total: 0, unread: 0 })
+  const [triageOpen, setTriageOpen] = useState(false)
+  const [triageStreak, setTriageStreak] = useState(0)
   const [markingRead, setMarkingRead] = useState(false)
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
@@ -411,6 +414,36 @@ function FeedPageContent(): React.ReactElement {
       }, 100)
     })
   }, [searchParams]) // Only run when searchParams changes
+
+  // Triage streak (shown on the entry button). Effective streak for "today".
+  const refreshStreak = useCallback(() => {
+    if (!isAuthenticated) return
+    const d = new Date()
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    fetch(`/api/triage/streak?today=${today}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((s) => s && setTriageStreak(s.current ?? 0))
+      .catch(() => {})
+  }, [isAuthenticated])
+
+  useEffect(() => {
+    refreshStreak()
+  }, [refreshStreak])
+
+  // Drop/mark items the triage mode resolved, keeping the feed in sync.
+  const handleTriageResolved = useCallback(
+    (id: string, action: 'archive' | 'delete') => {
+      if (action === 'delete' || unreadOnly) {
+        setItems((prev) => prev.filter((i) => i.id !== id))
+      } else {
+        setItems((prev) => prev.map((i) => (i.id === id ? { ...i, isRead: true } : i)))
+      }
+      if (action === 'archive') {
+        setStats((prev) => ({ ...prev, unread: Math.max(0, prev.unread - 1) }))
+      }
+    },
+    [unreadOnly],
+  )
 
   const handleMarkAsRead = useCallback(
     async (id: string) => {
@@ -878,6 +911,22 @@ function FeedPageContent(): React.ReactElement {
       </ErrorBoundary>
 
       <div className="p-4">
+        {stats.unread > 0 && (
+          <div className="mb-4 flex justify-center">
+            <button
+              onClick={() => setTriageOpen(true)}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full font-semibold text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-lg hover:scale-[1.02] transition-all"
+            >
+              <Zap className="w-4 h-4" />
+              Triage {stats.unread} unread
+              {triageStreak > 0 && (
+                <span className="flex items-center gap-1 ml-1 text-orange-200">
+                  <Flame className="w-4 h-4" /> {triageStreak}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
         <ErrorBoundary componentName="FeedGrid">
           <FeedGrid
             items={items}
@@ -895,6 +944,22 @@ function FeedPageContent(): React.ReactElement {
           />
         </ErrorBoundary>
       </div>
+
+      <ErrorBoundary componentName="TriageMode">
+        <TriageMode
+          isOpen={triageOpen}
+          onClose={() => {
+            setTriageOpen(false)
+            refreshStreak()
+          }}
+          filter={filter}
+          platformFilter={platformFilter}
+          search={search}
+          selectedTags={selectedTags}
+          availableTags={availableTags}
+          onItemResolved={handleTriageResolved}
+        />
+      </ErrorBoundary>
 
       {selectedItem && selectedIndex !== null && (
         <ErrorBoundary componentName="Lightbox">
