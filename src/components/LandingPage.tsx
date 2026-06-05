@@ -44,6 +44,13 @@ export function LandingPage() {
       return true
     }
 
+    // TikTok short link (vm./vt.tiktok.com/{code} or /t/{code}) — no video id
+    // in the URL, so let the server follow the redirect and bounce us back.
+    if (/(?:vm|vt)\.tiktok\.com\/[A-Za-z0-9]+|tiktok\.com\/t\/[A-Za-z0-9]+/i.test(trimmed)) {
+      window.location.href = `/api/tiktok/resolve?go=1&url=${encodeURIComponent(trimmed)}`
+      return true
+    }
+
     return false
   }
 

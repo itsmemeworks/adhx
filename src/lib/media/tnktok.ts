@@ -51,6 +51,88 @@ export function isAllowedVideoUrl(url: string): boolean {
   }
 }
 
+/** Hostname is tiktok.com or a subdomain of it (never `.includes()`). */
+function isTikTokHost(hostname: string): boolean {
+  return hostname === 'tiktok.com' || hostname.endsWith('.tiktok.com')
+}
+
+/** Canonical `@handle/video/{id}` anywhere in a string. */
+const CANONICAL_RE = /tiktok\.com\/@([A-Za-z0-9._]{1,30})\/video\/(\d{6,25})/i
+
+/**
+ * Short links carry a shortcode, not the video id:
+ *   vm.tiktok.com/ZNRvLPpVV   vt.tiktok.com/...   www.tiktok.com/t/{code}
+ * They 30x-redirect to the canonical `@user/video/{id}` URL.
+ */
+export function isTikTokShortLink(input: string): boolean {
+  try {
+    const u = new URL(input.startsWith('http') ? input : `https://${input}`)
+    if (!isTikTokHost(u.hostname)) return false
+    return /^(vm|vt)\./i.test(u.hostname) || /^\/t\/[A-Za-z0-9]+/i.test(u.pathname)
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Resolve any TikTok URL (canonical or short link) to `{ handle, videoId }`.
+ *
+ * Canonical URLs are parsed without a network call. Short links are followed
+ * via manual redirects; every hop must stay on a tiktok.com host (SSRF guard),
+ * and we cap the chain so a redirect loop can't hang the request.
+ */
+export async function resolveTikTokUrl(
+  input: string,
+): Promise<{ handle: string; videoId: string } | null> {
+  const direct = input.match(CANONICAL_RE)
+  if (direct) return { handle: direct[1], videoId: direct[2] }
+
+  let current: string
+  try {
+    const u = new URL(input.startsWith('http') ? input : `https://${input}`)
+    if (!isTikTokHost(u.hostname)) return null
+    current = u.toString()
+  } catch {
+    return null
+  }
+
+  for (let hop = 0; hop < 5; hop++) {
+    let res: Response
+    try {
+      res = await fetch(current, {
+        method: 'GET',
+        redirect: 'manual',
+        signal: AbortSignal.timeout(8_000),
+        // A browser-ish UA — TikTok serves a bot challenge to obvious crawlers.
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ADHXBot/1.0)' },
+      })
+    } catch {
+      return null
+    }
+
+    if (res.status >= 300 && res.status < 400) {
+      const loc = res.headers.get('location')
+      if (!loc) return null
+      let next: URL
+      try {
+        next = new URL(loc, current)
+      } catch {
+        return null
+      }
+      if (!isTikTokHost(next.hostname)) return null // don't follow off-platform
+      const m = next.toString().match(CANONICAL_RE)
+      if (m) return { handle: m[1], videoId: m[2] }
+      current = next.toString()
+      continue
+    }
+
+    // Landed on a non-redirect; canonical may be in the final URL.
+    const m = current.match(CANONICAL_RE)
+    return m ? { handle: m[1], videoId: m[2] } : null
+  }
+  return null
+}
+
 export function isValidUsername(username: string): boolean {
   // Accept with or without leading `@`
   const trimmed = username.startsWith('@') ? username.slice(1) : username
