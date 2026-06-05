@@ -3,6 +3,7 @@
   "version": "1.31.0",
   "description": "Save now. Read never. Find always. A Twitter/X bookmark manager for people who bookmark everything and read nothing.",
   "type": "module",
+  "packageManager": "pnpm@9.15.9",
   "scripts": {
     "dev": "next dev -p 3001",
     "build": "next build",
