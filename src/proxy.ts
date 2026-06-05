@@ -29,6 +29,12 @@ const INSTAGRAM_URL_PATTERN =
 const TIKTOK_URL_PATTERN =
   /^\/(?:https?:\/?\/?)?(?:www\.|vm\.|m\.)?tiktok\.com\/@?([A-Za-z0-9._]{1,30})\/video\/(\d{6,25})/i
 
+// Short links carry a shortcode, not a video id (vm./vt.tiktok.com/{code} or
+// www.tiktok.com/t/{code}). They need a server-side redirect-follow, so hand
+// them to /api/tiktok/resolve which resolves and redirects to the preview.
+const TIKTOK_SHORTLINK_PATTERN =
+  /^\/(?:https?:\/?\/?)?(?:(?:vm|vt)\.tiktok\.com\/[A-Za-z0-9]+|(?:www\.)?tiktok\.com\/t\/[A-Za-z0-9]+)/i
+
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
@@ -54,6 +60,15 @@ export function proxy(request: NextRequest) {
     const cleanUrl = new URL(`/@${tiktokUsername}/video/${tiktokVideoId}`, request.url)
     cleanUrl.search = request.nextUrl.search
     return NextResponse.redirect(cleanUrl, { status: 307 })
+  }
+
+  if (TIKTOK_SHORTLINK_PATTERN.test(pathname)) {
+    // Rebuild the pasted short URL and let the resolver follow it server-side.
+    const stripped = pathname.replace(/^\/(?:https?:\/?\/?)?/i, '')
+    const resolveUrl = new URL('/api/tiktok/resolve', request.url)
+    resolveUrl.searchParams.set('url', `https://${stripped}${request.nextUrl.search}`)
+    resolveUrl.searchParams.set('go', '1')
+    return NextResponse.redirect(resolveUrl, { status: 307 })
   }
 
   return NextResponse.next()

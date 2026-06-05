@@ -288,6 +288,26 @@ describe('Proxy: URL Normalization', () => {
     })
   })
 
+  describe('Pasted TikTok short links', () => {
+    it('hands a vm.tiktok.com short link to the resolver route', () => {
+      const request = createRequest('/https:/vm.tiktok.com/ZNRvLPpVV/')
+      const response = proxy(request)
+      expect(response.status).toBe(307)
+      const loc = new URL(response.headers.get('location')!)
+      expect(loc.pathname).toBe('/api/tiktok/resolve')
+      expect(loc.searchParams.get('go')).toBe('1')
+      expect(loc.searchParams.get('url')).toBe('https://vm.tiktok.com/ZNRvLPpVV/')
+    })
+
+    it('handles vt.tiktok.com and /t/{code} short links', () => {
+      for (const path of ['/vt.tiktok.com/ZSabc123/', '/https:/www.tiktok.com/t/ZNRvLPpVV']) {
+        const response = proxy(createRequest(path))
+        expect(response.status).toBe(307)
+        expect(new URL(response.headers.get('location')!).pathname).toBe('/api/tiktok/resolve')
+      }
+    })
+  })
+
   describe('Pasted Instagram URLs', () => {
     it('redirects https:/www.instagram.com/reels/{id} to /reels/{id}', () => {
       const request = createRequest(

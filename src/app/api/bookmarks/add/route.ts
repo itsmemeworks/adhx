@@ -5,7 +5,7 @@ import { eq, and } from 'drizzle-orm'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { captureException, metrics } from '@/lib/sentry'
 import { fetchReelMetadata } from '@/lib/media/instafix'
-import { fetchTikTokMetadata } from '@/lib/media/tnktok'
+import { fetchTikTokMetadata, resolveTikTokUrl, isTikTokShortLink } from '@/lib/media/tnktok'
 
 /**
  * Platform-agnostic bookmark add endpoint.
@@ -65,9 +65,14 @@ export async function POST(request: NextRequest) {
       return await addInstagramReel(userId, reelMatch[1], source)
     }
 
-    const tiktokMatch = url.match(TIKTOK_PATTERN)
-    if (tiktokMatch) {
-      return await addTikTokVideo(userId, tiktokMatch[1], tiktokMatch[2], source)
+    // TikTok: canonical (@user/video/id) or a short link (vm./vt.tiktok.com).
+    // resolveTikTokUrl handles both — canonical is parsed inline, short links
+    // are followed server-side to their canonical form.
+    if (TIKTOK_PATTERN.test(url) || isTikTokShortLink(url)) {
+      const resolved = await resolveTikTokUrl(url)
+      if (resolved) {
+        return await addTikTokVideo(userId, resolved.handle, resolved.videoId, source)
+      }
     }
 
     return NextResponse.json(
