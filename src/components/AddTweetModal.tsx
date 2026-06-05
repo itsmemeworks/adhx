@@ -8,7 +8,24 @@ type AddState = 'idle' | 'loading' | 'success' | 'duplicate' | 'error'
 export interface AddTweetResult {
   state: 'success' | 'duplicate' | 'error'
   bookmark?: { id: string; author: string; text: string }
+  platform?: string
   error?: string
+}
+
+type Platform = 'twitter' | 'instagram' | 'tiktok' | string
+
+// Noun used in success/duplicate copy, by platform.
+function platformNoun(platform?: Platform): string {
+  switch (platform) {
+    case 'instagram':
+      return 'Reel'
+    case 'tiktok':
+      return 'TikTok'
+    case 'twitter':
+      return 'Tweet'
+    default:
+      return 'Bookmark'
+  }
 }
 
 interface AddTweetModalProps {
@@ -24,6 +41,7 @@ export function AddTweetModal({ isOpen, onClose, onSuccess, onOpenTweet, initial
   const [state, setState] = useState<AddState>('idle')
   const [error, setError] = useState<string | null>(null)
   const [addedBookmark, setAddedBookmark] = useState<{ id: string; author: string; text: string } | null>(null)
+  const [platform, setPlatform] = useState<Platform | undefined>(undefined)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Focus input when modal opens (only if starting in idle state)
@@ -38,6 +56,7 @@ export function AddTweetModal({ isOpen, onClose, onSuccess, onOpenTweet, initial
     if (isOpen && initialResult) {
       setState(initialResult.state)
       setAddedBookmark(initialResult.bookmark || null)
+      setPlatform(initialResult.platform)
       setError(initialResult.error || null)
     }
   }, [isOpen, initialResult])
@@ -49,14 +68,19 @@ export function AddTweetModal({ isOpen, onClose, onSuccess, onOpenTweet, initial
       setState('idle')
       setError(null)
       setAddedBookmark(null)
+      setPlatform(undefined)
     }
   }, [isOpen])
 
   // Handle paste event for auto-submit
   const handlePaste = async (e: React.ClipboardEvent) => {
     const pastedText = e.clipboardData.getData('text')
-    // Check if it looks like a tweet URL
-    if (pastedText.match(/(?:twitter|x|vxtwitter|fxtwitter)\.com\/\w+\/status\/\d+/i)) {
+    // Auto-submit if it looks like a supported URL (X / Instagram / TikTok)
+    const looksSupported =
+      /(?:twitter|x|vxtwitter|fxtwitter)\.com\/\w+\/status\/\d+/i.test(pastedText) ||
+      /instagram\.com\/(?:reels?|p)\/[A-Za-z0-9_-]+/i.test(pastedText) ||
+      /tiktok\.com\/@[A-Za-z0-9._]+\/video\/\d+/i.test(pastedText)
+    if (looksSupported) {
       e.preventDefault()
       setUrl(pastedText)
       // Auto-submit after a brief delay to show the URL
@@ -72,17 +96,20 @@ export function AddTweetModal({ isOpen, onClose, onSuccess, onOpenTweet, initial
     setError(null)
 
     try {
-      const response = await fetch('/api/tweets/add', {
+      // Platform-agnostic endpoint: dispatches X / Instagram / TikTok URLs.
+      const response = await fetch('/api/bookmarks/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: submitUrl }),
+        body: JSON.stringify({ url: submitUrl, source: 'manual' }),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to add tweet')
+        throw new Error(data.error || 'Failed to add bookmark')
       }
+
+      setPlatform(data.platform)
 
       if (data.isDuplicate) {
         setState('duplicate')
@@ -102,7 +129,7 @@ export function AddTweetModal({ isOpen, onClose, onSuccess, onOpenTweet, initial
       }
     } catch (err) {
       setState('error')
-      setError(err instanceof Error ? err.message : 'Failed to add tweet')
+      setError(err instanceof Error ? err.message : 'Failed to add bookmark')
     }
   }
 
@@ -117,7 +144,7 @@ export function AddTweetModal({ isOpen, onClose, onSuccess, onOpenTweet, initial
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <Link2 className="w-5 h-5" />
-            Add Tweet
+            Add to Collection
           </h2>
           <button onClick={onClose} className="p-1 hover:bg-secondary rounded">
             <X className="w-5 h-5" />
@@ -129,7 +156,7 @@ export function AddTweetModal({ isOpen, onClose, onSuccess, onOpenTweet, initial
           {state === 'idle' || state === 'loading' ? (
             <>
               <p className="text-sm text-muted-foreground mb-4">
-                Paste a tweet URL to add it to your bookmarks. Works with twitter.com and x.com links.
+                Paste a link to add it to your collection. Works with X, Instagram, and TikTok.
               </p>
 
               <div className="flex gap-2">
@@ -163,18 +190,18 @@ export function AddTweetModal({ isOpen, onClose, onSuccess, onOpenTweet, initial
               <div className="mt-4 text-xs text-muted-foreground">
                 <p className="font-medium mb-1">Supported URL formats:</p>
                 <ul className="list-disc list-inside space-y-0.5">
-                  <li>twitter.com/user/status/123</li>
                   <li>x.com/user/status/123</li>
-                  <li>vxtwitter.com/user/status/123</li>
-                  <li>fxtwitter.com/user/status/123</li>
+                  <li>twitter.com/user/status/123</li>
+                  <li>instagram.com/reels/abc123</li>
+                  <li>tiktok.com/@user/video/123</li>
                 </ul>
               </div>
             </>
           ) : state === 'success' ? (
             <div className="text-center py-4">
               <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
-              <p className="font-medium text-lg mb-2">Tweet Added!</p>
-              {addedBookmark && (
+              <p className="font-medium text-lg mb-2">{platformNoun(platform)} Added!</p>
+              {addedBookmark?.author && (
                 <div className="bg-secondary/50 rounded-lg p-3 text-left mt-4">
                   <p className="text-sm font-medium">@{addedBookmark.author}</p>
                   <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
@@ -186,11 +213,11 @@ export function AddTweetModal({ isOpen, onClose, onSuccess, onOpenTweet, initial
           ) : state === 'duplicate' ? (
             <div className="text-center py-4">
               <Copy className="w-12 h-12 text-yellow-500 mx-auto mb-3" />
-              <p className="font-medium text-lg mb-2">Already Bookmarked</p>
+              <p className="font-medium text-lg mb-2">Already Saved</p>
               <p className="text-sm text-muted-foreground">
-                This tweet is already in your collection.
+                This {platformNoun(platform)} is already in your collection.
               </p>
-              {addedBookmark && (
+              {addedBookmark?.author && (
                 <div className="bg-secondary/50 rounded-lg p-3 text-left mt-4">
                   <p className="text-sm font-medium">@{addedBookmark.author}</p>
                   <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
@@ -214,7 +241,7 @@ export function AddTweetModal({ isOpen, onClose, onSuccess, onOpenTweet, initial
           ) : state === 'error' ? (
             <div className="text-center py-4">
               <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
-              <p className="font-medium text-lg mb-2">Failed to Add Tweet</p>
+              <p className="font-medium text-lg mb-2">Couldn&apos;t Add That</p>
               <p className="text-sm text-muted-foreground">{error}</p>
             </div>
           ) : null}
@@ -258,7 +285,7 @@ export function AddTweetModal({ isOpen, onClose, onSuccess, onOpenTweet, initial
             </div>
           ) : (
             <p className="text-center text-sm text-muted-foreground">
-              Tip: Paste a tweet URL and it will be added automatically!
+              Tip: Paste an X, Instagram, or TikTok link and it&apos;s added automatically!
             </p>
           )}
         </div>
