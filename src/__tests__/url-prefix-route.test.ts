@@ -155,8 +155,8 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
         params: Promise.resolve({ username: 'testuser', id: '123456789' }),
       })
 
-      expect(metadata.title).toBe("Save @testuser's tweet - ADHX")
-      expect(metadata.description).toBe('Save this tweet to your ADHX collection')
+      expect(metadata.title).toBe("Preview @testuser's tweet")
+      expect(metadata.description).toBe('Preview this tweet on ADHX')
     })
 
     it('generates rich metadata when tweet data is available', async () => {
@@ -195,7 +195,7 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
       expect(metadata.description).toBe(
         'This is a test tweet with some interesting content'
       )
-      expect(metadata.openGraph?.title).toBe('@testauthor on X')
+      expect(metadata.openGraph?.title).toBe("Preview @testauthor's tweet")
     })
 
     it('truncates long tweet text in metadata', async () => {

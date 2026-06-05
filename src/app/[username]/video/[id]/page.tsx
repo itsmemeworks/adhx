@@ -56,23 +56,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const canonicalUrl = `${baseUrl}/@${handle}/video/${id}`
   const meta = await fetchTikTokMetadata(handle, id)
 
-  const title = meta?.title || `TikTok @${handle} — Download on ADHX`
-  const description = meta?.description || `Download this TikTok by @${handle} as MP4.`
+  const who = meta?.authorName || meta?.author || `@${handle}`
+  // Page <title> for the tab; unfurl headline says "Preview" (og:site_name
+  // already carries "ADHX", so don't repeat it in the title).
+  const pageTitle = meta?.title || `@${handle} on TikTok`
+  const headline = `Preview ${who}'s TikTok`
+  const description = meta?.description || `Watch this TikTok by @${handle} on ADHX.`
+  // Poster via the thumbnail proxy so the card unfurls with an image.
+  const image = `${baseUrl}/api/media/tiktok/thumbnail?username=${encodeURIComponent(handle)}&id=${encodeURIComponent(id)}`
 
   return {
-    title,
+    title: pageTitle,
     description,
     openGraph: {
-      type: 'video.other',
-      title,
+      type: 'article',
+      title: headline,
       description,
       siteName: 'ADHX',
       url: canonicalUrl,
+      images: [{ url: image, alt: headline }],
     },
     twitter: {
       card: 'summary_large_image',
-      title,
+      title: headline,
       description,
+      images: [image],
     },
     alternates: {
       canonical: canonicalUrl,
