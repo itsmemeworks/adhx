@@ -4,6 +4,8 @@ import {
   isAllowedVideoUrl,
   isValidUsername,
   isValidVideoId,
+  isTikTokShortLink,
+  resolveTikTokUrl,
 } from '@/lib/media/tnktok'
 
 const mockFetch = vi.fn()
@@ -71,6 +73,54 @@ describe('isAllowedVideoUrl', () => {
   it('rejects malformed URLs', () => {
     expect(isAllowedVideoUrl('not a url')).toBe(false)
     expect(isAllowedVideoUrl('')).toBe(false)
+  })
+})
+
+function redirectResponse(location: string, status = 301) {
+  return { status, headers: new Headers({ location }), body: null }
+}
+
+describe('isTikTokShortLink', () => {
+  it('detects vm. / vt. short links and /t/ codes', () => {
+    expect(isTikTokShortLink('https://vm.tiktok.com/ZNRvLPpVV/')).toBe(true)
+    expect(isTikTokShortLink('https://vt.tiktok.com/ZSabc123/')).toBe(true)
+    expect(isTikTokShortLink('https://www.tiktok.com/t/ZNRvLPpVV/')).toBe(true)
+    expect(isTikTokShortLink('vm.tiktok.com/ZNRvLPpVV')).toBe(true)
+  })
+
+  it('returns false for canonical and non-tiktok URLs', () => {
+    expect(isTikTokShortLink('https://www.tiktok.com/@user/video/7619017281691045134')).toBe(false)
+    expect(isTikTokShortLink('https://vm.evil.com/abc')).toBe(false)
+    expect(isTikTokShortLink('not a url')).toBe(false)
+  })
+})
+
+describe('resolveTikTokUrl', () => {
+  beforeEach(() => mockFetch.mockReset())
+
+  it('parses a canonical URL without any network call', async () => {
+    const out = await resolveTikTokUrl('https://www.tiktok.com/@nakayylah/video/7645103968468684046?_t=abc')
+    expect(out).toEqual({ handle: 'nakayylah', videoId: '7645103968468684046' })
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('follows a short-link redirect to the canonical URL', async () => {
+    mockFetch.mockResolvedValueOnce(
+      redirectResponse('https://www.tiktok.com/@nakayylah/video/7645103968468684046?_r=1'),
+    )
+    const out = await resolveTikTokUrl('https://vm.tiktok.com/ZNRvLPpVV/')
+    expect(out).toEqual({ handle: 'nakayylah', videoId: '7645103968468684046' })
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('refuses to follow a redirect that leaves tiktok.com (SSRF guard)', async () => {
+    mockFetch.mockResolvedValueOnce(redirectResponse('https://evil.com/@x/video/123'))
+    expect(await resolveTikTokUrl('https://vm.tiktok.com/ZNRvLPpVV/')).toBeNull()
+  })
+
+  it('rejects a non-tiktok input without fetching', async () => {
+    expect(await resolveTikTokUrl('https://evil.com/whatever')).toBeNull()
+    expect(mockFetch).not.toHaveBeenCalled()
   })
 })
 

@@ -56,9 +56,15 @@ export function TikTokPreviewLanding({
   const tiktokUrlPattern = /(?:https?:\/\/)?(?:www\.|vm\.|m\.)?tiktok\.com\/@([A-Za-z0-9._]{1,30})\/video\/(\d{6,25})/i
 
   const parseAndNavigate = (url: string): boolean => {
-    const match = url.trim().match(tiktokUrlPattern)
+    const trimmed = url.trim()
+    const match = trimmed.match(tiktokUrlPattern)
     if (match) {
       window.location.href = `/@${match[1]}/video/${match[2]}`
+      return true
+    }
+    // Short link (vm./vt.tiktok.com/{code} or /t/{code}) — resolve server-side.
+    if (/(?:vm|vt)\.tiktok\.com\/[A-Za-z0-9]+|tiktok\.com\/t\/[A-Za-z0-9]+/i.test(trimmed)) {
+      window.location.href = `/api/tiktok/resolve?go=1&url=${encodeURIComponent(trimmed)}`
       return true
     }
     return false
