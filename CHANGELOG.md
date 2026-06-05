@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.32.6](https://github.com/itsmemeworks/adhx/compare/v1.32.5...v1.32.6) (2026-06-05)
+
+
+### Bug Fixes
+
+* **tiktok:** use relative redirect in resolve route for fly proxy ([#163](https://github.com/itsmemeworks/adhx/issues/163)) ([5c59060](https://github.com/itsmemeworks/adhx/commit/5c59060930ccfd669ed9a9bbfe19b83f7cd972c7))
+
 ## [1.32.5](https://github.com/itsmemeworks/adhx/compare/v1.32.4...v1.32.5) (2026-06-05)
 
 
