@@ -12,6 +12,18 @@ import { resolveTikTokUrl } from '@/lib/media/tnktok'
  * Used by the middleware (URL-prefix paste) and the landing/preview inputs,
  * which can't follow cross-origin redirects client-side.
  */
+
+/**
+ * Same-origin redirect via a RELATIVE Location header. NextResponse.redirect
+ * requires an absolute URL built from request.url, but behind Fly's proxy
+ * request.url is the internal bind address (http://0.0.0.0:3000), which would
+ * send the browser to an unreachable host. A relative Location is resolved by
+ * the browser against the real request origin (adhx.com), avoiding that.
+ */
+function relativeRedirect(path: string) {
+  return new NextResponse(null, { status: 307, headers: { Location: path } })
+}
+
 export async function GET(request: NextRequest) {
   const raw = request.nextUrl.searchParams.get('url')
   const go = request.nextUrl.searchParams.get('go') === '1'
@@ -25,10 +37,7 @@ export async function GET(request: NextRequest) {
   if (!resolved) {
     if (go) {
       // Send the user somewhere sensible instead of a JSON error.
-      return NextResponse.redirect(
-        new URL('/?error=' + encodeURIComponent('Could not resolve that TikTok link'), request.url),
-        { status: 307 },
-      )
+      return relativeRedirect('/?error=' + encodeURIComponent('Could not resolve that TikTok link'))
     }
     return NextResponse.json({ error: 'Could not resolve TikTok URL' }, { status: 404 })
   }
@@ -36,7 +45,7 @@ export async function GET(request: NextRequest) {
   const previewPath = `/@${resolved.handle}/video/${resolved.videoId}`
 
   if (go) {
-    return NextResponse.redirect(new URL(previewPath, request.url), { status: 307 })
+    return relativeRedirect(previewPath)
   }
 
   return NextResponse.json({ ...resolved, url: previewPath })
