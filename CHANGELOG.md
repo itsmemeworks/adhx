@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.32.7](https://github.com/itsmemeworks/adhx/compare/v1.32.6...v1.32.7) (2026-06-05)
+
+
+### Bug Fixes
+
+* **unfurl:** preview wording, drop duplicate adhx, add tiktok image ([#165](https://github.com/itsmemeworks/adhx/issues/165)) ([d94504d](https://github.com/itsmemeworks/adhx/commit/d94504da5eb9c661c3627fc9f14b496badfd05b5))
+
 ## [1.32.6](https://github.com/itsmemeworks/adhx/compare/v1.32.5...v1.32.6) (2026-06-05)
 
 
