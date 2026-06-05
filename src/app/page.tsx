@@ -6,7 +6,7 @@ import { LandingPage } from '@/components/LandingPage'
 import {
   FeedGrid,
   FilterBar,
-  Lightbox,
+  CardViewer,
   type FeedItem,
   type FilterType,
   type PlatformFilter,
@@ -506,123 +506,6 @@ function FeedPageContent(): React.ReactElement {
     [fetchTags]
   )
 
-  useEffect(() => {
-    if (selectedIndex === null) return
-
-    function handleKeyDown(e: KeyboardEvent): void {
-      // Don't trigger shortcuts when typing in input fields
-      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
-        // First Escape: blur the input. Second Escape: close lightbox
-        if (e.key === 'Escape') {
-          ;(document.activeElement as HTMLElement).blur()
-          e.preventDefault()
-        }
-        return
-      }
-
-      // Don't capture shortcuts when modifier keys are pressed (allow Cmd+R, Ctrl+R, etc.)
-      if (e.metaKey || e.ctrlKey || e.altKey) return
-
-      switch (e.key) {
-        case 'Escape':
-          setSelectedIndex(null)
-          break
-        case 'ArrowLeft':
-          e.preventDefault()
-          setSelectedIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : items.length - 1))
-          break
-        case 'ArrowRight':
-          e.preventDefault()
-          setSelectedIndex((prev) => (prev !== null && prev < items.length - 1 ? prev + 1 : 0))
-          break
-        case 'r':
-        case 'R':
-          if (selectedItem && !selectedItem.isRead) {
-            handleMarkAsRead(selectedItem.id)
-            // Auto-advance when in unread-only mode (same behavior as clicking the checkmark)
-            if (unreadOnly) {
-              setTimeout(() => {
-                if (items.length <= 1) {
-                  setSelectedIndex(null)
-                } else if (selectedIndex !== null && selectedIndex >= items.length - 1) {
-                  setSelectedIndex(selectedIndex - 1)
-                }
-                setItems((prev) => prev.filter((i) => i.id !== selectedItem.id))
-              }, 150)
-            }
-          }
-          break
-        case 'u':
-        case 'U':
-          if (selectedItem && selectedItem.isRead) {
-            handleMarkAsRead(selectedItem.id)
-          }
-          break
-        case 'q':
-        case 'Q':
-          // Navigate to quoted tweet
-          if (selectedItem?.quotedTweetId) {
-            const quotedIndex = items.findIndex((i) => i.id === selectedItem.quotedTweetId)
-            if (quotedIndex !== -1) {
-              setSelectedIndex(quotedIndex)
-            } else {
-              // Quoted tweet not in current feed - switch to "all" filter and navigate after reload
-              // Include fallback URL to open externally if not in user's collection
-              const quotedUrl = selectedItem.quotedTweet?.tweetUrl
-              setPendingNavigation({ id: selectedItem.quotedTweetId, fallbackUrl: quotedUrl })
-              setFilter('all')
-              setSearch('')
-            }
-          }
-          break
-        case 'p':
-        case 'P':
-          // Navigate to parent tweet (tweet that quoted this one)
-          if (selectedItem?.parentTweets?.[0]) {
-            const parentId = selectedItem.parentTweets[0].id
-            const parentIndex = items.findIndex((i) => i.id === parentId)
-            if (parentIndex !== -1) {
-              setSelectedIndex(parentIndex)
-            } else {
-              // Parent not in current feed - switch to "all" filter and navigate after reload
-              // Include fallback URL to open externally if parent not in user's collection
-              const parentUrl = selectedItem.parentTweets[0].tweetUrl
-              setPendingNavigation({ id: parentId, fallbackUrl: parentUrl })
-              setFilter('all')
-              setSearch('')
-            }
-          }
-          break
-        case 'x':
-        case 'X':
-          // Open current tweet externally
-          if (selectedItem?.tweetUrl) {
-            window.open(selectedItem.tweetUrl, '_blank')
-          }
-          break
-        case 's':
-        case 'S':
-          // Trigger share button animation (AuthorHeader listens for this event)
-          if (selectedItem) {
-            window.dispatchEvent(new CustomEvent('trigger-share'))
-          }
-          break
-        case 'g':
-        case 'G':
-          // Back to gallery
-          setSelectedIndex(null)
-          break
-        case '?':
-          // Show shortcuts help
-          e.preventDefault()
-          setShowShortcutsModal(true)
-          break
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedIndex, items, selectedItem, handleMarkAsRead, unreadOnly])
 
   // Global keyboard shortcuts (when lightbox is NOT open)
   useEffect(() => {
@@ -962,8 +845,8 @@ function FeedPageContent(): React.ReactElement {
       </ErrorBoundary>
 
       {selectedItem && selectedIndex !== null && (
-        <ErrorBoundary componentName="Lightbox">
-          <Lightbox
+        <ErrorBoundary componentName="CardViewer">
+          <CardViewer
             item={selectedItem}
             index={selectedIndex}
             total={items.length}
@@ -975,20 +858,15 @@ function FeedPageContent(): React.ReactElement {
             onTagAdd={(tag) => handleAddTag(selectedItem.id, tag)}
             onTagRemove={(tag) => handleRemoveTag(selectedItem.id, tag)}
             availableTags={availableTags}
-            unreadOnly={unreadOnly}
-            onRemoveItem={() => setItems((prev) => prev.filter((i) => i.id !== selectedItem.id))}
-            onNavigateToId={(id, fallbackUrl) => {
-              const targetIndex = items.findIndex((i) => i.id === id)
-              if (targetIndex !== -1) {
-                setSelectedIndex(targetIndex)
-                return true
-              }
-              // Item not in current feed - switch to "all" filter and navigate after reload
-              // Pass fallbackUrl so we can open externally if item not in user's collection
-              setPendingNavigation({ id, fallbackUrl })
-              setFilter('all')
-              setSearch('')
-              return false
+            onRemoveItem={() => {
+              const id = selectedItem.id
+              const wasUnread = !selectedItem.isRead
+              const newLen = items.length - 1
+              setItems((prev) => prev.filter((i) => i.id !== id))
+              setSelectedIndex((idx) =>
+                newLen <= 0 ? null : idx !== null && idx >= newLen ? newLen - 1 : idx,
+              )
+              if (wasUnread) setStats((s) => ({ ...s, unread: Math.max(0, s.unread - 1) }))
             }}
           />
         </ErrorBoundary>
