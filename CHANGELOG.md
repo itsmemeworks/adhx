@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.34.0](https://github.com/itsmemeworks/adhx/compare/v1.33.0...v1.34.0) (2026-06-06)
+
+
+### Features
+
+* redesign with the ADHX Matter warm editorial direction (light + dark) ([#175](https://github.com/itsmemeworks/adhx/issues/175)) ([b0f2983](https://github.com/itsmemeworks/adhx/commit/b0f2983703688618b8be652fa23d56d432744ba8))
+
 ## [1.33.0](https://github.com/itsmemeworks/adhx/compare/v1.32.7...v1.33.0) (2026-06-06)
 
 
