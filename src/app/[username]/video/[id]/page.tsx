@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { Metadata } from 'next'
 import { TikTokPreviewLanding } from '@/components/TikTokPreviewLanding'
 import {
@@ -7,6 +8,8 @@ import {
   isValidVideoId,
 } from '@/lib/media/tnktok'
 import { getSession } from '@/lib/auth/session'
+import { recordActivity, previewPath } from '@/lib/activity/record'
+import { isLikelyBot } from '@/lib/activity/bot'
 
 interface Props {
   params: Promise<{ username: string; id: string }>
@@ -30,6 +33,19 @@ export default async function TikTokPreviewPage({ params }: Props) {
     fetchTikTokMetadata(handle, id),
     getSession(),
   ])
+
+  if (meta && !isLikelyBot((await headers()).get('user-agent'))) {
+    recordActivity({
+      action: 'preview',
+      platform: 'tiktok',
+      bookmarkId: id,
+      author: meta.author || handle,
+      authorName: meta.authorName || null,
+      text: meta.description || meta.title || null,
+      thumbnailUrl: null, // tnktok exposes no poster; card falls back to the glyph
+      url: previewPath('tiktok', meta.author || handle, id),
+    })
+  }
 
   return (
     <TikTokPreviewLanding
