@@ -55,6 +55,7 @@ export function Header() {
   const [addTweetResult, setAddTweetResult] = useState<AddTweetResult | null>(null)
   const [showSync, setShowSync] = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null)
   const [stats, setStats] = useState<Stats>({ total: 0, unread: 0 })
@@ -402,6 +403,14 @@ export function Header() {
           {/* Right section - Actions (only show when authenticated) */}
           {authStatus?.authenticated && (
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+              {/* Mobile search — collapses to an icon (expands the row below) */}
+              <button
+                onClick={() => setMobileSearchOpen((v) => !v)}
+                aria-label="Search"
+                className="md:hidden w-9 h-9 flex items-center justify-center rounded-full text-ink-2 hover:bg-inset transition-colors"
+              >
+                <Search className="w-[18px] h-[18px]" />
+              </button>
               {/* Triage pill */}
               <button
                 onClick={openTriage}
@@ -566,27 +575,30 @@ export function Header() {
           )}
         </div>
 
-        {/* Mobile Search Row (only show when authenticated) */}
-        {authStatus?.authenticated && (
+        {/* Mobile Search Row — collapses to a header icon; expands on tap. */}
+        {authStatus?.authenticated && mobileSearchOpen && (
           <div className="md:hidden px-4 pb-3">
             <div className="relative flex items-center">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-3 pointer-events-none" />
               <input
                 type="text"
+                autoFocus
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
                 placeholder="Search your collection…"
                 aria-label="Search bookmarks"
                 className="w-full h-10 pl-9 pr-9 bg-inset rounded-full text-base sm:text-sm text-ink placeholder-ink-3 focus:outline-none focus:ring-2 focus:ring-clay/40"
               />
-              {searchValue && (
-                <button
-                  onClick={clearSearch}
-                  className="absolute right-2 inset-y-0 my-auto h-6 w-6 flex items-center justify-center hover:bg-hairline rounded-full transition-colors"
-                >
-                  <X className="w-4 h-4 text-ink-3" />
-                </button>
-              )}
+              <button
+                onClick={() => {
+                  clearSearch()
+                  setMobileSearchOpen(false)
+                }}
+                aria-label="Close search"
+                className="absolute right-2 inset-y-0 my-auto h-6 w-6 flex items-center justify-center hover:bg-hairline rounded-full transition-colors"
+              >
+                <X className="w-4 h-4 text-ink-3" />
+              </button>
             </div>
           </div>
         )}
