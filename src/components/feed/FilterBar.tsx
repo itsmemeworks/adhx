@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react'
-import { Tag, Eye, EyeOff, Globe, Link, Check, Filter, ChevronDown, ArrowUpDown, ArrowDown, ArrowUp, Instagram } from 'lucide-react'
+import { Tag, Eye, EyeOff, Globe, Link, Check, Filter, ChevronDown, ArrowUpDown, ArrowDown, ArrowUp, Instagram, Youtube } from 'lucide-react'
 import { FILTER_OPTIONS, PLATFORM_OPTIONS, type FilterType, type SortType, type SortDirection, type TagItem, type PlatformFilter } from './types'
 import { XIcon } from '@/components/icons'
 
@@ -36,6 +36,7 @@ function PlatformIcon({ value, className }: { value: PlatformFilter; className?:
   if (value === 'twitter') return <XIcon className={className} />
   if (value === 'instagram') return <Instagram className={className} />
   if (value === 'tiktok') return <TikTokGlyph className={className} />
+  if (value === 'youtube') return <Youtube className={className} />
   return null
 }
 

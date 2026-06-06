@@ -64,10 +64,12 @@ const nextConfig = {
             "default-src 'self'",
             "script-src 'self' 'unsafe-inline'",
             "style-src 'self' 'unsafe-inline'",
-            "img-src 'self' https://pbs.twimg.com https://d.fxtwitter.com https://d.fixupx.com https://abs.twimg.com data: blob:",
+            "img-src 'self' https://pbs.twimg.com https://d.fxtwitter.com https://d.fixupx.com https://abs.twimg.com https://i.ytimg.com data: blob:",
             "media-src 'self' https://video.twimg.com https://*.twimg.com blob:",
             "font-src 'self' data:",
             "connect-src 'self' https://api.fxtwitter.com https://*.sentry.io",
+            // YouTube Shorts play via the official privacy-enhanced iframe embed.
+            "frame-src https://www.youtube-nocookie.com https://www.youtube.com",
             "frame-ancestors 'none'",
           ].join('; '),
         },

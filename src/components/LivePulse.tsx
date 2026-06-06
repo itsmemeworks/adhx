@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Instagram } from 'lucide-react'
+import { Instagram, Youtube } from 'lucide-react'
 import { XIcon } from '@/components/icons'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
 
@@ -45,6 +45,7 @@ function TikTokGlyph({ className }: { className?: string }) {
 function PlatformGlyph({ platform }: { platform: string }) {
   if (platform === 'instagram') return <Instagram className="w-3.5 h-3.5 text-pink-500" />
   if (platform === 'tiktok') return <TikTokGlyph className="w-3.5 h-3.5 text-gray-900 dark:text-white" />
+  if (platform === 'youtube') return <Youtube className="w-3.5 h-3.5 text-red-600" />
   return <XIcon className="w-3 h-3 text-gray-900 dark:text-white" />
 }
 

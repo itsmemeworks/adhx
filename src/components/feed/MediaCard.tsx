@@ -1,7 +1,8 @@
 'use client'
 
-import { ExternalLink, Instagram, Sparkles, FileText } from 'lucide-react'
+import { ExternalLink, Instagram, Sparkles, FileText, Youtube } from 'lucide-react'
 import type { FeedItem } from './types'
+import { youtubeEmbedUrl } from '@/lib/media/youtube'
 import { AuthorAvatar } from './AuthorAvatar'
 import { renderTextWithLinks, stripMediaUrls } from './utils'
 import { XIcon } from '@/components/icons'
@@ -34,6 +35,13 @@ function PlatformWordmark({ platform }: { platform?: FeedItem['platform'] }) {
     return (
       <span className="flex items-center gap-1 font-semibold text-gray-900 dark:text-white">
         <TikTokGlyph className="w-4 h-4" /> TikTok
+      </span>
+    )
+  }
+  if (platform === 'youtube') {
+    return (
+      <span className="flex items-center gap-1 font-semibold text-gray-900 dark:text-white">
+        <Youtube className="w-4 h-4 text-red-600" /> YouTube
       </span>
     )
   }
@@ -102,6 +110,25 @@ function MediaPanel({ item }: { item: FeedItem }) {
   const primary = item.media?.[0]
   const isVideo = primary?.mediaType === 'video' || primary?.mediaType === 'animated_gif'
   const heightClass = 'max-h-[50vh] lg:max-h-[84vh]'
+
+  // YouTube plays via the official iframe embed (no MP4). Vertical Shorts frame.
+  // Needs a concrete height (the iframe is absolute, so aspect-ratio alone would
+  // collapse the box to zero); width then follows from the 9/16 ratio.
+  if (item.platform === 'youtube') {
+    return (
+      <div className="relative aspect-[9/16] h-[60vh] lg:h-[82vh] max-h-[82vh] max-w-full rounded-2xl overflow-hidden bg-black">
+        <iframe
+          key={item.id}
+          src={youtubeEmbedUrl(item.id)}
+          title={item.text || 'YouTube Short'}
+          className="absolute inset-0 w-full h-full"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerPolicy="strict-origin-when-cross-origin"
+          allowFullScreen
+        />
+      </div>
+    )
+  }
 
   if (isVideo && primary) {
     const src =

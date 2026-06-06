@@ -21,6 +21,8 @@ function platformNoun(platform?: Platform): string {
       return 'Reel'
     case 'tiktok':
       return 'TikTok'
+    case 'youtube':
+      return 'Short'
     case 'twitter':
       return 'Tweet'
     default:
@@ -75,11 +77,12 @@ export function AddTweetModal({ isOpen, onClose, onSuccess, onOpenTweet, initial
   // Handle paste event for auto-submit
   const handlePaste = async (e: React.ClipboardEvent) => {
     const pastedText = e.clipboardData.getData('text')
-    // Auto-submit if it looks like a supported URL (X / Instagram / TikTok)
+    // Auto-submit if it looks like a supported URL (X / Instagram / TikTok / YouTube)
     const looksSupported =
       /(?:twitter|x|vxtwitter|fxtwitter)\.com\/\w+\/status\/\d+/i.test(pastedText) ||
       /instagram\.com\/(?:reels?|p)\/[A-Za-z0-9_-]+/i.test(pastedText) ||
-      /tiktok\.com\/@[A-Za-z0-9._]+\/video\/\d+/i.test(pastedText)
+      /tiktok\.com\/@[A-Za-z0-9._]+\/video\/\d+/i.test(pastedText) ||
+      /(?:youtube\.com\/(?:shorts|watch|embed|v|live)|youtu\.be\/)/i.test(pastedText)
     if (looksSupported) {
       e.preventDefault()
       setUrl(pastedText)
@@ -156,7 +159,7 @@ export function AddTweetModal({ isOpen, onClose, onSuccess, onOpenTweet, initial
           {state === 'idle' || state === 'loading' ? (
             <>
               <p className="text-sm text-muted-foreground mb-4">
-                Paste a link to add it to your collection. Works with X, Instagram, and TikTok.
+                Paste a link to add it to your collection. Works with X, Instagram, TikTok, and YouTube.
               </p>
 
               <div className="flex gap-2">
@@ -194,6 +197,7 @@ export function AddTweetModal({ isOpen, onClose, onSuccess, onOpenTweet, initial
                   <li>twitter.com/user/status/123</li>
                   <li>instagram.com/reels/abc123</li>
                   <li>tiktok.com/@user/video/123</li>
+                  <li>youtube.com/shorts/abc123</li>
                 </ul>
               </div>
             </>
@@ -285,7 +289,7 @@ export function AddTweetModal({ isOpen, onClose, onSuccess, onOpenTweet, initial
             </div>
           ) : (
             <p className="text-center text-sm text-muted-foreground">
-              Tip: Paste an X, Instagram, or TikTok link and it&apos;s added automatically!
+              Tip: Paste an X, Instagram, TikTok, or YouTube link and it&apos;s added automatically!
             </p>
           )}
         </div>

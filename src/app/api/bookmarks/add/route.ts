@@ -6,6 +6,7 @@ import { getCurrentUserId } from '@/lib/auth/session'
 import { captureException, metrics } from '@/lib/sentry'
 import { fetchReelMetadata } from '@/lib/media/instafix'
 import { fetchTikTokMetadata, resolveTikTokUrl, isTikTokShortLink } from '@/lib/media/tnktok'
+import { fetchYouTubeMetadata, extractYouTubeId, youtubeThumbnail, youtubeShortUrl } from '@/lib/media/youtube'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 
 /**
@@ -30,6 +31,9 @@ const TIKTOK_PATTERN =
 
 const TWITTER_PATTERN =
   /(?:https?:\/\/)?(?:www\.)?(?:x\.com|twitter\.com)\/(\w{1,15})\/status\/(\d+)/i
+
+const YOUTUBE_PATTERN =
+  /(?:https?:\/\/)?(?:www\.|m\.)?(?:youtube\.com\/(?:shorts|watch|embed|v|live)|youtu\.be\/)/i
 
 export async function POST(request: NextRequest) {
   try {
@@ -59,6 +63,15 @@ export async function POST(request: NextRequest) {
       })
       const tweetData = await tweetResponse.json()
       return NextResponse.json({ ...tweetData, platform: 'twitter' }, { status: tweetResponse.status })
+    }
+
+    // YouTube (Shorts + regular videos) — match the host, then pull the id from
+    // any of /shorts, /watch?v=, youtu.be, /embed.
+    if (YOUTUBE_PATTERN.test(url)) {
+      const ytId = extractYouTubeId(url)
+      if (ytId) {
+        return await addYouTubeShort(userId, ytId, source)
+      }
     }
 
     const reelMatch = url.match(INSTAGRAM_PATTERN)
@@ -243,5 +256,85 @@ async function addTikTokVideo(userId: string, handle: string, videoId: string, s
     platform: 'tiktok',
     bookmark: newBookmark,
     message: 'TikTok added to your collection.',
+  })
+}
+
+async function addYouTubeShort(userId: string, videoId: string, source: string) {
+  const [existing] = await db
+    .select()
+    .from(bookmarks)
+    .where(and(eq(bookmarks.userId, userId), eq(bookmarks.platform, 'youtube'), eq(bookmarks.id, videoId)))
+    .limit(1)
+
+  if (existing) {
+    return NextResponse.json(
+      { success: false, isDuplicate: true, platform: 'youtube', bookmark: existing },
+      { status: 200 },
+    )
+  }
+
+  const meta = await fetchYouTubeMetadata(videoId)
+  if (!meta) {
+    return NextResponse.json({ error: 'YouTube video not available' }, { status: 404 })
+  }
+
+  const now = new Date().toISOString()
+  const handle = (meta.author || '').replace(/^@/, '') || meta.authorName || 'youtube'
+
+  await db.insert(bookmarks).values({
+    id: videoId,
+    userId,
+    platform: 'youtube',
+    author: handle,
+    authorName: meta.authorName || null,
+    authorProfileImageUrl: null,
+    text: meta.title || '',
+    tweetUrl: youtubeShortUrl(videoId),
+    processedAt: now,
+    category: 'video',
+    source,
+  })
+
+  // Store the poster as a 'video' media row. Playback is the official iframe
+  // embed (resolved in MediaCard from platform+id), so there's no MP4 to store.
+  await db
+    .insert(bookmarkMedia)
+    .values({
+      id: `${videoId}_video_0`,
+      userId,
+      platform: 'youtube',
+      bookmarkId: videoId,
+      mediaType: 'video',
+      originalUrl: youtubeShortUrl(videoId),
+      previewUrl: youtubeThumbnail(videoId),
+    })
+    .onConflictDoNothing()
+
+  metrics.bookmarkAdded(source as 'manual' | 'url_prefix')
+
+  recordActivity({
+    action: 'save',
+    platform: 'youtube',
+    bookmarkId: videoId,
+    author: handle,
+    authorName: meta.authorName || null,
+    text: meta.title || null,
+    thumbnailUrl: youtubeThumbnail(videoId),
+    url: previewPath('youtube', handle, videoId),
+    userId,
+  })
+
+  const [newBookmark] = await db
+    .select()
+    .from(bookmarks)
+    .where(and(eq(bookmarks.userId, userId), eq(bookmarks.platform, 'youtube'), eq(bookmarks.id, videoId)))
+    .limit(1)
+
+  return NextResponse.json({
+    success: true,
+    isDuplicate: false,
+    platform: 'youtube',
+    bookmark: newBookmark,
+    message: 'YouTube Short added to your collection.',
   })
 }

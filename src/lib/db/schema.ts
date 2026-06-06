@@ -6,16 +6,18 @@ import { relations, sql } from 'drizzle-orm'
 // ===========================================
 
 // Main bookmarks table - PK: (userId, platform, id)
-// `platform` is one of 'twitter' | 'instagram' | 'tiktok' — added so a TikTok
-// video id (numeric, 19 digits) can't collide with a tweet id (also numeric,
-// 18-19 digits). All bookmark-derived tables (tags/media/links/read_status/
-// collection_tweets) carry platform too so the foreign-key tuple matches.
+// `platform` is one of 'twitter' | 'instagram' | 'tiktok' | 'youtube' — added so
+// a TikTok video id (numeric, 19 digits) can't collide with a tweet id (also
+// numeric, 18-19 digits), and YouTube's 11-char id stays in its own namespace.
+// All bookmark-derived tables (tags/media/links/read_status/collection_tweets)
+// carry platform too so the foreign-key tuple matches. It's a free-text column
+// (no enum/migration needed to add a platform).
 export const bookmarks = sqliteTable(
   'bookmarks',
   {
     id: text('id').notNull(), // Source-native ID (tweet id, reel shortcode, tiktok video id)
     userId: text('user_id').notNull(), // Owner of the bookmark
-    platform: text('platform').notNull().default('twitter'), // 'twitter' | 'instagram' | 'tiktok'
+    platform: text('platform').notNull().default('twitter'), // 'twitter' | 'instagram' | 'tiktok' | 'youtube'
     author: text('author').notNull(),
     authorName: text('author_name'),
     authorProfileImageUrl: text('author_profile_image_url'),
