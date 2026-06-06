@@ -2,6 +2,12 @@ import { readFileSync } from 'fs'
 
 const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'))
 
+// In dev, Next/React use eval() for HMR + debugging (callstack reconstruction),
+// which a strict CSP blocks — noisy console errors on every page. Allow it for
+// `pnpm dev` ONLY. Production stays strict (no 'unsafe-eval'); React never uses
+// eval() in production, so the header below is unchanged for real deploys.
+const isDev = process.env.NODE_ENV !== 'production'
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Expose app version to client
@@ -62,7 +68,7 @@ const nextConfig = {
           key: 'Content-Security-Policy',
           value: [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline'",
+            `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' https://pbs.twimg.com https://d.fxtwitter.com https://d.fixupx.com https://abs.twimg.com https://i.ytimg.com data: blob:",
             "media-src 'self' https://video.twimg.com https://*.twimg.com blob:",
