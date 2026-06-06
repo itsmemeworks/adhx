@@ -544,7 +544,7 @@ function TtsPlayer({ text, minutes }: { text: string; minutes: number }) {
       >
         {playing ? <Pause className="w-[19px] h-[19px]" fill="currentColor" /> : <Play className="w-[19px] h-[19px]" fill="currentColor" />}
       </button>
-      <div className="flex items-center gap-[2px] flex-1 min-w-0 h-[26px] overflow-hidden">
+      <div className="flex items-center justify-between flex-1 min-w-0 h-[26px] overflow-hidden">
         {Array.from({ length: bars }).map((_, i) => {
           const h = 6 + Math.abs(Math.sin(i * 0.9)) * 18
           const on = i < activeBars

@@ -303,8 +303,8 @@ export function TriageMode({
         </>
       )}
 
-      {/* Top bar (absolute): close · count · progress · streak */}
-      <div className="absolute top-0 left-0 right-0 z-[6] flex items-center gap-4 px-5 sm:px-6 py-4">
+      {/* Top bar (absolute): close · count · progress · streak — one line, even on mobile */}
+      <div className="absolute top-0 left-0 right-0 z-[6] flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4">
         <button
           onClick={onClose}
           className={cn(
@@ -329,13 +329,18 @@ export function TriageMode({
         {streak.current > 0 && (
           <span
             className={cn(
-              'flex-none inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-semibold whitespace-nowrap border',
+              'flex-none inline-flex items-center gap-1.5 rounded-full font-semibold whitespace-nowrap border',
               fullBleed
-                ? 'bg-black/40 backdrop-blur text-white border-white/20'
-                : 'bg-flame/15 text-flame border-flame/30',
+                ? 'px-2.5 py-1 text-xs bg-black/40 backdrop-blur text-white border-white/20'
+                : 'px-3 py-1.5 text-[13px] bg-flame/15 text-flame border-flame/30',
             )}
           >
-            <Flame className="w-[15px] h-[15px]" fill="currentColor" /> {streak.current}-day streak
+            <Flame className="w-[15px] h-[15px]" fill="currentColor" />
+            {/* Number only on mobile/full-bleed; "-day streak" appended on sm+. */}
+            <span>
+              {streak.current}
+              {!fullBleed && <span className="hidden sm:inline">-day streak</span>}
+            </span>
           </span>
         )}
       </div>
@@ -382,31 +387,31 @@ export function TriageMode({
         </div>
       )}
 
-      {/* Single action dock (bottom-center) */}
+      {/* Single action dock (bottom-center): glass buttons, hint below. */}
       {!finished && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className="absolute bottom-6 left-0 right-0 z-[7] flex flex-col items-center gap-3.5"
+          className="absolute bottom-6 left-0 right-0 z-[7] flex flex-col items-center gap-[15px]"
         >
+          <div className="flex items-center gap-5 sm:gap-[30px]">
+            <DockButton onClick={keep} label="Keep" tone="primary" onDark={fullBleed}>
+              <Bookmark className="w-[25px] h-[25px]" />
+            </DockButton>
+            <DockButton onClick={del} label="Delete" tone="outline" onDark={fullBleed}>
+              <Trash2 className="w-[22px] h-[22px]" />
+            </DockButton>
+            <DockButton onClick={archive} label="Done" tone="done" onDark={fullBleed}>
+              <Check className="w-[25px] h-[25px]" />
+            </DockButton>
+          </div>
           <span
             className={cn(
               'inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold whitespace-nowrap',
-              fullBleed ? 'bg-black/40 backdrop-blur text-white/90' : 'bg-fsurface text-fink-2',
+              fullBleed ? 'bg-black/40 backdrop-blur text-white/90' : 'bg-fsurface/60 backdrop-blur text-fink-2 border border-fline',
             )}
           >
             <ArrowLeft className="w-3.5 h-3.5" /> {isTouch ? 'Swipe to sort' : 'Swipe or use arrow keys'} <ArrowRight className="w-3.5 h-3.5" />
           </span>
-          <div className="flex items-end gap-7 sm:gap-[30px]">
-            <DockButton onClick={keep} label="Keep" kb="←" tone="primary" onDark={fullBleed}>
-              <Bookmark className="w-[25px] h-[25px]" />
-            </DockButton>
-            <DockButton onClick={del} label="Delete" kb="↓" tone="outline" onDark={fullBleed}>
-              <Trash2 className="w-[22px] h-[22px]" />
-            </DockButton>
-            <DockButton onClick={archive} label="Done" kb="→" tone="done" onDark={fullBleed}>
-              <Check className="w-[25px] h-[25px]" />
-            </DockButton>
-          </div>
         </div>
       )}
 
@@ -435,47 +440,54 @@ export function TriageMode({
   )
 }
 
+/**
+ * "Apple-glass" dock button — translucent fill + backdrop blur so the content
+ * behind blurs through. Keep = accent glass, Delete = subtle outline glass,
+ * Done = green glass. No text label (the hint below covers the gesture).
+ */
 function DockButton({
   onClick,
   label,
-  kb,
   tone,
   onDark = false,
   children,
 }: {
   onClick: () => void
   label: string
-  kb?: string
   tone: 'primary' | 'outline' | 'done'
   onDark?: boolean
   children: React.ReactNode
 }) {
   const big = tone !== 'outline'
-  const surface =
+  const background =
     tone === 'primary'
-      ? 'bg-clay-grad text-white shadow-glow'
+      ? 'color-mix(in srgb, var(--m-accent) 66%, transparent)'
       : tone === 'done'
-        ? 'bg-done text-white shadow-m-lg'
+        ? 'color-mix(in srgb, var(--m-done) 66%, transparent)'
         : onDark
-          ? 'bg-white/10 backdrop-blur border-[1.5px] border-white/60 text-white'
-          : 'bg-transparent border-[1.5px] border-fline text-fink-2'
+          ? 'rgba(255,255,255,.12)'
+          : 'color-mix(in srgb, var(--m-fink) 8%, transparent)'
+  const borderColor = tone === 'outline' ? (onDark ? 'rgba(255,255,255,.4)' : 'var(--m-fline)') : 'rgba(255,255,255,.4)'
+  const iconColor = tone === 'outline' && !onDark ? 'text-fink-2' : 'text-white'
   return (
-    <div className="flex flex-col items-center gap-2">
-      <button
-        onClick={onClick}
-        aria-label={label}
-        className={cn(
-          'rounded-full flex items-center justify-center transition-transform hover:scale-105 active:scale-95',
-          big ? 'w-16 h-16' : 'w-[54px] h-[54px]',
-          surface,
-        )}
-      >
-        {children}
-      </button>
-      <span className={cn('text-xs font-semibold', onDark ? 'text-white drop-shadow' : 'text-fink-2')}>
-        {label} {kb && <span className={cn('font-mono', onDark ? 'text-white/70' : 'text-fink-3')}>{kb}</span>}
-      </span>
-    </div>
+    <button
+      onClick={onClick}
+      aria-label={label}
+      className={cn(
+        'rounded-full border flex items-center justify-center transition-transform hover:scale-105 active:scale-95',
+        big ? 'w-16 h-16' : 'w-[54px] h-[54px]',
+        iconColor,
+      )}
+      style={{
+        background,
+        borderColor,
+        backdropFilter: 'blur(16px) saturate(1.4)',
+        WebkitBackdropFilter: 'blur(16px) saturate(1.4)',
+        boxShadow: big ? '0 8px 24px rgba(0,0,0,.18)' : undefined,
+      }}
+    >
+      {children}
+    </button>
   )
 }
 

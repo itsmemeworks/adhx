@@ -1,12 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Bookmark, Search, Zap, Volume2, ArrowRight, Play, Plus, Smartphone, Monitor, ExternalLink, Copy, Check } from 'lucide-react'
+import { Bookmark, Search, Zap, Volume2, ArrowRight, Plus, Smartphone, Monitor, ExternalLink, Copy, Check } from 'lucide-react'
 import { extractYouTubeId } from '@/lib/media/youtube'
 import { getPlatformType, type PlatformType } from '@/lib/platform'
-import { MatterLogo, PlatformGlyph, LiveDot, type PlatformId } from '@/components/matter'
-import { formatCompactRelativeTime } from '@/lib/utils/format'
-import { DiscoverCard, inferType } from '@/components/discover/DiscoverCard'
+import { MatterLogo, PlatformGlyph, LiveDot } from '@/components/matter'
+import { DiscoverCard } from '@/components/discover/DiscoverCard'
 import type { ActivityItem } from '@/components/discover/DiscoverFeed'
 
 /* ---------- Live activity (the real, anonymous community pulse) ---------- */
@@ -203,8 +202,8 @@ export function LandingPage() {
             </div>
           </div>
 
-          {/* RIGHT: live discovery panel */}
-          <LivePanel items={live.items.slice(0, 5)} savedToday={live.savedToday} loaded={live.loaded} />
+          {/* RIGHT: how-it-works explainer (the live feed already appears below) */}
+          <HowItWorks />
         </section>
 
         {/* ───────── Live discovery section ───────── */}
@@ -305,79 +304,49 @@ export function LandingPage() {
   )
 }
 
-/* ───────── Live discovery panel (hero right column) ───────── */
+/* ───────── How ADHX works (hero right column) ───────── */
 
-function LivePanel({ items, savedToday, loaded }: { items: ActivityItem[]; savedToday: number; loaded: boolean }) {
+function HowItWorks() {
+  const steps: { icon: React.ReactNode; h: string; b: string }[] = [
+    {
+      icon: <PlatformGlyph platform="twitter" size={17} />,
+      h: 'Connect X',
+      b: 'Your saved bookmarks sync in automatically — nothing to copy-paste.',
+    },
+    {
+      icon: <Plus className="w-[17px] h-[17px]" />,
+      h: 'Save from anywhere',
+      b: 'Drop a TikTok, Reel, YouTube Short or tweet and it lands in your feed.',
+    },
+    {
+      icon: <Zap className="w-[17px] h-[17px]" />,
+      h: 'Triage daily',
+      b: 'Swipe through your backlog one card at a time — keep, read, or clear.',
+    },
+    {
+      icon: <Volume2 className="w-[17px] h-[17px]" />,
+      h: 'Read or listen later',
+      b: 'Full-text search across everything, plus text-to-speech for any post.',
+    },
+  ]
   return (
-    <div className="min-w-0 bg-surface border border-hairline rounded-card shadow-m-lg p-4">
-      <div className="flex items-center gap-2.5 mb-3.5">
-        <LiveDot />
-        <span className="font-bold text-sm text-ink">Live right now</span>
-        {savedToday > 0 && (
-          <span className="ml-auto font-mono text-[12.5px] text-ink-3">
-            {savedToday.toLocaleString()} {savedToday === 1 ? 'save' : 'saves'} today
-          </span>
-        )}
-      </div>
-      <div className="flex flex-col gap-2.5">
-        {!loaded ? (
-          Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-[66px] animate-pulse rounded-xl border border-hairline bg-inset" />
-          ))
-        ) : items.length === 0 ? (
-          <p className="px-3 py-6 text-center text-[13.5px] text-ink-2">
-            Quiet right now — be the first to save something.
-          </p>
-        ) : (
-          items.map((item, i) => <LiveRow key={`${item.url}-${i}`} item={item} />)
-        )}
-      </div>
-    </div>
-  )
-}
-
-/* compact ticker row */
-function LiveRow({ item }: { item: ActivityItem }) {
-  const type = inferType(item)
-  const thumb = item.thumbnailUrl || null
-  const title = item.text || (item.authorName ? `Saved from ${item.authorName}` : `${type} clip`)
-  return (
-    <a
-      href={item.url}
-      className="flex items-center gap-3 px-3 py-2.5 rounded-xl border bg-surface border-hairline transition-colors hover:bg-inset"
-    >
-      {thumb ? (
-        <div className="relative w-[46px] h-[46px] flex-none rounded-[10px] overflow-hidden">
-          <img src={thumb} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-          {type === 'video' && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Play className="w-3.5 h-3.5 text-white" fill="#fff" />
+    <div className="min-w-0 bg-surface border border-hairline rounded-card shadow-m-lg p-6">
+      <h2 className="font-serif font-semibold text-[19px] text-ink mb-[18px]">How ADHX works</h2>
+      <div className="flex flex-col gap-[17px]">
+        {steps.map((s, i) => (
+          <div key={s.h} className="flex items-start gap-3.5">
+            <div className="w-[34px] h-[34px] flex-none rounded-[10px] bg-clay/12 text-clay flex items-center justify-center">
+              {s.icon}
             </div>
-          )}
-        </div>
-      ) : (
-        <div className="w-[46px] h-[46px] flex-none rounded-[10px] bg-inset flex items-center justify-center text-clay">
-          {type === 'text' ? <Search className="w-[18px] h-[18px]" /> : <Bookmark className="w-[18px] h-[18px]" />}
-        </div>
-      )}
-      <div className="flex-1 min-w-0">
-        <div className="text-[13.5px] font-semibold text-ink truncate">{title}</div>
-        <Anon t={formatCompactRelativeTime(item.createdAt)} plat={item.platform as PlatformId} />
+            <div>
+              <div className="font-bold text-[14.5px] text-ink">
+                {i + 1}. {s.h}
+              </div>
+              <div className="text-[13px] text-ink-2 leading-[1.45] mt-0.5">{s.b}</div>
+            </div>
+          </div>
+        ))}
       </div>
-      <span className="flex-none w-[34px] h-[34px] rounded-[10px] border border-hairline bg-surface flex items-center justify-center text-clay">
-        <Plus className="w-[17px] h-[17px]" />
-      </span>
-    </a>
-  )
-}
-
-/* anonymous identity line */
-function Anon({ t, plat }: { t: string; plat: PlatformId }) {
-  return (
-    <div className="flex items-center gap-1.5 text-ink-3">
-      <span className="text-xs">{t}</span>
-      <span className="text-xs">·</span>
-      <PlatformGlyph platform={plat} size={12} />
     </div>
   )
 }
