@@ -54,13 +54,14 @@ function dedupeByPost(items: ActivityItem[]): ActivityItem[] {
 
 const POLL_MS = 12_000
 
-type FilterId = 'trending' | 'just-saved' | 'photos' | 'videos' | 'articles'
+type FilterId = 'trending' | 'just-saved' | 'photos' | 'videos' | 'text' | 'articles'
 
 const FILTERS: { id: FilterId; label: string }[] = [
   { id: 'trending', label: 'Trending' },
   { id: 'just-saved', label: 'Just saved' },
   { id: 'photos', label: 'Photos' },
   { id: 'videos', label: 'Videos' },
+  { id: 'text', label: 'Text' },
   { id: 'articles', label: 'Articles' },
 ]
 
@@ -72,7 +73,7 @@ function keyOf(item: ActivityItem): string {
 /**
  * Filter + sort an already-deduped list. "Just saved" (default) = newest first.
  * "Trending" surfaces posts saved by 2+ people, ranked by that count (newest as
- * the tiebreaker). Photos/Videos/Articles filter by type.
+ * the tiebreaker). Photos/Videos/Text/Articles filter by type (Text includes quotes).
  */
 function applyFilter(items: ActivityItem[], filter: FilterId): ActivityItem[] {
   if (filter === 'trending') {
@@ -87,6 +88,7 @@ function applyFilter(items: ActivityItem[], filter: FilterId): ActivityItem[] {
 
   if (filter === 'photos') return items.filter((it) => inferType(it) === 'photo')
   if (filter === 'videos') return items.filter((it) => inferType(it) === 'video')
+  if (filter === 'text') return items.filter((it) => inferType(it) === 'text' || inferType(it) === 'quote')
   if (filter === 'articles') return items.filter((it) => inferType(it) === 'article')
 
   // just-saved (default): already newest-first from the API.
