@@ -2,7 +2,7 @@
 export { FeedCard } from './FeedCard'
 export { FeedGrid } from './FeedGrid'
 export { FilterBar } from './FilterBar'
-export { Lightbox } from './Lightbox'
+export { MediaCard } from './MediaCard'
 export { AuthorAvatar } from './AuthorAvatar'
 export { TagInput } from './TagInput'
 
