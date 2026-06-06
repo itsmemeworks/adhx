@@ -125,8 +125,6 @@ export function DiscoverCard({ item, fresh = false }: { item: ActivityItem; fres
           <EyeOff size={12} />
         </span>
         <span className="flex items-center gap-1.5 font-mono text-[12px] text-ink-3">
-          <span>Someone</span>
-          <span aria-hidden>·</span>
           <span>{formatCompactRelativeTime(item.createdAt)}</span>
           <span aria-hidden>·</span>
           <PlatformGlyph platform={item.platform} size={12} />

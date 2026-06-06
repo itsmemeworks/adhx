@@ -375,8 +375,6 @@ function LiveRow({ item }: { item: ActivityItem }) {
 function Anon({ t, plat }: { t: string; plat: PlatformId }) {
   return (
     <div className="flex items-center gap-1.5 text-ink-3">
-      <span className="text-xs">Someone</span>
-      <span className="text-xs">·</span>
       <span className="text-xs">{t}</span>
       <span className="text-xs">·</span>
       <PlatformGlyph platform={plat} size={12} />
