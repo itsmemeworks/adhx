@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { ExternalLink, Play, Pause, Volume2, VolumeX } from 'lucide-react'
-import type { FeedItem, ArticleContentBlock } from './types'
+import type { FeedItem, ArticleContent } from './types'
 import { youtubeEmbedUrl } from '@/lib/media/youtube'
+import { normalizeEntityMap } from '@/lib/utils/article-text'
 import { AuthorAvatar } from './AuthorAvatar'
 import { renderTextWithLinks, stripMediaUrls } from './utils'
 import { PlatformGlyph, type PlatformId } from '@/components/matter'
@@ -52,13 +53,65 @@ function heroImageUrl(item: FeedItem): string | null {
   return null
 }
 
-/** Flatten article blocks into readable paragraphs (skips media/dividers). */
-function articleParagraphs(blocks: ArticleContentBlock[] | undefined): string[] {
-  if (!blocks) return []
-  return blocks
-    .filter((b) => b.type !== 'atomic' && b.type !== 'unstyled-divider')
-    .map((b) => b.text?.trim() ?? '')
-    .filter(Boolean)
+/** A renderable article block — text (with heading level) or a resolved image. */
+type ArticleRenderBlock =
+  | { kind: 'h1' | 'h2' | 'h3' | 'quote' | 'li' | 'p'; key: string; text: string }
+  | { kind: 'image'; key: string; src: string; alt: string; caption: string }
+
+type LooseEntity = {
+  type?: string
+  data?: { url?: string; src?: string; alt?: string; caption?: string; mediaItems?: Array<{ mediaId: string }> }
+}
+
+/**
+ * Turn X-Article DraftJS blocks into renderable blocks, resolving `atomic`
+ * media blocks into image URLs (via entityMap → mediaEntities, or a direct
+ * src/url). Mirrors the resolution in `articleBlocksToMarkdown`.
+ */
+function buildArticleBlocks(content: ArticleContent | null | undefined): ArticleRenderBlock[] {
+  if (!content?.blocks) return []
+  const map = normalizeEntityMap(content.entityMap) as Record<string, LooseEntity>
+  const media = content.mediaEntities || {}
+  const out: ArticleRenderBlock[] = []
+
+  for (const block of content.blocks) {
+    if (block.type === 'atomic') {
+      const entityKey = block.entityRanges?.[0]?.key
+      const entity = entityKey !== undefined ? map[entityKey] : undefined
+      let src: string | undefined
+      if (entity?.type === 'MEDIA' && entity.data?.mediaItems?.[0]?.mediaId) {
+        src = media[entity.data.mediaItems[0].mediaId]?.url
+      }
+      if (!src) src = entity?.data?.src || entity?.data?.url
+      if (src) {
+        out.push({
+          kind: 'image',
+          key: block.key,
+          src,
+          alt: entity?.data?.alt || '',
+          caption: entity?.data?.caption || '',
+        })
+      }
+      continue
+    }
+    if (block.type === 'unstyled-divider') continue
+    const text = block.text?.trim()
+    if (!text) continue
+    const kind: ArticleRenderBlock['kind'] =
+      block.type === 'header-one'
+        ? 'h1'
+        : block.type === 'header-two'
+          ? 'h2'
+          : block.type === 'header-three'
+            ? 'h3'
+            : block.type === 'blockquote'
+              ? 'quote'
+              : block.type === 'unordered-list-item' || block.type === 'ordered-list-item'
+                ? 'li'
+                : 'p'
+    out.push({ kind, key: block.key, text })
+  }
+  return out
 }
 
 /** Rough reading time: ~200 wpm, floor of 1 min. */
@@ -94,6 +147,68 @@ function videoSrc(item: FeedItem): string {
   return item.platform === 'tiktok' && primary
     ? primary.url
     : `/api/media/video?author=${encodeURIComponent(item.author)}&tweetId=${encodeURIComponent(item.id)}&quality=hd`
+}
+
+const FRAMED_MEDIA_CLASS = 'h-full max-h-full w-auto max-w-full object-contain rounded-2xl bg-black shadow-m-lg'
+
+/**
+ * Remember the focus-mode mute choice across items and sessions. Desktop
+ * defaults to audio ON; once the viewer mutes/unmutes (via the native controls)
+ * that choice sticks. SSR-safe (reads localStorage lazily on the client).
+ */
+const FOCUS_MUTED_KEY = 'adhx-focus-muted'
+function useFocusMuted(defaultMuted: boolean): [boolean, (m: boolean) => void] {
+  const [muted, setMutedState] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return defaultMuted
+    const v = window.localStorage.getItem(FOCUS_MUTED_KEY)
+    return v === null ? defaultMuted : v === '1'
+  })
+  const setMuted = (m: boolean) => {
+    setMutedState(m)
+    try {
+      window.localStorage.setItem(FOCUS_MUTED_KEY, m ? '1' : '0')
+    } catch {
+      /* private mode / disabled storage — preference just won't persist */
+    }
+  }
+  return [muted, setMuted]
+}
+
+/**
+ * Framed (desktop) video. Honors the remembered mute preference (audio on by
+ * default), attempts to play, and persists any mute toggle the viewer makes via
+ * the native controls. Unmuted autoplay may be blocked by the browser until the
+ * first interaction — the controls/poster are right there, and once the viewer
+ * has played one clip the rest of the session autoplays with sound.
+ */
+function FramedVideo({ item }: { item: FeedItem }) {
+  const [muted, setMuted] = useFocusMuted(false)
+  const ref = useRef<HTMLVideoElement>(null)
+
+  useEffect(() => {
+    const v = ref.current
+    if (!v) return
+    v.muted = muted
+    v.play().catch(() => {})
+  }, [muted, item.id])
+
+  return (
+    <video
+      key={item.id}
+      ref={ref}
+      src={videoSrc(item)}
+      poster={item.media?.[0]?.thumbnailUrl}
+      controls
+      autoPlay
+      loop
+      playsInline
+      onVolumeChange={(e) => {
+        const m = e.currentTarget.muted
+        if (m !== muted) setMuted(m)
+      }}
+      className={FRAMED_MEDIA_CLASS}
+    />
+  )
 }
 
 /* ===================== FULL-BLEED MEDIA (mobile) ===================== */
@@ -137,13 +252,13 @@ function FullBleedMedia({ item }: { item: FeedItem }) {
         muted
         loop
         playsInline
-        className="absolute inset-0 w-full h-full object-cover"
+        className="absolute inset-0 w-full h-full object-contain"
       />
     )
   } else {
     const img = primary?.url || heroImageUrl(item)
     media = img ? (
-      <img src={img} alt="" className="absolute inset-0 w-full h-full object-cover" referrerPolicy="no-referrer" />
+      <img src={img} alt="" className="absolute inset-0 w-full h-full object-contain" referrerPolicy="no-referrer" />
     ) : null
   }
 
@@ -200,7 +315,7 @@ function MediaPanel({ item }: { item: FeedItem }) {
   const primary = item.media?.[0]
   const isVideo = primary?.mediaType === 'video' || primary?.mediaType === 'animated_gif'
   // Fill the available focus-area height; width follows the media's own ratio.
-  const fill = 'h-full max-h-full w-auto max-w-full object-contain rounded-2xl bg-black shadow-m-lg'
+  const fill = FRAMED_MEDIA_CLASS
 
   // YouTube plays via the official iframe embed (no MP4). Vertical Shorts frame —
   // fills height, width derived from the 9/16 ratio.
@@ -221,19 +336,7 @@ function MediaPanel({ item }: { item: FeedItem }) {
   }
 
   if (isVideo && primary) {
-    return (
-      <video
-        key={item.id}
-        src={videoSrc(item)}
-        poster={primary.thumbnailUrl}
-        controls
-        autoPlay
-        muted
-        loop
-        playsInline
-        className={fill}
-      />
-    )
+    return <FramedVideo item={item} />
   }
 
   const photos = (item.media ?? []).filter((m) => m.mediaType === 'photo')
@@ -317,53 +420,106 @@ function AuthorCard({ item }: { item: FeedItem }) {
 function TtsPlayer({ text, minutes }: { text: string; minutes: number }) {
   const [playing, setPlaying] = useState(false)
   const [rate, setRate] = useState(1)
+  // 0..1 — how far through the article the speech has read. Drives the
+  // waveform fill so it acts as a position indicator, not just on/off.
+  const [progress, setProgress] = useState(0)
   const utterRef = useRef<SpeechSynthesisUtterance | null>(null)
+  // `boundary` events are the accurate position source but many voices/engines
+  // never emit them — so a wall-clock estimate drives the bar by default and
+  // boundary events take over (and stop the timer) the moment they fire.
+  const boundaryFiredRef = useRef(false)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // Stop any speech when unmounting / switching items.
+  const stopTimer = () => {
+    if (timerRef.current) clearInterval(timerRef.current)
+    timerRef.current = null
+  }
+
+  // Stop any speech / timer when unmounting or switching items.
   useEffect(() => {
+    setProgress(0)
+    setPlaying(false)
+    boundaryFiredRef.current = false
     return () => {
+      stopTimer()
       if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel()
     }
   }, [text])
 
   const supported = typeof window !== 'undefined' && 'speechSynthesis' in window
 
-  const toggle = () => {
+  // Words / (≈175 wpm × rate) → estimated duration in ms (floor 1s).
+  const estDurationMs = (speakRate: number) => {
+    const words = text.trim().split(/\s+/).filter(Boolean).length
+    return Math.max(1000, (words / (175 * speakRate)) * 60_000)
+  }
+
+  const begin = (speakRate: number) => {
     if (!supported) return
     const synth = window.speechSynthesis
-    if (playing) {
-      synth.cancel()
-      setPlaying(false)
-      return
-    }
     synth.cancel()
+    stopTimer()
+    setProgress(0)
+    boundaryFiredRef.current = false
+
     const u = new SpeechSynthesisUtterance(text)
-    u.rate = rate
-    u.onend = () => setPlaying(false)
-    u.onerror = () => setPlaying(false)
+    u.rate = speakRate
+    // Ignore events from a superseded utterance — our own cancel() fires an
+    // `interrupted` error on the previous one, which must not flip the new one's
+    // state (the classic Web Speech "interrupted kills the next clip" trap).
+    u.onboundary = (e) => {
+      if (utterRef.current !== u || text.length === 0) return
+      boundaryFiredRef.current = true // accurate source available — stop using the estimate
+      setProgress(Math.min(1, e.charIndex / text.length))
+    }
+    u.onend = () => {
+      if (utterRef.current !== u) return
+      stopTimer()
+      setProgress(1)
+      setPlaying(false)
+    }
+    u.onerror = () => {
+      if (utterRef.current !== u) return
+      stopTimer()
+      setPlaying(false)
+    }
     utterRef.current = u
     synth.speak(u)
     setPlaying(true)
+
+    // Runs for the whole playback: (1) keep Chrome from auto-pausing long
+    // utterances (~15s bug), and (2) drive the bar by wall-clock until/unless
+    // accurate boundary events take over.
+    const started = performance.now()
+    const dur = estDurationMs(speakRate)
+    timerRef.current = setInterval(() => {
+      if (window.speechSynthesis.paused) window.speechSynthesis.resume()
+      if (!boundaryFiredRef.current) {
+        setProgress(Math.min(0.99, (performance.now() - started) / dur))
+      }
+    }, 200)
+  }
+
+  const toggle = () => {
+    if (!supported) return
+    if (playing) {
+      window.speechSynthesis.cancel()
+      stopTimer()
+      setPlaying(false)
+      return
+    }
+    begin(rate)
   }
 
   const cycleRate = () => {
     const next = rate >= 2 ? 0.75 : rate >= 1.5 ? 2 : rate >= 1 ? 1.5 : 1
     setRate(next)
-    // Apply live: restart utterance at the new rate if currently speaking.
-    if (playing && supported) {
-      const synth = window.speechSynthesis
-      synth.cancel()
-      const u = new SpeechSynthesisUtterance(text)
-      u.rate = next
-      u.onend = () => setPlaying(false)
-      u.onerror = () => setPlaying(false)
-      utterRef.current = u
-      synth.speak(u)
-    }
+    // Web Speech can't change rate mid-utterance, so it restarts from the top.
+    if (playing) begin(next)
   }
 
   const bars = 44
-  const activeBars = playing ? bars : Math.round(bars * 0.3)
+  const activeBars = Math.round(bars * progress)
 
   return (
     <div className="flex items-center gap-3.5 pl-2.5 pr-3 py-2.5 rounded-full bg-fsurface border border-fline">
@@ -382,7 +538,7 @@ function TtsPlayer({ text, minutes }: { text: string; minutes: number }) {
           return (
             <span
               key={i}
-              className={cn('w-[3px] flex-none rounded-[3px]', on ? 'bg-clay' : 'bg-fline')}
+              className={cn('w-[3px] flex-none rounded-[3px] transition-colors', on ? 'bg-clay' : 'bg-fline')}
               style={{ height: h }}
             />
           )
@@ -405,14 +561,66 @@ function TtsPlayer({ text, minutes }: { text: string; minutes: number }) {
 
 /* ============================ ARTICLE READER ============================ */
 
+function ArticleBlockView({ block }: { block: ArticleRenderBlock }) {
+  switch (block.kind) {
+    case 'image':
+      return (
+        <figure className="my-5">
+          <img
+            src={block.src}
+            alt={block.alt}
+            className="w-full rounded-xl bg-inset"
+            referrerPolicy="no-referrer"
+            loading="lazy"
+          />
+          {block.caption && (
+            <figcaption className="mt-2 text-center text-xs text-fink-3 not-italic">{block.caption}</figcaption>
+          )}
+        </figure>
+      )
+    case 'h1':
+      return <h2 className="font-serif text-[24px] leading-snug font-semibold text-fink mt-7 mb-2">{block.text}</h2>
+    case 'h2':
+      return <h3 className="font-serif text-[21px] leading-snug font-semibold text-fink mt-6 mb-2">{block.text}</h3>
+    case 'h3':
+      return <h4 className="font-serif text-[19px] leading-snug font-semibold text-fink mt-5 mb-1.5">{block.text}</h4>
+    case 'quote':
+      return (
+        <blockquote className="my-4 border-l-[3px] border-clay pl-4 italic text-fink-2">{block.text}</blockquote>
+      )
+    case 'li':
+      return (
+        <div className="mb-1.5 flex gap-2.5">
+          <span className="text-clay flex-none">•</span>
+          <span>{block.text}</span>
+        </div>
+      )
+    default:
+      return <p className="mb-4">{block.text}</p>
+  }
+}
+
 function ArticleReader({ item }: { item: FeedItem }) {
-  const paras = useMemo(() => articleParagraphs(item.articleContent?.blocks), [item.articleContent])
+  const blocks = useMemo(() => buildArticleBlocks(item.articleContent), [item.articleContent])
   const fallbackText = stripMediaUrls(item.text || '', !!item.media?.[0])
-  const bodyParas = paras.length > 0 ? paras : fallbackText ? fallbackText.split(/\n{2,}/).filter(Boolean) : []
+  const fallbackParas = blocks.length === 0 && fallbackText ? fallbackText.split(/\n{2,}/).filter(Boolean) : []
   const title = item.articlePreview?.title || item.authorName || item.author
   const source = item.articlePreview?.domain || (item.platform === 'twitter' ? 'x.com' : item.platform) || 'x.com'
-  const fullText = bodyParas.join(' ')
+
+  // Reading text excludes images; used for TTS + reading-time estimate.
+  const fullText =
+    blocks
+      .filter((b): b is Exclude<ArticleRenderBlock, { kind: 'image' }> => b.kind !== 'image')
+      .map((b) => b.text)
+      .join(' ') || fallbackParas.join(' ')
   const minutes = readMinutes(fullText || title || '')
+
+  // Header/cover image — skip if it's already one of the inline images.
+  const inlineSrcs = new Set(blocks.filter((b) => b.kind === 'image').map((b) => (b as { src: string }).src))
+  const cover =
+    item.articlePreview?.imageUrl && !inlineSrcs.has(item.articlePreview.imageUrl)
+      ? item.articlePreview.imageUrl
+      : null
 
   return (
     <div className="w-full max-w-[700px] h-full flex flex-col gap-[18px] pt-1.5">
@@ -432,13 +640,23 @@ function ArticleReader({ item }: { item: FeedItem }) {
 
       {fullText && <div className="flex-none"><TtsPlayer text={fullText} minutes={minutes} /></div>}
 
-      {/* full untruncated body — scrolls in-app */}
+      {/* full untruncated body (cover + images + text) — scrolls in-app */}
       <div className="font-serif text-[17px] lg:text-[19px] leading-[1.72] text-fink overflow-y-auto flex-1 min-h-0">
-        {bodyParas.map((p, i) => (
-          <p key={i} className={i === bodyParas.length - 1 ? 'm-0' : 'mb-4'}>
-            {p}
-          </p>
-        ))}
+        {cover && (
+          <img
+            src={cover}
+            alt=""
+            className="w-full rounded-xl bg-inset mb-5"
+            referrerPolicy="no-referrer"
+          />
+        )}
+        {blocks.length > 0
+          ? blocks.map((b) => <ArticleBlockView key={b.key} block={b} />)
+          : fallbackParas.map((p, i) => (
+              <p key={i} className={i === fallbackParas.length - 1 ? 'm-0' : 'mb-4'}>
+                {p}
+              </p>
+            ))}
       </div>
     </div>
   )
