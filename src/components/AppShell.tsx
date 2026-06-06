@@ -30,6 +30,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     pathname.startsWith('/share/') ||
     /^\/\w+\/status\/\d+$/.test(pathname) ||
     /^\/reels?\/[A-Za-z0-9_-]+$/.test(pathname) ||
+    /^\/shorts\/[A-Za-z0-9_-]{11}$/.test(pathname) ||
     /^\/@?[A-Za-z0-9._]+\/video\/\d+$/.test(pathname)
 
   if (isFullWidth) {

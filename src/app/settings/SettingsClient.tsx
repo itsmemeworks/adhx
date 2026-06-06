@@ -43,7 +43,7 @@ import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
 import { getPlatformType, type PlatformType } from '@/lib/platform'
 
 const SHORTCUT_URL = 'https://www.icloud.com/shortcuts/0d187480099b4d34a745ec8750a4587b'
-const BOOKMARKLET_CODE = `javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tiktok)\\.com/,'adhx.com'))`
+const BOOKMARKLET_CODE = `javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tiktok|youtube)\\.com/,'adhx.com'))`
 
 interface AuthStatus {
   authenticated: boolean

@@ -352,6 +352,22 @@ export async function GET(request: NextRequest) {
           }
         }
 
+        if (bookmark.platform === 'youtube') {
+          // Playback is the official iframe embed (handled in MediaCard by
+          // platform+id); the gallery just needs the poster + a 'video' type.
+          return {
+            id: m.id,
+            mediaType: 'video' as const,
+            width: m.width,
+            height: m.height,
+            durationMs: m.durationMs,
+            altText: m.altText,
+            url: `https://www.youtube.com/shorts/${bookmark.id}`,
+            thumbnailUrl: `https://i.ytimg.com/vi/${bookmark.id}/hqdefault.jpg`,
+            shareUrl: `https://www.youtube.com/shorts/${bookmark.id}`,
+          }
+        }
+
         // Twitter / default — existing FxEmbed flow
         const urlOptions = {
           tweetId: bookmark.id,

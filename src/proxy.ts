@@ -12,11 +12,14 @@ import type { NextRequest } from 'next/server'
  *   adhx.com/instagram.com/p/DXVsqQ7CSXw/
  *   adhx.com/https://www.tiktok.com/@user/video/7619017281691045134
  *   adhx.com/tiktok.com/@user/video/123
+ *   adhx.com/https://youtube.com/shorts/Y9aytLYBajw
+ *   adhx.com/https://youtu.be/Y9aytLYBajw
  *
  * Extracted IDs are redirected to the clean route format:
  *   - X / Twitter  →  /{username}/status/{id}
  *   - Instagram    →  /reels/{id}
  *   - TikTok       →  /@{username}/video/{id}
+ *   - YouTube      →  /shorts/{id}
  */
 
 // Browsers normalize `//` → `/` in paths, so `https://x.com` becomes `https:/x.com`.
@@ -34,6 +37,15 @@ const TIKTOK_URL_PATTERN =
 // them to /api/tiktok/resolve which resolves and redirects to the preview.
 const TIKTOK_SHORTLINK_PATTERN =
   /^\/(?:https?:\/?\/?)?(?:(?:vm|vt)\.tiktok\.com\/[A-Za-z0-9]+|(?:www\.)?tiktok\.com\/t\/[A-Za-z0-9]+)/i
+
+// YouTube: /shorts/{id}, /watch?v={id} (id in query), youtu.be/{id}, /embed/{id}.
+// Shorts/embed/short-link carry the 11-char id in the path; watch carries it in
+// `?v=`, which we read from the query string.
+const YOUTUBE_PATH_ID_PATTERN =
+  /^\/(?:https?:\/?\/?)?(?:(?:www\.|m\.)?youtube\.com\/(?:shorts|embed|v|live)\/|youtu\.be\/)([A-Za-z0-9_-]{11})/i
+
+const YOUTUBE_WATCH_PATTERN =
+  /^\/(?:https?:\/?\/?)?(?:www\.|m\.)?youtube\.com\/watch\b/i
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -69,6 +81,18 @@ export function proxy(request: NextRequest) {
     resolveUrl.searchParams.set('url', `https://${stripped}${request.nextUrl.search}`)
     resolveUrl.searchParams.set('go', '1')
     return NextResponse.redirect(resolveUrl, { status: 307 })
+  }
+
+  const ytPathMatch = pathname.match(YOUTUBE_PATH_ID_PATTERN)
+  if (ytPathMatch) {
+    return NextResponse.redirect(new URL(`/shorts/${ytPathMatch[1]}`, request.url), { status: 307 })
+  }
+
+  if (YOUTUBE_WATCH_PATTERN.test(pathname)) {
+    const v = request.nextUrl.searchParams.get('v')
+    if (v && /^[A-Za-z0-9_-]{11}$/.test(v)) {
+      return NextResponse.redirect(new URL(`/shorts/${v}`, request.url), { status: 307 })
+    }
   }
 
   return NextResponse.next()

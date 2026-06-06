@@ -7,7 +7,7 @@ import { expandUrls } from '@/lib/utils/url-expander'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { captureException, metrics } from '@/lib/sentry'
 
-// GET /api/bookmarks/[id]?platform=twitter|instagram|tiktok - Get single bookmark
+// GET /api/bookmarks/[id]?platform=twitter|instagram|tiktok|youtube - Get single bookmark
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

@@ -398,4 +398,35 @@ describe('Proxy: URL Normalization', () => {
       expect(response.headers.get('location')).toBeNull()
     })
   })
+
+  describe('Pasted YouTube URLs', () => {
+    it('redirects https:/youtube.com/shorts/{id} to /shorts/{id}', () => {
+      const response = proxy(createRequest('/https:/youtube.com/shorts/Y9aytLYBajw'))
+      expect(response.status).toBe(307)
+      expect(response.headers.get('location')).toBe('https://adhx.com/shorts/Y9aytLYBajw')
+    })
+
+    it('handles www. and m. subdomains and a trailing ?si tracking param', () => {
+      const response = proxy(createRequest('/https:/www.youtube.com/shorts/Y9aytLYBajw?si=Ns240PHC8T7l5ZZC'))
+      expect(response.status).toBe(307)
+      expect(response.headers.get('location')).toBe('https://adhx.com/shorts/Y9aytLYBajw')
+    })
+
+    it('redirects youtu.be/{id} short links to /shorts/{id}', () => {
+      const response = proxy(createRequest('/https:/youtu.be/Y9aytLYBajw'))
+      expect(response.status).toBe(307)
+      expect(response.headers.get('location')).toBe('https://adhx.com/shorts/Y9aytLYBajw')
+    })
+
+    it('redirects watch?v={id} (id lives in the query string)', () => {
+      const response = proxy(createRequest('/https:/www.youtube.com/watch?v=Y9aytLYBajw&feature=share'))
+      expect(response.status).toBe(307)
+      expect(response.headers.get('location')).toBe('https://adhx.com/shorts/Y9aytLYBajw')
+    })
+
+    it('passes through the clean /shorts/{id} path (no loop)', () => {
+      const response = proxy(createRequest('/shorts/Y9aytLYBajw'))
+      expect(response.headers.get('location')).toBeNull()
+    })
+  })
 })

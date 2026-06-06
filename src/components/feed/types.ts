@@ -105,11 +105,11 @@ export interface ArticleContent {
   mediaEntities?: MediaEntitiesMap
 }
 
-export type Platform = 'twitter' | 'instagram' | 'tiktok'
+export type Platform = 'twitter' | 'instagram' | 'tiktok' | 'youtube'
 
 export interface FeedItem {
   id: string
-  platform?: Platform // 'twitter' (default) | 'instagram' | 'tiktok'
+  platform?: Platform // 'twitter' (default) | 'instagram' | 'tiktok' | 'youtube'
   author: string
   authorName?: string | null
   authorProfileImageUrl?: string | null
@@ -137,13 +137,14 @@ export interface FeedItem {
 
 export type FilterType = 'all' | 'photos' | 'videos' | 'text' | 'articles' | 'quoted' | 'manual'
 
-export type PlatformFilter = 'all' | 'twitter' | 'instagram' | 'tiktok'
+export type PlatformFilter = 'all' | 'twitter' | 'instagram' | 'tiktok' | 'youtube'
 
 export const PLATFORM_OPTIONS: { value: PlatformFilter; label: string }[] = [
   { value: 'all', label: 'All platforms' },
   { value: 'twitter', label: 'X / Twitter' },
   { value: 'instagram', label: 'Instagram' },
   { value: 'tiktok', label: 'TikTok' },
+  { value: 'youtube', label: 'YouTube' },
 ]
 
 export type SortType = 'added' | 'posted'

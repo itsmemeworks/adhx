@@ -6,6 +6,7 @@ import { ADHX_PURPLE } from '@/lib/gestalt/theme'
 import { XIcon } from '@/components/icons'
 import { AnimatedBackground, LandingAnimations } from '@/components/landing'
 import { LivePulse } from '@/components/LivePulse'
+import { extractYouTubeId } from '@/lib/media/youtube'
 import { getPlatformType, type PlatformType } from '@/lib/platform'
 
 export function LandingPage() {
@@ -45,6 +46,14 @@ export function LandingPage() {
       return true
     }
 
+    if (/(?:youtube\.com|youtu\.be)/i.test(trimmed)) {
+      const ytId = extractYouTubeId(trimmed)
+      if (ytId) {
+        window.location.href = `/shorts/${ytId}`
+        return true
+      }
+    }
+
     // TikTok short link (vm./vt.tiktok.com/{code} or /t/{code}) — no video id
     // in the URL, so let the server follow the redirect and bounce us back.
     if (/(?:vm|vt)\.tiktok\.com\/[A-Za-z0-9]+|tiktok\.com\/t\/[A-Za-z0-9]+/i.test(trimmed)) {
@@ -64,7 +73,9 @@ export function LandingPage() {
       value.includes('x.com/') ||
       value.includes('twitter.com/') ||
       value.includes('instagram.com/') ||
-      value.includes('tiktok.com/')
+      value.includes('tiktok.com/') ||
+      value.includes('youtube.com/') ||
+      value.includes('youtu.be/')
     ) {
       parseAndNavigate(value)
     }
@@ -75,7 +86,7 @@ export function LandingPage() {
     setUrlError('')
 
     if (!parseAndNavigate(tweetUrl)) {
-      setUrlError("That's not an X, Instagram, or TikTok link. But we appreciate the mystery.")
+      setUrlError("That's not an X, Instagram, TikTok, or YouTube link. But we appreciate the mystery.")
     }
   }
 
@@ -144,7 +155,7 @@ export function LandingPage() {
           </div>
 
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Paste any X, Instagram, or TikTok link to preview it instantly.
+            Paste any X, Instagram, TikTok, or YouTube link to preview it instantly.
           </p>
 
           <form onSubmit={handleTweetUrlSubmit} className="max-w-xl mx-auto">
@@ -153,7 +164,7 @@ export function LandingPage() {
                 type="text"
                 value={tweetUrl}
                 onChange={(e) => handleTweetUrlChange(e.target.value)}
-                placeholder="Paste an X, Instagram, or TikTok link here..."
+                placeholder="Paste an X, Instagram, TikTok, or YouTube link here..."
                 className="flex-1 font-mono text-base sm:text-sm bg-white dark:bg-gray-900 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:border-transparent"
                 style={{ '--tw-ring-color': ADHX_PURPLE } as React.CSSProperties}
               />
@@ -172,7 +183,7 @@ export function LandingPage() {
 
           <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 space-y-3">
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Or use the URL trick — works for X, Instagram, and TikTok:
+              Or use the URL trick — works for X, Instagram, TikTok, and YouTube:
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 text-sm">
               <div className="font-mono bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500">
@@ -199,6 +210,15 @@ export function LandingPage() {
               <ArrowRight className="w-4 h-4 text-gray-400 rotate-90 sm:rotate-0" />
               <div className="font-mono bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border-2 text-gray-900 dark:text-white" style={{ borderColor: ADHX_PURPLE }}>
                 <span style={{ color: ADHX_PURPLE }}>adh</span>x.com/@user/video/123
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 text-sm">
+              <div className="font-mono bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500">
+                youtube.com/shorts/abc
+              </div>
+              <ArrowRight className="w-4 h-4 text-gray-400 rotate-90 sm:rotate-0" />
+              <div className="font-mono bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border-2 text-gray-900 dark:text-white" style={{ borderColor: ADHX_PURPLE }}>
+                <span style={{ color: ADHX_PURPLE }}>adh</span>x.com/shorts/abc
               </div>
             </div>
           </div>
@@ -247,7 +267,7 @@ export function LandingPage() {
 }
 
 const SHORTCUT_URL = 'https://www.icloud.com/shortcuts/0d187480099b4d34a745ec8750a4587b'
-const BOOKMARKLET_CODE = `javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tiktok)\\.com/,'adhx.com'))`
+const BOOKMARKLET_CODE = `javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tiktok|youtube)\\.com/,'adhx.com'))`
 
 function ShortcutPromo() {
   const [platform, setPlatform] = useState<PlatformType>('desktop')
@@ -304,7 +324,7 @@ function ShortcutPromo() {
             ) : (
               <>
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  Drag this bookmarklet to your bookmarks bar. Click it on any X, Instagram, or TikTok page to instantly open it in ADHX.
+                  Drag this bookmarklet to your bookmarks bar. Click it on any X, Instagram, TikTok, or YouTube page to instantly open it in ADHX.
                 </p>
                 <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-3 mb-4">
                   <code className="text-xs text-gray-700 dark:text-gray-300 break-all select-all">

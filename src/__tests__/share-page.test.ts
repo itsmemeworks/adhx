@@ -5,78 +5,55 @@ import { parseShareUrl } from '@/lib/utils/parse-share-url'
  * Share Page URL Parsing Tests
  *
  * Tests the URL parsing utility used by the PWA Share Target /share page.
- * Validates extraction of username and tweet ID from various URL formats.
+ * Maps a shared link from any supported platform to its ADHX preview path.
  */
 
-describe('parseShareUrl', () => {
-  it('parses standard x.com URL', () => {
-    expect(parseShareUrl('https://x.com/elonmusk/status/1234567890'))
-      .toEqual({ username: 'elonmusk', id: '1234567890' })
+describe('parseShareUrl — X / Twitter', () => {
+  it('parses x.com and twitter.com', () => {
+    expect(parseShareUrl('https://x.com/elonmusk/status/1234567890')).toEqual({ path: '/elonmusk/status/1234567890' })
+    expect(parseShareUrl('https://twitter.com/jack/status/9876543210')).toEqual({ path: '/jack/status/9876543210' })
   })
 
-  it('parses standard twitter.com URL', () => {
-    expect(parseShareUrl('https://twitter.com/jack/status/9876543210'))
-      .toEqual({ username: 'jack', id: '9876543210' })
+  it('handles no-protocol, www, query params, trailing segments, whitespace, case', () => {
+    expect(parseShareUrl('x.com/user/status/111')).toEqual({ path: '/user/status/111' })
+    expect(parseShareUrl('https://www.x.com/user/status/111')).toEqual({ path: '/user/status/111' })
+    expect(parseShareUrl('https://x.com/user/status/111?s=20&t=abc')).toEqual({ path: '/user/status/111' })
+    expect(parseShareUrl('https://x.com/user/status/111/photo/1')).toEqual({ path: '/user/status/111' })
+    expect(parseShareUrl('  https://x.com/my_user_name/status/111  ')).toEqual({ path: '/my_user_name/status/111' })
+    expect(parseShareUrl('https://X.COM/user/status/111')).toEqual({ path: '/user/status/111' })
   })
+})
 
-  it('parses URL without https protocol', () => {
-    expect(parseShareUrl('http://x.com/user/status/111'))
-      .toEqual({ username: 'user', id: '111' })
+describe('parseShareUrl — Instagram', () => {
+  it('maps reels/reel/p to /reels/{id}', () => {
+    expect(parseShareUrl('https://www.instagram.com/reels/DXVsqQ7CSXw')).toEqual({ path: '/reels/DXVsqQ7CSXw' })
+    expect(parseShareUrl('https://instagram.com/reel/DXVsqQ7CSXw/')).toEqual({ path: '/reels/DXVsqQ7CSXw' })
   })
+})
 
-  it('parses URL without protocol', () => {
-    expect(parseShareUrl('x.com/user/status/111'))
-      .toEqual({ username: 'user', id: '111' })
+describe('parseShareUrl — TikTok', () => {
+  it('maps @user/video/{id} to /@user/video/{id}', () => {
+    expect(parseShareUrl('https://www.tiktok.com/@sophieraiin/video/7619017281691045134')).toEqual({
+      path: '/@sophieraiin/video/7619017281691045134',
+    })
   })
+})
 
-  it('parses URL with www prefix', () => {
-    expect(parseShareUrl('https://www.x.com/user/status/111'))
-      .toEqual({ username: 'user', id: '111' })
-    expect(parseShareUrl('https://www.twitter.com/user/status/111'))
-      .toEqual({ username: 'user', id: '111' })
+describe('parseShareUrl — YouTube', () => {
+  it('maps shorts / youtu.be / watch to /shorts/{id}', () => {
+    expect(parseShareUrl('https://youtube.com/shorts/Y9aytLYBajw?si=abc')).toEqual({ path: '/shorts/Y9aytLYBajw' })
+    expect(parseShareUrl('https://youtu.be/Y9aytLYBajw')).toEqual({ path: '/shorts/Y9aytLYBajw' })
+    expect(parseShareUrl('https://www.youtube.com/watch?v=Y9aytLYBajw&t=5s')).toEqual({ path: '/shorts/Y9aytLYBajw' })
   })
+})
 
-  it('parses URL with trailing query params', () => {
-    expect(parseShareUrl('https://x.com/user/status/111?s=20&t=abc'))
-      .toEqual({ username: 'user', id: '111' })
-  })
-
-  it('parses URL with trailing path segments', () => {
-    expect(parseShareUrl('https://x.com/user/status/111/photo/1'))
-      .toEqual({ username: 'user', id: '111' })
-  })
-
-  it('handles whitespace around URL', () => {
-    expect(parseShareUrl('  https://x.com/user/status/111  '))
-      .toEqual({ username: 'user', id: '111' })
-  })
-
-  it('handles usernames with underscores', () => {
-    expect(parseShareUrl('https://x.com/my_user_name/status/111'))
-      .toEqual({ username: 'my_user_name', id: '111' })
-  })
-
-  it('handles max length username (15 chars)', () => {
-    expect(parseShareUrl('https://x.com/abcdefghijklmno/status/111'))
-      .toEqual({ username: 'abcdefghijklmno', id: '111' })
-  })
-
-  it('returns null for non-tweet URLs', () => {
+describe('parseShareUrl — rejections', () => {
+  it('returns null for unsupported / malformed URLs', () => {
     expect(parseShareUrl('https://google.com')).toBeNull()
     expect(parseShareUrl('https://x.com/user')).toBeNull()
-    expect(parseShareUrl('https://x.com/user/likes')).toBeNull()
+    expect(parseShareUrl('https://x.com/user/status/abc')).toBeNull()
+    expect(parseShareUrl('https://youtube.com/feed/subscriptions')).toBeNull()
     expect(parseShareUrl('not a url at all')).toBeNull()
     expect(parseShareUrl('')).toBeNull()
-  })
-
-  it('returns null for URLs with non-numeric tweet IDs', () => {
-    expect(parseShareUrl('https://x.com/user/status/abc')).toBeNull()
-  })
-
-  it('is case insensitive for domain', () => {
-    expect(parseShareUrl('https://X.COM/user/status/111'))
-      .toEqual({ username: 'user', id: '111' })
-    expect(parseShareUrl('https://Twitter.Com/user/status/111'))
-      .toEqual({ username: 'user', id: '111' })
   })
 })

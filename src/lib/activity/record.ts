@@ -26,6 +26,7 @@ export type ActivityAction = 'preview' | 'save' | 'read'
 export function previewPath(platform: string, author: string, id: string): string {
   if (platform === 'instagram') return `/reels/${id}`
   if (platform === 'tiktok') return `/@${author}/video/${id}`
+  if (platform === 'youtube') return `/shorts/${id}`
   return `/${author}/status/${id}`
 }
 

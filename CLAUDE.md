@@ -33,7 +33,7 @@ Use org `your-org` and project `your-project`.
 
 **Save now. Read never. Find always.**
 
-A Twitter/X bookmark manager for people who bookmark everything and read nothing. Built with Next.js 16. Also previews and downloads Instagram Reels and TikTok videos via the same URL-prefix trick.
+A Twitter/X bookmark manager for people who bookmark everything and read nothing. Built with Next.js 16. Also previews and saves Instagram Reels, TikTok videos, and YouTube Shorts via the same URL-prefix trick (TikTok/Reels offer MP4 download; YouTube plays via the official iframe embed).
 
 ## Architecture Overview
 
@@ -279,13 +279,15 @@ Users can preview tweets, Reels, and TikToks by replacing the host in any link w
 | `instagram.com/reels/{id}` | `adhx.com/reels/{id}` | `src/app/reels/[id]/page.tsx` |
 | `instagram.com/reel/{id}` | `adhx.com/reel/{id}` | `src/app/reel/[id]/page.tsx` |
 | `tiktok.com/@{user}/video/{id}` | `adhx.com/@{user}/video/{id}` | `src/app/[username]/video/[id]/page.tsx` |
+| `youtube.com/shorts/{id}` | `adhx.com/shorts/{id}` | `src/app/shorts/[id]/page.tsx` |
 
 Users can also paste the **full** source URL after `adhx.com/` — `src/proxy.ts` (Next.js middleware) rewrites these via 307 redirect:
 - `adhx.com/https://x.com/{user}/status/{id}` → `/{user}/status/{id}`
 - `adhx.com/https://www.instagram.com/reels/{id}` → `/reels/{id}`
 - `adhx.com/https://www.tiktok.com/@{user}/video/{id}` → `/@{user}/video/{id}`
+- `adhx.com/https://youtube.com/shorts/{id}` (also `youtu.be/{id}`, `youtube.com/watch?v={id}` — id read from the query) → `/shorts/{id}`
 
-All work with or without protocol, browser path normalization (`//` → `/`), trailing path segments, and platform-specific subdomains (e.g. `vm.tiktok.com`, `m.tiktok.com`).
+All work with or without protocol, browser path normalization (`//` → `/`), trailing path segments, and platform-specific subdomains (e.g. `vm.tiktok.com`, `m.tiktok.com`, `m.youtube.com`).
 
 **Tweet preview** (`src/components/TweetPreviewLanding.tsx`):
 - Authenticated: Adds tweet, redirects to `/?open={id}` (opens lightbox)
@@ -300,6 +302,16 @@ All work with or without protocol, browser path normalization (`//` → `/`), tr
 - Resolves metadata via `tnktok.com` (fxTikTok). The mirror's `/generate/video/{id}.mp4` endpoint 302-redirects to the real TikTok CDN (`tiktokcdn-us.com` / `tiktokcdn-eu.com`) with proper signing — we stream straight through (`src/lib/media/tnktok.ts`).
 - Custom inline SVG glyph for the TikTok logo (lucide doesn't ship one).
 - Note: Next.js URL-encodes `@` in dynamic params, so `params.username` arrives as `%40user`. Decode before validation.
+
+**YouTube Shorts preview** (`src/components/YouTubePreviewLanding.tsx`):
+- Unlike TikTok/Instagram there's **no free MP4 mirror** — and stream extraction is fragile + against ToS. So YouTube uses the *official* path: metadata via YouTube's free **oEmbed** API and playback via the official **iframe embed** (`src/lib/media/youtube.ts`).
+  - oEmbed: `https://www.youtube.com/oembed?url=<watch url>&format=json` → title, channel name, channel handle (parsed from `author_url`'s `/@handle`).
+  - Thumbnail: `https://i.ytimg.com/vi/{id}/hqdefault.jpg`. Embed: `https://www.youtube-nocookie.com/embed/{id}` (privacy-enhanced).
+  - **No download** (that was a deliberate product decision — there's no compliant zero-cost MP4 source).
+- `extractYouTubeId()` handles `/shorts/{id}`, `youtu.be/{id}`, `/watch?v={id}`, `/embed/{id}` (11-char id), with/without protocol and `?si=` tracking params.
+- **CSP**: the iframe needs `frame-src https://www.youtube-nocookie.com https://www.youtube.com` and the poster needs `https://i.ytimg.com` in `img-src` — both in `next.config.js`.
+- The gallery `FeedCard` shows the poster + a play overlay (no hover-autoplay; there's no MP4). The unified `MediaCard` (focus/triage view) renders the iframe directly for `platform === 'youtube'` — **give the iframe container a concrete height** (e.g. `h-[60vh] lg:h-[82vh] aspect-[9/16]`); an `aspect-[9/16]` box around an `absolute` iframe collapses to zero otherwise.
+- Saved Shorts store a poster as a `mediaType: 'video'` row (the embed is resolved from platform+id, so there's no MP4 to store).
 
 All three preview components share the same shell (hero + two-column grid + sidebar + footer) and the floating share/download button pattern (hover-reveal desktop, always-visible mobile). The card content is source-specific because data shapes diverge.
 
@@ -421,10 +433,11 @@ The app offers multiple ways to save tweets, shown contextually based on the use
 - Shortcut ID: `0d187480099b4d34a745ec8750a4587b`
 - iCloud URL: `https://www.icloud.com/shortcuts/0d187480099b4d34a745ec8750a4587b`
 - Transforms `x.com/user/status/123` → `adhx.com/user/status/123`
+- **Limitation: X-only.** The shortcut only rewrites `x.com`, so the iOS share sheet won't pick up Instagram / TikTok / YouTube links. Those still work on iOS via the URL-prefix trick or the bookmarklet. Adding multi-platform support means editing the iCloud shortcut itself in the Shortcuts app (a manual change — it's not in this repo), then re-sharing the iCloud link. Until then the table above lists "URL prefix trick" as the iOS fallback for non-X platforms.
 
 **Bookmarklet** (desktop + Android):
 ```
-javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tiktok)\.com/,'adhx.com'))
+javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tiktok|youtube)\.com/,'adhx.com'))
 ```
 - One-click URL rewrite from x.com/twitter.com to adhx.com
 - Shown with copy-to-clipboard button and drag-to-toolbar instructions
@@ -432,9 +445,9 @@ javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tikt
 
 **PWA Share Target** (Android):
 - `public/manifest.json` includes `share_target` config: `action: "/share"`, `method: "GET"`, `params: { url: "url" }`
-- `src/app/share/page.tsx` — client component that parses the shared URL, extracts username/id, redirects to `/{username}/status/{id}`
-- Shows "Not a tweet link" error for invalid URLs with link back to homepage
-- URL parsing utility: `src/lib/utils/parse-share-url.ts`
+- `src/app/share/page.tsx` — client component that parses the shared URL and redirects to the matching preview path
+- `parseShareUrl()` (`src/lib/utils/parse-share-url.ts`) maps **all four platforms** to their preview path and returns `{ path }`: X → `/{user}/status/{id}`, Instagram → `/reels/{id}`, TikTok → `/@{user}/video/{id}`, YouTube (shorts / youtu.be / watch?v=) → `/shorts/{id}`
+- Shows a "Not a supported link" error for unrecognised URLs with a link back to homepage
 
 **Implementation files:**
 - `src/lib/platform.ts` — Platform detection utilities

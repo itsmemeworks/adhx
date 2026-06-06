@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Image, Play, Link as LinkIcon, Check, EyeOff, Instagram } from 'lucide-react'
+import { Image, Play, Link as LinkIcon, Check, EyeOff, Instagram, Youtube } from 'lucide-react'
 import { AuthorAvatar } from './AuthorAvatar'
 import { renderTextWithLinks, renderBionicTextWithLinks } from './utils'
 import { usePreferences } from '@/lib/preferences-context'
@@ -46,6 +46,17 @@ function PlatformBadge({ platform }: { platform: FeedItem['platform'] }) {
         title="TikTok"
       >
         <TikTokIcon className="w-3 h-3" />
+      </span>
+    )
+  }
+
+  if (platform === 'youtube') {
+    return (
+      <span
+        className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-600 text-white"
+        title="YouTube"
+      >
+        <Youtube className="w-3 h-3" />
       </span>
     )
   }
@@ -125,6 +136,7 @@ export function FeedCard({
   // Category label for gallery display
   const categoryLabel = item.platform === 'instagram' ? 'Reel'
     : item.platform === 'tiktok' ? 'TikTok'
+    : item.platform === 'youtube' ? 'Short'
     : item.isXArticle ? 'X Article'
     : isArticle ? 'Article'
     : isGif ? 'GIF'
