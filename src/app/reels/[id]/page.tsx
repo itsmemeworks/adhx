@@ -1,8 +1,11 @@
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { Metadata } from 'next'
 import { InstagramPreviewLanding } from '@/components/InstagramPreviewLanding'
 import { fetchReelMetadata, isValidReelId } from '@/lib/media/instafix'
 import { getSession } from '@/lib/auth/session'
+import { recordActivity, previewPath } from '@/lib/activity/record'
+import { isLikelyBot } from '@/lib/activity/bot'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -19,6 +22,20 @@ export default async function ReelPreviewPage({ params }: Props) {
     fetchReelMetadata(id),
     getSession(),
   ])
+
+  if (meta && !isLikelyBot((await headers()).get('user-agent'))) {
+    const author = meta.author || 'instagram'
+    recordActivity({
+      action: 'preview',
+      platform: 'instagram',
+      bookmarkId: id,
+      author,
+      authorName: meta.authorName || meta.author || null,
+      text: meta.caption || meta.description || null,
+      thumbnailUrl: meta.imageUrl ? `/api/media/instagram/thumbnail?id=${encodeURIComponent(id)}` : null,
+      url: previewPath('instagram', author, id),
+    })
+  }
 
   return (
     <InstagramPreviewLanding

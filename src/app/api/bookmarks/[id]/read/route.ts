@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { bookmarks, readStatus } from '@/lib/db/schema'
+import { bookmarks, bookmarkMedia, readStatus } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { metrics } from '@/lib/sentry'
+import { recordActivity, previewPath } from '@/lib/activity/record'
 
 function getPlatform(request: NextRequest): string {
   return request.nextUrl.searchParams.get('platform') || 'twitter'
@@ -24,7 +25,13 @@ export async function POST(
     const platform = getPlatform(request)
 
     const [bookmark] = await db
-      .select({ id: bookmarks.id })
+      .select({
+        id: bookmarks.id,
+        author: bookmarks.author,
+        authorName: bookmarks.authorName,
+        text: bookmarks.text,
+        authorProfileImageUrl: bookmarks.authorProfileImageUrl,
+      })
       .from(bookmarks)
       .where(and(eq(bookmarks.userId, userId), eq(bookmarks.platform, platform), eq(bookmarks.id, id)))
       .limit(1)
@@ -56,6 +63,24 @@ export async function POST(
     })
 
     metrics.bookmarkReadToggled(true)
+
+    // Push to the public activity pulse (anonymous, server-resolved content).
+    const [media] = await db
+      .select({ previewUrl: bookmarkMedia.previewUrl, originalUrl: bookmarkMedia.originalUrl })
+      .from(bookmarkMedia)
+      .where(and(eq(bookmarkMedia.userId, userId), eq(bookmarkMedia.platform, platform), eq(bookmarkMedia.bookmarkId, id)))
+      .limit(1)
+    recordActivity({
+      action: 'read',
+      platform,
+      bookmarkId: id,
+      author: bookmark.author,
+      authorName: bookmark.authorName,
+      text: bookmark.text,
+      thumbnailUrl: media?.previewUrl || media?.originalUrl || bookmark.authorProfileImageUrl || null,
+      url: previewPath(platform, bookmark.author, id),
+      userId,
+    })
 
     return NextResponse.json({ success: true, isRead: true, readAt })
   } catch (error) {

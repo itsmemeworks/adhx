@@ -264,6 +264,37 @@ export const syncLogs = sqliteTable(
   })
 )
 
+// Activity — the public "pulse" of community actions shown on the landing page.
+// Append-only event log. `userId` is stored only for moderation / rate-limiting
+// and is NEVER returned by the public /api/activity endpoint (the pulse is
+// anonymous: "Someone saved …"). Content is always resolved server-side by the
+// recorder — never accepted from the client — so it can't be used for injection.
+export const activity = sqliteTable(
+  'activity',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    action: text('action').notNull(), // 'preview' | 'save' | 'read'
+    platform: text('platform').notNull().default('twitter'),
+    bookmarkId: text('bookmark_id').notNull(),
+    author: text('author').notNull(),
+    authorName: text('author_name'),
+    text: text('text'),
+    thumbnailUrl: text('thumbnail_url'),
+    url: text('url').notNull(),
+    userId: text('user_id'), // private — never exposed publicly
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => ({
+    createdAtIdx: index('activity_created_at_idx').on(table.createdAt),
+    dedupeIdx: index('activity_dedupe_idx').on(
+      table.action,
+      table.platform,
+      table.bookmarkId,
+      table.createdAt,
+    ),
+  })
+)
+
 // ===========================================
 // Relations
 // ===========================================
@@ -344,3 +375,5 @@ export type NewSyncLog = typeof syncLogs.$inferInsert
 export type SyncState = typeof syncState.$inferSelect
 export type TagShare = typeof tagShares.$inferSelect
 export type NewTagShare = typeof tagShares.$inferInsert
+export type Activity = typeof activity.$inferSelect
+export type NewActivity = typeof activity.$inferInsert

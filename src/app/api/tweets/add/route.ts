@@ -12,6 +12,7 @@ import {
 import { extractUrlsFromFacets } from '@/lib/media/fxembed'
 import { fetchOgMetadata } from '@/lib/utils/og-fetch'
 import { normalizeEntityMap } from '@/lib/utils/article-text'
+import { recordActivity, previewPath } from '@/lib/activity/record'
 
 // POST /api/tweets/add - Add a tweet by URL
 export async function POST(request: NextRequest) {
@@ -291,6 +292,21 @@ export async function POST(request: NextRequest) {
 
     // Track bookmark addition with source
     metrics.bookmarkAdded(source as 'manual' | 'url_prefix')
+
+    // Push to the public activity pulse (anonymous, server-resolved content).
+    const saveAuthor = tweet.author?.screen_name || parsed.author
+    recordActivity({
+      action: 'save',
+      platform: 'twitter',
+      bookmarkId: parsed.tweetId,
+      author: saveAuthor,
+      authorName: tweet.author?.name || null,
+      text: tweet.text || null,
+      thumbnailUrl:
+        tweet.media?.all?.[0]?.thumbnail_url || tweet.media?.all?.[0]?.url || tweet.author?.avatar_url || null,
+      url: previewPath('twitter', saveAuthor, parsed.tweetId),
+      userId,
+    })
 
     return NextResponse.json({
       success: true,

@@ -19,6 +19,7 @@ import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Loader2, CheckCircle2, Zap, Flame } from 'lucide-react'
 import { TriageMode } from '@/components/feed/TriageMode'
+import { LivePulse } from '@/components/LivePulse'
 import { useTheme } from '@/lib/theme/context'
 
 export default function FeedPage(): React.ReactElement {
@@ -795,6 +796,9 @@ function FeedPageContent(): React.ReactElement {
       </ErrorBoundary>
 
       <div className="p-4">
+        {/* Live community pulse — self-hides when there's no recent activity */}
+        <LivePulse />
+
         {stats.unread > 0 && (
           <div className="mb-4 flex justify-center">
             <button

@@ -5,6 +5,7 @@ import { Bookmark, Search, Tag, Maximize2, ArrowRight, Zap, Smartphone, Monitor,
 import { ADHX_PURPLE } from '@/lib/gestalt/theme'
 import { XIcon } from '@/components/icons'
 import { AnimatedBackground, LandingAnimations } from '@/components/landing'
+import { LivePulse } from '@/components/LivePulse'
 import { getPlatformType, type PlatformType } from '@/lib/platform'
 
 export function LandingPage() {
@@ -130,6 +131,9 @@ export function LandingPage() {
           </button>
         </div>
       </section>
+
+      {/* Live activity pulse — social proof of what the community is doing */}
+      <LivePulse />
 
       {/* URL Trick Section */}
       <section aria-labelledby="url-trick-title" className="max-w-4xl mx-auto px-4 py-12">

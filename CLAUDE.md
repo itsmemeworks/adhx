@@ -330,6 +330,28 @@ When generating Open Graph metadata for social unfurling, images are selected in
 - Text-only tweets default to expanded on the preview page
 - User preference persisted via `localStorage` key `adhx-preview-collapsed`
 
+### Live Activity Pulse
+A real-time, **anonymous** ticker of community activity ("Someone just saved a tweet by @author") shown as a hover-pausing marquee. It's ambient social proof — what people are previewing, saving, and reading across ADHX right now.
+
+**Recorded events** (`recordActivity()` in `src/lib/activity/record.ts`):
+| Action | Hooked into | Notes |
+|--------|-------------|-------|
+| `preview` | the 4 preview page server components | Skipped for bots/OG-unfurl crawlers via `isLikelyBot()` (`src/lib/activity/bot.ts`) so the pulse stays human |
+| `save` | `/api/tweets/add` (twitter, covers the `/api/bookmarks/add` delegation) + the IG/TikTok branches of `/api/bookmarks/add` | |
+| `read` | `/api/bookmarks/[id]/read` POST (new reads only) | |
+
+**Two invariants enforced in `recordActivity()` — do not break these:**
+1. **Content is always resolved server-side** by the caller (tweet/reel/tiktok metadata already fetched in the route/page). We **never** accept display text/thumbnails from the client — a public "anyone can POST what shows on the front page" endpoint would be a stored-XSS / spam-injection hole. There is intentionally no write endpoint.
+2. **`userId` is stored but never exposed.** It exists only for future moderation/rate-limiting. `GET /api/activity` selects an explicit public column list that omits it — the pulse is anonymous by construction. Don't `select()` the whole row there.
+
+Other details:
+- Recording is fire-and-forget and synchronous (better-sqlite3); it swallows all errors so a pulse-write failure can never break a save/preview/read.
+- De-duped on write (same `action+platform+bookmarkId` within 60s) and again on read (same `action+platform+url`), so refreshes/prefetches/double-fires don't flood it.
+- Text is whitespace-collapsed and capped (240 chars); thumbnails must be `http(s)` or an `/api/` proxy path.
+- Pulse item links point to the **on-ADHX** preview path (`previewPath()`), keeping clicks on-site (and showing the save CTA) rather than bouncing to the source platform.
+- `LivePulse` (`src/components/LivePulse.tsx`) polls `/api/activity` every 12s, renders the list twice for a seamless `animate-marquee` loop (keyframe in `tailwind.config.ts`), pauses on hover (CSS `animation-play-state` + a `paused` flag that also halts the poll-driven reshuffle), respects `prefers-reduced-motion`, and renders nothing when there's no activity. Mounted on both the landing page (`LandingPage.tsx`) and the authed feed top (`page.tsx`).
+- Schema: standalone `activity` table (`migration 0004_add_activity`). Append-only, no composite key — it's an event log, not user-owned content, so it's exempt from the `(userId, platform, id)` convention.
+
 ### Branding Assets
 
 | File | Size | Purpose |
@@ -635,6 +657,7 @@ Database location: `./data/adhdone.db`
 | `collections` | `id` + `userId` | Custom bookmark collections |
 | `collection_tweets` | `(userId, collectionId, platform, bookmarkId)` | Bookmarks in collections |
 | `tag_shares` | `(userId, tag)` | Public tag sharing settings |
+| `activity` | `id` (auto) | Append-only public activity pulse — anonymous event log (`userId` stored but never exposed). Not user-owned content, so exempt from the composite-key convention |
 
 **Why composite keys with `platform`**: Allows User A and User B to both bookmark tweet X independently (multi-user), AND lets the same numeric id exist across platforms without collision (a TikTok video id and a tweet id can both be 19 digits). `platform` is one of `twitter` | `instagram` | `tiktok`, default `twitter`. Every query that filters by `bookmarkId` must also filter by `platform`.
 
@@ -680,6 +703,7 @@ export async function GET() {
 | Route | Method | Auth | Description |
 |-------|--------|------|-------------|
 | `/api/health` | GET | No | Health check for monitoring |
+| `/api/activity` | GET | No | Public anonymous activity pulse (recent previews/saves/reads, no userId, 5s cache) |
 | `/api/feed` | GET | Yes | Main feed with filtering |
 | `/api/bookmarks/[id]/read` | POST/DELETE | Yes | Toggle read status |
 | `/api/bookmarks/[id]/tags` | POST/DELETE | Yes | Add/remove tags |
