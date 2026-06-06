@@ -94,7 +94,8 @@ export function FeedBentoTile({
         isQuote ? 'bg-clay/[0.07]' : 'bg-surface',
       )}
     >
-      <TypeBadge type={type} />
+      {/* self-start so the badge hugs its content instead of stretching full-width */}
+      <TypeBadge type={type} className="self-start" />
       <span
         className={cn(
           'mt-3 flex-1 overflow-hidden leading-normal text-ink',

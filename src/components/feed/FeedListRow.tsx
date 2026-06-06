@@ -2,7 +2,7 @@
 
 import { Play, ChevronRight, Image as ImageIcon, FileText, Video, Quote, Link2 } from 'lucide-react'
 import type { FeedItem } from './types'
-import { PlatformGlyph, TYPE_META, type ContentType } from '@/components/matter'
+import { PlatformGlyph, TypeBadge, type ContentType } from '@/components/matter'
 import { formatCompactRelativeTime, formatDurationMs } from '@/lib/utils/format'
 import { feedItemType, feedItemTitle, feedItemThumb } from './feedItemMeta'
 import { cn } from '@/lib/utils'
@@ -101,10 +101,7 @@ export function FeedListRow({
       {/* desktop-only trailing columns: type chip, duration/time, chevron */}
       {!compact && (
         <>
-          <span className="flex-none inline-flex items-center gap-1.5 rounded-md bg-inset px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.06em] text-ink-2">
-            <span className={cn('w-1.5 h-1.5 rounded-full', DOT[type])} />
-            {TYPE_META[type].label}
-          </span>
+          <TypeBadge type={type} className="flex-none" />
           <span className="flex-none w-12 text-right font-mono text-[12.5px] text-ink-3">{duration || time}</span>
           <ChevronRight className="flex-none w-[17px] h-[17px] text-ink-3" />
         </>

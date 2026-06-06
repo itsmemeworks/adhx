@@ -671,34 +671,37 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
       <div
         class="flex items-center justify-between mb-3"
       >
-        <span
-          class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
-        >
-          <span
-            class="w-[5px] h-[5px] rounded-full flex-none bg-type-quote"
-          />
-          Quote
-        </span>
-        <span
+        <div
           class="flex items-center gap-1.5"
         >
-          <svg
-            aria-hidden="true"
-            class="text-ink-3"
-            fill="currentColor"
-            height="13"
-            viewBox="0 0 24 24"
-            width="13"
-          >
-            <path
-              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-            />
-          </svg>
           <span
-            class="font-mono text-[11px] text-ink-3"
+            class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
           >
-            now
+            <span
+              class="w-[5px] h-[5px] rounded-full flex-none bg-type-quote"
+            />
+            Quote
           </span>
+          <span
+            class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
+          >
+            <svg
+              aria-hidden="true"
+              fill="currentColor"
+              height="13"
+              viewBox="0 0 24 24"
+              width="13"
+            >
+              <path
+                d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+              />
+            </svg>
+          </span>
+        </div>
+        <span
+          class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5"
+        >
+          now
         </span>
       </div>
       <div
@@ -1054,34 +1057,37 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'p
       <div
         class="flex items-center justify-between mb-3"
       >
-        <span
-          class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
-        >
-          <span
-            class="w-[5px] h-[5px] rounded-full flex-none bg-type-text"
-          />
-          Text
-        </span>
-        <span
+        <div
           class="flex items-center gap-1.5"
         >
-          <svg
-            aria-hidden="true"
-            class="text-ink-3"
-            fill="currentColor"
-            height="13"
-            viewBox="0 0 24 24"
-            width="13"
-          >
-            <path
-              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-            />
-          </svg>
           <span
-            class="font-mono text-[11px] text-ink-3"
+            class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
           >
-            now
+            <span
+              class="w-[5px] h-[5px] rounded-full flex-none bg-type-text"
+            />
+            Text
           </span>
+          <span
+            class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
+          >
+            <svg
+              aria-hidden="true"
+              fill="currentColor"
+              height="13"
+              viewBox="0 0 24 24"
+              width="13"
+            >
+              <path
+                d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+              />
+            </svg>
+          </span>
+        </div>
+        <span
+          class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5"
+        >
+          now
         </span>
       </div>
       <div
@@ -1155,34 +1161,37 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
       <div
         class="flex items-center justify-between mb-3"
       >
-        <span
-          class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
-        >
-          <span
-            class="w-[5px] h-[5px] rounded-full flex-none bg-type-quote"
-          />
-          Quote
-        </span>
-        <span
+        <div
           class="flex items-center gap-1.5"
         >
-          <svg
-            aria-hidden="true"
-            class="text-ink-3"
-            fill="currentColor"
-            height="13"
-            viewBox="0 0 24 24"
-            width="13"
-          >
-            <path
-              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-            />
-          </svg>
           <span
-            class="font-mono text-[11px] text-ink-3"
+            class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
           >
-            now
+            <span
+              class="w-[5px] h-[5px] rounded-full flex-none bg-type-quote"
+            />
+            Quote
           </span>
+          <span
+            class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
+          >
+            <svg
+              aria-hidden="true"
+              fill="currentColor"
+              height="13"
+              viewBox="0 0 24 24"
+              width="13"
+            >
+              <path
+                d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+              />
+            </svg>
+          </span>
+        </div>
+        <span
+          class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5"
+        >
+          now
         </span>
       </div>
       <div
@@ -1407,34 +1416,37 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
       <div
         class="flex items-center justify-between mb-3"
       >
-        <span
-          class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
-        >
-          <span
-            class="w-[5px] h-[5px] rounded-full flex-none bg-type-quote"
-          />
-          Quote
-        </span>
-        <span
+        <div
           class="flex items-center gap-1.5"
         >
-          <svg
-            aria-hidden="true"
-            class="text-ink-3"
-            fill="currentColor"
-            height="13"
-            viewBox="0 0 24 24"
-            width="13"
-          >
-            <path
-              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-            />
-          </svg>
           <span
-            class="font-mono text-[11px] text-ink-3"
+            class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
           >
-            now
+            <span
+              class="w-[5px] h-[5px] rounded-full flex-none bg-type-quote"
+            />
+            Quote
           </span>
+          <span
+            class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
+          >
+            <svg
+              aria-hidden="true"
+              fill="currentColor"
+              height="13"
+              viewBox="0 0 24 24"
+              width="13"
+            >
+              <path
+                d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+              />
+            </svg>
+          </span>
+        </div>
+        <span
+          class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5"
+        >
+          now
         </span>
       </div>
       <div
@@ -1539,34 +1551,37 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'r
       <div
         class="flex items-center justify-between mb-3"
       >
-        <span
-          class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
-        >
-          <span
-            class="w-[5px] h-[5px] rounded-full flex-none bg-type-text"
-          />
-          Text
-        </span>
-        <span
+        <div
           class="flex items-center gap-1.5"
         >
-          <svg
-            aria-hidden="true"
-            class="text-ink-3"
-            fill="currentColor"
-            height="13"
-            viewBox="0 0 24 24"
-            width="13"
-          >
-            <path
-              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-            />
-          </svg>
           <span
-            class="font-mono text-[11px] text-ink-3"
+            class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
           >
-            now
+            <span
+              class="w-[5px] h-[5px] rounded-full flex-none bg-type-text"
+            />
+            Text
           </span>
+          <span
+            class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
+          >
+            <svg
+              aria-hidden="true"
+              fill="currentColor"
+              height="13"
+              viewBox="0 0 24 24"
+              width="13"
+            >
+              <path
+                d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+              />
+            </svg>
+          </span>
+        </div>
+        <span
+          class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5"
+        >
+          now
         </span>
       </div>
       <div
@@ -1649,34 +1664,37 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 't
       <div
         class="flex items-center justify-between mb-3"
       >
-        <span
-          class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
-        >
-          <span
-            class="w-[5px] h-[5px] rounded-full flex-none bg-type-quote"
-          />
-          Quote
-        </span>
-        <span
+        <div
           class="flex items-center gap-1.5"
         >
-          <svg
-            aria-hidden="true"
-            class="text-ink-3"
-            fill="currentColor"
-            height="13"
-            viewBox="0 0 24 24"
-            width="13"
-          >
-            <path
-              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-            />
-          </svg>
           <span
-            class="font-mono text-[11px] text-ink-3"
+            class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
           >
-            now
+            <span
+              class="w-[5px] h-[5px] rounded-full flex-none bg-type-quote"
+            />
+            Quote
           </span>
+          <span
+            class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
+          >
+            <svg
+              aria-hidden="true"
+              fill="currentColor"
+              height="13"
+              viewBox="0 0 24 24"
+              width="13"
+            >
+              <path
+                d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+              />
+            </svg>
+          </span>
+        </div>
+        <span
+          class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5"
+        >
+          now
         </span>
       </div>
       <div
@@ -1915,34 +1933,37 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'y
       <div
         class="flex items-center justify-between mb-3"
       >
-        <span
-          class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
-        >
-          <span
-            class="w-[5px] h-[5px] rounded-full flex-none bg-type-text"
-          />
-          Text
-        </span>
-        <span
+        <div
           class="flex items-center gap-1.5"
         >
-          <svg
-            aria-hidden="true"
-            class="text-ink-3"
-            fill="currentColor"
-            height="13"
-            viewBox="0 0 24 24"
-            width="13"
-          >
-            <path
-              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-            />
-          </svg>
           <span
-            class="font-mono text-[11px] text-ink-3"
+            class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
           >
-            now
+            <span
+              class="w-[5px] h-[5px] rounded-full flex-none bg-type-text"
+            />
+            Text
           </span>
+          <span
+            class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
+          >
+            <svg
+              aria-hidden="true"
+              fill="currentColor"
+              height="13"
+              viewBox="0 0 24 24"
+              width="13"
+            >
+              <path
+                d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+              />
+            </svg>
+          </span>
+        </div>
+        <span
+          class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5"
+        >
+          now
         </span>
       </div>
       <div

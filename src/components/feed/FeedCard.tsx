@@ -6,7 +6,7 @@ import { AuthorAvatar } from './AuthorAvatar'
 import { renderTextWithLinks, renderBionicTextWithLinks } from './utils'
 import { usePreferences } from '@/lib/preferences-context'
 import { formatDurationMs, formatCompactRelativeTime } from '@/lib/utils/format'
-import { TypeBadge, PlatformChip, PlatformGlyph, type ContentType, type PlatformId } from '@/components/matter'
+import { TypeBadge, PlatformChip, type ContentType, type PlatformId } from '@/components/matter'
 import { cn } from '@/lib/utils'
 import type { FeedItem } from './types'
 
@@ -379,11 +379,12 @@ function CardHeader({
 }): React.ReactElement {
   return (
     <div className="flex items-center justify-between mb-3">
-      <TypeBadge type={type} />
-      <span className="flex items-center gap-1.5">
-        <PlatformGlyph platform={platform} size={13} className="text-ink-3" />
-        <span className="font-mono text-[11px] text-ink-3">{timeBadge}</span>
-      </span>
+      {/* Match media cards: type label + platform glyph on the left, time chip on the right. */}
+      <div className="flex items-center gap-1.5">
+        <TypeBadge type={type} />
+        <PlatformChip platform={platform} />
+      </div>
+      <TimePill>{timeBadge}</TimePill>
     </div>
   )
 }
