@@ -278,7 +278,17 @@ function MediaContent({
         className={cn(mediaClass, 'transition-opacity', loaded ? 'opacity-100' : 'opacity-0')}
         style={arStyle}
         onLoad={onLoad}
-        onError={onError}
+        onError={(e) => {
+          // The FxEmbed photo proxy occasionally fails in-browser; retry once
+          // against the source CDN before showing the error state.
+          const el = e.currentTarget
+          if (primaryMedia.originalUrl && !el.dataset.fellBack) {
+            el.dataset.fellBack = '1'
+            el.src = primaryMedia.originalUrl
+            return
+          }
+          onError()
+        }}
         loading="lazy"
       />
       {!loaded && <div className="absolute inset-0 bg-inset animate-pulse" />}

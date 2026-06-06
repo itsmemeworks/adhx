@@ -7,6 +7,24 @@ import type { ArticleContentBlock, ArticleEntityMap, MediaEntitiesMap } from './
 
 
 /**
+ * `onError` handler for media images: if the primary (proxy) URL fails to load,
+ * swap once to the source CDN `originalUrl`. The FxEmbed photo proxy occasionally
+ * fails in-browser for a given photo (e.g. the first photo of a multi-image
+ * tweet) even though the source pbs.twimg.com image loads fine.
+ */
+export function fallbackToOriginal(
+  originalUrl?: string | null,
+): (e: React.SyntheticEvent<HTMLImageElement>) => void {
+  return (e) => {
+    const el = e.currentTarget
+    if (originalUrl && !el.dataset.fellBack) {
+      el.dataset.fellBack = '1'
+      el.src = originalUrl
+    }
+  }
+}
+
+/**
  * Download media helper - fetches image as blob and triggers download
  * This is necessary because the download attribute doesn't work for cross-origin URLs
  */

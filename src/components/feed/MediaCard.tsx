@@ -6,7 +6,7 @@ import type { FeedItem, ArticleContent } from './types'
 import { youtubeEmbedUrl } from '@/lib/media/youtube'
 import { normalizeEntityMap } from '@/lib/utils/article-text'
 import { AuthorAvatar } from './AuthorAvatar'
-import { renderTextWithLinks, stripMediaUrls } from './utils'
+import { renderTextWithLinks, stripMediaUrls, fallbackToOriginal } from './utils'
 import { PlatformGlyph, type PlatformId } from '@/components/matter'
 import { cn } from '@/lib/utils'
 
@@ -258,7 +258,13 @@ function FullBleedMedia({ item }: { item: FeedItem }) {
   } else {
     const img = primary?.url || heroImageUrl(item)
     media = img ? (
-      <img src={img} alt="" className="absolute inset-0 w-full h-full object-contain" referrerPolicy="no-referrer" />
+      <img
+        src={img}
+        alt=""
+        className="absolute inset-0 w-full h-full object-contain"
+        referrerPolicy="no-referrer"
+        onError={fallbackToOriginal(primary?.originalUrl)}
+      />
     ) : null
   }
 
@@ -350,6 +356,7 @@ function MediaPanel({ item }: { item: FeedItem }) {
             alt={`Image ${i + 1} of ${photos.length}`}
             className="snap-center h-full w-auto max-w-full object-contain rounded-2xl bg-black flex-shrink-0 shadow-m-lg"
             referrerPolicy="no-referrer"
+            onError={fallbackToOriginal(p.originalUrl)}
           />
         ))}
       </div>
@@ -361,7 +368,13 @@ function MediaPanel({ item }: { item: FeedItem }) {
   const href = item.articlePreview?.url || item.tweetUrl
   return (
     <a href={href} target="_blank" rel="noopener noreferrer" className="block h-full max-h-full">
-      <img src={primary?.url || img} alt="" className={fill} referrerPolicy="no-referrer" />
+      <img
+        src={primary?.url || img}
+        alt=""
+        className={fill}
+        referrerPolicy="no-referrer"
+        onError={fallbackToOriginal(primary?.originalUrl)}
+      />
     </a>
   )
 }

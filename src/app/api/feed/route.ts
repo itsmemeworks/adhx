@@ -283,6 +283,7 @@ export async function GET(request: NextRequest) {
         url: string
         thumbnailUrl: string
         shareUrl: string
+        originalUrl: string | null
       }> | null
       links: typeof links | null
       articlePreview: {
@@ -332,6 +333,7 @@ export async function GET(request: NextRequest) {
             thumbnailUrl,
             // No downloadable media — "share" is the Instagram link itself.
             shareUrl: bookmark.tweetUrl,
+            originalUrl: null,
           }
         }
 
@@ -349,6 +351,7 @@ export async function GET(request: NextRequest) {
             url: streamUrl,
             thumbnailUrl,
             shareUrl: downloadUrl,
+            originalUrl: null,
           }
         }
 
@@ -365,6 +368,7 @@ export async function GET(request: NextRequest) {
             url: `https://www.youtube.com/shorts/${bookmark.id}`,
             thumbnailUrl: `https://i.ytimg.com/vi/${bookmark.id}/hqdefault.jpg`,
             shareUrl: `https://www.youtube.com/shorts/${bookmark.id}`,
+            originalUrl: null,
           }
         }
 
@@ -385,6 +389,7 @@ export async function GET(request: NextRequest) {
           url: resolveMediaUrl(urlOptions),
           thumbnailUrl: getThumbnailUrl({ ...urlOptions, previewUrl: m.previewUrl || undefined }),
           shareUrl: getShareableUrl(urlOptions),
+          originalUrl: m.originalUrl ?? null,
         }
       })
 
