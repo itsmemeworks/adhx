@@ -3,7 +3,11 @@
 import { useEffect, useRef } from 'react'
 import { Image, Loader2 } from 'lucide-react'
 import { FeedCard } from './FeedCard'
+import { FeedListRow } from './FeedListRow'
+import { FeedBentoTile, BENTO_SPANS } from './FeedBentoTile'
 import type { FeedItem } from './types'
+
+export type FeedView = 'grid' | 'list' | 'bento'
 
 interface FeedGridProps {
   items: FeedItem[]
@@ -13,6 +17,7 @@ interface FeedGridProps {
   sortField: 'processedAt' | 'createdAt'
   unreadOnly: boolean
   stats: { total: number; unread: number }
+  view?: FeedView
   onExpand: (index: number) => void
   onMarkRead: (id: string) => void
   onRemove: (id: string) => void
@@ -33,6 +38,7 @@ export function FeedGrid({
   sortField,
   unreadOnly,
   stats,
+  view = 'grid',
   onExpand,
   onMarkRead,
   onRemove,
@@ -76,20 +82,41 @@ export function FeedGrid({
 
   return (
     <>
-      <div className={GRID_CLASS}>
-        {items.map((item, index) => (
-          <FeedCard
-            key={item.id}
-            item={item}
-            lastSyncAt={lastSyncAt}
-            sortField={sortField}
-            onExpand={() => onExpand(index)}
-            onMarkRead={() => onMarkRead(item.id)}
-            unreadOnly={unreadOnly}
-            onRemove={() => onRemove(item.id)}
-          />
-        ))}
-      </div>
+      {view === 'grid' && (
+        <div className={GRID_CLASS}>
+          {items.map((item, index) => (
+            <FeedCard
+              key={item.id}
+              item={item}
+              lastSyncAt={lastSyncAt}
+              sortField={sortField}
+              onExpand={() => onExpand(index)}
+              onMarkRead={() => onMarkRead(item.id)}
+              unreadOnly={unreadOnly}
+              onRemove={() => onRemove(item.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {view === 'list' && (
+        // List / Inbox — dense rows in a bordered surface.
+        <div className="rounded-card border border-hairline bg-surface shadow-m-sm overflow-hidden [&>*:last-child]:border-b-0">
+          {items.map((item, index) => (
+            <FeedListRow key={item.id} item={item} onClick={() => onExpand(index)} />
+          ))}
+        </div>
+      )}
+
+      {view === 'bento' && (
+        // Bento mosaic — mixed-size tiles; 2-col mobile → 4-col desktop.
+        <div className="grid grid-cols-2 [@media(min-width:820px)]:grid-cols-4 gap-3 sm:gap-4 [grid-auto-rows:108px] sm:[grid-auto-rows:168px]">
+          {items.map((item, index) => {
+            const [cs, rs] = BENTO_SPANS[index % BENTO_SPANS.length]
+            return <FeedBentoTile key={item.id} item={item} cs={cs} rs={rs} onClick={() => onExpand(index)} />
+          })}
+        </div>
+      )}
 
       {hasMore && (
         <>

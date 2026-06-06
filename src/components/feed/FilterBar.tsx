@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { EyeOff, ChevronDown, SlidersHorizontal, Instagram, Youtube } from 'lucide-react'
+import { EyeOff, ChevronDown, SlidersHorizontal, Instagram, Youtube, LayoutGrid, List as ListIcon, LayoutDashboard } from 'lucide-react'
 import { FILTER_OPTIONS, PLATFORM_OPTIONS, type FilterType, type SortType, type SortDirection, type TagItem, type PlatformFilter } from './types'
+import type { FeedView } from './FeedGrid'
 import { PlatformGlyph } from '@/components/matter'
 import { cn } from '@/lib/utils'
 
@@ -17,6 +18,8 @@ interface FilterBarProps {
   onSortDirectionChange: (dir: SortDirection) => void
   unreadOnly: boolean
   onUnreadOnlyChange: (unreadOnly: boolean) => void
+  view?: FeedView
+  onViewChange?: (view: FeedView) => void
   // Tagging is removed in the Matter redesign. These props are retained so
   // existing callers (page.tsx) continue to compile, but they are not used.
   selectedTags?: string[]
@@ -45,6 +48,8 @@ export function FilterBar({
   onSortDirectionChange,
   unreadOnly,
   onUnreadOnlyChange,
+  view = 'grid',
+  onViewChange,
   stats,
 }: FilterBarProps): React.ReactElement {
   const [showPlatformDropdown, setShowPlatformDropdown] = useState(false)
@@ -75,6 +80,30 @@ export function FilterBar({
 
         {/* Spacer */}
         <div className="flex-1 min-w-2" />
+
+        {/* Grid / List / Bento view switcher */}
+        {onViewChange && (
+          <div className="flex-shrink-0 flex items-center gap-0.5 p-[3px] rounded-[10px] bg-inset">
+            {([
+              ['grid', LayoutGrid, 'Grid'],
+              ['list', ListIcon, 'List'],
+              ['bento', LayoutDashboard, 'Bento'],
+            ] as const).map(([id, Ico, label]) => (
+              <button
+                key={id}
+                onClick={() => onViewChange(id)}
+                aria-label={`${label} view`}
+                aria-pressed={view === id}
+                className={cn(
+                  'w-[34px] h-8 rounded-lg flex items-center justify-center transition-colors duration-150',
+                  view === id ? 'bg-surface text-clay shadow-m-xs' : 'text-ink-3 hover:text-ink-2',
+                )}
+              >
+                <Ico className="w-[17px] h-[17px]" />
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Platform dropdown pill */}
         {onPlatformChange && (

@@ -45,6 +45,7 @@ function FeedPageContent(): React.ReactElement {
   const [sort, setSort] = useState<SortType>((searchParams.get('sort') as SortType) || 'added')
   const [sortDirection, setSortDirection] = useState<SortDirection>((searchParams.get('sortDir') as SortDirection) || 'desc')
   const [unreadOnly, setUnreadOnly] = useState(searchParams.get('unreadOnly') !== 'false')
+  const [view, setView] = useState<'grid' | 'list' | 'bento'>('grid')
   const [search, setSearch] = useState(searchParams.get('search') || '')
   const [triageQueue, setTriageQueue] = useState<FeedItem[]>([])
   const [triageStart, setTriageStart] = useState(0)
@@ -72,6 +73,24 @@ function FeedPageContent(): React.ReactElement {
   const itemsRef = useRef(items)
   itemsRef.current = items
   const [showShortcutsModal, setShowShortcutsModal] = useState(false)
+
+  // Feed layout (grid / list / bento), remembered per device.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('adhx-feed-view')
+      if (saved === 'grid' || saved === 'list' || saved === 'bento') setView(saved)
+    } catch {
+      /* localStorage unavailable */
+    }
+  }, [])
+  const changeView = useCallback((v: 'grid' | 'list' | 'bento') => {
+    setView(v)
+    try {
+      localStorage.setItem('adhx-feed-view', v)
+    } catch {
+      /* ignore */
+    }
+  }, [])
 
   // Open the unified triage viewer on a snapshot of the queue at a given index.
   const openTriage = useCallback((queue: FeedItem[], start: number) => {
@@ -783,6 +802,8 @@ function FeedPageContent(): React.ReactElement {
           onSortDirectionChange={setSortDirection}
           unreadOnly={unreadOnly}
           onUnreadOnlyChange={setUnreadOnly}
+          view={view}
+          onViewChange={changeView}
           selectedTags={selectedTags}
           onSelectedTagsChange={setSelectedTags}
           availableTags={availableTags}
@@ -808,6 +829,7 @@ function FeedPageContent(): React.ReactElement {
             sortField={sort === 'posted' ? 'createdAt' : 'processedAt'}
             unreadOnly={unreadOnly}
             stats={stats}
+            view={view}
             onExpand={(idx) => openTriage(items, idx)}
             onMarkRead={handleMarkAsRead}
             onRemove={(id) => setItems((prev) => prev.filter((i) => i.id !== id))}
