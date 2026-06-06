@@ -80,23 +80,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -1215,23 +1221,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -2881,23 +2893,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -6105,23 +6123,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -7150,23 +7174,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -8268,23 +8298,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -9342,23 +9378,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -10630,23 +10672,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -11569,23 +11617,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -12648,23 +12702,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -13632,23 +13692,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -14580,23 +14646,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -15652,23 +15724,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -16682,23 +16760,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -17630,23 +17714,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -18821,23 +18911,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -20543,23 +20639,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -23823,23 +23925,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -24924,23 +25032,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -26098,23 +26212,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -27228,23 +27348,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -28572,23 +28698,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -29567,23 +29699,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -30702,23 +30840,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -31742,23 +31886,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -32746,23 +32896,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -33874,23 +34030,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
@@ -34960,23 +35122,29 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <div
           class="flex items-center justify-center mb-4 md:mb-5"
         >
-          <span
-            class="flex items-center gap-2"
+          <a
+            aria-label="ADHX home"
+            class="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+            href="/"
           >
-            <img
-              alt=""
-              aria-hidden="true"
-              class="w-auto block"
-              src="/adhx-cloud.png"
-              style="height: 30.599999999999998px;"
-            />
             <span
-              class="font-indie-flower leading-none text-ink"
-              style="font-size: 27px;"
+              class="flex items-center gap-2"
             >
-              ADHX
+              <img
+                alt=""
+                aria-hidden="true"
+                class="w-auto block"
+                src="/adhx-cloud.png"
+                style="height: 30.599999999999998px;"
+              />
+              <span
+                class="font-indie-flower leading-none text-ink"
+                style="font-size: 27px;"
+              >
+                ADHX
+              </span>
             </span>
-          </span>
+          </a>
         </div>
         <h1
           class="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2"
