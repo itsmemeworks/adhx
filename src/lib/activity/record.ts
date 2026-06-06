@@ -24,10 +24,13 @@ export type ActivityAction = 'preview' | 'save' | 'read'
  * save CTA) instead of bouncing them to the source platform.
  */
 export function previewPath(platform: string, author: string, id: string): string {
+  // TikTok handles are stored with their leading "@", so strip any leading
+  // "@" before re-prefixing — otherwise the path doubles up (/@@handle/...).
+  const handle = author.replace(/^@+/, '')
   if (platform === 'instagram') return `/reels/${id}`
-  if (platform === 'tiktok') return `/@${author}/video/${id}`
+  if (platform === 'tiktok') return `/@${handle}/video/${id}`
   if (platform === 'youtube') return `/shorts/${id}`
-  return `/${author}/status/${id}`
+  return `/${handle}/status/${id}`
 }
 
 export interface ActivityInput {
