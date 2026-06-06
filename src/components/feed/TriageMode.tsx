@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { X, Check, Bookmark, Trash2, Flame, Undo2, PartyPopper, ArrowLeft, ArrowRight } from 'lucide-react'
 import type { FeedItem } from './types'
-import { MediaCard } from './MediaCard'
+import { MediaCard, isFullBleedCandidate } from './MediaCard'
 import { isTouchDevice } from './utils'
 import { cn } from '@/lib/utils'
 
@@ -11,6 +11,21 @@ import { cn } from '@/lib/utils'
 function localToday(): string {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/** Track the mobile breakpoint (<768px) so focus media can go full-bleed. */
+function useIsMobile(): boolean {
+  const [mobile, setMobile] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches,
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    const onChange = () => setMobile(mq.matches)
+    onChange()
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+  return mobile
 }
 
 interface Streak {
@@ -63,10 +78,15 @@ export function TriageMode({
   const touchStart = useRef<{ x: number; y: number } | null>(null)
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const isMobile = useIsMobile()
   const total = queue.length
   const done = Math.min(index, total)
   const current = index < queue.length ? queue[index] : null
   const finished = index >= queue.length
+  // On phones, media posts take over the whole screen (Reels/TikTok style) and
+  // the chrome (top bar + dock) overlays the media in white. Everything else
+  // (desktop, or article/quote/text on mobile) uses the light framed layout.
+  const fullBleed = isMobile && !!current && isFullBleedCandidate(current)
 
   // --- seed queue from the snapshot on open; load streak for display ---
   useEffect(() => {
@@ -249,65 +269,109 @@ export function TriageMode({
   const progress = total ? (done / total) * 100 : 0
 
   return (
-    // Full-screen Matter light focus surface. Click backdrop (outside card/dock) to close.
-    <div className="fixed inset-0 z-50 bg-focus-bg flex flex-col overflow-hidden" onClick={onClose}>
-      {/* Ambient edge glows — decorative, not buttons. */}
-      <div
-        className="pointer-events-none absolute left-0 top-0 bottom-0 w-[150px] z-[1]"
-        style={{ background: 'linear-gradient(to right, color-mix(in srgb, var(--m-accent) 20%, transparent), transparent)' }}
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute right-0 top-0 bottom-0 w-[150px] z-[1]"
-        style={{ background: 'linear-gradient(to left, rgba(16,185,129,.16), transparent)' }}
-        aria-hidden
-      />
+    // Full-screen focus surface. Media posts on mobile go full-bleed on black;
+    // everything else uses the light Matter focus surface. Click backdrop to close.
+    <div
+      className={cn(
+        'fixed inset-0 z-50 flex flex-col overflow-hidden',
+        fullBleed ? 'bg-black' : 'bg-focus-bg',
+      )}
+      onClick={onClose}
+    >
+      {/* Ambient edge glows — decorative, not buttons. Hidden under full-bleed media. */}
+      {!fullBleed && (
+        <>
+          <div
+            className="pointer-events-none absolute left-0 top-0 bottom-0 w-[150px] z-[1]"
+            style={{ background: 'linear-gradient(to right, color-mix(in srgb, var(--m-accent) 20%, transparent), transparent)' }}
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute right-0 top-0 bottom-0 w-[150px] z-[1]"
+            style={{ background: 'linear-gradient(to left, rgba(16,185,129,.16), transparent)' }}
+            aria-hidden
+          />
+        </>
+      )}
 
       {/* Top bar (absolute): close · count · progress · streak */}
       <div className="absolute top-0 left-0 right-0 z-[6] flex items-center gap-4 px-5 sm:px-6 py-4">
         <button
           onClick={onClose}
-          className="w-[38px] h-[38px] flex-none rounded-full bg-fsurface text-fink-2 flex items-center justify-center hover:opacity-80 transition-opacity"
+          className={cn(
+            'w-[38px] h-[38px] flex-none rounded-full flex items-center justify-center hover:opacity-80 transition-opacity',
+            fullBleed ? 'bg-black/40 backdrop-blur text-white' : 'bg-fsurface text-fink-2',
+          )}
           aria-label="Exit triage"
         >
           <X className="w-[19px] h-[19px]" />
         </button>
-        <span className="font-mono text-sm font-medium text-fink-2 min-w-[62px] flex-none">
+        <span
+          className={cn(
+            'font-mono text-sm font-medium min-w-[62px] flex-none',
+            fullBleed ? 'text-white/90 drop-shadow' : 'text-fink-2',
+          )}
+        >
           {finished ? `${total} done` : `${done} / ${total}`}
         </span>
-        <div className="flex-1 h-[5px] rounded-full bg-fline overflow-hidden">
+        <div className={cn('flex-1 h-[5px] rounded-full overflow-hidden', fullBleed ? 'bg-white/25' : 'bg-fline')}>
           <div className="h-full bg-clay-grad transition-all duration-300" style={{ width: `${progress}%` }} />
         </div>
         {streak.current > 0 && (
-          <span className="flex-none inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-semibold whitespace-nowrap bg-flame/15 text-flame border border-flame/30">
+          <span
+            className={cn(
+              'flex-none inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-semibold whitespace-nowrap border',
+              fullBleed
+                ? 'bg-black/40 backdrop-blur text-white border-white/20'
+                : 'bg-flame/15 text-flame border-flame/30',
+            )}
+          >
             <Flame className="w-[15px] h-[15px]" fill="currentColor" /> {streak.current}-day streak
           </span>
         )}
       </div>
 
       {/* Body */}
-      <div className="flex-1 flex items-center justify-center px-6 sm:px-16 lg:px-24 pt-[72px] pb-[150px] overflow-hidden z-[2]">
-        {finished ? (
-          <div onClick={(e) => e.stopPropagation()}>
-            <FinishCard total={total} streak={streak} onClose={onClose} />
-          </div>
-        ) : current ? (
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full h-full flex items-center justify-center select-none touch-pan-y"
-            style={{
-              transform: cardTransform,
-              opacity: exiting ? 0 : 1,
-              transition: exiting || drag === 0 ? 'transform 0.22s ease, opacity 0.22s ease' : undefined,
-            }}
-            onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
-            onTouchEnd={onTouchEnd}
-          >
-            <MediaCard item={current} />
-          </div>
-        ) : null}
-      </div>
+      {fullBleed && current ? (
+        // Full-bleed: media fills the screen; chrome above overlays it.
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="absolute inset-0 z-0 select-none touch-pan-y"
+          style={{
+            transform: cardTransform,
+            opacity: exiting ? 0 : 1,
+            transition: exiting || drag === 0 ? 'transform 0.22s ease, opacity 0.22s ease' : undefined,
+          }}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
+          <MediaCard item={current} fullBleed />
+        </div>
+      ) : (
+        <div className="flex-1 flex items-center justify-center px-6 sm:px-16 lg:px-24 pt-[72px] pb-[150px] overflow-hidden z-[2]">
+          {finished ? (
+            <div onClick={(e) => e.stopPropagation()}>
+              <FinishCard total={total} streak={streak} onClose={onClose} />
+            </div>
+          ) : current ? (
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="w-full h-full flex items-center justify-center select-none touch-pan-y"
+              style={{
+                transform: cardTransform,
+                opacity: exiting ? 0 : 1,
+                transition: exiting || drag === 0 ? 'transform 0.22s ease, opacity 0.22s ease' : undefined,
+              }}
+              onTouchStart={onTouchStart}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+            >
+              <MediaCard item={current} />
+            </div>
+          ) : null}
+        </div>
+      )}
 
       {/* Single action dock (bottom-center) */}
       {!finished && (
@@ -315,17 +379,22 @@ export function TriageMode({
           onClick={(e) => e.stopPropagation()}
           className="absolute bottom-6 left-0 right-0 z-[7] flex flex-col items-center gap-3.5"
         >
-          <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold whitespace-nowrap bg-fsurface text-fink-2">
+          <span
+            className={cn(
+              'inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold whitespace-nowrap',
+              fullBleed ? 'bg-black/40 backdrop-blur text-white/90' : 'bg-fsurface text-fink-2',
+            )}
+          >
             <ArrowLeft className="w-3.5 h-3.5" /> {isTouch ? 'Swipe to sort' : 'Swipe or use arrow keys'} <ArrowRight className="w-3.5 h-3.5" />
           </span>
           <div className="flex items-end gap-7 sm:gap-[30px]">
-            <DockButton onClick={keep} label="Keep" kb="←" tone="primary">
+            <DockButton onClick={keep} label="Keep" kb="←" tone="primary" onDark={fullBleed}>
               <Bookmark className="w-[25px] h-[25px]" />
             </DockButton>
-            <DockButton onClick={del} label="Delete" kb="↓" tone="outline">
+            <DockButton onClick={del} label="Delete" kb="↓" tone="outline" onDark={fullBleed}>
               <Trash2 className="w-[22px] h-[22px]" />
             </DockButton>
-            <DockButton onClick={archive} label="Done" kb="→" tone="done">
+            <DockButton onClick={archive} label="Done" kb="→" tone="done" onDark={fullBleed}>
               <Check className="w-[25px] h-[25px]" />
             </DockButton>
           </div>
@@ -362,12 +431,14 @@ function DockButton({
   label,
   kb,
   tone,
+  onDark = false,
   children,
 }: {
   onClick: () => void
   label: string
   kb?: string
   tone: 'primary' | 'outline' | 'done'
+  onDark?: boolean
   children: React.ReactNode
 }) {
   const big = tone !== 'outline'
@@ -376,7 +447,9 @@ function DockButton({
       ? 'bg-clay-grad text-white shadow-glow'
       : tone === 'done'
         ? 'bg-done text-white shadow-m-lg'
-        : 'bg-transparent border-[1.5px] border-fline text-fink-2'
+        : onDark
+          ? 'bg-white/10 backdrop-blur border-[1.5px] border-white/60 text-white'
+          : 'bg-transparent border-[1.5px] border-fline text-fink-2'
   return (
     <div className="flex flex-col items-center gap-2">
       <button
@@ -390,8 +463,8 @@ function DockButton({
       >
         {children}
       </button>
-      <span className="text-xs font-semibold text-fink-2">
-        {label} {kb && <span className="font-mono text-fink-3">{kb}</span>}
+      <span className={cn('text-xs font-semibold', onDark ? 'text-white drop-shadow' : 'text-fink-2')}>
+        {label} {kb && <span className={cn('font-mono', onDark ? 'text-white/70' : 'text-fink-3')}>{kb}</span>}
       </span>
     </div>
   )

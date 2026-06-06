@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { ExternalLink, Play, Pause, Volume2 } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { ExternalLink, Play, Pause, Volume2, VolumeX } from 'lucide-react'
 import type { FeedItem, ArticleContentBlock } from './types'
 import { youtubeEmbedUrl } from '@/lib/media/youtube'
 import { AuthorAvatar } from './AuthorAvatar'
@@ -11,8 +11,13 @@ import { cn } from '@/lib/utils'
 
 /**
  * Shared media-first card (the single triage/focus viewer) — Matter focus tokens.
- * Media is maximized per orientation; text sits alongside (text-only → text is the hero).
- * Variants: vertical video (+ author card), article reader (serif + TTS), quote (both posts in full).
+ *
+ * Two layouts:
+ *  - `fullBleed` (mobile, media items): media covers the whole screen
+ *    (object-cover, black bg); caption + chrome overlay on top — Reels/TikTok style.
+ *  - framed (desktop, or any non-media item): media is maximized to fill the
+ *    available height with the author card alongside; article reader (serif + TTS),
+ *    quote (both posts in full), or text-only hero.
  */
 
 /** Clear "which platform" wordmark, used in card headers / source lines. */
@@ -62,19 +67,142 @@ function readMinutes(text: string): number {
   return Math.max(1, Math.round(words / 200))
 }
 
-/* ============================ MEDIA PANEL ============================ */
+function isArticleItem(item: FeedItem): boolean {
+  const hasMedia = !!heroImageUrl(item)
+  return (
+    !!item.isXArticle ||
+    !!(item.articleContent?.blocks && item.articleContent.blocks.length > 0) ||
+    (!hasMedia && !!(item.articlePreview && (item.articlePreview.title || item.articlePreview.description)))
+  )
+}
+
+/**
+ * Whether this item should render as full-bleed media on mobile (video/photo
+ * with first-class media — not an article-with-cover, quote, or text post).
+ */
+export function isFullBleedCandidate(item: FeedItem): boolean {
+  return !!heroImageUrl(item) && !isArticleItem(item)
+}
+
+/** Inline MP4 source for a video item (TikTok ships a direct URL; others proxy). */
+function videoSrc(item: FeedItem): string {
+  const primary = item.media?.[0]
+  return item.platform === 'tiktok' && primary
+    ? primary.url
+    : `/api/media/video?author=${encodeURIComponent(item.author)}&tweetId=${encodeURIComponent(item.id)}&quality=preview`
+}
+
+/* ===================== FULL-BLEED MEDIA (mobile) ===================== */
+
+function FullBleedMedia({ item }: { item: FeedItem }) {
+  const primary = item.media?.[0]
+  const isVideo = primary?.mediaType === 'video' || primary?.mediaType === 'animated_gif'
+  const text = stripMediaUrls(item.text || '', !!item.media?.[0])
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [muted, setMuted] = useState(true)
+
+  const toggleMute = () => {
+    const v = videoRef.current
+    if (!v) return
+    v.muted = !v.muted
+    setMuted(v.muted)
+    if (!v.muted) v.play().catch(() => {})
+  }
+
+  let media: ReactNode = null
+  if (item.platform === 'youtube') {
+    media = (
+      <iframe
+        key={item.id}
+        src={youtubeEmbedUrl(item.id)}
+        title={item.text || 'YouTube Short'}
+        className="absolute inset-0 w-full h-full"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        referrerPolicy="strict-origin-when-cross-origin"
+        allowFullScreen
+      />
+    )
+  } else if (isVideo && primary) {
+    media = (
+      <video
+        key={item.id}
+        ref={videoRef}
+        src={videoSrc(item)}
+        poster={primary.thumbnailUrl}
+        autoPlay
+        muted
+        loop
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+    )
+  } else {
+    const img = primary?.url || heroImageUrl(item)
+    media = img ? (
+      <img src={img} alt="" className="absolute inset-0 w-full h-full object-cover" referrerPolicy="no-referrer" />
+    ) : null
+  }
+
+  return (
+    <>
+      {media}
+
+      {/* Scrim — darkens top (for the chrome) and bottom (for the caption/dock). */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(0,0,0,.55), transparent 22%, transparent 48%, rgba(0,0,0,.86))',
+        }}
+        aria-hidden
+      />
+
+      {/* Tap-to-unmute (video only) — top-right, clear of the dock. */}
+      {isVideo && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            toggleMute()
+          }}
+          aria-label={muted ? 'Unmute' : 'Mute'}
+          className="absolute top-[68px] right-4 z-[4] w-10 h-10 rounded-full bg-black/40 backdrop-blur text-white flex items-center justify-center"
+        >
+          {muted ? <VolumeX className="w-[18px] h-[18px]" /> : <Volume2 className="w-[18px] h-[18px]" />}
+        </button>
+      )}
+
+      {/* Caption — author + text, sitting just above the dock. */}
+      <div className="absolute left-0 right-0 z-[3] px-5" style={{ bottom: 150 }}>
+        <div className="flex items-center gap-2.5 mb-1.5">
+          <AuthorAvatar src={item.authorProfileImageUrl} author={item.author} size="sm" />
+          <div className="min-w-0">
+            <p className="text-white font-semibold text-sm leading-tight truncate drop-shadow">
+              {item.authorName || item.author}
+            </p>
+            <p className="text-white/70 font-mono text-xs truncate">@{item.author}</p>
+          </div>
+        </div>
+        {text && (
+          <p className="text-white/90 text-[14.5px] leading-snug line-clamp-3 drop-shadow">{text}</p>
+        )}
+      </div>
+    </>
+  )
+}
+
+/* ===================== MEDIA PANEL (framed, maximized) ===================== */
 
 function MediaPanel({ item }: { item: FeedItem }) {
   const primary = item.media?.[0]
   const isVideo = primary?.mediaType === 'video' || primary?.mediaType === 'animated_gif'
-  const heightClass = 'max-h-[50vh] lg:max-h-[84vh]'
+  // Fill the available focus-area height; width follows the media's own ratio.
+  const fill = 'h-full max-h-full w-auto max-w-full object-contain rounded-2xl bg-black shadow-m-lg'
 
-  // YouTube plays via the official iframe embed (no MP4). Vertical Shorts frame.
-  // Needs a concrete height (the iframe is absolute, so aspect-ratio alone would
-  // collapse the box to zero); width then follows from the 9/16 ratio.
+  // YouTube plays via the official iframe embed (no MP4). Vertical Shorts frame —
+  // fills height, width derived from the 9/16 ratio.
   if (item.platform === 'youtube') {
     return (
-      <div className="relative aspect-[9/16] h-[60vh] lg:h-[82vh] max-h-[82vh] max-w-full rounded-2xl overflow-hidden bg-black shadow-m-lg">
+      <div className="relative aspect-[9/16] h-full max-h-full max-w-full rounded-2xl overflow-hidden bg-black shadow-m-lg">
         <iframe
           key={item.id}
           src={youtubeEmbedUrl(item.id)}
@@ -89,21 +217,17 @@ function MediaPanel({ item }: { item: FeedItem }) {
   }
 
   if (isVideo && primary) {
-    const src =
-      item.platform === 'tiktok'
-        ? primary.url
-        : `/api/media/video?author=${encodeURIComponent(item.author)}&tweetId=${encodeURIComponent(item.id)}&quality=preview`
     return (
       <video
         key={item.id}
-        src={src}
+        src={videoSrc(item)}
         poster={primary.thumbnailUrl}
         controls
         autoPlay
         muted
         loop
         playsInline
-        className={`max-w-full w-auto ${heightClass} rounded-2xl object-contain bg-black shadow-m-lg`}
+        className={fill}
       />
     )
   }
@@ -111,13 +235,13 @@ function MediaPanel({ item }: { item: FeedItem }) {
   const photos = (item.media ?? []).filter((m) => m.mediaType === 'photo')
   if (photos.length > 1) {
     return (
-      <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory rounded-2xl max-w-full">
+      <div className="flex h-full max-w-full gap-2 overflow-x-auto snap-x snap-mandatory rounded-2xl">
         {photos.map((p, i) => (
           <img
             key={p.id}
             src={p.url}
             alt={`Image ${i + 1} of ${photos.length}`}
-            className={`snap-center ${heightClass} w-auto max-w-full object-contain rounded-2xl bg-black flex-shrink-0 shadow-m-lg`}
+            className="snap-center h-full w-auto max-w-full object-contain rounded-2xl bg-black flex-shrink-0 shadow-m-lg"
             referrerPolicy="no-referrer"
           />
         ))}
@@ -129,13 +253,8 @@ function MediaPanel({ item }: { item: FeedItem }) {
   if (!img) return null
   const href = item.articlePreview?.url || item.tweetUrl
   return (
-    <a href={href} target="_blank" rel="noopener noreferrer" className="block">
-      <img
-        src={primary?.url || img}
-        alt=""
-        className={`max-w-full w-auto ${heightClass} rounded-2xl object-contain bg-black shadow-m-lg`}
-        referrerPolicy="no-referrer"
-      />
+    <a href={href} target="_blank" rel="noopener noreferrer" className="block h-full max-h-full">
+      <img src={primary?.url || img} alt="" className={fill} referrerPolicy="no-referrer" />
     </a>
   )
 }
@@ -155,7 +274,7 @@ function AuthorCard({ item }: { item: FeedItem }) {
     : null
 
   return (
-    <article className="w-full lg:w-[340px] flex-shrink-0 bg-fsurface border border-fline rounded-2xl shadow-m-lg flex flex-col max-h-[32vh] lg:max-h-[84vh] overflow-hidden">
+    <article className="w-full md:w-[330px] flex-shrink-0 bg-fsurface border border-fline rounded-2xl shadow-m-lg flex flex-col max-h-[32vh] md:max-h-full overflow-hidden">
       <header className="flex items-start gap-3 p-4 pb-2 flex-shrink-0">
         <AuthorAvatar src={item.authorProfileImageUrl} author={item.author} size="md" />
         <div className="min-w-0 flex-1">
@@ -310,7 +429,7 @@ function ArticleReader({ item }: { item: FeedItem }) {
       {fullText && <div className="flex-none"><TtsPlayer text={fullText} minutes={minutes} /></div>}
 
       {/* full untruncated body — scrolls in-app */}
-      <div className="font-serif text-[17px] leading-[1.7] text-fink overflow-y-auto flex-1 min-h-0">
+      <div className="font-serif text-[17px] lg:text-[19px] leading-[1.72] text-fink overflow-y-auto flex-1 min-h-0">
         {bodyParas.map((p, i) => (
           <p key={i} className={i === bodyParas.length - 1 ? 'm-0' : 'mb-4'}>
             {p}
@@ -430,13 +549,15 @@ function TextCard({ item }: { item: FeedItem }) {
 
 /* ============================ ROOT ============================ */
 
-export function MediaCard({ item }: { item: FeedItem }) {
+export function MediaCard({ item, fullBleed = false }: { item: FeedItem; fullBleed?: boolean }) {
+  // Mobile full-bleed media — the whole viewer is the media, chrome overlays it.
+  if (fullBleed) {
+    return <FullBleedMedia item={item} />
+  }
+
   const hasMedia = !!heroImageUrl(item)
   const hasQuote = !!(item.isQuote && (item.quotedTweet || item.quoteContext))
-  const isArticle =
-    !!item.isXArticle ||
-    !!(item.articleContent?.blocks && item.articleContent.blocks.length > 0) ||
-    (!hasMedia && !!(item.articlePreview && (item.articlePreview.title || item.articlePreview.description)))
+  const isArticle = isArticleItem(item)
 
   // Article reader (serif body + TTS). Article-with-cover still reads as an article.
   if (isArticle) {
@@ -450,7 +571,7 @@ export function MediaCard({ item }: { item: FeedItem }) {
   // Quote (quoting + quoted, both in full) when there's no first-class media.
   if (hasQuote && !hasMedia) {
     return (
-      <div className="w-full flex items-start justify-center">
+      <div className="w-full h-full flex items-start justify-center overflow-y-auto">
         <QuoteView item={item} />
       </div>
     )
@@ -459,16 +580,16 @@ export function MediaCard({ item }: { item: FeedItem }) {
   // Text-only hero.
   if (!hasMedia) {
     return (
-      <div className="w-full flex items-start justify-center">
+      <div className="w-full h-full flex items-start justify-center overflow-y-auto">
         <TextCard item={item} />
       </div>
     )
   }
 
-  // Media + author card alongside (vertical video, photos, link image).
+  // Media maximized + author card alongside (vertical video, photos, link image).
   return (
-    <div className="w-full flex flex-col lg:flex-row gap-3 lg:gap-8 items-center lg:items-start justify-center">
-      <div className="flex-1 min-w-0 w-full flex items-start justify-center">
+    <div className="w-full h-full flex flex-col md:flex-row gap-4 md:gap-8 items-center justify-center">
+      <div className="flex-1 min-w-0 w-full h-full min-h-0 flex items-center justify-center">
         <MediaPanel item={item} />
       </div>
       <AuthorCard item={item} />
