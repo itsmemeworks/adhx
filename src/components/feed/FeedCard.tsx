@@ -291,15 +291,14 @@ function MediaContent({
         </span>
       )}
 
-      {/* Caption overlay (up to 2 lines) */}
+      {/* Caption overlay (up to 2 lines). The clamp lives on the inner <p> with
+          no padding of its own — putting the bottom padding on the clamp box
+          itself lets a clipped 3rd line peek through the padding zone. */}
       {caption && (
-        <div
-          className={cn(
-            'absolute left-0 right-0 bottom-0 px-3.5 pb-3 pt-8 text-white font-medium text-[13.5px] leading-snug line-clamp-2 [text-shadow:0_1px_3px_rgba(0,0,0,.55)]',
-            cornerBadge && 'pr-14',
-          )}
-        >
-          {caption}
+        <div className={cn('absolute left-0 right-0 bottom-0 px-3.5 pb-3 pt-8', cornerBadge && 'pr-14')}>
+          <p className="text-white font-medium text-[13.5px] leading-snug line-clamp-2 [text-shadow:0_1px_3px_rgba(0,0,0,.55)]">
+            {caption}
+          </p>
         </div>
       )}
     </div>

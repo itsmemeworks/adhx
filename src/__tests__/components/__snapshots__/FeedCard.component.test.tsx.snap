@@ -65,13 +65,17 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > '4
         4
       </span>
       <div
-        class="absolute left-0 right-0 bottom-0 px-3.5 pb-3 pt-8 text-white font-medium text-[13.5px] leading-snug line-clamp-2 [text-shadow:0_1px_3px_rgba(0,0,0,.55)] pr-14"
+        class="absolute left-0 right-0 bottom-0 px-3.5 pb-3 pt-8 pr-14"
       >
-        Apparently, a 19 year old built Wisprflow's UGC program to 500M views in 60 days.
+        <p
+          class="text-white font-medium text-[13.5px] leading-snug line-clamp-2 [text-shadow:0_1px_3px_rgba(0,0,0,.55)]"
+        >
+          Apparently, a 19 year old built Wisprflow's UGC program to 500M views in 60 days.
 
 Dude spills some sauce on LinkedIn. 
 
 Open this to see the entire post
+        </p>
       </div>
     </div>
     <div
@@ -432,9 +436,12 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'e
         now
       </span>
       <div
-        class="absolute left-0 right-0 bottom-0 px-3.5 pb-3 pt-8 text-white font-medium text-[13.5px] leading-snug line-clamp-2 [text-shadow:0_1px_3px_rgba(0,0,0,.55)]"
+        class="absolute left-0 right-0 bottom-0 px-3.5 pb-3 pt-8"
       >
-        BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Named Virtual Accounts powered by @moonpay & @iron
+        <p
+          class="text-white font-medium text-[13.5px] leading-snug line-clamp-2 [text-shadow:0_1px_3px_rgba(0,0,0,.55)]"
+        >
+          BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Named Virtual Accounts powered by @moonpay & @iron
 
 1️⃣ Claim your own named account in the Avici app
 
@@ -443,6 +450,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'e
 3️⃣ Take full self-custodial control of your money
 
 Live now 🚀
+        </p>
       </div>
     </div>
     <div
@@ -552,9 +560,12 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
         now
       </span>
       <div
-        class="absolute left-0 right-0 bottom-0 px-3.5 pb-3 pt-8 text-white font-medium text-[13.5px] leading-snug line-clamp-2 [text-shadow:0_1px_3px_rgba(0,0,0,.55)]"
+        class="absolute left-0 right-0 bottom-0 px-3.5 pb-3 pt-8"
       >
-        Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory
+        <p
+          class="text-white font-medium text-[13.5px] leading-snug line-clamp-2 [text-shadow:0_1px_3px_rgba(0,0,0,.55)]"
+        >
+          Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory
 
 We built a fully automated system that repurposes, localizes, and launches winning TikTok Shop content across hundreds of creator-style accounts.
 
@@ -593,6 +604,7 @@ Comment “Workflow” and I’ll send you everything.
 (must be connected)
 
 PS – Repost for early access to the full TikTok Shop content factory system.
+        </p>
       </div>
     </div>
     <div
@@ -708,9 +720,12 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
         2
       </span>
       <div
-        class="absolute left-0 right-0 bottom-0 px-3.5 pb-3 pt-8 text-white font-medium text-[13.5px] leading-snug line-clamp-2 [text-shadow:0_1px_3px_rgba(0,0,0,.55)] pr-14"
+        class="absolute left-0 right-0 bottom-0 px-3.5 pb-3 pt-8 pr-14"
       >
-        🚨BREAKING: TRUMP FURIOUS WITH STARMER
+        <p
+          class="text-white font-medium text-[13.5px] leading-snug line-clamp-2 [text-shadow:0_1px_3px_rgba(0,0,0,.55)]"
+        >
+          🚨BREAKING: TRUMP FURIOUS WITH STARMER
 
 U.S state department made clear last night speaking on the UK and Keir Starmer ⬇️ 
 
@@ -722,6 +737,7 @@ It’s also cancelling local elections, and curbing the right to a jury trial."
 
 They know Starmer is a tyrant
 His days are numbered
+        </p>
       </div>
     </div>
     <div
@@ -2015,13 +2031,17 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'v
         now
       </span>
       <div
-        class="absolute left-0 right-0 bottom-0 px-3.5 pb-3 pt-8 text-white font-medium text-[13.5px] leading-snug line-clamp-2 [text-shadow:0_1px_3px_rgba(0,0,0,.55)]"
+        class="absolute left-0 right-0 bottom-0 px-3.5 pb-3 pt-8"
       >
-        Primes look chaotic in a line, but reveal structure when space curves.
+        <p
+          class="text-white font-medium text-[13.5px] leading-snug line-clamp-2 [text-shadow:0_1px_3px_rgba(0,0,0,.55)]"
+        >
+          Primes look chaotic in a line, but reveal structure when space curves.
 
 Same numbers.
 Different geometry.
 Hidden order.
+        </p>
       </div>
     </div>
     <div
