@@ -84,12 +84,16 @@ export function isFullBleedCandidate(item: FeedItem): boolean {
   return !!heroImageUrl(item) && !isArticleItem(item)
 }
 
-/** Inline MP4 source for a video item (TikTok ships a direct URL; others proxy). */
+/**
+ * Inline MP4 source for a video item (TikTok ships a direct URL; others proxy).
+ * Focus mode is a deliberate viewing surface, so it streams HD (720p) — the
+ * 360p `preview` quality is only for gallery hover previews.
+ */
 function videoSrc(item: FeedItem): string {
   const primary = item.media?.[0]
   return item.platform === 'tiktok' && primary
     ? primary.url
-    : `/api/media/video?author=${encodeURIComponent(item.author)}&tweetId=${encodeURIComponent(item.id)}&quality=preview`
+    : `/api/media/video?author=${encodeURIComponent(item.author)}&tweetId=${encodeURIComponent(item.id)}&quality=hd`
 }
 
 /* ===================== FULL-BLEED MEDIA (mobile) ===================== */
@@ -587,9 +591,11 @@ export function MediaCard({ item, fullBleed = false }: { item: FeedItem; fullBle
   }
 
   // Media maximized + author card alongside (vertical video, photos, link image).
+  // No flex-grow on the media cell — it sizes to the media so the pair stays
+  // centered together (gap 8); a grown cell would strand the card at the edge.
   return (
     <div className="w-full h-full flex flex-col md:flex-row gap-4 md:gap-8 items-center justify-center">
-      <div className="flex-1 min-w-0 w-full h-full min-h-0 flex items-center justify-center">
+      <div className="min-w-0 max-w-full h-full min-h-0 flex items-center justify-center">
         <MediaPanel item={item} />
       </div>
       <AuthorCard item={item} />

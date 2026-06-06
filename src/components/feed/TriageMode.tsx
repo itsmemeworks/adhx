@@ -219,6 +219,15 @@ export function TriageMode({
     return () => window.removeEventListener('keydown', onKey)
   }, [isOpen, archive, keep, del, doUndo, onClose])
 
+  // Auto-dismiss the undo toast so it isn't a permanent fixture. Deletes manage
+  // their own lifetime (the toast must stay for the whole 5s undo window before
+  // the delete commits), so only keep/archive toasts time out here.
+  useEffect(() => {
+    if (!undo || undo.type === 'delete') return
+    const t = setTimeout(() => setUndo(null), 4000)
+    return () => clearTimeout(t)
+  }, [undo])
+
   // flush any pending delete when the mode closes
   useEffect(() => {
     if (isOpen) return
