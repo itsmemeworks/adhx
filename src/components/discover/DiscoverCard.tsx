@@ -1,6 +1,6 @@
 'use client'
 
-import { Plus, Play, EyeOff } from 'lucide-react'
+import { Plus, Play, EyeOff, Flame } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
 import { PlatformGlyph, TypeBadge, type ContentType } from '@/components/matter'
@@ -35,6 +35,15 @@ export function DiscoverCard({ item, fresh = false }: { item: ActivityItem; fres
   const hasMedia = Boolean(item.thumbnailUrl)
   const isVideo = type === 'video'
   const who = item.authorName || (item.author ? `@${item.author}` : null)
+  // "Hot" = saved by more than one person across ADHX. Shows a flame + count.
+  const saveCount = item.saveCount ?? 0
+  const hot = saveCount >= 2
+  const FlameBadge = hot ? (
+    <span className="inline-flex items-center gap-1 rounded-full bg-flame px-2 py-0.5 text-[11.5px] font-bold text-white shadow-sm">
+      <Flame size={12} fill="currentColor" />
+      {saveCount}
+    </span>
+  ) : null
 
   return (
     <article
@@ -55,9 +64,12 @@ export function DiscoverCard({ item, fresh = false }: { item: ActivityItem; fres
           <div className="absolute left-2.5 top-2.5">
             <TypeBadge type={type} />
           </div>
-          <span className="absolute right-2.5 top-2.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md">
-            <PlatformGlyph platform={item.platform} size={13} />
-          </span>
+          <div className="absolute right-2.5 top-2.5 flex items-center gap-1.5">
+            {FlameBadge}
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md">
+              <PlatformGlyph platform={item.platform} size={13} />
+            </span>
+          </div>
           {isVideo && (
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md">
@@ -68,7 +80,10 @@ export function DiscoverCard({ item, fresh = false }: { item: ActivityItem; fres
         </div>
       ) : (
         <div className="flex-1 px-4 pt-4">
-          <TypeBadge type={type} />
+          <div className="flex items-center gap-2">
+            <TypeBadge type={type} />
+            {FlameBadge}
+          </div>
           <p className="mt-3 line-clamp-5 text-[14.5px] leading-relaxed text-ink">
             {item.text || (who ? `Saved from ${who}` : 'Saved post')}
           </p>

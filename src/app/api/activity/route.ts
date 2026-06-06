@@ -1,15 +1,17 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { activity } from '@/lib/db/schema'
-import { desc } from 'drizzle-orm'
+import { activity, bookmarks } from '@/lib/db/schema'
+import { desc, inArray, sql } from 'drizzle-orm'
 
 /**
- * GET /api/activity — the public, anonymous pulse for the landing page.
+ * GET /api/activity — the public, anonymous pulse for the landing + Discover.
  *
  * Returns the most recent community actions. Deliberately selects ONLY public
  * fields: `userId` is never included, so the feed can't be tied back to anyone.
- * Short cache + SWR keeps it lively without hammering the DB when many visitors
- * poll at once.
+ * Each item is enriched with `saveCount` — how many DISTINCT users have saved
+ * that post across ADHX (anonymous count only) — which powers the "Trending"
+ * ranking and the flame badge on hot items. Short cache + SWR keeps it lively
+ * without hammering the DB when many visitors poll at once.
  */
 export const dynamic = 'force-dynamic'
 
@@ -22,6 +24,7 @@ export async function GET() {
       .select({
         action: activity.action,
         platform: activity.platform,
+        bookmarkId: activity.bookmarkId,
         author: activity.author,
         authorName: activity.authorName,
         text: activity.text,
@@ -46,8 +49,31 @@ export async function GET() {
       if (items.length >= LIMIT) break
     }
 
+    // Enrich with the real cross-user save count per post (anonymous — a count,
+    // never any user identity). One grouped query over the items on screen.
+    const counts = new Map<string, number>()
+    const ids = [...new Set(items.map((i) => i.bookmarkId).filter(Boolean))]
+    if (ids.length > 0) {
+      const rows2 = db
+        .select({
+          platform: bookmarks.platform,
+          id: bookmarks.id,
+          saveCount: sql<number>`count(distinct ${bookmarks.userId})`,
+        })
+        .from(bookmarks)
+        .where(inArray(bookmarks.id, ids))
+        .groupBy(bookmarks.platform, bookmarks.id)
+        .all()
+      for (const r of rows2) counts.set(`${r.platform}:${r.id}`, Number(r.saveCount) || 0)
+    }
+
+    const enriched = items.map((i) => ({
+      ...i,
+      saveCount: counts.get(`${i.platform}:${i.bookmarkId}`) ?? 0,
+    }))
+
     return NextResponse.json(
-      { items },
+      { items: enriched },
       { headers: { 'Cache-Control': 'public, max-age=5, stale-while-revalidate=15' } },
     )
   } catch {

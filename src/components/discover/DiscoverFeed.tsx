@@ -9,12 +9,15 @@ import { DiscoverCard, inferType } from './DiscoverCard'
 export interface ActivityItem {
   action: 'preview' | 'save' | 'read'
   platform: 'twitter' | 'instagram' | 'tiktok' | 'youtube' | string
+  bookmarkId?: string
   author: string
   authorName?: string | null
   text?: string | null
   thumbnailUrl?: string | null
   url: string
   createdAt: string
+  /** Distinct ADHX users who've saved this post (anonymous count). Drives the flame. */
+  saveCount?: number
 }
 
 const POLL_MS = 12_000
@@ -35,27 +38,27 @@ function keyOf(item: ActivityItem): string {
 }
 
 /**
- * Client-side filter + sort. "Just saved" (default) = newest first; "Trending"
- * approximates popularity by surfacing items that recur most (multiple saves of
- * the same URL bubble up). Photos/Videos/Articles filter by inferred type.
+ * Client-side filter + sort. "Just saved" (default) = newest first. "Trending"
+ * ranks by the real cross-user save count (how many people saved each post),
+ * newest as the tiebreaker, and only surfaces posts saved by more than one
+ * person. Photos/Videos/Articles filter by inferred type.
  */
 function applyFilter(items: ActivityItem[], filter: FilterId): ActivityItem[] {
   if (filter === 'trending') {
-    const counts = new Map<string, number>()
-    for (const it of items) counts.set(it.url, (counts.get(it.url) ?? 0) + 1)
-    // De-dupe (feed may already collapse, but be safe), then rank by frequency,
-    // newest as the tiebreaker.
-    const seen = new Set<string>()
-    const unique = items.filter((it) => {
-      if (seen.has(it.url)) return false
-      seen.add(it.url)
-      return true
-    })
-    return [...unique].sort((a, b) => {
-      const d = (counts.get(b.url) ?? 0) - (counts.get(a.url) ?? 0)
-      if (d !== 0) return d
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    })
+    // De-dupe by post, keeping the highest save count seen.
+    const byPost = new Map<string, ActivityItem>()
+    for (const it of items) {
+      const k = it.url
+      const prev = byPost.get(k)
+      if (!prev || (it.saveCount ?? 0) > (prev.saveCount ?? 0)) byPost.set(k, it)
+    }
+    return [...byPost.values()]
+      .filter((it) => (it.saveCount ?? 0) >= 2)
+      .sort((a, b) => {
+        const d = (b.saveCount ?? 0) - (a.saveCount ?? 0)
+        if (d !== 0) return d
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      })
   }
 
   if (filter === 'photos') return items.filter((it) => inferType(it) === 'photo')
