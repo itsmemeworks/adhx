@@ -187,14 +187,18 @@ export function TikTokPreviewLanding({
                       title="View on TikTok"
                     >
                       <PlatformGlyph platform="tiktok" size={13} />
-                      <ExternalLink className="w-3 h-3 text-ink-3" />
                     </a>
                   </div>
                 </header>
 
                 {description && (
                   <div className="px-4 pb-3">
-                    <p className="text-[14.5px] text-ink-2 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]">
+                    <p
+                      className={cn(
+                        'text-[14.5px] text-ink-2 break-words leading-relaxed [overflow-wrap:anywhere]',
+                        hasVideo ? 'line-clamp-3' : 'whitespace-pre-wrap',
+                      )}
+                    >
                       {description}
                     </p>
                   </div>

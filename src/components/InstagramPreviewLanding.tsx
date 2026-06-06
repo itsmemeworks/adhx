@@ -174,15 +174,20 @@ export function InstagramPreviewLanding({
                       title="View on Instagram"
                     >
                       <PlatformGlyph platform="instagram" size={13} />
-                      <ExternalLink className="w-3 h-3 text-ink-3" />
                     </a>
                   </div>
                 </header>
 
-                {/* Caption — placed above media to match X tweet text/media order */}
+                {/* Caption — placed above media to match X tweet text/media order.
+                    Auto-collapses to 3 lines when a poster is present. */}
                 {(caption || description) && (
                   <div className="px-4 pb-3">
-                    <p className="text-[14.5px] text-ink-2 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]">
+                    <p
+                      className={cn(
+                        'text-[14.5px] text-ink-2 break-words leading-relaxed [overflow-wrap:anywhere]',
+                        imageUrl ? 'line-clamp-3' : 'whitespace-pre-wrap',
+                      )}
+                    >
                       {caption || description}
                     </p>
                   </div>
