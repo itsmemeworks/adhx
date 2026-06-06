@@ -279,7 +279,7 @@ export function InstagramPreviewLanding({
                 <BenefitItem
                   icon={<Sparkles className="w-5 h-5" />}
                   title="One place for everything"
-                  description="Save Reels, tweets, and articles into a single searchable collection. Your chaos, contained."
+                  description="Save Reels, Shorts, tweets, and articles into a single searchable collection. Your chaos, contained."
                 />
                 <BenefitItem
                   icon={<Zap className="w-5 h-5" />}
@@ -370,7 +370,7 @@ function SidebarCta({
         )}
       </button>
       <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-        Save Reels, tweets, and articles in one place. Free forever.
+        Save Reels, Shorts, tweets, and articles in one place. Free forever.
       </p>
     </>
   )

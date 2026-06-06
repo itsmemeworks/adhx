@@ -303,7 +303,7 @@ export function TikTokPreviewLanding({
                 <BenefitItem
                   icon={<Sparkles className="w-5 h-5" />}
                   title="One place for everything"
-                  description="Save TikToks, Reels, tweets, and articles into a single searchable collection. Your chaos, contained."
+                  description="Save TikToks, Shorts, Reels, tweets, and articles into a single searchable collection. Your chaos, contained."
                 />
                 <BenefitItem
                   icon={<Zap className="w-5 h-5" />}
@@ -494,7 +494,7 @@ function SidebarCta({
         )}
       </button>
       <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-        Save TikToks, Reels, and tweets in one place. Free forever.
+        Save TikToks, Shorts, Reels, and tweets in one place. Free forever.
       </p>
     </>
   )

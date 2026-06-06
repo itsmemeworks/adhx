@@ -19,7 +19,7 @@ function ShareRedirect() {
 
     const parsed = parseShareUrl(url)
     if (parsed) {
-      router.replace(`/${parsed.username}/status/${parsed.id}`)
+      router.replace(parsed.path)
     } else {
       setError(true)
     }
@@ -30,10 +30,11 @@ function ShareRedirect() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 px-4">
         <div className="text-center max-w-md">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-            Not a tweet link
+            Not a supported link
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            The shared URL doesn&apos;t look like an X/Twitter tweet. Try sharing a link like x.com/user/status/123.
+            The shared URL doesn&apos;t look like a post we can preview. Try an X, Instagram, TikTok, or YouTube link
+            like x.com/user/status/123 or youtube.com/shorts/abc.
           </p>
           <a
             href="/"
