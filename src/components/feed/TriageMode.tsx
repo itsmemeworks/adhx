@@ -27,6 +27,8 @@ interface TriageModeProps {
   availableTags: { tag: string; count: number }[]
   /** Notify the feed so it can drop archived/deleted items without a refetch. */
   onItemResolved?: (id: string, action: 'archive' | 'delete') => void
+  /** Notify the feed an archive was undone, so it can restore the item + unread count. */
+  onItemRestored?: (item: FeedItem) => void
   onTagAdd?: (id: string, tag: string) => void
   onTagRemove?: (id: string, tag: string) => void
 }
@@ -45,6 +47,7 @@ export function TriageMode({
   startIndex,
   availableTags,
   onItemResolved,
+  onItemRestored,
   onTagAdd,
   onTagRemove,
 }: TriageModeProps) {
@@ -159,6 +162,8 @@ export function TriageMode({
     if (!undo) return
     if (undo.type === 'archive') {
       fetch(`/api/bookmarks/${undo.item.id}/read`, { method: 'DELETE' }).catch(() => {})
+      // archive decremented the feed's unread count immediately — restore it
+      onItemRestored?.(undo.item)
     } else if (undo.type === 'delete') {
       clearUndoTimer() // cancel the pending delete — nothing was deleted yet
     }
@@ -166,7 +171,7 @@ export function TriageMode({
     setExiting(null)
     setDrag(0)
     setUndo(null)
-  }, [undo])
+  }, [undo, onItemRestored])
 
   const addTag = useCallback(
     (tag: string) => {

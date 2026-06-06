@@ -447,6 +447,16 @@ function FeedPageContent(): React.ReactElement {
     [unreadOnly],
   )
 
+  // Undo of a triage archive: restore the item to unread + bump the count back.
+  const handleTriageRestored = useCallback((item: FeedItem) => {
+    setItems((prev) =>
+      prev.some((i) => i.id === item.id)
+        ? prev.map((i) => (i.id === item.id ? { ...i, isRead: false } : i))
+        : [{ ...item, isRead: false }, ...prev], // was dropped under unreadOnly — re-add it
+    )
+    setStats((prev) => ({ ...prev, unread: prev.unread + 1 }))
+  }, [])
+
   const handleMarkAsRead = useCallback(
     async (id: string) => {
       if (markingRead) return
@@ -844,6 +854,7 @@ function FeedPageContent(): React.ReactElement {
           startIndex={triageStart}
           availableTags={availableTags}
           onItemResolved={handleTriageResolved}
+          onItemRestored={handleTriageRestored}
           onTagAdd={(id, tag) => handleAddTag(id, tag)}
           onTagRemove={(id, tag) => handleRemoveTag(id, tag)}
         />

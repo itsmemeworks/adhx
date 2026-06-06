@@ -85,16 +85,29 @@ describe('TriageMode', () => {
     expect(mockFetch).toHaveBeenCalledWith('/api/triage/streak', expect.objectContaining({ method: 'POST' }))
   })
 
-  it('undo reverts an archive', async () => {
+  it('undo reverts an archive and notifies the feed to restore it', async () => {
     routeMock()
-    render(<TriageMode {...base} initialQueue={[item('1', 'first tweet'), item('2', 'second tweet')]} />)
+    const onItemResolved = vi.fn()
+    const onItemRestored = vi.fn()
+    render(
+      <TriageMode
+        {...base}
+        initialQueue={[item('1', 'first tweet'), item('2', 'second tweet')]}
+        onItemResolved={onItemResolved}
+        onItemRestored={onItemRestored}
+      />,
+    )
     await screen.findByText('first tweet')
     fireEvent.click(screen.getByLabelText('Archive'))
     await screen.findByText('second tweet')
+    expect(onItemResolved).toHaveBeenCalledWith('1', 'archive')
+
     fireEvent.click(screen.getByText('Undo'))
     await waitFor(() =>
       expect(mockFetch).toHaveBeenCalledWith('/api/bookmarks/1/read', expect.objectContaining({ method: 'DELETE' })),
     )
+    // The feed must be told to restore the item (re-increment unread + un-read it).
+    expect(onItemRestored).toHaveBeenCalledWith(expect.objectContaining({ id: '1' }))
     expect(await screen.findByText('first tweet')).toBeInTheDocument()
   })
 
