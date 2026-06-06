@@ -4,54 +4,52 @@ import { useState, useEffect } from 'react'
 import { Bookmark, Search, Zap, Volume2, ArrowRight, Play, Plus, Smartphone, Monitor, ExternalLink, Copy, Check } from 'lucide-react'
 import { extractYouTubeId } from '@/lib/media/youtube'
 import { getPlatformType, type PlatformType } from '@/lib/platform'
-import { MatterLogo, PlatformGlyph, LiveDot, TypeBadge, type PlatformId, type ContentType } from '@/components/matter'
-import { cn } from '@/lib/utils'
+import { MatterLogo, PlatformGlyph, LiveDot, type PlatformId } from '@/components/matter'
+import { formatCompactRelativeTime } from '@/lib/utils/format'
+import { DiscoverCard, inferType } from '@/components/discover/DiscoverCard'
+import type { ActivityItem } from '@/components/discover/DiscoverFeed'
 
-/* ---------- Placeholder live-discovery data (real feed wiring lives elsewhere) ---------- */
+/* ---------- Live activity (the real, anonymous community pulse) ---------- */
 
-const UNSPLASH: Record<string, string> = {
-  beach: 'photo-1507525428034-b723cf961d3e',
-  city: 'photo-1449824913935-59a10b8d2000',
-  bookshelf: 'photo-1521119989659-a83eee488004',
-  ramen: 'photo-1569718212165-3a8278d5f624',
-  podcast: 'photo-1598550476439-6847785fcea6',
-  coffee: 'photo-1495474472287-4d71bcdd2085',
-}
-const img = (key: string, w: number, h: number) =>
-  `https://images.unsplash.com/${UNSPLASH[key] || key}?auto=format&fit=crop&w=${w}&h=${h}&q=80`
+const POLL_MS = 12_000
 
-interface LiveItem {
-  type: ContentType
-  plat: PlatformId
-  t: string
-  saves: number
-  media?: string
-  title?: string
-  body?: string
-  fresh?: boolean
+interface LiveState {
+  items: ActivityItem[]
+  savedToday: number
+  loaded: boolean
 }
 
-const LIVE: LiveItem[] = [
-  { type: 'video', media: 'beach', t: 'just now', plat: 'tiktok', saves: 142, fresh: true },
-  { type: 'article', title: 'The 100-day ChatGPT ranking playbook', media: 'city', t: '2s ago', plat: 'twitter', saves: 88 },
-  { type: 'video', media: 'bookshelf', t: '6s ago', plat: 'youtube', saves: 118 },
-  { type: 'photo', media: 'ramen', t: '9s ago', plat: 'instagram', saves: 301 },
-  { type: 'text', body: '7 frameworks consultants charge $500/hr for — now free.', t: '24s ago', plat: 'twitter', saves: 54 },
-  { type: 'video', media: 'podcast', t: '1m ago', plat: 'twitter', saves: 212 },
-]
-
-const TYPE_LABEL: Record<ContentType, string> = {
-  video: 'Video',
-  photo: 'Photo',
-  text: 'Text',
-  article: 'Article',
-  quote: 'Quote',
+/** Poll /api/activity for the real anonymous pulse shown on the landing page. */
+function useLiveActivity(): LiveState {
+  const [state, setState] = useState<LiveState>({ items: [], savedToday: 0, loaded: false })
+  useEffect(() => {
+    let alive = true
+    const load = async () => {
+      try {
+        const res = await fetch('/api/activity', { cache: 'no-store' })
+        if (!res.ok) return
+        const data = await res.json()
+        if (!alive || !Array.isArray(data.items)) return
+        setState({ items: data.items, savedToday: Number(data.savedToday) || 0, loaded: true })
+      } catch {
+        if (alive) setState((s) => ({ ...s, loaded: true }))
+      }
+    }
+    load()
+    const t = window.setInterval(load, POLL_MS)
+    return () => {
+      alive = false
+      window.clearInterval(t)
+    }
+  }, [])
+  return state
 }
 
 export function LandingPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [tweetUrl, setTweetUrl] = useState('')
   const [urlError, setUrlError] = useState('')
+  const live = useLiveActivity()
 
   const handleLogin = () => {
     setIsLoading(true)
@@ -166,7 +164,9 @@ export function LandingPage() {
           <div>
             <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold bg-surface border border-hairline text-ink-2 mb-5">
               <LiveDot />
-              1,204 posts saved today
+              {live.savedToday > 0
+                ? `${live.savedToday.toLocaleString()} ${live.savedToday === 1 ? 'post' : 'posts'} saved today`
+                : 'Real-time community pulse'}
             </span>
 
             <div className="font-indie-flower leading-[.9] text-ink mb-4 text-[60px] min-[860px]:text-[84px]">ADHX</div>
@@ -204,7 +204,7 @@ export function LandingPage() {
           </div>
 
           {/* RIGHT: live discovery panel */}
-          <LivePanel />
+          <LivePanel items={live.items.slice(0, 5)} savedToday={live.savedToday} loaded={live.loaded} />
         </section>
 
         {/* ───────── Live discovery section ───────── */}
@@ -227,9 +227,17 @@ export function LandingPage() {
             </a>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[18px]">
-            {[LIVE[0], LIVE[2], LIVE[4], LIVE[5]].map((d, i) => (
-              <DiscoverCard key={i} d={d} />
-            ))}
+            {!live.loaded ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-64 animate-pulse rounded-card border border-hairline bg-inset" />
+              ))
+            ) : live.items.length === 0 ? (
+              <p className="col-span-full py-8 text-center text-[14.5px] text-ink-2">
+                Quiet right now — be the first to save something.
+              </p>
+            ) : (
+              live.items.slice(0, 4).map((item) => <DiscoverCard key={item.url} item={item} />)
+            )}
           </div>
         </section>
 
@@ -299,37 +307,49 @@ export function LandingPage() {
 
 /* ───────── Live discovery panel (hero right column) ───────── */
 
-function LivePanel() {
+function LivePanel({ items, savedToday, loaded }: { items: ActivityItem[]; savedToday: number; loaded: boolean }) {
   return (
     <div className="bg-surface border border-hairline rounded-card shadow-m-lg p-4">
       <div className="flex items-center gap-2.5 mb-3.5">
         <LiveDot />
         <span className="font-bold text-sm text-ink">Live right now</span>
-        <span className="ml-auto font-mono text-[12.5px] text-ink-3">1,204 saves today</span>
+        {savedToday > 0 && (
+          <span className="ml-auto font-mono text-[12.5px] text-ink-3">
+            {savedToday.toLocaleString()} {savedToday === 1 ? 'save' : 'saves'} today
+          </span>
+        )}
       </div>
       <div className="flex flex-col gap-2.5">
-        {LIVE.slice(0, 5).map((d, i) => (
-          <LiveRow key={i} d={d} />
-        ))}
+        {!loaded ? (
+          Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-[66px] animate-pulse rounded-xl border border-hairline bg-inset" />
+          ))
+        ) : items.length === 0 ? (
+          <p className="px-3 py-6 text-center text-[13.5px] text-ink-2">
+            Quiet right now — be the first to save something.
+          </p>
+        ) : (
+          items.map((item, i) => <LiveRow key={`${item.url}-${i}`} item={item} />)
+        )}
       </div>
     </div>
   )
 }
 
 /* compact ticker row */
-function LiveRow({ d }: { d: LiveItem }) {
-  const thumb = d.media ? img(d.media, 120, 120) : null
+function LiveRow({ item }: { item: ActivityItem }) {
+  const type = inferType(item)
+  const thumb = item.thumbnailUrl || null
+  const title = item.text || (item.authorName ? `Saved from ${item.authorName}` : `${type} clip`)
   return (
-    <div
-      className={cn(
-        'flex items-center gap-3 px-3 py-2.5 rounded-xl border',
-        d.fresh ? 'bg-clay/8 border-clay/30' : 'bg-surface border-hairline',
-      )}
+    <a
+      href={item.url}
+      className="flex items-center gap-3 px-3 py-2.5 rounded-xl border bg-surface border-hairline transition-colors hover:bg-inset"
     >
       {thumb ? (
         <div className="relative w-[46px] h-[46px] flex-none rounded-[10px] overflow-hidden">
-          <img src={thumb} alt="" className="w-full h-full object-cover" />
-          {d.type === 'video' && (
+          <img src={thumb} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+          {type === 'video' && (
             <div className="absolute inset-0 flex items-center justify-center">
               <Play className="w-3.5 h-3.5 text-white" fill="#fff" />
             </div>
@@ -337,22 +357,17 @@ function LiveRow({ d }: { d: LiveItem }) {
         </div>
       ) : (
         <div className="w-[46px] h-[46px] flex-none rounded-[10px] bg-inset flex items-center justify-center text-clay">
-          {d.type === 'text' ? <Search className="w-[18px] h-[18px]" /> : <Bookmark className="w-[18px] h-[18px]" />}
+          {type === 'text' ? <Search className="w-[18px] h-[18px]" /> : <Bookmark className="w-[18px] h-[18px]" />}
         </div>
       )}
       <div className="flex-1 min-w-0">
-        <div className="text-[13.5px] font-semibold text-ink truncate">
-          {d.title || d.body || `${TYPE_LABEL[d.type]} clip`}
-        </div>
-        <Anon t={d.t} plat={d.plat} />
+        <div className="text-[13.5px] font-semibold text-ink truncate">{title}</div>
+        <Anon t={formatCompactRelativeTime(item.createdAt)} plat={item.platform as PlatformId} />
       </div>
-      <button
-        aria-label="Save"
-        className="flex-none w-[34px] h-[34px] rounded-[10px] border border-hairline bg-surface flex items-center justify-center text-clay transition-colors hover:bg-inset"
-      >
+      <span className="flex-none w-[34px] h-[34px] rounded-[10px] border border-hairline bg-surface flex items-center justify-center text-clay">
         <Plus className="w-[17px] h-[17px]" />
-      </button>
-    </div>
+      </span>
+    </a>
   )
 }
 
@@ -365,46 +380,6 @@ function Anon({ t, plat }: { t: string; plat: PlatformId }) {
       <span className="text-xs">{t}</span>
       <span className="text-xs">·</span>
       <PlatformGlyph platform={plat} size={12} />
-    </div>
-  )
-}
-
-/* discovery grid card */
-function DiscoverCard({ d }: { d: LiveItem }) {
-  const hasMedia = Boolean(d.media)
-  return (
-    <div className="flex flex-col h-full bg-surface border border-hairline rounded-card overflow-hidden shadow-m-sm">
-      {hasMedia ? (
-        <div className="relative">
-          <img src={img(d.media!, 520, 400)} alt="" className="w-full block object-cover aspect-[4/3]" />
-          <TypeBadge type={d.type} className="absolute top-2.5 left-2.5" />
-          {d.saves >= 120 && (
-            <span className="absolute top-2.5 right-2.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11.5px] font-bold bg-black/60 text-[#FDBA74]">
-              <Zap className="w-3 h-3" fill="#FB923C" stroke="#FB923C" />
-              {d.saves}
-            </span>
-          )}
-          {d.type === 'video' && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="w-11 h-11 rounded-full bg-black/45 backdrop-blur-sm flex items-center justify-center">
-                <Play className="w-[18px] h-[18px] text-white" fill="#fff" />
-              </span>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="px-4 pt-4 flex-1">
-          <TypeBadge type={d.type} />
-          <p className="text-[14.5px] text-ink leading-[1.5] mt-3 line-clamp-5">{d.body || d.title}</p>
-        </div>
-      )}
-      <div className="flex items-center gap-2.5 px-3.5 py-3 mt-auto">
-        <Anon t={d.t} plat={d.plat} />
-        <button className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-clay-grad text-white shadow-glow font-semibold text-[13px] transition-transform hover:scale-[1.03]">
-          <Plus className="w-3.5 h-3.5" />
-          Save
-        </button>
-      </div>
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { activity, bookmarks } from '@/lib/db/schema'
-import { desc, inArray, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm'
 
 /**
  * GET /api/activity — the public, anonymous pulse for the landing + Discover.
@@ -72,11 +72,21 @@ export async function GET() {
       saveCount: counts.get(`${i.platform}:${i.bookmarkId}`) ?? 0,
     }))
 
+    // "saved today" headline count — save events since UTC midnight.
+    const midnight = new Date()
+    midnight.setUTCHours(0, 0, 0, 0)
+    const savedTodayRow = db
+      .select({ c: sql<number>`count(*)` })
+      .from(activity)
+      .where(and(eq(activity.action, 'save'), gte(activity.createdAt, midnight.toISOString())))
+      .get()
+    const savedToday = Number(savedTodayRow?.c) || 0
+
     return NextResponse.json(
-      { items: enriched },
+      { items: enriched, savedToday },
       { headers: { 'Cache-Control': 'public, max-age=5, stale-while-revalidate=15' } },
     )
   } catch {
-    return NextResponse.json({ items: [] })
+    return NextResponse.json({ items: [], savedToday: 0 })
   }
 }
