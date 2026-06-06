@@ -1,6 +1,6 @@
 'use client'
 
-import { Plus, Play, EyeOff, Flame } from 'lucide-react'
+import { Plus, Play, EyeOff, Flame, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
 import { PlatformGlyph, TypeBadge, type ContentType } from '@/components/matter'
@@ -32,7 +32,16 @@ export function inferType(item: ActivityItem): ContentType {
  * Anonymous by design: the SAVER is never shown — only an incognito avatar and
  * "Someone · {time} · <platform>". The content `author` may appear in the body.
  */
-export function DiscoverCard({ item, fresh = false }: { item: ActivityItem; fresh?: boolean }) {
+export function DiscoverCard({
+  item,
+  fresh = false,
+  pub = false,
+}: {
+  item: ActivityItem
+  fresh?: boolean
+  /** Public (signed-out) Discover — the action reads "Preview" instead of "Save". */
+  pub?: boolean
+}) {
   const type = inferType(item)
   const hasThumb = Boolean(item.thumbnailUrl)
   const isVideo = type === 'video'
@@ -131,10 +140,19 @@ export function DiscoverCard({ item, fresh = false }: { item: ActivityItem; fres
         </span>
         <a
           href={item.url}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-clay-grad px-3.5 py-2 text-[13px] font-semibold text-white shadow-glow transition-opacity duration-150 hover:opacity-90"
+          className="ml-auto flex-none inline-flex items-center gap-1.5 rounded-full bg-clay-grad px-3.5 py-2 text-[13px] font-semibold text-white shadow-glow transition-opacity duration-150 hover:opacity-90"
         >
-          <Plus size={14} />
-          Save
+          {pub ? (
+            <>
+              Preview
+              <ExternalLink size={13} />
+            </>
+          ) : (
+            <>
+              <Plus size={14} />
+              Save
+            </>
+          )}
         </a>
       </div>
     </article>

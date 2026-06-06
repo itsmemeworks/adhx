@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { LiveDot } from '@/components/matter'
+import { LiveDot, MatterLogo, PlatformGlyph } from '@/components/matter'
 import { DiscoverCard, inferType } from './DiscoverCard'
 
 export interface ActivityItem {
@@ -108,7 +108,22 @@ export function DiscoverFeed() {
   const [filter, setFilter] = useState<FilterId>('just-saved')
   const [loaded, setLoaded] = useState(false)
   const [freshKeys, setFreshKeys] = useState<Set<string>>(new Set())
+  // null while unknown; once known, signed-out gets the public shell (the global
+  // header is hidden when signed out) and Preview (not Save) actions.
+  const [authed, setAuthed] = useState<boolean | null>(null)
   const knownKeys = useRef<Set<string>>(new Set())
+
+  useEffect(() => {
+    let alive = true
+    fetch('/api/auth/twitter/status')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => alive && setAuthed(!!d?.authenticated))
+      .catch(() => alive && setAuthed(false))
+    return () => {
+      alive = false
+    }
+  }, [])
+  const signedOut = authed === false
 
   const load = useCallback(async (initial: boolean) => {
     try {
@@ -149,20 +164,44 @@ export function DiscoverFeed() {
 
   return (
     <div className="min-h-screen bg-paper">
-      {/* Tabs */}
-      <div className="border-b border-hairline bg-surface">
-        <div className="mx-auto flex max-w-7xl items-center gap-1 px-4 py-3 sm:px-6">
-          <Link
-            href="/"
-            className="rounded-full px-3.5 py-1.5 text-[13.5px] font-semibold text-ink-2 transition-colors duration-150 hover:text-ink"
-          >
-            My Collection
-          </Link>
-          <span className="rounded-full bg-clay/[0.12] px-3.5 py-1.5 text-[13.5px] font-bold text-clay">
-            Discover
-          </span>
-        </div>
-      </div>
+      {/* Signed-out: a public top nav + hero (the global header is hidden when
+          signed out). Signed-in: the global header already provides Collection/
+          Discover nav, so we go straight to the live banner. */}
+      {signedOut && (
+        <>
+          <nav className="flex items-center border-b border-hairline px-5 py-4 sm:px-11">
+            <Link href="/" aria-label="ADHX home">
+              <MatterLogo size={20} />
+            </Link>
+            <div className="ml-auto flex items-center gap-5 sm:gap-[22px]">
+              <Link href="/" className="hidden sm:inline text-sm font-medium text-ink-2 hover:text-ink">
+                How it works
+              </Link>
+              <span className="hidden sm:inline text-sm font-semibold text-clay">Discover</span>
+              <a
+                href="/api/auth/twitter"
+                className="inline-flex items-center gap-2 rounded-[10px] bg-ink px-4 py-2 text-[13.5px] font-semibold text-surface"
+              >
+                <PlatformGlyph platform="twitter" size={14} />
+                Connect with X
+              </a>
+            </div>
+          </nav>
+          <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-6">
+            <div className="flex items-center gap-2 mb-2">
+              <LiveDot />
+              <span className="text-[12.5px] font-bold uppercase tracking-[0.08em] text-clay">Live · public</span>
+            </div>
+            <h1 className="font-serif font-semibold text-[27px] sm:text-[34px] leading-tight tracking-[-0.01em] text-ink mb-2">
+              What the internet is saving, right now
+            </h1>
+            <p className="text-[15px] sm:text-[15.5px] text-ink-2 max-w-[640px] mb-2">
+              Anonymous, real-time saves from everyone on ADHX — new posts stream in as they happen. Click any to
+              preview it, then save your own.
+            </p>
+          </div>
+        </>
+      )}
 
       {/* Live status + filters */}
       <div className="mx-auto max-w-7xl px-4 pb-2 pt-4 sm:px-6">
@@ -217,7 +256,7 @@ export function DiscoverFeed() {
         ) : (
           <div className="grid grid-cols-1 items-stretch gap-[18px] sm:grid-cols-2 lg:grid-cols-4">
             {visible.map((item) => (
-              <DiscoverCard key={keyOf(item)} item={item} fresh={freshKeys.has(keyOf(item))} />
+              <DiscoverCard key={keyOf(item)} item={item} fresh={freshKeys.has(keyOf(item))} pub={signedOut} />
             ))}
           </div>
         )}
