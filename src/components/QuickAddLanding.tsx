@@ -55,7 +55,7 @@ export function QuickAddLanding({ username, tweetId }: QuickAddLandingProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900 flex flex-col">
+    <div className="min-h-screen bg-paper flex flex-col">
       {/* Header */}
       <header className="p-4">
         <a href="/" className="flex items-center gap-2 w-fit">
@@ -64,7 +64,7 @@ export function QuickAddLanding({ username, tweetId }: QuickAddLandingProps) {
             alt="ADHX Logo"
             className="w-8 h-8 object-contain"
           />
-          <span className="text-2xl font-indie-flower text-gray-900 dark:text-white">ADHX</span>
+          <span className="text-2xl font-indie-flower text-ink">ADHX</span>
         </a>
       </header>
 
@@ -79,19 +79,19 @@ export function QuickAddLanding({ username, tweetId }: QuickAddLandingProps) {
               <Bookmark className="w-8 h-8" style={{ color: ADHX_PURPLE }} />
             </div>
 
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            <h1 className="text-2xl font-bold text-ink mb-2">
               Save this tweet?
             </h1>
-            <p className="text-gray-500 dark:text-gray-400">
+            <p className="text-ink-3">
               Connect with X to add it to your collection.
             </p>
           </div>
 
           {/* Tweet Preview */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 mb-6">
+          <div className="bg-surface rounded-2xl border border-hairline p-4 mb-6">
             {loadingPreview ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                <Loader2 className="w-6 h-6 animate-spin text-ink-3" />
               </div>
             ) : preview ? (
               <div>
@@ -104,15 +104,15 @@ export function QuickAddLanding({ username, tweetId }: QuickAddLandingProps) {
                     />
                   )}
                   <div>
-                    <p className="font-semibold text-gray-900 dark:text-white">
+                    <p className="font-semibold text-ink">
                       {preview.author?.name || username}
                     </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <p className="text-sm text-ink-3">
                       @{preview.author?.screen_name || username}
                     </p>
                   </div>
                 </div>
-                <p className="text-gray-700 dark:text-gray-300 text-sm line-clamp-4">
+                <p className="text-ink-2 text-sm line-clamp-4">
                   {preview.text}
                 </p>
                 {preview.media?.photos?.[0] && (
@@ -126,7 +126,7 @@ export function QuickAddLanding({ username, tweetId }: QuickAddLandingProps) {
                 )}
               </div>
             ) : (
-              <div className="text-center py-4 text-gray-500">
+              <div className="text-center py-4 text-ink-3">
                 <p className="font-medium">@{username}</p>
                 <p className="text-sm">Tweet ID: {tweetId}</p>
               </div>
@@ -154,15 +154,15 @@ export function QuickAddLanding({ username, tweetId }: QuickAddLandingProps) {
             )}
           </button>
 
-          <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
+          <p className="text-center text-sm text-ink-3 mt-4">
             You&apos;ll be redirected back here after connecting.
           </p>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
-        <a href="/" className="hover:text-gray-700 dark:hover:text-gray-300">
+      <footer className="p-4 text-center text-sm text-ink-3">
+        <a href="/" className="hover:text-ink-2">
           Learn more about ADHX
         </a>
       </footer>

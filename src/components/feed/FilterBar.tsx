@@ -1,9 +1,11 @@
 'use client'
 
-import { useRef, useState, useEffect } from 'react'
-import { Tag, Eye, EyeOff, Globe, Link, Check, Filter, ChevronDown, ArrowUpDown, ArrowDown, ArrowUp, Instagram, Youtube } from 'lucide-react'
+import { useState } from 'react'
+import { EyeOff, ChevronDown, SlidersHorizontal, Instagram, Youtube, LayoutGrid, List as ListIcon, LayoutDashboard } from 'lucide-react'
 import { FILTER_OPTIONS, PLATFORM_OPTIONS, type FilterType, type SortType, type SortDirection, type TagItem, type PlatformFilter } from './types'
-import { XIcon } from '@/components/icons'
+import type { FeedView } from './FeedGrid'
+import { PlatformGlyph } from '@/components/matter'
+import { cn } from '@/lib/utils'
 
 interface FilterBarProps {
   filter: FilterType
@@ -16,116 +18,23 @@ interface FilterBarProps {
   onSortDirectionChange: (dir: SortDirection) => void
   unreadOnly: boolean
   onUnreadOnlyChange: (unreadOnly: boolean) => void
-  selectedTags: string[]
-  onSelectedTagsChange: (tags: string[]) => void
-  availableTags: TagItem[]
+  view?: FeedView
+  onViewChange?: (view: FeedView) => void
+  // Tagging is removed in the Matter redesign. These props are retained so
+  // existing callers (page.tsx) continue to compile, but they are not used.
+  selectedTags?: string[]
+  onSelectedTagsChange?: (tags: string[]) => void
+  availableTags?: TagItem[]
   stats: { total: number; unread: number }
   onTagUpdated?: (tag: string, isPublic: boolean, shareUrl: string) => void
 }
 
-/** Compact TikTok glyph for the platform filter chip. */
-function TikTokGlyph({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
-      <path d="M19.589 6.686a4.793 4.793 0 0 1-3.77-4.245V2h-3.445v13.672a2.896 2.896 0 0 1-5.201 1.743 2.896 2.896 0 0 1 2.342-4.585c.28 0 .55.04.808.115V9.435a6.327 6.327 0 0 0-.808-.051 6.272 6.272 0 0 0-6.272 6.272A6.272 6.272 0 0 0 9.515 22h.005a6.272 6.272 0 0 0 6.272-6.272V8.687a8.182 8.182 0 0 0 4.773 1.526V6.78a4.795 4.795 0 0 1-.976-.094z" />
-    </svg>
-  )
-}
-
 function PlatformIcon({ value, className }: { value: PlatformFilter; className?: string }) {
-  if (value === 'twitter') return <XIcon className={className} />
+  if (value === 'twitter') return <PlatformGlyph platform="x" className={className} />
   if (value === 'instagram') return <Instagram className={className} />
-  if (value === 'tiktok') return <TikTokGlyph className={className} />
+  if (value === 'tiktok') return <PlatformGlyph platform="tiktok" className={className} />
   if (value === 'youtube') return <Youtube className={className} />
   return null
-}
-
-/**
- * Inline share button for a single selected tag
- * Shows "Make Public" (Globe) for private tags, copy link (Link/Check) for public tags
- */
-function TagShareButton({
-  tag,
-  tagInfo,
-  onTagUpdated,
-}: {
-  tag: string
-  tagInfo: TagItem | undefined
-  onTagUpdated?: (tag: string, isPublic: boolean, shareUrl: string) => void
-}): React.ReactElement | null {
-  const [copied, setCopied] = useState(false)
-  const [loading, setLoading] = useState(false)
-
-  // Use shareUrl directly from tagInfo (already includes full path like /t/username/tag)
-  const fullShareUrl = tagInfo?.shareUrl
-    ? `${typeof window !== 'undefined' ? window.location.origin : ''}${tagInfo.shareUrl}`
-    : null
-
-  const handleMakePublic = async () => {
-    setLoading(true)
-    try {
-      const res = await fetch('/api/tags', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tag, isPublic: true }),
-      })
-      if (!res.ok) throw new Error('Failed to make tag public')
-      const data = await res.json()
-
-      // Copy URL to clipboard - shareUrl already includes full path
-      const url = `${window.location.origin}${data.shareUrl}`
-      try {
-        await navigator.clipboard.writeText(url)
-        setCopied(true)
-        setTimeout(() => setCopied(false), 2000)
-      } catch {
-        // Clipboard failed - still update state, user can copy manually
-      }
-
-      onTagUpdated?.(tag, true, data.shareUrl)
-    } catch (error) {
-       
-      console.error('Failed to make tag public:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleCopyUrl = async () => {
-    if (!fullShareUrl) return
-    try {
-      await navigator.clipboard.writeText(fullShareUrl)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // Clipboard failed silently
-    }
-  }
-
-  if (tagInfo?.isPublic && fullShareUrl) {
-    return (
-      <button
-        onClick={handleCopyUrl}
-        className="flex items-center gap-1 px-2 py-1.5 rounded-full text-xs font-medium transition-colors bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50"
-        title={copied ? 'Copied!' : 'Copy share link'}
-      >
-        {copied ? <Check className="w-3.5 h-3.5" /> : <Link className="w-3.5 h-3.5" />}
-        <span className="hidden sm:inline">{copied ? 'Copied!' : 'Share'}</span>
-      </button>
-    )
-  }
-
-  return (
-    <button
-      onClick={handleMakePublic}
-      disabled={loading}
-      className="flex items-center gap-1 px-2 py-1.5 rounded-full text-xs font-medium transition-colors bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50"
-      title="Make tag public to share"
-    >
-      <Globe className="w-3.5 h-3.5" />
-      <span className="hidden sm:inline">{loading ? 'Sharing...' : 'Make Public'}</span>
-    </button>
-  )
 }
 
 export function FilterBar({
@@ -139,162 +48,154 @@ export function FilterBar({
   onSortDirectionChange,
   unreadOnly,
   onUnreadOnlyChange,
-  selectedTags,
-  onSelectedTagsChange,
-  availableTags,
+  view = 'grid',
+  onViewChange,
   stats,
-  onTagUpdated,
 }: FilterBarProps): React.ReactElement {
   const [showPlatformDropdown, setShowPlatformDropdown] = useState(false)
-  const platformButtonRef = useRef<HTMLButtonElement>(null)
+  const [showSortDropdown, setShowSortDropdown] = useState(false)
   const currentPlatform = PLATFORM_OPTIONS.find((o) => o.value === platform) || PLATFORM_OPTIONS[0]
-  const [showTagDropdown, setShowTagDropdown] = useState(false)
-  const [showFilterDropdown, setShowFilterDropdown] = useState(false)
-  const [filterDropdownPos, setFilterDropdownPos] = useState({ top: 0, left: 0 })
-  const [focusedTagIndex, setFocusedTagIndex] = useState(-1)
-  const tagButtonRef = useRef<HTMLButtonElement>(null)
-  const filterButtonRef = useRef<HTMLButtonElement>(null)
-  const tagDropdownRef = useRef<HTMLDivElement>(null)
-
-  // Calculate total items in dropdown (clear button + tags)
-  const hasClearButton = selectedTags.length > 0
-  const totalItems = availableTags.length + (hasClearButton ? 1 : 0)
-
-  // Get current filter label
-  const currentFilterLabel = FILTER_OPTIONS.find((opt) => opt.value === filter)?.label || 'All'
-
-  // Listen for keyboard shortcut to toggle tag filter
-  useEffect(() => {
-    const handleToggleTagFilter = () => {
-      if (availableTags.length > 0) {
-        setShowTagDropdown((prev) => !prev)
-      }
-    }
-
-    window.addEventListener('toggle-tag-filter', handleToggleTagFilter)
-    return () => window.removeEventListener('toggle-tag-filter', handleToggleTagFilter)
-  }, [availableTags.length])
-
-  // Reset focused index when dropdown opens/closes
-  useEffect(() => {
-    if (showTagDropdown) {
-      setFocusedTagIndex(0) // Start at first item
-    } else {
-      setFocusedTagIndex(-1)
-    }
-  }, [showTagDropdown])
-
-  // Keyboard navigation for tag dropdown
-  useEffect(() => {
-    if (!showTagDropdown) return
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      switch (e.key) {
-        case 'ArrowDown':
-          e.preventDefault()
-          setFocusedTagIndex((prev) => (prev + 1) % totalItems)
-          break
-        case 'ArrowUp':
-          e.preventDefault()
-          setFocusedTagIndex((prev) => (prev - 1 + totalItems) % totalItems)
-          break
-        case 'Enter':
-        case ' ':
-          e.preventDefault()
-          if (focusedTagIndex >= 0) {
-            if (hasClearButton && focusedTagIndex === 0) {
-              // Clear all tags
-              onSelectedTagsChange([])
-              setShowTagDropdown(false)
-            } else {
-              // Select the tag (single selection)
-              const tagIndex = hasClearButton ? focusedTagIndex - 1 : focusedTagIndex
-              if (tagIndex >= 0 && tagIndex < availableTags.length) {
-                selectTag(availableTags[tagIndex].tag)
-              }
-            }
-          }
-          break
-        case 'Escape':
-          e.preventDefault()
-          setShowTagDropdown(false)
-          break
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [showTagDropdown, focusedTagIndex, totalItems, hasClearButton, availableTags, onSelectedTagsChange])
-
-  // Auto-scroll focused item into view
-  useEffect(() => {
-    if (!showTagDropdown || focusedTagIndex < 0 || !tagDropdownRef.current) return
-
-    const container = tagDropdownRef.current
-    const focusedElement = container.children[focusedTagIndex] as HTMLElement
-    if (focusedElement) {
-      focusedElement.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-    }
-  }, [focusedTagIndex, showTagDropdown])
-
-  function handleTagButtonClick(): void {
-    setShowTagDropdown(!showTagDropdown)
-  }
-
-  function handleFilterButtonClick(): void {
-    if (!showFilterDropdown && filterButtonRef.current) {
-      const rect = filterButtonRef.current.getBoundingClientRect()
-      setFilterDropdownPos({ top: rect.bottom + 4, left: rect.left })
-    }
-    setShowFilterDropdown(!showFilterDropdown)
-  }
-
-  function selectTag(tag: string): void {
-    // Single selection only - if already selected, deselect; otherwise select only this tag
-    if (selectedTags.includes(tag)) {
-      onSelectedTagsChange([])
-    } else {
-      onSelectedTagsChange([tag])
-    }
-    setShowTagDropdown(false)
-  }
 
   return (
-    <div className="sticky top-0 z-30 bg-white dark:bg-gray-950 border-b dark:border-gray-800">
-      <div className="flex items-center justify-between gap-2 px-3 sm:px-4 py-2 sm:py-3">
-        {/* Mobile Filter Dropdown */}
-        <div className="sm:hidden relative">
+    <div className="sticky top-0 z-30 bg-paper/95 backdrop-blur-sm border-b border-hairline">
+      <div className="flex items-center gap-2 px-4 sm:px-[26px] py-3 overflow-x-auto scrollbar-hide">
+        {/* Type filter pills */}
+        {FILTER_OPTIONS.map((opt) => {
+          const active = filter === opt.value
+          return (
+            <button
+              key={opt.value}
+              onClick={() => onFilterChange(opt.value)}
+              className={cn(
+                'flex-shrink-0 px-3.5 py-[7px] rounded-full text-[13.5px] font-semibold whitespace-nowrap transition-all duration-150',
+                active
+                  ? 'bg-clay-grad text-white shadow-glow'
+                  : 'bg-surface border border-hairline text-ink-2 hover:text-ink',
+              )}
+            >
+              {opt.label}
+            </button>
+          )
+        })}
+
+        {/* Spacer */}
+        <div className="flex-1 min-w-2" />
+
+        {/* Grid / List / Bento view switcher */}
+        {onViewChange && (
+          <div className="flex-shrink-0 flex items-center gap-0.5 p-[3px] rounded-[10px] bg-inset">
+            {([
+              ['grid', LayoutGrid, 'Grid'],
+              ['list', ListIcon, 'List'],
+              ['bento', LayoutDashboard, 'Bento'],
+            ] as const).map(([id, Ico, label]) => (
+              <button
+                key={id}
+                onClick={() => onViewChange(id)}
+                aria-label={`${label} view`}
+                aria-pressed={view === id}
+                className={cn(
+                  'w-[34px] h-8 rounded-lg flex items-center justify-center transition-colors duration-150',
+                  view === id ? 'bg-surface text-clay shadow-m-xs' : 'text-ink-3 hover:text-ink-2',
+                )}
+              >
+                <Ico className="w-[17px] h-[17px]" />
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Platform dropdown pill */}
+        {onPlatformChange && (
+          <div className="relative flex-shrink-0">
+            <button
+              onClick={() => setShowPlatformDropdown((v) => !v)}
+              className={cn(
+                'flex items-center gap-1.5 px-3.5 py-[7px] rounded-full text-[13.5px] font-semibold whitespace-nowrap transition-all duration-150',
+                platform !== 'all'
+                  ? 'bg-clay-grad text-white shadow-glow'
+                  : 'bg-surface border border-hairline text-ink-2 hover:text-ink',
+              )}
+              title="Filter by platform"
+            >
+              {platform !== 'all' ? (
+                <PlatformIcon value={platform} className="w-3.5 h-3.5" />
+              ) : (
+                <PlatformGlyph platform="x" size={12} className="text-ink-3" />
+              )}
+              <span className="max-w-[110px] truncate">{currentPlatform.label}</span>
+              <ChevronDown className={cn('w-3.5 h-3.5', platform !== 'all' ? 'text-white' : 'text-ink-3')} />
+            </button>
+
+            {showPlatformDropdown && (
+              <>
+                <div className="fixed inset-0 z-[100]" onClick={() => setShowPlatformDropdown(false)} />
+                <div className="absolute right-0 top-full mt-1.5 w-48 bg-surface rounded-card shadow-m-sm border border-hairline py-2 z-[101]">
+                  {PLATFORM_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => {
+                        onPlatformChange(opt.value)
+                        setShowPlatformDropdown(false)
+                      }}
+                      className={cn(
+                        'w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors',
+                        platform === opt.value ? 'text-clay font-medium' : 'text-ink-2 hover:bg-inset',
+                      )}
+                    >
+                      <PlatformIcon value={opt.value} className="w-4 h-4 flex-shrink-0" />
+                      <span>{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Sort dropdown pill */}
+        <div className="relative flex-shrink-0">
           <button
-            ref={filterButtonRef}
-            onClick={handleFilterButtonClick}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-gray-900 dark:bg-white text-white dark:text-gray-900"
+            onClick={() => setShowSortDropdown((v) => !v)}
+            className="flex items-center gap-1.5 px-3.5 py-[7px] rounded-full text-[13.5px] font-semibold whitespace-nowrap bg-surface border border-hairline text-ink-2 hover:text-ink transition-all duration-150"
+            title="Sort options"
           >
-            <Filter className="w-3.5 h-3.5" />
-            <span>{currentFilterLabel}</span>
-            <ChevronDown className="w-3 h-3" />
+            <SlidersHorizontal className="w-3.5 h-3.5 text-ink-3" />
+            <span>{sort === 'added' ? 'Added' : 'Posted'}</span>
+            <ChevronDown className="w-3.5 h-3.5 text-ink-3" />
           </button>
 
-          {showFilterDropdown && (
+          {showSortDropdown && (
             <>
-              <div className="fixed inset-0 z-[100]" onClick={() => setShowFilterDropdown(false)} />
-              <div
-                className="fixed w-36 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-[101]"
-                style={{ top: filterDropdownPos.top, left: filterDropdownPos.left }}
-              >
-                {FILTER_OPTIONS.map((opt) => (
+              <div className="fixed inset-0 z-[100]" onClick={() => setShowSortDropdown(false)} />
+              <div className="absolute right-0 top-full mt-1.5 w-44 bg-surface rounded-card shadow-m-sm border border-hairline py-2 z-[101]">
+                {(['added', 'posted'] as const).map((s) => (
                   <button
-                    key={opt.value}
+                    key={s}
                     onClick={() => {
-                      onFilterChange(opt.value)
-                      setShowFilterDropdown(false)
+                      onSortChange(s)
                     }}
-                    className={`w-full px-3 py-2 text-left text-sm ${
-                      filter === opt.value
-                        ? 'text-blue-500 font-medium'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-                    }`}
+                    className={cn(
+                      'w-full px-3 py-2 text-left text-sm transition-colors',
+                      sort === s ? 'text-clay font-medium' : 'text-ink-2 hover:bg-inset',
+                    )}
                   >
-                    {opt.label}
+                    {s === 'added' ? 'Date added' : 'Date posted'}
+                  </button>
+                ))}
+                <div className="my-1 border-t border-hairline" />
+                {(['desc', 'asc'] as const).map((dir) => (
+                  <button
+                    key={dir}
+                    onClick={() => {
+                      onSortDirectionChange(dir)
+                    }}
+                    className={cn(
+                      'w-full px-3 py-2 text-left text-sm transition-colors',
+                      sortDirection === dir ? 'text-clay font-medium' : 'text-ink-2 hover:bg-inset',
+                    )}
+                  >
+                    {dir === 'desc' ? 'Newest first' : 'Oldest first'}
                   </button>
                 ))}
               </div>
@@ -302,209 +203,27 @@ export function FilterBar({
           )}
         </div>
 
-        {/* Desktop Filter Chips */}
-        <div className="hidden sm:flex items-center gap-2 overflow-x-auto scrollbar-hide flex-shrink min-w-0">
-          {FILTER_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => onFilterChange(opt.value)}
-              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0 ${
-                filter === opt.value
-                  ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Right side: Platform + Tags + Unread */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Platform Filter Dropdown */}
-          {onPlatformChange && (
-            <div className="relative">
-              <button
-                ref={platformButtonRef}
-                onClick={() => setShowPlatformDropdown((v) => !v)}
-                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-colors ${
-                  platform !== 'all'
-                    ? 'bg-purple-500 text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                }`}
-                title="Filter by platform"
-              >
-                {platform !== 'all' && <PlatformIcon value={platform} className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                <span className="max-w-[80px] truncate">{currentPlatform.label}</span>
-                <ChevronDown className="w-3 h-3" />
-              </button>
-
-              {showPlatformDropdown && (
-                <>
-                  <div className="fixed inset-0 z-[100]" onClick={() => setShowPlatformDropdown(false)} />
-                  <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-[101]">
-                    {PLATFORM_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.value}
-                        onClick={() => {
-                          onPlatformChange(opt.value)
-                          setShowPlatformDropdown(false)
-                        }}
-                        className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 ${
-                          platform === opt.value
-                            ? 'text-purple-500 font-medium'
-                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-                        }`}
-                      >
-                        <PlatformIcon value={opt.value} className="w-4 h-4 flex-shrink-0" />
-                        <span>{opt.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
+        {/* Unread only toggle */}
+        <button
+          onClick={() => onUnreadOnlyChange(!unreadOnly)}
+          className={cn(
+            'flex items-center gap-2 px-3.5 py-[7px] rounded-full text-[13.5px] font-semibold whitespace-nowrap flex-shrink-0 transition-all duration-150',
+            unreadOnly
+              ? 'bg-clay-grad text-white shadow-glow'
+              : 'bg-surface border border-hairline text-ink-2 hover:text-ink',
           )}
-
-          {/* Tag Filter Dropdown */}
-          {availableTags.length > 0 && (
-            <div className="relative">
-              <button
-                ref={tagButtonRef}
-                onClick={handleTagButtonClick}
-                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-colors ${
-                  selectedTags.length > 0
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                }`}
-              >
-                <Tag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                {selectedTags.length > 0 ? (
-                  <span className="max-w-[60px] sm:max-w-[80px] truncate">{selectedTags[0]}</span>
-                ) : (
-                  <span>Tags</span>
-                )}
-                <ChevronDown className="w-3 h-3" />
-              </button>
-
-              {showTagDropdown && (
-                <>
-                  <div className="fixed inset-0 z-[100]" onClick={() => setShowTagDropdown(false)} />
-                  <div
-                    ref={tagDropdownRef}
-                    className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-[101] max-h-64 overflow-y-auto"
-                  >
-                    {selectedTags.length > 0 && (
-                      <button
-                        onClick={() => {
-                          onSelectedTagsChange([])
-                          setShowTagDropdown(false)
-                        }}
-                        className={`w-full px-3 py-2 text-left text-sm text-red-500 ${
-                          focusedTagIndex === 0
-                            ? 'bg-gray-100 dark:bg-gray-800 ring-2 ring-inset ring-blue-500'
-                            : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                        }`}
-                      >
-                        Clear tag
-                      </button>
-                    )}
-                    {availableTags.map(({ tag, count }, index) => {
-                      const itemIndex = hasClearButton ? index + 1 : index
-                      const isFocused = focusedTagIndex === itemIndex
-                      return (
-                        <button
-                          key={tag}
-                          onClick={() => selectTag(tag)}
-                          className={`w-full px-3 py-2 text-left text-sm flex items-center justify-between ${
-                            isFocused
-                              ? 'bg-gray-100 dark:bg-gray-800 ring-2 ring-inset ring-blue-500'
-                              : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                          }`}
-                        >
-                          <span
-                            className={
-                              selectedTags.includes(tag) ? 'text-blue-500 font-medium' : 'text-gray-700 dark:text-gray-300'
-                            }
-                          >
-                            {tag}
-                          </span>
-                          <span className="text-gray-400 text-xs">{count}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Tag Share Button - shown when exactly one tag is selected */}
-          {selectedTags.length === 1 && (
-            <TagShareButton
-              tag={selectedTags[0]}
-              tagInfo={availableTags.find((t) => t.tag === selectedTags[0])}
-              onTagUpdated={onTagUpdated}
-            />
-          )}
-
-          {/* Sort Controls */}
-          <div className="flex items-center gap-0.5 flex-shrink-0">
-            {/* Sort Field Toggle */}
-            <button
-              onClick={() => onSortChange(sort === 'added' ? 'posted' : 'added')}
-              className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-l-full text-xs sm:text-sm font-medium transition-colors ${
-                sort === 'posted'
-                  ? 'bg-amber-500 text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-              }`}
-              title={sort === 'added' ? 'Sort by tweet date' : 'Sort by added date'}
-            >
-              <ArrowUpDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span className="hidden sm:inline">{sort === 'added' ? 'Added' : 'Posted'}</span>
-            </button>
-            {/* Sort Direction Toggle */}
-            <button
-              onClick={() => onSortDirectionChange(sortDirection === 'desc' ? 'asc' : 'desc')}
-              className={`p-1.5 sm:p-2 rounded-r-full transition-colors ${
-                sort === 'posted'
-                  ? 'bg-amber-500 text-white hover:bg-amber-600'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-              }`}
-              title={sortDirection === 'desc' ? 'Newest first (click for oldest)' : 'Oldest first (click for newest)'}
-            >
-              {sortDirection === 'desc' ? (
-                <ArrowDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              ) : (
-                <ArrowUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              )}
-            </button>
-          </div>
-
-          {/* Unread Toggle */}
-          <button
-            onClick={() => onUnreadOnlyChange(!unreadOnly)}
-            className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-colors flex-shrink-0 ${
-              unreadOnly
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-            }`}
-          >
-            {unreadOnly ? (
-              <>
-                <EyeOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Unread only</span>
-                <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded">{stats.unread}</span>
-              </>
-            ) : (
-              <>
-                <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Showing all</span>
-                <span className="text-xs bg-black/10 dark:bg-white/10 px-1.5 py-0.5 rounded">{stats.total}</span>
-              </>
+        >
+          <EyeOff className="w-3.5 h-3.5" />
+          <span>Unread only</span>
+          <span
+            className={cn(
+              'text-[11.5px] rounded-full px-[7px] py-px',
+              unreadOnly ? 'bg-white/28 text-white' : 'bg-inset text-ink-2',
             )}
-          </button>
-        </div>
+          >
+            {unreadOnly ? stats.unread : stats.total}
+          </span>
+        </button>
       </div>
     </div>
   )

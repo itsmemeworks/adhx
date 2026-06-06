@@ -13,17 +13,18 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // Initialize from localStorage to match blocking script in layout.tsx
-  // This prevents hydration mismatch and FOUC
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window === 'undefined') return 'light'
-    return (localStorage.getItem('theme') as Theme) || 'light'
-  })
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() => {
-    if (typeof window === 'undefined') return 'light'
-    // Read what the blocking script already applied to avoid FOUC
-    return document.documentElement.classList.contains('dark') ? 'dark' : 'light'
-  })
+  // Start from the same value the server rendered ('light') so the first client
+  // render matches the SSR HTML — reading localStorage during render here would
+  // diverge from the server and cause a hydration mismatch. The real value is
+  // loaded right after mount; the blocking script in layout.tsx keeps the actual
+  // page colours correct in the meantime (no FOUC).
+  const [theme, setThemeState] = useState<Theme>('light')
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light')
+
+  useEffect(() => {
+    const stored = (localStorage.getItem('theme') as Theme) || 'light'
+    if (stored !== 'light') setThemeState(stored)
+  }, [])
 
   useEffect(() => {
     const root = window.document.documentElement

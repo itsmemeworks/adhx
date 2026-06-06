@@ -53,7 +53,7 @@ describe('TriageMode', () => {
     routeMock()
     render(<TriageMode {...base} initialQueue={[item('1', 'first tweet'), item('2', 'second tweet')]} />)
     expect(await screen.findByText('first tweet')).toBeInTheDocument()
-    expect(screen.getByText('0 / 2')).toBeInTheDocument()
+    expect(screen.getByText('1 / 2')).toBeInTheDocument()
   })
 
   it('honors startIndex (gallery jumps to the clicked item)', async () => {
@@ -62,7 +62,7 @@ describe('TriageMode', () => {
       <TriageMode {...base} startIndex={1} initialQueue={[item('1', 'first tweet'), item('2', 'second tweet')]} />,
     )
     expect(await screen.findByText('second tweet')).toBeInTheDocument()
-    expect(screen.getByText('1 / 2')).toBeInTheDocument()
+    expect(screen.getByText('2 / 2')).toBeInTheDocument()
   })
 
   it('archive marks read, advances, records the streak, and notifies the feed', async () => {
@@ -76,7 +76,7 @@ describe('TriageMode', () => {
       />,
     )
     await screen.findByText('first tweet')
-    fireEvent.click(screen.getByLabelText('Archive'))
+    fireEvent.click(screen.getByLabelText('Done'))
     await waitFor(() =>
       expect(mockFetch).toHaveBeenCalledWith('/api/bookmarks/1/read', expect.objectContaining({ method: 'POST' })),
     )
@@ -98,7 +98,7 @@ describe('TriageMode', () => {
       />,
     )
     await screen.findByText('first tweet')
-    fireEvent.click(screen.getByLabelText('Archive'))
+    fireEvent.click(screen.getByLabelText('Done'))
     await screen.findByText('second tweet')
     expect(onItemResolved).toHaveBeenCalledWith('1', 'archive')
 

@@ -8,14 +8,14 @@ import { PWAInstallPrompt } from './PWAInstallPrompt'
 // Header loading skeleton
 function HeaderSkeleton() {
   return (
-    <header className="sticky top-0 z-50 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800">
+    <header className="sticky top-0 z-50 bg-surface border-b border-hairline">
       <div className="max-w-7xl mx-auto px-4 py-3">
         <div className="flex items-center gap-4">
-          <div className="w-32 h-8 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
-          <div className="flex-1 max-w-xl h-10 bg-gray-200 dark:bg-gray-800 rounded-full animate-pulse" />
+          <div className="w-32 h-8 bg-inset rounded-card animate-pulse" />
+          <div className="flex-1 max-w-xl h-10 bg-inset rounded-full animate-pulse" />
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gray-200 dark:bg-gray-800 rounded-full animate-pulse" />
-            <div className="w-10 h-10 bg-gray-200 dark:bg-gray-800 rounded-full animate-pulse" />
+            <div className="w-10 h-10 bg-inset rounded-full animate-pulse" />
+            <div className="w-10 h-10 bg-inset rounded-full animate-pulse" />
           </div>
         </div>
       </div>
@@ -44,7 +44,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950">
+    <div className="min-h-screen bg-paper">
       <Suspense fallback={<HeaderSkeleton />}>
         <Header />
       </Suspense>

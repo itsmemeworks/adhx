@@ -3,8 +3,11 @@
 import { useEffect, useRef } from 'react'
 import { Image, Loader2 } from 'lucide-react'
 import { FeedCard } from './FeedCard'
-import { ADHX_PURPLE } from '@/lib/gestalt/theme'
+import { FeedListRow } from './FeedListRow'
+import { FeedBentoTile, BENTO_SPANS } from './FeedBentoTile'
 import type { FeedItem } from './types'
+
+export type FeedView = 'grid' | 'list' | 'bento'
 
 interface FeedGridProps {
   items: FeedItem[]
@@ -14,12 +17,18 @@ interface FeedGridProps {
   sortField: 'processedAt' | 'createdAt'
   unreadOnly: boolean
   stats: { total: number; unread: number }
+  view?: FeedView
   onExpand: (index: number) => void
   onMarkRead: (id: string) => void
   onRemove: (id: string) => void
   onLoadMore: () => void
   onShowAll: () => void
 }
+
+// Calm Matter grid: mobile 1 col → tablet 2 col (≥640) → 3 col (≥820) →
+// desktop 4 col (≥1024). 20px gap, ~26px page gutters (applied by the page
+// container). Masonry via CSS columns so cards flow by natural height.
+const GRID_CLASS = 'columns-1 [@media(min-width:640px)]:columns-2 [@media(min-width:820px)]:columns-3 lg:columns-4 gap-5'
 
 export function FeedGrid({
   items,
@@ -29,6 +38,7 @@ export function FeedGrid({
   sortField,
   unreadOnly,
   stats,
+  view = 'grid',
   onExpand,
   onMarkRead,
   onRemove,
@@ -72,20 +82,41 @@ export function FeedGrid({
 
   return (
     <>
-      <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4">
-        {items.map((item, index) => (
-          <FeedCard
-            key={item.id}
-            item={item}
-            lastSyncAt={lastSyncAt}
-            sortField={sortField}
-            onExpand={() => onExpand(index)}
-            onMarkRead={() => onMarkRead(item.id)}
-            unreadOnly={unreadOnly}
-            onRemove={() => onRemove(item.id)}
-          />
-        ))}
-      </div>
+      {view === 'grid' && (
+        <div className={GRID_CLASS}>
+          {items.map((item, index) => (
+            <FeedCard
+              key={item.id}
+              item={item}
+              lastSyncAt={lastSyncAt}
+              sortField={sortField}
+              onExpand={() => onExpand(index)}
+              onMarkRead={() => onMarkRead(item.id)}
+              unreadOnly={unreadOnly}
+              onRemove={() => onRemove(item.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {view === 'list' && (
+        // List / Inbox — dense rows in a bordered surface.
+        <div className="rounded-card border border-hairline bg-surface shadow-m-sm overflow-hidden [&>*:last-child]:border-b-0">
+          {items.map((item, index) => (
+            <FeedListRow key={item.id} item={item} onClick={() => onExpand(index)} />
+          ))}
+        </div>
+      )}
+
+      {view === 'bento' && (
+        // Bento mosaic — mixed-size tiles; 2-col mobile → 4-col desktop.
+        <div className="grid grid-cols-2 [@media(min-width:820px)]:grid-cols-4 gap-3 sm:gap-4 [grid-auto-rows:108px] sm:[grid-auto-rows:168px]">
+          {items.map((item, index) => {
+            const [cs, rs] = BENTO_SPANS[index % BENTO_SPANS.length]
+            return <FeedBentoTile key={item.id} item={item} cs={cs} rs={rs} onClick={() => onExpand(index)} />
+          })}
+        </div>
+      )}
 
       {hasMore && (
         <>
@@ -93,7 +124,7 @@ export function FeedGrid({
           <div ref={sentinelRef} aria-hidden className="h-px w-full" />
           <div className="mt-8 flex flex-col items-center gap-3">
             {loading ? (
-              <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+              <div className="flex items-center gap-2 text-ink-3">
                 <Loader2 className="w-5 h-5 animate-spin" />
                 <span className="text-sm">Loading more…</span>
               </div>
@@ -102,8 +133,7 @@ export function FeedGrid({
               // (e.g. very tall viewport, reduced-motion auto-scroll off).
               <button
                 onClick={onLoadMore}
-                className="px-8 py-3 rounded-full font-semibold text-white transition-opacity hover:opacity-90"
-                style={{ backgroundColor: ADHX_PURPLE }}
+                className="px-8 py-3 rounded-full font-semibold bg-clay-grad text-white shadow-glow transition-opacity hover:opacity-90"
               >
                 Load more
               </button>
@@ -117,10 +147,10 @@ export function FeedGrid({
 
 function LoadingSkeleton(): React.ReactElement {
   return (
-    <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4">
+    <div className={GRID_CLASS}>
       {Array.from({ length: 12 }).map((_, i) => (
         <div key={i} className="mb-4 break-inside-avoid" style={{ height: `${180 + (i % 3) * 80}px` }}>
-          <div className="w-full h-full bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />
+          <div className="w-full h-full bg-inset rounded-card animate-pulse" />
         </div>
       ))}
     </div>
@@ -136,20 +166,19 @@ interface EmptyStateProps {
 function EmptyState({ unreadOnly, stats, onShowAll }: EmptyStateProps): React.ReactElement {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="w-20 h-20 mb-4 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-        <Image className="w-10 h-10 text-gray-400" />
+      <div className="w-20 h-20 mb-4 rounded-full bg-inset flex items-center justify-center">
+        <Image className="w-10 h-10 text-ink-3" />
       </div>
-      <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+      <h3 className="font-serif text-xl font-semibold text-ink mb-2">
         {unreadOnly ? 'All caught up!' : 'No items found'}
       </h3>
-      <p className="text-gray-500 dark:text-gray-400">
+      <p className="text-ink-2">
         {unreadOnly ? 'You have no unread bookmarks' : 'Try adjusting your filters'}
       </p>
       {unreadOnly && stats.total > 0 && (
         <button
           onClick={onShowAll}
-          className="mt-4 px-6 py-2 rounded-full font-medium text-white"
-          style={{ backgroundColor: ADHX_PURPLE }}
+          className="mt-4 px-6 py-2 rounded-full font-medium bg-clay-grad text-white shadow-glow transition-opacity hover:opacity-90"
         >
           Show all {stats.total} bookmarks
         </button>

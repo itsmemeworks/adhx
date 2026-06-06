@@ -7,6 +7,24 @@ import type { ArticleContentBlock, ArticleEntityMap, MediaEntitiesMap } from './
 
 
 /**
+ * `onError` handler for media images: if the primary (proxy) URL fails to load,
+ * swap once to the source CDN `originalUrl`. The FxEmbed photo proxy occasionally
+ * fails in-browser for a given photo (e.g. the first photo of a multi-image
+ * tweet) even though the source pbs.twimg.com image loads fine.
+ */
+export function fallbackToOriginal(
+  originalUrl?: string | null,
+): (e: React.SyntheticEvent<HTMLImageElement>) => void {
+  return (e) => {
+    const el = e.currentTarget
+    if (originalUrl && !el.dataset.fellBack) {
+      el.dataset.fellBack = '1'
+      el.src = originalUrl
+    }
+  }
+}
+
+/**
  * Download media helper - fetches image as blob and triggers download
  * This is necessary because the download attribute doesn't work for cross-origin URLs
  */
@@ -68,31 +86,31 @@ export function VideoDownloadBlocked({
   return (
     <div
       style={aspectRatio ? { aspectRatio } : undefined}
-      className={`flex flex-col items-center justify-center gap-4 bg-gray-900 w-full ${
+      className={`flex flex-col items-center justify-center gap-4 bg-inset w-full ${
         compact
           ? 'p-6 rounded-xl'
           : 'p-8 rounded-xl lg:rounded-2xl max-w-md mx-auto'
       }`}
     >
-      <div className={`rounded-full bg-purple-500/20 flex items-center justify-center ${
+      <div className={`rounded-full bg-clay/15 flex items-center justify-center ${
         compact ? 'w-16 h-16' : 'w-20 h-20'
       }`}>
-        <Monitor className={compact ? 'w-8 h-8 text-purple-400' : 'w-10 h-10 text-purple-400'} />
+        <Monitor className={compact ? 'w-8 h-8 text-clay' : 'w-10 h-10 text-clay'} />
       </div>
       <div className="text-center">
         <p className={`text-white font-medium ${compact ? 'text-lg' : 'text-xl'}`}>
           Whoa there, data hoarder! 📱
         </p>
-        <p className={`text-gray-400 ${compact ? 'mt-1' : 'mt-2'}`}>
+        <p className={`text-ink-3 ${compact ? 'mt-1' : 'mt-2'}`}>
           ~{formatFileSize(estimatedSize)}
         </p>
       </div>
-      <p className={`text-gray-400 text-center ${compact ? 'text-sm max-w-xs' : ''}`}>
+      <p className={`text-ink-3 text-center ${compact ? 'text-sm max-w-xs' : ''}`}>
         This chunky boi is too thicc for your phone. Pop open your laptop for instant downloads with a progress bar and everything.
       </p>
       <button
         onClick={onDismiss}
-        className={`mt-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-white font-medium transition-colors ${
+        className={`mt-2 bg-clay-grad shadow-glow rounded-lg text-white font-medium transition-colors ${
           compact ? 'px-5 py-2 text-sm' : 'px-6 py-2'
         }`}
       >
@@ -280,7 +298,7 @@ function MediaWithActions({
   alt,
   caption,
   blockKey,
-  className = 'w-full rounded-lg max-h-[600px] object-contain bg-gray-100 dark:bg-gray-800',
+  className = 'w-full rounded-lg max-h-[600px] object-contain bg-inset',
 }: {
   src: string
   alt?: string
@@ -323,7 +341,7 @@ function MediaWithActions({
         </div>
       </div>
       {caption && (
-        <figcaption className="text-center text-gray-500 dark:text-white/60 text-sm mt-2 italic">{caption}</figcaption>
+        <figcaption className="text-center text-ink-3 text-sm mt-2 italic">{caption}</figcaption>
       )}
     </figure>
   )
@@ -621,9 +639,9 @@ export function renderArticleBlock(
 
       return (
         <figure key={block.key || index} className="my-6">
-          <div className="w-full aspect-video bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 rounded-xl flex flex-col items-center justify-center border border-gray-200 dark:border-gray-700/50 gap-3">
-            <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700/50 flex items-center justify-center">
-              <svg className="w-6 h-6 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="w-full aspect-video bg-gradient-to-br bg-inset rounded-xl flex flex-col items-center justify-center border border-hairline gap-3">
+            <div className="w-12 h-12 rounded-full bg-inset flex items-center justify-center">
+              <svg className="w-6 h-6 text-ink-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -632,9 +650,9 @@ export function renderArticleBlock(
                 />
               </svg>
             </div>
-            <span className="text-gray-400 dark:text-gray-500 text-sm">Image unavailable</span>
+            <span className="text-ink-3 text-sm">Image unavailable</span>
           </div>
-          {caption && <figcaption className="text-gray-500 dark:text-white/50 text-sm mt-3 text-center">{caption}</figcaption>}
+          {caption && <figcaption className="text-ink-3 text-sm mt-3 text-center">{caption}</figcaption>}
         </figure>
       )
     }
@@ -648,7 +666,7 @@ export function renderArticleBlock(
             src={imgSrc}
             alt={entity.data.alt}
             blockKey={String(block.key || index)}
-            className="w-full rounded-lg max-h-96 object-contain bg-gray-100 dark:bg-gray-800"
+            className="w-full rounded-lg max-h-96 object-contain bg-inset"
           />
         )
       }
@@ -659,7 +677,7 @@ export function renderArticleBlock(
 
   if (block.type === 'header-one') {
     return (
-      <h3 key={block.key || index} className="text-gray-900 dark:text-white text-xl font-semibold mt-6 mb-2">
+      <h3 key={block.key || index} className="text-ink text-xl font-semibold mt-6 mb-2">
         {renderBlockText(block.text, block.inlineStyleRanges, block.entityRanges)}
       </h3>
     )
@@ -667,7 +685,7 @@ export function renderArticleBlock(
 
   if (block.type === 'header-two') {
     return (
-      <h4 key={block.key || index} className="text-gray-900 dark:text-white text-lg font-semibold mt-4 mb-2">
+      <h4 key={block.key || index} className="text-ink text-lg font-semibold mt-4 mb-2">
         {renderBlockText(block.text, block.inlineStyleRanges, block.entityRanges)}
       </h4>
     )
@@ -675,7 +693,7 @@ export function renderArticleBlock(
 
   if (block.type === 'header-three') {
     return (
-      <h5 key={block.key || index} className="text-gray-900 dark:text-white text-base font-semibold mt-3 mb-2">
+      <h5 key={block.key || index} className="text-ink text-base font-semibold mt-3 mb-2">
         {renderBlockText(block.text, block.inlineStyleRanges, block.entityRanges)}
       </h5>
     )
@@ -683,7 +701,7 @@ export function renderArticleBlock(
 
   if (block.type === 'blockquote') {
     return (
-      <blockquote key={block.key || index} className="border-l-4 border-gray-300 dark:border-gray-600 pl-4 my-4 text-gray-700 dark:text-white/80 italic">
+      <blockquote key={block.key || index} className="border-l-4 border-hairline pl-4 my-4 text-ink-2 italic">
         {renderBlockText(block.text, block.inlineStyleRanges, block.entityRanges)}
       </blockquote>
     )
@@ -691,7 +709,7 @@ export function renderArticleBlock(
 
   if (block.type === 'unordered-list-item') {
     return (
-      <li key={block.key || index} className="text-gray-800 dark:text-white/90 leading-relaxed ml-4 list-disc">
+      <li key={block.key || index} className="text-ink-2 leading-relaxed ml-4 list-disc">
         {renderBlockText(block.text, block.inlineStyleRanges, block.entityRanges)}
       </li>
     )
@@ -699,7 +717,7 @@ export function renderArticleBlock(
 
   if (block.type === 'ordered-list-item') {
     return (
-      <li key={block.key || index} className="text-gray-800 dark:text-white/90 leading-relaxed ml-4 list-decimal">
+      <li key={block.key || index} className="text-ink-2 leading-relaxed ml-4 list-decimal">
         {renderBlockText(block.text, block.inlineStyleRanges, block.entityRanges)}
       </li>
     )
@@ -718,7 +736,7 @@ export function renderArticleBlock(
       <div key={block.key || index} className="space-y-4">
         {paragraphs.map((para, i) => (
           para.trim() ? (
-            <p key={i} className="text-gray-800 dark:text-white/90 leading-relaxed">
+            <p key={i} className="text-ink-2 leading-relaxed">
               {bionicReading ? toBionicText(para) : para}
             </p>
           ) : (
@@ -733,7 +751,7 @@ export function renderArticleBlock(
   if (block.text.includes('\n')) {
     const lines = block.text.split('\n')
     return (
-      <p key={block.key || index} className="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0">
+      <p key={block.key || index} className="text-ink-2 leading-relaxed mb-4 last:mb-0">
         {lines.map((line, i) => (
           <React.Fragment key={i}>
             {i > 0 && <br />}
@@ -745,7 +763,7 @@ export function renderArticleBlock(
   }
 
   return (
-    <p key={block.key || index} className="text-gray-800 dark:text-white/90 leading-relaxed mb-4 last:mb-0">
+    <p key={block.key || index} className="text-ink-2 leading-relaxed mb-4 last:mb-0">
       {renderBlockText(block.text, block.inlineStyleRanges, block.entityRanges)}
     </p>
   )

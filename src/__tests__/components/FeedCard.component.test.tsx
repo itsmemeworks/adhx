@@ -58,8 +58,9 @@ describe('FeedCard Component Snapshots', () => {
         />
       )
 
-      // Text cards have min-h-[150px] and noise texture
-      expect(container.querySelector('.min-h-\\[150px\\]')).toBeTruthy()
+      // Text cards are tweet-style: the author handle + the post body.
+      expect(container.textContent).toContain(`@${feedItem.author}`)
+      expect(container.textContent).toContain(feedItem.text.slice(0, 20))
     })
 
     it('4-images: renders MediaContent with multi-image badge', () => {
@@ -75,9 +76,8 @@ describe('FeedCard Component Snapshots', () => {
         />
       )
 
-      // Multi-image cards show "1/N" badge
-      const badge = container.querySelector('.bg-black\\/70')
-      expect(badge?.textContent).toContain('1/')
+      // Multi-image cards show a "1/N" count badge
+      expect(container.textContent).toContain('1/')
     })
 
     it('video-tweet: renders MediaContent with play button', () => {
@@ -110,8 +110,10 @@ describe('FeedCard Component Snapshots', () => {
         />
       )
 
-      // Article cards have min-h-[200px]
-      expect(container.querySelector('.min-h-\\[200px\\]')).toBeTruthy()
+      // Article cards render the article body on a surface with a serif title
+      // and an "Article" type badge.
+      expect(container.textContent).toContain('Article')
+      expect(container.querySelector('.font-serif')).toBeTruthy()
     })
 
     it('quote-of-text-tweet: renders QuoteCardContent', () => {
@@ -127,14 +129,17 @@ describe('FeedCard Component Snapshots', () => {
         />
       )
 
-      // Quote cards have a quote indicator
+      // Quote cards are tweet-style with the embedded quoted post beneath.
       const text = container.textContent
-      expect(text).toContain('Quote')
+      expect(text).toContain(`@${feedItem.author}`)
+      if (feedItem.quoteContext?.author) {
+        expect(text).toContain(`@${feedItem.quoteContext.author}`)
+      }
     })
   })
 
   describe('Read status styling', () => {
-    it('unread: shows green check button', () => {
+    it('unread: shows clay check button', () => {
       const feedItem = fxTwitterToFeedItem(fixtures['plain-text'])
       feedItem.isRead = false
 
@@ -148,12 +153,12 @@ describe('FeedCard Component Snapshots', () => {
         />
       )
 
-      // Unread items have green background
+      // Unread items show a clay-colored "mark as read" button
       const button = container.querySelector('button[title="Mark as read"]')
-      expect(button?.className).toContain('bg-green-500')
+      expect(button?.className).toContain('bg-clay')
     })
 
-    it('read: shows gray eye-off button', () => {
+    it('read: shows translucent eye-off button', () => {
       const feedItem = fxTwitterToFeedItem(fixtures['plain-text'])
       feedItem.isRead = true
 
@@ -167,9 +172,9 @@ describe('FeedCard Component Snapshots', () => {
         />
       )
 
-      // Read items have gray background
+      // Read items show a translucent black "mark as unread" button
       const button = container.querySelector('button[title="Mark as unread"]')
-      expect(button?.className).toContain('bg-gray-600')
+      expect(button?.className).toContain('bg-black/50')
     })
   })
 
@@ -195,8 +200,8 @@ describe('FeedCard Component Snapshots', () => {
     })
   })
 
-  describe('X Article background styling', () => {
-    it('article-no-header: uses dark gradient background (not blue)', () => {
+  describe('X Article styling (Matter redesign)', () => {
+    it('article-no-header: renders a serif title (not the old blue gradient)', () => {
       const feedItem = fxTwitterToFeedItem(fixtures['article-no-header'])
 
       const { container } = render(
@@ -209,16 +214,13 @@ describe('FeedCard Component Snapshots', () => {
         />
       )
 
-      // Should use dark gray gradient (from-gray-900), not the old blue gradient
-      const backgroundDiv = container.querySelector('.from-gray-900')
-      expect(backgroundDiv).toBeTruthy()
-
-      // Should NOT use the old blue gradient
-      const oldBlueGradient = container.querySelector('.from-blue-600')
-      expect(oldBlueGradient).toBeNull()
+      // New design: a serif article title (over a cover image, or on an accent
+      // gradient fallback) — never the old blue gradient.
+      expect(container.querySelector('.font-serif')).toBeTruthy()
+      expect(container.querySelector('.from-blue-600')).toBeNull()
     })
 
-    it('article-no-header: has noise texture overlay', () => {
+    it('article-no-header: shows the Article type badge', () => {
       const feedItem = fxTwitterToFeedItem(fixtures['article-no-header'])
 
       const { container } = render(
@@ -231,27 +233,12 @@ describe('FeedCard Component Snapshots', () => {
         />
       )
 
-      // Should have mix-blend-overlay for noise texture
-      const noiseOverlay = container.querySelector('.mix-blend-overlay')
-      expect(noiseOverlay).toBeTruthy()
-    })
+      // New unified TypeBadge renders the "Article" label.
+      expect(container.textContent).toContain('Article')
 
-    it('article-no-header: has blue glow accent', () => {
-      const feedItem = fxTwitterToFeedItem(fixtures['article-no-header'])
-
-      const { container } = render(
-        <FeedCard
-          item={feedItem}
-          lastSyncAt={null}
-          sortField="processedAt"
-          onExpand={mockOnExpand}
-          onMarkRead={mockOnMarkRead}
-        />
-      )
-
-      // Should have blue glow accent (bg-blue-500/20)
-      const glowAccent = container.querySelector('.bg-blue-500\\/20')
-      expect(glowAccent).toBeTruthy()
+      // Old design's noise/blue-glow decorations are gone.
+      expect(container.querySelector('.mix-blend-overlay')).toBeNull()
+      expect(container.querySelector('.bg-blue-500\\/20')).toBeNull()
     })
 
     it('article-no-header: does NOT show FileText icon (old design)', () => {

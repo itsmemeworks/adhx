@@ -27,19 +27,18 @@ function ShareRedirect() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 px-4">
+      <div className="min-h-screen flex items-center justify-center bg-paper px-4">
         <div className="text-center max-w-md">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+          <h1 className="text-2xl font-bold text-ink mb-3">
             Not a supported link
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
+          <p className="text-ink-2 mb-6">
             The shared URL doesn&apos;t look like a post we can preview. Try an X, Instagram, TikTok, or YouTube link
             like x.com/user/status/123 or youtube.com/shorts/abc.
           </p>
           <a
             href="/"
-            className="inline-flex items-center gap-2 px-6 py-3 text-white font-medium rounded-full transition-all hover:scale-105"
-            style={{ backgroundColor: '#8B5CF6' }}
+            className="inline-flex items-center gap-2 px-6 py-3 text-white font-medium rounded-full bg-clay-grad shadow-glow transition-all hover:scale-105"
           >
             Go to ADHX
           </a>
@@ -49,8 +48,8 @@ function ShareRedirect() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
-      <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+    <div className="min-h-screen flex items-center justify-center bg-paper">
+      <div className="w-6 h-6 border-2 border-clay border-t-transparent rounded-full animate-spin" />
     </div>
   )
 }
@@ -59,8 +58,8 @@ export default function SharePage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
-          <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+        <div className="min-h-screen flex items-center justify-center bg-paper">
+          <div className="w-6 h-6 border-2 border-clay border-t-transparent rounded-full animate-spin" />
         </div>
       }
     >

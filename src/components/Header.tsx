@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import {
   Search,
   Plus,
@@ -12,8 +12,14 @@ import {
   Menu,
   X,
   RefreshCw,
+  Zap,
+  Flame,
+  Bookmark,
+  Compass,
 } from 'lucide-react'
 import { useTheme } from '@/lib/theme/context'
+import { cn } from '@/lib/utils'
+import { MatterLogo } from '@/components/matter'
 import { AddTweetModal, AddTweetResult } from './AddTweetModal'
 import { SyncProgress } from './sync/SyncProgress'
 import { Tooltip } from './Tooltip'
@@ -42,15 +48,18 @@ interface CooldownStatus {
 export function Header() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { theme, setTheme } = useTheme()
+  const pathname = usePathname()
+  const { resolvedTheme, setTheme } = useTheme()
   const [searchValue, setSearchValue] = useState(searchParams.get('search') || '')
   const [showAddTweet, setShowAddTweet] = useState(false)
   const [addTweetResult, setAddTweetResult] = useState<AddTweetResult | null>(null)
   const [showSync, setShowSync] = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null)
   const [stats, setStats] = useState<Stats>({ total: 0, unread: 0 })
+  const [streak, setStreak] = useState(0)
   const [cooldown, setCooldown] = useState<CooldownStatus>({ canSync: true, cooldownRemaining: 0, lastSyncAt: null, fetchedAt: Date.now() })
   const [displayedCooldown, setDisplayedCooldown] = useState(0)
 
@@ -63,7 +72,10 @@ export function Header() {
 
     // Listen for stats updates from other components (only fires when authenticated)
     const handleStatsUpdate = () => {
-      if (authStatus?.authenticated) fetchStats()
+      if (authStatus?.authenticated) {
+        fetchStats()
+        fetchStreak()
+      }
     }
     window.addEventListener('stats-updated', handleStatsUpdate)
 
@@ -110,6 +122,7 @@ export function Header() {
     if (authStatus?.authenticated) {
       fetchStats()
       fetchCooldown()
+      fetchStreak()
 
       // Update cooldown timer every minute (only when authenticated)
       const cooldownInterval = setInterval(fetchCooldown, 60000)
@@ -200,6 +213,16 @@ export function Header() {
     }
   }
 
+  async function fetchStreak() {
+    try {
+      const response = await fetch('/api/triage/streak')
+      const data = await response.json()
+      setStreak(data.current || 0)
+    } catch (error) {
+      console.error('Failed to fetch streak:', error)
+    }
+  }
+
   async function fetchCooldown() {
     try {
       const response = await fetch('/api/sync/cooldown')
@@ -248,6 +271,20 @@ export function Header() {
     router.refresh()
   }
 
+  const openTriage = () => {
+    // The feed page owns triage. If we're already there, open it directly;
+    // otherwise navigate to the feed with ?triage=1 so it opens once loaded.
+    if (pathname === '/') {
+      window.dispatchEvent(new CustomEvent('open-triage'))
+    } else {
+      router.push('/?triage=1')
+    }
+  }
+
+  const toggleTheme = () => {
+    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
+  }
+
   // Format remaining cooldown time with seconds for live countdown
   const formatCooldown = (ms: number) => {
     const totalSeconds = Math.ceil(ms / 1000)
@@ -265,56 +302,71 @@ export function Header() {
   const userInitial = authStatus?.user?.username?.[0]?.toUpperCase() || 'U'
   const profileImage = authStatus?.user?.profileImageUrl
 
+  // Signed-out: the only signed-out page is the marketing landing, which has
+  // its own nav — so the app top bar renders nothing (avoids a double header).
+  if (authStatus !== null && !authStatus.authenticated) return null
+
   return (
     <>
-      <header className="sticky top-0 z-50 bg-white dark:bg-gray-950 shadow-sm">
-        <div className="px-4 h-16 flex items-center justify-between gap-3">
+      <header className="sticky top-0 z-50 bg-surface border-b border-hairline">
+        <div className="px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           {/* Left section - Logo and Stats */}
           <div className="flex items-center gap-4 flex-shrink-0">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2">
-              <img
-                src="/logo.png"
-                alt="ADHX Logo"
-                className="w-10 h-10 object-contain"
-              />
-              <span className="text-xl sm:text-2xl font-indie-flower text-gray-900 dark:text-white">ADHX</span>
+            <Link href="/" className="flex items-center" aria-label="ADHX home">
+              <MatterLogo size={20} />
             </Link>
 
-            {/* Stats - only show when authenticated, hidden on mobile */}
+            {/* Primary nav — switch between the collection feed and Discover.
+                Only when authenticated, hidden on mobile (mobile uses the menu). */}
             {authStatus?.authenticated && (
-              <div className="hidden lg:flex items-center gap-3 text-sm">
-                <span className="text-gray-500 dark:text-gray-400">
-                  <span className="font-semibold text-gray-900 dark:text-white">{stats.total}</span> saved
-                </span>
-                <span className="text-gray-300 dark:text-gray-600">•</span>
-                <span className="text-gray-500 dark:text-gray-400">
-                  <span className="font-semibold text-blue-500">{stats.unread}</span> unread
-                </span>
-              </div>
+              <nav className="hidden lg:flex items-center gap-1 text-[13.5px]">
+                <Link
+                  href="/"
+                  className={cn(
+                    'rounded-full px-3 py-1.5 font-semibold transition-colors',
+                    pathname === '/'
+                      ? 'bg-clay/[0.12] text-clay'
+                      : 'text-ink-2 hover:text-ink',
+                  )}
+                >
+                  Collection
+                </Link>
+                <Link
+                  href="/discover"
+                  className={cn(
+                    'rounded-full px-3 py-1.5 font-semibold transition-colors',
+                    pathname === '/discover'
+                      ? 'bg-clay/[0.12] text-clay'
+                      : 'text-ink-2 hover:text-ink',
+                  )}
+                >
+                  Discover
+                </Link>
+              </nav>
             )}
           </div>
 
           {/* Center section - Search (desktop only, only show when authenticated) */}
           {authStatus?.authenticated && (
-            <div className="hidden md:block flex-1 max-w-xl mx-4">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <div className="hidden md:block flex-1 max-w-[540px] mx-auto">
+              <div className="relative flex items-center">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-[17px] h-[17px] text-ink-3 pointer-events-none" />
                 <input
                   ref={searchInputRef}
                   type="text"
                   value={searchValue}
                   onChange={(e) => setSearchValue(e.target.value)}
-                  placeholder="Search"
+                  placeholder="Search your collection…"
                   aria-label="Search bookmarks"
-                  className="w-full h-11 pl-11 pr-10 bg-gray-100 dark:bg-gray-800 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600 text-gray-900 dark:text-white placeholder-gray-500"
+                  className="w-full h-11 pl-11 pr-10 bg-inset rounded-full text-[13.5px] text-ink placeholder-ink-3 focus:outline-none focus:ring-2 focus:ring-clay/40"
                 />
                 {searchValue && (
                   <button
                     onClick={clearSearch}
-                    className="absolute right-3 inset-y-0 my-auto h-6 w-6 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors"
+                    className="absolute right-3 inset-y-0 my-auto h-6 w-6 flex items-center justify-center hover:bg-hairline rounded-full transition-colors"
                   >
-                    <X className="w-4 h-4 text-gray-500" />
+                    <X className="w-4 h-4 text-ink-3" />
                   </button>
                 )}
               </div>
@@ -330,7 +382,7 @@ export function Header() {
               href="https://github.com/itsmemeworks/adhx"
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              className="p-2 text-ink-3 hover:text-ink transition-colors"
               title="View on GitHub"
             >
               <svg
@@ -350,35 +402,74 @@ export function Header() {
 
           {/* Right section - Actions (only show when authenticated) */}
           {authStatus?.authenticated && (
-            <div className="flex items-center gap-1 flex-shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+              {/* Mobile search — collapses to an icon (expands the row below) */}
+              <button
+                onClick={() => setMobileSearchOpen((v) => !v)}
+                aria-label="Search"
+                className="md:hidden w-9 h-9 flex items-center justify-center rounded-full text-ink-2 hover:bg-inset transition-colors"
+              >
+                <Search className="w-[18px] h-[18px]" />
+              </button>
+              {/* Triage pill */}
+              <button
+                onClick={openTriage}
+                className="inline-flex items-center gap-1.5 bg-clay-grad text-white shadow-glow rounded-full font-semibold text-[13.5px] h-9 px-3 sm:px-3.5 whitespace-nowrap"
+                title="Triage your unread"
+              >
+                <Zap className="w-[15px] h-[15px]" fill="currentColor" />
+                <span className="hidden sm:inline">Triage</span>
+                <span className="bg-white/[0.28] rounded-md px-1.5 py-px text-xs leading-none">
+                  {stats.unread}
+                </span>
+                {streak > 0 && (
+                  <span className="inline-flex items-center gap-1 ml-1 pl-2.5 border-l border-white/30">
+                    <Flame className="w-3.5 h-3.5 text-flame" fill="currentColor" />
+                    <span className="text-xs leading-none">{streak}</span>
+                  </span>
+                )}
+              </button>
+
+              {/* Theme toggle */}
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-full hover:bg-inset transition-colors text-ink-3 hover:text-ink"
+                title={resolvedTheme === 'dark' ? 'Switch to light' : 'Switch to dark'}
+                aria-label="Toggle theme"
+              >
+                {resolvedTheme === 'dark' ? <Sun className="w-[18px] h-[18px]" /> : <Moon className="w-[18px] h-[18px]" />}
+              </button>
+
               {/* Sync Button */}
               <Tooltip content={cooldown.canSync ? 'Sync bookmarks' : `Available in ${formatCooldown(displayedCooldown)}`} placement="left">
                 <button
                   onClick={() => cooldown.canSync && setShowSync(true)}
-                  className={`p-2.5 rounded-full transition-colors ${
+                  className={cn(
+                    'p-2 rounded-full transition-colors',
                     cooldown.canSync
-                      ? 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
-                      : 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
-                  }`}
+                      ? 'hover:bg-inset text-ink-3 hover:text-ink'
+                      : 'text-ink-3/50 cursor-not-allowed',
+                  )}
                 >
-                  <RefreshCw className="w-5 h-5" />
+                  <RefreshCw className="w-[18px] h-[18px]" />
                 </button>
               </Tooltip>
 
               {/* Add Button */}
               <button
                 onClick={() => setShowAddTweet(true)}
-                className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors text-gray-700 dark:text-gray-300"
-                title="Add tweet"
+                className="w-[33px] h-[33px] flex items-center justify-center rounded-card bg-clay-grad text-white shadow-glow transition-transform hover:scale-105"
+                title="Add link"
+                aria-label="Add link"
               >
-                <Plus className="w-5 h-5" />
+                <Plus className="w-[18px] h-[18px]" />
               </button>
 
               {/* User Menu */}
-              <div className="relative ml-1">
+              <div className="relative">
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="w-9 h-9 rounded-full overflow-hidden hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-600 transition-all flex items-center justify-center"
+                  className="w-[33px] h-[33px] rounded-full overflow-hidden hover:ring-2 hover:ring-clay/40 transition-all flex items-center justify-center"
                 >
                   {profileImage ? (
                     <img
@@ -387,7 +478,7 @@ export function Header() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center text-white text-sm font-semibold">
+                    <div className="w-full h-full bg-clay-grad flex items-center justify-center text-white text-sm font-semibold">
                       {userInitial}
                     </div>
                   )}
@@ -399,10 +490,10 @@ export function Header() {
                       className="fixed inset-0 z-40"
                       onClick={() => setShowUserMenu(false)}
                     />
-                    <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2 z-50">
+                    <div className="absolute right-0 top-full mt-2 w-64 bg-surface rounded-card shadow-m-lg border border-hairline py-2 z-50">
                       {/* User info at top */}
                       {authStatus?.authenticated && authStatus.user && (
-                        <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+                        <div className="px-4 py-3 border-b border-hairline">
                           <div className="flex items-center gap-3">
                             {profileImage ? (
                               <img
@@ -411,70 +502,62 @@ export function Header() {
                                 className="w-10 h-10 rounded-full"
                               />
                             ) : (
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center text-white font-semibold">
+                              <div className="w-10 h-10 rounded-full bg-clay-grad flex items-center justify-center text-white font-semibold">
                                 {userInitial}
                               </div>
                             )}
                             <div>
-                              <p className="font-semibold text-gray-900 dark:text-white">@{authStatus.user.username}</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">Connected</p>
+                              <p className="font-semibold text-ink font-mono">@{authStatus.user.username}</p>
+                              <p className="text-xs text-ink-3">Connected</p>
                             </div>
                           </div>
                         </div>
                       )}
 
                       {/* Mobile stats - shown when header stats are hidden */}
-                      <div className="lg:hidden px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-                        <div className="flex items-center gap-4 text-sm">
-                          <span className="text-gray-500 dark:text-gray-400">
-                            <span className="font-semibold text-gray-900 dark:text-white">{stats.total}</span> saved
+                      <div className="lg:hidden px-4 py-3 border-b border-hairline">
+                        <div className="flex items-center gap-4 text-sm text-ink-2">
+                          <span>
+                            <b className="font-bold text-ink">{stats.total}</b> saved
                           </span>
-                          <span className="text-gray-500 dark:text-gray-400">
-                            <span className="font-semibold text-blue-500">{stats.unread}</span> unread
+                          <span>
+                            <b className="font-bold text-clay">{stats.unread}</b> unread
                           </span>
                         </div>
                       </div>
 
-                      {/* Settings link */}
+                      {/* Nav + Settings links */}
                       <div className="py-1">
+                        <Link
+                          href="/"
+                          onClick={() => setShowUserMenu(false)}
+                          className={cn(
+                            'flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset transition-colors',
+                            pathname === '/' ? 'font-semibold text-clay' : 'text-ink-2 hover:text-ink',
+                          )}
+                        >
+                          <Bookmark className="w-4 h-4" />
+                          Collection
+                        </Link>
+                        <Link
+                          href="/discover"
+                          onClick={() => setShowUserMenu(false)}
+                          className={cn(
+                            'flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset transition-colors',
+                            pathname === '/discover' ? 'font-semibold text-clay' : 'text-ink-2 hover:text-ink',
+                          )}
+                        >
+                          <Compass className="w-4 h-4" />
+                          Discover
+                        </Link>
                         <Link
                           href="/settings"
                           onClick={() => setShowUserMenu(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset text-ink-2 hover:text-ink transition-colors"
                         >
                           <Settings className="w-4 h-4" />
                           Settings
                         </Link>
-                      </div>
-
-                      <div className="border-t border-gray-100 dark:border-gray-800 my-1" />
-
-                      {/* Theme toggle */}
-                      <div className="px-4 py-3">
-                        <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
-                          <button
-                            onClick={() => setTheme('light')}
-                            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                              theme === 'light'
-                                ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white'
-                                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                            }`}
-                          >
-                            <Sun className="w-4 h-4" />
-                            Light
-                          </button>
-                          <button
-                            onClick={() => setTheme('dark')}
-                            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                              theme === 'dark'
-                                ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white'
-                                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                            }`}
-                          >
-                            <Moon className="w-4 h-4" />
-                            Dark
-                          </button>
-                        </div>
                       </div>
                     </div>
                   </>
@@ -484,7 +567,7 @@ export function Header() {
               {/* Mobile Menu Toggle */}
               <button
                 onClick={() => setShowMobileMenu(!showMobileMenu)}
-                className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors md:hidden text-gray-700 dark:text-gray-300"
+                className="p-2 hover:bg-inset rounded-full transition-colors md:hidden text-ink-3 hover:text-ink"
               >
                 {showMobileMenu ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
@@ -492,38 +575,41 @@ export function Header() {
           )}
         </div>
 
-        {/* Mobile Search Row (only show when authenticated) */}
-        {authStatus?.authenticated && (
+        {/* Mobile Search Row — collapses to a header icon; expands on tap. */}
+        {authStatus?.authenticated && mobileSearchOpen && (
           <div className="md:hidden px-4 pb-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <div className="relative flex items-center">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-3 pointer-events-none" />
               <input
                 type="text"
+                autoFocus
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
-                placeholder="Search"
+                placeholder="Search your collection…"
                 aria-label="Search bookmarks"
-                className="w-full h-10 pl-9 pr-9 bg-gray-100 dark:bg-gray-800 rounded-full text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600 text-gray-900 dark:text-white placeholder-gray-500"
+                className="w-full h-10 pl-9 pr-9 bg-inset rounded-full text-base sm:text-sm text-ink placeholder-ink-3 focus:outline-none focus:ring-2 focus:ring-clay/40"
               />
-              {searchValue && (
-                <button
-                  onClick={clearSearch}
-                  className="absolute right-2 inset-y-0 my-auto h-6 w-6 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors"
-                >
-                  <X className="w-4 h-4 text-gray-500" />
-                </button>
-              )}
+              <button
+                onClick={() => {
+                  clearSearch()
+                  setMobileSearchOpen(false)
+                }}
+                aria-label="Close search"
+                className="absolute right-2 inset-y-0 my-auto h-6 w-6 flex items-center justify-center hover:bg-hairline rounded-full transition-colors"
+              >
+                <X className="w-4 h-4 text-ink-3" />
+              </button>
             </div>
           </div>
         )}
 
         {/* Mobile Navigation */}
         {showMobileMenu && (
-          <div className="md:hidden border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 py-2">
+          <div className="md:hidden border-t border-hairline bg-surface py-2">
             <Link
               href="/settings"
               onClick={() => setShowMobileMenu(false)}
-              className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+              className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-inset text-ink-2 hover:text-ink transition-colors"
             >
               <Settings className="w-5 h-5" />
               Settings

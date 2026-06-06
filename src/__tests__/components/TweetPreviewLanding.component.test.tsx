@@ -229,7 +229,7 @@ describe('TweetPreviewLanding Component Snapshots', () => {
   })
 
   describe('CTA buttons', () => {
-    it('unauthenticated: shows "Save this tweet" button', () => {
+    it('unauthenticated: shows the "Connect with" (X logo) sign-in CTA', () => {
       const fixture = fixtures['plain-text']
 
       const { container } = render(
@@ -241,10 +241,11 @@ describe('TweetPreviewLanding Component Snapshots', () => {
         />
       )
 
-      expect(container.textContent).toContain('Save this tweet')
+      // The X logo now stands in for the word "X" (glyph, not text).
+      expect(container.textContent).toContain('Connect with')
     })
 
-    it('authenticated: shows "Add to Collection" button', () => {
+    it('authenticated: shows "Save to collection" button', () => {
       const fixture = fixtures['plain-text']
 
       const { container } = render(
@@ -256,10 +257,10 @@ describe('TweetPreviewLanding Component Snapshots', () => {
         />
       )
 
-      expect(container.textContent).toContain('Add to Collection')
+      expect(container.textContent).toContain('Save to collection')
     })
 
-    it('authenticated: shows "Continue to Gallery" button', () => {
+    it('authenticated: shows "Continue to gallery" button', () => {
       const fixture = fixtures['plain-text']
 
       const { container } = render(
@@ -271,12 +272,12 @@ describe('TweetPreviewLanding Component Snapshots', () => {
         />
       )
 
-      expect(container.textContent).toContain('Continue to Gallery')
+      expect(container.textContent).toContain('Continue to gallery')
     })
   })
 
-  describe('URL trick callout', () => {
-    it('shows preview input and URL trick hint', () => {
+  describe('Preview another link callout', () => {
+    it('shows the preview input and multi-platform hint', () => {
       const fixture = fixtures['plain-text']
 
       const { container } = render(
@@ -287,8 +288,9 @@ describe('TweetPreviewLanding Component Snapshots', () => {
         />
       )
 
-      expect(container.textContent).toContain('Preview another tweet')
-      expect(container.textContent).toContain('adh')
+      expect(container.textContent).toContain('Preview another link')
+      // The hint now advertises X / Instagram / TikTok / YouTube support.
+      expect(container.textContent).toContain('Works with X, Instagram, TikTok')
       // Check for input placeholder
       expect(container.querySelector('input[placeholder*="Paste"]')).toBeTruthy()
     })

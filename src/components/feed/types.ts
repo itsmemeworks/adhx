@@ -11,6 +11,8 @@ export interface MediaItem {
   url: string
   thumbnailUrl: string
   shareUrl: string
+  /** Source CDN URL (e.g. pbs.twimg.com) — onError fallback when the proxy fails. */
+  originalUrl?: string | null
 }
 
 export interface LinkItem {

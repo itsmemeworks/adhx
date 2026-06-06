@@ -77,7 +77,8 @@ export async function POST(
       author: bookmark.author,
       authorName: bookmark.authorName,
       text: bookmark.text,
-      thumbnailUrl: media?.previewUrl || media?.originalUrl || bookmark.authorProfileImageUrl || null,
+      // Real media only — no avatar fallback, so text posts stay "text".
+      thumbnailUrl: media?.previewUrl || media?.originalUrl || null,
       url: previewPath(platform, bookmark.author, id),
       userId,
     })

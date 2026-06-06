@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { userPreferences } from '@/lib/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { userPreferences, readStatus } from '@/lib/db/schema'
+import { eq, and, count, gte } from 'drizzle-orm'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { captureException } from '@/lib/sentry'
 import {
@@ -71,10 +71,23 @@ export async function GET(request: NextRequest) {
     const state = await readState(userId)
     const current = isValidDay(today) ? effectiveCurrent(state, today) : state?.current ?? 0
 
+    // "Triaged" counts — read events are the triage Done signal (no migration).
+    const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString()
+    const [totalRow] = await db
+      .select({ c: count() })
+      .from(readStatus)
+      .where(eq(readStatus.userId, userId))
+    const [weekRow] = await db
+      .select({ c: count() })
+      .from(readStatus)
+      .where(and(eq(readStatus.userId, userId), gte(readStatus.readAt, weekAgo)))
+
     return NextResponse.json({
       current,
       longest: state?.longest ?? 0,
       lastActiveDate: state?.lastActiveDate ?? null,
+      triagedTotal: totalRow?.c ?? 0,
+      triagedThisWeek: weekRow?.c ?? 0,
     })
   } catch (error) {
     captureException(error, { endpoint: '/api/triage/streak', method: 'GET' })

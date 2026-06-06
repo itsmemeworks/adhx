@@ -302,8 +302,8 @@ export async function POST(request: NextRequest) {
       author: saveAuthor,
       authorName: tweet.author?.name || null,
       text: tweet.text || null,
-      thumbnailUrl:
-        tweet.media?.all?.[0]?.thumbnail_url || tweet.media?.all?.[0]?.url || tweet.author?.avatar_url || null,
+      // Real media only — no avatar fallback, so text tweets stay "text".
+      thumbnailUrl: tweet.media?.all?.[0]?.thumbnail_url || tweet.media?.all?.[0]?.url || null,
       url: previewPath('twitter', saveAuthor, parsed.tweetId),
       userId,
     })

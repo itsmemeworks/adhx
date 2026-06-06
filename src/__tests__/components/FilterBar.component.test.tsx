@@ -1,16 +1,21 @@
 /**
  * @vitest-environment jsdom
  *
- * FilterBar Component Tests
+ * FilterBar Component Tests (Matter redesign)
  *
  * Tests for the FilterBar component including:
- * - Filter options rendering (desktop) and dropdown (mobile)
- * - Tags single-select dropdown behavior
- * - Tags button shows selected tag name
+ * - Type filter pills rendering + active styling
+ * - Platform dropdown
+ * - Sort dropdown
+ * - Unread-only toggle
+ *
+ * Note: tagging UI was fully removed in the Matter redesign. The component
+ * still accepts tag-related props for caller compatibility but renders nothing
+ * for them, so those test cases have been deleted.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, fireEvent, screen, within } from '@testing-library/react'
+import { render, fireEvent, screen } from '@testing-library/react'
 import { FilterBar } from '@/components/feed/FilterBar'
 import { FILTER_OPTIONS, type FilterType, type TagItem } from '@/components/feed/types'
 
@@ -21,7 +26,7 @@ Element.prototype.scrollIntoView = vi.fn()
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: vi.fn().mockImplementation((query: string) => ({
-    matches: false, // Default to mobile view
+    matches: false,
     media: query,
     onchange: null,
     addListener: vi.fn(),
@@ -57,25 +62,17 @@ describe('FilterBar Component', () => {
     vi.clearAllMocks()
   })
 
-  describe('Filter Options (Desktop)', () => {
-    it('renders all 7 filter options in desktop container', () => {
-      const { container } = render(<FilterBar {...defaultProps} />)
+  describe('Type Filter Pills', () => {
+    it('renders all 7 filter options', () => {
+      render(<FilterBar {...defaultProps} />)
 
-      // Find the desktop filter container (hidden sm:flex)
-      const desktopContainer = container.querySelector('.sm\\:flex')
-      expect(desktopContainer).toBeTruthy()
-
-      // All filter labels should be in the desktop container
-      const buttons = within(desktopContainer as HTMLElement).getAllByRole('button')
-      const buttonLabels = buttons.map(b => b.textContent)
-
-      expect(buttonLabels).toContain('All')
-      expect(buttonLabels).toContain('Photos')
-      expect(buttonLabels).toContain('Videos')
-      expect(buttonLabels).toContain('Text')
-      expect(buttonLabels).toContain('Articles')
-      expect(buttonLabels).toContain('Quoted')
-      expect(buttonLabels).toContain('Manual')
+      expect(screen.getByRole('button', { name: 'All' })).toBeTruthy()
+      expect(screen.getByRole('button', { name: 'Photos' })).toBeTruthy()
+      expect(screen.getByRole('button', { name: 'Videos' })).toBeTruthy()
+      expect(screen.getByRole('button', { name: 'Text' })).toBeTruthy()
+      expect(screen.getByRole('button', { name: 'Articles' })).toBeTruthy()
+      expect(screen.getByRole('button', { name: 'Quoted' })).toBeTruthy()
+      expect(screen.getByRole('button', { name: 'Manual' })).toBeTruthy()
     })
 
     it('does NOT include needsTranscript filter', () => {
@@ -90,259 +87,158 @@ describe('FilterBar Component', () => {
       expect(FILTER_OPTIONS.map(o => o.value)).not.toContain('needsTranscript')
     })
 
-    it('applies active styling to selected filter', () => {
-      const { container } = render(<FilterBar {...defaultProps} filter="photos" />)
+    it('applies active gradient styling to selected filter', () => {
+      render(<FilterBar {...defaultProps} filter="photos" />)
 
-      // Find desktop container
-      const desktopContainer = container.querySelector('.sm\\:flex')
-      const photosButton = within(desktopContainer as HTMLElement).getByRole('button', { name: 'Photos' })
-      expect(photosButton.className).toContain('bg-gray-900')
+      const photosButton = screen.getByRole('button', { name: 'Photos' })
+      expect(photosButton.className).toContain('bg-clay-grad')
+    })
+
+    it('calls onFilterChange when a filter pill is clicked', () => {
+      const onFilterChange = vi.fn()
+      render(<FilterBar {...defaultProps} onFilterChange={onFilterChange} />)
+
+      fireEvent.click(screen.getByRole('button', { name: 'Videos' }))
+      expect(onFilterChange).toHaveBeenCalledWith('videos')
     })
   })
 
-  describe('Mobile Filter Dropdown', () => {
-    it('shows current filter label in mobile dropdown button', () => {
-      const { container } = render(<FilterBar {...defaultProps} filter="videos" />)
+  describe('Platform Dropdown', () => {
+    it('shows the platform dropdown when onPlatformChange is provided', () => {
+      render(<FilterBar {...defaultProps} platform="all" onPlatformChange={vi.fn()} />)
 
-      // Find the mobile filter container (sm:hidden)
-      const mobileContainer = container.querySelector('.sm\\:hidden')
-      expect(mobileContainer).toBeTruthy()
-      expect(mobileContainer?.textContent).toContain('Videos')
+      const buttons = screen.getAllByRole('button')
+      const platformButton = buttons.find(b => b.textContent?.includes('All platforms'))
+      expect(platformButton).toBeTruthy()
     })
 
-    it('opens filter dropdown on mobile button click', () => {
-      const { container } = render(<FilterBar {...defaultProps} />)
-
-      // Find the mobile filter button
-      const mobileContainer = container.querySelector('.sm\\:hidden')
-      const mobileButton = within(mobileContainer as HTMLElement).getByRole('button')
-
-      fireEvent.click(mobileButton)
-
-      // All filter options should appear in dropdown
-      // The dropdown should be visible with all 7 options
-      const allButtons = screen.getAllByText('All')
-      expect(allButtons.length).toBeGreaterThanOrEqual(2)
-    })
-  })
-
-  describe('Tags Button', () => {
-    it('shows "Tags" label on desktop when no tag selected', () => {
+    it('does not render the platform dropdown without onPlatformChange', () => {
       render(<FilterBar {...defaultProps} />)
 
-      // When no tag is selected, there should be a button with "Tags" text
-      const tagsButtons = screen.getAllByRole('button')
-      const tagsButton = tagsButtons.find(b => b.textContent?.includes('Tags'))
-      expect(tagsButton).toBeTruthy()
+      const buttons = screen.getAllByRole('button')
+      const platformButton = buttons.find(b => b.textContent?.includes('All platforms'))
+      expect(platformButton).toBeFalsy()
     })
 
-    it('shows selected tag name when a tag is selected', () => {
-      render(<FilterBar {...defaultProps} selectedTags={['work']} />)
+    it('opens the platform dropdown and lists platforms', () => {
+      render(<FilterBar {...defaultProps} platform="all" onPlatformChange={vi.fn()} />)
 
-      // Button should show "work" instead of "Tags"
       const buttons = screen.getAllByRole('button')
-      const tagButton = buttons.find(b => b.textContent?.includes('work') && !b.textContent?.includes('Tags'))
-      expect(tagButton).toBeTruthy()
+      const platformButton = buttons.find(b => b.textContent?.includes('All platforms'))
+      fireEvent.click(platformButton!)
+
+      expect(screen.getByText('X / Twitter')).toBeTruthy()
+      expect(screen.getByText('Instagram')).toBeTruthy()
+      expect(screen.getByText('TikTok')).toBeTruthy()
+      expect(screen.getByText('YouTube')).toBeTruthy()
     })
 
-    it('has blue background when a tag is selected', () => {
-      render(<FilterBar {...defaultProps} selectedTags={['work']} />)
+    it('calls onPlatformChange when a platform is selected', () => {
+      const onPlatformChange = vi.fn()
+      render(<FilterBar {...defaultProps} platform="all" onPlatformChange={onPlatformChange} />)
 
-      // Find button with "work" that has blue background
       const buttons = screen.getAllByRole('button')
-      const tagButton = buttons.find(b =>
-        b.textContent?.includes('work') && b.className.includes('bg-blue-500')
-      )
-      expect(tagButton).toBeTruthy()
-    })
+      const platformButton = buttons.find(b => b.textContent?.includes('All platforms'))
+      fireEvent.click(platformButton!)
 
-    it('has gray background when no tags selected', () => {
-      render(<FilterBar {...defaultProps} selectedTags={[]} />)
-
-      // Find button with "Tags" that has gray background
-      const buttons = screen.getAllByRole('button')
-      const tagButton = buttons.find(b =>
-        b.textContent?.includes('Tags') && b.className.includes('bg-gray-100')
-      )
-      expect(tagButton).toBeTruthy()
+      fireEvent.click(screen.getByText('Instagram'))
+      expect(onPlatformChange).toHaveBeenCalledWith('instagram')
     })
   })
 
-  describe('Single Tag Selection', () => {
-    it('selecting a tag replaces previous selection (single select)', () => {
-      const onSelectedTagsChange = vi.fn()
-      render(
-        <FilterBar
-          {...defaultProps}
-          selectedTags={['work']}
-          onSelectedTagsChange={onSelectedTagsChange}
-        />
-      )
+  describe('Sort Dropdown', () => {
+    it('shows the current sort label ("Added")', () => {
+      render(<FilterBar {...defaultProps} sort="added" />)
 
-      // Find and click the tags button (shows "work")
       const buttons = screen.getAllByRole('button')
-      const tagsButton = buttons.find(b =>
-        b.textContent?.includes('work') && b.className.includes('bg-blue-500')
-      )
-      fireEvent.click(tagsButton!)
-
-      // Click on "personal" tag in dropdown
-      const personalTags = screen.getAllByText('personal')
-      const personalInDropdown = personalTags.find(el =>
-        el.closest('button')?.className.includes('w-full')
-      )
-      fireEvent.click(personalInDropdown!)
-
-      // Should replace with just "personal"
-      expect(onSelectedTagsChange).toHaveBeenCalledWith(['personal'])
+      const sortButton = buttons.find(b => b.textContent?.includes('Added'))
+      expect(sortButton).toBeTruthy()
     })
 
-    it('clicking selected tag deselects it', () => {
-      const onSelectedTagsChange = vi.fn()
-      render(
-        <FilterBar
-          {...defaultProps}
-          selectedTags={['work']}
-          onSelectedTagsChange={onSelectedTagsChange}
-        />
-      )
-
-      // Find and click the tags button (shows "work")
-      const buttons = screen.getAllByRole('button')
-      const tagsButton = buttons.find(b =>
-        b.textContent?.includes('work') && b.className.includes('bg-blue-500')
-      )
-      fireEvent.click(tagsButton!)
-
-      // Click on already selected "work" tag in dropdown
-      const workTags = screen.getAllByText('work')
-      const workInDropdown = workTags.find(el =>
-        el.closest('button')?.className.includes('w-full')
-      )
-      fireEvent.click(workInDropdown!)
-
-      // Should deselect
-      expect(onSelectedTagsChange).toHaveBeenCalledWith([])
-    })
-  })
-
-  describe('Tags Dropdown', () => {
-    it('opens dropdown on button click', () => {
+    it('opens the sort dropdown with sort + direction options', () => {
       render(<FilterBar {...defaultProps} />)
 
-      // Find tags button
       const buttons = screen.getAllByRole('button')
-      const tagsButton = buttons.find(b => b.textContent?.includes('Tags'))
-      fireEvent.click(tagsButton!)
+      const sortButton = buttons.find(b => b.textContent?.includes('Added'))
+      fireEvent.click(sortButton!)
 
-      // Dropdown should now be visible with tag options
-      expect(screen.getByText('work')).toBeTruthy()
-      expect(screen.getByText('personal')).toBeTruthy()
-      expect(screen.getByText('important')).toBeTruthy()
+      expect(screen.getByText('Date added')).toBeTruthy()
+      expect(screen.getByText('Date posted')).toBeTruthy()
+      expect(screen.getByText('Newest first')).toBeTruthy()
+      expect(screen.getByText('Oldest first')).toBeTruthy()
     })
 
-    it('shows tag counts in dropdown', () => {
-      render(<FilterBar {...defaultProps} />)
+    it('calls onSortChange when a sort option is selected', () => {
+      const onSortChange = vi.fn()
+      render(<FilterBar {...defaultProps} onSortChange={onSortChange} />)
 
-      // Find tags button
       const buttons = screen.getAllByRole('button')
-      const tagsButton = buttons.find(b => b.textContent?.includes('Tags'))
-      fireEvent.click(tagsButton!)
+      const sortButton = buttons.find(b => b.textContent?.includes('Added'))
+      fireEvent.click(sortButton!)
 
-      // Check that counts are displayed
-      expect(screen.getByText('5')).toBeTruthy() // work count
-      expect(screen.getByText('3')).toBeTruthy() // personal count
-      expect(screen.getByText('2')).toBeTruthy() // important count
+      fireEvent.click(screen.getByText('Date posted'))
+      expect(onSortChange).toHaveBeenCalledWith('posted')
     })
 
-    it('calls onSelectedTagsChange when tag is clicked', () => {
-      const onSelectedTagsChange = vi.fn()
-      render(<FilterBar {...defaultProps} onSelectedTagsChange={onSelectedTagsChange} />)
+    it('calls onSortDirectionChange when a direction is selected', () => {
+      const onSortDirectionChange = vi.fn()
+      render(<FilterBar {...defaultProps} onSortDirectionChange={onSortDirectionChange} />)
 
-      // Find tags button
       const buttons = screen.getAllByRole('button')
-      const tagsButton = buttons.find(b => b.textContent?.includes('Tags'))
-      fireEvent.click(tagsButton!)
+      const sortButton = buttons.find(b => b.textContent?.includes('Added'))
+      fireEvent.click(sortButton!)
 
-      // Find work tag in dropdown
-      const workTag = screen.getByText('work')
-      fireEvent.click(workTag)
-
-      expect(onSelectedTagsChange).toHaveBeenCalledWith(['work'])
-    })
-
-    it('shows "Clear tag" option when a tag is selected', () => {
-      render(<FilterBar {...defaultProps} selectedTags={['work']} />)
-
-      // Find tags button (shows "work")
-      const buttons = screen.getAllByRole('button')
-      const tagsButton = buttons.find(b =>
-        b.textContent?.includes('work') && b.className.includes('bg-blue-500')
-      )
-      fireEvent.click(tagsButton!)
-
-      expect(screen.getByText('Clear tag')).toBeTruthy()
-    })
-
-    it('does not show "Clear tag" when no tags selected', () => {
-      render(<FilterBar {...defaultProps} selectedTags={[]} />)
-
-      // Find tags button
-      const buttons = screen.getAllByRole('button')
-      const tagsButton = buttons.find(b => b.textContent?.includes('Tags'))
-      fireEvent.click(tagsButton!)
-
-      expect(screen.queryByText('Clear tag')).toBeNull()
-    })
-
-    it('highlights selected tag in dropdown', () => {
-      render(<FilterBar {...defaultProps} selectedTags={['work']} />)
-
-      // Find tags button (shows "work")
-      const buttons = screen.getAllByRole('button')
-      const tagsButton = buttons.find(b =>
-        b.textContent?.includes('work') && b.className.includes('bg-blue-500')
-      )
-      fireEvent.click(tagsButton!)
-
-      // Get all elements with "work" text and find the one with blue text
-      const workTags = screen.getAllByText('work')
-      const highlightedTag = workTags.find(el => el.className.includes('text-blue-500'))
-      expect(highlightedTag).toBeTruthy()
+      fireEvent.click(screen.getByText('Oldest first'))
+      expect(onSortDirectionChange).toHaveBeenCalledWith('asc')
     })
   })
 
   describe('Unread Toggle', () => {
-    it('shows "Unread only" when unreadOnly is true', () => {
-      render(<FilterBar {...defaultProps} unreadOnly={true} />)
+    it('renders an "Unread only" toggle', () => {
+      render(<FilterBar {...defaultProps} unreadOnly={false} />)
 
       expect(screen.getByText(/unread only/i)).toBeTruthy()
     })
 
-    it('shows "Showing all" when unreadOnly is false', () => {
+    it('shows the unread count when unreadOnly is true', () => {
+      render(<FilterBar {...defaultProps} unreadOnly={true} />)
+
+      const buttons = screen.getAllByRole('button')
+      const toggleButton = buttons.find(b => b.textContent?.includes('Unread only'))
+      expect(toggleButton?.textContent).toContain('50')
+    })
+
+    it('shows the total count when unreadOnly is false', () => {
       render(<FilterBar {...defaultProps} unreadOnly={false} />)
 
-      expect(screen.getByText(/showing all/i)).toBeTruthy()
+      const buttons = screen.getAllByRole('button')
+      const toggleButton = buttons.find(b => b.textContent?.includes('Unread only'))
+      expect(toggleButton?.textContent).toContain('100')
+    })
+
+    it('applies active gradient styling when unreadOnly is true', () => {
+      render(<FilterBar {...defaultProps} unreadOnly={true} />)
+
+      const buttons = screen.getAllByRole('button')
+      const toggleButton = buttons.find(b => b.textContent?.includes('Unread only'))
+      expect(toggleButton?.className).toContain('bg-clay-grad')
     })
 
     it('calls onUnreadOnlyChange on toggle', () => {
       const onUnreadOnlyChange = vi.fn()
       render(<FilterBar {...defaultProps} onUnreadOnlyChange={onUnreadOnlyChange} />)
 
-      // Find the unread toggle button
       const buttons = screen.getAllByRole('button')
-      const toggleButton = buttons.find(b =>
-        b.textContent?.includes('Showing all') || b.textContent?.includes('Unread')
-      )
+      const toggleButton = buttons.find(b => b.textContent?.includes('Unread only'))
       fireEvent.click(toggleButton!)
 
       expect(onUnreadOnlyChange).toHaveBeenCalledWith(true)
     })
   })
 
-  describe('No available tags', () => {
-    it('does not render Tags button when no tags available', () => {
-      render(<FilterBar {...defaultProps} availableTags={[]} />)
+  describe('Tagging removed', () => {
+    it('does not render any Tags button (tagging removed in Matter redesign)', () => {
+      render(<FilterBar {...defaultProps} availableTags={defaultProps.availableTags} />)
 
       const buttons = screen.getAllByRole('button')
       const tagsButton = buttons.find(b => b.textContent?.includes('Tags'))
