@@ -18,7 +18,22 @@ import {
 import { AnimatedBackground, LandingAnimations } from '@/components/landing'
 import { isTouchDevice } from '@/components/feed/utils'
 import { MatterLogo, PlatformGlyph, ConnectWithX } from '@/components/matter'
+import { formatCompactRelativeTime } from '@/lib/utils/format'
 import { cn } from '@/lib/utils'
+
+/**
+ * TikTok video IDs are Snowflake-style: the high 32 bits are the Unix creation
+ * time (seconds). Derive the post date from the id — no metadata fetch needed.
+ */
+function tiktokDateFromId(id: string): string | null {
+  try {
+    const secs = Number(BigInt(id) >> BigInt(32))
+    if (secs < 1_400_000_000 || secs > 4_000_000_000) return null // ~2014–2096 sanity check
+    return new Date(secs * 1000).toISOString()
+  } catch {
+    return null
+  }
+}
 
 interface TikTokPreviewLandingProps {
   username: string
@@ -50,6 +65,8 @@ export function TikTokPreviewLanding({
   const tiktokUrl = `https://www.tiktok.com/@${handle}/video/${videoId}`
   const streamUrl = `/api/media/tiktok/video?username=${encodeURIComponent(handle)}&id=${encodeURIComponent(videoId)}`
   const downloadUrl = `/api/media/tiktok/video/download?username=${encodeURIComponent(handle)}&id=${encodeURIComponent(videoId)}`
+  const posterUrl = `/api/media/tiktok/thumbnail?username=${encodeURIComponent(handle)}&id=${encodeURIComponent(videoId)}`
+  const postedAt = tiktokDateFromId(videoId)
 
   // TikTok URL pattern — works with vm., m., www. subdomains
   const tiktokUrlPattern = /(?:https?:\/\/)?(?:www\.|vm\.|m\.)?tiktok\.com\/@([A-Za-z0-9._]{1,30})\/video\/(\d{6,25})/i
@@ -186,6 +203,7 @@ export function TikTokPreviewLanding({
                       className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[12.5px] font-semibold bg-inset text-ink-2 hover:text-clay transition-colors"
                       title="View on TikTok"
                     >
+                      {postedAt && <span className="font-mono">{formatCompactRelativeTime(postedAt)}</span>}
                       <PlatformGlyph platform="tiktok" size={13} />
                     </a>
                   </div>
@@ -220,9 +238,19 @@ export function TikTokPreviewLanding({
                         />
                       ) : (
                         <>
-                          <div className="w-full h-full flex items-center justify-center">
+                          {/* Glyph fallback sits behind the poster (shown if it fails to load). */}
+                          <div className="absolute inset-0 flex items-center justify-center">
                             <TikTokGlyph className="w-20 h-20 opacity-30" />
                           </div>
+                          <img
+                            src={posterUrl}
+                            alt={description || 'TikTok video'}
+                            className="absolute inset-0 w-full h-full object-cover"
+                            referrerPolicy="no-referrer"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none'
+                            }}
+                          />
                           <button
                             onClick={() => setIsPlaying(true)}
                             className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors"
