@@ -18,6 +18,38 @@ export interface ActivityItem {
   createdAt: string
   /** Distinct ADHX users who've saved this post (anonymous count). Drives the flame. */
   saveCount?: number
+  /** Real post type from the saved bookmark, when known (else client infers it). */
+  contentType?: 'video' | 'photo' | 'text' | 'quote' | 'article'
+}
+
+/**
+ * The true identity of a post — platform + source id. Keys off this (not the
+ * URL) so the same post recorded under slightly different URLs (e.g. an old
+ * `/@@handle` vs the fixed `/@handle`) still collapses to one card.
+ */
+function postKey(item: ActivityItem): string {
+  return item.bookmarkId ? `${item.platform}:${item.bookmarkId}` : item.url
+}
+
+/**
+ * One card per post. The API can return several events for the same post
+ * (previewed then saved, or differing URLs), so collapse by identity — keeping
+ * the first (newest) event but the best save count / type / thumbnail seen.
+ */
+function dedupeByPost(items: ActivityItem[]): ActivityItem[] {
+  const byPost = new Map<string, ActivityItem>()
+  for (const it of items) {
+    const k = postKey(it)
+    const prev = byPost.get(k)
+    if (!prev) {
+      byPost.set(k, it)
+    } else {
+      prev.saveCount = Math.max(prev.saveCount ?? 0, it.saveCount ?? 0)
+      prev.contentType = prev.contentType ?? it.contentType
+      prev.thumbnailUrl = prev.thumbnailUrl ?? it.thumbnailUrl
+    }
+  }
+  return [...byPost.values()]
 }
 
 const POLL_MS = 12_000
@@ -32,27 +64,19 @@ const FILTERS: { id: FilterId; label: string }[] = [
   { id: 'articles', label: 'Articles' },
 ]
 
-/** Stable key for an activity item (URL is the natural identity in the feed). */
+/** Stable React key / identity for an activity item. */
 function keyOf(item: ActivityItem): string {
-  return item.url
+  return postKey(item)
 }
 
 /**
- * Client-side filter + sort. "Just saved" (default) = newest first. "Trending"
- * ranks by the real cross-user save count (how many people saved each post),
- * newest as the tiebreaker, and only surfaces posts saved by more than one
- * person. Photos/Videos/Articles filter by inferred type.
+ * Filter + sort an already-deduped list. "Just saved" (default) = newest first.
+ * "Trending" surfaces posts saved by 2+ people, ranked by that count (newest as
+ * the tiebreaker). Photos/Videos/Articles filter by type.
  */
 function applyFilter(items: ActivityItem[], filter: FilterId): ActivityItem[] {
   if (filter === 'trending') {
-    // De-dupe by post, keeping the highest save count seen.
-    const byPost = new Map<string, ActivityItem>()
-    for (const it of items) {
-      const k = it.url
-      const prev = byPost.get(k)
-      if (!prev || (it.saveCount ?? 0) > (prev.saveCount ?? 0)) byPost.set(k, it)
-    }
-    return [...byPost.values()]
+    return items
       .filter((it) => (it.saveCount ?? 0) >= 2)
       .sort((a, b) => {
         const d = (b.saveCount ?? 0) - (a.saveCount ?? 0)
@@ -63,7 +87,7 @@ function applyFilter(items: ActivityItem[], filter: FilterId): ActivityItem[] {
 
   if (filter === 'photos') return items.filter((it) => inferType(it) === 'photo')
   if (filter === 'videos') return items.filter((it) => inferType(it) === 'video')
-  if (filter === 'articles') return items.filter((it) => inferType(it) === 'text')
+  if (filter === 'articles') return items.filter((it) => inferType(it) === 'article')
 
   // just-saved (default): already newest-first from the API.
   return items
@@ -118,7 +142,7 @@ export function DiscoverFeed() {
     return () => window.clearInterval(t)
   }, [load])
 
-  const visible = applyFilter(items, filter)
+  const visible = applyFilter(dedupeByPost(items), filter)
   const count = savingNow(items)
 
   return (

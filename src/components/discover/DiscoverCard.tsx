@@ -7,16 +7,18 @@ import { PlatformGlyph, TypeBadge, type ContentType } from '@/components/matter'
 import type { ActivityItem } from './DiscoverFeed'
 
 /**
- * Infer a TypeBadge type from the (limited) activity payload.
- * We don't store the exact post type, so approximate:
- *   tiktok / youtube / instagram → always video (they ship no poster of their
- *     own, so keying off the thumbnail would wrongly classify them as text)
- *   twitter / other              → media thumbnail ⇒ photo, otherwise text
+ * The post's type for the badge. Prefer the real `contentType` resolved server
+ * side from the saved bookmark; otherwise fall back to a heuristic:
+ *   tiktok / youtube / instagram → video (single-format platforms)
+ *   an avatar/profile image is NOT real media → text
+ *   any other thumbnail ⇒ photo, otherwise text
  */
 export function inferType(item: ActivityItem): ContentType {
+  if (item.contentType) return item.contentType
   if (item.platform === 'tiktok' || item.platform === 'youtube' || item.platform === 'instagram') {
     return 'video'
   }
+  if (item.thumbnailUrl && /profile_images/.test(item.thumbnailUrl)) return 'text'
   return item.thumbnailUrl ? 'photo' : 'text'
 }
 
@@ -32,7 +34,7 @@ export function inferType(item: ActivityItem): ContentType {
  */
 export function DiscoverCard({ item, fresh = false }: { item: ActivityItem; fresh?: boolean }) {
   const type = inferType(item)
-  const hasMedia = Boolean(item.thumbnailUrl)
+  const hasThumb = Boolean(item.thumbnailUrl)
   const isVideo = type === 'video'
   const who = item.authorName || (item.author ? `@${item.author}` : null)
   // "Hot" = saved by more than one person across ADHX. Shows a flame + count.
@@ -45,6 +47,21 @@ export function DiscoverCard({ item, fresh = false }: { item: ActivityItem; fres
     </span>
   ) : null
 
+  // Overlaid badges shared by the thumbnail + poster-less video tiles.
+  const Overlays = (
+    <>
+      <div className="absolute left-2.5 top-2.5">
+        <TypeBadge type={type} />
+      </div>
+      <div className="absolute right-2.5 top-2.5 flex items-center gap-1.5">
+        {FlameBadge}
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md">
+          <PlatformGlyph platform={item.platform} size={13} />
+        </span>
+      </div>
+    </>
+  )
+
   return (
     <article
       className={cn(
@@ -52,43 +69,52 @@ export function DiscoverCard({ item, fresh = false }: { item: ActivityItem; fres
         fresh ? 'border-clay/40 bg-clay/[0.08]' : 'border-hairline',
       )}
     >
-      {hasMedia ? (
-        <div className="relative">
-          <img
-            src={item.thumbnailUrl!}
-            alt=""
-            referrerPolicy="no-referrer"
-            loading="lazy"
-            className="block aspect-[4/3] w-full bg-inset object-cover"
-          />
-          <div className="absolute left-2.5 top-2.5">
-            <TypeBadge type={type} />
+      {/* Whole tile is a link to the on-ADHX preview page. */}
+      <a href={item.url} className="flex flex-1 flex-col">
+        {hasThumb ? (
+          <div className="relative">
+            <img
+              src={item.thumbnailUrl!}
+              alt=""
+              referrerPolicy="no-referrer"
+              loading="lazy"
+              className="block aspect-[4/3] w-full bg-inset object-cover"
+            />
+            {Overlays}
+            {isVideo && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md">
+                  <Play size={18} fill="currentColor" />
+                </span>
+              </div>
+            )}
           </div>
-          <div className="absolute right-2.5 top-2.5 flex items-center gap-1.5">
-            {FlameBadge}
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md">
-              <PlatformGlyph platform={item.platform} size={13} />
+        ) : isVideo ? (
+          // Video with no poster (e.g. TikTok) — dark placeholder with a play
+          // glyph + the caption, so it still reads as a playable video tile.
+          <div className="relative flex aspect-[4/3] w-full items-center justify-center bg-gradient-to-br from-ink to-[#15110d]">
+            {Overlays}
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-md">
+              <Play size={18} fill="currentColor" />
             </span>
+            {item.text && (
+              <p className="absolute inset-x-0 bottom-0 line-clamp-2 bg-gradient-to-t from-black/70 to-transparent px-3 pb-2.5 pt-6 text-[12.5px] font-medium text-white/90">
+                {item.text}
+              </p>
+            )}
           </div>
-          {isVideo && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md">
-                <Play size={18} fill="currentColor" />
-              </span>
+        ) : (
+          <div className="flex-1 px-4 pt-4">
+            <div className="flex items-center gap-2">
+              <TypeBadge type={type} />
+              {FlameBadge}
             </div>
-          )}
-        </div>
-      ) : (
-        <div className="flex-1 px-4 pt-4">
-          <div className="flex items-center gap-2">
-            <TypeBadge type={type} />
-            {FlameBadge}
+            <p className="mt-3 line-clamp-5 text-[14.5px] leading-relaxed text-ink">
+              {item.text || (who ? `Saved from ${who}` : 'Saved post')}
+            </p>
           </div>
-          <p className="mt-3 line-clamp-5 text-[14.5px] leading-relaxed text-ink">
-            {item.text || (who ? `Saved from ${who}` : 'Saved post')}
-          </p>
-        </div>
-      )}
+        )}
+      </a>
 
       {/* bottom-pinned footer */}
       <div className="mt-auto flex items-center gap-2.5 px-3.5 py-3">
