@@ -9,14 +9,15 @@ import type { ActivityItem } from './DiscoverFeed'
 /**
  * Infer a TypeBadge type from the (limited) activity payload.
  * We don't store the exact post type, so approximate:
- *   thumbnail present → video on tiktok/youtube, else photo
- *   no thumbnail      → text
+ *   tiktok / youtube / instagram → always video (they ship no poster of their
+ *     own, so keying off the thumbnail would wrongly classify them as text)
+ *   twitter / other              → media thumbnail ⇒ photo, otherwise text
  */
 export function inferType(item: ActivityItem): ContentType {
-  if (item.thumbnailUrl) {
-    return item.platform === 'tiktok' || item.platform === 'youtube' ? 'video' : 'photo'
+  if (item.platform === 'tiktok' || item.platform === 'youtube' || item.platform === 'instagram') {
+    return 'video'
   }
-  return 'text'
+  return item.thumbnailUrl ? 'photo' : 'text'
 }
 
 /**

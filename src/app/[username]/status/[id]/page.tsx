@@ -136,8 +136,9 @@ export default async function QuickAddPage({ params }: Props) {
         author: previewAuthor,
         authorName: tweet.author?.name || null,
         text: tweet.text || null,
-        thumbnailUrl:
-          tweet.media?.all?.[0]?.thumbnail_url || tweet.media?.all?.[0]?.url || tweet.author?.avatar_url || null,
+        // Real media only — no avatar fallback, so text tweets stay "text"
+        // in the pulse/Discover rather than being mistaken for photos.
+        thumbnailUrl: tweet.media?.all?.[0]?.thumbnail_url || tweet.media?.all?.[0]?.url || null,
         url: previewPath('twitter', previewAuthor, id),
       })
     }
