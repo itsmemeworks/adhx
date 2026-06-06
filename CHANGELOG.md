@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.35.0](https://github.com/itsmemeworks/adhx/compare/v1.34.0...v1.35.0) (2026-06-06)
+
+
+### Features
+
+* make the preview-page logo link home ([#179](https://github.com/itsmemeworks/adhx/issues/179)) ([7402827](https://github.com/itsmemeworks/adhx/commit/7402827895f73e65d9b199a4d34b0ac72261c167))
+
+
+### Bug Fixes
+
+* stop mobile header from overflowing horizontally ([#177](https://github.com/itsmemeworks/adhx/issues/177)) ([1df09ec](https://github.com/itsmemeworks/adhx/commit/1df09ec64a29dbde0e61dfe551520dec34731b12))
+
 ## [1.34.0](https://github.com/itsmemeworks/adhx/compare/v1.33.0...v1.34.0) (2026-06-06)
 
 
