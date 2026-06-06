@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { IBM_Plex_Sans, Inter, Lexend, Atkinson_Hyperlegible, Indie_Flower } from 'next/font/google'
+import { IBM_Plex_Sans, Inter, Lexend, Atkinson_Hyperlegible, Indie_Flower, Newsreader, Roboto_Mono } from 'next/font/google'
 import './globals.css'
 import { ThemeProvider } from '@/lib/theme/context'
 import { PreferencesProvider } from '@/lib/preferences-context'
@@ -29,11 +29,25 @@ const atkinson = Atkinson_Hyperlegible({
   variable: '--font-atkinson',
 })
 
-// Indie Flower - playful handwritten font for the ADHX brand
+// Indie Flower - playful handwritten font for the ADHX wordmark only
 const indieFlower = Indie_Flower({
   subsets: ['latin'],
   variable: '--font-indie-flower',
   weight: '400',
+})
+
+// Matter — Newsreader serif (headlines, page titles, article reading body)
+const newsreader = Newsreader({
+  subsets: ['latin'],
+  style: ['normal', 'italic'],
+  variable: '--font-newsreader',
+})
+
+// Matter — Roboto Mono (handles, timestamps, counts, URLs)
+const robotoMono = Roboto_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  variable: '--font-roboto-mono',
 })
 
 const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://adhx.com'
@@ -169,7 +183,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className={`${ibmPlex.variable} ${inter.variable} ${lexend.variable} ${atkinson.variable} ${indieFlower.variable}`}>
+      <body className={`${ibmPlex.variable} ${inter.variable} ${lexend.variable} ${atkinson.variable} ${indieFlower.variable} ${newsreader.variable} ${robotoMono.variable}`}>
         <ThemeProvider>
           <PreferencesProvider>
             <FontProvider>
