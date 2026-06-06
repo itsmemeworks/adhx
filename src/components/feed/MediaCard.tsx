@@ -8,6 +8,7 @@ import { normalizeEntityMap } from '@/lib/utils/article-text'
 import { AuthorAvatar } from './AuthorAvatar'
 import { renderTextWithLinks, stripMediaUrls, fallbackToOriginal } from './utils'
 import { PlatformGlyph, type PlatformId } from '@/components/matter'
+import { formatCompactRelativeTime } from '@/lib/utils/format'
 import { cn } from '@/lib/utils'
 
 /**
@@ -304,7 +305,16 @@ function FullBleedMedia({ item }: { item: FeedItem }) {
             <p className="text-white font-semibold text-sm leading-tight truncate drop-shadow">
               {item.authorName || item.author}
             </p>
-            <p className="text-white/70 font-mono text-xs truncate">@{item.author}</p>
+            <p className="text-white/70 font-mono text-xs truncate flex items-center gap-1.5">
+              @{item.author}
+              <PlatformGlyph platform={(item.platform ?? 'twitter') as PlatformId} size={11} />
+              {item.createdAt && (
+                <>
+                  <span aria-hidden>·</span>
+                  {formatCompactRelativeTime(item.createdAt)}
+                </>
+              )}
+            </p>
           </div>
         </div>
         {text && (
