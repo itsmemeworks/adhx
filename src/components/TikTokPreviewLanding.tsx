@@ -15,6 +15,7 @@ import {
   Sparkles,
   Zap,
 } from 'lucide-react'
+import Link from 'next/link'
 import { AnimatedBackground, LandingAnimations } from '@/components/landing'
 import { isTouchDevice } from '@/components/feed/utils'
 import { MatterLogo, PlatformGlyph, ConnectWithX } from '@/components/matter'
@@ -337,7 +338,13 @@ function PreviewHeader() {
   return (
     <div className="text-center animate-fade-in-up [animation-fill-mode:both]">
       <div className="flex items-center justify-center mb-4 md:mb-5">
-        <MatterLogo size={18} />
+        <Link
+          href="/"
+          aria-label="ADHX home"
+          className="inline-flex rounded-full transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay/40"
+        >
+          <MatterLogo size={18} />
+        </Link>
       </div>
       <h1 className="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2">
         Found something good?
