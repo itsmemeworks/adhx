@@ -110,3 +110,16 @@ export function TypeBadge({ type, className }: { type: ContentType | string; cla
 export function LiveDot({ className }: { className?: string }) {
   return <span className={cn('w-2 h-2 rounded-full bg-live animate-live-pulse flex-none', className)} />
 }
+
+/**
+ * "Connect with [X]" label — the X logo stands in for the word "X" (no separate
+ * leading glyph). Use as the contents of the connect buttons.
+ */
+export function ConnectWithX({ size = 15 }: { size?: number }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      Connect with
+      <PlatformGlyph platform="twitter" size={size} />
+    </span>
+  )
+}

@@ -9,7 +9,7 @@ import { normalizeEntityMap } from '@/lib/utils/article-text'
 import { VideoPlayer as SmartVideoPlayer } from '@/components/feed/VideoPlayer'
 import type { ArticleEntityMap } from '@/components/feed/types'
 import { FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
-import { MatterLogo, PlatformGlyph } from '@/components/matter'
+import { MatterLogo, PlatformGlyph, ConnectWithX } from '@/components/matter'
 import { AnimatedBackground, LandingAnimations } from '@/components/landing'
 import { formatCount, formatRelativeTime } from '@/lib/utils/format'
 import { cn } from '@/lib/utils'
@@ -165,6 +165,8 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
   const [bionicReading, setBionicReading] = useState(false)
   const [selectedFont, setSelectedFont] = useState<BodyFont>('ibm-plex')
   const [isExpanded, setIsExpanded] = useState(true)
+  // For tweets WITH media, long text auto-collapses to 3 lines (expandable).
+  const [mediaTextExpanded, setMediaTextExpanded] = useState(false)
   const [tweetUrl, setTweetUrl] = useState('')
   const [urlError, setUrlError] = useState('')
   const [shareStatus, setShareStatus] = useState<'idle' | 'shared' | 'copied'>('idle')
@@ -470,10 +472,25 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                       </div>
                     </div>
                   ) : (
-                    // Regular tweet text - break-all ensures long text wraps on mobile
-                    <p className="text-[18px] text-ink whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]">
-                      {renderTextWithLinks(tweet.text)}
-                    </p>
+                    // Regular tweet text. With media, long text collapses to 3 lines.
+                    <>
+                      <p
+                        className={cn(
+                          'text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere]',
+                          hasMedia && !mediaTextExpanded ? 'line-clamp-3' : 'whitespace-pre-wrap',
+                        )}
+                      >
+                        {renderTextWithLinks(tweet.text)}
+                      </p>
+                      {hasMedia && (tweet.text?.length ?? 0) > 180 && (
+                        <button
+                          onClick={() => setMediaTextExpanded((v) => !v)}
+                          className="mt-1.5 text-[13px] font-semibold text-clay hover:opacity-80"
+                        >
+                          {mediaTextExpanded ? 'Show less' : 'Show more'}
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
 
@@ -716,8 +733,14 @@ function SidebarActions({
           disabled={isLoading}
           className="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isLoading ? <Loader2 className="w-[18px] h-[18px] animate-spin" /> : <PlatformGlyph platform="x" size={16} />}
-          {isLoading ? 'Connecting…' : 'Connect with X'}
+          {isLoading ? (
+            <>
+              <Loader2 className="w-[18px] h-[18px] animate-spin" />
+              Connecting…
+            </>
+          ) : (
+            <ConnectWithX size={16} />
+          )}
         </button>
       )}
 
@@ -751,8 +774,7 @@ function SidebarActions({
             disabled={isLoading}
             className="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
           >
-            <PlatformGlyph platform="x" size={14} />
-            Connect with X
+            <ConnectWithX size={14} />
           </button>
         </div>
       )}

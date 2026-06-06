@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { LiveDot, MatterLogo, PlatformGlyph } from '@/components/matter'
+import { LiveDot, MatterLogo, ConnectWithX } from '@/components/matter'
 import { DiscoverCard, inferType } from './DiscoverCard'
 
 export interface ActivityItem {
@@ -182,8 +182,7 @@ export function DiscoverFeed() {
                 href="/api/auth/twitter"
                 className="inline-flex items-center gap-2 rounded-[10px] bg-ink px-4 py-2 text-[13.5px] font-semibold text-surface"
               >
-                <PlatformGlyph platform="twitter" size={14} />
-                Connect with X
+                <ConnectWithX size={14} />
               </a>
             </div>
           </nav>

@@ -229,7 +229,7 @@ describe('TweetPreviewLanding Component Snapshots', () => {
   })
 
   describe('CTA buttons', () => {
-    it('unauthenticated: shows "Connect with X" sign-in CTA', () => {
+    it('unauthenticated: shows the "Connect with" (X logo) sign-in CTA', () => {
       const fixture = fixtures['plain-text']
 
       const { container } = render(
@@ -241,7 +241,8 @@ describe('TweetPreviewLanding Component Snapshots', () => {
         />
       )
 
-      expect(container.textContent).toContain('Connect with X')
+      // The X logo now stands in for the word "X" (glyph, not text).
+      expect(container.textContent).toContain('Connect with')
     })
 
     it('authenticated: shows "Save to collection" button', () => {

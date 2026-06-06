@@ -102,6 +102,24 @@ function FeedPageContent(): React.ReactElement {
     setTriageOpen(true)
   }, [])
 
+  // Open triage over the FULL unread queue (not just the loaded page), so the
+  // progress count matches the unread total shown on the Triage pill. The feed
+  // API caps at 100/request, which covers a typical backlog.
+  const startTriageAll = useCallback(async () => {
+    let queue: FeedItem[] = items.filter((i) => !i.isRead)
+    try {
+      const res = await fetch('/api/feed?filter=all&unreadOnly=true&limit=100')
+      if (res.ok) {
+        const data = await res.json()
+        const all: FeedItem[] = (data.items || []).filter((i: FeedItem) => !i.isRead)
+        if (all.length) queue = all
+      }
+    } catch {
+      /* fall back to the loaded unread items */
+    }
+    openTriage(queue, 0)
+  }, [items, openTriage])
+
   const startSync = useCallback(async (firstLogin = false) => {
     if (isSyncing) return
 
@@ -440,10 +458,10 @@ function FeedPageContent(): React.ReactElement {
   // The Matter top-bar Triage pill dispatches `open-triage`; open the focus
   // queue on the current unread items.
   useEffect(() => {
-    const handler = () => openTriage(items.filter((i) => !i.isRead), 0)
+    const handler = () => startTriageAll()
     window.addEventListener('open-triage', handler)
     return () => window.removeEventListener('open-triage', handler)
-  }, [items, openTriage])
+  }, [startTriageAll])
 
   // `?triage=1` — the Triage pill was pressed from another route (e.g. Discover),
   // so we navigated here to open triage. Flag it, then clear the param.
@@ -456,12 +474,12 @@ function FeedPageContent(): React.ReactElement {
     router.replace(qs ? `?${qs}` : '/', { scroll: false })
   }, [searchParams, router])
 
-  // Open the focus queue once the feed has finished its first load.
+  // Arrived via ?triage=1 — open the full unread queue once authenticated.
   useEffect(() => {
-    if (!pendingTriage || loading) return
+    if (!pendingTriage || isAuthenticated !== true) return
     setPendingTriage(false)
-    openTriage(items.filter((i) => !i.isRead), 0)
-  }, [pendingTriage, loading, items, openTriage])
+    startTriageAll()
+  }, [pendingTriage, isAuthenticated, startTriageAll])
 
   // Drop/mark items the triage mode resolved, keeping the feed in sync.
   const handleTriageResolved = useCallback(

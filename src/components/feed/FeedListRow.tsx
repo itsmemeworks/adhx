@@ -55,6 +55,11 @@ export function FeedListRow({
           <Play className="w-3.5 h-3.5 text-white" fill="white" />
         </span>
       )}
+      {!compact && duration && (
+        <span className="absolute bottom-0.5 right-0.5 rounded bg-black/65 px-1 text-[9px] font-mono font-semibold text-white">
+          {duration}
+        </span>
+      )}
     </div>
   ) : (
     <div
@@ -102,7 +107,7 @@ export function FeedListRow({
       {!compact && (
         <>
           <TypeBadge type={type} className="flex-none" />
-          <span className="flex-none w-12 text-right font-mono text-[12.5px] text-ink-3">{duration || time}</span>
+          <span className="flex-none w-12 text-right font-mono text-[12.5px] text-ink-3">{time}</span>
           <ChevronRight className="flex-none w-[17px] h-[17px] text-ink-3" />
         </>
       )}

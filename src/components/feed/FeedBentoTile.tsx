@@ -71,11 +71,13 @@ export function FeedBentoTile({
           </span>
         )}
         {(type === 'article' || cs > 1) && (
-          <span className="absolute left-0 right-0 bottom-0 p-3.5">
-            <span className={cn('block font-serif font-semibold text-white leading-tight', cs > 1 ? 'text-[18px]' : 'text-[15px]')}>
+          <span className="absolute left-0 right-0 bottom-0 px-3.5 pb-3.5 pt-10 bg-gradient-to-t from-black/85 via-black/45 to-transparent">
+            <span
+              className={cn('block font-serif font-semibold text-white leading-tight [text-shadow:0_1px_3px_rgba(0,0,0,.6)]', cs > 1 ? 'text-[18px]' : 'text-[15px]')}
+            >
               {feedItemTitle(item)}
             </span>
-            <span className="block text-[11.5px] font-medium text-white/80 mt-1">{author}</span>
+            <span className="block text-[11.5px] font-medium text-white/85 mt-1 [text-shadow:0_1px_2px_rgba(0,0,0,.6)]">{author}</span>
           </span>
         )}
       </button>

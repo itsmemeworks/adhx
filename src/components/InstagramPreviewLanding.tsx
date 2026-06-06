@@ -14,7 +14,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { AnimatedBackground, LandingAnimations } from '@/components/landing'
-import { MatterLogo, PlatformGlyph } from '@/components/matter'
+import { MatterLogo, PlatformGlyph, ConnectWithX } from '@/components/matter'
 import { cn } from '@/lib/utils'
 
 interface InstagramPreviewLandingProps {
@@ -356,8 +356,14 @@ function SidebarCta({
           disabled={connecting}
           className="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {connecting ? <Loader2 className="w-[18px] h-[18px] animate-spin" /> : <PlatformGlyph platform="x" size={16} />}
-          {connecting ? 'Connecting…' : 'Connect with X'}
+          {connecting ? (
+            <>
+              <Loader2 className="w-[18px] h-[18px] animate-spin" />
+              Connecting…
+            </>
+          ) : (
+            <ConnectWithX size={16} />
+          )}
         </button>
       )}
 
@@ -375,8 +381,7 @@ function SidebarCta({
             disabled={connecting}
             className="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
           >
-            <PlatformGlyph platform="x" size={14} />
-            Connect with X
+            <ConnectWithX size={14} />
           </button>
         </div>
       )}

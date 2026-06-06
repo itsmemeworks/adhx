@@ -321,7 +321,7 @@ export function TriageMode({
             fullBleed ? 'text-white/90 drop-shadow' : 'text-fink-2',
           )}
         >
-          {finished ? `${total} done` : `${done} / ${total}`}
+          {finished ? `${total} done` : `${done + 1} / ${total}`}
         </span>
         <div className={cn('flex-1 h-[5px] rounded-full overflow-hidden', fullBleed ? 'bg-white/25' : 'bg-fline')}>
           <div className="h-full bg-clay-grad transition-all duration-300" style={{ width: `${progress}%` }} />

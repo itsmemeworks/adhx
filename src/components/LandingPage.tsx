@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Bookmark, Search, Zap, Volume2, ArrowRight, Plus, Smartphone, Monitor, ExternalLink, Copy, Check } from 'lucide-react'
 import { extractYouTubeId } from '@/lib/media/youtube'
 import { getPlatformType, type PlatformType } from '@/lib/platform'
-import { MatterLogo, PlatformGlyph, LiveDot } from '@/components/matter'
+import { MatterLogo, PlatformGlyph, LiveDot, ConnectWithX } from '@/components/matter'
 import { DiscoverCard } from '@/components/discover/DiscoverCard'
 import type { ActivityItem } from '@/components/discover/DiscoverFeed'
 
@@ -148,8 +148,7 @@ export function LandingPage() {
               disabled={isLoading}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-[10px] bg-ink text-surface font-semibold text-sm transition-opacity hover:opacity-90 disabled:opacity-50"
             >
-              <PlatformGlyph platform="twitter" size={14} />
-              Connect with X
+              <ConnectWithX size={14} />
             </button>
           </div>
         </nav>
@@ -192,8 +191,7 @@ export function LandingPage() {
                   </>
                 ) : (
                   <>
-                    <PlatformGlyph platform="twitter" size={17} />
-                    Connect with X
+                    <ConnectWithX size={17} />
                     <ArrowRight className="w-[17px] h-[17px]" />
                   </>
                 )}
