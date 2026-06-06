@@ -219,6 +219,17 @@ export function TriageMode({
     return () => window.removeEventListener('keydown', onKey)
   }, [isOpen, archive, keep, del, doUndo, onClose])
 
+  // Lock the underlying page while triage is open, so wheel/touch scrolling in
+  // the empty areas doesn't scroll the collection behind the overlay.
+  useEffect(() => {
+    if (!isOpen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [isOpen])
+
   // Auto-dismiss the undo toast so it isn't a permanent fixture. Deletes manage
   // their own lifetime (the toast must stay for the whole 5s undo window before
   // the delete commits), so only keep/archive toasts time out here.
@@ -370,7 +381,11 @@ export function TriageMode({
             </div>
           ) : current ? (
             <div
-              onClick={(e) => e.stopPropagation()}
+              // Click-away: only clicks on the actual media/card/text keep triage
+              // open; clicks in the surrounding gutter fall through to the backdrop.
+              onClick={(e) => {
+                if ((e.target as HTMLElement).closest('[data-triage-content]')) e.stopPropagation()
+              }}
               className="w-full h-full flex items-center justify-center select-none touch-pan-y"
               style={{
                 transform: cardTransform,

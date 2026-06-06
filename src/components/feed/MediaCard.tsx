@@ -404,7 +404,7 @@ function AuthorCard({ item }: { item: FeedItem }) {
     : null
 
   return (
-    <article className="w-full md:w-[330px] flex-shrink-0 bg-fsurface border border-fline rounded-2xl shadow-m-lg flex flex-col max-h-[32vh] md:max-h-full overflow-hidden">
+    <article data-triage-content className="w-full md:w-[330px] flex-shrink-0 bg-fsurface border border-fline rounded-2xl shadow-m-lg flex flex-col max-h-[32vh] md:max-h-full overflow-hidden">
       <header className="flex items-start gap-3 p-4 pb-2 flex-shrink-0">
         <AuthorAvatar src={item.authorProfileImageUrl} author={item.author} size="md" />
         <div className="min-w-0 flex-1">
@@ -646,7 +646,7 @@ function ArticleReader({ item }: { item: FeedItem }) {
       : null
 
   return (
-    <div className="w-full max-w-[700px] h-full flex flex-col gap-[18px] pt-1.5">
+    <div data-triage-content className="w-full max-w-[700px] h-full flex flex-col gap-[18px] pt-1.5">
       {/* source line */}
       <div className="flex items-center gap-2.5 flex-none">
         <span className="w-[26px] h-[26px] rounded-[7px] bg-inset flex items-center justify-center text-fink-2">
@@ -699,7 +699,7 @@ function QuoteView({ item }: { item: FeedItem }) {
   const qThumb = quoteThumb(item)
 
   return (
-    <div className="w-full max-w-[640px] max-h-full overflow-y-auto bg-fsurface border border-fline rounded-2xl shadow-m-lg p-6 lg:p-7">
+    <div data-triage-content className="w-full max-w-[640px] max-h-full overflow-y-auto bg-fsurface border border-fline rounded-2xl shadow-m-lg p-6 lg:p-7">
       {/* quoting post header */}
       <div className="flex items-center gap-3 mb-4">
         <AuthorAvatar src={item.authorProfileImageUrl} author={item.author} size="md" />
@@ -764,7 +764,7 @@ function TextCard({ item }: { item: FeedItem }) {
     : null
 
   return (
-    <article className="w-full max-w-xl max-h-full overflow-y-auto bg-fsurface border border-fline rounded-2xl shadow-m-lg p-6 lg:p-7">
+    <article data-triage-content className="w-full max-w-xl max-h-full overflow-y-auto bg-fsurface border border-fline rounded-2xl shadow-m-lg p-6 lg:p-7">
       <div className="flex items-center gap-3 mb-4">
         <AuthorAvatar src={item.authorProfileImageUrl} author={item.author} size="md" />
         <div className="min-w-0 flex-1">
@@ -836,7 +836,7 @@ export function MediaCard({ item, fullBleed = false }: { item: FeedItem; fullBle
   // centered together (gap 8); a grown cell would strand the card at the edge.
   return (
     <div className="w-full h-full flex flex-col md:flex-row gap-4 md:gap-8 items-center justify-center">
-      <div className="min-w-0 max-w-full h-full min-h-0 flex items-center justify-center">
+      <div data-triage-content className="min-w-0 max-w-full h-full min-h-0 flex items-center justify-center">
         <MediaPanel item={item} />
       </div>
       <AuthorCard item={item} />
