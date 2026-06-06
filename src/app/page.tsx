@@ -64,6 +64,9 @@ function FeedPageContent(): React.ReactElement {
   const [streamedItems, setStreamedItems] = useState<FeedItem[]>([])
   const syncTriggeredRef = useRef(false)
   const [pendingNavigation, setPendingNavigation] = useState<{ id: string; fallbackUrl?: string } | null>(null)
+  // Set when arriving via `?triage=1` (e.g. the Triage pill pressed on /discover);
+  // opens the focus queue once the feed has loaded.
+  const [pendingTriage, setPendingTriage] = useState(false)
   const prevLoadingRef = useRef(false)
   // Track seen item IDs for O(1) duplicate detection during sync streaming
   const seenItemIdsRef = useRef<Set<string>>(new Set())
@@ -441,6 +444,24 @@ function FeedPageContent(): React.ReactElement {
     window.addEventListener('open-triage', handler)
     return () => window.removeEventListener('open-triage', handler)
   }, [items, openTriage])
+
+  // `?triage=1` — the Triage pill was pressed from another route (e.g. Discover),
+  // so we navigated here to open triage. Flag it, then clear the param.
+  useEffect(() => {
+    if (searchParams.get('triage') !== '1') return
+    setPendingTriage(true)
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('triage')
+    const qs = params.toString()
+    router.replace(qs ? `?${qs}` : '/', { scroll: false })
+  }, [searchParams, router])
+
+  // Open the focus queue once the feed has finished its first load.
+  useEffect(() => {
+    if (!pendingTriage || loading) return
+    setPendingTriage(false)
+    openTriage(items.filter((i) => !i.isRead), 0)
+  }, [pendingTriage, loading, items, openTriage])
 
   // Drop/mark items the triage mode resolved, keeping the feed in sync.
   const handleTriageResolved = useCallback(

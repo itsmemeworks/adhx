@@ -271,7 +271,13 @@ export function Header() {
   }
 
   const openTriage = () => {
-    window.dispatchEvent(new CustomEvent('open-triage'))
+    // The feed page owns triage. If we're already there, open it directly;
+    // otherwise navigate to the feed with ?triage=1 so it opens once loaded.
+    if (pathname === '/') {
+      window.dispatchEvent(new CustomEvent('open-triage'))
+    } else {
+      router.push('/?triage=1')
+    }
   }
 
   const toggleTheme = () => {
