@@ -1,10 +1,11 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { X, Check, Clock, Trash2, Flame, Undo2, PartyPopper } from 'lucide-react'
+import { X, Check, Bookmark, Trash2, Flame, Undo2, PartyPopper, ArrowLeft, ArrowRight } from 'lucide-react'
 import type { FeedItem } from './types'
 import { MediaCard } from './MediaCard'
 import { isTouchDevice } from './utils'
+import { cn } from '@/lib/utils'
 
 /** User's LOCAL calendar day as YYYY-MM-DD (streaks are per the user's days). */
 function localToday(): string {
@@ -24,6 +25,7 @@ interface TriageModeProps {
   initialQueue: FeedItem[]
   /** Where to start in the queue (gallery click jumps to the clicked item). */
   startIndex: number
+  /** Retained for API compatibility — tags are not surfaced in Matter triage. */
   availableTags: { tag: string; count: number }[]
   /** Notify the feed so it can drop archived/deleted items without a refetch. */
   onItemResolved?: (id: string, action: 'archive' | 'delete') => void
@@ -45,11 +47,8 @@ export function TriageMode({
   onClose,
   initialQueue,
   startIndex,
-  availableTags,
   onItemResolved,
   onItemRestored,
-  onTagAdd,
-  onTagRemove,
 }: TriageModeProps) {
   const [queue, setQueue] = useState<FeedItem[]>([])
   const [index, setIndex] = useState(0)
@@ -120,6 +119,7 @@ export function TriageMode({
   }, [])
 
   // --- actions ---
+  // Done: mark read and advance (the design's green "Done"; same handler as before).
   const archive = useCallback(() => {
     if (!current) return
     recordStreak()
@@ -128,16 +128,17 @@ export function TriageMode({
     onItemResolved?.(item.id, 'archive')
     clearUndoTimer()
     setUndo({ type: 'archive', item, index })
-    setExiting('left')
+    setExiting('right')
     setTimeout(advance, 220)
   }, [current, index, recordStreak, advance, onItemResolved])
 
+  // Keep: save & advance (no DB change).
   const keep = useCallback(() => {
     if (!current) return
     recordStreak()
     clearUndoTimer()
     setUndo({ type: 'keep', index })
-    setExiting('right')
+    setExiting('left')
     setTimeout(advance, 220)
   }, [current, index, recordStreak, advance])
 
@@ -173,25 +174,7 @@ export function TriageMode({
     setUndo(null)
   }, [undo, onItemRestored])
 
-  const addTag = useCallback(
-    (tag: string) => {
-      if (!current || current.tags.includes(tag)) return
-      onTagAdd?.(current.id, tag)
-      setQueue((q) => q.map((it, i) => (i === index ? { ...it, tags: [...it.tags, tag] } : it)))
-    },
-    [current, index, onTagAdd],
-  )
-
-  const removeTag = useCallback(
-    (tag: string) => {
-      if (!current) return
-      onTagRemove?.(current.id, tag)
-      setQueue((q) => q.map((it, i) => (i === index ? { ...it, tags: it.tags.filter((t) => t !== tag) } : it)))
-    },
-    [current, index, onTagRemove],
-  )
-
-  // --- keyboard ---
+  // --- keyboard: ← Keep, → Done, ↓ Delete, U undo, Esc close ---
   useEffect(() => {
     if (!isOpen) return
     const onKey = (e: KeyboardEvent) => {
@@ -201,6 +184,7 @@ export function TriageMode({
           e.preventDefault(); archive(); break
         case 'ArrowLeft':
           e.preventDefault(); keep(); break
+        case 'ArrowDown':
         case 'Backspace':
         case 'Delete':
           e.preventDefault(); del(); break
@@ -262,34 +246,47 @@ export function TriageMode({
       ? `translateX(${drag}px) rotate(${drag / 30}deg)`
       : undefined
 
+  const progress = total ? (done / total) * 100 : 0
+
   return (
-    // Click anywhere on the backdrop (outside the card/actions) to close.
-    <div className="fixed inset-0 z-50 bg-gray-950/80 backdrop-blur-sm flex flex-col" onClick={onClose}>
-      {/* Header: progress + streak + close */}
-      <div className="flex items-center gap-3 px-4 py-3 text-white">
-        <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-full" aria-label="Exit triage">
-          <X className="w-5 h-5" />
+    // Full-screen Matter light focus surface. Click backdrop (outside card/dock) to close.
+    <div className="fixed inset-0 z-50 bg-focus-bg flex flex-col overflow-hidden" onClick={onClose}>
+      {/* Ambient edge glows — decorative, not buttons. */}
+      <div
+        className="pointer-events-none absolute left-0 top-0 bottom-0 w-[150px] z-[1]"
+        style={{ background: 'linear-gradient(to right, color-mix(in srgb, var(--m-accent) 20%, transparent), transparent)' }}
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute right-0 top-0 bottom-0 w-[150px] z-[1]"
+        style={{ background: 'linear-gradient(to left, rgba(16,185,129,.16), transparent)' }}
+        aria-hidden
+      />
+
+      {/* Top bar (absolute): close · count · progress · streak */}
+      <div className="absolute top-0 left-0 right-0 z-[6] flex items-center gap-4 px-5 sm:px-6 py-4">
+        <button
+          onClick={onClose}
+          className="w-[38px] h-[38px] flex-none rounded-full bg-fsurface text-fink-2 flex items-center justify-center hover:opacity-80 transition-opacity"
+          aria-label="Exit triage"
+        >
+          <X className="w-[19px] h-[19px]" />
         </button>
-        <div className="flex-1">
-          <div className="flex items-center justify-between text-xs mb-1">
-            <span>{finished ? `${total} done` : `${done} / ${total}`}</span>
-            {streak.current > 0 && (
-              <span className="flex items-center gap-1 text-orange-300 font-medium">
-                <Flame className="w-3.5 h-3.5" /> {streak.current}-day streak
-              </span>
-            )}
-          </div>
-          <div className="h-1.5 bg-white/15 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-purple-400 to-pink-400 transition-all duration-300"
-              style={{ width: `${total ? (done / total) * 100 : 0}%` }}
-            />
-          </div>
+        <span className="font-mono text-sm font-medium text-fink-2 min-w-[62px] flex-none">
+          {finished ? `${total} done` : `${done} / ${total}`}
+        </span>
+        <div className="flex-1 h-[5px] rounded-full bg-fline overflow-hidden">
+          <div className="h-full bg-clay-grad transition-all duration-300" style={{ width: `${progress}%` }} />
         </div>
+        {streak.current > 0 && (
+          <span className="flex-none inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-semibold whitespace-nowrap bg-flame/15 text-flame border border-flame/30">
+            <Flame className="w-[15px] h-[15px]" fill="currentColor" /> {streak.current}-day streak
+          </span>
+        )}
       </div>
 
       {/* Body */}
-      <div className="flex-1 flex items-center justify-center px-4 pb-4 overflow-hidden">
+      <div className="flex-1 flex items-center justify-center px-6 sm:px-16 lg:px-24 pt-[72px] pb-[150px] overflow-hidden z-[2]">
         {finished ? (
           <div onClick={(e) => e.stopPropagation()}>
             <FinishCard total={total} streak={streak} onClose={onClose} />
@@ -297,75 +294,52 @@ export function TriageMode({
         ) : current ? (
           <div
             onClick={(e) => e.stopPropagation()}
-            className={`w-full flex flex-col items-center gap-4 ${
-              current.media?.length || current.articlePreview?.imageUrl ? 'max-w-md lg:max-w-4xl' : 'max-w-md lg:max-w-xl'
-            }`}
+            className="w-full h-full flex items-center justify-center select-none touch-pan-y"
+            style={{
+              transform: cardTransform,
+              opacity: exiting ? 0 : 1,
+              transition: exiting || drag === 0 ? 'transform 0.22s ease, opacity 0.22s ease' : undefined,
+            }}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
           >
-            <div
-              className="w-full select-none touch-pan-y"
-              style={{
-                transform: cardTransform,
-                opacity: exiting ? 0 : 1,
-                transition: exiting || drag === 0 ? 'transform 0.22s ease, opacity 0.22s ease' : undefined,
-              }}
-              onTouchStart={onTouchStart}
-              onTouchMove={onTouchMove}
-              onTouchEnd={onTouchEnd}
-            >
-              <MediaCard item={current} />
-            </div>
-
-            {/* Tags: applied (tap to remove) + a few suggestions (tap to add) */}
-            <div className="flex flex-wrap gap-1.5 justify-center max-w-lg">
-              {current.tags.map((t) => (
-                <button
-                  key={t}
-                  onClick={() => removeTag(t)}
-                  className="px-2.5 py-1 rounded-full text-xs font-medium bg-purple-500 text-white hover:bg-purple-600 flex items-center gap-1 transition-colors"
-                >
-                  #{t} <X className="w-3 h-3" />
-                </button>
-              ))}
-              {availableTags
-                .filter((a) => !current.tags.includes(a.tag))
-                .slice(0, 6)
-                .map(({ tag }) => (
-                  <button
-                    key={tag}
-                    onClick={() => addTag(tag)}
-                    className="px-2.5 py-1 rounded-full text-xs font-medium bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition-colors"
-                  >
-                    + {tag}
-                  </button>
-                ))}
-            </div>
-
-            {/* Action bar */}
-            <div className="flex items-center gap-3">
-              <ActionButton onClick={keep} label="Keep" sub={isTouch ? 'swipe →' : '←'} tone="neutral">
-                <Clock className="w-6 h-6" />
-              </ActionButton>
-              <ActionButton onClick={del} label="Delete" tone="danger" small>
-                <Trash2 className="w-5 h-5" />
-              </ActionButton>
-              <ActionButton onClick={archive} label="Archive" sub={isTouch ? 'swipe ←' : '→'} tone="primary">
-                <Check className="w-6 h-6" />
-              </ActionButton>
-            </div>
+            <MediaCard item={current} />
           </div>
         ) : null}
       </div>
+
+      {/* Single action dock (bottom-center) */}
+      {!finished && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="absolute bottom-6 left-0 right-0 z-[7] flex flex-col items-center gap-3.5"
+        >
+          <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold whitespace-nowrap bg-fsurface text-fink-2">
+            <ArrowLeft className="w-3.5 h-3.5" /> {isTouch ? 'Swipe to sort' : 'Swipe or use arrow keys'} <ArrowRight className="w-3.5 h-3.5" />
+          </span>
+          <div className="flex items-end gap-7 sm:gap-[30px]">
+            <DockButton onClick={keep} label="Keep" kb="←" tone="primary">
+              <Bookmark className="w-[25px] h-[25px]" />
+            </DockButton>
+            <DockButton onClick={del} label="Delete" kb="↓" tone="outline">
+              <Trash2 className="w-[22px] h-[22px]" />
+            </DockButton>
+            <DockButton onClick={archive} label="Done" kb="→" tone="done">
+              <Check className="w-[25px] h-[25px]" />
+            </DockButton>
+          </div>
+        </div>
+      )}
 
       {/* Undo toast */}
       {undo && !finished && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-white text-gray-900 px-4 py-2 rounded-full shadow-lg text-sm"
+          className="fixed bottom-[150px] left-1/2 -translate-x-1/2 z-[8] flex items-center gap-3 bg-fsurface border border-fline text-fink px-4 py-2 rounded-full shadow-m-lg text-sm"
         >
-          <span>
-            {undo.type === 'archive' ? 'Archived' : undo.type === 'delete' ? 'Deleted' : 'Kept'}
-          </span>
-          <button onClick={doUndo} className="flex items-center gap-1 font-semibold text-purple-600">
+          <span>{undo.type === 'archive' ? 'Done' : undo.type === 'delete' ? 'Deleted' : 'Kept'}</span>
+          <button onClick={doUndo} className="flex items-center gap-1 font-semibold text-clay">
             <Undo2 className="w-4 h-4" /> Undo
           </button>
         </div>
@@ -373,9 +347,9 @@ export function TriageMode({
 
       {/* Streak celebration */}
       {celebrate && (
-        <div className="fixed inset-0 flex items-center justify-center pointer-events-none">
-          <div className="bg-orange-500 text-white px-6 py-3 rounded-2xl text-xl font-bold shadow-2xl animate-bounce flex items-center gap-2">
-            <Flame className="w-6 h-6" /> {celebrate}
+        <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-[9]">
+          <div className="bg-flame text-white px-6 py-3 rounded-2xl text-xl font-bold shadow-m-lg animate-bounce flex items-center gap-2">
+            <Flame className="w-6 h-6" fill="currentColor" /> {celebrate}
           </div>
         </div>
       )}
@@ -383,60 +357,69 @@ export function TriageMode({
   )
 }
 
-function ActionButton({
+function DockButton({
   onClick,
   label,
-  sub,
+  kb,
   tone,
-  small,
   children,
 }: {
   onClick: () => void
   label: string
-  sub?: string
-  tone: 'primary' | 'neutral' | 'danger'
-  small?: boolean
+  kb?: string
+  tone: 'primary' | 'outline' | 'done'
   children: React.ReactNode
 }) {
-  const colors =
+  const big = tone !== 'outline'
+  const surface =
     tone === 'primary'
-      ? 'bg-green-500 hover:bg-green-600 text-white'
-      : tone === 'danger'
-        ? 'bg-white/10 hover:bg-red-500/80 text-white/70 hover:text-white'
-        : 'bg-white/10 hover:bg-white/20 text-white'
-  const size = small ? 'w-11 h-11' : 'w-14 h-14'
+      ? 'bg-clay-grad text-white shadow-glow'
+      : tone === 'done'
+        ? 'bg-done text-white shadow-m-lg'
+        : 'bg-transparent border-[1.5px] border-fline text-fink-2'
   return (
-    <button onClick={onClick} className="flex flex-col items-center gap-1" aria-label={label}>
-      <span className={`${size} rounded-full flex items-center justify-center transition-colors ${colors}`}>
+    <div className="flex flex-col items-center gap-2">
+      <button
+        onClick={onClick}
+        aria-label={label}
+        className={cn(
+          'rounded-full flex items-center justify-center transition-transform hover:scale-105 active:scale-95',
+          big ? 'w-16 h-16' : 'w-[54px] h-[54px]',
+          surface,
+        )}
+      >
         {children}
+      </button>
+      <span className="text-xs font-semibold text-fink-2">
+        {label} {kb && <span className="font-mono text-fink-3">{kb}</span>}
       </span>
-      <span className="text-[10px] text-white/60">
-        {label}
-        {sub ? ` · ${sub}` : ''}
-      </span>
-    </button>
+    </div>
   )
 }
 
 function FinishCard({ total, streak, onClose }: { total: number; streak: Streak; onClose: () => void }) {
   return (
-    <div className="text-center text-white max-w-sm">
-      <PartyPopper className="w-16 h-16 mx-auto mb-4 text-purple-300" />
-      <h2 className="text-2xl font-bold mb-2">{total > 0 ? 'Backlog cleared!' : 'Nothing to triage'}</h2>
+    <div className="text-center max-w-sm">
+      <PartyPopper className="w-16 h-16 mx-auto mb-4 text-clay" />
+      <h2 className="font-serif text-2xl font-semibold text-fink mb-2">
+        {total > 0 ? 'Backlog cleared!' : 'Nothing to triage'}
+      </h2>
       {total > 0 ? (
-        <p className="text-white/70 mb-1">You processed {total} {total === 1 ? 'item' : 'items'}.</p>
+        <p className="text-fink-2 mb-1">
+          You processed {total} {total === 1 ? 'item' : 'items'}.
+        </p>
       ) : (
-        <p className="text-white/70 mb-1">Your unread queue is empty. Nice.</p>
+        <p className="text-fink-2 mb-1">Your unread queue is empty. Nice.</p>
       )}
       {streak.current > 0 && (
-        <p className="flex items-center justify-center gap-1.5 text-orange-300 font-semibold text-lg mb-1">
-          <Flame className="w-5 h-5" /> {streak.current}-day streak
+        <p className="flex items-center justify-center gap-1.5 text-flame font-semibold text-lg mb-1">
+          <Flame className="w-5 h-5" fill="currentColor" /> {streak.current}-day streak
         </p>
       )}
-      <p className="text-white/50 text-sm mb-6">Come back tomorrow to keep your streak alive.</p>
+      <p className="text-fink-3 text-sm mb-6">Come back tomorrow to keep your streak alive.</p>
       <button
         onClick={onClose}
-        className="px-6 py-2.5 bg-white text-gray-900 rounded-full font-semibold hover:bg-white/90"
+        className="px-6 py-2.5 bg-clay-grad text-white rounded-full font-semibold shadow-glow hover:opacity-90 transition-opacity"
       >
         Done
       </button>

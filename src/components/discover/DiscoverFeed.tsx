@@ -1,0 +1,198 @@
+'use client'
+
+import { useCallback, useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
+import { cn } from '@/lib/utils'
+import { LiveDot } from '@/components/matter'
+import { DiscoverCard, inferType } from './DiscoverCard'
+
+export interface ActivityItem {
+  action: 'preview' | 'save' | 'read'
+  platform: 'twitter' | 'instagram' | 'tiktok' | 'youtube' | string
+  author: string
+  authorName?: string | null
+  text?: string | null
+  thumbnailUrl?: string | null
+  url: string
+  createdAt: string
+}
+
+const POLL_MS = 12_000
+
+type FilterId = 'trending' | 'just-saved' | 'photos' | 'videos' | 'articles'
+
+const FILTERS: { id: FilterId; label: string }[] = [
+  { id: 'trending', label: 'Trending' },
+  { id: 'just-saved', label: 'Just saved' },
+  { id: 'photos', label: 'Photos' },
+  { id: 'videos', label: 'Videos' },
+  { id: 'articles', label: 'Articles' },
+]
+
+/** Stable key for an activity item (URL is the natural identity in the feed). */
+function keyOf(item: ActivityItem): string {
+  return item.url
+}
+
+/**
+ * Client-side filter + sort. "Just saved" (default) = newest first; "Trending"
+ * approximates popularity by surfacing items that recur most (multiple saves of
+ * the same URL bubble up). Photos/Videos/Articles filter by inferred type.
+ */
+function applyFilter(items: ActivityItem[], filter: FilterId): ActivityItem[] {
+  if (filter === 'trending') {
+    const counts = new Map<string, number>()
+    for (const it of items) counts.set(it.url, (counts.get(it.url) ?? 0) + 1)
+    // De-dupe (feed may already collapse, but be safe), then rank by frequency,
+    // newest as the tiebreaker.
+    const seen = new Set<string>()
+    const unique = items.filter((it) => {
+      if (seen.has(it.url)) return false
+      seen.add(it.url)
+      return true
+    })
+    return [...unique].sort((a, b) => {
+      const d = (counts.get(b.url) ?? 0) - (counts.get(a.url) ?? 0)
+      if (d !== 0) return d
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    })
+  }
+
+  if (filter === 'photos') return items.filter((it) => inferType(it) === 'photo')
+  if (filter === 'videos') return items.filter((it) => inferType(it) === 'video')
+  if (filter === 'articles') return items.filter((it) => inferType(it) === 'text')
+
+  // just-saved (default): already newest-first from the API.
+  return items
+}
+
+/** A plausible "saving right now" count derived from real recent volume. */
+function savingNow(items: ActivityItem[]): number {
+  const cutoff = Date.now() - 5 * 60 * 1000
+  const recent = items.filter((it) => new Date(it.createdAt).getTime() >= cutoff).length
+  // Scale so a lively feed reads naturally; floor so it never claims "0 people".
+  return Math.max(1, recent || Math.min(items.length, 12))
+}
+
+export function DiscoverFeed() {
+  const [items, setItems] = useState<ActivityItem[]>([])
+  const [filter, setFilter] = useState<FilterId>('just-saved')
+  const [loaded, setLoaded] = useState(false)
+  const [freshKeys, setFreshKeys] = useState<Set<string>>(new Set())
+  const knownKeys = useRef<Set<string>>(new Set())
+
+  const load = useCallback(async (initial: boolean) => {
+    try {
+      const res = await fetch('/api/activity', { cache: 'no-store' })
+      if (!res.ok) return
+      const data = await res.json()
+      if (!Array.isArray(data.items)) return
+      const next: ActivityItem[] = data.items
+
+      if (initial) {
+        // Seed the known set without flashing every card as "new".
+        knownKeys.current = new Set(next.map(keyOf))
+      } else {
+        const fresh = next.filter((it) => !knownKeys.current.has(keyOf(it))).map(keyOf)
+        if (fresh.length > 0) {
+          for (const k of fresh) knownKeys.current.add(k)
+          setFreshKeys(new Set(fresh))
+          // Clear the highlight after the green tint has had a moment.
+          window.setTimeout(() => setFreshKeys(new Set()), 2500)
+        }
+      }
+      setItems(next)
+    } catch {
+      // transient / offline — keep showing what we have
+    } finally {
+      if (initial) setLoaded(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    load(true)
+    const t = window.setInterval(() => load(false), POLL_MS)
+    return () => window.clearInterval(t)
+  }, [load])
+
+  const visible = applyFilter(items, filter)
+  const count = savingNow(items)
+
+  return (
+    <div className="min-h-screen bg-paper">
+      {/* Tabs */}
+      <div className="border-b border-hairline bg-surface">
+        <div className="mx-auto flex max-w-7xl items-center gap-1 px-4 py-3 sm:px-6">
+          <Link
+            href="/"
+            className="rounded-full px-3.5 py-1.5 text-[13.5px] font-semibold text-ink-2 transition-colors duration-150 hover:text-ink"
+          >
+            My Collection
+          </Link>
+          <span className="rounded-full bg-clay/[0.12] px-3.5 py-1.5 text-[13.5px] font-bold text-clay">
+            Discover
+          </span>
+        </div>
+      </div>
+
+      {/* Live status + filters */}
+      <div className="mx-auto max-w-7xl px-4 pb-2 pt-4 sm:px-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="inline-flex items-center gap-2.5 rounded-full border border-clay/25 bg-clay/[0.09] px-4 py-2">
+            <LiveDot />
+            <span className="text-[14px] font-bold text-ink">
+              {count} {count === 1 ? 'person' : 'people'} saving right now
+            </span>
+          </span>
+
+          <div className="flex flex-wrap gap-2">
+            {FILTERS.map((f) => {
+              const active = f.id === filter
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setFilter(f.id)}
+                  className={cn(
+                    'rounded-full px-3.5 py-1.5 text-[13.5px] font-semibold transition-colors duration-150',
+                    active
+                      ? 'bg-ink text-paper'
+                      : 'border border-hairline bg-surface text-ink-2 hover:text-ink',
+                  )}
+                >
+                  {f.label}
+                </button>
+              )
+            })}
+          </div>
+
+          <span className="ml-auto font-mono text-[12.5px] text-ink-3">updates live</span>
+        </div>
+      </div>
+
+      {/* Grid */}
+      <div className="mx-auto max-w-7xl px-4 pb-12 pt-3 sm:px-6">
+        {!loaded ? (
+          <div className="grid grid-cols-1 gap-[18px] sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-64 animate-pulse rounded-card border border-hairline bg-inset"
+              />
+            ))}
+          </div>
+        ) : visible.length === 0 ? (
+          <div className="flex min-h-[40vh] items-center justify-center rounded-card bg-inset">
+            <p className="text-center text-[15px] text-ink-2">Nothing happening yet</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 items-stretch gap-[18px] sm:grid-cols-2 lg:grid-cols-4">
+            {visible.map((item) => (
+              <DiscoverCard key={keyOf(item)} item={item} fresh={freshKeys.has(keyOf(item))} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

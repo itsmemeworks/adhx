@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { Share, Plus, X } from 'lucide-react'
-import { ADHX_PURPLE } from '@/lib/gestalt/theme'
 import { getPlatformType, type PlatformType } from '@/lib/platform'
 
 /**
@@ -93,23 +92,22 @@ export function PWAInstallPrompt() {
 
   return (
     <div className="fixed bottom-3 inset-x-3 z-[60] sm:hidden">
-      <div className="mx-auto max-w-md flex items-center gap-3 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl px-4 py-3">
+      <div className="mx-auto max-w-md flex items-center gap-3 rounded-2xl bg-surface border border-hairline shadow-2xl px-4 py-3">
         <img src="/icon-192.png" alt="" className="w-10 h-10 rounded-xl flex-shrink-0" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-gray-900 dark:text-white">Add ADHX to your home screen</p>
+          <p className="text-sm font-semibold text-ink">Add ADHX to your home screen</p>
           {platform === 'ios' ? (
-            <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 flex-wrap">
+            <p className="text-xs text-ink-3 flex items-center gap-1 flex-wrap">
               Tap <Share className="w-3.5 h-3.5 inline" aria-label="the Share button" /> then &ldquo;Add to Home Screen&rdquo;
             </p>
           ) : (
-            <p className="text-xs text-gray-500 dark:text-gray-400">One tap — open it like an app, no app store needed.</p>
+            <p className="text-xs text-ink-3">One tap — open it like an app, no app store needed.</p>
           )}
         </div>
         {deferred && (
           <button
             onClick={install}
-            className="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-semibold text-white transition-transform hover:scale-105"
-            style={{ backgroundColor: ADHX_PURPLE }}
+            className="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-semibold text-white bg-clay-grad shadow-glow transition-transform hover:scale-105"
           >
             <Plus className="w-4 h-4" /> Add
           </button>
@@ -117,7 +115,7 @@ export function PWAInstallPrompt() {
         <button
           onClick={dismiss}
           aria-label="Dismiss"
-          className="flex-shrink-0 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          className="flex-shrink-0 p-1.5 text-ink-3 hover:text-ink-2"
         >
           <X className="w-4 h-4" />
         </button>

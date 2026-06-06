@@ -2,15 +2,14 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Search, Sparkles, Play, Zap, Eye, Maximize2, Minimize2, Plus, Loader2, Download, Share2, Check } from 'lucide-react'
-import { ADHX_PURPLE } from '@/lib/gestalt/theme'
+import { Search, Sparkles, Play, Zap, Eye, Maximize2, Minimize2, Bookmark, Link2, Loader2, Download, Share2, Check } from 'lucide-react'
 import { type FxTwitterResponse } from '@/lib/media/fxembed'
 import { renderArticleBlock, renderTextWithLinks, handleShareMedia, isTouchDevice, VideoDownloadBlocked } from '@/components/feed/utils'
 import { normalizeEntityMap } from '@/lib/utils/article-text'
 import { VideoPlayer as SmartVideoPlayer } from '@/components/feed/VideoPlayer'
 import type { ArticleEntityMap } from '@/components/feed/types'
 import { FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
-import { XIcon } from '@/components/icons'
+import { MatterLogo, PlatformGlyph } from '@/components/matter'
 import { AnimatedBackground, LandingAnimations } from '@/components/landing'
 import { formatCount, formatRelativeTime } from '@/lib/utils/format'
 import { cn } from '@/lib/utils'
@@ -42,29 +41,28 @@ function ReadingTools({
   className,
 }: ReadingToolsProps): React.ReactElement {
   return (
-    <div className={`p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 ${className || ''}`}>
+    <div className={cn('p-3 rounded-2xl bg-clay/10 border border-clay/20', className)}>
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-purple-600 dark:text-purple-300">
+        <div className="flex items-center gap-2 text-clay">
           <Eye className="w-4 h-4 flex-shrink-0" />
-          <span className="text-xs font-medium">Reading tools</span>
+          <span className="text-xs font-semibold">Reading tools</span>
         </div>
 
         <div className="flex items-center gap-2">
           {/* Bionic Reading Toggle */}
           <button
             onClick={onBionicToggle}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-              bionicReading
-                ? 'bg-purple-200 dark:bg-purple-800/50 text-purple-800 dark:text-purple-200'
-                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-purple-100 dark:hover:bg-purple-900/30'
-            }`}
+            className={cn(
+              'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors',
+              bionicReading ? 'bg-clay text-white' : 'bg-surface text-ink-2 hover:text-clay'
+            )}
             title="Bolds first part of each word for easier reading"
           >
             Bionic
           </button>
 
           {/* Divider */}
-          <div className="w-px h-4 bg-purple-200 dark:bg-purple-700" />
+          <div className="w-px h-4 bg-hairline" />
 
           {/* Font Selector */}
           <div className="flex items-center gap-0.5">
@@ -72,11 +70,10 @@ function ReadingTools({
               <button
                 key={key}
                 onClick={() => onFontChange(key)}
-                className={`px-2 py-1 rounded-lg text-xs transition-colors ${
-                  selectedFont === key
-                    ? 'bg-purple-200 dark:bg-purple-800/50 text-purple-800 dark:text-purple-200'
-                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-purple-100 dark:hover:bg-purple-900/30'
-                }`}
+                className={cn(
+                  'px-2 py-1 rounded-lg text-xs transition-colors',
+                  selectedFont === key ? 'bg-clay text-white' : 'bg-surface text-ink-2 hover:text-clay'
+                )}
                 style={{ fontFamily: `var(--font-${key})` }}
                 title={name}
               >
@@ -181,14 +178,33 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
     if (collapsed === 'true') setIsExpanded(false)
   }, [])
 
-  // Pattern to extract username and tweet ID from x.com or twitter.com URLs
+  // Patterns for the "preview another link" field — accepts X, Instagram, TikTok & YouTube.
   const tweetUrlPattern = /(?:https?:\/\/)?(?:www\.)?(?:x\.com|twitter\.com)\/(\w{1,15})\/status\/(\d+)/i
+  const instagramUrlPattern = /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:reels?|p)\/([A-Za-z0-9_-]+)/i
+  const tiktokUrlPattern = /(?:https?:\/\/)?(?:www\.|vm\.|m\.)?tiktok\.com\/@([A-Za-z0-9._]{1,30})\/video\/(\d{6,25})/i
+  const youtubeUrlPattern = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:shorts\/|watch\?v=)|youtu\.be\/)([A-Za-z0-9_-]{6,})/i
 
   const parseAndNavigate = (url: string): boolean => {
-    const match = url.trim().match(tweetUrlPattern)
-    if (match) {
-      const [, newUsername, newTweetId] = match
-      window.location.href = `/${newUsername}/status/${newTweetId}`
+    const trimmed = url.trim()
+
+    const tweetMatch = trimmed.match(tweetUrlPattern)
+    if (tweetMatch) {
+      window.location.href = `/${tweetMatch[1]}/status/${tweetMatch[2]}`
+      return true
+    }
+    const igMatch = trimmed.match(instagramUrlPattern)
+    if (igMatch) {
+      window.location.href = `/reels/${igMatch[1]}/`
+      return true
+    }
+    const ttMatch = trimmed.match(tiktokUrlPattern)
+    if (ttMatch) {
+      window.location.href = `/@${ttMatch[1]}/video/${ttMatch[2]}`
+      return true
+    }
+    const ytMatch = trimmed.match(youtubeUrlPattern)
+    if (ytMatch) {
+      window.location.href = `/shorts/${ytMatch[1]}`
       return true
     }
     return false
@@ -198,8 +214,8 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
     setTweetUrl(value)
     setUrlError('')
 
-    // Auto-navigate if a valid URL is pasted
-    if (value.includes('x.com/') || value.includes('twitter.com/')) {
+    // Auto-navigate if a recognized link is pasted
+    if (/(?:x\.com|twitter\.com|instagram\.com|tiktok\.com|youtube\.com|youtu\.be)\//i.test(value)) {
       parseAndNavigate(value)
     }
   }
@@ -209,7 +225,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
     setUrlError('')
 
     if (!parseAndNavigate(tweetUrl)) {
-      setUrlError("That's not a tweet link. But we appreciate the mystery.")
+      setUrlError("That's not a link we recognize. Try X, Instagram, TikTok or YouTube.")
     }
   }
 
@@ -310,51 +326,45 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900 relative overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-paper relative overflow-x-hidden">
       <LandingAnimations />
       <AnimatedBackground />
 
-      {/* Header */}
-      <header className="relative z-10 p-4 sm:p-6">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <a href="/" className="flex items-center gap-2 group">
-            <img
-              src="/logo.png"
-              alt="ADHX Logo"
-              className="w-10 h-10 object-contain group-hover:scale-110 transition-transform"
-            />
-            <span className="text-2xl font-indie-flower text-gray-900 dark:text-white">ADHX</span>
-          </a>
-          <a
-            href="/"
-            className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-          >
-            Learn more →
-          </a>
-        </div>
-      </header>
+      {/* warm ambient glow */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-32 -left-24 w-[420px] h-[420px] rounded-full"
+        style={{ background: 'radial-gradient(circle, color-mix(in srgb, var(--m-accent) 16%, transparent), transparent 70%)' }}
+      />
 
       {/* Main Content - flex-1 only on md+ to allow mobile scrolling */}
-      <main className="relative z-10 px-4 sm:px-6 pb-6 md:flex-1">
-        <div className="max-w-5xl mx-auto">
-          {/* Hero Text - Tighter spacing on mobile */}
-          <div className="text-center mb-4 md:mb-6 lg:mb-8 animate-fade-in-up [animation-fill-mode:both]">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-3">
+      <main className="relative z-10 px-4 sm:px-6 lg:px-12 pb-14 md:flex-1 pt-8 sm:pt-12">
+        <div className="max-w-[1040px] mx-auto">
+          {/* Centered Matter header */}
+          <div className="text-center mb-8 md:mb-10 animate-fade-in-up [animation-fill-mode:both]">
+            <div className="flex items-center justify-center mb-4 md:mb-5">
+              <MatterLogo size={18} />
+            </div>
+            <h1 className="font-serif font-semibold tracking-[-0.015em] text-ink text-3xl sm:text-4xl lg:text-[46px] mb-2">
               Found something good?
             </h1>
-            <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              <span className="sm:hidden">Save it now before you forget.</span>
-              <span className="hidden sm:inline">Save it now before <span className="text-purple-600 dark:text-purple-400 font-medium">47 browser tabs</span> make you forget.</span>
+            <p className="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto">
+              Save it before{' '}
+              <b className="text-clay font-semibold">
+                <span className="sm:hidden">47 tabs</span>
+                <span className="hidden sm:inline">47 browser tabs</span>
+              </b>{' '}
+              make you forget.
             </p>
           </div>
 
           {/* Two Column Layout - Tops align, two columns from tablet (md) breakpoint */}
-          <div className="grid md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 items-start">
+          <div className="grid md:grid-cols-[minmax(0,430px)_1fr] gap-8 lg:gap-12 items-start">
             {/* Tweet Card - Left Column - Fixed max heights for scrollable mobile, viewport-based for desktop */}
             <div className="animate-fade-in-up [animation-fill-mode:both] delay-100 w-full min-w-0">
-              <article ref={articleRef} data-content="tweet" className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl animate-pulse-glow flex flex-col overflow-hidden min-h-[300px] w-full min-w-0 ${hasMedia || isExpanded ? '' : 'max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]'}`}>
+              <article ref={articleRef} data-content="tweet" className={cn('bg-surface rounded-card border border-hairline shadow-m-lg flex flex-col overflow-hidden min-h-[300px] w-full min-w-0', !(hasMedia || isExpanded) && 'max-h-[400px] sm:max-h-[450px] md:max-h-[500px] lg:max-h-[653px]')}>
                 {/* Author Header */}
-                <header className="p-4 pb-3">
+                <header className="px-4 pt-4 pb-3">
                   <div className="flex items-center gap-3">
                     <a
                       href={`https://x.com/${tweet.author?.screen_name || username}`}
@@ -362,18 +372,22 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                       rel="noopener noreferrer"
                       className="flex items-center gap-3 flex-1 min-w-0 group"
                     >
-                      {tweet.author?.avatar_url && (
+                      {tweet.author?.avatar_url ? (
                         <img
                           src={tweet.author.avatar_url}
                           alt={tweet.author.name}
-                          className="w-12 h-12 rounded-full ring-2 ring-purple-100 dark:ring-purple-900 group-hover:ring-purple-300 dark:group-hover:ring-purple-700 transition-all"
+                          className="w-[42px] h-[42px] rounded-full"
                         />
+                      ) : (
+                        <div className="w-[42px] h-[42px] rounded-full flex items-center justify-center flex-shrink-0 bg-black text-white">
+                          <PlatformGlyph platform="x" size={20} />
+                        </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-900 dark:text-white truncate group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                        <p className="font-semibold text-[15px] text-ink truncate group-hover:text-clay transition-colors">
                           {tweet.author?.name || username}
                         </p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <p className="font-mono text-[12.5px] text-ink-3 truncate">
                           @{tweet.author?.screen_name || username}
                         </p>
                       </div>
@@ -382,11 +396,11 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                       href={`https://x.com/${tweet.author?.screen_name || username}/status/${tweetId}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 px-2 py-1 rounded-full transition-colors"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[12.5px] font-semibold bg-inset text-ink-2 hover:text-clay transition-colors"
                       title="View on X"
                     >
-                      {formatRelativeTime(tweet.created_at)}
-                      <XIcon className="w-3 h-3" />
+                      <span className="font-mono">{formatRelativeTime(tweet.created_at)}</span>
+                      <PlatformGlyph platform="x" size={12} />
                     </a>
                   </div>
                 </header>
@@ -398,11 +412,11 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                   style={{ fontFamily: `var(--font-${selectedFont})` }}
                 >
                 {/* Tweet Text or Article */}
-                <div className="px-4 py-3 w-full min-w-0">
+                <div className="px-4 pb-3 w-full min-w-0">
                   {tweet.article ? (
                     // X Article display
                     <div className="space-y-3">
-                      <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                      <h2 className="font-serif text-xl font-semibold text-ink">
                         {tweet.article.title}
                       </h2>
 
@@ -445,21 +459,19 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                           })()}
                         </div>
                       ) : tweet.article.preview_text ? (
-                        <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                        <p className="text-ink-2 text-sm leading-relaxed">
                           {tweet.article.preview_text}
                         </p>
                       ) : null}
 
-                      <div className="flex items-center gap-2 text-xs text-purple-600 dark:text-purple-400 font-medium">
-                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
-                        </svg>
+                      <div className="flex items-center gap-2 text-xs text-clay font-medium">
+                        <PlatformGlyph platform="x" size={14} />
                         X Article
                       </div>
                     </div>
                   ) : (
                     // Regular tweet text - break-all ensures long text wraps on mobile
-                    <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]">
+                    <p className="text-[18px] text-ink whitespace-pre-wrap break-words leading-relaxed [overflow-wrap:anywhere]">
                       {renderTextWithLinks(tweet.text)}
                     </p>
                   )}
@@ -493,7 +505,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                 {/* End Scrollable Content Area */}
 
                 {/* Engagement Stats - responsive: compact on mobile/tablet, normal on desktop */}
-                <footer className="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 min-w-0">
+                <footer className="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-hairline flex items-center gap-2 sm:gap-3 md:gap-2 lg:gap-4 text-xs sm:text-sm md:text-xs lg:text-sm text-ink-3 min-w-0">
                   <span className="flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5" title="Replies">
                     <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -532,7 +544,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                           return next
                         })
                       }}
-                      className="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                      className="ml-auto flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg text-ink-3 hover:text-clay hover:bg-clay/10 transition-colors"
                       title={isExpanded ? 'Collapse tweet' : 'Expand tweet'}
                     >
                       {isExpanded ? (
@@ -550,8 +562,8 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                       'flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors',
                       (!hasMedia && contentOverflows) ? '' : 'ml-auto',
                       shareStatus !== 'idle'
-                        ? 'text-green-600 dark:text-green-400'
-                        : 'text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20'
+                        ? 'text-[#3E7D5F]'
+                        : 'text-ink-3 hover:text-clay hover:bg-clay/10'
                     )}
                     title="Share this preview"
                     aria-label="Share this preview"
@@ -568,215 +580,206 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                 </footer>
               </article>
 
-              {/* ADHD Reading Tools - Mobile only, below tweet card for easy thumb access */}
-              {tweet.article && (
-                <ReadingTools
-                  bionicReading={bionicReading}
-                  onBionicToggle={() => setBionicReading(!bionicReading)}
-                  selectedFont={selectedFont}
-                  onFontChange={setSelectedFont}
-                  className="md:hidden mt-4"
-                />
-              )}
-
-              {/* Mobile CTA - positioned right after reading tools, above value props */}
-              <div className="md:hidden mt-4 space-y-3">
-                {isAuthenticated ? (
-                  <>
-                    <button
-                      onClick={handleAddToCollection}
-                      disabled={isAdding}
-                      className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-[1.02] hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{ backgroundColor: ADHX_PURPLE }}
-                    >
-                      {isAdding ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          Adding...
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-5 h-5" />
-                          Add to Collection
-                        </>
-                      )}
-                    </button>
-                    <button
-                      onClick={handleContinueToGallery}
-                      disabled={isAdding}
-                      className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 text-lg font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 rounded-full transition-all hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50"
-                    >
-                      <ArrowRight className="w-5 h-5" />
-                      Continue to Gallery
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={handleLogin}
-                      disabled={isLoading}
-                      className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-[1.02] hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{ backgroundColor: ADHX_PURPLE }}
-                    >
-                      {isLoading ? (
-                        <>
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          Connecting...
-                        </>
-                      ) : (
-                        <>
-                          <XIcon className="w-5 h-5" />
-                          Save this tweet
-                          <ArrowRight className="w-5 h-5" />
-                        </>
-                      )}
-                    </button>
-                    <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-                      Save to your own Collection. Visible only to you.
-                    </p>
-                  </>
+              {/* Mobile actions */}
+              <div className="md:hidden mt-6 space-y-3.5">
+                {tweet.article && (
+                  <ReadingTools
+                    bionicReading={bionicReading}
+                    onBionicToggle={() => setBionicReading(!bionicReading)}
+                    selectedFont={selectedFont}
+                    onFontChange={setSelectedFont}
+                  />
                 )}
+                <SidebarActions
+                  isAuthenticated={isAuthenticated}
+                  isAdding={isAdding}
+                  isLoading={isLoading}
+                  onAdd={handleAddToCollection}
+                  onContinue={handleContinueToGallery}
+                  onLogin={handleLogin}
+                  onShare={handleSharePreview}
+                  shareStatus={shareStatus}
+                />
+                <PreviewAnotherTweet
+                  tweetUrl={tweetUrl}
+                  urlError={urlError}
+                  onUrlChange={handleTweetUrlChange}
+                  onSubmit={handleTweetUrlSubmit}
+                />
               </div>
-
-              {/* Preview Another Tweet - Mobile only (after CTA) */}
-              <PreviewAnotherTweet
-                tweetUrl={tweetUrl}
-                urlError={urlError}
-                onUrlChange={handleTweetUrlChange}
-                onSubmit={handleTweetUrlSubmit}
-                className="md:hidden mt-4"
-              />
-
             </div>
 
-            {/* CTA Section - Right Column */}
-            <div role="complementary" aria-label="ADHX features" className="animate-fade-in-up [animation-fill-mode:both] delay-200">
-              {/* CTA Button - Desktop only (mobile CTA is above value props) */}
-              <div className="hidden md:block space-y-3 animate-fade-in-up [animation-fill-mode:both] delay-300">
-                {isAuthenticated ? (
-                  <>
-                    <button
-                      onClick={handleAddToCollection}
-                      disabled={isAdding}
-                      className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-[1.02] hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{ backgroundColor: ADHX_PURPLE }}
-                    >
-                      {isAdding ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          Adding...
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-5 h-5" />
-                          Add to Collection
-                        </>
-                      )}
-                    </button>
-                    <button
-                      onClick={handleContinueToGallery}
-                      disabled={isAdding}
-                      className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 text-lg font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 rounded-full transition-all hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50"
-                    >
-                      <ArrowRight className="w-5 h-5" />
-                      Continue to Gallery
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={handleLogin}
-                      disabled={isLoading}
-                      className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-[1.02] hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{ backgroundColor: ADHX_PURPLE }}
-                    >
-                      {isLoading ? (
-                        <>
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          Connecting...
-                        </>
-                      ) : (
-                        <>
-                          <XIcon className="w-5 h-5" />
-                          Save this tweet
-                          <ArrowRight className="w-5 h-5" />
-                        </>
-                      )}
-                    </button>
-                    <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-                      Save to your own Collection. Visible only to you.
-                    </p>
-                  </>
-                )}
-              </div>
-
-              {/* Preview Another Tweet - Desktop only (after CTA, before benefits) */}
-              <PreviewAnotherTweet
-                tweetUrl={tweetUrl}
-                urlError={urlError}
-                onUrlChange={handleTweetUrlChange}
-                onSubmit={handleTweetUrlSubmit}
-                className="hidden md:block mt-6"
-              />
-
-              {/* Benefits */}
-              <div className="space-y-3 md:space-y-4 mt-6 md:mt-8">
-                <BenefitItem
-                  icon={<Sparkles className="w-5 h-5" />}
-                  title="One place for everything"
-                  description="Sync your X bookmarks, add tweets manually, organize with tags. Your chaos, contained."
-                />
-                <BenefitItem
-                  icon={<Zap className="w-5 h-5" />}
-                  title="Media at your fingertips"
-                  description="Full-screen viewer with one-click downloads. Save that meme before you forget."
-                />
-                <BenefitItem
-                  icon={<Search className="w-5 h-5" />}
-                  title="Actually find it later"
-                  description="Full-text search across your entire collection. That thread from 6 months ago? Found."
-                />
-              </div>
-
-              {/* ADHD Reading Tools - Below benefits (desktop only) */}
+            {/* Actions Section - Right Column (desktop) */}
+            <div
+              role="complementary"
+              aria-label="ADHX features"
+              className="hidden md:flex flex-col gap-3.5 animate-fade-in-up [animation-fill-mode:both] delay-200"
+            >
               {tweet.article && (
                 <ReadingTools
                   bionicReading={bionicReading}
                   onBionicToggle={() => setBionicReading(!bionicReading)}
                   selectedFont={selectedFont}
                   onFontChange={setSelectedFont}
-                  className="hidden md:block mt-4"
                 />
               )}
+              <SidebarActions
+                isAuthenticated={isAuthenticated}
+                isAdding={isAdding}
+                isLoading={isLoading}
+                onAdd={handleAddToCollection}
+                onContinue={handleContinueToGallery}
+                onLogin={handleLogin}
+                onShare={handleSharePreview}
+                shareStatus={shareStatus}
+              />
+              <PreviewAnotherTweet
+                tweetUrl={tweetUrl}
+                urlError={urlError}
+                onUrlChange={handleTweetUrlChange}
+                onSubmit={handleTweetUrlSubmit}
+              />
+              <ValueCard />
+            </div>
+
+            {/* Value card — mobile */}
+            <div className="md:hidden">
+              <ValueCard />
             </div>
           </div>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 py-3 text-center flex-shrink-0">
-        <p className="text-gray-400 dark:text-gray-500 font-indie-flower text-sm">
-          Save now. Read never. Find always.
-        </p>
+      <footer className="relative z-10 py-4 text-center flex-shrink-0">
+        <p className="text-ink-3 font-indie-flower text-sm">Save now. Read never. Find always.</p>
       </footer>
     </div>
   )
 }
 
-/** Benefit item component for CTA section */
-function BenefitItem({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }): React.ReactElement {
+/** Right-column actions panel: primary CTA + Copy link / Share + Keep-it-forever. */
+function SidebarActions({
+  isAuthenticated,
+  isAdding,
+  isLoading,
+  onAdd,
+  onContinue,
+  onLogin,
+  onShare,
+  shareStatus,
+}: {
+  isAuthenticated: boolean
+  isAdding: boolean
+  isLoading: boolean
+  onAdd: () => void
+  onContinue: () => void
+  onLogin: () => void
+  onShare: () => void
+  shareStatus: 'idle' | 'shared' | 'copied'
+}): React.ReactElement {
+  const [copied, setCopied] = useState(false)
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      /* clipboard unavailable */
+    }
+  }
+
   return (
-    <div className="flex gap-4 p-4 rounded-xl bg-white dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 hover:border-purple-200 dark:hover:border-purple-700 transition-colors">
-      <div
-        className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
-        style={{ backgroundColor: `${ADHX_PURPLE}15`, color: ADHX_PURPLE }}
-      >
-        {icon}
+    <div className="flex flex-col gap-3.5">
+      {isAuthenticated ? (
+        <>
+          <button
+            onClick={onAdd}
+            disabled={isAdding}
+            className="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isAdding ? <Loader2 className="w-[18px] h-[18px] animate-spin" /> : <Bookmark className="w-[18px] h-[18px]" />}
+            {isAdding ? 'Saving…' : 'Save to collection'}
+          </button>
+          <button
+            onClick={onContinue}
+            disabled={isAdding}
+            className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-inset text-ink font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
+          >
+            Continue to gallery
+          </button>
+        </>
+      ) : (
+        <button
+          onClick={onLogin}
+          disabled={isLoading}
+          className="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isLoading ? <Loader2 className="w-[18px] h-[18px] animate-spin" /> : <PlatformGlyph platform="x" size={16} />}
+          {isLoading ? 'Connecting…' : 'Connect with X'}
+        </button>
+      )}
+
+      {/* Secondary action row — Download omitted for tweets (per-media download lives on the media itself) */}
+      <div className="flex gap-2.5">
+        <button
+          onClick={copyLink}
+          className="flex-1 flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl border border-hairline bg-surface text-ink-2 hover:text-clay hover:border-clay/30 transition-colors"
+        >
+          {copied ? <Check className="w-[19px] h-[19px]" /> : <Link2 className="w-[19px] h-[19px]" />}
+          <span className="text-[12.5px] font-semibold">{copied ? 'Copied' : 'Copy link'}</span>
+        </button>
+        <button
+          onClick={onShare}
+          className="flex-1 flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl border border-hairline bg-surface text-ink-2 hover:text-clay hover:border-clay/30 transition-colors"
+        >
+          {shareStatus !== 'idle' ? <Check className="w-[19px] h-[19px]" /> : <Share2 className="w-[19px] h-[19px]" />}
+          <span className="text-[12.5px] font-semibold">{shareStatus === 'shared' ? 'Shared' : shareStatus === 'copied' ? 'Copied' : 'Share'}</span>
+        </button>
       </div>
-      <div>
-        <h3 className="font-semibold text-gray-900 dark:text-white mb-0.5">{title}</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{description}</p>
-      </div>
+
+      {/* Keep it forever — only when unauthenticated */}
+      {!isAuthenticated && (
+        <div className="rounded-2xl px-4 py-4 bg-clay/10 border border-clay/20">
+          <div className="font-bold text-sm text-ink mb-0.5">Keep it forever</div>
+          <p className="text-[13px] text-ink-2 leading-snug mb-3">
+            Create a free account to save everything you preview — private to you.
+          </p>
+          <button
+            onClick={onLogin}
+            disabled={isLoading}
+            className="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
+          >
+            <PlatformGlyph platform="x" size={14} />
+            Connect with X
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Shared 3-row value card (bullets). */
+function ValueCard(): React.ReactElement {
+  const rows: Array<[React.ReactNode, string, string]> = [
+    [<Sparkles key="s" className="w-[17px] h-[17px]" />, 'One place for everything', 'Tweets, TikToks, Reels, Shorts & articles in one searchable home.'],
+    [<Zap key="z" className="w-[17px] h-[17px]" />, 'Media at your fingertips', 'Full-screen viewer with one-click downloads.'],
+    [<Search key="f" className="w-[17px] h-[17px]" />, 'Actually find it later', 'Full-text search across everything you save.'],
+  ]
+  return (
+    <div className="rounded-card border border-hairline bg-surface overflow-hidden">
+      {rows.map(([icon, title, body], i) => (
+        <div key={title} className={cn('flex items-center gap-3 px-4 py-3.5', i > 0 && 'border-t border-hairline')}>
+          <div className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center flex-none bg-clay/10 text-clay">
+            {icon}
+          </div>
+          <div>
+            <div className="font-semibold text-[13.5px] text-ink">{title}</div>
+            <div className="text-[12px] text-ink-3 leading-snug">{body}</div>
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
@@ -792,46 +795,27 @@ interface PreviewAnotherTweetProps {
 
 function PreviewAnotherTweet({ tweetUrl, urlError, onUrlChange, onSubmit, className }: PreviewAnotherTweetProps): React.ReactElement {
   return (
-    <div data-section="preview-another" className={`p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800 animate-fade-in-up [animation-fill-mode:both] delay-400 ${className || ''}`}>
-      <div className="flex items-start gap-3 mb-4">
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center">
-          <Zap className="w-4 h-4 text-purple-600 dark:text-purple-300" />
-        </div>
-        <div>
-          <p className="font-medium text-gray-900 dark:text-white text-sm mb-1">
-            Preview another tweet
-          </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Paste any X/Twitter link below
-          </p>
-        </div>
-      </div>
-
+    <div data-section="preview-another" className={cn('rounded-2xl border border-hairline bg-surface px-4 py-4', className)}>
+      <p className="font-bold text-[13.5px] text-ink mb-2.5">Preview another link</p>
       <form onSubmit={onSubmit}>
-        <div className="flex gap-2">
+        <div className="flex gap-2.5">
           <input
             type="text"
             value={tweetUrl}
             onChange={(e) => onUrlChange(e.target.value)}
-            placeholder="Paste an X link here..."
-            className="flex-1 font-mono text-base sm:text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            placeholder="Paste a link…"
+            className="flex-1 font-mono text-base sm:text-[12.5px] bg-inset px-3 py-2.5 rounded-xl border border-hairline text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-clay/40 focus:border-transparent"
           />
           <button
             type="submit"
-            className="px-4 py-2 text-sm text-white font-medium rounded-lg transition-all hover:scale-105"
-            style={{ backgroundColor: ADHX_PURPLE }}
+            className="px-[18px] rounded-xl bg-clay-grad text-white font-semibold text-[13.5px] shadow-glow transition-all hover:opacity-95"
           >
             Go
           </button>
         </div>
-        {urlError && (
-          <p className="text-red-500 text-xs mt-2">{urlError}</p>
-        )}
+        {urlError && <p className="text-[#EF4444] text-xs mt-2">{urlError}</p>}
       </form>
-
-      <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
-        Or use the URL trick: add <code className="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono">adh</code> before any <code className="bg-purple-100 dark:bg-purple-800/50 px-1 py-0.5 rounded text-purple-700 dark:text-purple-300 font-mono">x.com</code> URL
-      </p>
+      <p className="text-xs text-ink-3 mt-2.5">Works with X, Instagram, TikTok &amp; YouTube.</p>
     </div>
   )
 }
@@ -1039,7 +1023,7 @@ function QuoteTweetPreview({ quote, quoteAuthor, quoteTweetId }: QuoteTweetPrevi
   const hasMedia = photos.length > 0 || videos.length > 0
 
   return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 dark:bg-gray-900/50">
+    <div className="rounded-xl border border-hairline overflow-hidden bg-inset">
       {/* Quote author */}
       <div className="p-3 pb-2">
         <div className="flex items-center gap-2">
@@ -1050,10 +1034,10 @@ function QuoteTweetPreview({ quote, quoteAuthor, quoteTweetId }: QuoteTweetPrevi
               className="w-5 h-5 rounded-full"
             />
           )}
-          <span className="text-sm font-medium text-gray-900 dark:text-white">
+          <span className="text-sm font-medium text-ink">
             {quote.author?.name}
           </span>
-          <span className="text-xs text-gray-500 dark:text-gray-400">
+          <span className="font-mono text-xs text-ink-3">
             @{quote.author?.screen_name}
           </span>
         </div>
@@ -1062,7 +1046,7 @@ function QuoteTweetPreview({ quote, quoteAuthor, quoteTweetId }: QuoteTweetPrevi
       {/* Quote text - full text, no truncation */}
       {quote.text && (
         <div className="px-3 pb-3">
-          <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">
+          <p className="text-sm text-ink-2 whitespace-pre-wrap break-words">
             {quote.text}
           </p>
         </div>
@@ -1117,7 +1101,7 @@ function ExternalLinkPreview({ external }: ExternalLinkPreviewProps): React.Reac
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="block rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group"
+        className="block rounded-xl border border-hairline overflow-hidden hover:bg-inset transition-colors group"
       >
         {showImage && (
           <div className="relative">
@@ -1134,16 +1118,16 @@ function ExternalLinkPreview({ external }: ExternalLinkPreviewProps): React.Reac
           </div>
         )}
         <div className="p-4">
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">
+          <p className="text-xs text-ink-3 mb-2 uppercase tracking-wide">
             {external.display_url}
           </p>
           {external.title && (
-            <h3 className="font-semibold text-gray-900 dark:text-white text-base leading-snug mb-2 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+            <h3 className="font-semibold text-ink text-base leading-snug mb-2 group-hover:text-clay transition-colors">
               {external.title}
             </h3>
           )}
           {external.description && (
-            <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3 leading-relaxed">
+            <p className="text-sm text-ink-2 line-clamp-3 leading-relaxed">
               {external.description}
             </p>
           )}
@@ -1158,7 +1142,7 @@ function ExternalLinkPreview({ external }: ExternalLinkPreviewProps): React.Reac
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="block rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+      className="block rounded-xl border border-hairline overflow-hidden hover:bg-inset transition-colors"
     >
       {showImage && (
         <img
@@ -1171,16 +1155,16 @@ function ExternalLinkPreview({ external }: ExternalLinkPreviewProps): React.Reac
         />
       )}
       <div className="p-3">
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+        <p className="text-xs text-ink-3 mb-1">
           {external.display_url}
         </p>
         {external.title && (
-          <p className="font-medium text-gray-900 dark:text-white text-sm line-clamp-2">
+          <p className="font-medium text-ink text-sm line-clamp-2">
             {external.title}
           </p>
         )}
         {external.description && (
-          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+          <p className="text-xs text-ink-2 mt-1 line-clamp-2">
             {external.description}
           </p>
         )}

@@ -17,16 +17,15 @@ import {
 } from '@/components/feed'
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { Loader2, CheckCircle2, Zap, Flame } from 'lucide-react'
+import { Loader2, CheckCircle2 } from 'lucide-react'
 import { TriageMode } from '@/components/feed/TriageMode'
-import { LivePulse } from '@/components/LivePulse'
 import { useTheme } from '@/lib/theme/context'
 
 export default function FeedPage(): React.ReactElement {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+      <div className="min-h-screen bg-paper flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-ink-3" />
       </div>
     }>
       <FeedPageContent />
@@ -53,7 +52,6 @@ function FeedPageContent(): React.ReactElement {
   const [hasMore, setHasMore] = useState(true)
   const [stats, setStats] = useState({ total: 0, unread: 0 })
   const [triageOpen, setTriageOpen] = useState(false)
-  const [triageStreak, setTriageStreak] = useState(0)
   const [markingRead, setMarkingRead] = useState(false)
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
@@ -417,20 +415,13 @@ function FeedPageContent(): React.ReactElement {
     })
   }, [searchParams]) // Only run when searchParams changes
 
-  // Triage streak (shown on the entry button). Effective streak for "today".
-  const refreshStreak = useCallback(() => {
-    if (!isAuthenticated) return
-    const d = new Date()
-    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-    fetch(`/api/triage/streak?today=${today}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((s) => s && setTriageStreak(s.current ?? 0))
-      .catch(() => {})
-  }, [isAuthenticated])
-
+  // The Matter top-bar Triage pill dispatches `open-triage`; open the focus
+  // queue on the current unread items.
   useEffect(() => {
-    refreshStreak()
-  }, [refreshStreak])
+    const handler = () => openTriage(items.filter((i) => !i.isRead), 0)
+    window.addEventListener('open-triage', handler)
+    return () => window.removeEventListener('open-triage', handler)
+  }, [items, openTriage])
 
   // Drop/mark items the triage mode resolved, keeping the feed in sync.
   const handleTriageResolved = useCallback(
@@ -639,8 +630,8 @@ function FeedPageContent(): React.ReactElement {
     // Show minimal loading state while checking auth
     // This prevents flash of skeleton loaders on the landing page
     return (
-      <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+      <div className="min-h-screen bg-paper flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-ink-3" />
       </div>
     )
   }
@@ -650,17 +641,17 @@ function FeedPageContent(): React.ReactElement {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950">
+    <div className="min-h-screen bg-paper">
       {/* Full Sync Modal (for first login) */}
       {showSyncModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden">
+          <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden">
             {/* Modal Header */}
-            <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-800">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            <div className="px-6 py-5 border-b border-hairline">
+              <h2 className="text-xl font-semibold text-ink">
                 {isSyncing ? 'Syncing Your Bookmarks' : 'Sync Complete!'}
               </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-sm text-ink-3 mt-1">
                 {isSyncing
                   ? 'Your bookmarks are being imported. Watch them appear in real-time!'
                   : `Successfully imported ${syncProgress?.current || 0} bookmarks.`}
@@ -668,24 +659,24 @@ function FeedPageContent(): React.ReactElement {
             </div>
 
             {/* Progress Section */}
-            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50">
+            <div className="px-6 py-4 bg-inset">
               <div className="flex items-center gap-3">
                 {isSyncing ? (
                   <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
                 ) : (
                   <CheckCircle2 className="w-5 h-5 text-green-500" />
                 )}
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <span className="text-sm font-medium text-ink-2">
                   {syncProgress?.message}
                 </span>
                 {syncProgress && syncProgress.total > 0 && (
-                  <span className="ml-auto text-xs font-medium bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded">
+                  <span className="ml-auto text-xs font-medium bg-inset px-2 py-1 rounded">
                     {syncProgress.current}/{syncProgress.total}
                   </span>
                 )}
               </div>
               {syncProgress && syncProgress.total > 0 && (
-                <div className="mt-3 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div className="mt-3 h-2 bg-inset rounded-full overflow-hidden">
                   <div
                     className="h-full bg-blue-500 transition-all duration-300 ease-out"
                     style={{ width: `${(syncProgress.current / syncProgress.total) * 100}%` }}
@@ -704,7 +695,7 @@ function FeedPageContent(): React.ReactElement {
                   >
                     {/* Thumbnail */}
                     {item.media?.[0] ? (
-                      <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-gray-200 dark:bg-gray-700">
+                      <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-inset">
                         <img
                           src={item.media[0].thumbnailUrl || item.media[0].url}
                           alt=""
@@ -712,7 +703,7 @@ function FeedPageContent(): React.ReactElement {
                         />
                       </div>
                     ) : item.articlePreview?.imageUrl ? (
-                      <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-gray-200 dark:bg-gray-700">
+                      <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-inset">
                         <img
                           src={item.articlePreview.imageUrl}
                           alt=""
@@ -720,7 +711,7 @@ function FeedPageContent(): React.ReactElement {
                         />
                       </div>
                     ) : (
-                      <div className="w-16 h-16 rounded-lg flex-shrink-0 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                      <div className="w-16 h-16 rounded-lg flex-shrink-0 bg-inset flex items-center justify-center">
                         <span className="text-2xl">💬</span>
                       </div>
                     )}
@@ -734,7 +725,7 @@ function FeedPageContent(): React.ReactElement {
                             className="w-4 h-4 rounded-full"
                           />
                         )}
-                        <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        <span className="text-sm font-medium text-ink truncate">
                           @{item.author}
                         </span>
                         {item.category && item.category !== 'tweet' && (
@@ -743,19 +734,19 @@ function FeedPageContent(): React.ReactElement {
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                      <p className="text-sm text-ink-2 line-clamp-2">
                         {item.text}
                       </p>
                     </div>
                   </div>
                 ))}
                 {streamedItems.length > 10 && (
-                  <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-center text-sm text-ink-3">
                     +{streamedItems.length - 10} more bookmarks...
                   </p>
                 )}
                 {streamedItems.length === 0 && isSyncing && (
-                  <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-8">
+                  <p className="text-center text-sm text-ink-3 py-8">
                     Waiting for bookmarks...
                   </p>
                 )}
@@ -805,26 +796,9 @@ function FeedPageContent(): React.ReactElement {
         />
       </ErrorBoundary>
 
-      <div className="p-4">
-        {/* Live community pulse — self-hides when there's no recent activity */}
-        <LivePulse />
-
-        {stats.unread > 0 && (
-          <div className="mb-4 flex justify-center">
-            <button
-              onClick={() => openTriage(items.filter((i) => !i.isRead), 0)}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full font-semibold text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-lg hover:scale-[1.02] transition-all"
-            >
-              <Zap className="w-4 h-4" />
-              Triage {stats.unread} unread
-              {triageStreak > 0 && (
-                <span className="flex items-center gap-1 ml-1 text-orange-200">
-                  <Flame className="w-4 h-4" /> {triageStreak}
-                </span>
-              )}
-            </button>
-          </div>
-        )}
+      {/* Triage now lives in the top bar (Matter); it dispatches `open-triage`,
+          which we listen for below. Live activity moved to the Discover view. */}
+      <div className="px-4 sm:px-[26px] py-4">
         <ErrorBoundary componentName="FeedGrid">
           <FeedGrid
             items={items}
@@ -848,7 +822,8 @@ function FeedPageContent(): React.ReactElement {
           isOpen={triageOpen}
           onClose={() => {
             setTriageOpen(false)
-            refreshStreak()
+            // Refresh the top-bar streak + counts after a triage session.
+            window.dispatchEvent(new CustomEvent('stats-updated'))
           }}
           initialQueue={triageQueue}
           startIndex={triageStart}

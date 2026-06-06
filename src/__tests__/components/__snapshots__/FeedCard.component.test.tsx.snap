@@ -5,49 +5,59 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > '4
   class="mb-4 break-inside-avoid transition-all duration-300 "
 >
   <div
-    class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
   >
-    <div
-      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
-    >
-      <div
-        class="flex items-start justify-between p-3"
-      >
-        <span
-          class="flex items-center gap-1.5"
-        >
-          <span
-            class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
-          >
-            Photos
-          </span>
-        </span>
-        <span
-          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
-        >
-          now
-        </span>
-      </div>
-    </div>
     <div
       class="relative"
     >
       <img
         alt=""
-        class="w-full object-cover transition-opacity opacity-0"
+        class="w-full object-cover bg-black aspect-[var(--m-ar)] sm:aspect-[4/3] transition-opacity opacity-0"
         loading="lazy"
         src="https://pbs.twimg.com/media/G-e63eNWkAATqEB.jpg?name=orig"
-        style="aspect-ratio: 1.4586666666666666;"
+        style="--m-ar: 1.4586666666666666;"
       />
       <div
-        class="absolute inset-0 bg-gray-200 dark:bg-gray-700 animate-pulse"
+        class="absolute inset-0 bg-inset animate-pulse"
       />
       <div
-        class="absolute top-10 right-4 bg-black/70 text-white text-xs font-medium px-2 py-0.5 rounded-full"
+        class="absolute top-2.5 left-2.5 flex items-center gap-1.5 group-hover:opacity-0 transition-opacity"
+      >
+        <span
+          class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
+        >
+          <span
+            class="w-[5px] h-[5px] rounded-full flex-none bg-type-photo"
+          />
+          Photo
+        </span>
+        <span
+          class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
+        >
+          <svg
+            aria-hidden="true"
+            fill="currentColor"
+            height="13"
+            viewBox="0 0 24 24"
+            width="13"
+          >
+            <path
+              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+            />
+          </svg>
+        </span>
+      </div>
+      <span
+        class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5 group-hover:opacity-0 transition-opacity"
+      >
+        now
+      </span>
+      <span
+        class="absolute bottom-2.5 right-2.5 font-mono text-[11px] text-white bg-black/60 rounded-full px-2 py-0.5"
       >
         1/
         4
-      </div>
+      </span>
     </div>
     <div
       class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
@@ -70,7 +80,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > '4
             iamgdsa
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-green-500 hover:bg-green-600 text-white"
+            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
           >
             <svg
@@ -102,58 +112,55 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
   class="mb-4 break-inside-avoid transition-all duration-300 "
 >
   <div
-    class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
   >
-    <div
-      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
-    >
+    <div>
       <div
-        class="flex items-start justify-between p-3"
+        class="relative h-[120px] overflow-hidden bg-black"
       >
-        <span
-          class="flex items-center gap-1.5"
+        <div
+          class="absolute top-2.5 left-2.5 flex items-center gap-1.5"
         >
           <span
-            class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+            class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
           >
-            X Article
+            <span
+              class="w-[5px] h-[5px] rounded-full flex-none bg-type-article"
+            />
+            Article
           </span>
-        </span>
+          <span
+            class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
+          >
+            <svg
+              aria-hidden="true"
+              fill="currentColor"
+              height="13"
+              viewBox="0 0 24 24"
+              width="13"
+            >
+              <path
+                d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+              />
+            </svg>
+          </span>
+        </div>
         <span
-          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+          class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5"
         >
           now
         </span>
       </div>
-    </div>
-    <div
-      class="relative min-h-[200px] overflow-hidden"
-    >
       <div
-        class="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900"
-      >
-        <div
-          class="absolute inset-0 opacity-[0.15] mix-blend-overlay"
-          style="background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"); background-size: 100px 100px;"
-        />
-        <div
-          class="absolute inset-0 opacity-[0.03]"
-          style="background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255, 255, 255, 0.5) 10px, rgba(255, 255, 255, 0.5) 11px);"
-        />
-        <div
-          class="absolute -top-20 -right-20 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl"
-        />
-      </div>
-      <div
-        class="relative p-4 pt-8 h-full flex flex-col"
+        class="bg-surface pt-[13px] px-[15px] pb-[15px]"
       >
         <h3
-          class="text-white font-semibold text-sm line-clamp-2 mb-1"
+          class="font-serif font-semibold text-[16px] leading-tight text-ink mb-1.5 line-clamp-2"
         >
           human data will be a $1 trillion/year market
         </h3>
         <p
-          class="text-white/80 text-xs line-clamp-3 flex-1"
+          class="text-[13px] text-ink-2 leading-snug line-clamp-2"
         >
           human data will be a $1 trillion/year market
 This is not a short-term prediction. It is a structural claim about where the economy converges.
@@ -182,7 +189,7 @@ To believe this, you need to accept two assumptions:
             aliniikk
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-green-500 hover:bg-green-600 text-white"
+            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
           >
             <svg
@@ -214,55 +221,60 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
   class="mb-4 break-inside-avoid transition-all duration-300 "
 >
   <div
-    class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
   >
-    <div
-      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
-    >
+    <div>
       <div
-        class="flex items-start justify-between p-3"
+        class="relative h-[120px] overflow-hidden bg-black"
       >
-        <span
-          class="flex items-center gap-1.5"
+        <img
+          alt=""
+          class="w-full h-full object-cover opacity-55"
+          src="https://pbs.twimg.com/media/G-E_92mXcAALnrI.jpg"
+        />
+        <div
+          class="absolute top-2.5 left-2.5 flex items-center gap-1.5"
         >
           <span
-            class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+            class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
           >
-            X Article
+            <span
+              class="w-[5px] h-[5px] rounded-full flex-none bg-type-article"
+            />
+            Article
           </span>
-        </span>
+          <span
+            class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
+          >
+            <svg
+              aria-hidden="true"
+              fill="currentColor"
+              height="13"
+              viewBox="0 0 24 24"
+              width="13"
+            >
+              <path
+                d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+              />
+            </svg>
+          </span>
+        </div>
         <span
-          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+          class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5"
         >
           now
         </span>
       </div>
-    </div>
-    <div
-      class="relative min-h-[200px] overflow-hidden"
-    >
       <div
-        class="absolute inset-0"
-      >
-        <img
-          alt=""
-          class="w-full h-full object-cover"
-          src="https://pbs.twimg.com/media/G-E_92mXcAALnrI.jpg"
-        />
-        <div
-          class="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/30"
-        />
-      </div>
-      <div
-        class="relative p-4 pt-8 h-full flex flex-col"
+        class="bg-surface pt-[13px] px-[15px] pb-[15px]"
       >
         <h3
-          class="text-white font-semibold text-sm line-clamp-2 mb-1"
+          class="font-serif font-semibold text-[16px] leading-tight text-ink mb-1.5 line-clamp-2"
         >
           How to Get Shredded (Without Even Trying)
         </h3>
         <p
-          class="text-white/80 text-xs line-clamp-3 flex-1"
+          class="text-[13px] text-ink-2 leading-snug line-clamp-2"
         >
           Guys. I finally did it. After years of fidgeting with macros, intermittent fasting, and diet “hacks”, I finally got hyperlean. My visceral fat vanished, muscles are fuller, and vascularity is through
         </p>
@@ -289,7 +301,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
             NoahRyanCo
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-green-500 hover:bg-green-600 text-white"
+            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
           >
             <svg
@@ -321,45 +333,23 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'e
   class="mb-4 break-inside-avoid transition-all duration-300 "
 >
   <div
-    class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
   >
-    <div
-      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
-    >
-      <div
-        class="flex items-start justify-between p-3"
-      >
-        <span
-          class="flex items-center gap-1.5"
-        >
-          <span
-            class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
-          >
-            Video
-          </span>
-        </span>
-        <span
-          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
-        >
-          now
-        </span>
-      </div>
-    </div>
     <div
       class="relative"
     >
       <img
         alt=""
-        class="w-full object-cover bg-black"
+        class="w-full object-cover bg-black aspect-[var(--m-ar)] sm:aspect-[4/3]"
         referrerpolicy="no-referrer"
         src="https://pbs.twimg.com/amplify_video_thumb/2009617113384706048/img/uUdl5DT48QRZSEHb.jpg"
-        style="aspect-ratio: 1.7777777777777777;"
+        style="--m-ar: 1.7777777777777777;"
       />
       <div
         class="absolute inset-0 flex items-center justify-center pointer-events-none"
       >
         <div
-          class="w-12 h-12 bg-black/60 rounded-full flex items-center justify-center"
+          class="w-14 h-14 rounded-full bg-black/[0.42] backdrop-blur border border-white/50 flex items-center justify-center"
         >
           <svg
             class="lucide lucide-play h-6 w-6 text-white ml-1"
@@ -379,6 +369,38 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'e
           </svg>
         </div>
       </div>
+      <div
+        class="absolute top-2.5 left-2.5 flex items-center gap-1.5 group-hover:opacity-0 transition-opacity"
+      >
+        <span
+          class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
+        >
+          <span
+            class="w-[5px] h-[5px] rounded-full flex-none bg-type-video"
+          />
+          Video
+        </span>
+        <span
+          class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
+        >
+          <svg
+            aria-hidden="true"
+            fill="currentColor"
+            height="13"
+            viewBox="0 0 24 24"
+            width="13"
+          >
+            <path
+              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+            />
+          </svg>
+        </span>
+      </div>
+      <span
+        class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5 group-hover:opacity-0 transition-opacity"
+      >
+        now
+      </span>
     </div>
     <div
       class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
@@ -401,7 +423,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'e
             moonpay
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-green-500 hover:bg-green-600 text-white"
+            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
           >
             <svg
@@ -433,43 +455,53 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
   class="mb-4 break-inside-avoid transition-all duration-300 "
 >
   <div
-    class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
   >
-    <div
-      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
-    >
-      <div
-        class="flex items-start justify-between p-3"
-      >
-        <span
-          class="flex items-center gap-1.5"
-        >
-          <span
-            class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
-          >
-            Photo
-          </span>
-        </span>
-        <span
-          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
-        >
-          now
-        </span>
-      </div>
-    </div>
     <div
       class="relative"
     >
       <img
         alt=""
-        class="w-full object-cover transition-opacity opacity-0"
+        class="w-full object-cover bg-black aspect-[var(--m-ar)] sm:aspect-[4/3] transition-opacity opacity-0"
         loading="lazy"
         src="https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg?name=orig"
-        style="aspect-ratio: 1;"
+        style="--m-ar: 1;"
       />
       <div
-        class="absolute inset-0 bg-gray-200 dark:bg-gray-700 animate-pulse"
+        class="absolute inset-0 bg-inset animate-pulse"
       />
+      <div
+        class="absolute top-2.5 left-2.5 flex items-center gap-1.5 group-hover:opacity-0 transition-opacity"
+      >
+        <span
+          class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
+        >
+          <span
+            class="w-[5px] h-[5px] rounded-full flex-none bg-type-photo"
+          />
+          Photo
+        </span>
+        <span
+          class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
+        >
+          <svg
+            aria-hidden="true"
+            fill="currentColor"
+            height="13"
+            viewBox="0 0 24 24"
+            width="13"
+          >
+            <path
+              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+            />
+          </svg>
+        </span>
+      </div>
+      <span
+        class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5 group-hover:opacity-0 transition-opacity"
+      >
+        now
+      </span>
     </div>
     <div
       class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
@@ -492,7 +524,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
             maverickecom
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-green-500 hover:bg-green-600 text-white"
+            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
           >
             <svg
@@ -524,49 +556,59 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
   class="mb-4 break-inside-avoid transition-all duration-300 "
 >
   <div
-    class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
   >
-    <div
-      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
-    >
-      <div
-        class="flex items-start justify-between p-3"
-      >
-        <span
-          class="flex items-center gap-1.5"
-        >
-          <span
-            class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
-          >
-            Photos
-          </span>
-        </span>
-        <span
-          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
-        >
-          now
-        </span>
-      </div>
-    </div>
     <div
       class="relative"
     >
       <img
         alt=""
-        class="w-full object-cover transition-opacity opacity-0"
+        class="w-full object-cover bg-black aspect-[var(--m-ar)] sm:aspect-[4/3] transition-opacity opacity-0"
         loading="lazy"
         src="https://pbs.twimg.com/media/G-w2zr6aEAAt-FN.png?name=orig"
-        style="aspect-ratio: 1.7773195876288659;"
+        style="--m-ar: 1.7773195876288659;"
       />
       <div
-        class="absolute inset-0 bg-gray-200 dark:bg-gray-700 animate-pulse"
+        class="absolute inset-0 bg-inset animate-pulse"
       />
       <div
-        class="absolute top-10 right-4 bg-black/70 text-white text-xs font-medium px-2 py-0.5 rounded-full"
+        class="absolute top-2.5 left-2.5 flex items-center gap-1.5 group-hover:opacity-0 transition-opacity"
+      >
+        <span
+          class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
+        >
+          <span
+            class="w-[5px] h-[5px] rounded-full flex-none bg-type-photo"
+          />
+          Photo
+        </span>
+        <span
+          class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
+        >
+          <svg
+            aria-hidden="true"
+            fill="currentColor"
+            height="13"
+            viewBox="0 0 24 24"
+            width="13"
+          >
+            <path
+              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+            />
+          </svg>
+        </span>
+      </div>
+      <span
+        class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5 group-hover:opacity-0 transition-opacity"
+      >
+        now
+      </span>
+      <span
+        class="absolute bottom-2.5 right-2.5 font-mono text-[11px] text-white bg-black/60 rounded-full px-2 py-0.5"
       >
         1/
         2
-      </div>
+      </span>
     </div>
     <div
       class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
@@ -589,7 +631,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
             BasilTheGreat
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-green-500 hover:bg-green-600 text-white"
+            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
           >
             <svg
@@ -621,330 +663,333 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
   class="mb-4 break-inside-avoid transition-all duration-300 "
 >
   <div
-    class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
   >
     <div
-      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
+      class="bg-surface p-4"
     >
       <div
-        class="flex items-start justify-between p-3"
+        class="flex items-center justify-between mb-3"
       >
+        <span
+          class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
+        >
+          <span
+            class="w-[5px] h-[5px] rounded-full flex-none bg-type-quote"
+          />
+          Quote
+        </span>
         <span
           class="flex items-center gap-1.5"
         >
-          <span
-            class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+          <svg
+            aria-hidden="true"
+            class="text-ink-3"
+            fill="currentColor"
+            height="13"
+            viewBox="0 0 24 24"
+            width="13"
           >
-            Quote
+            <path
+              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+            />
+          </svg>
+          <span
+            class="font-mono text-[11px] text-ink-3"
+          >
+            now
           </span>
         </span>
-        <span
-          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
-        >
-          now
+      </div>
+      <div
+        class="text-[14px] text-ink leading-normal whitespace-pre-line"
+      >
+        <span>
+          <span>
+            ⚡️This is a live containment operation.
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            The strike was real. The reversal was real.
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            This is state-level controlled ignition.
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            There was a greenlight. Then a high-level override.
+          </span>
+          <br />
+          <span>
+            Carrier strike groups moved. Bombers were armed.
+          </span>
+          <br />
+          <span>
+            Evacuation flights were ordered, then stood down.
+          </span>
+          <br />
+          <span>
+            Chalk orders were issued. Logs show “mission called off.”
+          </span>
+          <br />
+          <span>
+            The clock was ticking and the clock stopped.
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            Why?
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            Because something broke the symmetry.
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            Trump went on camera. Iran halted executions.
+          </span>
+          <br />
+          <span>
+            A backchannel was opened via Pakistan.
+          </span>
+          <br />
+          <span>
+            Regional actors like Saudi Arabia, Egypt, and Qatar intervened to prevent use of airspace.
+          </span>
+          <br />
+          <span>
+            A UN Security Council session was triggered mid-crisis.
+          </span>
+          <br />
+          <span>
+            The airspace closure, the rerouted commercial flights, the military standby - all of it was real.
+          </span>
+          <br />
+          <span>
+            The response was not symbolic. It was surgical.
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            The deterrent message was delivered with maximum ambiguity.
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            Iran blinked. Trump flexed. But neither side collapsed.
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            This was a trial run.
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            The US gained full-spectrum data on Iranian readiness.
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            Command latency. Radar activation. Defensive posture.
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            Iran showed its hand under pressure. 
+          </span>
+          <br />
+          <span>
+            The Pentagon watched every move.
+          </span>
+          <br />
+          <span>
+            What the US just did was a dry-run ignition protocol to test reflexes.
+          </span>
+          <br />
+          <span>
+            And it worked.
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            No bombs dropped. No martyrs made.
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            But the field was mapped, the pressure applied, and the exit offered.
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            Trump now controls the pace of escalation.
+          </span>
+          <br />
+          <span>
+            Iran is buying time through signals and intermediaries.
+          </span>
+          <br />
+          <span>
+            The Ayatollah is either evacuating or preparing an internal firewall.
+          </span>
+          <br />
+          <span>
+            Both are collapse moves.
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            The sanctions, the media leaks, the social media info war - they are not distractions.
+          </span>
+          <br />
+          <span>
+            They are phase 2 of a psyops-led siege campaign.
+          </span>
+          <br />
+          <span>
+            Collapse without a missile. Submission through saturation.
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            This is war by other means.
+          </span>
+          <br />
+          <span>
+            The strike is no longer the question.
+          </span>
+          <br />
+          <span>
+            The strike is now leverage.
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            Collapse has entered the slow spiral.
+          </span>
+          <br />
+          <span>
+            No fundamental rescue exists inside Iran.
+          </span>
+          <br />
+          <span>
+            Sanctions are deepening. Capital is fleeing.
+          </span>
+          <br />
+          <span>
+            Water shortages, blackouts, repression - all accelerating.
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            The regime is now hostage to its own stagnation.
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            And everyone at the top of the game knows it.
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            This was not about killing leaders.
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            This was about proving who moves the sky.
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            And now the whole world sees who moves it.
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            The tempo of collapse has entered American control.
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            Not by force. By frequency.
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            The signal has been sent.
+          </span>
         </span>
       </div>
-    </div>
-    <div
-      class="relative p-4 pt-8 bg-white dark:bg-gradient-to-br dark:from-gray-700 dark:to-gray-900 min-h-[200px]"
-    >
       <div
-        class="absolute inset-0 opacity-[0.02] dark:opacity-[0.08] pointer-events-none"
-        style="background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");"
-      />
-      <div
-        class="relative z-10"
+        class="bg-inset border border-hairline rounded-[10px] pt-[11px] px-[13px] pb-[11px] mt-3"
       >
-        <p
-          class="text-gray-800 dark:text-white text-sm mb-3 line-clamp-3"
+        <div
+          class="text-clay font-bold text-[12.5px] mb-0.5"
+        >
+          @
+          Faytuks
+        </div>
+        <div
+          class="text-[12.5px] text-ink-2 leading-snug line-clamp-2"
         >
           <span>
             <span>
-              ⚡️This is a live containment operation.
+              NEW - Arab governments believe US-Iran tension has ‘de-escalated’ after Intense diplomatic efforts, according to three people close to Arab governments - Financial Times
             </span>
             <br />
             <span />
             <br />
             <span>
-              The strike was real. The reversal was real.
+              “Things have de-escalated for now,” said one Arab official.
             </span>
             <br />
             <span />
             <br />
-            <span>
-              This is state-level controlled ignition.
-            </span>
-            <br />
             <span />
-            <br />
-            <span>
-              There was a greenlight. Then a high-level override.
-            </span>
-            <br />
-            <span>
-              Carrier strike groups moved. Bombers were armed.
-            </span>
-            <br />
-            <span>
-              Evacuation flights were ordered, then stood down.
-            </span>
-            <br />
-            <span>
-              Chalk orders were issued. Logs show “mission called off.”
-            </span>
-            <br />
-            <span>
-              The clock was ticking and the clock stopped.
-            </span>
-            <br />
+            <a
+              class="text-blue-400 hover:text-blue-300 hover:underline break-all"
+              href="https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              https://www.ft.com/content/df0c0833-59f6...
+            </a>
             <span />
-            <br />
-            <span>
-              Why?
-            </span>
-            <br />
-            <span />
-            <br />
-            <span>
-              Because something broke the symmetry.
-            </span>
-            <br />
-            <span />
-            <br />
-            <span>
-              Trump went on camera. Iran halted executions.
-            </span>
-            <br />
-            <span>
-              A backchannel was opened via Pakistan.
-            </span>
-            <br />
-            <span>
-              Regional actors like Saudi Arabia, Egypt, and Qatar intervened to prevent use of airspace.
-            </span>
-            <br />
-            <span>
-              A UN Security Council session was triggered mid-crisis.
-            </span>
-            <br />
-            <span>
-              The airspace closure, the rerouted commercial flights, the military standby - all of it was real.
-            </span>
-            <br />
-            <span>
-              The response was not symbolic. It was surgical.
-            </span>
-            <br />
-            <span />
-            <br />
-            <span>
-              The deterrent message was delivered with maximum ambiguity.
-            </span>
-            <br />
-            <span />
-            <br />
-            <span>
-              Iran blinked. Trump flexed. But neither side collapsed.
-            </span>
-            <br />
-            <span />
-            <br />
-            <span>
-              This was a trial run.
-            </span>
-            <br />
-            <span />
-            <br />
-            <span>
-              The US gained full-spectrum data on Iranian readiness.
-            </span>
-            <br />
-            <span />
-            <br />
-            <span>
-              Command latency. Radar activation. Defensive posture.
-            </span>
-            <br />
-            <span />
-            <br />
-            <span>
-              Iran showed its hand under pressure. 
-            </span>
-            <br />
-            <span>
-              The Pentagon watched every move.
-            </span>
-            <br />
-            <span>
-              What the US just did was a dry-run ignition protocol to test reflexes.
-            </span>
-            <br />
-            <span>
-              And it worked.
-            </span>
-            <br />
-            <span />
-            <br />
-            <span>
-              No bombs dropped. No martyrs made.
-            </span>
-            <br />
-            <span />
-            <br />
-            <span>
-              But the field was mapped, the pressure applied, and the exit offered.
-            </span>
-            <br />
-            <span />
-            <br />
-            <span>
-              Trump now controls the pace of escalation.
-            </span>
-            <br />
-            <span>
-              Iran is buying time through signals and intermediaries.
-            </span>
-            <br />
-            <span>
-              The Ayatollah is either evacuating or preparing an internal firewall.
-            </span>
-            <br />
-            <span>
-              Both are collapse moves.
-            </span>
-            <br />
-            <span />
-            <br />
-            <span>
-              The sanctions, the media leaks, the social media info war - they are not distractions.
-            </span>
-            <br />
-            <span>
-              They are phase 2 of a psyops-led siege campaign.
-            </span>
-            <br />
-            <span>
-              Collapse without a missile. Submission through saturation.
-            </span>
-            <br />
-            <span />
-            <br />
-            <span>
-              This is war by other means.
-            </span>
-            <br />
-            <span>
-              The strike is no longer the question.
-            </span>
-            <br />
-            <span>
-              The strike is now leverage.
-            </span>
-            <br />
-            <span />
-            <br />
-            <span>
-              Collapse has entered the slow spiral.
-            </span>
-            <br />
-            <span>
-              No fundamental rescue exists inside Iran.
-            </span>
-            <br />
-            <span>
-              Sanctions are deepening. Capital is fleeing.
-            </span>
-            <br />
-            <span>
-              Water shortages, blackouts, repression - all accelerating.
-            </span>
-            <br />
-            <span />
-            <br />
-            <span>
-              The regime is now hostage to its own stagnation.
-            </span>
-            <br />
-            <span />
-            <br />
-            <span>
-              And everyone at the top of the game knows it.
-            </span>
-            <br />
-            <span />
-            <br />
-            <span>
-              This was not about killing leaders.
-            </span>
-            <br />
-            <span />
-            <br />
-            <span>
-              This was about proving who moves the sky.
-            </span>
-            <br />
-            <span />
-            <br />
-            <span>
-              And now the whole world sees who moves it.
-            </span>
-            <br />
-            <span />
-            <br />
-            <span>
-              The tempo of collapse has entered American control.
-            </span>
-            <br />
-            <span />
-            <br />
-            <span>
-              Not by force. By frequency.
-            </span>
-            <br />
-            <span />
-            <br />
-            <span>
-              The signal has been sent.
-            </span>
           </span>
-        </p>
-        <div
-          class="bg-gray-100 dark:bg-white/10 rounded-lg p-3"
-        >
-          <p
-            class="text-gray-600 dark:text-white/80 text-xs mb-1"
-          >
-            @
-            Faytuks
-          </p>
-          <p
-            class="text-gray-500 dark:text-white/70 text-xs line-clamp-2"
-          >
-            <span>
-              <span>
-                NEW - Arab governments believe US-Iran tension has ‘de-escalated’ after Intense diplomatic efforts, according to three people close to Arab governments - Financial Times
-              </span>
-              <br />
-              <span />
-              <br />
-              <span>
-                “Things have de-escalated for now,” said one Arab official.
-              </span>
-              <br />
-              <span />
-              <br />
-              <span />
-              <a
-                class="text-blue-400 hover:text-blue-300 hover:underline break-all"
-                href="https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72"
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                https://www.ft.com/content/df0c0833-59f6...
-              </a>
-              <span />
-            </span>
-          </p>
         </div>
       </div>
     </div>
@@ -969,7 +1014,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
             _The_Prophet__
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-green-500 hover:bg-green-600 text-white"
+            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
           >
             <svg
@@ -1001,53 +1046,53 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'p
   class="mb-4 break-inside-avoid transition-all duration-300 "
 >
   <div
-    class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
   >
     <div
-      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
+      class="bg-surface p-4"
     >
       <div
-        class="flex items-start justify-between p-3"
+        class="flex items-center justify-between mb-3"
       >
+        <span
+          class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
+        >
+          <span
+            class="w-[5px] h-[5px] rounded-full flex-none bg-type-text"
+          />
+          Text
+        </span>
         <span
           class="flex items-center gap-1.5"
         >
-          <span
-            class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+          <svg
+            aria-hidden="true"
+            class="text-ink-3"
+            fill="currentColor"
+            height="13"
+            viewBox="0 0 24 24"
+            width="13"
           >
-            Text
+            <path
+              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+            />
+          </svg>
+          <span
+            class="font-mono text-[11px] text-ink-3"
+          >
+            now
           </span>
         </span>
-        <span
-          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
-        >
-          now
-        </span>
       </div>
-    </div>
-    <div
-      class="relative p-4 pt-8 bg-white dark:bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 min-h-[150px] max-h-[300px] overflow-hidden"
-    >
       <div
-        class="absolute inset-0 opacity-[0.02] dark:opacity-[0.08] pointer-events-none"
-        style="background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");"
-      />
-      <div
-        class="relative z-10"
+        class="text-[14px] text-ink leading-normal whitespace-pre-line line-clamp-[12]"
       >
-        <p
-          class="text-gray-800 dark:text-white text-sm leading-relaxed line-clamp-[12]"
-        >
+        <span>
           <span>
-            <span>
-              What movie is 10/10, yet hardly anyone has heard of it?
-            </span>
+            What movie is 10/10, yet hardly anyone has heard of it?
           </span>
-        </p>
+        </span>
       </div>
-      <div
-        class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-gray-900 to-transparent pointer-events-none"
-      />
     </div>
     <div
       class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
@@ -1070,7 +1115,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'p
             TheCinesthetic
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-green-500 hover:bg-green-600 text-white"
+            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
           >
             <svg
@@ -1102,199 +1147,202 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
   class="mb-4 break-inside-avoid transition-all duration-300 "
 >
   <div
-    class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
   >
     <div
-      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
+      class="bg-surface p-4"
     >
       <div
-        class="flex items-start justify-between p-3"
+        class="flex items-center justify-between mb-3"
       >
+        <span
+          class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
+        >
+          <span
+            class="w-[5px] h-[5px] rounded-full flex-none bg-type-quote"
+          />
+          Quote
+        </span>
         <span
           class="flex items-center gap-1.5"
         >
-          <span
-            class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+          <svg
+            aria-hidden="true"
+            class="text-ink-3"
+            fill="currentColor"
+            height="13"
+            viewBox="0 0 24 24"
+            width="13"
           >
-            Quote
+            <path
+              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+            />
+          </svg>
+          <span
+            class="font-mono text-[11px] text-ink-3"
+          >
+            now
           </span>
         </span>
-        <span
-          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
-        >
-          now
+      </div>
+      <div
+        class="text-[14px] text-ink leading-normal whitespace-pre-line"
+      >
+        <span>
+          <span>
+            for all of you guys that haven’t cracked organic yet
+          </span>
+          <br />
+          <span />
+          <br />
+          <span>
+            you’re welcome
+          </span>
         </span>
       </div>
-    </div>
-    <div
-      class="relative p-4 pt-8 bg-white dark:bg-gradient-to-br dark:from-gray-700 dark:to-gray-900 min-h-[200px]"
-    >
       <div
-        class="absolute inset-0 opacity-[0.02] dark:opacity-[0.08] pointer-events-none"
-        style="background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");"
-      />
-      <div
-        class="relative z-10"
+        class="bg-inset border border-hairline rounded-[10px] pt-[11px] px-[13px] pb-[11px] mt-3"
       >
-        <p
-          class="text-gray-800 dark:text-white text-sm mb-3 line-clamp-3"
+        <div
+          class="text-clay font-bold text-[12.5px] mb-0.5"
+        >
+          @
+          maverickecom
+        </div>
+        <div
+          class="text-[12.5px] text-ink-2 leading-snug line-clamp-2"
         >
           <span>
             <span>
-              for all of you guys that haven’t cracked organic yet
+              Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory
             </span>
             <br />
             <span />
             <br />
             <span>
-              you’re welcome
+              We built a fully automated system that repurposes, localizes, and launches winning TikTok Shop content across hundreds of creator-style accounts.
+            </span>
+            <br />
+            <span />
+            <br />
+            <span>
+              It’s so effective it feels like running Facebook ads in 2008. 
+            </span>
+            <br />
+            <span />
+            <br />
+            <span>
+              - CPMs as low as $0.10
+            </span>
+            <br />
+            <span>
+              - no reliance on paid ads 
+            </span>
+            <br />
+            <span>
+              - no ghost creators
+            </span>
+            <br />
+            <span>
+              - no wasted samples
+            </span>
+            <br />
+            <span>
+              - no lost time 
+            </span>
+            <br />
+            <span />
+            <br />
+            <span>
+              My $300/monthly tech stack which replaced $50k+ budget:
+            </span>
+            <br />
+            <span />
+            <br />
+            <span>
+              - manus for product research and viral script ideas 
+            </span>
+            <br />
+            <span>
+              - cruva / Fastmoss for recently viral content ideas from competitors 
+            </span>
+            <br />
+            <span>
+              - nano banana pro for images 
+            </span>
+            <br />
+            <span>
+              - kling 2.6 for video 
+            </span>
+            <br />
+            <span>
+              - now using my own phone posting network for automated posting 
+            </span>
+            <br />
+            <span />
+            <br />
+            <span>
+              Here’s how it works:
+            </span>
+            <br />
+            <span>
+              •Each AI Agent spins up a TikTok Shop–ready profile, built to sell my products through shoppable videos.
+            </span>
+            <br />
+            <span>
+              •Agents are prompted to research the niche, scrape winning TikTok Shop videos, and rebuild them with new hooks, angles, and UGC-style visuals tailored to your brand.
+            </span>
+            <br />
+            <span>
+              •They create and post daily using my tech stack onto affiliate accounts 
+            </span>
+            <br />
+            <span />
+            <br />
+            <span>
+              No touchpoints. No delays.
+            </span>
+            <br />
+            <span />
+            <br />
+            <span>
+              Just shoppable videos going live and GMV compounding every week.
+            </span>
+            <br />
+            <span />
+            <br />
+            <span>
+              Then we use an MPS (Multi-Platform Swarm) approach:
+            </span>
+            <br />
+            <span />
+            <br />
+            <span>
+              once the concept works on TikTok Shop, we deploy hundreds of AI Agents to flood the niche with variations that all drive back to your Shop and Amazon listing.
+            </span>
+            <br />
+            <span />
+            <br />
+            <span>
+              I’m giving you access to the full stack — the ai workflow, ready to plug into your TikTok Shop today.
+            </span>
+            <br />
+            <span />
+            <br />
+            <span>
+              Comment “Workflow” and I’ll send you everything.
+            </span>
+            <br />
+            <span>
+              (must be connected)
+            </span>
+            <br />
+            <span />
+            <br />
+            <span>
+              PS – Repost for early access to the full TikTok Shop content factory system.
             </span>
           </span>
-        </p>
-        <div
-          class="bg-gray-100 dark:bg-white/10 rounded-lg p-3"
-        >
-          <p
-            class="text-gray-600 dark:text-white/80 text-xs mb-1"
-          >
-            @
-            maverickecom
-          </p>
-          <p
-            class="text-gray-500 dark:text-white/70 text-xs line-clamp-2"
-          >
-            <span>
-              <span>
-                Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory
-              </span>
-              <br />
-              <span />
-              <br />
-              <span>
-                We built a fully automated system that repurposes, localizes, and launches winning TikTok Shop content across hundreds of creator-style accounts.
-              </span>
-              <br />
-              <span />
-              <br />
-              <span>
-                It’s so effective it feels like running Facebook ads in 2008. 
-              </span>
-              <br />
-              <span />
-              <br />
-              <span>
-                - CPMs as low as $0.10
-              </span>
-              <br />
-              <span>
-                - no reliance on paid ads 
-              </span>
-              <br />
-              <span>
-                - no ghost creators
-              </span>
-              <br />
-              <span>
-                - no wasted samples
-              </span>
-              <br />
-              <span>
-                - no lost time 
-              </span>
-              <br />
-              <span />
-              <br />
-              <span>
-                My $300/monthly tech stack which replaced $50k+ budget:
-              </span>
-              <br />
-              <span />
-              <br />
-              <span>
-                - manus for product research and viral script ideas 
-              </span>
-              <br />
-              <span>
-                - cruva / Fastmoss for recently viral content ideas from competitors 
-              </span>
-              <br />
-              <span>
-                - nano banana pro for images 
-              </span>
-              <br />
-              <span>
-                - kling 2.6 for video 
-              </span>
-              <br />
-              <span>
-                - now using my own phone posting network for automated posting 
-              </span>
-              <br />
-              <span />
-              <br />
-              <span>
-                Here’s how it works:
-              </span>
-              <br />
-              <span>
-                •Each AI Agent spins up a TikTok Shop–ready profile, built to sell my products through shoppable videos.
-              </span>
-              <br />
-              <span>
-                •Agents are prompted to research the niche, scrape winning TikTok Shop videos, and rebuild them with new hooks, angles, and UGC-style visuals tailored to your brand.
-              </span>
-              <br />
-              <span>
-                •They create and post daily using my tech stack onto affiliate accounts 
-              </span>
-              <br />
-              <span />
-              <br />
-              <span>
-                No touchpoints. No delays.
-              </span>
-              <br />
-              <span />
-              <br />
-              <span>
-                Just shoppable videos going live and GMV compounding every week.
-              </span>
-              <br />
-              <span />
-              <br />
-              <span>
-                Then we use an MPS (Multi-Platform Swarm) approach:
-              </span>
-              <br />
-              <span />
-              <br />
-              <span>
-                once the concept works on TikTok Shop, we deploy hundreds of AI Agents to flood the niche with variations that all drive back to your Shop and Amazon listing.
-              </span>
-              <br />
-              <span />
-              <br />
-              <span>
-                I’m giving you access to the full stack — the ai workflow, ready to plug into your TikTok Shop today.
-              </span>
-              <br />
-              <span />
-              <br />
-              <span>
-                Comment “Workflow” and I’ll send you everything.
-              </span>
-              <br />
-              <span>
-                (must be connected)
-              </span>
-              <br />
-              <span />
-              <br />
-              <span>
-                PS – Repost for early access to the full TikTok Shop content factory system.
-              </span>
-            </span>
-          </p>
         </div>
       </div>
     </div>
@@ -1319,7 +1367,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
             Nate_Google_
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-green-500 hover:bg-green-600 text-white"
+            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
           >
             <svg
@@ -1351,79 +1399,82 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
   class="mb-4 break-inside-avoid transition-all duration-300 "
 >
   <div
-    class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
   >
     <div
-      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
+      class="bg-surface p-4"
     >
       <div
-        class="flex items-start justify-between p-3"
+        class="flex items-center justify-between mb-3"
       >
+        <span
+          class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
+        >
+          <span
+            class="w-[5px] h-[5px] rounded-full flex-none bg-type-quote"
+          />
+          Quote
+        </span>
         <span
           class="flex items-center gap-1.5"
         >
-          <span
-            class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+          <svg
+            aria-hidden="true"
+            class="text-ink-3"
+            fill="currentColor"
+            height="13"
+            viewBox="0 0 24 24"
+            width="13"
           >
-            Quote
+            <path
+              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+            />
+          </svg>
+          <span
+            class="font-mono text-[11px] text-ink-3"
+          >
+            now
           </span>
         </span>
-        <span
-          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
-        >
-          now
+      </div>
+      <div
+        class="text-[14px] text-ink leading-normal whitespace-pre-line"
+      >
+        <span>
+          <span>
+            True
+          </span>
         </span>
       </div>
-    </div>
-    <div
-      class="relative p-4 pt-8 bg-white dark:bg-gradient-to-br dark:from-gray-700 dark:to-gray-900 min-h-[200px]"
-    >
       <div
-        class="absolute inset-0 opacity-[0.02] dark:opacity-[0.08] pointer-events-none"
-        style="background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");"
-      />
-      <div
-        class="relative z-10"
+        class="bg-inset border border-hairline rounded-[10px] pt-[11px] px-[13px] pb-[11px] mt-3"
       >
-        <p
-          class="text-gray-800 dark:text-white text-sm mb-3 line-clamp-3"
+        <div
+          class="text-clay font-bold text-[12.5px] mb-0.5"
+        >
+          @
+          TheAliceSmith
+        </div>
+        <div
+          class="text-[12.5px] text-ink-2 leading-snug line-clamp-2"
         >
           <span>
             <span>
-              True
+              Two of the most important twentieth-century academics behind woke views of sexuality were Michel Foucault and John Money.
+            </span>
+            <br />
+            <span />
+            <br />
+            <span>
+              Both were advocates for pedophilia and likely abusers themselves.
+            </span>
+            <br />
+            <span />
+            <br />
+            <span>
+              This is not a coincidence.
             </span>
           </span>
-        </p>
-        <div
-          class="bg-gray-100 dark:bg-white/10 rounded-lg p-3"
-        >
-          <p
-            class="text-gray-600 dark:text-white/80 text-xs mb-1"
-          >
-            @
-            TheAliceSmith
-          </p>
-          <p
-            class="text-gray-500 dark:text-white/70 text-xs line-clamp-2"
-          >
-            <span>
-              <span>
-                Two of the most important twentieth-century academics behind woke views of sexuality were Michel Foucault and John Money.
-              </span>
-              <br />
-              <span />
-              <br />
-              <span>
-                Both were advocates for pedophilia and likely abusers themselves.
-              </span>
-              <br />
-              <span />
-              <br />
-              <span>
-                This is not a coincidence.
-              </span>
-            </span>
-          </p>
         </div>
       </div>
     </div>
@@ -1448,7 +1499,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
             elonmusk
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-green-500 hover:bg-green-600 text-white"
+            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
           >
             <svg
@@ -1480,62 +1531,62 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'r
   class="mb-4 break-inside-avoid transition-all duration-300 "
 >
   <div
-    class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
   >
     <div
-      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
+      class="bg-surface p-4"
     >
       <div
-        class="flex items-start justify-between p-3"
+        class="flex items-center justify-between mb-3"
       >
+        <span
+          class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
+        >
+          <span
+            class="w-[5px] h-[5px] rounded-full flex-none bg-type-text"
+          />
+          Text
+        </span>
         <span
           class="flex items-center gap-1.5"
         >
-          <span
-            class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+          <svg
+            aria-hidden="true"
+            class="text-ink-3"
+            fill="currentColor"
+            height="13"
+            viewBox="0 0 24 24"
+            width="13"
           >
-            Text
+            <path
+              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+            />
+          </svg>
+          <span
+            class="font-mono text-[11px] text-ink-3"
+          >
+            now
           </span>
         </span>
-        <span
-          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
-        >
-          now
-        </span>
       </div>
-    </div>
-    <div
-      class="relative p-4 pt-8 bg-white dark:bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 min-h-[150px] max-h-[300px] overflow-hidden"
-    >
       <div
-        class="absolute inset-0 opacity-[0.02] dark:opacity-[0.08] pointer-events-none"
-        style="background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");"
-      />
-      <div
-        class="relative z-10"
+        class="text-[14px] text-ink leading-normal whitespace-pre-line line-clamp-[12]"
       >
-        <p
-          class="text-gray-800 dark:text-white text-sm leading-relaxed line-clamp-[12]"
-        >
+        <span>
           <span>
-            <span>
-              Based on recent reports, the UK government has approved postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing reorganisation, like merging councils into unitary authorities. Up to 63 councils could delay by a year to manage resources and avoid electing soon-abolished bodies, affecting millions of voters. Critics from Tories and Reform UK claim it's to evade losses amid low Labour polls. Sources: Telegraph, ITV, 
-            </span>
-            <a
-              class="text-blue-400 hover:text-blue-300 hover:underline break-all"
-              href="http://GOV.UK."
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              http://GOV.UK.
-            </a>
-            <span />
+            Based on recent reports, the UK government has approved postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing reorganisation, like merging councils into unitary authorities. Up to 63 councils could delay by a year to manage resources and avoid electing soon-abolished bodies, affecting millions of voters. Critics from Tories and Reform UK claim it's to evade losses amid low Labour polls. Sources: Telegraph, ITV, 
           </span>
-        </p>
+          <a
+            class="text-blue-400 hover:text-blue-300 hover:underline break-all"
+            href="http://GOV.UK."
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            http://GOV.UK.
+          </a>
+          <span />
+        </span>
       </div>
-      <div
-        class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-gray-900 to-transparent pointer-events-none"
-      />
     </div>
     <div
       class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
@@ -1558,7 +1609,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'r
             grok
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-green-500 hover:bg-green-600 text-white"
+            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
           >
             <svg
@@ -1590,91 +1641,94 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 't
   class="mb-4 break-inside-avoid transition-all duration-300 "
 >
   <div
-    class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
   >
     <div
-      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
+      class="bg-surface p-4"
     >
       <div
-        class="flex items-start justify-between p-3"
+        class="flex items-center justify-between mb-3"
       >
+        <span
+          class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
+        >
+          <span
+            class="w-[5px] h-[5px] rounded-full flex-none bg-type-quote"
+          />
+          Quote
+        </span>
         <span
           class="flex items-center gap-1.5"
         >
-          <span
-            class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+          <svg
+            aria-hidden="true"
+            class="text-ink-3"
+            fill="currentColor"
+            height="13"
+            viewBox="0 0 24 24"
+            width="13"
           >
-            Quote
+            <path
+              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+            />
+          </svg>
+          <span
+            class="font-mono text-[11px] text-ink-3"
+          >
+            now
           </span>
         </span>
-        <span
-          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
-        >
-          now
+      </div>
+      <div
+        class="text-[14px] text-ink leading-normal whitespace-pre-line"
+      >
+        <span>
+          <span>
+            insane how much goalposts have shifted that bfl can just drop a model that is ~10x better than Stable Diffusion while being ~as small and basically nobody bats an eye
+          </span>
         </span>
       </div>
-    </div>
-    <div
-      class="relative p-4 pt-8 bg-white dark:bg-gradient-to-br dark:from-gray-700 dark:to-gray-900 min-h-[200px]"
-    >
       <div
-        class="absolute inset-0 opacity-[0.02] dark:opacity-[0.08] pointer-events-none"
-        style="background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");"
-      />
-      <div
-        class="relative z-10"
+        class="bg-inset border border-hairline rounded-[10px] pt-[11px] px-[13px] pb-[11px] mt-3"
       >
-        <p
-          class="text-gray-800 dark:text-white text-sm mb-3 line-clamp-3"
+        <div
+          class="text-clay font-bold text-[12.5px] mb-0.5"
+        >
+          @
+          bfl_ml
+        </div>
+        <div
+          class="text-[12.5px] text-ink-2 leading-snug line-clamp-2"
         >
           <span>
             <span>
-              insane how much goalposts have shifted that bfl can just drop a model that is ~10x better than Stable Diffusion while being ~as small and basically nobody bats an eye
+              Introducing FLUX.2 [klein]. Blazing fast. Beautiful.
+            </span>
+            <br />
+            <span />
+            <br />
+            <span>
+              Generate stunning images in under a second while maintaining exceptional quality.
+            </span>
+            <br />
+            <span />
+            <br />
+            <span>
+              Great for fast editing, changing styles, and developing ideas from 0 → 1.
+            </span>
+            <br />
+            <span />
+            <br />
+            <span>
+              Available via API, or run it locally - Klein 4B under Apache 2.0, Klein 9B as open weights.
+            </span>
+            <br />
+            <span />
+            <br />
+            <span>
+              Try it for free in our demo app (link in the thread).
             </span>
           </span>
-        </p>
-        <div
-          class="bg-gray-100 dark:bg-white/10 rounded-lg p-3"
-        >
-          <p
-            class="text-gray-600 dark:text-white/80 text-xs mb-1"
-          >
-            @
-            bfl_ml
-          </p>
-          <p
-            class="text-gray-500 dark:text-white/70 text-xs line-clamp-2"
-          >
-            <span>
-              <span>
-                Introducing FLUX.2 [klein]. Blazing fast. Beautiful.
-              </span>
-              <br />
-              <span />
-              <br />
-              <span>
-                Generate stunning images in under a second while maintaining exceptional quality.
-              </span>
-              <br />
-              <span />
-              <br />
-              <span>
-                Great for fast editing, changing styles, and developing ideas from 0 → 1.
-              </span>
-              <br />
-              <span />
-              <br />
-              <span>
-                Available via API, or run it locally - Klein 4B under Apache 2.0, Klein 9B as open weights.
-              </span>
-              <br />
-              <span />
-              <br />
-              <span>
-                Try it for free in our demo app (link in the thread).
-              </span>
-            </span>
-          </p>
         </div>
       </div>
     </div>
@@ -1699,7 +1753,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 't
             swyx
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-green-500 hover:bg-green-600 text-white"
+            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
           >
             <svg
@@ -1731,45 +1785,23 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'v
   class="mb-4 break-inside-avoid transition-all duration-300 "
 >
   <div
-    class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
   >
-    <div
-      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
-    >
-      <div
-        class="flex items-start justify-between p-3"
-      >
-        <span
-          class="flex items-center gap-1.5"
-        >
-          <span
-            class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
-          >
-            Video
-          </span>
-        </span>
-        <span
-          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
-        >
-          now
-        </span>
-      </div>
-    </div>
     <div
       class="relative"
     >
       <img
         alt=""
-        class="w-full object-cover bg-black"
+        class="w-full object-cover bg-black aspect-[var(--m-ar)] sm:aspect-[4/3]"
         referrerpolicy="no-referrer"
         src="https://pbs.twimg.com/amplify_video_thumb/2011857732484423680/img/wFNhWwXUnF0woRwH.jpg"
-        style="aspect-ratio: 0.5625;"
+        style="--m-ar: 0.5625;"
       />
       <div
         class="absolute inset-0 flex items-center justify-center pointer-events-none"
       >
         <div
-          class="w-12 h-12 bg-black/60 rounded-full flex items-center justify-center"
+          class="w-14 h-14 rounded-full bg-black/[0.42] backdrop-blur border border-white/50 flex items-center justify-center"
         >
           <svg
             class="lucide lucide-play h-6 w-6 text-white ml-1"
@@ -1789,6 +1821,38 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'v
           </svg>
         </div>
       </div>
+      <div
+        class="absolute top-2.5 left-2.5 flex items-center gap-1.5 group-hover:opacity-0 transition-opacity"
+      >
+        <span
+          class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
+        >
+          <span
+            class="w-[5px] h-[5px] rounded-full flex-none bg-type-video"
+          />
+          Video
+        </span>
+        <span
+          class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
+        >
+          <svg
+            aria-hidden="true"
+            fill="currentColor"
+            height="13"
+            viewBox="0 0 24 24"
+            width="13"
+          >
+            <path
+              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+            />
+          </svg>
+        </span>
+      </div>
+      <span
+        class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5 group-hover:opacity-0 transition-opacity"
+      >
+        now
+      </span>
     </div>
     <div
       class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
@@ -1811,7 +1875,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'v
             Kekius_Sage
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-green-500 hover:bg-green-600 text-white"
+            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
           >
             <svg
@@ -1843,62 +1907,62 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'y
   class="mb-4 break-inside-avoid transition-all duration-300 "
 >
   <div
-    class="group relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer transition-shadow duration-300 "
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
   >
     <div
-      class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-[5] group-hover:opacity-0 transition-opacity pointer-events-none"
+      class="bg-surface p-4"
     >
       <div
-        class="flex items-start justify-between p-3"
+        class="flex items-center justify-between mb-3"
       >
+        <span
+          class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
+        >
+          <span
+            class="w-[5px] h-[5px] rounded-full flex-none bg-type-text"
+          />
+          Text
+        </span>
         <span
           class="flex items-center gap-1.5"
         >
-          <span
-            class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
+          <svg
+            aria-hidden="true"
+            class="text-ink-3"
+            fill="currentColor"
+            height="13"
+            viewBox="0 0 24 24"
+            width="13"
           >
-            Text
+            <path
+              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+            />
+          </svg>
+          <span
+            class="font-mono text-[11px] text-ink-3"
+          >
+            now
           </span>
         </span>
-        <span
-          class="text-[10px] font-semibold px-2 py-0.5 bg-white/20 text-white rounded-full"
-        >
-          now
-        </span>
       </div>
-    </div>
-    <div
-      class="relative p-4 pt-8 bg-white dark:bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 min-h-[150px] max-h-[300px] overflow-hidden"
-    >
       <div
-        class="absolute inset-0 opacity-[0.02] dark:opacity-[0.08] pointer-events-none"
-        style="background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");"
-      />
-      <div
-        class="relative z-10"
+        class="text-[14px] text-ink leading-normal whitespace-pre-line line-clamp-[12]"
       >
-        <p
-          class="text-gray-800 dark:text-white text-sm leading-relaxed line-clamp-[12]"
-        >
+        <span>
           <span>
-            <span>
-              link: 
-            </span>
-            <a
-              class="text-blue-400 hover:text-blue-300 hover:underline break-all"
-              href="https://www.youtube.com/watch?v=yGQb9KkvQ1Q"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              https://www.youtube.com/watch?v=yGQb9Kkv...
-            </a>
-            <span />
+            link: 
           </span>
-        </p>
+          <a
+            class="text-blue-400 hover:text-blue-300 hover:underline break-all"
+            href="https://www.youtube.com/watch?v=yGQb9KkvQ1Q"
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            https://www.youtube.com/watch?v=yGQb9Kkv...
+          </a>
+          <span />
+        </span>
       </div>
-      <div
-        class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-gray-900 to-transparent pointer-events-none"
-      />
     </div>
     <div
       class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
@@ -1921,7 +1985,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'y
             skalskip92
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-green-500 hover:bg-green-600 text-white"
+            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
           >
             <svg

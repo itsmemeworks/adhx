@@ -76,7 +76,7 @@ describe('TriageMode', () => {
       />,
     )
     await screen.findByText('first tweet')
-    fireEvent.click(screen.getByLabelText('Archive'))
+    fireEvent.click(screen.getByLabelText('Done'))
     await waitFor(() =>
       expect(mockFetch).toHaveBeenCalledWith('/api/bookmarks/1/read', expect.objectContaining({ method: 'POST' })),
     )
@@ -98,7 +98,7 @@ describe('TriageMode', () => {
       />,
     )
     await screen.findByText('first tweet')
-    fireEvent.click(screen.getByLabelText('Archive'))
+    fireEvent.click(screen.getByLabelText('Done'))
     await screen.findByText('second tweet')
     expect(onItemResolved).toHaveBeenCalledWith('1', 'archive')
 
