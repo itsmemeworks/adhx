@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Image, Play, Check, EyeOff } from 'lucide-react'
+import { Image, Play, Check, EyeOff, FileText } from 'lucide-react'
 import { AuthorAvatar } from './AuthorAvatar'
-import { renderTextWithLinks, renderBionicTextWithLinks } from './utils'
+import { renderTextWithLinks, renderBionicTextWithLinks, stripMediaUrls } from './utils'
 import { usePreferences } from '@/lib/preferences-context'
 import { formatDurationMs, formatCompactRelativeTime } from '@/lib/utils/format'
 import { TypeBadge, PlatformChip, type ContentType, type PlatformId } from '@/components/matter'
@@ -219,85 +219,88 @@ function MediaContent({
     )
   }
 
-  if (isVideo) {
-    // Hover preview only works for Twitter (its proxy exposes a 360p `quality=preview`
-    // tier). Instagram/TikTok proxies serve a single quality, so for non-Twitter
-    // we keep the thumbnail on hover instead of swapping to the heavier stream.
-    const hoverVideoUrl =
-      item.platform === 'twitter' || !item.platform
-        ? `/api/media/video?author=${item.author}&tweetId=${item.id}&quality=preview`
-        : null
-    return (
-      <div className="relative">
-        {isHovered && hoverVideoUrl ? (
-          <video
-            src={hoverVideoUrl}
-            muted
-            loop
-            playsInline
-            autoPlay
-            className={mediaClass}
-            style={arStyle}
-          />
-        ) : (
-          <>
-            <img
-              src={primaryMedia.thumbnailUrl}
-              alt=""
-              className={mediaClass}
-              style={arStyle}
-              referrerPolicy="no-referrer"
-              onError={onError}
-            />
-            {/* Centered play button */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-14 h-14 rounded-full bg-black/[0.42] backdrop-blur border border-white/50 flex items-center justify-center">
-                <Play className="h-6 w-6 text-white ml-1" fill="white" />
-              </div>
-            </div>
-            {/* Duration pill */}
-            {primaryMedia.durationMs && (
-              <span className="absolute bottom-2.5 right-2.5 font-mono text-[11px] text-white bg-black/60 rounded-full px-2 py-0.5">
-                {formatDurationMs(primaryMedia.durationMs)}
-              </span>
-            )}
-          </>
-        )}
-        <MediaOverlays platform={platform} badgeType={badgeType} timeBadge={timeBadge} />
-      </div>
-    )
-  }
-
+  // Caption text shown over the media bottom (white, 2 lines, scrim). Hidden when empty.
+  const caption = stripMediaUrls(item.text || '', true).trim()
   const imageCount = item.media?.length ?? 0
+  const hasDuration = isVideo && !!primaryMedia.durationMs
+  const cornerBadge = hasDuration || (!isVideo && imageCount > 1)
+
+  // Hover preview only works for Twitter (its proxy exposes a 360p `quality=preview`
+  // tier). Instagram/TikTok proxies serve a single quality, so for non-Twitter
+  // we keep the thumbnail on hover instead of swapping to the heavier stream.
+  const hoverVideoUrl =
+    item.platform === 'twitter' || !item.platform
+      ? `/api/media/video?author=${item.author}&tweetId=${item.id}&quality=preview`
+      : null
 
   return (
     <div className="relative">
-      <img
-        src={primaryMedia.thumbnailUrl}
-        alt=""
-        className={cn(mediaClass, 'transition-opacity', loaded ? 'opacity-100' : 'opacity-0')}
-        style={arStyle}
-        onLoad={onLoad}
-        onError={(e) => {
-          // The FxEmbed photo proxy occasionally fails in-browser; retry once
-          // against the source CDN before showing the error state.
-          const el = e.currentTarget
-          if (primaryMedia.originalUrl && !el.dataset.fellBack) {
-            el.dataset.fellBack = '1'
-            el.src = primaryMedia.originalUrl
-            return
-          }
-          onError()
-        }}
-        loading="lazy"
-      />
-      {!loaded && <div className="absolute inset-0 bg-inset animate-pulse" />}
+      {isVideo && isHovered && hoverVideoUrl ? (
+        <video src={hoverVideoUrl} muted loop playsInline autoPlay className={mediaClass} style={arStyle} />
+      ) : (
+        <img
+          src={primaryMedia.thumbnailUrl}
+          alt=""
+          className={cn(mediaClass, !isVideo && 'transition-opacity', !isVideo && (loaded ? 'opacity-100' : 'opacity-0'))}
+          style={arStyle}
+          onLoad={onLoad}
+          referrerPolicy="no-referrer"
+          loading={isVideo ? undefined : 'lazy'}
+          onError={(e) => {
+            const el = e.currentTarget
+            if (primaryMedia.originalUrl && !el.dataset.fellBack) {
+              el.dataset.fellBack = '1'
+              el.src = primaryMedia.originalUrl
+              return
+            }
+            onError()
+          }}
+        />
+      )}
+      {!isVideo && !loaded && <div className="absolute inset-0 bg-inset animate-pulse" />}
+
+      {/* Caption scrim (only when there's caption text) */}
+      {caption && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: 'linear-gradient(transparent 40%, rgba(11,11,17,.84))' }}
+          aria-hidden
+        />
+      )}
+
+      {/* Centered play button (video, not while hover-previewing) */}
+      {isVideo && !(isHovered && hoverVideoUrl) && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="w-14 h-14 rounded-full bg-black/[0.42] backdrop-blur border border-white/50 flex items-center justify-center">
+            <Play className="h-6 w-6 text-white ml-1" fill="white" />
+          </div>
+        </div>
+      )}
+
       <MediaOverlays platform={platform} badgeType={badgeType} timeBadge={timeBadge} />
-      {/* Multi-image count badge */}
-      {imageCount > 1 && (
+
+      {/* Duration / multi-image pill (bottom-right) */}
+      {hasDuration && (
+        <span className="absolute bottom-2.5 right-2.5 font-mono text-[11px] text-white bg-black/60 rounded-full px-2 py-0.5">
+          {formatDurationMs(primaryMedia.durationMs!)}
+        </span>
+      )}
+      {!isVideo && imageCount > 1 && (
         <span className="absolute bottom-2.5 right-2.5 font-mono text-[11px] text-white bg-black/60 rounded-full px-2 py-0.5">
           1/{imageCount}
         </span>
+      )}
+
+      {/* Caption overlay (up to 2 lines) */}
+      {caption && (
+        <div
+          className={cn(
+            'absolute left-0 right-0 bottom-0 px-3.5 pb-3 pt-8 text-white font-medium text-[13.5px] leading-snug line-clamp-2 [text-shadow:0_1px_3px_rgba(0,0,0,.55)]',
+            cornerBadge && 'pr-14',
+          )}
+        >
+          {caption}
+        </div>
       )}
     </div>
   )
@@ -335,56 +338,70 @@ function ArticleCardContent({
   platform: PlatformId
   timeBadge: string
 }): React.ReactElement {
-  const title = item.articlePreview?.title
-  const excerpt = item.articlePreview?.description || item.text
+  const cover = item.articlePreview?.imageUrl
   const domain = item.articlePreview?.domain || articleDomain
+  const title = item.articlePreview?.title || item.text || domain || 'Article'
 
-  return (
-    <div>
-      {/* Dark image band */}
-      <div className="relative h-[120px] overflow-hidden bg-black">
-        {item.articlePreview?.imageUrl && (
-          <img src={item.articlePreview.imageUrl} alt="" className="w-full h-full object-cover opacity-55" />
-        )}
+  // With cover: image fills the card, serif title overlaid over a dark scrim.
+  if (cover) {
+    return (
+      <div className="relative">
+        <img src={cover} alt="" className="w-full aspect-[16/10] object-cover bg-black" referrerPolicy="no-referrer" />
+        <div
+          className="absolute inset-0"
+          style={{ background: 'linear-gradient(transparent 32%, rgba(11,11,17,.86))' }}
+          aria-hidden
+        />
         <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
           <TypeBadge type="article" />
           <PlatformChip platform={platform} />
         </div>
         <TimePill className="absolute top-2.5 right-2.5">{timeBadge}</TimePill>
+        <div className="absolute left-0 right-0 bottom-0 px-4 pb-3.5 pt-8">
+          <h3 className="font-serif font-semibold text-[17px] leading-tight text-white line-clamp-3 [text-shadow:0_1px_3px_rgba(0,0,0,.5)]">
+            {title}
+          </h3>
+        </div>
       </div>
-      {/* Body on surface */}
-      <div className="bg-surface pt-[13px] px-[15px] pb-[15px]">
-        {title ? (
-          <h3 className="font-serif font-semibold text-[16px] leading-tight text-ink mb-1.5 line-clamp-2">{title}</h3>
-        ) : (
-          domain && <div className="font-mono text-[11px] text-ink-3 mb-1.5 truncate">{domain}</div>
-        )}
-        <p className="text-[13px] text-ink-2 leading-snug line-clamp-2">{excerpt}</p>
+    )
+  }
+
+  // No cover: accent-tinted gradient fallback with a faint file-text watermark.
+  return (
+    <div className="relative overflow-hidden p-4 bg-gradient-to-br from-clay/[0.14] to-surface">
+      <FileText className="absolute -right-[18px] -bottom-5 w-[110px] h-[110px] text-clay/[0.13]" aria-hidden />
+      <div className="relative flex items-center gap-1.5 mb-3">
+        <TypeBadge type="article" />
+        <PlatformChip platform={platform} />
       </div>
+      <h3 className="relative font-serif font-semibold text-[17px] leading-tight text-ink line-clamp-3">{title}</h3>
     </div>
   )
 }
 
 type RenderTextFn = (text: string, className?: string) => React.ReactNode
 
-/** Header row shared by text + quote cards: type badge left, platform glyph + time right. */
+/** Tweet-style header for text + quote cards: avatar + name + @handle·time, platform chip. */
 function CardHeader({
-  type,
+  item,
   platform,
   timeBadge,
 }: {
-  type: ContentType
+  item: FeedItem
   platform: PlatformId
   timeBadge: string
 }): React.ReactElement {
   return (
-    <div className="flex items-center justify-between mb-3">
-      {/* Match media cards: type label + platform glyph on the left, time chip on the right. */}
-      <div className="flex items-center gap-1.5">
-        <TypeBadge type={type} />
-        <PlatformChip platform={platform} />
+    <div className="flex items-center gap-2.5 mb-2.5">
+      <AuthorAvatar src={item.authorProfileImageUrl} author={item.author} size="sm" />
+      <div className="min-w-0 flex-1">
+        <div className="font-bold text-[13.5px] text-ink truncate">{item.authorName || item.author || 'Saved post'}</div>
+        <div className="font-mono text-[11.5px] text-ink-3 truncate">
+          @{item.author}
+          {timeBadge ? ` · ${timeBadge}` : ''}
+        </div>
       </div>
-      <TimePill>{timeBadge}</TimePill>
+      <PlatformChip platform={platform} />
     </div>
   )
 }
@@ -402,7 +419,7 @@ function QuoteCardContent({
 }): React.ReactElement {
   return (
     <div className="bg-surface p-4">
-      <CardHeader type="quote" platform={platform} timeBadge={timeBadge} />
+      <CardHeader item={item} platform={platform} timeBadge={timeBadge} />
       <div className="text-[14px] text-ink leading-normal whitespace-pre-line">{renderText(item.text)}</div>
       <div className="bg-inset border border-hairline rounded-[10px] pt-[11px] px-[13px] pb-[11px] mt-3">
         <div className="text-clay font-bold text-[12.5px] mb-0.5">@{item.quoteContext!.author}</div>
@@ -427,7 +444,7 @@ function TextCardContent({
 }): React.ReactElement {
   return (
     <div className="bg-surface p-4">
-      <CardHeader type="text" platform={platform} timeBadge={timeBadge} />
+      <CardHeader item={item} platform={platform} timeBadge={timeBadge} />
       <div className="text-[14px] text-ink leading-normal whitespace-pre-line line-clamp-[12]">
         {renderText(item.text)}
       </div>

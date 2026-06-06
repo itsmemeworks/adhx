@@ -14,11 +14,17 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > '4
         alt=""
         class="w-full object-cover bg-black aspect-[var(--m-ar)] sm:aspect-[4/3] transition-opacity opacity-0"
         loading="lazy"
+        referrerpolicy="no-referrer"
         src="https://pbs.twimg.com/media/G-e63eNWkAATqEB.jpg?name=orig"
         style="--m-ar: 1.4586666666666666;"
       />
       <div
         class="absolute inset-0 bg-inset animate-pulse"
+      />
+      <div
+        aria-hidden="true"
+        class="absolute inset-0 pointer-events-none"
+        style="background: linear-gradient(transparent 40%, rgba(11, 11, 17, 0.84));"
       />
       <div
         class="absolute top-2.5 left-2.5 flex items-center gap-1.5 group-hover:opacity-0 transition-opacity"
@@ -58,6 +64,15 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > '4
         1/
         4
       </span>
+      <div
+        class="absolute left-0 right-0 bottom-0 px-3.5 pb-3 pt-8 text-white font-medium text-[13.5px] leading-snug line-clamp-2 [text-shadow:0_1px_3px_rgba(0,0,0,.55)] pr-14"
+      >
+        Apparently, a 19 year old built Wisprflow's UGC program to 500M views in 60 days.
+
+Dude spills some sauce on LinkedIn. 
+
+Open this to see the entire post
+      </div>
     </div>
     <div
       class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
@@ -114,59 +129,70 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
   <div
     class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
   >
-    <div>
-      <div
-        class="relative h-[120px] overflow-hidden bg-black"
+    <div
+      class="relative overflow-hidden p-4 bg-gradient-to-br from-clay/[0.14] to-surface"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-file-text absolute -right-[18px] -bottom-5 w-[110px] h-[110px] text-clay/[0.13]"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
       >
-        <div
-          class="absolute top-2.5 left-2.5 flex items-center gap-1.5"
-        >
-          <span
-            class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
-          >
-            <span
-              class="w-[5px] h-[5px] rounded-full flex-none bg-type-article"
-            />
-            Article
-          </span>
-          <span
-            class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
-          >
-            <svg
-              aria-hidden="true"
-              fill="currentColor"
-              height="13"
-              viewBox="0 0 24 24"
-              width="13"
-            >
-              <path
-                d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-              />
-            </svg>
-          </span>
-        </div>
+        <path
+          d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+        />
+        <path
+          d="M14 2v4a2 2 0 0 0 2 2h4"
+        />
+        <path
+          d="M10 9H8"
+        />
+        <path
+          d="M16 13H8"
+        />
+        <path
+          d="M16 17H8"
+        />
+      </svg>
+      <div
+        class="relative flex items-center gap-1.5 mb-3"
+      >
         <span
-          class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5"
+          class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
         >
-          now
+          <span
+            class="w-[5px] h-[5px] rounded-full flex-none bg-type-article"
+          />
+          Article
+        </span>
+        <span
+          class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
+        >
+          <svg
+            aria-hidden="true"
+            fill="currentColor"
+            height="13"
+            viewBox="0 0 24 24"
+            width="13"
+          >
+            <path
+              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+            />
+          </svg>
         </span>
       </div>
-      <div
-        class="bg-surface pt-[13px] px-[15px] pb-[15px]"
+      <h3
+        class="relative font-serif font-semibold text-[17px] leading-tight text-ink line-clamp-3"
       >
-        <h3
-          class="font-serif font-semibold text-[16px] leading-tight text-ink mb-1.5 line-clamp-2"
-        >
-          human data will be a $1 trillion/year market
-        </h3>
-        <p
-          class="text-[13px] text-ink-2 leading-snug line-clamp-2"
-        >
-          human data will be a $1 trillion/year market
-This is not a short-term prediction. It is a structural claim about where the economy converges.
-To believe this, you need to accept two assumptions:
-        </p>
-      </div>
+        human data will be a $1 trillion/year market
+      </h3>
     </div>
     <div
       class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
@@ -223,61 +249,60 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
   <div
     class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
   >
-    <div>
+    <div
+      class="relative"
+    >
+      <img
+        alt=""
+        class="w-full aspect-[16/10] object-cover bg-black"
+        referrerpolicy="no-referrer"
+        src="https://pbs.twimg.com/media/G-E_92mXcAALnrI.jpg"
+      />
       <div
-        class="relative h-[120px] overflow-hidden bg-black"
+        aria-hidden="true"
+        class="absolute inset-0"
+        style="background: linear-gradient(transparent 32%, rgba(11, 11, 17, 0.86));"
+      />
+      <div
+        class="absolute top-2.5 left-2.5 flex items-center gap-1.5"
       >
-        <img
-          alt=""
-          class="w-full h-full object-cover opacity-55"
-          src="https://pbs.twimg.com/media/G-E_92mXcAALnrI.jpg"
-        />
-        <div
-          class="absolute top-2.5 left-2.5 flex items-center gap-1.5"
-        >
-          <span
-            class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
-          >
-            <span
-              class="w-[5px] h-[5px] rounded-full flex-none bg-type-article"
-            />
-            Article
-          </span>
-          <span
-            class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
-          >
-            <svg
-              aria-hidden="true"
-              fill="currentColor"
-              height="13"
-              viewBox="0 0 24 24"
-              width="13"
-            >
-              <path
-                d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-              />
-            </svg>
-          </span>
-        </div>
         <span
-          class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5"
+          class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
         >
-          now
+          <span
+            class="w-[5px] h-[5px] rounded-full flex-none bg-type-article"
+          />
+          Article
+        </span>
+        <span
+          class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
+        >
+          <svg
+            aria-hidden="true"
+            fill="currentColor"
+            height="13"
+            viewBox="0 0 24 24"
+            width="13"
+          >
+            <path
+              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+            />
+          </svg>
         </span>
       </div>
+      <span
+        class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5"
+      >
+        now
+      </span>
       <div
-        class="bg-surface pt-[13px] px-[15px] pb-[15px]"
+        class="absolute left-0 right-0 bottom-0 px-4 pb-3.5 pt-8"
       >
         <h3
-          class="font-serif font-semibold text-[16px] leading-tight text-ink mb-1.5 line-clamp-2"
+          class="font-serif font-semibold text-[17px] leading-tight text-white line-clamp-3 [text-shadow:0_1px_3px_rgba(0,0,0,.5)]"
         >
           How to Get Shredded (Without Even Trying)
         </h3>
-        <p
-          class="text-[13px] text-ink-2 leading-snug line-clamp-2"
-        >
-          Guys. I finally did it. After years of fidgeting with macros, intermittent fasting, and diet “hacks”, I finally got hyperlean. My visceral fat vanished, muscles are fuller, and vascularity is through
-        </p>
       </div>
     </div>
     <div
@@ -346,6 +371,11 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'e
         style="--m-ar: 1.7777777777777777;"
       />
       <div
+        aria-hidden="true"
+        class="absolute inset-0 pointer-events-none"
+        style="background: linear-gradient(transparent 40%, rgba(11, 11, 17, 0.84));"
+      />
+      <div
         class="absolute inset-0 flex items-center justify-center pointer-events-none"
       >
         <div
@@ -401,6 +431,19 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'e
       >
         now
       </span>
+      <div
+        class="absolute left-0 right-0 bottom-0 px-3.5 pb-3 pt-8 text-white font-medium text-[13.5px] leading-snug line-clamp-2 [text-shadow:0_1px_3px_rgba(0,0,0,.55)]"
+      >
+        BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Named Virtual Accounts powered by @moonpay & @iron
+
+1️⃣ Claim your own named account in the Avici app
+
+2️⃣ Fund fast via SEPA Instant, ACH, Wire, and Direct Deposit
+
+3️⃣ Take full self-custodial control of your money
+
+Live now 🚀
+      </div>
     </div>
     <div
       class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
@@ -464,11 +507,17 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
         alt=""
         class="w-full object-cover bg-black aspect-[var(--m-ar)] sm:aspect-[4/3] transition-opacity opacity-0"
         loading="lazy"
+        referrerpolicy="no-referrer"
         src="https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg?name=orig"
         style="--m-ar: 1;"
       />
       <div
         class="absolute inset-0 bg-inset animate-pulse"
+      />
+      <div
+        aria-hidden="true"
+        class="absolute inset-0 pointer-events-none"
+        style="background: linear-gradient(transparent 40%, rgba(11, 11, 17, 0.84));"
       />
       <div
         class="absolute top-2.5 left-2.5 flex items-center gap-1.5 group-hover:opacity-0 transition-opacity"
@@ -502,6 +551,49 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
       >
         now
       </span>
+      <div
+        class="absolute left-0 right-0 bottom-0 px-3.5 pb-3 pt-8 text-white font-medium text-[13.5px] leading-snug line-clamp-2 [text-shadow:0_1px_3px_rgba(0,0,0,.55)]"
+      >
+        Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory
+
+We built a fully automated system that repurposes, localizes, and launches winning TikTok Shop content across hundreds of creator-style accounts.
+
+It’s so effective it feels like running Facebook ads in 2008. 
+
+- CPMs as low as $0.10
+- no reliance on paid ads 
+- no ghost creators
+- no wasted samples
+- no lost time 
+
+My $300/monthly tech stack which replaced $50k+ budget:
+
+- manus for product research and viral script ideas 
+- cruva / Fastmoss for recently viral content ideas from competitors 
+- nano banana pro for images 
+- kling 2.6 for video 
+- now using my own phone posting network for automated posting 
+
+Here’s how it works:
+•Each AI Agent spins up a TikTok Shop–ready profile, built to sell my products through shoppable videos.
+•Agents are prompted to research the niche, scrape winning TikTok Shop videos, and rebuild them with new hooks, angles, and UGC-style visuals tailored to your brand.
+•They create and post daily using my tech stack onto affiliate accounts 
+
+No touchpoints. No delays.
+
+Just shoppable videos going live and GMV compounding every week.
+
+Then we use an MPS (Multi-Platform Swarm) approach:
+
+once the concept works on TikTok Shop, we deploy hundreds of AI Agents to flood the niche with variations that all drive back to your Shop and Amazon listing.
+
+I’m giving you access to the full stack — the ai workflow, ready to plug into your TikTok Shop today.
+
+Comment “Workflow” and I’ll send you everything.
+(must be connected)
+
+PS – Repost for early access to the full TikTok Shop content factory system.
+      </div>
     </div>
     <div
       class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
@@ -565,11 +657,17 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
         alt=""
         class="w-full object-cover bg-black aspect-[var(--m-ar)] sm:aspect-[4/3] transition-opacity opacity-0"
         loading="lazy"
+        referrerpolicy="no-referrer"
         src="https://pbs.twimg.com/media/G-w2zr6aEAAt-FN.png?name=orig"
         style="--m-ar: 1.7773195876288659;"
       />
       <div
         class="absolute inset-0 bg-inset animate-pulse"
+      />
+      <div
+        aria-hidden="true"
+        class="absolute inset-0 pointer-events-none"
+        style="background: linear-gradient(transparent 40%, rgba(11, 11, 17, 0.84));"
       />
       <div
         class="absolute top-2.5 left-2.5 flex items-center gap-1.5 group-hover:opacity-0 transition-opacity"
@@ -609,6 +707,22 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
         1/
         2
       </span>
+      <div
+        class="absolute left-0 right-0 bottom-0 px-3.5 pb-3 pt-8 text-white font-medium text-[13.5px] leading-snug line-clamp-2 [text-shadow:0_1px_3px_rgba(0,0,0,.55)] pr-14"
+      >
+        🚨BREAKING: TRUMP FURIOUS WITH STARMER
+
+U.S state department made clear last night speaking on the UK and Keir Starmer ⬇️ 
+
+"The government has, indeed, repeatedly threatened to return Lucy Connolly to prison for benign political speech. 
+
+It also blocked her from visiting the United States at our invitation. 
+
+It’s also cancelling local elections, and curbing the right to a jury trial."
+
+They know Starmer is a tyrant
+His days are numbered
+      </div>
     </div>
     <div
       class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
@@ -669,39 +783,43 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
       class="bg-surface p-4"
     >
       <div
-        class="flex items-center justify-between mb-3"
+        class="flex items-center gap-2.5 mb-2.5"
       >
+        <img
+          alt="_The_Prophet__"
+          class="w-5 h-5 text-[10px] rounded-full object-cover flex-shrink-0"
+          src="https://pbs.twimg.com/profile_images/1996761764684500992/THPeAaeJ_200x200.jpg"
+        />
         <div
-          class="flex items-center gap-1.5"
+          class="min-w-0 flex-1"
         >
-          <span
-            class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
+          <div
+            class="font-bold text-[13.5px] text-ink truncate"
           >
-            <span
-              class="w-[5px] h-[5px] rounded-full flex-none bg-type-quote"
-            />
-            Quote
-          </span>
-          <span
-            class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
+            SightBringer
+          </div>
+          <div
+            class="font-mono text-[11.5px] text-ink-3 truncate"
           >
-            <svg
-              aria-hidden="true"
-              fill="currentColor"
-              height="13"
-              viewBox="0 0 24 24"
-              width="13"
-            >
-              <path
-                d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-              />
-            </svg>
-          </span>
+            @
+            _The_Prophet__
+             · now
+          </div>
         </div>
         <span
-          class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5"
+          class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
         >
-          now
+          <svg
+            aria-hidden="true"
+            fill="currentColor"
+            height="13"
+            viewBox="0 0 24 24"
+            width="13"
+          >
+            <path
+              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+            />
+          </svg>
         </span>
       </div>
       <div
@@ -1055,39 +1173,43 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'p
       class="bg-surface p-4"
     >
       <div
-        class="flex items-center justify-between mb-3"
+        class="flex items-center gap-2.5 mb-2.5"
       >
+        <img
+          alt="TheCinesthetic"
+          class="w-5 h-5 text-[10px] rounded-full object-cover flex-shrink-0"
+          src="https://pbs.twimg.com/profile_images/1385452682517745667/mfcIUnoX_200x200.jpg"
+        />
         <div
-          class="flex items-center gap-1.5"
+          class="min-w-0 flex-1"
         >
-          <span
-            class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
+          <div
+            class="font-bold text-[13.5px] text-ink truncate"
           >
-            <span
-              class="w-[5px] h-[5px] rounded-full flex-none bg-type-text"
-            />
-            Text
-          </span>
-          <span
-            class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
+            cinesthetic.
+          </div>
+          <div
+            class="font-mono text-[11.5px] text-ink-3 truncate"
           >
-            <svg
-              aria-hidden="true"
-              fill="currentColor"
-              height="13"
-              viewBox="0 0 24 24"
-              width="13"
-            >
-              <path
-                d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-              />
-            </svg>
-          </span>
+            @
+            TheCinesthetic
+             · now
+          </div>
         </div>
         <span
-          class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5"
+          class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
         >
-          now
+          <svg
+            aria-hidden="true"
+            fill="currentColor"
+            height="13"
+            viewBox="0 0 24 24"
+            width="13"
+          >
+            <path
+              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+            />
+          </svg>
         </span>
       </div>
       <div
@@ -1159,39 +1281,43 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
       class="bg-surface p-4"
     >
       <div
-        class="flex items-center justify-between mb-3"
+        class="flex items-center gap-2.5 mb-2.5"
       >
+        <img
+          alt="Nate_Google_"
+          class="w-5 h-5 text-[10px] rounded-full object-cover flex-shrink-0"
+          src="https://pbs.twimg.com/profile_images/2001053423257473035/J8H1pEIw_200x200.jpg"
+        />
         <div
-          class="flex items-center gap-1.5"
+          class="min-w-0 flex-1"
         >
-          <span
-            class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
+          <div
+            class="font-bold text-[13.5px] text-ink truncate"
           >
-            <span
-              class="w-[5px] h-[5px] rounded-full flex-none bg-type-quote"
-            />
-            Quote
-          </span>
-          <span
-            class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
+            Nate.Google
+          </div>
+          <div
+            class="font-mono text-[11.5px] text-ink-3 truncate"
           >
-            <svg
-              aria-hidden="true"
-              fill="currentColor"
-              height="13"
-              viewBox="0 0 24 24"
-              width="13"
-            >
-              <path
-                d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-              />
-            </svg>
-          </span>
+            @
+            Nate_Google_
+             · now
+          </div>
         </div>
         <span
-          class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5"
+          class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
         >
-          now
+          <svg
+            aria-hidden="true"
+            fill="currentColor"
+            height="13"
+            viewBox="0 0 24 24"
+            width="13"
+          >
+            <path
+              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+            />
+          </svg>
         </span>
       </div>
       <div
@@ -1414,39 +1540,43 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
       class="bg-surface p-4"
     >
       <div
-        class="flex items-center justify-between mb-3"
+        class="flex items-center gap-2.5 mb-2.5"
       >
+        <img
+          alt="elonmusk"
+          class="w-5 h-5 text-[10px] rounded-full object-cover flex-shrink-0"
+          src="https://pbs.twimg.com/profile_images/2008546467615580160/57KcqsTA_200x200.jpg"
+        />
         <div
-          class="flex items-center gap-1.5"
+          class="min-w-0 flex-1"
         >
-          <span
-            class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
+          <div
+            class="font-bold text-[13.5px] text-ink truncate"
           >
-            <span
-              class="w-[5px] h-[5px] rounded-full flex-none bg-type-quote"
-            />
-            Quote
-          </span>
-          <span
-            class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
+            Elon Musk
+          </div>
+          <div
+            class="font-mono text-[11.5px] text-ink-3 truncate"
           >
-            <svg
-              aria-hidden="true"
-              fill="currentColor"
-              height="13"
-              viewBox="0 0 24 24"
-              width="13"
-            >
-              <path
-                d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-              />
-            </svg>
-          </span>
+            @
+            elonmusk
+             · now
+          </div>
         </div>
         <span
-          class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5"
+          class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
         >
-          now
+          <svg
+            aria-hidden="true"
+            fill="currentColor"
+            height="13"
+            viewBox="0 0 24 24"
+            width="13"
+          >
+            <path
+              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+            />
+          </svg>
         </span>
       </div>
       <div
@@ -1549,39 +1679,43 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'r
       class="bg-surface p-4"
     >
       <div
-        class="flex items-center justify-between mb-3"
+        class="flex items-center gap-2.5 mb-2.5"
       >
+        <img
+          alt="grok"
+          class="w-5 h-5 text-[10px] rounded-full object-cover flex-shrink-0"
+          src="https://pbs.twimg.com/profile_images/1893219113717342208/Vgg2hEPa_200x200.jpg"
+        />
         <div
-          class="flex items-center gap-1.5"
+          class="min-w-0 flex-1"
         >
-          <span
-            class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
+          <div
+            class="font-bold text-[13.5px] text-ink truncate"
           >
-            <span
-              class="w-[5px] h-[5px] rounded-full flex-none bg-type-text"
-            />
-            Text
-          </span>
-          <span
-            class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
+            Grok
+          </div>
+          <div
+            class="font-mono text-[11.5px] text-ink-3 truncate"
           >
-            <svg
-              aria-hidden="true"
-              fill="currentColor"
-              height="13"
-              viewBox="0 0 24 24"
-              width="13"
-            >
-              <path
-                d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-              />
-            </svg>
-          </span>
+            @
+            grok
+             · now
+          </div>
         </div>
         <span
-          class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5"
+          class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
         >
-          now
+          <svg
+            aria-hidden="true"
+            fill="currentColor"
+            height="13"
+            viewBox="0 0 24 24"
+            width="13"
+          >
+            <path
+              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+            />
+          </svg>
         </span>
       </div>
       <div
@@ -1662,39 +1796,43 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 't
       class="bg-surface p-4"
     >
       <div
-        class="flex items-center justify-between mb-3"
+        class="flex items-center gap-2.5 mb-2.5"
       >
+        <img
+          alt="swyx"
+          class="w-5 h-5 text-[10px] rounded-full object-cover flex-shrink-0"
+          src="https://pbs.twimg.com/profile_images/1867875781676007424/RIF4Kt7U_200x200.jpg"
+        />
         <div
-          class="flex items-center gap-1.5"
+          class="min-w-0 flex-1"
         >
-          <span
-            class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
+          <div
+            class="font-bold text-[13.5px] text-ink truncate"
           >
-            <span
-              class="w-[5px] h-[5px] rounded-full flex-none bg-type-quote"
-            />
-            Quote
-          </span>
-          <span
-            class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
+            swyx
+          </div>
+          <div
+            class="font-mono text-[11.5px] text-ink-3 truncate"
           >
-            <svg
-              aria-hidden="true"
-              fill="currentColor"
-              height="13"
-              viewBox="0 0 24 24"
-              width="13"
-            >
-              <path
-                d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-              />
-            </svg>
-          </span>
+            @
+            swyx
+             · now
+          </div>
         </div>
         <span
-          class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5"
+          class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
         >
-          now
+          <svg
+            aria-hidden="true"
+            fill="currentColor"
+            height="13"
+            viewBox="0 0 24 24"
+            width="13"
+          >
+            <path
+              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+            />
+          </svg>
         </span>
       </div>
       <div
@@ -1816,6 +1954,11 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'v
         style="--m-ar: 0.5625;"
       />
       <div
+        aria-hidden="true"
+        class="absolute inset-0 pointer-events-none"
+        style="background: linear-gradient(transparent 40%, rgba(11, 11, 17, 0.84));"
+      />
+      <div
         class="absolute inset-0 flex items-center justify-center pointer-events-none"
       >
         <div
@@ -1871,6 +2014,15 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'v
       >
         now
       </span>
+      <div
+        class="absolute left-0 right-0 bottom-0 px-3.5 pb-3 pt-8 text-white font-medium text-[13.5px] leading-snug line-clamp-2 [text-shadow:0_1px_3px_rgba(0,0,0,.55)]"
+      >
+        Primes look chaotic in a line, but reveal structure when space curves.
+
+Same numbers.
+Different geometry.
+Hidden order.
+      </div>
     </div>
     <div
       class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
@@ -1931,39 +2083,43 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'y
       class="bg-surface p-4"
     >
       <div
-        class="flex items-center justify-between mb-3"
+        class="flex items-center gap-2.5 mb-2.5"
       >
+        <img
+          alt="skalskip92"
+          class="w-5 h-5 text-[10px] rounded-full object-cover flex-shrink-0"
+          src="https://pbs.twimg.com/profile_images/1557421659925237763/RzJu2YI3_200x200.jpg"
+        />
         <div
-          class="flex items-center gap-1.5"
+          class="min-w-0 flex-1"
         >
-          <span
-            class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
+          <div
+            class="font-bold text-[13.5px] text-ink truncate"
           >
-            <span
-              class="w-[5px] h-[5px] rounded-full flex-none bg-type-text"
-            />
-            Text
-          </span>
-          <span
-            class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
+            SkalskiP
+          </div>
+          <div
+            class="font-mono text-[11.5px] text-ink-3 truncate"
           >
-            <svg
-              aria-hidden="true"
-              fill="currentColor"
-              height="13"
-              viewBox="0 0 24 24"
-              width="13"
-            >
-              <path
-                d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-              />
-            </svg>
-          </span>
+            @
+            skalskip92
+             · now
+          </div>
         </div>
         <span
-          class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5"
+          class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
         >
-          now
+          <svg
+            aria-hidden="true"
+            fill="currentColor"
+            height="13"
+            viewBox="0 0 24 24"
+            width="13"
+          >
+            <path
+              d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
+            />
+          </svg>
         </span>
       </div>
       <div

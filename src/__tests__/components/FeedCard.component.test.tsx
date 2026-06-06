@@ -58,8 +58,8 @@ describe('FeedCard Component Snapshots', () => {
         />
       )
 
-      // Text cards render the tweet text and a "Text" type badge.
-      expect(container.textContent).toContain('Text')
+      // Text cards are tweet-style: the author handle + the post body.
+      expect(container.textContent).toContain(`@${feedItem.author}`)
       expect(container.textContent).toContain(feedItem.text.slice(0, 20))
     })
 
@@ -129,9 +129,12 @@ describe('FeedCard Component Snapshots', () => {
         />
       )
 
-      // Quote cards have a quote indicator
+      // Quote cards are tweet-style with the embedded quoted post beneath.
       const text = container.textContent
-      expect(text).toContain('Quote')
+      expect(text).toContain(`@${feedItem.author}`)
+      if (feedItem.quoteContext?.author) {
+        expect(text).toContain(`@${feedItem.quoteContext.author}`)
+      }
     })
   })
 
@@ -198,7 +201,7 @@ describe('FeedCard Component Snapshots', () => {
   })
 
   describe('X Article styling (Matter redesign)', () => {
-    it('article-no-header: uses a dark image band (not the old blue gradient)', () => {
+    it('article-no-header: renders a serif title (not the old blue gradient)', () => {
       const feedItem = fxTwitterToFeedItem(fixtures['article-no-header'])
 
       const { container } = render(
@@ -211,11 +214,9 @@ describe('FeedCard Component Snapshots', () => {
         />
       )
 
-      // New design: dark band on a bg-black header, body on bg-surface.
-      const band = container.querySelector('.bg-black')
-      expect(band).toBeTruthy()
-
-      // Should NOT use the old blue gradient
+      // New design: a serif article title (over a cover image, or on an accent
+      // gradient fallback) — never the old blue gradient.
+      expect(container.querySelector('.font-serif')).toBeTruthy()
       expect(container.querySelector('.from-blue-600')).toBeNull()
     })
 

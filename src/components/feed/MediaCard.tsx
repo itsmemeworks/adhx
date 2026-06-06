@@ -411,15 +411,18 @@ function AuthorCard({ item }: { item: FeedItem }) {
           <p className="font-semibold text-fink truncate">{item.authorName || item.author}</p>
           <p className="text-sm text-fink-3 font-mono truncate">@{item.author}</p>
         </div>
+        {/* Platform glyph + human time chip (no external-link icon). */}
         <a
           href={item.tweetUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1 text-sm hover:opacity-80 flex-shrink-0"
+          className="inline-flex items-center gap-1.5 flex-shrink-0 rounded-full bg-inset px-2.5 py-1 text-fink-2 hover:opacity-80"
           title="Open source"
         >
-          <PlatformWordmark platform={item.platform} />
-          <ExternalLink className="w-3.5 h-3.5 text-fink-3" />
+          <PlatformGlyph platform={(item.platform ?? 'twitter') as PlatformId} size={13} />
+          {item.createdAt && (
+            <span className="font-mono text-xs">{formatCompactRelativeTime(item.createdAt)}</span>
+          )}
         </a>
       </header>
 

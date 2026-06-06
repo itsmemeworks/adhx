@@ -1,9 +1,10 @@
 'use client'
 
-import { Plus, Play, EyeOff, Flame, ExternalLink } from 'lucide-react'
+import { Plus, Play, EyeOff, Flame, ExternalLink, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
-import { PlatformGlyph, TypeBadge, type ContentType } from '@/components/matter'
+import { PlatformGlyph, PlatformChip, TypeBadge, type ContentType } from '@/components/matter'
+import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import type { ActivityItem } from './DiscoverFeed'
 
 /**
@@ -23,14 +24,13 @@ export function inferType(item: ActivityItem): ContentType {
 }
 
 /**
- * A single Discover grid card (Matter direction).
+ * A single Discover grid card (Matter direction), rendered per content type.
+ * The media/article/text area flex-fills so the footer is bottom-pinned and
+ * aligns across the equal-height grid regardless of card type.
  *
- * Flex column with a `mt-auto` footer so the anonymous-identity + Save row is
- * ALWAYS pinned to the bottom of the card regardless of body length, keeping
- * the uniform grid visually even.
- *
- * Anonymous by design: the SAVER is never shown — only an incognito avatar and
- * "Someone · {time} · <platform>". The content `author` may appear in the body.
+ * Anonymous by design: the SAVER is never shown — only an incognito avatar +
+ * time + platform in the footer. Text/quote cards show the *original* post's
+ * author (avatar + @handle) tweet-style.
  */
 export function DiscoverCard({
   item,
@@ -43,10 +43,13 @@ export function DiscoverCard({
   pub?: boolean
 }) {
   const type = inferType(item)
-  const hasThumb = Boolean(item.thumbnailUrl)
+  const isMedia = type === 'video' || type === 'photo'
+  const isArticle = type === 'article'
   const isVideo = type === 'video'
-  const who = item.authorName || (item.author ? `@${item.author}` : null)
-  // "Hot" = saved by more than one person across ADHX. Shows a flame + count.
+  const hasThumb = Boolean(item.thumbnailUrl)
+  const caption = (item.text || '').trim()
+  const time = formatCompactRelativeTime(item.createdAt)
+
   const saveCount = item.saveCount ?? 0
   const hot = saveCount >= 2
   const FlameBadge = hot ? (
@@ -56,20 +59,112 @@ export function DiscoverCard({
     </span>
   ) : null
 
-  // Overlaid badges shared by the thumbnail + poster-less video tiles.
-  const Overlays = (
-    <>
-      <div className="absolute left-2.5 top-2.5">
-        <TypeBadge type={type} />
-      </div>
-      <div className="absolute right-2.5 top-2.5 flex items-center gap-1.5">
-        {FlameBadge}
-        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md">
-          <PlatformGlyph platform={item.platform} size={13} />
-        </span>
-      </div>
-    </>
+  const TopRight = (
+    <div className="absolute right-2.5 top-2.5 flex items-center gap-1.5">
+      {FlameBadge}
+      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md">
+        <PlatformGlyph platform={item.platform} size={13} />
+      </span>
+    </div>
   )
+
+  let body: React.ReactNode
+  if (isMedia) {
+    body = (
+      <div className="relative flex flex-1 min-h-[200px]">
+        {hasThumb ? (
+          <img
+            src={item.thumbnailUrl!}
+            alt=""
+            referrerPolicy="no-referrer"
+            loading="lazy"
+            className="absolute inset-0 h-full w-full bg-inset object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-ink to-[#15110d]" />
+        )}
+        {caption && (
+          <div
+            className="absolute inset-0"
+            style={{ background: 'linear-gradient(transparent 42%, rgba(11,11,17,.84))' }}
+            aria-hidden
+          />
+        )}
+        <div className="absolute left-2.5 top-2.5">
+          <TypeBadge type={type} />
+        </div>
+        {TopRight}
+        {isVideo && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md">
+              <Play size={18} fill="currentColor" />
+            </span>
+          </div>
+        )}
+        {caption && (
+          <p className="absolute inset-x-0 bottom-0 line-clamp-2 px-3.5 pb-3 pt-8 text-[13.5px] font-medium leading-snug text-white [text-shadow:0_1px_3px_rgba(0,0,0,.55)]">
+            {caption}
+          </p>
+        )}
+      </div>
+    )
+  } else if (isArticle && hasThumb) {
+    body = (
+      <div className="relative flex flex-1 min-h-[210px]">
+        <img
+          src={item.thumbnailUrl!}
+          alt=""
+          referrerPolicy="no-referrer"
+          loading="lazy"
+          className="absolute inset-0 h-full w-full bg-inset object-cover"
+        />
+        <div
+          className="absolute inset-0"
+          style={{ background: 'linear-gradient(transparent 30%, rgba(11,11,17,.86))' }}
+          aria-hidden
+        />
+        <div className="absolute left-2.5 top-2.5">
+          <TypeBadge type="article" />
+        </div>
+        {TopRight}
+        <div className="absolute inset-x-0 bottom-0 px-4 pb-3.5 pt-8">
+          <h3 className="font-serif font-semibold text-[17px] leading-tight text-white line-clamp-3 [text-shadow:0_1px_3px_rgba(0,0,0,.5)]">
+            {caption || 'Article'}
+          </h3>
+        </div>
+      </div>
+    )
+  } else if (isArticle) {
+    body = (
+      <div className="relative flex flex-1 min-h-[200px] flex-col overflow-hidden p-4 bg-gradient-to-br from-clay/[0.14] to-surface">
+        <FileText className="absolute -right-5 -bottom-[22px] w-[120px] h-[120px] text-clay/[0.13]" aria-hidden />
+        <div className="relative flex items-center gap-1.5">
+          <TypeBadge type="article" />
+          <PlatformChip platform={item.platform} />
+        </div>
+        <h3 className="relative mt-3.5 font-serif font-semibold text-[18px] leading-tight text-ink line-clamp-4">
+          {caption || 'Article'}
+        </h3>
+      </div>
+    )
+  } else {
+    // text / quote — tweet style (original poster's avatar + handle).
+    body = (
+      <div className="flex-1 px-4 pt-4">
+        <div className="mb-2.5 flex items-center gap-2.5">
+          <AuthorAvatar src={item.thumbnailUrl} author={item.author} size="sm" />
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-bold text-[13.5px] text-ink">
+              {item.authorName || (item.author ? `@${item.author}` : 'Saved post')}
+            </div>
+            {item.author && <div className="truncate font-mono text-[11.5px] text-ink-3">@{item.author}</div>}
+          </div>
+          <PlatformChip platform={item.platform} />
+        </div>
+        <p className="line-clamp-4 text-[14.5px] leading-relaxed text-ink">{caption || 'Saved post'}</p>
+      </div>
+    )
+  }
 
   return (
     <article
@@ -78,54 +173,12 @@ export function DiscoverCard({
         fresh ? 'border-clay/40 bg-clay/[0.08]' : 'border-hairline',
       )}
     >
-      {/* Whole tile is a link to the on-ADHX preview page. */}
+      {/* The whole tile links to the on-ADHX preview page. */}
       <a href={item.url} className="flex flex-1 flex-col">
-        {hasThumb ? (
-          <div className="relative">
-            <img
-              src={item.thumbnailUrl!}
-              alt=""
-              referrerPolicy="no-referrer"
-              loading="lazy"
-              className="block aspect-[4/3] w-full bg-inset object-cover"
-            />
-            {Overlays}
-            {isVideo && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md">
-                  <Play size={18} fill="currentColor" />
-                </span>
-              </div>
-            )}
-          </div>
-        ) : isVideo ? (
-          // Video with no poster (e.g. TikTok) — dark placeholder with a play
-          // glyph + the caption, so it still reads as a playable video tile.
-          <div className="relative flex aspect-[4/3] w-full items-center justify-center bg-gradient-to-br from-ink to-[#15110d]">
-            {Overlays}
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-md">
-              <Play size={18} fill="currentColor" />
-            </span>
-            {item.text && (
-              <p className="absolute inset-x-0 bottom-0 line-clamp-2 bg-gradient-to-t from-black/70 to-transparent px-3 pb-2.5 pt-6 text-[12.5px] font-medium text-white/90">
-                {item.text}
-              </p>
-            )}
-          </div>
-        ) : (
-          <div className="flex-1 px-4 pt-4">
-            <div className="flex items-center gap-2">
-              <TypeBadge type={type} />
-              {FlameBadge}
-            </div>
-            <p className="mt-3 line-clamp-5 text-[14.5px] leading-relaxed text-ink">
-              {item.text || (who ? `Saved from ${who}` : 'Saved post')}
-            </p>
-          </div>
-        )}
+        {body}
       </a>
 
-      {/* bottom-pinned footer */}
+      {/* Bottom-pinned anonymous footer (aligned across the equal-height grid). */}
       <div className="mt-auto flex items-center gap-2.5 px-3.5 py-3">
         <span
           className="inline-flex h-[22px] w-[22px] flex-none items-center justify-center rounded-full border border-hairline bg-inset text-ink-3"
@@ -134,7 +187,7 @@ export function DiscoverCard({
           <EyeOff size={12} />
         </span>
         <span className="flex items-center gap-1.5 font-mono text-[12px] text-ink-3">
-          <span>{formatCompactRelativeTime(item.createdAt)}</span>
+          <span>{time}</span>
           <span aria-hidden>·</span>
           <PlatformGlyph platform={item.platform} size={12} />
         </span>
