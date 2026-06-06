@@ -433,10 +433,11 @@ The app offers multiple ways to save tweets, shown contextually based on the use
 - Shortcut ID: `0d187480099b4d34a745ec8750a4587b`
 - iCloud URL: `https://www.icloud.com/shortcuts/0d187480099b4d34a745ec8750a4587b`
 - Transforms `x.com/user/status/123` → `adhx.com/user/status/123`
+- **Limitation: X-only.** The shortcut only rewrites `x.com`, so the iOS share sheet won't pick up Instagram / TikTok / YouTube links. Those still work on iOS via the URL-prefix trick or the bookmarklet. Adding multi-platform support means editing the iCloud shortcut itself in the Shortcuts app (a manual change — it's not in this repo), then re-sharing the iCloud link. Until then the table above lists "URL prefix trick" as the iOS fallback for non-X platforms.
 
 **Bookmarklet** (desktop + Android):
 ```
-javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tiktok)\.com/,'adhx.com'))
+javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tiktok|youtube)\.com/,'adhx.com'))
 ```
 - One-click URL rewrite from x.com/twitter.com to adhx.com
 - Shown with copy-to-clipboard button and drag-to-toolbar instructions
@@ -444,9 +445,9 @@ javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tikt
 
 **PWA Share Target** (Android):
 - `public/manifest.json` includes `share_target` config: `action: "/share"`, `method: "GET"`, `params: { url: "url" }`
-- `src/app/share/page.tsx` — client component that parses the shared URL, extracts username/id, redirects to `/{username}/status/{id}`
-- Shows "Not a tweet link" error for invalid URLs with link back to homepage
-- URL parsing utility: `src/lib/utils/parse-share-url.ts`
+- `src/app/share/page.tsx` — client component that parses the shared URL and redirects to the matching preview path
+- `parseShareUrl()` (`src/lib/utils/parse-share-url.ts`) maps **all four platforms** to their preview path and returns `{ path }`: X → `/{user}/status/{id}`, Instagram → `/reels/{id}`, TikTok → `/@{user}/video/{id}`, YouTube (shorts / youtu.be / watch?v=) → `/shorts/{id}`
+- Shows a "Not a supported link" error for unrecognised URLs with a link back to homepage
 
 **Implementation files:**
 - `src/lib/platform.ts` — Platform detection utilities
