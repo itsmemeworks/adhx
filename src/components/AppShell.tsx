@@ -3,6 +3,7 @@
 import { Suspense } from 'react'
 import { usePathname } from 'next/navigation'
 import { Header } from './Header'
+import { PWAInstallPrompt } from './PWAInstallPrompt'
 
 // Header loading skeleton
 function HeaderSkeleton() {
@@ -34,7 +35,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     /^\/@?[A-Za-z0-9._]+\/video\/\d+$/.test(pathname)
 
   if (isFullWidth) {
-    return <>{children}</>
+    return (
+      <>
+        {children}
+        <PWAInstallPrompt />
+      </>
+    )
   }
 
   return (
@@ -43,6 +49,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Header />
       </Suspense>
       <main>{children}</main>
+      <PWAInstallPrompt />
     </div>
   )
 }
