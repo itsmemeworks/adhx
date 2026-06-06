@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import {
   Search,
   Plus,
@@ -14,6 +14,8 @@ import {
   RefreshCw,
   Zap,
   Flame,
+  Bookmark,
+  Compass,
 } from 'lucide-react'
 import { useTheme } from '@/lib/theme/context'
 import { cn } from '@/lib/utils'
@@ -46,6 +48,7 @@ interface CooldownStatus {
 export function Header() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const pathname = usePathname()
   const { resolvedTheme, setTheme } = useTheme()
   const [searchValue, setSearchValue] = useState(searchParams.get('search') || '')
   const [showAddTweet, setShowAddTweet] = useState(false)
@@ -307,17 +310,33 @@ export function Header() {
               <MatterLogo size={20} />
             </Link>
 
-            {/* Stats - only show when authenticated, hidden on mobile */}
+            {/* Primary nav — switch between the collection feed and Discover.
+                Only when authenticated, hidden on mobile (mobile uses the menu). */}
             {authStatus?.authenticated && (
-              <div className="hidden lg:flex items-baseline gap-3 text-[13.5px] text-ink-2">
-                <span>
-                  <b className="font-bold text-ink">{stats.total}</b> saved
-                </span>
-                <span className="w-1 h-1 rounded-full bg-ink-3 opacity-50 self-center" />
-                <span>
-                  <b className="font-bold text-clay">{stats.unread}</b> unread
-                </span>
-              </div>
+              <nav className="hidden lg:flex items-center gap-1 text-[13.5px]">
+                <Link
+                  href="/"
+                  className={cn(
+                    'rounded-full px-3 py-1.5 font-semibold transition-colors',
+                    pathname === '/'
+                      ? 'bg-clay/[0.12] text-clay'
+                      : 'text-ink-2 hover:text-ink',
+                  )}
+                >
+                  Collection
+                </Link>
+                <Link
+                  href="/discover"
+                  className={cn(
+                    'rounded-full px-3 py-1.5 font-semibold transition-colors',
+                    pathname === '/discover'
+                      ? 'bg-clay/[0.12] text-clay'
+                      : 'text-ink-2 hover:text-ink',
+                  )}
+                >
+                  Discover
+                </Link>
+              </nav>
             )}
           </div>
 
@@ -492,8 +511,30 @@ export function Header() {
                         </div>
                       </div>
 
-                      {/* Settings link */}
+                      {/* Nav + Settings links */}
                       <div className="py-1">
+                        <Link
+                          href="/"
+                          onClick={() => setShowUserMenu(false)}
+                          className={cn(
+                            'flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset transition-colors',
+                            pathname === '/' ? 'font-semibold text-clay' : 'text-ink-2 hover:text-ink',
+                          )}
+                        >
+                          <Bookmark className="w-4 h-4" />
+                          Collection
+                        </Link>
+                        <Link
+                          href="/discover"
+                          onClick={() => setShowUserMenu(false)}
+                          className={cn(
+                            'flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset transition-colors',
+                            pathname === '/discover' ? 'font-semibold text-clay' : 'text-ink-2 hover:text-ink',
+                          )}
+                        >
+                          <Compass className="w-4 h-4" />
+                          Discover
+                        </Link>
                         <Link
                           href="/settings"
                           onClick={() => setShowUserMenu(false)}

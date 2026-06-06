@@ -158,7 +158,7 @@ export function LandingPage() {
         {/* ───────── Hero ───────── */}
         <section
           aria-labelledby="hero-title"
-          className="grid grid-cols-1 min-[860px]:grid-cols-[1.05fr_.95fr] gap-10 lg:gap-14 items-center px-6 sm:px-10 lg:px-16 pt-10 sm:pt-14 pb-10 max-w-[1240px] mx-auto"
+          className="grid grid-cols-1 min-[860px]:grid-cols-[minmax(0,1.05fr)_minmax(0,.95fr)] gap-10 lg:gap-14 items-center px-6 sm:px-10 lg:px-16 pt-10 sm:pt-14 pb-10 max-w-[1240px] mx-auto"
         >
           {/* LEFT: copy + CTA */}
           <div>
@@ -309,7 +309,7 @@ export function LandingPage() {
 
 function LivePanel({ items, savedToday, loaded }: { items: ActivityItem[]; savedToday: number; loaded: boolean }) {
   return (
-    <div className="bg-surface border border-hairline rounded-card shadow-m-lg p-4">
+    <div className="min-w-0 bg-surface border border-hairline rounded-card shadow-m-lg p-4">
       <div className="flex items-center gap-2.5 mb-3.5">
         <LiveDot />
         <span className="font-bold text-sm text-ink">Live right now</span>
