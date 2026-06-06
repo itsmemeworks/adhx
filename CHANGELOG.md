@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.33.0](https://github.com/itsmemeworks/adhx/compare/v1.32.7...v1.33.0) (2026-06-06)
+
+
+### Features
+
+* add-to-home-screen prompt (pwa install) + readme save-methods ([#170](https://github.com/itsmemeworks/adhx/issues/170)) ([5c9a436](https://github.com/itsmemeworks/adhx/commit/5c9a436f83b47d97f997ab9c52d826b95e6e0c70))
+* full YouTube Shorts support ([#169](https://github.com/itsmemeworks/adhx/issues/169)) ([7935d16](https://github.com/itsmemeworks/adhx/commit/7935d166dd5624dc3c453a061c558c1ee53ec182))
+* live activity pulse on the front page ([#173](https://github.com/itsmemeworks/adhx/issues/173)) ([93bbca7](https://github.com/itsmemeworks/adhx/commit/93bbca7ddd9a3ab67369eca70ba52e5418080c81))
+* **triage:** swipe-to-clear triage mode with a daily streak ([#167](https://github.com/itsmemeworks/adhx/issues/167)) ([1afd764](https://github.com/itsmemeworks/adhx/commit/1afd7642d7b8da4c04ef8ed2be4d74e58dd0f487))
+
+
+### Bug Fixes
+
+* scope csp 'unsafe-eval' to dev so hmr stops tripping it ([#171](https://github.com/itsmemeworks/adhx/issues/171)) ([b705f2b](https://github.com/itsmemeworks/adhx/commit/b705f2b6cdb1ad124cc48ee63dae00855a7f7814))
+* **triage:** restore unread count when an archive is undone ([#174](https://github.com/itsmemeworks/adhx/issues/174)) ([9711726](https://github.com/itsmemeworks/adhx/commit/9711726567ce7b82ca4b8bb57e559284a969f70a))
+
 ## [1.32.7](https://github.com/itsmemeworks/adhx/compare/v1.32.6...v1.32.7) (2026-06-05)
 
 
