@@ -449,6 +449,12 @@ javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tikt
 - `parseShareUrl()` (`src/lib/utils/parse-share-url.ts`) maps **all four platforms** to their preview path and returns `{ path }`: X → `/{user}/status/{id}`, Instagram → `/reels/{id}`, TikTok → `/@{user}/video/{id}`, YouTube (shorts / youtu.be / watch?v=) → `/shorts/{id}`
 - Shows a "Not a supported link" error for unrecognised URLs with a link back to homepage
 
+**Add to Home Screen (PWA install)**:
+- `src/components/PWAInstallPrompt.tsx` — mobile-only bottom banner, mounted app-wide in `AppShell` (shows on preview pages too — a conversion moment for visitors arriving from a shared link). Hidden on desktop, when already `display-mode: standalone`, and after dismissal (`localStorage` key `adhx-a2hs-dismissed`).
+  - **Android/Chrome**: captures `beforeinstallprompt` → one-tap **Add** button that fires the native install dialog.
+  - **iOS/Safari**: no programmatic API, so it shows the manual "tap Share → Add to Home Screen" instructions.
+- `public/sw.js` — a deliberately **cache-free** service worker (no-op `fetch` handler, no `respondWith`). It exists only to satisfy Chrome's installability criteria so `beforeinstallprompt` fires; it never serves stale content. Registered from `PWAInstallPrompt` on mount.
+
 **Implementation files:**
 - `src/lib/platform.ts` — Platform detection utilities
 - `src/components/LandingPage.tsx` — `ShortcutPromo` component (platform-aware)

@@ -7,7 +7,7 @@
 
 > **Save now. Read never. Find always.**
 
-For people who bookmark everything and read nothing. A Twitter/X bookmark manager that actually helps you find that tweet you saved 6 months ago — and previews/downloads Instagram Reels and TikToks with the same one-tap UX.
+For people who bookmark everything and read nothing. A Twitter/X bookmark manager that actually helps you find that tweet you saved 6 months ago — and previews Instagram Reels, TikToks, and YouTube Shorts with the same one-tap UX.
 
 <p align="center">
   <img src="https://img.shields.io/badge/Bookmarks_Saved-∞-8B5CF6?style=for-the-badge" alt="Bookmarks Saved: Infinite" />
@@ -18,12 +18,12 @@ For people who bookmark everything and read nothing. A Twitter/X bookmark manage
 
 ## ⚡ Quick Add: URL Prefix
 
-Save tweets, preview Instagram Reels, or grab TikToks instantly by replacing the host in any link with `adhx.com`:
+Save tweets, preview Instagram Reels, grab TikToks, or watch YouTube Shorts instantly by replacing the host in any link with `adhx.com`:
 
 ```
-x.com/user/status/123              instagram.com/reels/abc            tiktok.com/@user/video/123
-  ↓                                  ↓                                   ↓
-adhx.com/user/status/123          adhx.com/reels/abc                  adhx.com/@user/video/123
+x.com/user/status/123        instagram.com/reels/abc      tiktok.com/@user/video/123     youtube.com/shorts/abc
+  ↓                            ↓                             ↓                              ↓
+adhx.com/user/status/123     adhx.com/reels/abc            adhx.com/@user/video/123       adhx.com/shorts/abc
 ```
 
 You can also paste the full URL after `adhx.com/` — the middleware proxy (`src/proxy.ts`) handles every shape:
@@ -32,9 +32,33 @@ You can also paste the full URL after `adhx.com/` — the middleware proxy (`src
 adhx.com/https://x.com/user/status/123              → /user/status/123
 adhx.com/https://www.instagram.com/reels/abc        → /reels/abc
 adhx.com/https://www.tiktok.com/@user/video/123     → /@user/video/123
+adhx.com/https://youtube.com/shorts/abc             → /shorts/abc   (also youtu.be/abc, watch?v=abc)
 ```
 
-Tweets land in your collection and open in the lightbox. Reels and TikToks render a public preview with inline playback and a one-tap MP4 download (no account needed).
+Tweets land in your collection and open in the lightbox. Reels and TikToks render a public preview with inline playback and a one-tap MP4 download (no account needed). YouTube Shorts play inline via the official embed (preview + save; no download — YouTube has no compliant MP4 source).
+
+---
+
+## 📱 Save it from anywhere
+
+Pick whatever's least friction for your device — every route ends up at the same `adhx.com` preview:
+
+| Method | Best for | How |
+|--------|----------|-----|
+| **URL-prefix trick** | Everyone | Replace the link's host with `adhx.com` (see above). Works on any device, no setup. |
+| **Bookmarklet** | Desktop + Android | Drag the one-click bookmarklet to your toolbar; click it on any X / Instagram / TikTok / YouTube page. |
+| **Add to ADHX** | Logged-in users | Paste any link into the in-app "Add" box (X, Instagram, TikTok, YouTube — auto-detected). |
+| **Android share sheet** | Android | Install the app (below), then **Share → ADHX** from any app — it's a PWA share target. |
+| **iOS Shortcut** | iOS | One-tap Share Sheet shortcut. _Currently rewrites `x.com` only; for Reels / TikToks / Shorts on iOS use the URL-prefix trick._ |
+
+### Install as an app (PWA)
+
+ADHX is a Progressive Web App, so you can add it to your home screen and run it full-screen like a native app — no app store:
+
+- **Android (Chrome):** a one-tap **"Add to home screen"** banner appears at the bottom on mobile; tap **Add**.
+- **iOS (Safari):** tap the **Share** button, then **"Add to Home Screen"** (the in-app banner reminds you how).
+
+Once installed it launches standalone, remembers your session, and registers as an **Android share target** so you can share links straight into it. (The prompt is handled by `src/components/PWAInstallPrompt.tsx`; a cache-free service worker in `public/sw.js` makes the app installable without ever serving stale content.)
 
 ---
 
@@ -44,7 +68,9 @@ Tweets land in your collection and open in the lightbox. Reels and TikToks rende
 |---------|-------------|
 | 🐿️ **Hoard Mode** | Sync up to 800 bookmarks from Twitter/X. No judgment here. |
 | 🎬 **Reel & TikTok Downloader** | Paste any Instagram Reel or TikTok URL → preview inline + download the MP4 in one tap. No account, no watermark. |
-| 💾 **Save Across Platforms** | Add Reels and TikToks to your collection alongside tweets. Same feed, one search, platform badges keep things straight. |
+| ▶️ **YouTube Shorts** | Paste a Shorts (or `youtu.be` / `watch`) link → preview + play inline via the official embed, save it to your collection. |
+| 💾 **Save Across Platforms** | Add Reels, TikToks, and Shorts to your collection alongside tweets. Same feed, one search, platform badges keep things straight. |
+| 📲 **Install as an App** | On mobile, tap "Add to home screen" — ADHX runs full-screen like a native app (PWA), with an Android share-target so you can share any link straight into it. |
 | 🖼️ **Gallery View** | Visual masonry grid with hover previews for videos |
 | 🔍 **Actually Find Stuff** | Full-text search that works. Revolutionary, we know. |
 | 🏷️ **Tag Everything** | Custom tags to organize your chaos (or don't, we won't tell) |
@@ -120,7 +146,7 @@ SESSION_SECRET=your-secret-key-here
 | **Database** | SQLite + Drizzle ORM (multi-user ready) |
 | **Styling** | Tailwind CSS |
 | **Auth** | Twitter OAuth 2.0 PKCE + JWT sessions |
-| **Media** | FxTwitter for X, InstaFix for Instagram Reels, fxTikTok for TikToks |
+| **Media** | FxTwitter for X, InstaFix for Instagram Reels, fxTikTok for TikToks, YouTube oEmbed + iframe for Shorts |
 | **Deployment** | Fly.io with automated releases |
 | **Testing** | Vitest (800+ tests) |
 
