@@ -6,6 +6,7 @@ import { getCurrentUserId } from '@/lib/auth/session'
 import { captureException, metrics } from '@/lib/sentry'
 import { fetchReelMetadata } from '@/lib/media/instafix'
 import { fetchTikTokMetadata, resolveTikTokUrl, isTikTokShortLink } from '@/lib/media/tnktok'
+import { recordActivity, previewPath } from '@/lib/activity/record'
 
 /**
  * Platform-agnostic bookmark add endpoint.
@@ -142,6 +143,18 @@ async function addInstagramReel(userId: string, reelId: string, source: string) 
 
   metrics.bookmarkAdded(source as 'manual' | 'url_prefix')
 
+  recordActivity({
+    action: 'save',
+    platform: 'instagram',
+    bookmarkId: reelId,
+    author: handle,
+    authorName: meta.authorName || meta.author || null,
+    text: meta.caption || meta.description || null,
+    thumbnailUrl: meta.imageUrl ? `/api/media/instagram/thumbnail?id=${encodeURIComponent(reelId)}` : null,
+    url: previewPath('instagram', handle, reelId),
+    userId,
+  })
+
   const [newBookmark] = await db
     .select()
     .from(bookmarks)
@@ -205,6 +218,18 @@ async function addTikTokVideo(userId: string, handle: string, videoId: string, s
   }
 
   metrics.bookmarkAdded(source as 'manual' | 'url_prefix')
+
+  recordActivity({
+    action: 'save',
+    platform: 'tiktok',
+    bookmarkId: videoId,
+    author: handle,
+    authorName: meta.authorName || null,
+    text: meta.description || meta.title || null,
+    thumbnailUrl: null, // tnktok exposes no poster; card falls back to the glyph
+    url: previewPath('tiktok', handle, videoId),
+    userId,
+  })
 
   const [newBookmark] = await db
     .select()

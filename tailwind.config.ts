@@ -72,6 +72,11 @@ const config: Config = {
           '0%': { transform: 'translate(0, 0) scale(1)', opacity: '1' },
           '100%': { transform: 'translate(40px, 25px) scale(0)', opacity: '0' },
         },
+        // The list is rendered twice; sliding by -50% loops seamlessly.
+        marquee: {
+          '0%': { transform: 'translateX(0)' },
+          '100%': { transform: 'translateX(-50%)' },
+        },
       },
       animation: {
         'bounce-in': 'bounce-in 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
@@ -79,6 +84,7 @@ const config: Config = {
         'sparkle-2': 'sparkle-2 0.6s ease-out 0.1s forwards',
         'sparkle-3': 'sparkle-3 0.6s ease-out 0.05s forwards',
         'sparkle-4': 'sparkle-4 0.6s ease-out 0.15s forwards',
+        marquee: 'marquee var(--marquee-duration, 60s) linear infinite',
       },
     },
   },

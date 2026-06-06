@@ -1,6 +1,9 @@
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { Metadata } from 'next'
 import { getSession } from '@/lib/auth/session'
+import { recordActivity, previewPath } from '@/lib/activity/record'
+import { isLikelyBot } from '@/lib/activity/bot'
 import { QuickAddLanding } from '@/components/QuickAddLanding'
 import { TweetPreviewLanding } from '@/components/TweetPreviewLanding'
 import { fetchTweetData, extractUrlsFromFacets, type FxTwitterResponse } from '@/lib/media/fxembed'
@@ -122,6 +125,23 @@ export default async function QuickAddPage({ params }: Props) {
 
   // Show rich preview if we have tweet data
   if (tweet) {
+    // Record a human preview for the public pulse (skip OG-unfurl crawlers).
+    const ua = (await headers()).get('user-agent')
+    if (!isLikelyBot(ua)) {
+      const previewAuthor = tweet.author?.screen_name || username
+      recordActivity({
+        action: 'preview',
+        platform: 'twitter',
+        bookmarkId: id,
+        author: previewAuthor,
+        authorName: tweet.author?.name || null,
+        text: tweet.text || null,
+        thumbnailUrl:
+          tweet.media?.all?.[0]?.thumbnail_url || tweet.media?.all?.[0]?.url || tweet.author?.avatar_url || null,
+        url: previewPath('twitter', previewAuthor, id),
+      })
+    }
+
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     const jsonLd = buildJsonLd(tweet, baseUrl, username, id)
 

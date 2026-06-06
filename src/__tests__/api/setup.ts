@@ -182,6 +182,22 @@ export const FULL_SCHEMA_SQL = `
     PRIMARY KEY (user_id, tag)
   );
   CREATE INDEX tag_shares_share_code_idx ON tag_shares(share_code);
+
+  CREATE TABLE activity (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    action TEXT NOT NULL,
+    platform TEXT NOT NULL DEFAULT 'twitter',
+    bookmark_id TEXT NOT NULL,
+    author TEXT NOT NULL,
+    author_name TEXT,
+    text TEXT,
+    thumbnail_url TEXT,
+    url TEXT NOT NULL,
+    user_id TEXT,
+    created_at TEXT NOT NULL
+  );
+  CREATE INDEX activity_created_at_idx ON activity(created_at);
+  CREATE INDEX activity_dedupe_idx ON activity(action, platform, bookmark_id, created_at);
 `
 
 export interface TestDbInstance {
