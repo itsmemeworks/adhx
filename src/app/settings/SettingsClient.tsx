@@ -23,6 +23,7 @@ import {
   ExternalLink,
   Copy,
   Check,
+  Flame,
 } from 'lucide-react'
 import { SyncProgress } from '@/components/sync/SyncProgress'
 import { usePreferences, FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
@@ -227,6 +228,120 @@ function ShortcutCard() {
         </div>
       )}
     </SCard>
+  )
+}
+
+/** Local calendar day as YYYY-MM-DD. */
+function localDay(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+interface StreakData {
+  current: number
+  longest: number
+  lastActiveDate: string | null
+  triagedTotal: number
+  triagedThisWeek: number
+}
+
+/**
+ * Gamification streak card (top of Settings): current streak, a Mon–Sun dot row
+ * (done / today / upcoming), and stats — longest streak, posts triaged, this week.
+ */
+function StreakCard() {
+  const [s, setS] = useState<StreakData | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    fetch(`/api/triage/streak?today=${localDay(new Date())}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => alive && d && setS(d))
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const current = s?.current ?? 0
+  const today = localDay(new Date())
+
+  // Active days = the `current` consecutive days ending at lastActiveDate.
+  const activeDays = new Set<string>()
+  if (s?.lastActiveDate && current > 0) {
+    const [y, m, d] = s.lastActiveDate.split('-').map(Number)
+    for (let k = 0; k < current; k++) {
+      const dt = new Date(y, m - 1, d)
+      dt.setDate(dt.getDate() - k)
+      activeDays.add(localDay(dt))
+    }
+  }
+
+  // Build the current calendar week, Monday → Sunday.
+  const now = new Date()
+  const monday = new Date(now)
+  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7))
+  const labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+  const week = labels.map((label, i) => {
+    const dt = new Date(monday)
+    dt.setDate(monday.getDate() + i)
+    const iso = localDay(dt)
+    return { label, iso, done: activeDays.has(iso), isToday: iso === today, isFuture: iso > today }
+  })
+
+  const activeToday = activeDays.has(today)
+  const subtitle = activeToday
+    ? 'Nice — come back tomorrow to keep it going.'
+    : current > 0
+      ? `Triage at least one post today to reach ${current + 1} days.`
+      : 'Triage a post today to start your streak.'
+
+  const stats: [string, string][] = [
+    [String(s?.longest ?? 0), 'Longest streak'],
+    [String(s?.triagedTotal ?? 0), 'Posts triaged'],
+    [String(s?.triagedThisWeek ?? 0), 'This week'],
+  ]
+
+  return (
+    <div className="rounded-card border border-clay/25 bg-clay/[0.06] p-5 sm:px-6">
+      <div className="flex flex-wrap items-center gap-3.5">
+        <div className="w-[52px] h-[52px] flex-none rounded-[14px] bg-flame/[0.18] flex items-center justify-center">
+          <Flame className="w-[26px] h-[26px] text-flame" fill="currentColor" />
+        </div>
+        <div className="flex-1 min-w-[140px]">
+          <div className="font-serif font-bold text-[23px] leading-tight text-ink">
+            {current > 0 ? `${current}-day streak` : 'Start a streak'}
+          </div>
+          <div className="text-[13.5px] text-ink-2 mt-0.5">{subtitle}</div>
+        </div>
+        <div className="flex gap-[7px]">
+          {week.map((d, i) => (
+            <div key={i} className="flex flex-col items-center gap-1.5">
+              <div
+                className={cn(
+                  'w-[26px] h-[26px] rounded-full flex items-center justify-center',
+                  d.done
+                    ? 'bg-clay-grad text-white'
+                    : d.isToday
+                      ? 'border-2 border-dashed border-clay bg-inset'
+                      : 'bg-inset',
+                )}
+              >
+                {d.done && <Check className="w-3 h-3" strokeWidth={3} />}
+              </div>
+              <span className="text-[10.5px] font-semibold text-ink-3">{d.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="flex gap-7 mt-4 pt-4 border-t border-clay/20">
+        {stats.map(([n, l]) => (
+          <div key={l}>
+            <div className="font-extrabold text-[18px] text-ink">{n}</div>
+            <div className="text-[12px] text-ink-3">{l}</div>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -533,6 +648,9 @@ function SettingsPage() {
           <h1 className="font-serif text-[30px] sm:text-[38px] font-semibold tracking-tight text-ink mb-1">Settings</h1>
           <p className="text-[15px] text-ink-2">Manage your connection, reading and sync preferences.</p>
         </div>
+
+        {/* Streak / gamification */}
+        <StreakCard />
 
         {/* Message Toast */}
         {message && (
