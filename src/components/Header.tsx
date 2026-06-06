@@ -9,7 +9,6 @@ import {
   Settings,
   Sun,
   Moon,
-  Menu,
   X,
   RefreshCw,
   Zap,
@@ -54,7 +53,6 @@ export function Header() {
   const [showAddTweet, setShowAddTweet] = useState(false)
   const [addTweetResult, setAddTweetResult] = useState<AddTweetResult | null>(null)
   const [showSync, setShowSync] = useState(false)
-  const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null)
@@ -309,7 +307,7 @@ export function Header() {
   return (
     <>
       <header className="sticky top-0 z-50 bg-surface border-b border-hairline">
-        <div className="px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+        <div className="px-4 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4">
           {/* Left section - Logo and Stats */}
           <div className="flex items-center gap-4 flex-shrink-0">
             {/* Logo */}
@@ -402,7 +400,7 @@ export function Header() {
 
           {/* Right section - Actions (only show when authenticated) */}
           {authStatus?.authenticated && (
-            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
               {/* Mobile search — collapses to an icon (expands the row below) */}
               <button
                 onClick={() => setMobileSearchOpen((v) => !v)}
@@ -423,37 +421,39 @@ export function Header() {
                   {stats.unread}
                 </span>
                 {streak > 0 && (
-                  <span className="inline-flex items-center gap-1 ml-1 pl-2.5 border-l border-white/30">
+                  <span className="hidden sm:inline-flex items-center gap-1 ml-1 pl-2.5 border-l border-white/30">
                     <Flame className="w-3.5 h-3.5 text-flame" fill="currentColor" />
                     <span className="text-xs leading-none">{streak}</span>
                   </span>
                 )}
               </button>
 
-              {/* Theme toggle */}
+              {/* Theme toggle — hidden on phones (lives in the user menu there) */}
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-full hover:bg-inset transition-colors text-ink-3 hover:text-ink"
+                className="hidden sm:flex items-center justify-center p-2 rounded-full hover:bg-inset transition-colors text-ink-3 hover:text-ink"
                 title={resolvedTheme === 'dark' ? 'Switch to light' : 'Switch to dark'}
                 aria-label="Toggle theme"
               >
                 {resolvedTheme === 'dark' ? <Sun className="w-[18px] h-[18px]" /> : <Moon className="w-[18px] h-[18px]" />}
               </button>
 
-              {/* Sync Button */}
-              <Tooltip content={cooldown.canSync ? 'Sync bookmarks' : `Available in ${formatCooldown(displayedCooldown)}`} placement="left">
-                <button
-                  onClick={() => cooldown.canSync && setShowSync(true)}
-                  className={cn(
-                    'p-2 rounded-full transition-colors',
-                    cooldown.canSync
-                      ? 'hover:bg-inset text-ink-3 hover:text-ink'
-                      : 'text-ink-3/50 cursor-not-allowed',
-                  )}
-                >
-                  <RefreshCw className="w-[18px] h-[18px]" />
-                </button>
-              </Tooltip>
+              {/* Sync Button — hidden on phones (lives in the user menu there) */}
+              <div className="hidden sm:block">
+                <Tooltip content={cooldown.canSync ? 'Sync bookmarks' : `Available in ${formatCooldown(displayedCooldown)}`} placement="left">
+                  <button
+                    onClick={() => cooldown.canSync && setShowSync(true)}
+                    className={cn(
+                      'p-2 rounded-full transition-colors',
+                      cooldown.canSync
+                        ? 'hover:bg-inset text-ink-3 hover:text-ink'
+                        : 'text-ink-3/50 cursor-not-allowed',
+                    )}
+                  >
+                    <RefreshCw className="w-[18px] h-[18px]" />
+                  </button>
+                </Tooltip>
+              </div>
 
               {/* Add Button */}
               <button
@@ -559,18 +559,38 @@ export function Header() {
                           Settings
                         </Link>
                       </div>
+
+                      {/* Theme + Sync — phones only; on larger screens these sit
+                          in the top bar, so showing them here too would duplicate. */}
+                      <div className="sm:hidden border-t border-hairline py-1">
+                        <button
+                          onClick={toggleTheme}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset text-ink-2 hover:text-ink transition-colors"
+                        >
+                          {resolvedTheme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                          {resolvedTheme === 'dark' ? 'Light mode' : 'Dark mode'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (cooldown.canSync) {
+                              setShowSync(true)
+                              setShowUserMenu(false)
+                            }
+                          }}
+                          disabled={!cooldown.canSync}
+                          className={cn(
+                            'w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors',
+                            cooldown.canSync ? 'hover:bg-inset text-ink-2 hover:text-ink' : 'text-ink-3/50 cursor-not-allowed',
+                          )}
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                          {cooldown.canSync ? 'Sync bookmarks' : `Sync in ${formatCooldown(displayedCooldown)}`}
+                        </button>
+                      </div>
                     </div>
                   </>
                 )}
               </div>
-
-              {/* Mobile Menu Toggle */}
-              <button
-                onClick={() => setShowMobileMenu(!showMobileMenu)}
-                className="p-2 hover:bg-inset rounded-full transition-colors md:hidden text-ink-3 hover:text-ink"
-              >
-                {showMobileMenu ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </button>
             </div>
           )}
         </div>
@@ -603,19 +623,6 @@ export function Header() {
           </div>
         )}
 
-        {/* Mobile Navigation */}
-        {showMobileMenu && (
-          <div className="md:hidden border-t border-hairline bg-surface py-2">
-            <Link
-              href="/settings"
-              onClick={() => setShowMobileMenu(false)}
-              className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-inset text-ink-2 hover:text-ink transition-colors"
-            >
-              <Settings className="w-5 h-5" />
-              Settings
-            </Link>
-          </div>
-        )}
       </header>
 
       {/* Add Tweet Modal */}
