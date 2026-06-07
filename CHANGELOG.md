@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.39.0](https://github.com/itsmemeworks/adhx/compare/v1.38.0...v1.39.0) (2026-06-07)
+
+
+### Features
+
+* refresh preview hero tagline + align readme ([#192](https://github.com/itsmemeworks/adhx/issues/192)) ([a0b892b](https://github.com/itsmemeworks/adhx/commit/a0b892b3c28c717c586598886191888e8ee0cdf6))
+
+
+### Bug Fixes
+
+* drop the duplicate connect cta on preview pages ([#194](https://github.com/itsmemeworks/adhx/issues/194)) ([aef1943](https://github.com/itsmemeworks/adhx/commit/aef19437aabc0fcf0f408da33f3529dac318f6d7))
+
 ## [1.38.0](https://github.com/itsmemeworks/adhx/compare/v1.37.1...v1.38.0) (2026-06-07)
 
 
