@@ -13,6 +13,7 @@
  */
 
 import { fetchTweetData, type FxTwitterResponse } from '@/lib/media/fxembed'
+import { detectPlatformPost } from '@/lib/platform/url'
 import { normalizeEntityMap } from '@/lib/utils/article-text'
 
 // ============================================================================
@@ -112,22 +113,16 @@ export interface ProcessedLinkItem {
 
 /**
  * Parse a tweet URL to extract author and tweet ID.
- * Supports multiple URL formats:
- * - https://twitter.com/user/status/123
- * - https://x.com/user/status/123
- * - https://mobile.twitter.com/user/status/123
- * - https://vxtwitter.com/user/status/123
- * - https://fxtwitter.com/user/status/123
+ *
+ * Delegates to the shared platform URL detector (`@/lib/platform/url`) so the
+ * tweet-URL regex lives in exactly one place. Supports x.com, twitter.com, the
+ * mobile. subdomain, and the vxtwitter.com / fxtwitter.com mirrors.
  */
 export function parseTweetUrl(url: string): ParsedTweetUrl | null {
-  const pattern =
-    /(?:https?:\/\/)?(?:www\.|mobile\.)?(?:twitter|x|vxtwitter|fxtwitter)\.com\/([^/]+)\/status\/(\d+)/i
-
-  const match = url.match(pattern)
-  if (match) {
-    return { author: match[1], tweetId: match[2] }
+  const detected = detectPlatformPost(url)
+  if (detected?.platform === 'twitter' && detected.author) {
+    return { author: detected.author, tweetId: detected.id }
   }
-
   return null
 }
 

@@ -9,7 +9,9 @@
  *
  * Behaviour preserved from the prior call sites:
  *   - protocol optional (`https?://` or bare host)
- *   - `www.` everywhere; `vm.`/`m.` for TikTok; `m.` for YouTube
+ *   - `www.`/`mobile.` for Twitter; `vm.`/`m.` for TikTok; `m.` for YouTube
+ *   - Twitter also matches the `vxtwitter.com`/`fxtwitter.com` mirrors so a
+ *     pasted mirror link resolves (same hosts `parseTweetUrl` accepted)
  *   - Instagram accepts `reel`, `reels`, and `p`
  *   - Twitter usernames are `\w{1,15}`; TikTok handles `[A-Za-z0-9._]{1,30}`
  *   - TikTok video ids are `\d{6,25}`; tweet ids are `\d+`
@@ -38,7 +40,8 @@ export interface PlatformPost {
  * here — its many id forms are owned by `extractYouTubeId`.
  */
 export const PLATFORM_PATTERNS = {
-  twitter: /(?:https?:\/\/)?(?:www\.)?(?:x\.com|twitter\.com)\/(\w{1,15})\/status\/(\d+)/i,
+  twitter:
+    /(?:https?:\/\/)?(?:www\.|mobile\.)?(?:x|twitter|vxtwitter|fxtwitter)\.com\/(\w{1,15})\/status\/(\d+)/i,
   instagram: /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:reels?|p)\/([A-Za-z0-9_-]+)/i,
   tiktok:
     /(?:https?:\/\/)?(?:www\.|vm\.|m\.)?tiktok\.com\/@([A-Za-z0-9._]{1,30})\/video\/(\d{6,25})/i,

@@ -50,6 +50,22 @@ describe('detectPlatformPost — X / Twitter', () => {
     expect(detectPlatformPost('https://x.com/abcdefghijklmnop/status/111')).toBeNull()
     expect(detectPlatformPost('https://x.com/user/status/abc')).toBeNull()
   })
+
+  it('accepts the mobile. subdomain and vxtwitter/fxtwitter mirrors', () => {
+    // These match parseTweetUrl in the processor — a pasted mirror link resolves.
+    expect(detectPlatformPost('https://mobile.twitter.com/user/status/999')?.previewPath).toBe(
+      '/user/status/999',
+    )
+    expect(detectPlatformPost('https://vxtwitter.com/user/status/111')).toEqual({
+      platform: 'twitter',
+      id: '111',
+      author: 'user',
+      previewPath: '/user/status/111',
+    })
+    expect(detectPlatformPost('https://fxtwitter.com/user/status/222')?.previewPath).toBe(
+      '/user/status/222',
+    )
+  })
 })
 
 describe('detectPlatformPost — Instagram', () => {
