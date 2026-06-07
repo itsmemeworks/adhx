@@ -148,6 +148,16 @@ db.exec(`
 
 console.log('[migrate] Indexes created')
 
+// activity.author_avatar_url — added after the table's initial schema so the
+// pulse/Discover can show the post author's avatar on tweet-style cards.
+// SQLite's ALTER TABLE ADD COLUMN has no IF NOT EXISTS, so guard re-runs.
+try {
+  db.exec('ALTER TABLE activity ADD COLUMN author_avatar_url text')
+  console.log('[migrate] Added activity.author_avatar_url')
+} catch {
+  // Column already exists — nothing to do.
+}
+
 // Normalize non-ISO created_at dates (Twitter format like "Wed Jan 28 02:28:44 +0000 2026")
 // to ISO 8601 format for correct string-based sorting
 try {

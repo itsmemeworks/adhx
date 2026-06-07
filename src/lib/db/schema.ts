@@ -280,6 +280,7 @@ export const activity = sqliteTable(
     bookmarkId: text('bookmark_id').notNull(),
     author: text('author').notNull(),
     authorName: text('author_name'),
+    authorAvatarUrl: text('author_avatar_url'),
     text: text('text'),
     thumbnailUrl: text('thumbnail_url'),
     url: text('url').notNull(),

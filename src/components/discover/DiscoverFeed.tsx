@@ -14,6 +14,8 @@ export interface ActivityItem {
   authorName?: string | null
   text?: string | null
   thumbnailUrl?: string | null
+  /** The post author's avatar, for tweet-style text/quote cards. */
+  authorAvatarUrl?: string | null
   url: string
   createdAt: string
   /** Distinct ADHX users who've saved this post (anonymous count). Drives the flame. */
@@ -47,6 +49,7 @@ function dedupeByPost(items: ActivityItem[]): ActivityItem[] {
       prev.saveCount = Math.max(prev.saveCount ?? 0, it.saveCount ?? 0)
       prev.contentType = prev.contentType ?? it.contentType
       prev.thumbnailUrl = prev.thumbnailUrl ?? it.thumbnailUrl
+      prev.authorAvatarUrl = prev.authorAvatarUrl ?? it.authorAvatarUrl
     }
   }
   return [...byPost.values()]

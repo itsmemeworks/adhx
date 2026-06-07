@@ -38,6 +38,7 @@ export async function GET() {
         bookmarkId: activity.bookmarkId,
         author: activity.author,
         authorName: activity.authorName,
+        authorAvatarUrl: activity.authorAvatarUrl,
         text: activity.text,
         thumbnailUrl: activity.thumbnailUrl,
         url: activity.url,
@@ -69,6 +70,7 @@ export async function GET() {
     const mediaKinds = new Map<string, { video: boolean; photo: boolean }>()
     const articleCovers = new Map<string, string>()
     const articleTitles = new Map<string, string>()
+    const avatars = new Map<string, string>()
     if (ids.length > 0) {
       const aggRows = db
         .select({
@@ -77,6 +79,7 @@ export async function GET() {
           saveCount: sql<number>`count(distinct ${bookmarks.userId})`,
           isQuote: sql<number>`max(${bookmarks.isQuote})`,
           category: sql<string | null>`max(${bookmarks.category})`,
+          avatar: sql<string | null>`max(${bookmarks.authorProfileImageUrl})`,
         })
         .from(bookmarks)
         .where(inArray(bookmarks.id, ids))
@@ -86,6 +89,7 @@ export async function GET() {
         const k = `${r.platform}:${r.id}`
         counts.set(k, Number(r.saveCount) || 0)
         flags.set(k, { isQuote: !!Number(r.isQuote), category: r.category ?? null })
+        if (r.avatar) avatars.set(k, r.avatar)
       }
 
       const mediaRows = db
@@ -164,6 +168,9 @@ export async function GET() {
         saveCount: counts.get(key) ?? 0,
         contentType,
         thumbnailUrl: thumbOf(i, key, contentType),
+        // The post author's avatar for tweet-style cards — the recorded value
+        // (preview-only items) else the saved bookmark's avatar (saved items).
+        authorAvatarUrl: i.authorAvatarUrl ?? avatars.get(key) ?? null,
       }
     })
 
