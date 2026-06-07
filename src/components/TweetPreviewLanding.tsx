@@ -12,6 +12,7 @@ import { FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
 import Link from 'next/link'
 import { MatterLogo, PlatformGlyph, ConnectWithX } from '@/components/matter'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { PreviewAnotherLink } from '@/components/PreviewAnotherLink'
 import { AnimatedBackground, LandingAnimations } from '@/components/landing'
 import { formatCount, formatRelativeTime } from '@/lib/utils/format'
 import { cn } from '@/lib/utils'
@@ -169,8 +170,6 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
   const [isExpanded, setIsExpanded] = useState(true)
   // For tweets WITH media, long text auto-collapses to 3 lines (expandable).
   const [mediaTextExpanded, setMediaTextExpanded] = useState(false)
-  const [tweetUrl, setTweetUrl] = useState('')
-  const [urlError, setUrlError] = useState('')
   const [shareStatus, setShareStatus] = useState<'idle' | 'shared' | 'copied'>('idle')
   const [contentOverflows, setContentOverflows] = useState(false)
   const articleRef = useRef<HTMLElement>(null)
@@ -181,57 +180,6 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
     const collapsed = localStorage.getItem('adhx-preview-collapsed')
     if (collapsed === 'true') setIsExpanded(false)
   }, [])
-
-  // Patterns for the "preview another link" field — accepts X, Instagram, TikTok & YouTube.
-  const tweetUrlPattern = /(?:https?:\/\/)?(?:www\.)?(?:x\.com|twitter\.com)\/(\w{1,15})\/status\/(\d+)/i
-  const instagramUrlPattern = /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:reels?|p)\/([A-Za-z0-9_-]+)/i
-  const tiktokUrlPattern = /(?:https?:\/\/)?(?:www\.|vm\.|m\.)?tiktok\.com\/@([A-Za-z0-9._]{1,30})\/video\/(\d{6,25})/i
-  const youtubeUrlPattern = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:shorts\/|watch\?v=)|youtu\.be\/)([A-Za-z0-9_-]{6,})/i
-
-  const parseAndNavigate = (url: string): boolean => {
-    const trimmed = url.trim()
-
-    const tweetMatch = trimmed.match(tweetUrlPattern)
-    if (tweetMatch) {
-      window.location.href = `/${tweetMatch[1]}/status/${tweetMatch[2]}`
-      return true
-    }
-    const igMatch = trimmed.match(instagramUrlPattern)
-    if (igMatch) {
-      window.location.href = `/reels/${igMatch[1]}/`
-      return true
-    }
-    const ttMatch = trimmed.match(tiktokUrlPattern)
-    if (ttMatch) {
-      window.location.href = `/@${ttMatch[1]}/video/${ttMatch[2]}`
-      return true
-    }
-    const ytMatch = trimmed.match(youtubeUrlPattern)
-    if (ytMatch) {
-      window.location.href = `/shorts/${ytMatch[1]}`
-      return true
-    }
-    return false
-  }
-
-  const handleTweetUrlChange = (value: string) => {
-    setTweetUrl(value)
-    setUrlError('')
-
-    // Auto-navigate if a recognized link is pasted
-    if (/(?:x\.com|twitter\.com|instagram\.com|tiktok\.com|youtube\.com|youtu\.be)\//i.test(value)) {
-      parseAndNavigate(value)
-    }
-  }
-
-  const handleTweetUrlSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setUrlError('')
-
-    if (!parseAndNavigate(tweetUrl)) {
-      setUrlError("That's not a link we recognize. Try X, Instagram, TikTok or YouTube.")
-    }
-  }
 
   const photos = tweet.media?.photos || []
   const videos = tweet.media?.videos || []
@@ -626,12 +574,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                   onShare={handleSharePreview}
                   shareStatus={shareStatus}
                 />
-                <PreviewAnotherTweet
-                  tweetUrl={tweetUrl}
-                  urlError={urlError}
-                  onUrlChange={handleTweetUrlChange}
-                  onSubmit={handleTweetUrlSubmit}
-                />
+                <PreviewAnotherLink />
               </div>
             </div>
 
@@ -659,12 +602,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
                 onShare={handleSharePreview}
                 shareStatus={shareStatus}
               />
-              <PreviewAnotherTweet
-                tweetUrl={tweetUrl}
-                urlError={urlError}
-                onUrlChange={handleTweetUrlChange}
-                onSubmit={handleTweetUrlSubmit}
-              />
+              <PreviewAnotherLink />
               <ValueCard />
             </div>
 
@@ -815,41 +753,6 @@ function ValueCard(): React.ReactElement {
   )
 }
 
-/** Preview another tweet section - URL input form for previewing different tweets */
-interface PreviewAnotherTweetProps {
-  tweetUrl: string
-  urlError: string
-  onUrlChange: (value: string) => void
-  onSubmit: (e: React.FormEvent) => void
-  className?: string
-}
-
-function PreviewAnotherTweet({ tweetUrl, urlError, onUrlChange, onSubmit, className }: PreviewAnotherTweetProps): React.ReactElement {
-  return (
-    <div data-section="preview-another" className={cn('rounded-2xl border border-hairline bg-surface px-4 py-4', className)}>
-      <p className="font-bold text-[13.5px] text-ink mb-2.5">Preview another link</p>
-      <form onSubmit={onSubmit}>
-        <div className="flex gap-2.5">
-          <input
-            type="text"
-            value={tweetUrl}
-            onChange={(e) => onUrlChange(e.target.value)}
-            placeholder="Paste a link…"
-            className="flex-1 font-mono text-base sm:text-[12.5px] bg-inset px-3 py-2.5 rounded-xl border border-hairline text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-clay/40 focus:border-transparent"
-          />
-          <button
-            type="submit"
-            className="px-[18px] rounded-xl bg-clay-grad text-white font-semibold text-[13.5px] shadow-glow transition-all hover:opacity-95"
-          >
-            Go
-          </button>
-        </div>
-        {urlError && <p className="text-[#EF4444] text-xs mt-2">{urlError}</p>}
-      </form>
-      <p className="text-xs text-ink-3 mt-2.5">Works with X, Instagram, TikTok &amp; YouTube.</p>
-    </div>
-  )
-}
 
 /** Media grid component for displaying tweet photos and videos */
 interface MediaGridProps {

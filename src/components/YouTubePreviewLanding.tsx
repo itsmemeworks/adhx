@@ -8,7 +8,8 @@ import { AnimatedBackground, LandingAnimations } from '@/components/landing'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { MatterLogo, PlatformGlyph, ConnectWithX } from '@/components/matter'
 import { cn } from '@/lib/utils'
-import { extractYouTubeId, youtubeEmbedUrl, youtubeShortUrl, youtubeThumbnail } from '@/lib/media/youtube'
+import { youtubeEmbedUrl, youtubeShortUrl, youtubeThumbnail } from '@/lib/media/youtube'
+import { PreviewAnotherLink } from '@/components/PreviewAnotherLink'
 
 interface YouTubePreviewLandingProps {
   videoId: string
@@ -29,36 +30,11 @@ export function YouTubePreviewLanding({
 }: YouTubePreviewLandingProps) {
   const router = useRouter()
   const [isPlaying, setIsPlaying] = useState(false)
-  const [linkInput, setLinkInput] = useState('')
-  const [urlError, setUrlError] = useState('')
   const [connecting, setConnecting] = useState(false)
   const [adding, setAdding] = useState(false)
 
   const shortUrl = youtubeShortUrl(videoId)
   const channel = author || (authorName ? authorName : '@youtube')
-
-  const parseAndNavigate = (url: string): boolean => {
-    const id = extractYouTubeId(url.trim())
-    if (id) {
-      window.location.href = `/shorts/${id}`
-      return true
-    }
-    return false
-  }
-
-  const handleInputChange = (value: string) => {
-    setLinkInput(value)
-    setUrlError('')
-    if (/youtu\.?be/i.test(value)) parseAndNavigate(value)
-  }
-
-  const handleInputSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setUrlError('')
-    if (!parseAndNavigate(linkInput)) {
-      setUrlError("That's not a YouTube link. Or it's been heavily disguised.")
-    }
-  }
 
   const handleConnect = () => {
     setConnecting(true)
@@ -97,13 +73,7 @@ export function YouTubePreviewLanding({
         onAdd={handleAddToCollection}
         onConnect={handleConnect}
       />
-      <PreviewAnother
-        linkInput={linkInput}
-        urlError={urlError}
-        onChange={handleInputChange}
-        onSubmit={handleInputSubmit}
-        className="mt-4"
-      />
+      <PreviewAnotherLink className="mt-4" />
     </>
   )
 
@@ -425,44 +395,3 @@ function ActBtn({ icon, label, onClick }: { icon: React.ReactNode; label: string
   )
 }
 
-function PreviewAnother({
-  linkInput,
-  urlError,
-  onChange,
-  onSubmit,
-  className,
-}: {
-  linkInput: string
-  urlError: string
-  onChange: (value: string) => void
-  onSubmit: (e: React.FormEvent) => void
-  className?: string
-}) {
-  return (
-    <div
-      data-section="preview-another"
-      className={cn('rounded-2xl border border-hairline bg-surface px-4 py-4', className)}
-    >
-      <p className="font-bold text-[13.5px] text-ink mb-2.5">Preview another link</p>
-      <form onSubmit={onSubmit}>
-        <div className="flex gap-2.5">
-          <input
-            type="text"
-            value={linkInput}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder="Paste a link…"
-            className="flex-1 font-mono text-base sm:text-[12.5px] bg-inset px-3 py-2.5 rounded-xl border border-hairline text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-clay/40 focus:border-transparent"
-          />
-          <button
-            type="submit"
-            className="px-[18px] rounded-xl bg-clay-grad text-white font-semibold text-[13.5px] shadow-glow transition-all hover:opacity-95"
-          >
-            Go
-          </button>
-        </div>
-        {urlError && <p className="text-[#EF4444] text-xs mt-2">{urlError}</p>}
-      </form>
-      <p className="text-xs text-ink-3 mt-2.5">Works with X, Instagram, TikTok &amp; YouTube.</p>
-    </div>
-  )
-}
