@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.37.1](https://github.com/itsmemeworks/adhx/compare/v1.37.0...v1.37.1) (2026-06-07)
+
+
+### Bug Fixes
+
+* discover footer platform icon + homepage discover link → /discover ([#187](https://github.com/itsmemeworks/adhx/issues/187)) ([d0d9860](https://github.com/itsmemeworks/adhx/commit/d0d9860c98e641ea3793cb923901d81e04989ee3))
+
 ## [1.37.0](https://github.com/itsmemeworks/adhx/compare/v1.36.1...v1.37.0) (2026-06-07)
 
 
