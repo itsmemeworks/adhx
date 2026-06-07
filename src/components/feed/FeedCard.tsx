@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Image, Play, Check, EyeOff, FileText, Share2 } from 'lucide-react'
+import { Image, Play, Check, FileText, Share2 } from 'lucide-react'
 import { AuthorAvatar } from './AuthorAvatar'
 import {
   renderTextWithLinks,
@@ -20,9 +20,6 @@ interface FeedCardProps {
   lastSyncAt: string | null
   sortField: 'processedAt' | 'createdAt'
   onExpand: () => void
-  onMarkRead: () => void
-  unreadOnly?: boolean
-  onRemove?: () => void
 }
 
 /** Time pill — mono white on translucent black, for media/article overlays. */
@@ -44,14 +41,11 @@ export function FeedCard({
   lastSyncAt,
   sortField,
   onExpand,
-  onMarkRead,
-  unreadOnly,
-  onRemove,
 }: FeedCardProps): React.ReactElement {
   const [error, setError] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
-  // Hover affordances (video autoplay + the mark-read overlay) are desktop-only.
+  // Hover affordances (video autoplay + the share overlay) are desktop-only.
   // On touch the browser emulates :hover on the FIRST tap, revealing the overlay
   // and swallowing that tap — which is why opening took two taps. Gate them to
   // hover-capable devices so a tap just opens the item.
@@ -59,9 +53,7 @@ export function FeedCard({
   useEffect(() => {
     setCanHover(window.matchMedia('(hover: hover)').matches)
   }, [])
-  const [showDopamine, setShowDopamine] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
-  const [isExiting, setIsExiting] = useState(false)
   const { preferences } = usePreferences()
   const renderText = preferences.bionicReading ? renderBionicTextWithLinks : renderTextWithLinks
 
@@ -79,25 +71,6 @@ export function FeedCard({
 
   const aspectRatio =
     primaryMedia?.width && primaryMedia?.height ? primaryMedia.width / primaryMedia.height : 1
-
-  function handleMarkReadWithAnimation(e: React.MouseEvent): void {
-    e.stopPropagation()
-
-    if (item.isRead) {
-      onMarkRead()
-      return
-    }
-
-    setShowDopamine(true)
-    setTimeout(() => onMarkRead(), 150)
-
-    if (unreadOnly && onRemove) {
-      setTimeout(() => setIsExiting(true), 400)
-      setTimeout(() => onRemove(), 700)
-    } else {
-      setTimeout(() => setShowDopamine(false), 800)
-    }
-  }
 
   const newGlowClass =
     isNew && !isHovered
@@ -122,9 +95,7 @@ export function FeedCard({
   const platform = (item.platform || 'twitter') as PlatformId
 
   return (
-    <div
-      className={`mb-4 break-inside-avoid transition-all duration-300 ${isExiting ? 'opacity-0 scale-95 -translate-y-2' : ''}`}
-    >
+    <div className="mb-4 break-inside-avoid transition-all duration-300">
       <div
         className={cn(
           'group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer',
@@ -194,24 +165,13 @@ export function FeedCard({
                       }
                     })
                   }}
-                  className="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
-                  title="Copy link to this post"
+                  className={cn(
+                    'p-2 rounded-full pointer-events-auto text-white transition-all duration-200',
+                    copiedLink ? 'bg-done scale-110 shadow-lg' : 'bg-clay hover:opacity-90',
+                  )}
+                  title={copiedLink ? 'Link copied!' : 'Copy link to this post'}
                 >
                   {copiedLink ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
-                </button>
-                <button
-                  onClick={handleMarkReadWithAnimation}
-                  className={cn(
-                    'p-2 rounded-full pointer-events-auto transition-all duration-200',
-                    showDopamine
-                      ? 'bg-clay text-white scale-125 shadow-lg'
-                      : item.isRead
-                        ? 'bg-black/50 hover:bg-black/40 text-white'
-                        : 'bg-clay hover:opacity-90 text-white',
-                  )}
-                  title={item.isRead ? 'Mark as unread' : 'Mark as read'}
-                >
-                  {item.isRead ? <EyeOff className="w-4 h-4" /> : <Check className="w-4 h-4" />}
                 </button>
               </div>
             </div>

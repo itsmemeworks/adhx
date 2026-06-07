@@ -61,7 +61,6 @@ function FeedPageContent(): React.ReactElement {
   const [hasMore, setHasMore] = useState(true)
   const [stats, setStats] = useState({ total: 0, unread: 0 })
   const [triageOpen, setTriageOpen] = useState(false)
-  const [markingRead, setMarkingRead] = useState(false)
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)
@@ -582,32 +581,6 @@ function FeedPageContent(): React.ReactElement {
     setStats((prev) => ({ ...prev, unread: prev.unread + 1 }))
   }, [])
 
-  const handleMarkAsRead = useCallback(
-    async (id: string) => {
-      if (markingRead) return
-      setMarkingRead(true)
-
-      try {
-        const item = items.find((i) => i.id === id)
-        const method = item?.isRead ? 'DELETE' : 'POST'
-
-        await fetch(`/api/bookmarks/${id}/read`, { method })
-
-        setItems((prev) => prev.map((i) => (i.id === id ? { ...i, isRead: !i.isRead } : i)))
-        setStats((prev) => ({
-          ...prev,
-          unread: item?.isRead ? prev.unread + 1 : Math.max(0, prev.unread - 1),
-        }))
-        window.dispatchEvent(new CustomEvent('stats-updated'))
-      } catch (error) {
-        console.error('Failed to mark as read:', error)
-      } finally {
-        setMarkingRead(false)
-      }
-    },
-    [markingRead, items],
-  )
-
   const handleAddTag = useCallback(
     async (itemId: string, tag: string) => {
       const response = await fetch(`/api/bookmarks/${itemId}/tags`, {
@@ -951,8 +924,6 @@ function FeedPageContent(): React.ReactElement {
             stats={stats}
             view={view}
             onExpand={openTriageFromItem}
-            onMarkRead={handleMarkAsRead}
-            onRemove={(id) => setItems((prev) => prev.filter((i) => i.id !== id))}
             onLoadMore={loadMore}
             onShowAll={() => setUnreadOnly(false)}
           />

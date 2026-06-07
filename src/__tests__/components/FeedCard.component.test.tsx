@@ -21,7 +21,6 @@ import { fxTwitterToFeedItem } from '../fixtures/tweets/helpers'
 
 // Mock handlers
 const mockOnExpand = vi.fn()
-const mockOnMarkRead = vi.fn()
 
 describe('FeedCard Component Snapshots', () => {
   describe('Renders all fixture types correctly', () => {
@@ -35,7 +34,6 @@ describe('FeedCard Component Snapshots', () => {
           lastSyncAt={null}
           sortField="processedAt"
           onExpand={mockOnExpand}
-          onMarkRead={mockOnMarkRead}
         />,
       )
 
@@ -54,7 +52,6 @@ describe('FeedCard Component Snapshots', () => {
           lastSyncAt={null}
           sortField="processedAt"
           onExpand={mockOnExpand}
-          onMarkRead={mockOnMarkRead}
         />,
       )
 
@@ -72,7 +69,6 @@ describe('FeedCard Component Snapshots', () => {
           lastSyncAt={null}
           sortField="processedAt"
           onExpand={mockOnExpand}
-          onMarkRead={mockOnMarkRead}
         />,
       )
 
@@ -89,7 +85,6 @@ describe('FeedCard Component Snapshots', () => {
           lastSyncAt={null}
           sortField="processedAt"
           onExpand={mockOnExpand}
-          onMarkRead={mockOnMarkRead}
         />,
       )
 
@@ -106,7 +101,6 @@ describe('FeedCard Component Snapshots', () => {
           lastSyncAt={null}
           sortField="processedAt"
           onExpand={mockOnExpand}
-          onMarkRead={mockOnMarkRead}
         />,
       )
 
@@ -125,7 +119,6 @@ describe('FeedCard Component Snapshots', () => {
           lastSyncAt={null}
           sortField="processedAt"
           onExpand={mockOnExpand}
-          onMarkRead={mockOnMarkRead}
         />,
       )
 
@@ -138,10 +131,9 @@ describe('FeedCard Component Snapshots', () => {
     })
   })
 
-  describe('Read status styling', () => {
-    it('unread: shows clay check button', () => {
+  describe('Quick share', () => {
+    it('shows a clay share button in the hover overlay (no mark-read button)', () => {
       const feedItem = fxTwitterToFeedItem(fixtures['plain-text'])
-      feedItem.isRead = false
 
       const { container } = render(
         <FeedCard
@@ -149,32 +141,14 @@ describe('FeedCard Component Snapshots', () => {
           lastSyncAt={null}
           sortField="processedAt"
           onExpand={mockOnExpand}
-          onMarkRead={mockOnMarkRead}
         />,
       )
 
-      // Unread items show a clay-colored "mark as read" button
-      const button = container.querySelector('button[title="Mark as read"]')
-      expect(button?.className).toContain('bg-clay')
-    })
-
-    it('read: shows translucent eye-off button', () => {
-      const feedItem = fxTwitterToFeedItem(fixtures['plain-text'])
-      feedItem.isRead = true
-
-      const { container } = render(
-        <FeedCard
-          item={feedItem}
-          lastSyncAt={null}
-          sortField="processedAt"
-          onExpand={mockOnExpand}
-          onMarkRead={mockOnMarkRead}
-        />,
-      )
-
-      // Read items show a translucent black "mark as unread" button
-      const button = container.querySelector('button[title="Mark as unread"]')
-      expect(button?.className).toContain('bg-black/50')
+      // Reading is done in triage now — the gallery card only offers Share.
+      const share = container.querySelector('button[title="Copy link to this post"]')
+      expect(share?.className).toContain('bg-clay')
+      expect(container.querySelector('button[title="Mark as read"]')).toBeNull()
+      expect(container.querySelector('button[title="Mark as unread"]')).toBeNull()
     })
   })
 
@@ -190,7 +164,6 @@ describe('FeedCard Component Snapshots', () => {
           lastSyncAt={oldSyncTime}
           sortField="processedAt"
           onExpand={mockOnExpand}
-          onMarkRead={mockOnMarkRead}
         />,
       )
 
@@ -210,7 +183,6 @@ describe('FeedCard Component Snapshots', () => {
           lastSyncAt={null}
           sortField="processedAt"
           onExpand={mockOnExpand}
-          onMarkRead={mockOnMarkRead}
         />,
       )
 
@@ -229,7 +201,6 @@ describe('FeedCard Component Snapshots', () => {
           lastSyncAt={null}
           sortField="processedAt"
           onExpand={mockOnExpand}
-          onMarkRead={mockOnMarkRead}
         />,
       )
 
@@ -250,7 +221,6 @@ describe('FeedCard Component Snapshots', () => {
           lastSyncAt={null}
           sortField="processedAt"
           onExpand={mockOnExpand}
-          onMarkRead={mockOnMarkRead}
         />,
       )
 
@@ -269,7 +239,6 @@ describe('FeedCard Component Snapshots', () => {
           lastSyncAt={null}
           sortField="processedAt"
           onExpand={mockOnExpand}
-          onMarkRead={mockOnMarkRead}
         />,
       )
 

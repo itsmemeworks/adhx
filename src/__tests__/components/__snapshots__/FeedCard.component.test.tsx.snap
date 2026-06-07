@@ -2,7 +2,7 @@
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > '4-images': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
     class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
@@ -99,7 +99,7 @@ Open this to see the entire post
             iamgdsa
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            class="p-2 rounded-full pointer-events-auto text-white transition-all duration-200 bg-clay hover:opacity-90"
             title="Copy link to this post"
           >
             <svg
@@ -143,27 +143,6 @@ Open this to see the entire post
               />
             </svg>
           </button>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
         </div>
       </div>
     </div>
@@ -173,7 +152,7 @@ Open this to see the entire post
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'article-no-header': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
     class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
@@ -264,7 +243,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
             aliniikk
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            class="p-2 rounded-full pointer-events-auto text-white transition-all duration-200 bg-clay hover:opacity-90"
             title="Copy link to this post"
           >
             <svg
@@ -308,27 +287,6 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
               />
             </svg>
           </button>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
         </div>
       </div>
     </div>
@@ -338,7 +296,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'article-with-media': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
     class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
@@ -420,7 +378,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
             NoahRyanCo
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            class="p-2 rounded-full pointer-events-auto text-white transition-all duration-200 bg-clay hover:opacity-90"
             title="Copy link to this post"
           >
             <svg
@@ -464,27 +422,6 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
               />
             </svg>
           </button>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
         </div>
       </div>
     </div>
@@ -494,7 +431,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'emoji-tweet': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
     class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
@@ -609,7 +546,7 @@ Live now 🚀
             moonpay
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            class="p-2 rounded-full pointer-events-auto text-white transition-all duration-200 bg-clay hover:opacity-90"
             title="Copy link to this post"
           >
             <svg
@@ -653,27 +590,6 @@ Live now 🚀
               />
             </svg>
           </button>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
         </div>
       </div>
     </div>
@@ -683,7 +599,7 @@ Live now 🚀
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'long-text-1-image': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
     class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
@@ -808,7 +724,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
             maverickecom
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            class="p-2 rounded-full pointer-events-auto text-white transition-all duration-200 bg-clay hover:opacity-90"
             title="Copy link to this post"
           >
             <svg
@@ -852,27 +768,6 @@ PS – Repost for early access to the full TikTok Shop content factory system.
               />
             </svg>
           </button>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
         </div>
       </div>
     </div>
@@ -882,7 +777,7 @@ PS – Repost for early access to the full TikTok Shop content factory system.
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'long-text-2-images': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
     class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
@@ -986,7 +881,7 @@ His days are numbered
             BasilTheGreat
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            class="p-2 rounded-full pointer-events-auto text-white transition-all duration-200 bg-clay hover:opacity-90"
             title="Copy link to this post"
           >
             <svg
@@ -1030,27 +925,6 @@ His days are numbered
               />
             </svg>
           </button>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
         </div>
       </div>
     </div>
@@ -1060,7 +934,7 @@ His days are numbered
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'long-text-with-quote': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
     class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
@@ -1421,7 +1295,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
             _The_Prophet__
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            class="p-2 rounded-full pointer-events-auto text-white transition-all duration-200 bg-clay hover:opacity-90"
             title="Copy link to this post"
           >
             <svg
@@ -1465,27 +1339,6 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
               />
             </svg>
           </button>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
         </div>
       </div>
     </div>
@@ -1495,7 +1348,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'plain-text': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
     class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
@@ -1574,7 +1427,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'p
             TheCinesthetic
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            class="p-2 rounded-full pointer-events-auto text-white transition-all duration-200 bg-clay hover:opacity-90"
             title="Copy link to this post"
           >
             <svg
@@ -1618,27 +1471,6 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'p
               />
             </svg>
           </button>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
         </div>
       </div>
     </div>
@@ -1648,7 +1480,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'p
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'quote-of-image-tweet': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
     class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
@@ -1878,7 +1710,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
             Nate_Google_
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            class="p-2 rounded-full pointer-events-auto text-white transition-all duration-200 bg-clay hover:opacity-90"
             title="Copy link to this post"
           >
             <svg
@@ -1922,27 +1754,6 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
               />
             </svg>
           </button>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
         </div>
       </div>
     </div>
@@ -1952,7 +1763,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'quote-of-text-tweet': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
     class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
@@ -2062,7 +1873,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
             elonmusk
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            class="p-2 rounded-full pointer-events-auto text-white transition-all duration-200 bg-clay hover:opacity-90"
             title="Copy link to this post"
           >
             <svg
@@ -2106,27 +1917,6 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
               />
             </svg>
           </button>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
         </div>
       </div>
     </div>
@@ -2136,7 +1926,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'reply-tweet': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
     class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
@@ -2224,7 +2014,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'r
             grok
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            class="p-2 rounded-full pointer-events-auto text-white transition-all duration-200 bg-clay hover:opacity-90"
             title="Copy link to this post"
           >
             <svg
@@ -2268,27 +2058,6 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'r
               />
             </svg>
           </button>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
         </div>
       </div>
     </div>
@@ -2298,7 +2067,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'r
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'text-quoting-video': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
     class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
@@ -2420,7 +2189,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 't
             swyx
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            class="p-2 rounded-full pointer-events-auto text-white transition-all duration-200 bg-clay hover:opacity-90"
             title="Copy link to this post"
           >
             <svg
@@ -2464,27 +2233,6 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 't
               />
             </svg>
           </button>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
         </div>
       </div>
     </div>
@@ -2494,7 +2242,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 't
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'video-tweet': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
     class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
@@ -2605,7 +2353,7 @@ Hidden order.
             Kekius_Sage
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            class="p-2 rounded-full pointer-events-auto text-white transition-all duration-200 bg-clay hover:opacity-90"
             title="Copy link to this post"
           >
             <svg
@@ -2649,27 +2397,6 @@ Hidden order.
               />
             </svg>
           </button>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
         </div>
       </div>
     </div>
@@ -2679,7 +2406,7 @@ Hidden order.
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'youtube-link': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
     class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
@@ -2767,7 +2494,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'y
             skalskip92
           </span>
           <button
-            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            class="p-2 rounded-full pointer-events-auto text-white transition-all duration-200 bg-clay hover:opacity-90"
             title="Copy link to this post"
           >
             <svg
@@ -2808,27 +2535,6 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'y
                 x2="8.59"
                 y1="6.51"
                 y2="10.49"
-              />
-            </svg>
-          </button>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
               />
             </svg>
           </button>
