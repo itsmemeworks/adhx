@@ -162,9 +162,18 @@ pnpm dev          # Start dev server
 pnpm build        # Production build
 pnpm test         # Run tests
 pnpm test:watch   # Run tests in watch mode
+pnpm lint         # ESLint
 pnpm typecheck    # TypeScript check
+pnpm format       # Format the codebase with Prettier
+pnpm format:check # Check formatting (CI gate)
 pnpm db:migrate   # Run database migrations
 ```
+
+A pre-commit hook (Husky + lint-staged) auto-formats staged files and runs
+typecheck + tests. On pull requests, CI runs lint, format check, typecheck,
+tests, and a production build, plus CodeQL security analysis — the `build` and
+`format` checks are required to merge. See [ARCHITECTURE.md](ARCHITECTURE.md)
+for how the codebase is organized.
 
 ---
 
