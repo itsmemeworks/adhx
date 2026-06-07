@@ -57,7 +57,7 @@ jobs:
             // protection's required checks. Release PRs only bump version /
             // changelog, so the real CI jobs are skipped — synthesize a passing
             // check for each required context.
-            for (const name of ['build', 'format']) {
+            for (const name of ['build', 'format', 'test']) {
               const { data: checkRun } = await github.rest.checks.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
