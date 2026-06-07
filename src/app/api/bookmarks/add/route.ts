@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { bookmarks, bookmarkMedia } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { getCurrentUserId } from '@/lib/auth/session'
-import { captureException, metrics } from '@/lib/sentry'
+import { withAuth } from '@/lib/api/with-auth'
+import { metrics } from '@/lib/sentry'
+import { handleRouteError } from '@/lib/api/response'
 import { fetchReelMetadata } from '@/lib/media/instafix'
 import { fetchTikTokMetadata, resolveTikTokUrl, isTikTokShortLink } from '@/lib/media/tnktok'
-import { fetchYouTubeMetadata, extractYouTubeId, youtubeThumbnail, youtubeShortUrl } from '@/lib/media/youtube'
+import { fetchYouTubeMetadata, youtubeThumbnail, youtubeShortUrl } from '@/lib/media/youtube'
 import { recordActivity, previewPath } from '@/lib/activity/record'
+import { detectPlatformPost } from '@/lib/platform/url'
 
 /**
  * Platform-agnostic bookmark add endpoint.
@@ -23,25 +25,8 @@ import { recordActivity, previewPath } from '@/lib/activity/record'
  * where to redirect after save (`/?added=success&platform=...&id=...`).
  */
 
-const INSTAGRAM_PATTERN =
-  /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:reels?|p)\/([A-Za-z0-9_-]+)/i
-
-const TIKTOK_PATTERN =
-  /(?:https?:\/\/)?(?:www\.|vm\.|m\.)?tiktok\.com\/@([A-Za-z0-9._]{1,30})\/video\/(\d{6,25})/i
-
-const TWITTER_PATTERN =
-  /(?:https?:\/\/)?(?:www\.)?(?:x\.com|twitter\.com)\/(\w{1,15})\/status\/(\d+)/i
-
-const YOUTUBE_PATTERN =
-  /(?:https?:\/\/)?(?:www\.|m\.)?(?:youtube\.com\/(?:shorts|watch|embed|v|live)|youtu\.be\/)/i
-
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, userId: string) => {
   try {
-    const userId = await getCurrentUserId()
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const body = await request.json()
     const { url, source = 'manual' } = body
 
@@ -49,8 +34,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'URL is required' }, { status: 400 })
     }
 
+    // Detect the platform/id once via the shared detector (single source of
+    // truth for the per-platform URL patterns).
+    const detected = detectPlatformPost(url)
+
     // Dispatch based on detected platform
-    if (TWITTER_PATTERN.test(url)) {
+    if (detected?.platform === 'twitter') {
       // Delegate to the existing tweet-specific flow (FxTwitter resolver +
       // article + quote-tweet + facet URL handling are all baked in there).
       const tweetResponse = await fetch(new URL('/api/tweets/add', request.url).toString(), {
@@ -62,27 +51,26 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({ url, source }),
       })
       const tweetData = await tweetResponse.json()
-      return NextResponse.json({ ...tweetData, platform: 'twitter' }, { status: tweetResponse.status })
+      return NextResponse.json(
+        { ...tweetData, platform: 'twitter' },
+        { status: tweetResponse.status },
+      )
     }
 
-    // YouTube (Shorts + regular videos) — match the host, then pull the id from
-    // any of /shorts, /watch?v=, youtu.be, /embed.
-    if (YOUTUBE_PATTERN.test(url)) {
-      const ytId = extractYouTubeId(url)
-      if (ytId) {
-        return await addYouTubeShort(userId, ytId, source)
-      }
+    // YouTube (Shorts + regular videos) — the detector matches the host and
+    // pulls the id from any of /shorts, /watch?v=, youtu.be, /embed.
+    if (detected?.platform === 'youtube') {
+      return await addYouTubeShort(userId, detected.id, source)
     }
 
-    const reelMatch = url.match(INSTAGRAM_PATTERN)
-    if (reelMatch) {
-      return await addInstagramReel(userId, reelMatch[1], source)
+    if (detected?.platform === 'instagram') {
+      return await addInstagramReel(userId, detected.id, source)
     }
 
     // TikTok: canonical (@user/video/id) or a short link (vm./vt.tiktok.com).
     // resolveTikTokUrl handles both — canonical is parsed inline, short links
     // are followed server-side to their canonical form.
-    if (TIKTOK_PATTERN.test(url) || isTikTokShortLink(url)) {
+    if (detected?.platform === 'tiktok' || isTikTokShortLink(url)) {
       const resolved = await resolveTikTokUrl(url)
       if (resolved) {
         return await addTikTokVideo(userId, resolved.handle, resolved.videoId, source)
@@ -90,23 +78,30 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: 'Unsupported URL. Supported: x.com, twitter.com, instagram.com/reels, tiktok.com/@user/video.' },
+      {
+        error:
+          'Unsupported URL. Supported: x.com, twitter.com, instagram.com/reels, tiktok.com/@user/video.',
+      },
       { status: 400 },
     )
   } catch (error) {
-    console.error('Failed to add bookmark:', error)
-    captureException(error, { endpoint: '/api/bookmarks/add' })
     const message = error instanceof Error ? error.message : 'Failed to add bookmark'
-    return NextResponse.json({ error: message }, { status: 500 })
+    return handleRouteError(error, { endpoint: '/api/bookmarks/add', userId, message })
   }
-}
+})
 
 async function addInstagramReel(userId: string, reelId: string, source: string) {
   // Check duplicate (composite key: userId + platform + id)
   const [existing] = await db
     .select()
     .from(bookmarks)
-    .where(and(eq(bookmarks.userId, userId), eq(bookmarks.platform, 'instagram'), eq(bookmarks.id, reelId)))
+    .where(
+      and(
+        eq(bookmarks.userId, userId),
+        eq(bookmarks.platform, 'instagram'),
+        eq(bookmarks.id, reelId),
+      ),
+    )
     .limit(1)
 
   if (existing) {
@@ -143,15 +138,18 @@ async function addInstagramReel(userId: string, reelId: string, source: string) 
   // photo media row so the gallery renders the poster; the actual image is
   // served fresh via the thumbnail proxy (the stored CDN URL is signed/expiring).
   if (meta.imageUrl) {
-    await db.insert(bookmarkMedia).values({
-      id: `${reelId}_photo_0`,
-      userId,
-      platform: 'instagram',
-      bookmarkId: reelId,
-      mediaType: 'photo',
-      originalUrl: meta.imageUrl,
-      previewUrl: meta.imageUrl,
-    }).onConflictDoNothing()
+    await db
+      .insert(bookmarkMedia)
+      .values({
+        id: `${reelId}_photo_0`,
+        userId,
+        platform: 'instagram',
+        bookmarkId: reelId,
+        mediaType: 'photo',
+        originalUrl: meta.imageUrl,
+        previewUrl: meta.imageUrl,
+      })
+      .onConflictDoNothing()
   }
 
   metrics.bookmarkAdded(source as 'manual' | 'url_prefix')
@@ -163,7 +161,9 @@ async function addInstagramReel(userId: string, reelId: string, source: string) 
     author: handle,
     authorName: meta.authorName || meta.author || null,
     text: meta.caption || meta.description || null,
-    thumbnailUrl: meta.imageUrl ? `/api/media/instagram/thumbnail?id=${encodeURIComponent(reelId)}` : null,
+    thumbnailUrl: meta.imageUrl
+      ? `/api/media/instagram/thumbnail?id=${encodeURIComponent(reelId)}`
+      : null,
     url: previewPath('instagram', handle, reelId),
     userId,
   })
@@ -171,7 +171,13 @@ async function addInstagramReel(userId: string, reelId: string, source: string) 
   const [newBookmark] = await db
     .select()
     .from(bookmarks)
-    .where(and(eq(bookmarks.userId, userId), eq(bookmarks.platform, 'instagram'), eq(bookmarks.id, reelId)))
+    .where(
+      and(
+        eq(bookmarks.userId, userId),
+        eq(bookmarks.platform, 'instagram'),
+        eq(bookmarks.id, reelId),
+      ),
+    )
     .limit(1)
 
   return NextResponse.json({
@@ -187,7 +193,13 @@ async function addTikTokVideo(userId: string, handle: string, videoId: string, s
   const [existing] = await db
     .select()
     .from(bookmarks)
-    .where(and(eq(bookmarks.userId, userId), eq(bookmarks.platform, 'tiktok'), eq(bookmarks.id, videoId)))
+    .where(
+      and(
+        eq(bookmarks.userId, userId),
+        eq(bookmarks.platform, 'tiktok'),
+        eq(bookmarks.id, videoId),
+      ),
+    )
     .limit(1)
 
   if (existing) {
@@ -220,14 +232,17 @@ async function addTikTokVideo(userId: string, handle: string, videoId: string, s
   })
 
   if (meta.videoUrl) {
-    await db.insert(bookmarkMedia).values({
-      id: `${videoId}_video_0`,
-      userId,
-      platform: 'tiktok',
-      bookmarkId: videoId,
-      mediaType: 'video',
-      originalUrl: meta.videoUrl,
-    }).onConflictDoNothing()
+    await db
+      .insert(bookmarkMedia)
+      .values({
+        id: `${videoId}_video_0`,
+        userId,
+        platform: 'tiktok',
+        bookmarkId: videoId,
+        mediaType: 'video',
+        originalUrl: meta.videoUrl,
+      })
+      .onConflictDoNothing()
   }
 
   metrics.bookmarkAdded(source as 'manual' | 'url_prefix')
@@ -247,7 +262,13 @@ async function addTikTokVideo(userId: string, handle: string, videoId: string, s
   const [newBookmark] = await db
     .select()
     .from(bookmarks)
-    .where(and(eq(bookmarks.userId, userId), eq(bookmarks.platform, 'tiktok'), eq(bookmarks.id, videoId)))
+    .where(
+      and(
+        eq(bookmarks.userId, userId),
+        eq(bookmarks.platform, 'tiktok'),
+        eq(bookmarks.id, videoId),
+      ),
+    )
     .limit(1)
 
   return NextResponse.json({
@@ -263,7 +284,13 @@ async function addYouTubeShort(userId: string, videoId: string, source: string) 
   const [existing] = await db
     .select()
     .from(bookmarks)
-    .where(and(eq(bookmarks.userId, userId), eq(bookmarks.platform, 'youtube'), eq(bookmarks.id, videoId)))
+    .where(
+      and(
+        eq(bookmarks.userId, userId),
+        eq(bookmarks.platform, 'youtube'),
+        eq(bookmarks.id, videoId),
+      ),
+    )
     .limit(1)
 
   if (existing) {
@@ -327,7 +354,13 @@ async function addYouTubeShort(userId: string, videoId: string, source: string) 
   const [newBookmark] = await db
     .select()
     .from(bookmarks)
-    .where(and(eq(bookmarks.userId, userId), eq(bookmarks.platform, 'youtube'), eq(bookmarks.id, videoId)))
+    .where(
+      and(
+        eq(bookmarks.userId, userId),
+        eq(bookmarks.platform, 'youtube'),
+        eq(bookmarks.id, videoId),
+      ),
+    )
     .limit(1)
 
   return NextResponse.json({
