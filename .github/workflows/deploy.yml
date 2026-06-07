@@ -48,7 +48,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Full history for Sentry commit association
 
@@ -85,7 +85,7 @@ jobs:
       # Sentry release tracking
       - name: Create Sentry release
         if: ${{ inputs.skip_sentry != true && env.SENTRY_ORG != '' }}
-        uses: getsentry/action-release@v1
+        uses: getsentry/action-release@v3
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ env.SENTRY_ORG }}
