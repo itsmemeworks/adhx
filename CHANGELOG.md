@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.38.0](https://github.com/itsmemeworks/adhx/compare/v1.37.1...v1.38.0) (2026-06-07)
+
+
+### Features
+
+* reposition home + discover copy and metadata for seo ([#190](https://github.com/itsmemeworks/adhx/issues/190)) ([17f0b14](https://github.com/itsmemeworks/adhx/commit/17f0b14bf32253fd0f392b39db8090751af64da9))
+
 ## [1.37.1](https://github.com/itsmemeworks/adhx/compare/v1.37.0...v1.37.1) (2026-06-07)
 
 
