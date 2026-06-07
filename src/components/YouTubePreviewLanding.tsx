@@ -244,12 +244,9 @@ function PreviewHeader() {
         Found something good?
       </h1>
       <p className="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto">
-        Save it before{' '}
-        <b className="text-clay font-semibold">
-          <span className="sm:hidden">47 tabs</span>
-          <span className="hidden sm:inline">47 browser tabs</span>
-        </b>{' '}
-        make you forget.
+        Save it before you{' '}
+        <b className="text-clay font-semibold">doomscroll</b>{' '}
+        past it.
       </p>
     </div>
   )

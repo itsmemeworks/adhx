@@ -7,7 +7,7 @@
 
 > **Save now. Read never. Find always.**
 
-For people who bookmark everything and read nothing. A Twitter/X bookmark manager that actually helps you find that tweet you saved 6 months ago — and previews Instagram Reels, TikToks, and YouTube Shorts with the same one-tap UX.
+For people who bookmark everything and read nothing. A Twitter/X bookmark manager that syncs your bookmarks, surfaces what's trending, and actually helps you find that tweet you saved 6 months ago — and previews Instagram Reels, TikToks, and YouTube Shorts too.
 
 <p align="center">
   <img src="https://img.shields.io/badge/Bookmarks_Saved-∞-8B5CF6?style=for-the-badge" alt="Bookmarks Saved: Infinite" />
@@ -18,7 +18,7 @@ For people who bookmark everything and read nothing. A Twitter/X bookmark manage
 
 ## ⚡ Quick Add: URL Prefix
 
-Save tweets, preview Instagram Reels, grab TikToks, or watch YouTube Shorts instantly by replacing the host in any link with `adhx.com`:
+Save tweets, or preview Instagram Reels, TikToks and YouTube Shorts instantly by replacing the host in any link with `adhx.com`:
 
 ```
 x.com/user/status/123        instagram.com/reels/abc      tiktok.com/@user/video/123     youtube.com/shorts/abc
@@ -35,7 +35,7 @@ adhx.com/https://www.tiktok.com/@user/video/123     → /@user/video/123
 adhx.com/https://youtube.com/shorts/abc             → /shorts/abc   (also youtu.be/abc, watch?v=abc)
 ```
 
-Tweets land in your collection and open in the lightbox. Reels and TikToks render a public preview with inline playback and a one-tap MP4 download (no account needed). YouTube Shorts play inline via the official embed (preview + save; no download — YouTube has no compliant MP4 source).
+Tweets land in your collection and open in the lightbox. Reels and TikToks render a public preview with inline playback, and you can save them to your collection alongside your tweets. YouTube Shorts play inline via the official embed.
 
 ---
 
@@ -67,7 +67,7 @@ Once installed it launches standalone, remembers your session, and registers as 
 | Feature | Description |
 |---------|-------------|
 | 🐿️ **Hoard Mode** | Sync up to 800 bookmarks from Twitter/X. No judgment here. |
-| 🎬 **Reel & TikTok Downloader** | Paste any Instagram Reel or TikTok URL → preview inline + download the MP4 in one tap. No account, no watermark. |
+| 🎬 **Reels & TikToks** | Paste any Instagram Reel or TikTok URL → preview it inline and save it to your collection alongside your tweets. |
 | ▶️ **YouTube Shorts** | Paste a Shorts (or `youtu.be` / `watch`) link → preview + play inline via the official embed, save it to your collection. |
 | 💾 **Save Across Platforms** | Add Reels, TikToks, and Shorts to your collection alongside tweets. Same feed, one search, platform badges keep things straight. |
 | 📲 **Install as an App** | On mobile, tap "Add to home screen" — ADHX runs full-screen like a native app (PWA), with an Android share-target so you can share any link straight into it. |
