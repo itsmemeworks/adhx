@@ -21,6 +21,7 @@ import { ThemeToggle } from '@/components/ThemeToggle'
 import { isTouchDevice } from '@/components/feed/utils'
 import { MatterLogo, PlatformGlyph, ConnectWithX } from '@/components/matter'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
+import { PreviewAnotherLink } from '@/components/PreviewAnotherLink'
 import { cn } from '@/lib/utils'
 
 /**
@@ -58,8 +59,6 @@ export function TikTokPreviewLanding({
 }: TikTokPreviewLandingProps) {
   const router = useRouter()
   const [isPlaying, setIsPlaying] = useState(false)
-  const [linkInput, setLinkInput] = useState('')
-  const [urlError, setUrlError] = useState('')
   const [connecting, setConnecting] = useState(false)
   const [adding, setAdding] = useState(false)
 
@@ -69,38 +68,6 @@ export function TikTokPreviewLanding({
   const downloadUrl = `/api/media/tiktok/video/download?username=${encodeURIComponent(handle)}&id=${encodeURIComponent(videoId)}`
   const posterUrl = `/api/media/tiktok/thumbnail?username=${encodeURIComponent(handle)}&id=${encodeURIComponent(videoId)}`
   const postedAt = tiktokDateFromId(videoId)
-
-  // TikTok URL pattern — works with vm., m., www. subdomains
-  const tiktokUrlPattern = /(?:https?:\/\/)?(?:www\.|vm\.|m\.)?tiktok\.com\/@([A-Za-z0-9._]{1,30})\/video\/(\d{6,25})/i
-
-  const parseAndNavigate = (url: string): boolean => {
-    const trimmed = url.trim()
-    const match = trimmed.match(tiktokUrlPattern)
-    if (match) {
-      window.location.href = `/@${match[1]}/video/${match[2]}`
-      return true
-    }
-    // Short link (vm./vt.tiktok.com/{code} or /t/{code}) — resolve server-side.
-    if (/(?:vm|vt)\.tiktok\.com\/[A-Za-z0-9]+|tiktok\.com\/t\/[A-Za-z0-9]+/i.test(trimmed)) {
-      window.location.href = `/api/tiktok/resolve?go=1&url=${encodeURIComponent(trimmed)}`
-      return true
-    }
-    return false
-  }
-
-  const handleInputChange = (value: string) => {
-    setLinkInput(value)
-    setUrlError('')
-    if (value.includes('tiktok.com/')) parseAndNavigate(value)
-  }
-
-  const handleInputSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setUrlError('')
-    if (!parseAndNavigate(linkInput)) {
-      setUrlError("That's not a TikTok link. Or it's been heavily disguised.")
-    }
-  }
 
   const handleConnect = () => {
     setConnecting(true)
@@ -145,13 +112,7 @@ export function TikTokPreviewLanding({
         videoId={videoId}
         downloadUrl={downloadUrl}
       />
-      <PreviewAnotherTikTok
-        linkInput={linkInput}
-        urlError={urlError}
-        onChange={handleInputChange}
-        onSubmit={handleInputSubmit}
-        className="mt-4"
-      />
+      <PreviewAnotherLink className="mt-4" />
     </>
   )
 
@@ -628,44 +589,3 @@ function ActBtn({ icon, label, onClick }: { icon: React.ReactNode; label: string
   )
 }
 
-function PreviewAnotherTikTok({
-  linkInput,
-  urlError,
-  onChange,
-  onSubmit,
-  className,
-}: {
-  linkInput: string
-  urlError: string
-  onChange: (value: string) => void
-  onSubmit: (e: React.FormEvent) => void
-  className?: string
-}) {
-  return (
-    <div
-      data-section="preview-another"
-      className={cn('rounded-2xl border border-hairline bg-surface px-4 py-4', className)}
-    >
-      <p className="font-bold text-[13.5px] text-ink mb-2.5">Preview another link</p>
-      <form onSubmit={onSubmit}>
-        <div className="flex gap-2.5">
-          <input
-            type="text"
-            value={linkInput}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder="Paste a link…"
-            className="flex-1 font-mono text-base sm:text-[12.5px] bg-inset px-3 py-2.5 rounded-xl border border-hairline text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-clay/40 focus:border-transparent"
-          />
-          <button
-            type="submit"
-            className="px-[18px] rounded-xl bg-clay-grad text-white font-semibold text-[13.5px] shadow-glow transition-all hover:opacity-95"
-          >
-            Go
-          </button>
-        </div>
-        {urlError && <p className="text-[#EF4444] text-xs mt-2">{urlError}</p>}
-      </form>
-      <p className="text-xs text-ink-3 mt-2.5">Works with X, Instagram, TikTok &amp; YouTube.</p>
-    </div>
-  )
-}
