@@ -68,6 +68,7 @@ export async function GET() {
     const flags = new Map<string, { isQuote: boolean; category: string | null }>()
     const mediaKinds = new Map<string, { video: boolean; photo: boolean }>()
     const articleCovers = new Map<string, string>()
+    const articleTitles = new Map<string, string>()
     if (ids.length > 0) {
       const aggRows = db
         .select({
@@ -104,23 +105,24 @@ export async function GET() {
         mediaKinds.set(k, cur)
       }
 
-      // Article cover images — the same hero the collection card uses. Cross-user
-      // is fine (the cover is identical regardless of who saved it). Prefer an
-      // explicit article link's image; otherwise take any link that has one.
+      // Article cover + title — the same hero/headline the collection card uses.
+      // Cross-user is fine (they're identical regardless of who saved it). Prefer
+      // the explicit article link; otherwise take any link that carries them.
       const linkRows = db
         .select({
           platform: bookmarkLinks.platform,
           bookmarkId: bookmarkLinks.bookmarkId,
           linkType: bookmarkLinks.linkType,
           imageUrl: bookmarkLinks.previewImageUrl,
+          title: bookmarkLinks.previewTitle,
         })
         .from(bookmarkLinks)
         .where(inArray(bookmarkLinks.bookmarkId, ids))
         .all()
       for (const l of linkRows) {
-        if (!l.imageUrl) continue
         const k = `${l.platform}:${l.bookmarkId}`
-        if (!articleCovers.has(k) || l.linkType === 'article') articleCovers.set(k, l.imageUrl)
+        if (l.imageUrl && (!articleCovers.has(k) || l.linkType === 'article')) articleCovers.set(k, l.imageUrl)
+        if (l.title && (!articleTitles.has(k) || l.linkType === 'article')) articleTitles.set(k, l.title)
       }
     }
 
@@ -156,6 +158,9 @@ export async function GET() {
       const contentType = typeOf(i.platform, key)
       return {
         ...i,
+        // Article cards show the article's own headline (the recorded `text` is
+        // usually just the wrapper tweet's t.co link), matching the collection.
+        text: contentType === 'article' ? (articleTitles.get(key) ?? i.text) : i.text,
         saveCount: counts.get(key) ?? 0,
         contentType,
         thumbnailUrl: thumbOf(i, key, contentType),
