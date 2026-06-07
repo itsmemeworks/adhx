@@ -466,7 +466,10 @@ function SidebarCta({
 }) {
   return (
     <div className="flex flex-col gap-3.5">
-      {isAuthenticated ? (
+      {/* Authenticated users get the primary "Save" CTA up top. Unauthenticated
+          users lead with the actions below — the single Connect CTA lives in the
+          benefit-backed "Keep it forever" card, so we don't double up on it. */}
+      {isAuthenticated && (
         <button
           onClick={onAdd}
           disabled={adding || !hasVideo}
@@ -474,21 +477,6 @@ function SidebarCta({
         >
           {adding ? <Loader2 className="w-[18px] h-[18px] animate-spin" /> : <Bookmark className="w-[18px] h-[18px]" />}
           {adding ? 'Saving…' : 'Save to collection'}
-        </button>
-      ) : (
-        <button
-          onClick={onConnect}
-          disabled={connecting}
-          className="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {connecting ? (
-            <>
-              <Loader2 className="w-[18px] h-[18px] animate-spin" />
-              Connecting…
-            </>
-          ) : (
-            <ConnectWithX size={16} />
-          )}
         </button>
       )}
 
