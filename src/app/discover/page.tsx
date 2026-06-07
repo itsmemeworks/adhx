@@ -1,19 +1,13 @@
-import type { Metadata } from 'next'
-import { DiscoverFeed } from '@/components/discover/DiscoverFeed'
-
-export const metadata: Metadata = {
-  title: "Discover what's trending",
-  description:
-    'A live, anonymous feed of trending tweets, TikToks, Reels and Shorts people are saving on ADHX right now. Preview any post and save it to your collection.',
-}
+import { permanentRedirect } from 'next/navigation'
 
 /**
- * /discover — the real-time anonymous discovery feed (Matter direction).
+ * /discover → /trending (308 permanent).
  *
- * No auth gate: anyone can browse what the community is saving. The client feed
- * polls the public /api/activity endpoint; the "+ Save" action navigates to the
- * on-ADHX preview page (item.url), which handles save + auth gating itself.
+ * The discovery feed now lives at the SEO-canonical /trending hub, which
+ * server-renders crawlable HTML for each item (the old /discover was a
+ * client-only skeleton). We keep /discover as a permanent redirect so existing
+ * links + bookmarks land on the new canonical URL and pass their link equity on.
  */
-export default function DiscoverPage() {
-  return <DiscoverFeed />
+export default function DiscoverPage(): never {
+  permanentRedirect('/trending')
 }

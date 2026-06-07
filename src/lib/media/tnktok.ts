@@ -11,6 +11,7 @@
  * GET (unlike Instagram's 403-gated CDN), so we can stream straight through.
  */
 
+import { unstable_cache } from 'next/cache'
 import { makeHostAllowlist } from '@/lib/media/proxy'
 
 const MIRRORS = ['https://tnktok.com'] as const
@@ -139,20 +140,27 @@ export function isValidVideoId(id: string): boolean {
 
 /**
  * Resolve a TikTok video's direct MP4 URL + metadata via a TnkTok mirror.
+ *
+ * Wrapped in `unstable_cache` (keyed by username+id, revalidate 3600) rather than
+ * per-fetch `next.revalidate`: the mirror scrape streams the response body with a
+ * manual reader and early-bails at `</head>`, which the fetch-level Data Cache
+ * can't cache, so we cache the resolved metadata instead. Repeat crawler hits to
+ * the same id reuse it.
  */
-export async function fetchTikTokMetadata(
-  username: string,
-  videoId: string,
-): Promise<TikTokMetadata | null> {
-  if (!isValidUsername(username) || !isValidVideoId(videoId)) return null
-  const handle = username.startsWith('@') ? username.slice(1) : username
+export const fetchTikTokMetadata = unstable_cache(
+  async (username: string, videoId: string): Promise<TikTokMetadata | null> => {
+    if (!isValidUsername(username) || !isValidVideoId(videoId)) return null
+    const handle = username.startsWith('@') ? username.slice(1) : username
 
-  for (const mirror of MIRRORS) {
-    const meta = await tryMirror(`${mirror}/@${handle}/video/${videoId}`)
-    if (meta) return meta
-  }
-  return null
-}
+    for (const mirror of MIRRORS) {
+      const meta = await tryMirror(`${mirror}/@${handle}/video/${videoId}`)
+      if (meta) return meta
+    }
+    return null
+  },
+  ['tiktok-video-metadata'],
+  { revalidate: 3600 },
+)
 
 async function tryMirror(url: string): Promise<TikTokMetadata | null> {
   try {

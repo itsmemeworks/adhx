@@ -1,25 +1,68 @@
 import { MetadataRoute } from 'next'
 import { db } from '@/lib/db'
-import { tagShares, bookmarkTags, bookmarks, oauthTokens } from '@/lib/db/schema'
-import { eq, and, inArray } from 'drizzle-orm'
+import { tagShares, bookmarks, oauthTokens, activity } from '@/lib/db/schema'
+import { eq, desc } from 'drizzle-orm'
+import { previewPath } from '@/lib/activity/record'
+import type { PlatformId } from '@/lib/platform/url'
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://adhx.com'
+/**
+ * Sharded sitemap index. Next re-runs each shard's DB query hourly (rather than
+ * baking URLs at build time, which only refreshed on deploy).
+ */
+export const revalidate = 3600
 
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://adhx.com'
+
+/** The four content platforms, each gets its own preview-URL shard. */
+const PLATFORMS: PlatformId[] = ['twitter', 'instagram', 'tiktok', 'youtube']
+
+/** URL slug for a platform's /trending hub ("x" for twitter, else the id). */
+const TRENDING_SLUG: Record<PlatformId, string> = {
+  twitter: 'x',
+  instagram: 'instagram',
+  tiktok: 'tiktok',
+  youtube: 'youtube',
+}
+
+/**
+ * Per-shard URL cap. Sitemaps allow 50k URLs / 50MB; we stay well under both.
+ * Anything beyond the cap is dropped (and the count logged) so a runaway table
+ * can't produce an oversized sitemap.
+ */
+const SHARD_CAP = 45_000
+
+/**
+ * One shard per platform plus a `hubs` shard (homepage + /trending hubs + all
+ * public tag-collection pages). Keeps each file under the 50k-URL limit and
+ * lets Next emit a sitemap index automatically.
+ */
+export async function generateSitemaps(): Promise<{ id: string }[]> {
+  return [{ id: 'hubs' }, ...PLATFORMS.map((p) => ({ id: p }))]
+}
+
+/**
+ * Hubs shard: homepage, the cross-network /trending hub + per-platform trending
+ * hubs, and every public tag-collection page (`/t/{user}/{tag}`).
+ */
+function hubsSitemap(): MetadataRoute.Sitemap {
+  const now = new Date()
   const entries: MetadataRoute.Sitemap = [
-    {
-      url: baseUrl,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 1,
-    },
+    { url: baseUrl, lastModified: now, changeFrequency: 'daily', priority: 1 },
+    { url: `${baseUrl}/trending`, lastModified: now, changeFrequency: 'hourly', priority: 0.9 },
   ]
 
+  for (const platform of PLATFORMS) {
+    entries.push({
+      url: `${baseUrl}/trending/${TRENDING_SLUG[platform]}`,
+      lastModified: now,
+      changeFrequency: 'hourly',
+      priority: 0.8,
+    })
+  }
+
   try {
-    // Find all public tag shares with their usernames
     const publicShares = db
       .select({
-        userId: tagShares.userId,
         tag: tagShares.tag,
         username: oauthTokens.username,
       })
@@ -28,7 +71,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       .where(eq(tagShares.isPublic, true))
       .all()
 
-    // Add tag collection pages
     for (const share of publicShares) {
       if (!share.username) continue
       entries.push({
@@ -37,52 +79,96 @@ export default function sitemap(): MetadataRoute.Sitemap {
         priority: 0.7,
       })
     }
-
-    // Collect all tweet IDs from public tags (deduplicated)
-    if (publicShares.length > 0) {
-      const tweetUrlSet = new Set<string>()
-
-      for (const share of publicShares) {
-        const tagged = db
-          .select({ bookmarkId: bookmarkTags.bookmarkId })
-          .from(bookmarkTags)
-          .where(and(eq(bookmarkTags.userId, share.userId), eq(bookmarkTags.tag, share.tag)))
-          .all()
-
-        if (tagged.length === 0) continue
-
-        const bookmarkIds = tagged.map((t) => t.bookmarkId)
-        // Only Twitter bookmarks map to /{author}/status/{id}. Reels and TikToks
-        // live at other routes, so exclude them from the tweet sitemap.
-        const tweetsInTag = db
-          .select({ id: bookmarks.id, author: bookmarks.author })
-          .from(bookmarks)
-          .where(
-            and(
-              eq(bookmarks.userId, share.userId),
-              eq(bookmarks.platform, 'twitter'),
-              inArray(bookmarks.id, bookmarkIds),
-            ),
-          )
-          .all()
-
-        for (const tweet of tweetsInTag) {
-          tweetUrlSet.add(`${baseUrl}/${tweet.author}/status/${tweet.id}`)
-        }
-      }
-
-      for (const url of tweetUrlSet) {
-        entries.push({
-          url,
-          changeFrequency: 'weekly',
-          priority: 0.5,
-        })
-      }
-    }
   } catch (error) {
-    // If DB query fails (e.g., during build), return just the homepage
-    console.error('Sitemap: failed to query public tags:', error)
+    // If DB query fails (e.g. during build), fall back to the static hubs above.
+    console.error('Sitemap[hubs]: failed to query public tags:', error)
   }
 
   return entries
+}
+
+/**
+ * Per-platform shard: every saved-content preview for the platform (distinct
+ * by `(platform, id)`), plus any preview-only items from the activity pulse
+ * that were never saved. URLs are built with the shared `previewPath()` so they
+ * match the on-ADHX preview routes exactly.
+ *
+ * ANONYMITY: the activity read selects ONLY public columns — `userId` is never
+ * touched here.
+ */
+function platformSitemap(platform: PlatformId): MetadataRoute.Sitemap {
+  const entries: MetadataRoute.Sitemap = []
+
+  try {
+    // Saved content: distinct (platform, id) across all users. The same id can
+    // be saved by many users; we want one preview URL per post.
+    const saved = db
+      .selectDistinct({
+        id: bookmarks.id,
+        author: bookmarks.author,
+        createdAt: bookmarks.createdAt,
+      })
+      .from(bookmarks)
+      .where(eq(bookmarks.platform, platform))
+      .all()
+
+    const seen = new Set<string>()
+    for (const b of saved) {
+      if (!b.id || !b.author) continue
+      const path = previewPath(platform, b.author, b.id)
+      if (seen.has(path)) continue
+      seen.add(path)
+      entries.push({
+        url: `${baseUrl}${path}`,
+        lastModified: b.createdAt ? new Date(b.createdAt) : undefined,
+        changeFrequency: 'weekly',
+        priority: 0.5,
+      })
+    }
+
+    // Preview-only items: surfaced via the pulse but never saved. De-duped
+    // against the saved set above by their preview path.
+    const previewed = db
+      .selectDistinct({
+        bookmarkId: activity.bookmarkId,
+        author: activity.author,
+        url: activity.url,
+        createdAt: activity.createdAt,
+      })
+      .from(activity)
+      .where(eq(activity.platform, platform))
+      .orderBy(desc(activity.createdAt))
+      .all()
+
+    for (const a of previewed) {
+      if (!a.bookmarkId || !a.author) continue
+      const path = previewPath(platform, a.author, a.bookmarkId)
+      if (seen.has(path)) continue
+      seen.add(path)
+      entries.push({
+        url: `${baseUrl}${path}`,
+        lastModified: a.createdAt ? new Date(a.createdAt) : undefined,
+        changeFrequency: 'weekly',
+        priority: 0.4,
+      })
+    }
+  } catch (error) {
+    console.error(`Sitemap[${platform}]: failed to query content:`, error)
+    return []
+  }
+
+  if (entries.length > SHARD_CAP) {
+    const dropped = entries.length - SHARD_CAP
+    console.warn(`Sitemap[${platform}]: ${dropped} URLs over the ${SHARD_CAP} cap — dropping.`)
+    return entries.slice(0, SHARD_CAP)
+  }
+
+  return entries
+}
+
+export default function sitemap({ id }: { id: string }): MetadataRoute.Sitemap {
+  if (id === 'hubs') return hubsSitemap()
+  if ((PLATFORMS as string[]).includes(id)) return platformSitemap(id as PlatformId)
+  // Unknown shard id — degrade to homepage-only rather than throwing.
+  return [{ url: baseUrl, lastModified: new Date(), changeFrequency: 'daily', priority: 1 }]
 }

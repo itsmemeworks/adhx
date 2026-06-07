@@ -337,15 +337,15 @@ export function Header() {
                   Collection
                 </Link>
                 <Link
-                  href="/discover"
+                  href="/trending"
                   className={cn(
                     'rounded-full px-3 py-1.5 font-semibold transition-colors',
-                    pathname === '/discover'
+                    pathname.startsWith('/trending')
                       ? 'bg-clay/[0.12] text-clay'
                       : 'text-ink-2 hover:text-ink',
                   )}
                 >
-                  Discover
+                  Trending
                 </Link>
               </nav>
             )}
@@ -558,17 +558,17 @@ export function Header() {
                           Collection
                         </Link>
                         <Link
-                          href="/discover"
+                          href="/trending"
                           onClick={() => setShowUserMenu(false)}
                           className={cn(
                             'flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset transition-colors',
-                            pathname === '/discover'
+                            pathname.startsWith('/trending')
                               ? 'font-semibold text-clay'
                               : 'text-ink-2 hover:text-ink',
                           )}
                         >
                           <Compass className="w-4 h-4" />
-                          Discover
+                          Trending
                         </Link>
                         <Link
                           href="/settings"

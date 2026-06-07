@@ -6,26 +6,15 @@ import { cn } from '@/lib/utils'
 import { LiveDot, MatterLogo, ConnectWithX } from '@/components/matter'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { DiscoverCard, inferType } from './DiscoverCard'
+import type { TrendingItem } from '@/lib/trending/query'
 
-export interface ActivityItem {
-  action: 'preview' | 'save' | 'read'
-  platform: 'twitter' | 'instagram' | 'tiktok' | 'youtube' | string
-  bookmarkId?: string
-  author: string
-  authorName?: string | null
-  text?: string | null
-  thumbnailUrl?: string | null
-  /** The post author's avatar, for tweet-style text/quote cards. */
-  authorAvatarUrl?: string | null
-  url: string
-  createdAt: string
-  /** Distinct ADHX users who've saved this post (anonymous count). */
-  saveCount?: number
-  /** Trending score = savers + preview events. Drives the flame + Trending sort. */
-  trendCount?: number
-  /** Real post type from the saved bookmark, when known (else client infers it). */
-  contentType?: 'video' | 'photo' | 'text' | 'quote' | 'article'
-}
+/**
+ * The Discover/Trending item shape — the canonical, anonymity-safe public item
+ * from the trending query module (carries NO `userId`). Re-exported under the
+ * historical `ActivityItem` name so `DiscoverCard` (and existing call sites)
+ * keep importing it from here unchanged.
+ */
+export type ActivityItem = TrendingItem
 
 /**
  * The true identity of a post — platform + source id. Keys off this (not the
@@ -112,15 +101,30 @@ function savingNow(items: ActivityItem[]): number {
   return Math.max(1, recent || Math.min(items.length, 12))
 }
 
-export function DiscoverFeed() {
-  const [items, setItems] = useState<ActivityItem[]>([])
-  const [filter, setFilter] = useState<FilterId>('just-saved')
-  const [loaded, setLoaded] = useState(false)
+export function DiscoverFeed({
+  initialItems,
+  initialFilter,
+}: {
+  /**
+   * Server-rendered items to seed from (e.g. the /trending hub's ISR data).
+   * When provided, the grid paints immediately with no skeleton flash and the
+   * redundant first fetch is skipped — but the 12s live polling continues.
+   */
+  initialItems?: ActivityItem[]
+  /** Initial filter pill selection (defaults to "just saved"). */
+  initialFilter?: FilterId
+} = {}) {
+  const seeded = (initialItems?.length ?? 0) > 0
+  const [items, setItems] = useState<ActivityItem[]>(initialItems ?? [])
+  const [filter, setFilter] = useState<FilterId>(initialFilter ?? 'just-saved')
+  const [loaded, setLoaded] = useState(seeded)
   const [freshKeys, setFreshKeys] = useState<Set<string>>(new Set())
   // null while unknown; once known, signed-out gets the public shell (the global
   // header is hidden when signed out) and Preview (not Save) actions.
   const [authed, setAuthed] = useState<boolean | null>(null)
-  const knownKeys = useRef<Set<string>>(new Set())
+  // Seed the known set from the server items so the first poll doesn't flash
+  // every pre-rendered card as "new".
+  const knownKeys = useRef<Set<string>>(new Set((initialItems ?? []).map(keyOf)))
 
   useEffect(() => {
     let alive = true
@@ -163,10 +167,12 @@ export function DiscoverFeed() {
   }, [])
 
   useEffect(() => {
-    load(true)
+    // When seeded from the server we already have items + a primed known-set,
+    // so skip the redundant initial fetch and go straight to live polling.
+    if (!seeded) load(true)
     const t = window.setInterval(() => load(false), POLL_MS)
     return () => window.clearInterval(t)
-  }, [load])
+  }, [load, seeded])
 
   const visible = applyFilter(dedupeByPost(items), filter)
   const count = savingNow(items)

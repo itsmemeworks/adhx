@@ -102,6 +102,10 @@ export async function fetchYouTubeMetadata(videoId: string): Promise<YouTubeMeta
     const res = await fetch(oembed, {
       signal: AbortSignal.timeout(8_000),
       headers: { Accept: 'application/json' },
+      // Next Data Cache: dedupe repeat crawler hits to the same Short for an
+      // hour. Independent of full-route caching, so it works on the dynamic
+      // (cookie-reading) preview route. The AbortSignal timeout is unaffected.
+      next: { revalidate: 3600 },
     })
     if (!res.ok) return null
     const data = (await res.json()) as {

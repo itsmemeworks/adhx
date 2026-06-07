@@ -58,7 +58,7 @@ const robotoMono = Roboto_Mono({
   variable: '--font-roboto-mono',
 })
 
-const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://adhx.com'
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://adhx.com'
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
