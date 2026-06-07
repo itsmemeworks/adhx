@@ -460,11 +460,13 @@ export function Header() {
                 >
                   <button
                     onClick={() => cooldown.canSync && setShowSync(true)}
+                    disabled={!cooldown.canSync}
                     className={cn(
                       'inline-flex items-center justify-center p-2 rounded-full transition-colors',
+                      // Available → clearly interactive; cooling down → clearly dimmed.
                       cooldown.canSync
-                        ? 'hover:bg-inset text-ink-3 hover:text-ink'
-                        : 'text-ink-3/50 cursor-not-allowed',
+                        ? 'text-ink-2 hover:text-ink hover:bg-inset cursor-pointer'
+                        : 'text-ink-3/40 cursor-not-allowed',
                     )}
                   >
                     <RefreshCw className="w-[18px] h-[18px]" />
@@ -605,8 +607,8 @@ export function Header() {
                           className={cn(
                             'w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors',
                             cooldown.canSync
-                              ? 'hover:bg-inset text-ink-2 hover:text-ink'
-                              : 'text-ink-3/50 cursor-not-allowed',
+                              ? 'hover:bg-inset text-ink hover:text-ink'
+                              : 'text-ink-3/40 cursor-not-allowed',
                           )}
                         >
                           <RefreshCw className="w-4 h-4" />

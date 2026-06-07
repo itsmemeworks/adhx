@@ -290,8 +290,10 @@ export function TriageMode({
     if (Math.abs(dx) > Math.abs(dy)) setDrag(dx)
   }
   const onTouchEnd = () => {
-    if (drag > SWIPE_THRESHOLD) keep()
-    else if (drag < -SWIPE_THRESHOLD) archive()
+    // Swipe direction matches the card flight + the keyboard arrows:
+    // right → Done (flies right), left → Keep (flies left).
+    if (drag > SWIPE_THRESHOLD) archive()
+    else if (drag < -SWIPE_THRESHOLD) keep()
     else setDrag(0)
     touchStart.current = null
   }
@@ -435,34 +437,84 @@ export function TriageMode({
         </div>
       )}
 
-      {/* Single action dock (bottom-center): glass buttons, hint below. */}
+      {/* Live swipe feedback: the action you're about to trigger, on the side
+          the card is heading toward (left = Keep, right = Done). */}
+      {!finished && current && drag !== 0 && !exiting && (
+        <div
+          className={cn(
+            'pointer-events-none absolute inset-0 z-[5] flex items-center',
+            drag < 0 ? 'justify-start pl-6 sm:pl-14' : 'justify-end pr-6 sm:pr-14',
+          )}
+        >
+          <div
+            className="inline-flex items-center gap-2 rounded-2xl border-[3px] px-4 py-2.5 text-lg font-extrabold uppercase tracking-wide backdrop-blur"
+            style={{
+              opacity: Math.min(1, Math.abs(drag) / SWIPE_THRESHOLD),
+              transform: `rotate(${drag < 0 ? -8 : 8}deg)`,
+              color: drag < 0 ? 'var(--m-accent)' : 'var(--m-done)',
+              borderColor: drag < 0 ? 'var(--m-accent)' : 'var(--m-done)',
+              background: `color-mix(in srgb, ${drag < 0 ? 'var(--m-accent)' : 'var(--m-done)'} 14%, transparent)`,
+            }}
+          >
+            {drag < 0 ? <Bookmark className="w-5 h-5" /> : <Check className="w-5 h-5" />}
+            {drag < 0 ? 'Keep' : 'Done'}
+          </div>
+        </div>
+      )}
+
+      {/* Action dock (bottom-center): labelled glass buttons (tap or swipe) +
+          a legend that maps the swipe directions to actions. */}
       {!finished && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className="absolute bottom-6 left-0 right-0 z-[7] flex flex-col items-center gap-[15px]"
+          className="absolute bottom-6 left-0 right-0 z-[7] flex flex-col items-center gap-3"
         >
-          <div className="flex items-center gap-5 sm:gap-[30px]">
-            <DockButton onClick={keep} label="Keep" tone="primary" onDark={fullBleed}>
+          <div className="flex items-end gap-6 sm:gap-[40px]">
+            <DockButton
+              onClick={keep}
+              label="Keep"
+              caption="stays unread"
+              tone="primary"
+              onDark={fullBleed}
+            >
               <Bookmark className="w-[25px] h-[25px]" />
             </DockButton>
-            <DockButton onClick={del} label="Delete" tone="outline" onDark={fullBleed}>
+            <DockButton
+              onClick={del}
+              label="Delete"
+              caption="removes it"
+              tone="outline"
+              onDark={fullBleed}
+            >
               <Trash2 className="w-[22px] h-[22px]" />
             </DockButton>
-            <DockButton onClick={archive} label="Done" tone="done" onDark={fullBleed}>
+            <DockButton
+              onClick={archive}
+              label="Done"
+              caption="marks read"
+              tone="done"
+              onDark={fullBleed}
+            >
               <Check className="w-[25px] h-[25px]" />
             </DockButton>
           </div>
           <span
             className={cn(
-              'inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold whitespace-nowrap',
+              'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[12px] font-medium whitespace-nowrap',
               fullBleed
                 ? 'bg-black/40 backdrop-blur text-white/90'
                 : 'bg-fsurface/60 backdrop-blur text-fink-2 border border-fline',
             )}
           >
-            <ArrowLeft className="w-3.5 h-3.5" />{' '}
-            {isTouch ? 'Swipe to sort' : 'Swipe or use arrow keys'}{' '}
-            <ArrowRight className="w-3.5 h-3.5" />
+            <span className="inline-flex items-center gap-1">
+              <ArrowLeft className="w-3.5 h-3.5" /> Keep
+            </span>
+            <span className="opacity-40">·</span>
+            <span>{isTouch ? 'tap or swipe' : 'tap, swipe, or ←→'}</span>
+            <span className="opacity-40">·</span>
+            <span className="inline-flex items-center gap-1">
+              Done <ArrowRight className="w-3.5 h-3.5" />
+            </span>
           </span>
         </div>
       )}
@@ -495,19 +547,22 @@ export function TriageMode({
 }
 
 /**
- * "Apple-glass" dock button — translucent fill + backdrop blur so the content
- * behind blurs through. Keep = accent glass, Delete = subtle outline glass,
- * Done = green glass. No text label (the hint below covers the gesture).
+ * "Apple-glass" dock button — translucent fill + backdrop blur. Keep = accent
+ * glass, Delete = subtle outline glass, Done = green glass. The whole stack
+ * (circle + label + caption) is the tap target, so it works by tap as well as
+ * swipe, and the always-visible label/caption say what each action does.
  */
 function DockButton({
   onClick,
   label,
+  caption,
   tone,
   onDark = false,
   children,
 }: {
   onClick: () => void
   label: string
+  caption?: string
   tone: 'primary' | 'outline' | 'done'
   onDark?: boolean
   children: React.ReactNode
@@ -532,20 +587,42 @@ function DockButton({
     <button
       onClick={onClick}
       aria-label={label}
-      className={cn(
-        'rounded-full border flex items-center justify-center transition-transform hover:scale-105 active:scale-95',
-        big ? 'w-16 h-16' : 'w-[54px] h-[54px]',
-        iconColor,
-      )}
-      style={{
-        background,
-        borderColor,
-        backdropFilter: 'blur(16px) saturate(1.4)',
-        WebkitBackdropFilter: 'blur(16px) saturate(1.4)',
-        boxShadow: big ? '0 8px 24px rgba(0,0,0,.18)' : undefined,
-      }}
+      className="group flex flex-col items-center gap-1.5"
     >
-      {children}
+      <span
+        className={cn(
+          'rounded-full border flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95',
+          big ? 'w-16 h-16' : 'w-[54px] h-[54px]',
+          iconColor,
+        )}
+        style={{
+          background,
+          borderColor,
+          backdropFilter: 'blur(16px) saturate(1.4)',
+          WebkitBackdropFilter: 'blur(16px) saturate(1.4)',
+          boxShadow: big ? '0 8px 24px rgba(0,0,0,.18)' : undefined,
+        }}
+      >
+        {children}
+      </span>
+      <span
+        className={cn(
+          'text-[13px] font-semibold leading-none',
+          onDark ? 'text-white drop-shadow' : 'text-fink',
+        )}
+      >
+        {label}
+      </span>
+      {caption && (
+        <span
+          className={cn(
+            'text-[10.5px] leading-none',
+            onDark ? 'text-white/75 drop-shadow' : 'text-fink-3',
+          )}
+        >
+          {caption}
+        </span>
+      )}
     </button>
   )
 }

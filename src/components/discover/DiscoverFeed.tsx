@@ -51,6 +51,9 @@ function dedupeByPost(items: ActivityItem[]): ActivityItem[] {
 
 const POLL_MS = 12_000
 
+/** Remembers the user's last-used lens so the bare /trending hub restores it. */
+const FILTER_STORAGE_KEY = 'adhx-trending-filter'
+
 /** Stable React key / identity for an activity item. */
 function keyOf(item: ActivityItem): string {
   return postKey(item)
@@ -101,6 +104,20 @@ export function DiscoverFeed({
   }, [])
   const signedOut = authed === false
 
+  // Restore the last-used lens on the bare /trending hub (where the URL didn't
+  // pin a specific filter — i.e. initialFilter is the default 'trending'). A
+  // /trending/<filter> URL always wins. Runs in an effect (not the initial
+  // useState) so server + first client render match — no hydration mismatch.
+  useEffect(() => {
+    if (initialFilter && initialFilter !== 'trending') return
+    try {
+      const saved = localStorage.getItem(FILTER_STORAGE_KEY)
+      if (saved && FILTERS.some((f) => f.id === saved)) setFilter(saved as FilterId)
+    } catch {
+      /* localStorage unavailable — keep the default */
+    }
+  }, [initialFilter])
+
   const load = useCallback(async (initial: boolean) => {
     try {
       const res = await fetch('/api/activity', { cache: 'no-store' })
@@ -143,6 +160,11 @@ export function DiscoverFeed({
   // the matching filter server-side (see the [filter] route).
   const selectFilter = useCallback((id: FilterId) => {
     setFilter(id)
+    try {
+      localStorage.setItem(FILTER_STORAGE_KEY, id)
+    } catch {
+      /* ignore */
+    }
     if (typeof window !== 'undefined') {
       window.history.replaceState(null, '', filterToPath(id))
     }

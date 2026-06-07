@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Image, Play, Check, EyeOff, FileText } from 'lucide-react'
 import { AuthorAvatar } from './AuthorAvatar'
 import { renderTextWithLinks, renderBionicTextWithLinks, stripMediaUrls } from './utils'
@@ -46,6 +46,14 @@ export function FeedCard({
   const [error, setError] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
+  // Hover affordances (video autoplay + the mark-read overlay) are desktop-only.
+  // On touch the browser emulates :hover on the FIRST tap, revealing the overlay
+  // and swallowing that tap — which is why opening took two taps. Gate them to
+  // hover-capable devices so a tap just opens the item.
+  const [canHover, setCanHover] = useState(false)
+  useEffect(() => {
+    setCanHover(window.matchMedia('(hover: hover)').matches)
+  }, [])
   const [showDopamine, setShowDopamine] = useState(false)
   const [isExiting, setIsExiting] = useState(false)
   const { preferences } = usePreferences()
@@ -118,8 +126,8 @@ export function FeedCard({
           newGlowClass,
         )}
         onClick={onExpand}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        onMouseEnter={canHover ? () => setIsHovered(true) : undefined}
+        onMouseLeave={canHover ? () => setIsHovered(false) : undefined}
       >
         {/* Content based on type */}
         {hasMedia && primaryMedia ? (
@@ -160,29 +168,34 @@ export function FeedCard({
           />
         )}
 
-        {/* Hover overlay */}
-        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-          <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
-            <div className="flex items-center gap-2">
-              <AuthorAvatar src={item.authorProfileImageUrl} author={item.author} size="sm" />
-              <span className="text-white text-xs font-medium truncate flex-1">@{item.author}</span>
-              <button
-                onClick={handleMarkReadWithAnimation}
-                className={cn(
-                  'p-2 rounded-full pointer-events-auto transition-all duration-200',
-                  showDopamine
-                    ? 'bg-clay text-white scale-125 shadow-lg'
-                    : item.isRead
-                      ? 'bg-black/50 hover:bg-black/40 text-white'
-                      : 'bg-clay hover:opacity-90 text-white',
-                )}
-                title={item.isRead ? 'Mark as unread' : 'Mark as read'}
-              >
-                {item.isRead ? <EyeOff className="w-4 h-4" /> : <Check className="w-4 h-4" />}
-              </button>
+        {/* Hover overlay — desktop only (see canHover). Rendering it on touch
+            would make the first tap reveal it instead of opening the item. */}
+        {canHover && (
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
+              <div className="flex items-center gap-2">
+                <AuthorAvatar src={item.authorProfileImageUrl} author={item.author} size="sm" />
+                <span className="text-white text-xs font-medium truncate flex-1">
+                  @{item.author}
+                </span>
+                <button
+                  onClick={handleMarkReadWithAnimation}
+                  className={cn(
+                    'p-2 rounded-full pointer-events-auto transition-all duration-200',
+                    showDopamine
+                      ? 'bg-clay text-white scale-125 shadow-lg'
+                      : item.isRead
+                        ? 'bg-black/50 hover:bg-black/40 text-white'
+                        : 'bg-clay hover:opacity-90 text-white',
+                  )}
+                  title={item.isRead ? 'Mark as unread' : 'Mark as read'}
+                >
+                  {item.isRead ? <EyeOff className="w-4 h-4" /> : <Check className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )

@@ -135,6 +135,37 @@ function FeedPageContent(): React.ReactElement {
     openTriage(queue, 0)
   }, [items, openTriage])
 
+  // Open triage from a tapped gallery item: triage the FULL unread backlog (not
+  // just the loaded page) so the progress count reflects everything, but start
+  // on the item the user tapped.
+  const openTriageFromItem = useCallback(
+    async (idx: number) => {
+      const clicked = items[idx]
+      let queue: FeedItem[] = items.filter((i) => !i.isRead)
+      try {
+        const res = await fetch('/api/feed?filter=all&unreadOnly=true&limit=100')
+        if (res.ok) {
+          const data = await res.json()
+          const all: FeedItem[] = (data.items || []).filter((i: FeedItem) => !i.isRead)
+          if (all.length) queue = all
+        }
+      } catch {
+        /* fall back to the loaded unread items */
+      }
+      const plat = (i: FeedItem) => i.platform ?? 'twitter'
+      let start = clicked
+        ? queue.findIndex((i) => i.id === clicked.id && plat(i) === plat(clicked))
+        : 0
+      if (start === -1) {
+        // Tapped item isn't in the unread set (e.g. already read) — open it alone.
+        queue = clicked ? [clicked] : queue
+        start = 0
+      }
+      openTriage(queue, Math.max(0, start))
+    },
+    [items, openTriage],
+  )
+
   const startSync = useCallback(
     async (firstLogin = false) => {
       if (isSyncing) return
@@ -691,10 +722,10 @@ function FeedPageContent(): React.ReactElement {
           break
         case 'f':
         case 'F':
-          // Focus mode - open first item
+          // Focus mode - open first item (full unread backlog)
           e.preventDefault()
           if (items.length > 0) {
-            openTriage(items, 0)
+            openTriageFromItem(0)
           }
           break
         case 't':
@@ -919,7 +950,7 @@ function FeedPageContent(): React.ReactElement {
             unreadOnly={unreadOnly}
             stats={stats}
             view={view}
-            onExpand={(idx) => openTriage(items, idx)}
+            onExpand={openTriageFromItem}
             onMarkRead={handleMarkAsRead}
             onRemove={(id) => setItems((prev) => prev.filter((i) => i.id !== id))}
             onLoadMore={loadMore}
