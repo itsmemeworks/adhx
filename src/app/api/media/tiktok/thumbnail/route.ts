@@ -24,6 +24,29 @@ const CACHE_TTL = 60 * 60 * 1000
 
 const OG_IMAGE_RE = /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i
 
+// HTML entities that appear in og:image URLs (mostly `&amp;` between query
+// params, occasionally an escaped apostrophe).
+const HTML_ENTITIES: Record<string, string> = {
+  amp: '&',
+  '#x27': "'",
+  '#39': "'",
+  quot: '"',
+  lt: '<',
+  gt: '>',
+}
+
+/**
+ * Decode HTML entities in a single pass. A single pass (rather than chained
+ * `.replace()` calls) avoids double-unescaping — e.g. `&amp;#x27;` decodes to
+ * the literal `&#x27;`, never to `'`.
+ */
+function decodeHtmlEntities(input: string): string {
+  return input.replace(
+    /&(amp|#x27|#39|quot|lt|gt);/g,
+    (match, entity) => HTML_ENTITIES[entity] ?? match,
+  )
+}
+
 export async function GET(request: NextRequest) {
   const username = request.nextUrl.searchParams.get('username')
   const videoId = request.nextUrl.searchParams.get('id')
@@ -60,7 +83,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'No thumbnail in mirror response' }, { status: 404 })
       }
 
-      cdnUrl = match[1].replace(/&amp;/g, '&').replace(/&#x27;/g, "'")
+      cdnUrl = decodeHtmlEntities(match[1])
       thumbnailUrlCache.set(cacheKey, { url: cdnUrl, ts: Date.now() })
 
       // Trim cache if it grows
