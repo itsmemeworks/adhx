@@ -4,7 +4,7 @@ import { previewPath } from '@/lib/activity/record'
 
 /**
  * Shared server-rendered markup for the /trending hubs. Extracted from the
- * /trending route so both /trending and /trending/[platform] import it from a
+ * /trending route so both /trending and /trending/[filter] import it from a
  * stable component module rather than reaching into a sibling route's page.tsx.
  *
  * Renders ONLY public fields + previewPath links — no saver identity. See the
@@ -29,7 +29,7 @@ export function itemHref(item: TrendingItem): string {
  * <DiscoverFeed> grid is what users see) but present in the HTML source with
  * full text + links so search engines and no-JS clients get real content.
  *
- * Reused by both /trending and /trending/[platform].
+ * Reused by both /trending and /trending/[filter].
  */
 export function TrendingStaticList({ items, heading }: { items: TrendingItem[]; heading: string }) {
   if (items.length === 0) return null

@@ -36,12 +36,12 @@ describe('Dynamic Sitemap', () => {
     const { default: sitemap } = await import('@/app/sitemap')
     const entries = sitemap({ id: 'hubs' })
 
-    // homepage + /trending + 4 per-platform /trending hubs = 6 static entries
-    expect(entries).toHaveLength(6)
+    // homepage + /trending + 5 per-lens /trending hubs = 7 static entries
+    expect(entries).toHaveLength(7)
     expect(entries[0].url).toBe('https://adhx.com')
     expect(entries[0].priority).toBe(1)
     expect(entries.find((e) => e.url === 'https://adhx.com/trending')).toBeDefined()
-    expect(entries.find((e) => e.url === 'https://adhx.com/trending/x')).toBeDefined()
+    expect(entries.find((e) => e.url === 'https://adhx.com/trending/videos')).toBeDefined()
     // No tag pages
     expect(entries.find((e) => e.url.includes('/t/'))).toBeUndefined()
   })
@@ -206,11 +206,12 @@ describe('Dynamic Sitemap', () => {
     expect(entries.find((e) => e.url === 'https://adhx.com')).toBeDefined()
     // cross-network trending hub
     expect(entries.find((e) => e.url === 'https://adhx.com/trending')).toBeDefined()
-    // the four per-platform trending hubs (x for twitter, else the platform id)
-    expect(entries.find((e) => e.url === 'https://adhx.com/trending/x')).toBeDefined()
-    expect(entries.find((e) => e.url === 'https://adhx.com/trending/tiktok')).toBeDefined()
-    expect(entries.find((e) => e.url === 'https://adhx.com/trending/instagram')).toBeDefined()
-    expect(entries.find((e) => e.url === 'https://adhx.com/trending/youtube')).toBeDefined()
+    // the five per-lens trending hubs
+    expect(entries.find((e) => e.url === 'https://adhx.com/trending/just-saved')).toBeDefined()
+    expect(entries.find((e) => e.url === 'https://adhx.com/trending/videos')).toBeDefined()
+    expect(entries.find((e) => e.url === 'https://adhx.com/trending/photos')).toBeDefined()
+    expect(entries.find((e) => e.url === 'https://adhx.com/trending/text')).toBeDefined()
+    expect(entries.find((e) => e.url === 'https://adhx.com/trending/articles')).toBeDefined()
   })
 
   it('platform shard indexes saved content under a PRIVATE tag (saved content is indexed regardless of tag visibility)', async () => {

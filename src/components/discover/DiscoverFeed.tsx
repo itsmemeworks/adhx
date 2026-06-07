@@ -5,8 +5,9 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { LiveDot, MatterLogo, ConnectWithX } from '@/components/matter'
 import { ThemeToggle } from '@/components/ThemeToggle'
-import { DiscoverCard, inferType } from './DiscoverCard'
+import { DiscoverCard } from './DiscoverCard'
 import type { TrendingItem } from '@/lib/trending/query'
+import { type FilterId, FILTERS, applyFilter, filterToPath } from '@/lib/trending/filter'
 
 /**
  * The Discover/Trending item shape — the canonical, anonymity-safe public item
@@ -50,47 +51,9 @@ function dedupeByPost(items: ActivityItem[]): ActivityItem[] {
 
 const POLL_MS = 12_000
 
-type FilterId = 'trending' | 'just-saved' | 'photos' | 'videos' | 'text' | 'articles'
-
-const FILTERS: { id: FilterId; label: string }[] = [
-  { id: 'trending', label: 'Trending' },
-  { id: 'just-saved', label: 'Just saved' },
-  { id: 'photos', label: 'Photos' },
-  { id: 'videos', label: 'Videos' },
-  { id: 'text', label: 'Text' },
-  { id: 'articles', label: 'Articles' },
-]
-
 /** Stable React key / identity for an activity item. */
 function keyOf(item: ActivityItem): string {
   return postKey(item)
-}
-
-/**
- * Filter + sort an already-deduped list. "Just saved" (default) = newest first.
- * "Trending" surfaces posts with 2+ interactions (saves + previews), ranked by
- * that score (newest as the tiebreaker). Photos/Videos/Text/Articles filter by
- * type (Text includes quotes).
- */
-function applyFilter(items: ActivityItem[], filter: FilterId): ActivityItem[] {
-  if (filter === 'trending') {
-    return items
-      .filter((it) => (it.trendCount ?? 0) >= 2)
-      .sort((a, b) => {
-        const d = (b.trendCount ?? 0) - (a.trendCount ?? 0)
-        if (d !== 0) return d
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      })
-  }
-
-  if (filter === 'photos') return items.filter((it) => inferType(it) === 'photo')
-  if (filter === 'videos') return items.filter((it) => inferType(it) === 'video')
-  if (filter === 'text')
-    return items.filter((it) => inferType(it) === 'text' || inferType(it) === 'quote')
-  if (filter === 'articles') return items.filter((it) => inferType(it) === 'article')
-
-  // just-saved (default): already newest-first from the API.
-  return items
 }
 
 /** A plausible "saving right now" count derived from real recent volume. */
@@ -174,6 +137,17 @@ export function DiscoverFeed({
     return () => window.clearInterval(t)
   }, [load, seeded])
 
+  // Select a lens AND reflect it in the address bar (tidy path) so the current
+  // view is shareable + crawlable, without a full navigation — the grid already
+  // holds the data and filters live. A fresh load of /trending/<filter> seeds
+  // the matching filter server-side (see the [filter] route).
+  const selectFilter = useCallback((id: FilterId) => {
+    setFilter(id)
+    if (typeof window !== 'undefined') {
+      window.history.replaceState(null, '', filterToPath(id))
+    }
+  }, [])
+
   const visible = applyFilter(dedupeByPost(items), filter)
   const count = savingNow(items)
 
@@ -195,7 +169,7 @@ export function DiscoverFeed({
               >
                 How it works
               </Link>
-              <span className="hidden sm:inline text-sm font-semibold text-clay">Discover</span>
+              <span className="hidden sm:inline text-sm font-semibold text-clay">Trending</span>
               <ThemeToggle className="-mr-1 sm:mr-0" />
               <a
                 href="/api/auth/twitter"
@@ -241,7 +215,7 @@ export function DiscoverFeed({
                 <button
                   key={f.id}
                   type="button"
-                  onClick={() => setFilter(f.id)}
+                  onClick={() => selectFilter(f.id)}
                   className={cn(
                     'rounded-full px-3.5 py-1.5 text-[13.5px] font-semibold transition-colors duration-150',
                     active

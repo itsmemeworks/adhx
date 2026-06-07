@@ -12,7 +12,7 @@
 
 - [Tweet Previews](/{username}/status/{id}): Rich HTML preview of a saved tweet with Schema.org JSON-LD (SocialMediaPosting), OG tags, and semantic HTML.
 - [Tag Collections](/t/{username}/{tag}): Browsable gallery of curated tweet collections organized by tag.
-- [Trending](/trending): The cross-network real-time trending source — what the community is saving and previewing right now across X, Instagram, TikTok, and YouTube. Per-platform hubs at /trending/x, /trending/instagram, /trending/tiktok, /trending/youtube. Backed by the [Trending JSON](/api/trending) API.
+- [Trending](/trending): The cross-network real-time trending source — what the community is saving and previewing right now across X, Instagram, TikTok, and YouTube. Per-lens hubs at /trending/just-saved, /trending/videos, /trending/photos, /trending/text, /trending/articles. Backed by the [Trending JSON](/api/trending) API.
 
 ## Content Types
 

@@ -4,6 +4,7 @@ import { tagShares, bookmarks, oauthTokens, activity } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
 import { previewPath } from '@/lib/activity/record'
 import type { PlatformId } from '@/lib/platform/url'
+import { FILTER_SLUGS } from '@/lib/trending/filter'
 
 /**
  * Sharded sitemap index. Next re-runs each shard's DB query hourly (rather than
@@ -15,14 +16,6 @@ const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://adhx.com'
 
 /** The four content platforms, each gets its own preview-URL shard. */
 const PLATFORMS: PlatformId[] = ['twitter', 'instagram', 'tiktok', 'youtube']
-
-/** URL slug for a platform's /trending hub ("x" for twitter, else the id). */
-const TRENDING_SLUG: Record<PlatformId, string> = {
-  twitter: 'x',
-  instagram: 'instagram',
-  tiktok: 'tiktok',
-  youtube: 'youtube',
-}
 
 /**
  * Per-shard URL cap. Sitemaps allow 50k URLs / 50MB; we stay well under both.
@@ -51,9 +44,10 @@ function hubsSitemap(): MetadataRoute.Sitemap {
     { url: `${baseUrl}/trending`, lastModified: now, changeFrequency: 'hourly', priority: 0.9 },
   ]
 
-  for (const platform of PLATFORMS) {
+  // Per-lens trending hubs (videos / photos / text / articles / just-saved).
+  for (const slug of FILTER_SLUGS) {
     entries.push({
-      url: `${baseUrl}/trending/${TRENDING_SLUG[platform]}`,
+      url: `${baseUrl}/trending/${slug}`,
       lastModified: now,
       changeFrequency: 'hourly',
       priority: 0.8,

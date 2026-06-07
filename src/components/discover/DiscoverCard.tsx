@@ -3,34 +3,10 @@
 import { Plus, Play, Flame, ExternalLink, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
-import { PlatformGlyph, TypeBadge, type ContentType } from '@/components/matter'
+import { PlatformGlyph, TypeBadge } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
+import { inferType } from '@/lib/trending/filter'
 import type { ActivityItem } from './DiscoverFeed'
-
-/**
- * The post's type for the badge. Prefer the real `contentType` resolved server
- * side from the saved bookmark; otherwise fall back to a heuristic:
- *   tiktok / youtube / instagram → video (single-format platforms)
- *   an avatar/profile image is NOT real media → text
- *   any other thumbnail ⇒ photo, otherwise text
- */
-export function inferType(item: ActivityItem): ContentType {
-  if (item.contentType) return item.contentType
-  if (item.platform === 'tiktok' || item.platform === 'youtube' || item.platform === 'instagram') {
-    return 'video'
-  }
-  if (item.thumbnailUrl && /profile_images/.test(item.thumbnailUrl)) return 'text'
-  // A Twitter *video* poster (ext_tw_video_thumb / amplify_video_thumb / the
-  // tweet_video_thumb used for GIFs) isn't a photo — only `/media/` URLs are.
-  // Matters for preview-only items, where the server can't derive the type.
-  if (
-    item.thumbnailUrl &&
-    /(ext_tw_video_thumb|amplify_video_thumb|tweet_video_thumb)/.test(item.thumbnailUrl)
-  ) {
-    return 'video'
-  }
-  return item.thumbnailUrl ? 'photo' : 'text'
-}
 
 /**
  * A single Discover grid card (Matter direction), rendered per content type.
