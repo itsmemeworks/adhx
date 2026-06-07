@@ -58,8 +58,8 @@ importers:
         specifier: ^2.2.0
         version: 2.6.0
       twitter-api-v2:
-        specifier: ^1.17.0
-        version: 1.28.0
+        specifier: ^1.29.0
+        version: 1.29.0
     devDependencies:
       '@commitlint/cli':
         specifier: ^21.0.2
@@ -3709,8 +3709,8 @@ packages:
   tunnel-agent@0.6.0:
     resolution: {integrity: sha512-McnNiV1l8RYeY8tBgEpuodCC1mLUdbSN+CYBL7kJsJNInOP8UjDDEwdk6Mw60vdLLrr5NHKZhMAOSrR2NZuQ+w==}
 
-  twitter-api-v2@1.28.0:
-    resolution: {integrity: sha512-VBmiAMylCEr94OChaHJ+0TBrOZNrduwWUe7QLoa/KdOdv1fNiToJ0xZGOrNKFd2B7jrAdAkfUW6yA5LuXYOYLQ==}
+  twitter-api-v2@1.29.0:
+    resolution: {integrity: sha512-v473q5bwme4N+DWSg6qY+JCvfg1nSJRWwui3HUALafxfqCvVkKiYmS/5x/pVeJwTmyeBxexMbzHwnzrH4h6oYQ==}
 
   type-check@0.4.0:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
@@ -7677,7 +7677,7 @@ snapshots:
     dependencies:
       safe-buffer: 5.2.1
 
-  twitter-api-v2@1.28.0: {}
+  twitter-api-v2@1.29.0: {}
 
   type-check@0.4.0:
     dependencies:
