@@ -174,6 +174,28 @@ const encrypted = encryptToken(accessToken) // Store this in DB
 const decrypted = decryptToken(encrypted) // Use this for API calls
 ```
 
+### OAuth Token Refresh (race-safe)
+
+X OAuth 2.0 tokens: the **access token lasts ~2 hours**; the **refresh token is single-use and rotates** — every refresh issues a new access+refresh token and **invalidates the previous refresh token**. If two requests refresh concurrently they both spend the same refresh token; the loser is handed an invalidated one, which **breaks the rotation chain** and forces a full re-auth. This app calls auth on every page load (`/api/auth/twitter/status`) and during sync, so concurrent refreshes are common.
+
+**`getValidTokens(userId, { forceRefresh? })` (`src/lib/auth/oauth.ts`) is the single entry point** for obtaining a usable access token. It:
+
+- returns stored tokens unchanged when still valid (5-min expiry buffer),
+- refreshes when expired (or when `forceRefresh` is set),
+- **coalesces concurrent refreshes per user** onto one in-flight promise (an in-process `Map`), so the single-use refresh token is spent exactly once,
+- persists the rotated tokens (via `saveTokens`, **encrypted**) before returning.
+
+**Do NOT add new refresh call sites** that call `refreshAccessToken` + `saveTokens` directly — route everything through `getValidTokens`, or you reintroduce the rotation race. `getTwitterClient()` and `/api/auth/twitter/status` both use it.
+
+**`TokenRefreshError`** carries `status` + `fatal`:
+
+- `fatal` (HTTP 400/401) → the refresh token itself is dead; only a fresh re-auth recovers it. The status route clears the session here; throw it to the user as "reconnect your account".
+- non-fatal (network / 5xx / lost race) → **keep the stored tokens** and let a later request retry. Never tear down the session on a transient failure (that turns a blip into a forced re-auth).
+
+**Reactive 401 recovery**: `fetchBookmarks` (`src/lib/twitter/client.ts`) force-refreshes once and retries on a 401/403, recovering tokens that died before their nominal expiry; if that still fails it surfaces a clear reconnect message.
+
+Tests: `src/__tests__/token-refresh.test.ts` (coalescing, fatal/transient, rotation persistence) and the refresh cases in `src/__tests__/api/auth-status.test.ts`.
+
 ### Content Security Policy (CSP)
 
 Security headers configured in `next.config.js`:

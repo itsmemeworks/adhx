@@ -6,9 +6,45 @@ import { fetchReelMetadata, isValidReelId } from '@/lib/media/instafix'
 import { getSession } from '@/lib/auth/session'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 import { isLikelyBot } from '@/lib/activity/bot'
+import { buildVideoObjectLd } from '@/lib/utils/structured-data'
+import { db } from '@/lib/db'
+import { bookmarks } from '@/lib/db/schema'
+import { and, eq } from 'drizzle-orm'
 
 interface Props {
   params: Promise<{ id: string }>
+}
+
+// This route is dynamic (reads cookies for auth), so it is never full-route
+// cached. Crawl-cheapness comes instead from fetchReelMetadata()'s cached scrape
+// (unstable_cache, revalidate 3600) and the DB-first skip for saved posts.
+
+/** Display fields InstagramPreviewLanding needs, sourced from a saved bookmark. */
+interface SavedReel {
+  author: string | null
+  authorName: string | null
+  caption: string | null
+}
+
+/**
+ * Cross-user lookup: is this Reel already in someone's collection? Content is
+ * identical regardless of saver (mirrors the cross-user reads in the trending
+ * query / /api/activity), so a single row is enough — we render from it and skip
+ * the Instagram scrape. We never select or expose `userId`.
+ */
+function getSavedReel(id: string): SavedReel | null {
+  const row = db
+    .select({
+      author: bookmarks.author,
+      authorName: bookmarks.authorName,
+      text: bookmarks.text,
+    })
+    .from(bookmarks)
+    .where(and(eq(bookmarks.platform, 'instagram'), eq(bookmarks.id, id)))
+    .limit(1)
+    .get()
+  if (!row) return null
+  return { author: row.author, authorName: row.authorName, caption: row.text }
 }
 
 export default async function ReelPreviewPage({ params }: Props) {
@@ -18,37 +54,72 @@ export default async function ReelPreviewPage({ params }: Props) {
     redirect('/')
   }
 
-  const [meta, session] = await Promise.all([fetchReelMetadata(id), getSession()])
+  // DB-first: if anyone has saved this Reel, render from the stored row and skip
+  // the Instagram scrape. The poster is served via the /api/media/instagram
+  // thumbnail proxy (it re-resolves the signed CDN URL from the id), so the
+  // saved row's author/name/caption is all the UI needs.
+  const saved = getSavedReel(id)
+  const session = await getSession()
+  const meta = saved ? null : await fetchReelMetadata(id)
 
-  if (meta && !isLikelyBot((await headers()).get('user-agent'))) {
-    const author = meta.author || 'instagram'
+  const author = saved?.author || meta?.author || null
+  const authorName = saved?.authorName || meta?.authorName || null
+  const caption = saved?.caption || meta?.caption || null
+  const description = saved ? null : meta?.description || null
+  // Saved reels always get the proxy poster; preview-only only when a CDN image
+  // was resolved.
+  const hasImage = saved ? true : !!meta?.imageUrl
+  const imageUrl = hasImage
+    ? `/api/media/instagram/thumbnail?id=${encodeURIComponent(id)}`
+    : undefined
+  const available = saved ? true : !!meta
+
+  if (available && !isLikelyBot((await headers()).get('user-agent'))) {
     recordActivity({
       action: 'preview',
       platform: 'instagram',
       bookmarkId: id,
-      author,
-      authorName: meta.authorName || meta.author || null,
-      text: meta.caption || meta.description || null,
-      thumbnailUrl: meta.imageUrl
-        ? `/api/media/instagram/thumbnail?id=${encodeURIComponent(id)}`
-        : null,
-      url: previewPath('instagram', author, id),
+      author: author || 'instagram',
+      authorName: authorName || author || null,
+      text: caption || description || null,
+      thumbnailUrl: imageUrl ?? null,
+      url: previewPath('instagram', author || 'instagram', id),
     })
   }
 
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const ldAuthorName = authorName || author
+  const jsonLd = buildVideoObjectLd({
+    name: caption || description || (authorName ? `${authorName} on Instagram` : 'Instagram Reel'),
+    description: caption || description || undefined,
+    thumbnailUrl: imageUrl ? `${baseUrl}${imageUrl}` : undefined,
+    // No contentUrl: Instagram playback is degraded (mirrors dead — poster +
+    // caption only), so we don't advertise a non-working media URL.
+    author: ldAuthorName
+      ? {
+          name: ldAuthorName,
+          url: author ? `https://www.instagram.com/${author}` : undefined,
+        }
+      : undefined,
+  })
+
   return (
-    <InstagramPreviewLanding
-      reelId={id}
-      caption={meta?.caption}
-      description={meta?.description}
-      // Served via the proxy (re-resolves the signed CDN URL fresh).
-      imageUrl={
-        meta?.imageUrl ? `/api/media/instagram/thumbnail?id=${encodeURIComponent(id)}` : undefined
-      }
-      author={meta?.author}
-      authorName={meta?.authorName}
-      isAuthenticated={!!session}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <InstagramPreviewLanding
+        reelId={id}
+        caption={caption || undefined}
+        description={description || undefined}
+        // Served via the proxy (re-resolves the signed CDN URL fresh).
+        imageUrl={imageUrl}
+        author={author || undefined}
+        authorName={authorName || undefined}
+        isAuthenticated={!!session}
+      />
+    </>
   )
 }
 

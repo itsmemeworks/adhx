@@ -9,7 +9,15 @@ import { withAuth } from '@/lib/api/with-auth'
 import { captureException, metrics } from '@/lib/sentry'
 import type { StreamedBookmark } from '@/components/feed/types'
 import { categorizeTweetByUrls, extractDomain, determineLinkType } from '@/lib/tweets/processor'
+import { recordActivity, previewPath } from '@/lib/activity/record'
 import { getSyncCooldownMs } from '@/lib/sync/config'
+
+/**
+ * Cap on how many newly-synced tweets feed the public pulse per sync. Bookmarks
+ * arrive most-recently-bookmarked first, so the freshest saves are recorded and
+ * a large first-time backfill can't flood the shared, anonymous Discover feed.
+ */
+const SYNC_PULSE_CAP = 25
 import { normalizeEntityMap } from '@/lib/utils/article-text'
 
 // GET /api/sync - SSE endpoint for sync progress
@@ -134,6 +142,29 @@ export const GET = withAuth(async (request, userId) => {
             const savedBookmark = await saveBookmark(tweet, userId, insertedDuringSync)
             insertedDuringSync.add(tweet.id) // Track that we inserted this ID
             newBookmarks++
+
+            // Feed the public pulse, same as a manual save — a newly-synced tweet
+            // is a new save. Capped (freshest first) so a big backfill can't flood
+            // the shared feed. getTrendingItems derives type/counts from the
+            // bookmark we just wrote; we still pass title/cover so articles read
+            // rich. Fire-and-forget (recordActivity swallows errors).
+            if (newBookmarks <= SYNC_PULSE_CAP) {
+              recordActivity({
+                action: 'save',
+                platform: 'twitter',
+                bookmarkId: savedBookmark.id,
+                author: savedBookmark.author,
+                authorName: savedBookmark.authorName,
+                text: savedBookmark.articlePreview?.title || savedBookmark.text || null,
+                thumbnailUrl:
+                  savedBookmark.articlePreview?.imageUrl ||
+                  savedBookmark.media?.[0]?.thumbnailUrl ||
+                  null,
+                contentType: savedBookmark.category,
+                url: previewPath('twitter', savedBookmark.author, savedBookmark.id),
+                userId,
+              })
+            }
 
             send('processing', {
               current: i + 1,

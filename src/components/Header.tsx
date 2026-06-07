@@ -337,15 +337,15 @@ export function Header() {
                   Collection
                 </Link>
                 <Link
-                  href="/discover"
+                  href="/trending"
                   className={cn(
                     'rounded-full px-3 py-1.5 font-semibold transition-colors',
-                    pathname === '/discover'
+                    pathname.startsWith('/trending')
                       ? 'bg-clay/[0.12] text-clay'
                       : 'text-ink-2 hover:text-ink',
                   )}
                 >
-                  Discover
+                  Trending
                 </Link>
               </nav>
             )}
@@ -449,7 +449,7 @@ export function Header() {
               </button>
 
               {/* Sync Button — hidden on phones (lives in the user menu there) */}
-              <div className="hidden sm:block">
+              <div className="hidden sm:flex items-center">
                 <Tooltip
                   content={
                     cooldown.canSync
@@ -461,7 +461,7 @@ export function Header() {
                   <button
                     onClick={() => cooldown.canSync && setShowSync(true)}
                     className={cn(
-                      'p-2 rounded-full transition-colors',
+                      'inline-flex items-center justify-center p-2 rounded-full transition-colors',
                       cooldown.canSync
                         ? 'hover:bg-inset text-ink-3 hover:text-ink'
                         : 'text-ink-3/50 cursor-not-allowed',
@@ -558,17 +558,17 @@ export function Header() {
                           Collection
                         </Link>
                         <Link
-                          href="/discover"
+                          href="/trending"
                           onClick={() => setShowUserMenu(false)}
                           className={cn(
                             'flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset transition-colors',
-                            pathname === '/discover'
+                            pathname.startsWith('/trending')
                               ? 'font-semibold text-clay'
                               : 'text-ink-2 hover:text-ink',
                           )}
                         >
                           <Compass className="w-4 h-4" />
-                          Discover
+                          Trending
                         </Link>
                         <Link
                           href="/settings"

@@ -167,10 +167,10 @@ export function LandingPage() {
               How it works
             </a>
             <a
-              href="/discover"
+              href="/trending"
               className="hidden sm:inline text-sm font-medium text-ink-2 hover:text-ink transition-colors"
             >
-              Discover
+              Trending
             </a>
             <ThemeToggle className="-mr-1 sm:mr-0" />
             <button
@@ -272,10 +272,10 @@ export function LandingPage() {
               </p>
             </div>
             <a
-              href="/discover"
+              href="/trending"
               className="sm:ml-auto text-sm font-semibold text-clay whitespace-nowrap hover:opacity-80 transition-opacity"
             >
-              Open Discover →
+              Open Trending →
             </a>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[18px]">

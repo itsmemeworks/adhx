@@ -10,6 +10,7 @@ import { fetchTweetData, extractUrlsFromFacets, type FxTwitterResponse } from '@
 import { fetchOgMetadata } from '@/lib/utils/og-fetch'
 import { truncate } from '@/lib/utils/format'
 import { getOgImages } from '@/lib/utils/og-image'
+import { buildSocialMediaPostingLd } from '@/lib/utils/structured-data'
 
 type FxTweet = NonNullable<FxTwitterResponse['tweet']>
 
@@ -17,7 +18,10 @@ interface Props {
   params: Promise<{ username: string; id: string }>
 }
 
-// Fetch tweet data from FxTwitter API (cached per request via Next.js)
+// Fetch tweet data from FxTwitter API. The route is dynamic (reads cookies for
+// auth), so it is never full-route cached — the crawl stays cheap because
+// fetchTweetData() caches the upstream FxTwitter response in the Next Data Cache
+// (revalidate 3600), so repeat crawler hits to the same id don't re-hit the API.
 async function getTweetData(username: string, tweetId: string) {
   try {
     const data = await fetchTweetData(username, tweetId)
@@ -29,17 +33,24 @@ async function getTweetData(username: string, tweetId: string) {
 }
 
 /**
- * Build Schema.org JSON-LD structured data for a tweet.
+ * Build Schema.org JSON-LD structured data for a tweet. Delegates to the shared
+ * SocialMediaPosting builder — output stays equivalent to the previous inline
+ * version (the status page always supplies headline/text/url/date/counts).
  */
 function buildJsonLd(tweet: FxTweet, baseUrl: string, username: string, id: string) {
-  const jsonLd: Record<string, unknown> = {
-    '@context': 'https://schema.org',
-    '@type': 'SocialMediaPosting',
+  // Keep the existing og-logo guard: only set `image` when it's real media,
+  // never the fallback logo.
+  const ogImages = getOgImages(tweet, baseUrl)
+  const image =
+    ogImages[0] && !ogImages[0].url.endsWith('/og-logo.png') ? ogImages[0].url : undefined
+
+  const video = tweet.media?.videos?.[0]
+
+  return buildSocialMediaPostingLd({
     headline:
       tweet.article?.title || truncate(tweet.text || `Tweet by @${tweet.author.screen_name}`, 110),
-    articleBody: tweet.text || undefined,
+    text: tweet.text || undefined,
     author: {
-      '@type': 'Person',
       name: tweet.author.name,
       url: `https://x.com/${tweet.author.screen_name}`,
       image: tweet.author.avatar_url,
@@ -47,44 +58,19 @@ function buildJsonLd(tweet: FxTweet, baseUrl: string, username: string, id: stri
     datePublished: tweet.created_at,
     url: tweet.url || `https://x.com/${username}/status/${id}`,
     mainEntityOfPage: `${baseUrl}/${username}/status/${id}`,
-    interactionStatistic: [
-      {
-        '@type': 'InteractionCounter',
-        interactionType: 'https://schema.org/LikeAction',
-        userInteractionCount: tweet.likes,
-      },
-      {
-        '@type': 'InteractionCounter',
-        interactionType: 'https://schema.org/ShareAction',
-        userInteractionCount: tweet.retweets,
-      },
-      {
-        '@type': 'InteractionCounter',
-        interactionType: 'https://schema.org/CommentAction',
-        userInteractionCount: tweet.replies,
-      },
-    ],
-  }
-
-  // Add image
-  const ogImages = getOgImages(tweet, baseUrl)
-  if (ogImages[0] && !ogImages[0].url.endsWith('/og-logo.png')) {
-    jsonLd.image = ogImages[0].url
-  }
-
-  // Add video
-  if (tweet.media?.videos?.[0]) {
-    const video = tweet.media.videos[0]
-    jsonLd.video = {
-      '@type': 'VideoObject',
-      contentUrl: video.url,
-      thumbnailUrl: video.thumbnail_url,
-      width: video.width,
-      height: video.height,
-    }
-  }
-
-  return jsonLd
+    likes: tweet.likes,
+    reposts: tweet.retweets,
+    replies: tweet.replies,
+    image,
+    video: video
+      ? {
+          contentUrl: video.url,
+          thumbnailUrl: video.thumbnail_url,
+          width: video.width,
+          height: video.height,
+        }
+      : undefined,
+  })
 }
 
 export default async function QuickAddPage({ params }: Props) {
@@ -106,7 +92,11 @@ export default async function QuickAddPage({ params }: Props) {
   // Check authentication
   const session = await getSession()
 
-  // Enrich tweet with OG metadata from facet URLs when external is null
+  // Enrich tweet with OG metadata from facet URLs when external is null, so a
+  // tweet with a bare t.co link still renders a rich link preview. Runs the same
+  // for saved and unsaved tweets — fetchTweetData's data cache already keeps
+  // repeat crawls cheap, so there's no need to skip enrichment for saved tweets
+  // (which previously degraded their preview).
   if (tweet && !tweet.external && !tweet.article) {
     const facetUrls = extractUrlsFromFacets(tweet)
     if (facetUrls.length > 0) {
@@ -130,6 +120,17 @@ export default async function QuickAddPage({ params }: Props) {
     const ua = (await headers()).get('user-agent')
     if (!isLikelyBot(ua)) {
       const previewAuthor = tweet.author?.screen_name || username
+      // An X Article keeps its headline + cover in `tweet.article` (not
+      // tweet.text/media), so resolve those explicitly — otherwise a
+      // preview-only article would land in the pulse as a bare "Saved post".
+      const articleCover = tweet.article?.cover_media?.media_info?.original_img_url || null
+      const previewType = tweet.article?.title
+        ? 'article'
+        : tweet.media?.videos?.length
+          ? 'video'
+          : tweet.media?.photos?.length
+            ? 'photo'
+            : 'text'
       recordActivity({
         action: 'preview',
         platform: 'twitter',
@@ -137,10 +138,15 @@ export default async function QuickAddPage({ params }: Props) {
         author: previewAuthor,
         authorName: tweet.author?.name || null,
         authorAvatarUrl: tweet.author?.avatar_url || null,
-        text: tweet.text || null,
-        // Real media only — no avatar fallback, so text tweets stay "text"
-        // in the pulse/Discover rather than being mistaken for photos.
-        thumbnailUrl: tweet.media?.all?.[0]?.thumbnail_url || tweet.media?.all?.[0]?.url || null,
+        text: tweet.article?.title || tweet.text || null,
+        // Real media (or the article cover) only — no avatar fallback, so text
+        // tweets stay "text" rather than being mistaken for photos.
+        thumbnailUrl:
+          articleCover ||
+          tweet.media?.all?.[0]?.thumbnail_url ||
+          tweet.media?.all?.[0]?.url ||
+          null,
+        contentType: previewType,
         url: previewPath('twitter', previewAuthor, id),
       })
     }

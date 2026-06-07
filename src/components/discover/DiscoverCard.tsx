@@ -3,34 +3,10 @@
 import { Plus, Play, Flame, ExternalLink, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
-import { PlatformGlyph, TypeBadge, type ContentType } from '@/components/matter'
+import { PlatformGlyph, TypeBadge } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
+import { inferType } from '@/lib/trending/filter'
 import type { ActivityItem } from './DiscoverFeed'
-
-/**
- * The post's type for the badge. Prefer the real `contentType` resolved server
- * side from the saved bookmark; otherwise fall back to a heuristic:
- *   tiktok / youtube / instagram → video (single-format platforms)
- *   an avatar/profile image is NOT real media → text
- *   any other thumbnail ⇒ photo, otherwise text
- */
-export function inferType(item: ActivityItem): ContentType {
-  if (item.contentType) return item.contentType
-  if (item.platform === 'tiktok' || item.platform === 'youtube' || item.platform === 'instagram') {
-    return 'video'
-  }
-  if (item.thumbnailUrl && /profile_images/.test(item.thumbnailUrl)) return 'text'
-  // A Twitter *video* poster (ext_tw_video_thumb / amplify_video_thumb / the
-  // tweet_video_thumb used for GIFs) isn't a photo — only `/media/` URLs are.
-  // Matters for preview-only items, where the server can't derive the type.
-  if (
-    item.thumbnailUrl &&
-    /(ext_tw_video_thumb|amplify_video_thumb|tweet_video_thumb)/.test(item.thumbnailUrl)
-  ) {
-    return 'video'
-  }
-  return item.thumbnailUrl ? 'photo' : 'text'
-}
 
 /**
  * A single Discover grid card (Matter direction), rendered per content type.
@@ -98,7 +74,6 @@ export function DiscoverCard({
         <div className="absolute left-2.5 top-2.5">
           <TypeBadge type={type} />
         </div>
-        {TopRight}
         {isVideo && (
           <div className="absolute inset-0 flex items-center justify-center">
             <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md">
@@ -133,7 +108,6 @@ export function DiscoverCard({
         <div className="absolute left-2.5 top-2.5">
           <TypeBadge type="article" />
         </div>
-        {TopRight}
         <div className="absolute inset-x-0 bottom-0 px-4 pb-3.5 pt-8">
           <h3 className="font-serif font-semibold text-[17px] leading-tight text-white line-clamp-3 [text-shadow:0_1px_3px_rgba(0,0,0,.5)]">
             {caption || 'Article'}
@@ -189,9 +163,11 @@ export function DiscoverCard({
         fresh ? 'border-clay/40 bg-clay/[0.08]' : 'border-hairline',
       )}
     >
-      {/* The whole tile links to the on-ADHX preview page. */}
-      <a href={item.url} className="flex flex-1 flex-col">
+      {/* The whole tile links to the on-ADHX preview page. The trend badge is
+          pinned top-right for every card type (media, article, text/quote). */}
+      <a href={item.url} className="relative flex flex-1 flex-col">
         {body}
+        {TopRight}
       </a>
 
       {/* Bottom-pinned footer (aligned across the equal-height grid). Still
@@ -200,7 +176,10 @@ export function DiscoverCard({
         <span className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full border border-hairline bg-inset text-ink-2">
           <PlatformGlyph platform={item.platform} size={17} />
         </span>
-        <span className="font-mono text-[12.5px] text-ink-3">{time}</span>
+        {/* Relative time (Date.now-based) differs between ISR HTML and client. */}
+        <span className="font-mono text-[12.5px] text-ink-3" suppressHydrationWarning>
+          {time}
+        </span>
         <a
           href={item.url}
           className="ml-auto flex-none inline-flex items-center gap-1.5 rounded-full bg-clay-grad px-3.5 py-2 text-[13px] font-semibold text-white shadow-glow transition-opacity duration-150 hover:opacity-90"

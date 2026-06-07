@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { X, CheckCircle, AlertCircle, RefreshCw, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -37,8 +37,15 @@ export function SyncProgress({ isOpen, onClose, fetchAll = false, onComplete }: 
   const [error, setError] = useState<string | null>(null)
   const [pageNumber, setPageNumber] = useState(0)
   const [stats, setStats] = useState<SyncStats | null>(null)
+  // Set once a terminal event (complete/error) is handled, so the built-in
+  // EventSource `onerror` (which fires when the stream closes — including a
+  // clean close right after a server `error` event) doesn't clobber the real
+  // error message with a generic "Connection lost". A ref avoids the stale
+  // closure that made the old `state`-based guard unreliable.
+  const terminalRef = useRef(false)
 
   const startSync = useCallback(async () => {
+    terminalRef.current = false
     setState('connecting')
     setProgress(0)
     setTotalTweets(0)
@@ -84,6 +91,7 @@ export function SyncProgress({ isOpen, onClose, fetchAll = false, onComplete }: 
       })
 
       eventSource.addEventListener('complete', (e) => {
+        terminalRef.current = true
         const data = JSON.parse(e.data)
         setStats(data.stats)
         onComplete?.(data.stats)
@@ -98,9 +106,14 @@ export function SyncProgress({ isOpen, onClose, fetchAll = false, onComplete }: 
       })
 
       eventSource.addEventListener('error', (e) => {
-        if (e instanceof MessageEvent) {
-          const data = JSON.parse(e.data)
-          setError(data.message)
+        terminalRef.current = true
+        if (e instanceof MessageEvent && e.data) {
+          try {
+            const data = JSON.parse(e.data)
+            setError(data.message || 'Sync failed')
+          } catch {
+            setError('Sync failed')
+          }
         } else {
           setError('Connection lost')
         }
@@ -109,7 +122,9 @@ export function SyncProgress({ isOpen, onClose, fetchAll = false, onComplete }: 
       })
 
       eventSource.onerror = () => {
-        if (state !== 'complete' && state !== 'error') {
+        // Only a real connection drop — a terminal `error`/`complete` already
+        // set a meaningful message, so don't overwrite it with "Connection lost".
+        if (!terminalRef.current) {
           setError('Connection lost')
           setState('error')
         }
@@ -119,7 +134,7 @@ export function SyncProgress({ isOpen, onClose, fetchAll = false, onComplete }: 
       setError(err instanceof Error ? err.message : 'Failed to start sync')
       setState('error')
     }
-  }, [fetchAll, onComplete, state])
+  }, [fetchAll, onComplete])
 
   // Start sync when modal opens
   useEffect(() => {

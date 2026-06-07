@@ -1,4 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+
+// `fetchTikTokMetadata` is wrapped in Next's `unstable_cache`, which throws
+// "incrementalCache missing" outside a Next request context. In unit tests we
+// want the bare implementation, so make `unstable_cache` a pass-through.
+vi.mock('next/cache', () => ({
+  unstable_cache: <A extends unknown[], R>(fn: (...args: A) => R) => fn,
+}))
+
 import {
   fetchTikTokMetadata,
   isAllowedVideoUrl,

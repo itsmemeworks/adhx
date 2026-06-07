@@ -6,11 +6,13 @@
 
 - [Tweet JSON](/api/share/tweet/{username}/{id}): Structured JSON for any tweet — author, text, engagement metrics, media URLs, article content as markdown, quote tweets, external links. 5-min cache. No auth required.
 - [Tag Collection](/api/share/tag/by-name/{username}/{tag}): All tweets in a user's public tag collection with full media metadata. No auth required.
+- [Trending JSON](/api/trending): Cross-network real-time trending JSON — the posts the community is saving and previewing right now across X, Instagram, TikTok, and YouTube, ranked by trend score (saves + previews). Anonymous (no user identity). Optional `?platform=x|instagram|tiktok|youtube` filter. 60s cache. No auth required.
 
 ## Public Pages
 
 - [Tweet Previews](/{username}/status/{id}): Rich HTML preview of a saved tweet with Schema.org JSON-LD (SocialMediaPosting), OG tags, and semantic HTML.
 - [Tag Collections](/t/{username}/{tag}): Browsable gallery of curated tweet collections organized by tag.
+- [Trending](/trending): The cross-network real-time trending source — what the community is saving and previewing right now across X, Instagram, TikTok, and YouTube. Per-lens hubs at /trending/just-saved, /trending/videos, /trending/photos, /trending/text, /trending/articles. Backed by the [Trending JSON](/api/trending) API.
 
 ## Content Types
 

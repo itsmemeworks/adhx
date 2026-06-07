@@ -5,27 +5,17 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { LiveDot, MatterLogo, ConnectWithX } from '@/components/matter'
 import { ThemeToggle } from '@/components/ThemeToggle'
-import { DiscoverCard, inferType } from './DiscoverCard'
+import { DiscoverCard } from './DiscoverCard'
+import type { TrendingItem } from '@/lib/trending/query'
+import { type FilterId, FILTERS, applyFilter, filterToPath } from '@/lib/trending/filter'
 
-export interface ActivityItem {
-  action: 'preview' | 'save' | 'read'
-  platform: 'twitter' | 'instagram' | 'tiktok' | 'youtube' | string
-  bookmarkId?: string
-  author: string
-  authorName?: string | null
-  text?: string | null
-  thumbnailUrl?: string | null
-  /** The post author's avatar, for tweet-style text/quote cards. */
-  authorAvatarUrl?: string | null
-  url: string
-  createdAt: string
-  /** Distinct ADHX users who've saved this post (anonymous count). */
-  saveCount?: number
-  /** Trending score = savers + preview events. Drives the flame + Trending sort. */
-  trendCount?: number
-  /** Real post type from the saved bookmark, when known (else client infers it). */
-  contentType?: 'video' | 'photo' | 'text' | 'quote' | 'article'
-}
+/**
+ * The Discover/Trending item shape — the canonical, anonymity-safe public item
+ * from the trending query module (carries NO `userId`). Re-exported under the
+ * historical `ActivityItem` name so `DiscoverCard` (and existing call sites)
+ * keep importing it from here unchanged.
+ */
+export type ActivityItem = TrendingItem
 
 /**
  * The true identity of a post — platform + source id. Keys off this (not the
@@ -61,47 +51,9 @@ function dedupeByPost(items: ActivityItem[]): ActivityItem[] {
 
 const POLL_MS = 12_000
 
-type FilterId = 'trending' | 'just-saved' | 'photos' | 'videos' | 'text' | 'articles'
-
-const FILTERS: { id: FilterId; label: string }[] = [
-  { id: 'trending', label: 'Trending' },
-  { id: 'just-saved', label: 'Just saved' },
-  { id: 'photos', label: 'Photos' },
-  { id: 'videos', label: 'Videos' },
-  { id: 'text', label: 'Text' },
-  { id: 'articles', label: 'Articles' },
-]
-
 /** Stable React key / identity for an activity item. */
 function keyOf(item: ActivityItem): string {
   return postKey(item)
-}
-
-/**
- * Filter + sort an already-deduped list. "Just saved" (default) = newest first.
- * "Trending" surfaces posts with 2+ interactions (saves + previews), ranked by
- * that score (newest as the tiebreaker). Photos/Videos/Text/Articles filter by
- * type (Text includes quotes).
- */
-function applyFilter(items: ActivityItem[], filter: FilterId): ActivityItem[] {
-  if (filter === 'trending') {
-    return items
-      .filter((it) => (it.trendCount ?? 0) >= 2)
-      .sort((a, b) => {
-        const d = (b.trendCount ?? 0) - (a.trendCount ?? 0)
-        if (d !== 0) return d
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      })
-  }
-
-  if (filter === 'photos') return items.filter((it) => inferType(it) === 'photo')
-  if (filter === 'videos') return items.filter((it) => inferType(it) === 'video')
-  if (filter === 'text')
-    return items.filter((it) => inferType(it) === 'text' || inferType(it) === 'quote')
-  if (filter === 'articles') return items.filter((it) => inferType(it) === 'article')
-
-  // just-saved (default): already newest-first from the API.
-  return items
 }
 
 /** A plausible "saving right now" count derived from real recent volume. */
@@ -112,15 +64,30 @@ function savingNow(items: ActivityItem[]): number {
   return Math.max(1, recent || Math.min(items.length, 12))
 }
 
-export function DiscoverFeed() {
-  const [items, setItems] = useState<ActivityItem[]>([])
-  const [filter, setFilter] = useState<FilterId>('just-saved')
-  const [loaded, setLoaded] = useState(false)
+export function DiscoverFeed({
+  initialItems,
+  initialFilter,
+}: {
+  /**
+   * Server-rendered items to seed from (e.g. the /trending hub's ISR data).
+   * When provided, the grid paints immediately with no skeleton flash and the
+   * redundant first fetch is skipped — but the 12s live polling continues.
+   */
+  initialItems?: ActivityItem[]
+  /** Initial filter pill selection (defaults to "just saved"). */
+  initialFilter?: FilterId
+} = {}) {
+  const seeded = (initialItems?.length ?? 0) > 0
+  const [items, setItems] = useState<ActivityItem[]>(initialItems ?? [])
+  const [filter, setFilter] = useState<FilterId>(initialFilter ?? 'just-saved')
+  const [loaded, setLoaded] = useState(seeded)
   const [freshKeys, setFreshKeys] = useState<Set<string>>(new Set())
   // null while unknown; once known, signed-out gets the public shell (the global
   // header is hidden when signed out) and Preview (not Save) actions.
   const [authed, setAuthed] = useState<boolean | null>(null)
-  const knownKeys = useRef<Set<string>>(new Set())
+  // Seed the known set from the server items so the first poll doesn't flash
+  // every pre-rendered card as "new".
+  const knownKeys = useRef<Set<string>>(new Set((initialItems ?? []).map(keyOf)))
 
   useEffect(() => {
     let alive = true
@@ -163,10 +130,23 @@ export function DiscoverFeed() {
   }, [])
 
   useEffect(() => {
-    load(true)
+    // When seeded from the server we already have items + a primed known-set,
+    // so skip the redundant initial fetch and go straight to live polling.
+    if (!seeded) load(true)
     const t = window.setInterval(() => load(false), POLL_MS)
     return () => window.clearInterval(t)
-  }, [load])
+  }, [load, seeded])
+
+  // Select a lens AND reflect it in the address bar (tidy path) so the current
+  // view is shareable + crawlable, without a full navigation — the grid already
+  // holds the data and filters live. A fresh load of /trending/<filter> seeds
+  // the matching filter server-side (see the [filter] route).
+  const selectFilter = useCallback((id: FilterId) => {
+    setFilter(id)
+    if (typeof window !== 'undefined') {
+      window.history.replaceState(null, '', filterToPath(id))
+    }
+  }, [])
 
   const visible = applyFilter(dedupeByPost(items), filter)
   const count = savingNow(items)
@@ -189,7 +169,7 @@ export function DiscoverFeed() {
               >
                 How it works
               </Link>
-              <span className="hidden sm:inline text-sm font-semibold text-clay">Discover</span>
+              <span className="hidden sm:inline text-sm font-semibold text-clay">Trending</span>
               <ThemeToggle className="-mr-1 sm:mr-0" />
               <a
                 href="/api/auth/twitter"
@@ -223,7 +203,10 @@ export function DiscoverFeed() {
         <div className="flex flex-wrap items-center gap-3">
           <span className="inline-flex items-center gap-2.5 rounded-full border border-clay/25 bg-clay/[0.09] px-4 py-2">
             <LiveDot />
-            <span className="text-[14px] font-bold text-ink">
+            {/* Time-derived (savingNow uses Date.now), so it legitimately differs
+                between the ISR-cached server HTML and the client — suppress the
+                hydration warning rather than regenerate the tree. */}
+            <span className="text-[14px] font-bold text-ink" suppressHydrationWarning>
               {count} {count === 1 ? 'person' : 'people'} saving right now
             </span>
           </span>
@@ -235,7 +218,7 @@ export function DiscoverFeed() {
                 <button
                   key={f.id}
                   type="button"
-                  onClick={() => setFilter(f.id)}
+                  onClick={() => selectFilter(f.id)}
                   className={cn(
                     'rounded-full px-3.5 py-1.5 text-[13.5px] font-semibold transition-colors duration-150',
                     active

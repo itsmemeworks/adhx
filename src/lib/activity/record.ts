@@ -18,6 +18,10 @@ import { and, eq, gt } from 'drizzle-orm'
 
 export type ActivityAction = 'preview' | 'save' | 'read'
 
+/** Post types the pulse understands. Used to type preview-only cards. */
+export type ActivityContentType = 'video' | 'photo' | 'text' | 'quote' | 'article'
+const CONTENT_TYPES = new Set<string>(['video', 'photo', 'text', 'quote', 'article'])
+
 /**
  * Canonical on-ADHX preview path for a piece of content. Used as the pulse
  * item's link target so a click keeps the visitor on ADHX (and shows the
@@ -43,6 +47,8 @@ export interface ActivityInput {
   authorAvatarUrl?: string | null
   text?: string | null
   thumbnailUrl?: string | null
+  /** Server-resolved post type, so preview-only cards render correctly. */
+  contentType?: ActivityContentType | string | null
   url: string
   /** Private — for abuse handling only, never surfaced publicly. */
   userId?: string | null
@@ -103,6 +109,8 @@ export function recordActivity(input: ActivityInput): void {
       authorAvatarUrl: safeThumb(input.authorAvatarUrl),
       text: clean(input.text, TEXT_CAP),
       thumbnailUrl: safeThumb(input.thumbnailUrl),
+      contentType:
+        input.contentType && CONTENT_TYPES.has(input.contentType) ? input.contentType : null,
       url: input.url,
       userId: input.userId ?? null,
       createdAt: new Date().toISOString(),

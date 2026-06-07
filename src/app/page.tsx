@@ -449,13 +449,21 @@ function FeedPageContent(): React.ReactElement {
       return
     }
 
-    // If not found, switch to 'all' filter with no search/tag constraints
-    // and use pendingNavigationId to open once loaded
-    setFilter('all')
-    setUnreadOnly(true)
-    setSearch('')
-    setSelectedTags([])
-    setPendingNavigation({ id: openId })
+    // Not in the loaded feed — e.g. an already-saved tweet that's already read,
+    // or one on a later page. Fetch that specific bookmark by id (read state and
+    // pagination ignored) and open it directly in triage.
+    let alive = true
+    fetch(`/api/feed?id=${encodeURIComponent(openId)}&unreadOnly=false&limit=1`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!alive) return
+        const item = data?.items?.[0]
+        if (item) openTriage([item], 0)
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
   }, [searchParams]) // Only run when searchParams changes
 
   // Handle ?added=success URL parameter after adding tweet via URL prefix

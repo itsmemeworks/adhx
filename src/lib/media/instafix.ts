@@ -18,6 +18,7 @@
  * (`/api/media/instagram/thumbnail?id=`), which re-resolves it fresh.
  */
 
+import { unstable_cache } from 'next/cache'
 import { makeHostAllowlist } from '@/lib/media/proxy'
 
 // Hosts we trust to serve a Reel thumbnail (SSRF allowlist for the proxy).
@@ -55,16 +56,25 @@ export function isValidReelId(id: string): boolean {
  * Resolve a Reel's poster + caption + author from Instagram's own OG tags.
  * Returns null only when the post is unavailable (private/removed) or
  * Instagram served nothing usable.
+ *
+ * Wrapped in `unstable_cache` (keyed by id, revalidate 3600) rather than per-fetch
+ * `next.revalidate`: the scrape streams the response body with a manual reader and
+ * early-bails at `</head>`, which the fetch-level Data Cache can't cache, so we
+ * cache the resolved metadata instead. Repeat crawler hits to the same id reuse it.
  */
-export async function fetchReelMetadata(id: string): Promise<ReelMetadata | null> {
-  if (!isValidReelId(id)) return null
+export const fetchReelMetadata = unstable_cache(
+  async (id: string): Promise<ReelMetadata | null> => {
+    if (!isValidReelId(id)) return null
 
-  for (const path of [`/reel/${id}/`, `/p/${id}/`]) {
-    const meta = await fetchFromInstagram(path)
-    if (meta) return meta
-  }
-  return null
-}
+    for (const path of [`/reel/${id}/`, `/p/${id}/`]) {
+      const meta = await fetchFromInstagram(path)
+      if (meta) return meta
+    }
+    return null
+  },
+  ['instagram-reel-metadata'],
+  { revalidate: 3600 },
+)
 
 async function fetchFromInstagram(path: string): Promise<ReelMetadata | null> {
   try {

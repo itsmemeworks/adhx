@@ -47,6 +47,10 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
   const sortDir = searchParams.get('sortDir') === 'asc' ? 'asc' : 'desc' // default desc (newest first)
   const collectionId = searchParams.get('collection') // Filter by collection
   const platformFilter = (searchParams.get('platform') || 'all') as PlatformFilter // 'all' | 'twitter' | 'instagram' | 'tiktok'
+  // Direct id lookup (?id=...). Returns the specific bookmark(s) regardless of
+  // read state / pagination — used to open a saved tweet in triage (e.g. the
+  // "View in Collection" action on an already-saved preview).
+  const ids = searchParams.getAll('id')
 
   const offset = (page - 1) * limit
 
@@ -56,6 +60,11 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
 
     // Filter by user ID for multi-user support
     conditions.push(eq(bookmarks.userId, userId))
+
+    // Direct id lookup short-circuits the read/pagination filters below.
+    if (ids.length > 0) {
+      conditions.push(inArray(bookmarks.id, ids))
+    }
 
     // Platform filter (X / Instagram / TikTok / all)
     if (platformFilter !== 'all') {
@@ -173,8 +182,9 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
       conditions.push(or(eq(bookmarks.source, 'manual'), eq(bookmarks.source, 'url_prefix'))!)
     }
 
-    // Unread filter — composite key (bookmarkId, platform) matches read_status PK
-    if (unreadOnly) {
+    // Unread filter — composite key (bookmarkId, platform) matches read_status PK.
+    // Skipped for direct id lookups so an already-read tweet still resolves.
+    if (unreadOnly && ids.length === 0) {
       const readSubquery = sql`(
         SELECT ${readStatus.bookmarkId}, ${readStatus.platform}
         FROM ${readStatus}

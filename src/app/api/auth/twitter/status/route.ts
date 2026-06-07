@@ -3,16 +3,14 @@ import {
   getStoredTokens,
   isTokenExpired,
   getCurrentUser,
-  refreshAccessToken,
+  getValidTokens,
+  TokenRefreshError,
   deleteTokens,
 } from '@/lib/auth/oauth'
 import { db } from '@/lib/db'
 import { oauthTokens } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { getSession, clearSessionCookie } from '@/lib/auth/session'
-
-const CLIENT_ID = process.env.TWITTER_CLIENT_ID!
-const CLIENT_SECRET = process.env.TWITTER_CLIENT_SECRET!
 
 // GET /api/auth/twitter/status - Check auth status
 export async function GET() {
@@ -39,28 +37,20 @@ export async function GET() {
     let accessToken = tokens.accessToken
     let newExpiresAt = tokens.expiresAt
 
-    // If token is expired and we have a refresh token, try to refresh it
-    if (expired && tokens.refreshToken) {
-      try {
-        const refreshed = await refreshAccessToken(tokens.refreshToken, CLIENT_ID, CLIENT_SECRET)
-        accessToken = refreshed.accessToken
-        newExpiresAt = Math.floor(Date.now() / 1000) + refreshed.expiresIn
-
-        // Update tokens in database
-        await db
-          .update(oauthTokens)
-          .set({
-            accessToken: refreshed.accessToken,
-            refreshToken: refreshed.refreshToken,
-            expiresAt: newExpiresAt,
-            updatedAt: new Date().toISOString(),
-          })
-          .where(eq(oauthTokens.userId, tokens.userId))
-
-        expired = false
-      } catch (error) {
-        console.error('Failed to refresh token:', error)
-        // Token refresh failed - clear tokens and session, force re-auth
+    // Refresh if needed. getValidTokens serializes concurrent refreshes per
+    // user (this endpoint runs on every page load and could otherwise race the
+    // sync flow), so the single-use refresh-token chain isn't broken.
+    try {
+      const valid = await getValidTokens(session.userId)
+      if (valid) {
+        accessToken = valid.accessToken
+        newExpiresAt = valid.expiresAt
+        expired = isTokenExpired(valid.expiresAt)
+      }
+    } catch (error) {
+      if (error instanceof TokenRefreshError && error.fatal) {
+        // The refresh token itself was rejected (the chain is dead) — only a
+        // fresh re-auth recovers it, so clear tokens + session.
         await deleteTokens(tokens.userId)
         const response = NextResponse.json({
           authenticated: false,
@@ -69,6 +59,10 @@ export async function GET() {
         clearSessionCookie(response)
         return response
       }
+      // Transient failure (network / 5xx / lost rotation race): keep the stored
+      // tokens and report the current state. A later request retries rather
+      // than forcing an unnecessary re-auth.
+      console.error('Token refresh failed (transient), keeping session:', error)
     }
 
     // If profile image is missing and token is not expired, fetch it from Twitter

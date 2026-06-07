@@ -1,8 +1,5 @@
 import { TwitterApi, UserV2 } from 'twitter-api-v2'
-import { getStoredTokens, isTokenExpired, refreshAccessToken, saveTokens } from '@/lib/auth/oauth'
-
-const CLIENT_ID = process.env.TWITTER_CLIENT_ID!
-const CLIENT_SECRET = process.env.TWITTER_CLIENT_SECRET!
+import { getStoredTokens, getValidTokens } from '@/lib/auth/oauth'
 
 export interface TwitterMedia {
   mediaKey: string
@@ -54,31 +51,22 @@ export interface FetchBookmarksResult {
   resultCount: number
 }
 
-// Get authenticated Twitter client for a specific user
-export async function getTwitterClient(userId: string): Promise<TwitterApi> {
-  const tokens = await getStoredTokens(userId)
+/** A 401 from the Twitter API (twitter-api-v2 surfaces the HTTP status as `code`). */
+function isAuthError(err: unknown): boolean {
+  const code = (err as { code?: number })?.code
+  return code === 401 || code === 403
+}
+
+// Get authenticated Twitter client for a specific user. Pass forceRefresh to
+// refresh the access token even if it looks valid — used to recover from a 401
+// when a token died before its nominal expiry (revoked / rotated / clock skew).
+// Refresh + rotation is handled by getValidTokens, which serializes concurrent
+// refreshes per user so the single-use refresh-token chain isn't broken.
+export async function getTwitterClient(userId: string, forceRefresh = false): Promise<TwitterApi> {
+  const tokens = await getValidTokens(userId, { forceRefresh })
 
   if (!tokens) {
     throw new Error('Not authenticated. Please connect your Twitter account.')
-  }
-
-  // Check if token needs refresh
-  if (isTokenExpired(tokens.expiresAt)) {
-    console.log('Token expired, refreshing...')
-    const newTokens = await refreshAccessToken(tokens.refreshToken, CLIENT_ID, CLIENT_SECRET)
-
-    // Save new tokens
-    await saveTokens(
-      tokens.userId,
-      tokens.username || '',
-      tokens.profileImageUrl || null,
-      newTokens.accessToken,
-      newTokens.refreshToken,
-      newTokens.expiresIn,
-      '', // scopes don't change
-    )
-
-    return new TwitterApi(newTokens.accessToken)
   }
 
   return new TwitterApi(tokens.accessToken)
@@ -93,30 +81,46 @@ export async function fetchBookmarks(
   } = {},
 ): Promise<FetchBookmarksResult> {
   const { maxResults = 100, paginationToken } = options
-  const client = await getTwitterClient(userId)
 
   const tokens = await getStoredTokens(userId)
   if (!tokens) {
     throw new Error('Not authenticated')
   }
 
-  // Fetch bookmarks with expansions
-  const response = await client.v2.bookmarks({
-    max_results: Math.min(maxResults, 100),
-    pagination_token: paginationToken,
-    'tweet.fields': [
-      'created_at',
-      'author_id',
-      'entities',
-      'referenced_tweets',
-      'attachments',
-      'public_metrics',
-      'note_tweet',
-    ],
-    'user.fields': ['username', 'name', 'profile_image_url'],
-    expansions: ['author_id', 'referenced_tweets.id', 'attachments.media_keys'],
-    'media.fields': ['url', 'preview_image_url', 'type', 'width', 'height', 'duration_ms'],
-  })
+  // Inline so the literal field arrays get contextually typed by the API param.
+  const fetchPage = (client: TwitterApi) =>
+    client.v2.bookmarks({
+      max_results: Math.min(maxResults, 100),
+      pagination_token: paginationToken,
+      'tweet.fields': [
+        'created_at',
+        'author_id',
+        'entities',
+        'referenced_tweets',
+        'attachments',
+        'public_metrics',
+        'note_tweet',
+      ],
+      'user.fields': ['username', 'name', 'profile_image_url'],
+      expansions: ['author_id', 'referenced_tweets.id', 'attachments.media_keys'],
+      'media.fields': ['url', 'preview_image_url', 'type', 'width', 'height', 'duration_ms'],
+    })
+
+  // Fetch bookmarks. If the access token died before its nominal expiry (so the
+  // proactive refresh in getTwitterClient missed it), Twitter 401s — force a
+  // refresh and retry once. If that still fails on auth, surface a clear
+  // reconnect message instead of a raw "code 401".
+  let response
+  try {
+    response = await fetchPage(await getTwitterClient(userId))
+  } catch (err) {
+    if (!isAuthError(err)) throw err
+    try {
+      response = await fetchPage(await getTwitterClient(userId, true))
+    } catch {
+      throw new Error('Your X session has expired. Please reconnect your account in Settings.')
+    }
+  }
 
   // Build user lookup map
   const users = new Map<string, UserV2>()

@@ -339,6 +339,11 @@ export async function fetchTweetData(
         'User-Agent': 'ADHX/1.0',
       },
       signal: controller.signal,
+      // Next Data Cache: dedupe repeat crawler hits to the same tweet for an
+      // hour. Independent of full-route caching, so it works on the dynamic
+      // (cookie-reading) preview routes. The AbortSignal timeout is unaffected —
+      // only cache:'no-store' / revalidate:0 would disable caching.
+      next: { revalidate: 3600 },
     })
 
     clearTimeout(timeoutId)
