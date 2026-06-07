@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.40.1](https://github.com/itsmemeworks/adhx/compare/v1.40.0...v1.40.1) (2026-06-07)
+
+
+### Bug Fixes
+
+* render trending hubs at request time, not build time ([#217](https://github.com/itsmemeworks/adhx/issues/217)) ([c36c9cc](https://github.com/itsmemeworks/adhx/commit/c36c9ccf9b8a6241600cf1a47f78bdabc58438a2))
+
 ## [1.40.0](https://github.com/itsmemeworks/adhx/compare/v1.39.0...v1.40.0) (2026-06-07)
 
 
