@@ -11,10 +11,11 @@ import {
   PartyPopper,
   ArrowLeft,
   ArrowRight,
+  Share2,
 } from 'lucide-react'
 import type { FeedItem } from './types'
 import { MediaCard, isFullBleedCandidate } from './MediaCard'
-import { isTouchDevice } from './utils'
+import { isTouchDevice, copyPreviewLink } from './utils'
 import { cn } from '@/lib/utils'
 
 /** User's LOCAL calendar day as YYYY-MM-DD (streaks are per the user's days). */
@@ -83,6 +84,7 @@ export function TriageMode({
   const [exiting, setExiting] = useState<'left' | 'right' | 'up' | null>(null)
   const [drag, setDrag] = useState(0)
   const [isTouch, setIsTouch] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   const recordedRef = useRef(false)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
@@ -205,6 +207,15 @@ export function TriageMode({
     setDrag(0)
     setUndo(null)
   }, [undo, onItemRestored])
+
+  // Copy the current post's on-ADHX preview link (quick share).
+  const shareCurrent = useCallback(async () => {
+    if (!current) return
+    if (await copyPreviewLink(current)) {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1600)
+    }
+  }, [current])
 
   // --- keyboard: ← Keep, → Done, ↓ Delete, U undo, Esc close ---
   useEffect(() => {
@@ -370,6 +381,23 @@ export function TriageMode({
             style={{ width: `${progress}%` }}
           />
         </div>
+        {current && (
+          <button
+            onClick={shareCurrent}
+            className={cn(
+              'w-[38px] h-[38px] flex-none rounded-full flex items-center justify-center hover:opacity-80 transition-opacity',
+              fullBleed ? 'bg-black/40 backdrop-blur text-white' : 'bg-fsurface text-fink-2',
+            )}
+            aria-label="Copy link to this post"
+            title="Copy link"
+          >
+            {copied ? (
+              <Check className="w-[18px] h-[18px]" />
+            ) : (
+              <Share2 className="w-[18px] h-[18px]" />
+            )}
+          </button>
+        )}
         {streak.current > 0 && (
           <span
             className={cn(
@@ -531,6 +559,13 @@ export function TriageMode({
           <button onClick={doUndo} className="flex items-center gap-1 font-semibold text-clay">
             <Undo2 className="w-4 h-4" /> Undo
           </button>
+        </div>
+      )}
+
+      {/* Link-copied toast */}
+      {copied && (
+        <div className="fixed top-[68px] left-1/2 -translate-x-1/2 z-[9] bg-fink text-fsurface px-4 py-2 rounded-full text-sm font-semibold shadow-m-lg">
+          Link copied
         </div>
       )}
 

@@ -1,9 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Image, Play, Check, EyeOff, FileText } from 'lucide-react'
+import { Image, Play, Check, EyeOff, FileText, Share2 } from 'lucide-react'
 import { AuthorAvatar } from './AuthorAvatar'
-import { renderTextWithLinks, renderBionicTextWithLinks, stripMediaUrls } from './utils'
+import {
+  renderTextWithLinks,
+  renderBionicTextWithLinks,
+  stripMediaUrls,
+  copyPreviewLink,
+} from './utils'
 import { usePreferences } from '@/lib/preferences-context'
 import { formatDurationMs, formatCompactRelativeTime } from '@/lib/utils/format'
 import { TypeBadge, PlatformChip, type ContentType, type PlatformId } from '@/components/matter'
@@ -55,6 +60,7 @@ export function FeedCard({
     setCanHover(window.matchMedia('(hover: hover)').matches)
   }, [])
   const [showDopamine, setShowDopamine] = useState(false)
+  const [copiedLink, setCopiedLink] = useState(false)
   const [isExiting, setIsExiting] = useState(false)
   const { preferences } = usePreferences()
   const renderText = preferences.bionicReading ? renderBionicTextWithLinks : renderTextWithLinks
@@ -178,6 +184,21 @@ export function FeedCard({
                 <span className="text-white text-xs font-medium truncate flex-1">
                   @{item.author}
                 </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    copyPreviewLink(item).then((ok) => {
+                      if (ok) {
+                        setCopiedLink(true)
+                        setTimeout(() => setCopiedLink(false), 1500)
+                      }
+                    })
+                  }}
+                  className="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+                  title="Copy link to this post"
+                >
+                  {copiedLink ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+                </button>
                 <button
                   onClick={handleMarkReadWithAnimation}
                   className={cn(

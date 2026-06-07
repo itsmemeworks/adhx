@@ -8,7 +8,7 @@ import { TrendingStaticList, itemHref } from '@/components/trending/TrendingStat
 
 /**
  * /trending/[filter] — a crawlable hub for a single lens (videos / photos /
- * text / articles / just-saved). Same SSR-then-hydrate shape as /trending: real
+ * text / articles / latest). Same SSR-then-hydrate shape as /trending: real
  * HTML for each matching item in source, then the live <DiscoverFeed> grid on
  * top, pre-selected to this filter. Sharing a filtered view lands the visitor
  * on the same filter.
@@ -33,11 +33,11 @@ interface Props {
 
 /** Per-filter copy for titles/descriptions. */
 function copy(label: string): { title: string; description: string } {
-  if (label === 'Just saved') {
+  if (label === 'Latest') {
     return {
-      title: 'Just saved — the latest on ADHX',
+      title: 'Latest — the newest on ADHX',
       description:
-        'The newest things people are saving across X, TikTok, Instagram and YouTube right now. A live, anonymous feed — preview any of them and save your own to ADHX.',
+        'The newest things happening across X, TikTok, Instagram and YouTube on ADHX right now — saved, synced, added or previewed. A live, anonymous feed — preview any of them and save your own to ADHX.',
     }
   }
   const lower = label.toLowerCase()

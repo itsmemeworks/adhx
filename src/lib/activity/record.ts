@@ -26,16 +26,12 @@ const CONTENT_TYPES = new Set<string>(['video', 'photo', 'text', 'quote', 'artic
  * Canonical on-ADHX preview path for a piece of content. Used as the pulse
  * item's link target so a click keeps the visitor on ADHX (and shows the
  * save CTA) instead of bouncing them to the source platform.
+ *
+ * Defined in the dependency-free `./preview-path` module (no DB import) and
+ * re-exported here so client components can import the path helper without
+ * pulling in better-sqlite3 through this server-only module.
  */
-export function previewPath(platform: string, author: string, id: string): string {
-  // TikTok handles are stored with their leading "@", so strip any leading
-  // "@" before re-prefixing — otherwise the path doubles up (/@@handle/...).
-  const handle = author.replace(/^@+/, '')
-  if (platform === 'instagram') return `/reels/${id}`
-  if (platform === 'tiktok') return `/@${handle}/video/${id}`
-  if (platform === 'youtube') return `/shorts/${id}`
-  return `/${handle}/status/${id}`
-}
+export { previewPath } from './preview-path'
 
 export interface ActivityInput {
   action: ActivityAction

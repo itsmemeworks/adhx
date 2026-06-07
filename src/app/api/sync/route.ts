@@ -283,9 +283,15 @@ async function saveBookmark(
   let authorName = tweet.author?.name || null
   let enrichment: ReturnType<typeof extractEnrichmentData> | null = null
 
-  for (let attempt = 1; attempt <= 2; attempt++) {
+  // Sync is a background stream, not a latency-sensitive page render, so give the
+  // enrichment fetch a generous timeout (15s) and 3 attempts. Article payloads are
+  // large and were timing out under bulk load at the default 5s — leaving synced
+  // articles un-enriched (no category='article', no bookmark_links) so they showed
+  // bare in Trending until an individual preview re-fetched them.
+  const FX_ATTEMPTS = 3
+  for (let attempt = 1; attempt <= FX_ATTEMPTS; attempt++) {
     try {
-      const fxData = await fetchTweetData(authorUsername, tweet.id)
+      const fxData = await fetchTweetData(authorUsername, tweet.id, { timeoutMs: 15_000 })
       if (fxData?.tweet) {
         enrichment = extractEnrichmentData(fxData)
         if (enrichment) {
@@ -303,9 +309,17 @@ async function saveBookmark(
         }
         break // Success, exit retry loop
       }
+      // fetchTweetData swallows timeouts/HTTP errors and returns null (no throw),
+      // so back off here before the next attempt rather than hammering instantly.
+      if (attempt < FX_ATTEMPTS) {
+        await new Promise((resolve) => setTimeout(resolve, attempt * 300))
+      }
     } catch (error) {
-      if (attempt === 2) {
-        console.error('Failed to fetch FxTwitter enrichment data after 2 attempts:', error)
+      if (attempt === FX_ATTEMPTS) {
+        console.error(
+          `Failed to fetch FxTwitter enrichment data after ${FX_ATTEMPTS} attempts:`,
+          error,
+        )
         captureException(error, {
           context: 'fxtwitter_enrichment',
           tweetId: tweet.id,
@@ -313,8 +327,8 @@ async function saveBookmark(
           attempt,
         })
       } else {
-        // Wait before retry
-        await new Promise((resolve) => setTimeout(resolve, 200))
+        // Back off before retrying (linear: 300ms, 600ms).
+        await new Promise((resolve) => setTimeout(resolve, attempt * 300))
       }
     }
   }

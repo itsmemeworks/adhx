@@ -3,7 +3,32 @@
  */
 import React from 'react'
 import { Download, Monitor } from 'lucide-react'
-import type { ArticleContentBlock, ArticleEntityMap, MediaEntitiesMap } from './types'
+import type { ArticleContentBlock, ArticleEntityMap, MediaEntitiesMap, FeedItem } from './types'
+import { previewPath } from '@/lib/activity/preview-path'
+
+/** The on-ADHX preview URL for a saved item (absolute). */
+export function previewUrlForItem(item: Pick<FeedItem, 'platform' | 'author' | 'id'>): string {
+  const origin =
+    typeof window !== 'undefined'
+      ? window.location.origin
+      : process.env.NEXT_PUBLIC_APP_URL || 'https://adhx.com'
+  return `${origin}${previewPath(item.platform || 'twitter', item.author, item.id)}`
+}
+
+/**
+ * Copy a saved item's on-ADHX preview link to the clipboard. Returns true on
+ * success. Powers the quick Share buttons in the gallery + triage mode.
+ */
+export async function copyPreviewLink(
+  item: Pick<FeedItem, 'platform' | 'author' | 'id'>,
+): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(previewUrlForItem(item))
+    return true
+  } catch {
+    return false
+  }
+}
 
 /**
  * `onError` handler for media images: if the primary (proxy) URL fails to load,

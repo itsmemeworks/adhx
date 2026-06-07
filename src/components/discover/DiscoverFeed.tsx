@@ -77,12 +77,12 @@ export function DiscoverFeed({
    * redundant first fetch is skipped — but the 12s live polling continues.
    */
   initialItems?: ActivityItem[]
-  /** Initial filter pill selection (defaults to "just saved"). */
+  /** Initial filter pill selection (defaults to "latest"). */
   initialFilter?: FilterId
 } = {}) {
   const seeded = (initialItems?.length ?? 0) > 0
   const [items, setItems] = useState<ActivityItem[]>(initialItems ?? [])
-  const [filter, setFilter] = useState<FilterId>(initialFilter ?? 'just-saved')
+  const [filter, setFilter] = useState<FilterId>(initialFilter ?? 'latest')
   const [loaded, setLoaded] = useState(seeded)
   const [freshKeys, setFreshKeys] = useState<Set<string>>(new Set())
   // null while unknown; once known, signed-out gets the public shell (the global

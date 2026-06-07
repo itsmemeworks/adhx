@@ -99,6 +99,51 @@ Open this to see the entire post
             iamgdsa
           </span>
           <button
+            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            title="Copy link to this post"
+          >
+            <svg
+              class="lucide lucide-share2 w-4 h-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="18"
+                cy="5"
+                r="3"
+              />
+              <circle
+                cx="6"
+                cy="12"
+                r="3"
+              />
+              <circle
+                cx="18"
+                cy="19"
+                r="3"
+              />
+              <line
+                x1="8.59"
+                x2="15.42"
+                y1="13.51"
+                y2="17.49"
+              />
+              <line
+                x1="15.41"
+                x2="8.59"
+                y1="6.51"
+                y2="10.49"
+              />
+            </svg>
+          </button>
+          <button
             class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
           >
@@ -219,6 +264,51 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
             aliniikk
           </span>
           <button
+            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            title="Copy link to this post"
+          >
+            <svg
+              class="lucide lucide-share2 w-4 h-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="18"
+                cy="5"
+                r="3"
+              />
+              <circle
+                cx="6"
+                cy="12"
+                r="3"
+              />
+              <circle
+                cx="18"
+                cy="19"
+                r="3"
+              />
+              <line
+                x1="8.59"
+                x2="15.42"
+                y1="13.51"
+                y2="17.49"
+              />
+              <line
+                x1="15.41"
+                x2="8.59"
+                y1="6.51"
+                y2="10.49"
+              />
+            </svg>
+          </button>
+          <button
             class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
           >
@@ -329,6 +419,51 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
             @
             NoahRyanCo
           </span>
+          <button
+            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            title="Copy link to this post"
+          >
+            <svg
+              class="lucide lucide-share2 w-4 h-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="18"
+                cy="5"
+                r="3"
+              />
+              <circle
+                cx="6"
+                cy="12"
+                r="3"
+              />
+              <circle
+                cx="18"
+                cy="19"
+                r="3"
+              />
+              <line
+                x1="8.59"
+                x2="15.42"
+                y1="13.51"
+                y2="17.49"
+              />
+              <line
+                x1="15.41"
+                x2="8.59"
+                y1="6.51"
+                y2="10.49"
+              />
+            </svg>
+          </button>
           <button
             class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
@@ -473,6 +608,51 @@ Live now 🚀
             @
             moonpay
           </span>
+          <button
+            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            title="Copy link to this post"
+          >
+            <svg
+              class="lucide lucide-share2 w-4 h-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="18"
+                cy="5"
+                r="3"
+              />
+              <circle
+                cx="6"
+                cy="12"
+                r="3"
+              />
+              <circle
+                cx="18"
+                cy="19"
+                r="3"
+              />
+              <line
+                x1="8.59"
+                x2="15.42"
+                y1="13.51"
+                y2="17.49"
+              />
+              <line
+                x1="15.41"
+                x2="8.59"
+                y1="6.51"
+                y2="10.49"
+              />
+            </svg>
+          </button>
           <button
             class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
@@ -628,6 +808,51 @@ PS – Repost for early access to the full TikTok Shop content factory system.
             maverickecom
           </span>
           <button
+            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            title="Copy link to this post"
+          >
+            <svg
+              class="lucide lucide-share2 w-4 h-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="18"
+                cy="5"
+                r="3"
+              />
+              <circle
+                cx="6"
+                cy="12"
+                r="3"
+              />
+              <circle
+                cx="18"
+                cy="19"
+                r="3"
+              />
+              <line
+                x1="8.59"
+                x2="15.42"
+                y1="13.51"
+                y2="17.49"
+              />
+              <line
+                x1="15.41"
+                x2="8.59"
+                y1="6.51"
+                y2="10.49"
+              />
+            </svg>
+          </button>
+          <button
             class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
           >
@@ -760,6 +985,51 @@ His days are numbered
             @
             BasilTheGreat
           </span>
+          <button
+            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            title="Copy link to this post"
+          >
+            <svg
+              class="lucide lucide-share2 w-4 h-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="18"
+                cy="5"
+                r="3"
+              />
+              <circle
+                cx="6"
+                cy="12"
+                r="3"
+              />
+              <circle
+                cx="18"
+                cy="19"
+                r="3"
+              />
+              <line
+                x1="8.59"
+                x2="15.42"
+                y1="13.51"
+                y2="17.49"
+              />
+              <line
+                x1="15.41"
+                x2="8.59"
+                y1="6.51"
+                y2="10.49"
+              />
+            </svg>
+          </button>
           <button
             class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
@@ -1151,6 +1421,51 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
             _The_Prophet__
           </span>
           <button
+            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            title="Copy link to this post"
+          >
+            <svg
+              class="lucide lucide-share2 w-4 h-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="18"
+                cy="5"
+                r="3"
+              />
+              <circle
+                cx="6"
+                cy="12"
+                r="3"
+              />
+              <circle
+                cx="18"
+                cy="19"
+                r="3"
+              />
+              <line
+                x1="8.59"
+                x2="15.42"
+                y1="13.51"
+                y2="17.49"
+              />
+              <line
+                x1="15.41"
+                x2="8.59"
+                y1="6.51"
+                y2="10.49"
+              />
+            </svg>
+          </button>
+          <button
             class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
           >
@@ -1258,6 +1573,51 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'p
             @
             TheCinesthetic
           </span>
+          <button
+            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            title="Copy link to this post"
+          >
+            <svg
+              class="lucide lucide-share2 w-4 h-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="18"
+                cy="5"
+                r="3"
+              />
+              <circle
+                cx="6"
+                cy="12"
+                r="3"
+              />
+              <circle
+                cx="18"
+                cy="19"
+                r="3"
+              />
+              <line
+                x1="8.59"
+                x2="15.42"
+                y1="13.51"
+                y2="17.49"
+              />
+              <line
+                x1="15.41"
+                x2="8.59"
+                y1="6.51"
+                y2="10.49"
+              />
+            </svg>
+          </button>
           <button
             class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
@@ -1518,6 +1878,51 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
             Nate_Google_
           </span>
           <button
+            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            title="Copy link to this post"
+          >
+            <svg
+              class="lucide lucide-share2 w-4 h-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="18"
+                cy="5"
+                r="3"
+              />
+              <circle
+                cx="6"
+                cy="12"
+                r="3"
+              />
+              <circle
+                cx="18"
+                cy="19"
+                r="3"
+              />
+              <line
+                x1="8.59"
+                x2="15.42"
+                y1="13.51"
+                y2="17.49"
+              />
+              <line
+                x1="15.41"
+                x2="8.59"
+                y1="6.51"
+                y2="10.49"
+              />
+            </svg>
+          </button>
+          <button
             class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
           >
@@ -1657,6 +2062,51 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
             elonmusk
           </span>
           <button
+            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            title="Copy link to this post"
+          >
+            <svg
+              class="lucide lucide-share2 w-4 h-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="18"
+                cy="5"
+                r="3"
+              />
+              <circle
+                cx="6"
+                cy="12"
+                r="3"
+              />
+              <circle
+                cx="18"
+                cy="19"
+                r="3"
+              />
+              <line
+                x1="8.59"
+                x2="15.42"
+                y1="13.51"
+                y2="17.49"
+              />
+              <line
+                x1="15.41"
+                x2="8.59"
+                y1="6.51"
+                y2="10.49"
+              />
+            </svg>
+          </button>
+          <button
             class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
           >
@@ -1773,6 +2223,51 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'r
             @
             grok
           </span>
+          <button
+            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            title="Copy link to this post"
+          >
+            <svg
+              class="lucide lucide-share2 w-4 h-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="18"
+                cy="5"
+                r="3"
+              />
+              <circle
+                cx="6"
+                cy="12"
+                r="3"
+              />
+              <circle
+                cx="18"
+                cy="19"
+                r="3"
+              />
+              <line
+                x1="8.59"
+                x2="15.42"
+                y1="13.51"
+                y2="17.49"
+              />
+              <line
+                x1="15.41"
+                x2="8.59"
+                y1="6.51"
+                y2="10.49"
+              />
+            </svg>
+          </button>
           <button
             class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
@@ -1925,6 +2420,51 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 't
             swyx
           </span>
           <button
+            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            title="Copy link to this post"
+          >
+            <svg
+              class="lucide lucide-share2 w-4 h-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="18"
+                cy="5"
+                r="3"
+              />
+              <circle
+                cx="6"
+                cy="12"
+                r="3"
+              />
+              <circle
+                cx="18"
+                cy="19"
+                r="3"
+              />
+              <line
+                x1="8.59"
+                x2="15.42"
+                y1="13.51"
+                y2="17.49"
+              />
+              <line
+                x1="15.41"
+                x2="8.59"
+                y1="6.51"
+                y2="10.49"
+              />
+            </svg>
+          </button>
+          <button
             class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
           >
@@ -2065,6 +2605,51 @@ Hidden order.
             Kekius_Sage
           </span>
           <button
+            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            title="Copy link to this post"
+          >
+            <svg
+              class="lucide lucide-share2 w-4 h-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="18"
+                cy="5"
+                r="3"
+              />
+              <circle
+                cx="6"
+                cy="12"
+                r="3"
+              />
+              <circle
+                cx="18"
+                cy="19"
+                r="3"
+              />
+              <line
+                x1="8.59"
+                x2="15.42"
+                y1="13.51"
+                y2="17.49"
+              />
+              <line
+                x1="15.41"
+                x2="8.59"
+                y1="6.51"
+                y2="10.49"
+              />
+            </svg>
+          </button>
+          <button
             class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
           >
@@ -2181,6 +2766,51 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'y
             @
             skalskip92
           </span>
+          <button
+            class="p-2 rounded-full pointer-events-auto bg-black/50 hover:bg-black/40 text-white transition-colors"
+            title="Copy link to this post"
+          >
+            <svg
+              class="lucide lucide-share2 w-4 h-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="18"
+                cy="5"
+                r="3"
+              />
+              <circle
+                cx="6"
+                cy="12"
+                r="3"
+              />
+              <circle
+                cx="18"
+                cy="19"
+                r="3"
+              />
+              <line
+                x1="8.59"
+                x2="15.42"
+                y1="13.51"
+                y2="17.49"
+              />
+              <line
+                x1="15.41"
+                x2="8.59"
+                y1="6.51"
+                y2="10.49"
+              />
+            </svg>
+          </button>
           <button
             class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
             title="Mark as read"
