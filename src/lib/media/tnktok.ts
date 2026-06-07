@@ -11,6 +11,8 @@
  * GET (unlike Instagram's 403-gated CDN), so we can stream straight through.
  */
 
+import { makeHostAllowlist } from '@/lib/media/proxy'
+
 const MIRRORS = ['https://tnktok.com'] as const
 
 const ALLOWED_VIDEO_HOSTS = [
@@ -37,19 +39,11 @@ export interface TikTokMetadata {
 
 /**
  * SSRF allowlist for the streaming proxy. Exact-match or dot-prefixed subdomain
- * (never `.includes()` — that's the classic SSRF footgun).
+ * (never `.includes()` — that's the classic SSRF footgun), https only.
  */
-export function isAllowedVideoUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url)
-    if (parsed.protocol !== 'https:') return false
-    return ALLOWED_VIDEO_HOSTS.some(
-      (host) => parsed.hostname === host || parsed.hostname.endsWith(`.${host}`),
-    )
-  } catch {
-    return false
-  }
-}
+export const isAllowedVideoUrl = makeHostAllowlist(
+  ALLOWED_VIDEO_HOSTS.flatMap((host) => [host, `.${host}`]),
+)
 
 /** Hostname is tiktok.com or a subdomain of it (never `.includes()`). */
 function isTikTokHost(hostname: string): boolean {
