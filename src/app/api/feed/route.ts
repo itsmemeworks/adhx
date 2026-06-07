@@ -1,12 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { bookmarks, bookmarkLinks, bookmarkMedia, readStatus, syncLogs, bookmarkTags, collectionTweets } from '@/lib/db/schema'
+import {
+  bookmarks,
+  bookmarkLinks,
+  bookmarkMedia,
+  readStatus,
+  syncLogs,
+  bookmarkTags,
+  collectionTweets,
+} from '@/lib/db/schema'
 import { eq, desc, asc, like, and, or, sql, count, inArray, SQL, isNull } from 'drizzle-orm'
 import { resolveMediaUrl, getShareableUrl, getThumbnailUrl } from '@/lib/media/fxembed'
 import { expandUrls } from '@/lib/utils/url-expander'
-import { getCurrentUserId } from '@/lib/auth/session'
-import { selectArticleLink, buildArticlePreview, parseArticleContent } from '@/lib/utils/feed-helpers'
-import { metrics, captureException } from '@/lib/sentry'
+import {
+  selectArticleLink,
+  buildArticlePreview,
+  parseArticleContent,
+} from '@/lib/utils/feed-helpers'
+import { metrics } from '@/lib/sentry'
+import { withAuth } from '@/lib/api/with-auth'
+import { handleRouteError } from '@/lib/api/response'
 
 export type FilterType = 'all' | 'photos' | 'videos' | 'text' | 'articles' | 'quoted' | 'manual'
 export type PlatformFilter = 'all' | 'twitter' | 'instagram' | 'tiktok'
@@ -20,14 +33,8 @@ function escapeLikePattern(input: string): string {
 }
 
 // GET /api/feed - Unified feed for gallery view
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, userId) => {
   const searchParams = request.nextUrl.searchParams
-
-  // Get current user ID for multi-user data isolation
-  const userId = await getCurrentUserId()
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
 
   // Parse query parameters
   const page = parseInt(searchParams.get('page') || '1')
@@ -75,8 +82,8 @@ export async function GET(request: NextRequest) {
           like(bookmarks.text, `%${safeSearch}%`),
           like(bookmarks.author, `%${safeSearch}%`),
           like(bookmarks.authorName, `%${safeSearch}%`),
-          sql`(${bookmarks.id}, ${bookmarks.platform}) IN ${articleMatchSubquery}`
-        )!
+          sql`(${bookmarks.id}, ${bookmarks.platform}) IN ${articleMatchSubquery}`,
+        )!,
       )
     }
 
@@ -149,8 +156,8 @@ export async function GET(request: NextRequest) {
       conditions.push(
         or(
           eq(bookmarks.category, 'article'),
-          sql`(${bookmarks.id}, ${bookmarks.platform}) IN ${articleSubquery}`
-        )!
+          sql`(${bookmarks.id}, ${bookmarks.platform}) IN ${articleSubquery}`,
+        )!,
       )
     } else if (filter === 'quoted') {
       // Quote relations are Twitter-only — quotedTweetId always references a tweet
@@ -163,12 +170,7 @@ export async function GET(request: NextRequest) {
       conditions.push(sql`${bookmarks.id} IN ${quotedSubquery}`)
       conditions.push(eq(bookmarks.platform, 'twitter'))
     } else if (filter === 'manual') {
-      conditions.push(
-        or(
-          eq(bookmarks.source, 'manual'),
-          eq(bookmarks.source, 'url_prefix')
-        )!
-      )
+      conditions.push(or(eq(bookmarks.source, 'manual'), eq(bookmarks.source, 'url_prefix'))!)
     }
 
     // Unread filter — composite key (bookmarkId, platform) matches read_status PK
@@ -186,7 +188,17 @@ export async function GET(request: NextRequest) {
     // Get total count and paginated results in parallel
     const [totalResult, results] = await Promise.all([
       db.select({ count: count() }).from(bookmarks).where(whereClause),
-      db.select().from(bookmarks).where(whereClause).orderBy((sortDir === 'asc' ? asc : desc)(sort === 'posted' ? bookmarks.createdAt : bookmarks.processedAt)).limit(limit).offset(offset),
+      db
+        .select()
+        .from(bookmarks)
+        .where(whereClause)
+        .orderBy(
+          (sortDir === 'asc' ? asc : desc)(
+            sort === 'posted' ? bookmarks.createdAt : bookmarks.processedAt,
+          ),
+        )
+        .limit(limit)
+        .offset(offset),
     ])
 
     const total = totalResult[0]?.count || 0
@@ -217,10 +229,26 @@ export async function GET(request: NextRequest) {
 
     // Batch fetch all related data for result set only (not ALL user data)
     const [media, links, resultTags, readStatusRecords] = await Promise.all([
-      db.select().from(bookmarkMedia).where(and(eq(bookmarkMedia.userId, userId), inArray(bookmarkMedia.bookmarkId, bookmarkIds))),
-      db.select().from(bookmarkLinks).where(and(eq(bookmarkLinks.userId, userId), inArray(bookmarkLinks.bookmarkId, bookmarkIds))),
-      db.select().from(bookmarkTags).where(and(eq(bookmarkTags.userId, userId), inArray(bookmarkTags.bookmarkId, bookmarkIds))),
-      db.select({ bookmarkId: readStatus.bookmarkId, platform: readStatus.platform }).from(readStatus).where(and(eq(readStatus.userId, userId), inArray(readStatus.bookmarkId, bookmarkIds))),
+      db
+        .select()
+        .from(bookmarkMedia)
+        .where(
+          and(eq(bookmarkMedia.userId, userId), inArray(bookmarkMedia.bookmarkId, bookmarkIds)),
+        ),
+      db
+        .select()
+        .from(bookmarkLinks)
+        .where(
+          and(eq(bookmarkLinks.userId, userId), inArray(bookmarkLinks.bookmarkId, bookmarkIds)),
+        ),
+      db
+        .select()
+        .from(bookmarkTags)
+        .where(and(eq(bookmarkTags.userId, userId), inArray(bookmarkTags.bookmarkId, bookmarkIds))),
+      db
+        .select({ bookmarkId: readStatus.bookmarkId, platform: readStatus.platform })
+        .from(readStatus)
+        .where(and(eq(readStatus.userId, userId), inArray(readStatus.bookmarkId, bookmarkIds))),
     ])
 
     // Build lookup maps keyed by composite (platform + bookmarkId)
@@ -303,12 +331,12 @@ export async function GET(request: NextRequest) {
 
     // Helper function to build a FeedItem
     function buildFeedItem(
-      bookmark: typeof results[0],
+      bookmark: (typeof results)[0],
       bookmarkLinks: typeof links,
       bookmarkMedia: typeof media,
       bookmarkTags: string[],
       isRead: boolean,
-      isArticle: boolean
+      isArticle: boolean,
     ): FeedItemResponse {
       // Build media URLs — platform-aware. Twitter uses FxEmbed; Instagram and
       // TikTok stream through our own proxy routes (CDN URLs require referer/sig
@@ -477,7 +505,7 @@ export async function GET(request: NextRequest) {
         mediaByBookmark.get(key) || [],
         tagsByBookmark.get(key) || [],
         readKeys.has(key),
-        articleKeys.has(key)
+        articleKeys.has(key),
       )
     })
 
@@ -489,13 +517,60 @@ export async function GET(request: NextRequest) {
 
     if (quotedTweetIds.length > 0) {
       // Quotes are Twitter-only (quotedTweetId always references a tweet)
-      const [quotedBookmarks, quotedMedia, quotedLinks, quotedTags, quotedRead] = await Promise.all([
-        db.select().from(bookmarks).where(and(eq(bookmarks.userId, userId), eq(bookmarks.platform, 'twitter'), inArray(bookmarks.id, quotedTweetIds))),
-        db.select().from(bookmarkMedia).where(and(eq(bookmarkMedia.userId, userId), eq(bookmarkMedia.platform, 'twitter'), inArray(bookmarkMedia.bookmarkId, quotedTweetIds))),
-        db.select().from(bookmarkLinks).where(and(eq(bookmarkLinks.userId, userId), eq(bookmarkLinks.platform, 'twitter'), inArray(bookmarkLinks.bookmarkId, quotedTweetIds))),
-        db.select().from(bookmarkTags).where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.platform, 'twitter'), inArray(bookmarkTags.bookmarkId, quotedTweetIds))),
-        db.select({ bookmarkId: readStatus.bookmarkId }).from(readStatus).where(and(eq(readStatus.userId, userId), eq(readStatus.platform, 'twitter'), inArray(readStatus.bookmarkId, quotedTweetIds))),
-      ])
+      const [quotedBookmarks, quotedMedia, quotedLinks, quotedTags, quotedRead] = await Promise.all(
+        [
+          db
+            .select()
+            .from(bookmarks)
+            .where(
+              and(
+                eq(bookmarks.userId, userId),
+                eq(bookmarks.platform, 'twitter'),
+                inArray(bookmarks.id, quotedTweetIds),
+              ),
+            ),
+          db
+            .select()
+            .from(bookmarkMedia)
+            .where(
+              and(
+                eq(bookmarkMedia.userId, userId),
+                eq(bookmarkMedia.platform, 'twitter'),
+                inArray(bookmarkMedia.bookmarkId, quotedTweetIds),
+              ),
+            ),
+          db
+            .select()
+            .from(bookmarkLinks)
+            .where(
+              and(
+                eq(bookmarkLinks.userId, userId),
+                eq(bookmarkLinks.platform, 'twitter'),
+                inArray(bookmarkLinks.bookmarkId, quotedTweetIds),
+              ),
+            ),
+          db
+            .select()
+            .from(bookmarkTags)
+            .where(
+              and(
+                eq(bookmarkTags.userId, userId),
+                eq(bookmarkTags.platform, 'twitter'),
+                inArray(bookmarkTags.bookmarkId, quotedTweetIds),
+              ),
+            ),
+          db
+            .select({ bookmarkId: readStatus.bookmarkId })
+            .from(readStatus)
+            .where(
+              and(
+                eq(readStatus.userId, userId),
+                eq(readStatus.platform, 'twitter'),
+                inArray(readStatus.bookmarkId, quotedTweetIds),
+              ),
+            ),
+        ],
+      )
 
       const quotedMediaByBookmark = new Map<string, typeof quotedMedia>()
       for (const qm of quotedMedia) {
@@ -526,14 +601,17 @@ export async function GET(request: NextRequest) {
 
       const quotedItemMap = new Map<string, FeedItemResponse>()
       for (const qb of quotedBookmarks) {
-        quotedItemMap.set(qb.id, buildFeedItem(
-          qb,
-          quotedLinksByBookmark.get(qb.id) || [],
-          quotedMediaByBookmark.get(qb.id) || [],
-          quotedTagsByBookmark.get(qb.id) || [],
-          quotedReadIds.has(qb.id),
-          quotedArticleIds.has(qb.id)
-        ))
+        quotedItemMap.set(
+          qb.id,
+          buildFeedItem(
+            qb,
+            quotedLinksByBookmark.get(qb.id) || [],
+            quotedMediaByBookmark.get(qb.id) || [],
+            quotedTagsByBookmark.get(qb.id) || [],
+            quotedReadIds.has(qb.id),
+            quotedArticleIds.has(qb.id),
+          ),
+        )
       }
 
       for (const item of items) {
@@ -545,21 +623,64 @@ export async function GET(request: NextRequest) {
 
     // Fetch parent tweets for items that are quoted by other bookmarks (Twitter-only)
     const itemIds = items.filter((i) => i.platform === 'twitter').map((item) => item.id)
-    const parentBookmarks = itemIds.length > 0
-      ? await db
-          .select()
-          .from(bookmarks)
-          .where(and(eq(bookmarks.userId, userId), eq(bookmarks.platform, 'twitter'), inArray(bookmarks.quotedTweetId, itemIds)))
-      : []
+    const parentBookmarks =
+      itemIds.length > 0
+        ? await db
+            .select()
+            .from(bookmarks)
+            .where(
+              and(
+                eq(bookmarks.userId, userId),
+                eq(bookmarks.platform, 'twitter'),
+                inArray(bookmarks.quotedTweetId, itemIds),
+              ),
+            )
+        : []
 
     if (parentBookmarks.length > 0) {
       const parentIds = parentBookmarks.map((p) => p.id)
 
       const [parentMedia, parentLinks, parentTags, parentRead] = await Promise.all([
-        db.select().from(bookmarkMedia).where(and(eq(bookmarkMedia.userId, userId), eq(bookmarkMedia.platform, 'twitter'), inArray(bookmarkMedia.bookmarkId, parentIds))),
-        db.select().from(bookmarkLinks).where(and(eq(bookmarkLinks.userId, userId), eq(bookmarkLinks.platform, 'twitter'), inArray(bookmarkLinks.bookmarkId, parentIds))),
-        db.select().from(bookmarkTags).where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.platform, 'twitter'), inArray(bookmarkTags.bookmarkId, parentIds))),
-        db.select({ bookmarkId: readStatus.bookmarkId }).from(readStatus).where(and(eq(readStatus.userId, userId), eq(readStatus.platform, 'twitter'), inArray(readStatus.bookmarkId, parentIds))),
+        db
+          .select()
+          .from(bookmarkMedia)
+          .where(
+            and(
+              eq(bookmarkMedia.userId, userId),
+              eq(bookmarkMedia.platform, 'twitter'),
+              inArray(bookmarkMedia.bookmarkId, parentIds),
+            ),
+          ),
+        db
+          .select()
+          .from(bookmarkLinks)
+          .where(
+            and(
+              eq(bookmarkLinks.userId, userId),
+              eq(bookmarkLinks.platform, 'twitter'),
+              inArray(bookmarkLinks.bookmarkId, parentIds),
+            ),
+          ),
+        db
+          .select()
+          .from(bookmarkTags)
+          .where(
+            and(
+              eq(bookmarkTags.userId, userId),
+              eq(bookmarkTags.platform, 'twitter'),
+              inArray(bookmarkTags.bookmarkId, parentIds),
+            ),
+          ),
+        db
+          .select({ bookmarkId: readStatus.bookmarkId })
+          .from(readStatus)
+          .where(
+            and(
+              eq(readStatus.userId, userId),
+              eq(readStatus.platform, 'twitter'),
+              inArray(readStatus.bookmarkId, parentIds),
+            ),
+          ),
       ])
 
       // Build lookup maps
@@ -600,7 +721,7 @@ export async function GET(request: NextRequest) {
           parentMediaByBookmark.get(pb.id) || [],
           parentTagsByBookmark.get(pb.id) || [],
           parentReadIds.has(pb.id),
-          parentArticleIds.has(pb.id)
+          parentArticleIds.has(pb.id),
         )
         const existing = parentsByQuotedId.get(pb.quotedTweetId) || []
         existing.push(parentItem)
@@ -619,7 +740,8 @@ export async function GET(request: NextRequest) {
     const [totalBookmarks, readCount, lastSync] = await Promise.all([
       db.select({ count: count() }).from(bookmarks).where(eq(bookmarks.userId, userId)),
       db.select({ count: count() }).from(readStatus).where(eq(readStatus.userId, userId)),
-      db.select({ startedAt: syncLogs.startedAt })
+      db
+        .select({ startedAt: syncLogs.startedAt })
         .from(syncLogs)
         .where(and(eq(syncLogs.status, 'completed'), eq(syncLogs.userId, userId)))
         .orderBy(desc(syncLogs.startedAt))
@@ -654,11 +776,10 @@ export async function GET(request: NextRequest) {
       lastSyncAt: lastSync[0]?.startedAt || null,
     })
   } catch (error) {
-    console.error('Error fetching feed:', error)
-    captureException(error, { endpoint: '/api/feed', userId })
-    return NextResponse.json(
-      { error: 'Failed to fetch feed' },
-      { status: 500 }
-    )
+    return handleRouteError(error, {
+      endpoint: '/api/feed',
+      userId,
+      message: 'Failed to fetch feed',
+    })
   }
-}
+})

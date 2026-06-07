@@ -1,15 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { userPreferences, readStatus } from '@/lib/db/schema'
 import { eq, and, count, gte } from 'drizzle-orm'
-import { getCurrentUserId } from '@/lib/auth/session'
+import { withAuth } from '@/lib/api/with-auth'
 import { captureException } from '@/lib/sentry'
-import {
-  type StreakState,
-  effectiveCurrent,
-  isValidDay,
-  recordDay,
-} from '@/lib/triage/streak'
+import { type StreakState, effectiveCurrent, isValidDay, recordDay } from '@/lib/triage/streak'
 
 /**
  * Daily triage streak, persisted in the existing user_preferences KV table
@@ -62,14 +57,11 @@ async function writeState(userId: string, state: StreakState): Promise<void> {
   }
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, userId) => {
   try {
-    const userId = await getCurrentUserId()
-    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
     const today = request.nextUrl.searchParams.get('today')
     const state = await readState(userId)
-    const current = isValidDay(today) ? effectiveCurrent(state, today) : state?.current ?? 0
+    const current = isValidDay(today) ? effectiveCurrent(state, today) : (state?.current ?? 0)
 
     // "Triaged" counts — read events are the triage Done signal (no migration).
     const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString()
@@ -93,13 +85,10 @@ export async function GET(request: NextRequest) {
     captureException(error, { endpoint: '/api/triage/streak', method: 'GET' })
     return NextResponse.json({ error: 'Failed to read streak' }, { status: 500 })
   }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, userId) => {
   try {
-    const userId = await getCurrentUserId()
-    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
     const body = await request.json().catch(() => ({}))
     const today = body?.today
     if (!isValidDay(today)) {
@@ -123,4 +112,4 @@ export async function POST(request: NextRequest) {
     captureException(error, { endpoint: '/api/triage/streak', method: 'POST' })
     return NextResponse.json({ error: 'Failed to record streak' }, { status: 500 })
   }
-}
+})

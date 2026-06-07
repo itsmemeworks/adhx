@@ -2,17 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { collections } from '@/lib/db/schema'
 import { eq, desc, sql } from 'drizzle-orm'
-import { getCurrentUserId } from '@/lib/auth/session'
 import { nanoid } from '@/lib/utils'
-import { captureException } from '@/lib/sentry'
+import { withAuth } from '@/lib/api/with-auth'
+import { handleRouteError } from '@/lib/api/response'
 
 // GET /api/collections - List user's collections with tweet counts
-export async function GET() {
-  const userId = await getCurrentUserId()
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
+export const GET = withAuth(async (_req, userId) => {
   try {
     // Get collections with tweet counts
     const userCollections = await db
@@ -38,19 +33,16 @@ export async function GET() {
 
     return NextResponse.json({ collections: userCollections })
   } catch (error) {
-    console.error('Error fetching collections:', error)
-    captureException(error, { endpoint: '/api/collections', method: 'GET' })
-    return NextResponse.json({ error: 'Failed to fetch collections' }, { status: 500 })
+    return handleRouteError(error, {
+      endpoint: '/api/collections',
+      userId,
+      message: 'Failed to fetch collections',
+    })
   }
-}
+})
 
 // POST /api/collections - Create a new collection
-export async function POST(request: NextRequest) {
-  const userId = await getCurrentUserId()
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
+export const POST = withAuth(async (request: NextRequest, userId) => {
   try {
     const body = await request.json()
     const { name, description, color, icon, isPublic } = body
@@ -88,8 +80,10 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('Error creating collection:', error)
-    captureException(error, { endpoint: '/api/collections', method: 'POST' })
-    return NextResponse.json({ error: 'Failed to create collection' }, { status: 500 })
+    return handleRouteError(error, {
+      endpoint: '/api/collections',
+      userId,
+      message: 'Failed to create collection',
+    })
   }
-}
+})

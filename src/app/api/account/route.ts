@@ -14,7 +14,8 @@ import {
   oauthTokens,
 } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
-import { getCurrentUserId } from '@/lib/auth/session'
+import { withAuth } from '@/lib/api/with-auth'
+import { handleRouteError } from '@/lib/api/response'
 
 /**
  * DELETE /api/account
@@ -24,13 +25,8 @@ import { getCurrentUserId } from '@/lib/auth/session'
  *
  * This is a destructive, irreversible operation.
  */
-export async function DELETE() {
+export const DELETE = withAuth(async (_req, userId) => {
   try {
-    const userId = await getCurrentUserId()
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     // Delete everything in order to respect foreign key constraints
     // Note: SQLite with WAL mode serializes writes. better-sqlite3's synchronous
     // driver doesn't support async transactions, but SQLite's single-writer lock
@@ -74,10 +70,10 @@ export async function DELETE() {
       message: 'Account deleted successfully.',
     })
   } catch (error) {
-    console.error('Failed to delete account:', error)
-    return NextResponse.json(
-      { error: 'Failed to delete account' },
-      { status: 500 }
-    )
+    return handleRouteError(error, {
+      endpoint: '/api/account',
+      userId,
+      message: 'Failed to delete account',
+    })
   }
-}
+})

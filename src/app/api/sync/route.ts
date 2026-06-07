@@ -1,29 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { fetchBookmarks, TwitterBookmark } from '@/lib/twitter/client'
 import { fetchTweetData, extractEnrichmentData } from '@/lib/media/fxembed'
 import { db } from '@/lib/db'
 import { bookmarks, bookmarkLinks, bookmarkMedia, syncLogs } from '@/lib/db/schema'
 import { eq, desc, and } from 'drizzle-orm'
 import { nanoid } from '@/lib/utils'
-import { getCurrentUserId } from '@/lib/auth/session'
+import { withAuth } from '@/lib/api/with-auth'
 import { captureException, metrics } from '@/lib/sentry'
 import type { StreamedBookmark } from '@/components/feed/types'
-import {
-  categorizeTweetByUrls,
-  extractDomain,
-  determineLinkType,
-} from '@/lib/tweets/processor'
+import { categorizeTweetByUrls, extractDomain, determineLinkType } from '@/lib/tweets/processor'
 import { getSyncCooldownMs } from '@/lib/sync/config'
 import { normalizeEntityMap } from '@/lib/utils/article-text'
 
 // GET /api/sync - SSE endpoint for sync progress
-export async function GET(request: NextRequest) {
-  // Get current user ID for multi-user data isolation
-  const userId = await getCurrentUserId()
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
+export const GET = withAuth(async (request, userId) => {
   // Check cooldown between syncs (configurable via SYNC_COOLDOWN_MINUTES env)
   const cooldownMs = getSyncCooldownMs()
   const [lastSync] = await db
@@ -41,7 +31,7 @@ export async function GET(request: NextRequest) {
           error: 'Please wait before syncing again',
           cooldownRemaining: cooldownMs - elapsed,
         },
-        { status: 429 }
+        { status: 429 },
       )
     }
   }
@@ -85,7 +75,12 @@ export async function GET(request: NextRequest) {
 
         // Get existing bookmark IDs for this user (strict userId check)
         const existingIds = new Set(
-          (await db.select({ id: bookmarks.id }).from(bookmarks).where(eq(bookmarks.userId, userId))).map((b) => b.id)
+          (
+            await db
+              .select({ id: bookmarks.id })
+              .from(bookmarks)
+              .where(eq(bookmarks.userId, userId))
+          ).map((b) => b.id),
         )
 
         // Track IDs we've inserted during this sync (for quote tweets that get saved separately)
@@ -104,7 +99,10 @@ export async function GET(request: NextRequest) {
 
           while (hasMore && pageNumber < maxPages) {
             pageNumber++
-            const result = await fetchBookmarks(userId, { maxResults: 100, paginationToken: cursor })
+            const result = await fetchBookmarks(userId, {
+              maxResults: 100,
+              paginationToken: cursor,
+            })
 
             send('page', {
               pageNumber,
@@ -223,13 +221,13 @@ export async function GET(request: NextRequest) {
       Connection: 'keep-alive',
     },
   })
-}
+})
 
 // Save a single bookmark to the database with automatic enrichment
 async function saveBookmark(
   tweet: TwitterBookmark,
   userId: string,
-  insertedDuringSync: Set<string>
+  insertedDuringSync: Set<string>,
 ): Promise<StreamedBookmark> {
   const now = new Date().toISOString()
   const authorUsername = tweet.author?.username || 'unknown'
@@ -238,7 +236,9 @@ async function saveBookmark(
     : `https://x.com/i/status/${tweet.id}`
 
   // Determine category based on URLs (will be overridden by FxTwitter if media detected)
-  let category = categorizeTweetByUrls(tweet.entities?.urls?.map(u => ({ expandedUrl: u.expandedUrl })) || [])
+  let category = categorizeTweetByUrls(
+    tweet.entities?.urls?.map((u) => ({ expandedUrl: u.expandedUrl })) || [],
+  )
 
   // Check for reply/quote/retweet context
   const isReply = tweet.referencedTweets?.some((rt) => rt.type === 'replied_to') || false
@@ -303,10 +303,12 @@ async function saveBookmark(
           authorName: fxData.tweet.author.name,
           authorProfileImageUrl: fxData.tweet.author.avatar_url,
           text: fxData.tweet.text,
-          media: fxData.tweet.media ? {
-            photos: fxData.tweet.media.photos,
-            videos: fxData.tweet.media.videos,
-          } : null,
+          media: fxData.tweet.media
+            ? {
+                photos: fxData.tweet.media.photos,
+                videos: fxData.tweet.media.videos,
+              }
+            : null,
         })
       }
     } catch (error) {
@@ -363,21 +365,26 @@ async function saveBookmark(
 
           // Save the quoted tweet as its own bookmark
           // Use onConflictDoNothing to handle case where another user already synced this tweet
-          await db.insert(bookmarks).values({
-            id: quoteRef.id,
-            userId,
-            author: quotedAuthor,
-            authorName: fxData.tweet.author.name,
-            authorProfileImageUrl: fxData.tweet.author.avatar_url,
-            text: fxData.tweet.text,
-            tweetUrl: quotedTweetUrl,
-            createdAt: fxData.tweet.created_at ? new Date(fxData.tweet.created_at).toISOString() : null,
-            processedAt: now,
-            category: quotedCategory,
-            isReply: false,
-            isQuote: false,
-            isRetweet: false,
-          }).onConflictDoNothing()
+          await db
+            .insert(bookmarks)
+            .values({
+              id: quoteRef.id,
+              userId,
+              author: quotedAuthor,
+              authorName: fxData.tweet.author.name,
+              authorProfileImageUrl: fxData.tweet.author.avatar_url,
+              text: fxData.tweet.text,
+              tweetUrl: quotedTweetUrl,
+              createdAt: fxData.tweet.created_at
+                ? new Date(fxData.tweet.created_at).toISOString()
+                : null,
+              processedAt: now,
+              category: quotedCategory,
+              isReply: false,
+              isQuote: false,
+              isRetweet: false,
+            })
+            .onConflictDoNothing()
 
           // Track that we've inserted this quoted tweet
           insertedDuringSync.add(quoteRef.id)
@@ -387,15 +394,18 @@ async function saveBookmark(
             for (let i = 0; i < fxData.tweet.media.photos.length; i++) {
               const photo = fxData.tweet.media.photos[i]
               const mediaId = `${quoteRef.id}_photo_${i}`
-              await db.insert(bookmarkMedia).values({
-                id: mediaId,
-                userId,
-                bookmarkId: quoteRef.id,
-                mediaType: 'photo',
-                originalUrl: photo.url,
-                width: photo.width,
-                height: photo.height,
-              }).onConflictDoNothing()
+              await db
+                .insert(bookmarkMedia)
+                .values({
+                  id: mediaId,
+                  userId,
+                  bookmarkId: quoteRef.id,
+                  mediaType: 'photo',
+                  originalUrl: photo.url,
+                  width: photo.width,
+                  height: photo.height,
+                })
+                .onConflictDoNothing()
             }
           }
 
@@ -403,38 +413,56 @@ async function saveBookmark(
             for (let i = 0; i < fxData.tweet.media.videos.length; i++) {
               const video = fxData.tweet.media.videos[i]
               const mediaId = `${quoteRef.id}_video_${i}`
-              await db.insert(bookmarkMedia).values({
-                id: mediaId,
-                userId,
-                bookmarkId: quoteRef.id,
-                mediaType: 'video',
-                originalUrl: video.url,
-                previewUrl: video.thumbnail_url,
-                width: video.width,
-                height: video.height,
-                durationMs: video.duration ? video.duration * 1000 : null,
-              }).onConflictDoNothing()
+              await db
+                .insert(bookmarkMedia)
+                .values({
+                  id: mediaId,
+                  userId,
+                  bookmarkId: quoteRef.id,
+                  mediaType: 'video',
+                  originalUrl: video.url,
+                  previewUrl: video.thumbnail_url,
+                  width: video.width,
+                  height: video.height,
+                  durationMs: video.duration ? video.duration * 1000 : null,
+                })
+                .onConflictDoNothing()
             }
           }
 
           // Save article link for quoted tweet if it's an article
           if (fxData.tweet.article && quotedArticleUrl) {
             // Build full article content with blocks, entityMap, and mediaEntities
-            const articleContent = fxData.tweet.article.content ? {
-              blocks: fxData.tweet.article.content.blocks,
-              entityMap: normalizeEntityMap(fxData.tweet.article.content.entityMap),
-              // Include media_entities to map mediaId to actual image URLs
-              mediaEntities: fxData.tweet.article.media_entities?.reduce((acc: Record<string, { url: string; width?: number; height?: number }>, entity: { media_id?: string; media_info?: { original_img_url?: string; original_img_width?: number; original_img_height?: number } }) => {
-                if (entity.media_id && entity.media_info?.original_img_url) {
-                  acc[entity.media_id] = {
-                    url: entity.media_info.original_img_url,
-                    width: entity.media_info.original_img_width,
-                    height: entity.media_info.original_img_height,
-                  }
+            const articleContent = fxData.tweet.article.content
+              ? {
+                  blocks: fxData.tweet.article.content.blocks,
+                  entityMap: normalizeEntityMap(fxData.tweet.article.content.entityMap),
+                  // Include media_entities to map mediaId to actual image URLs
+                  mediaEntities: fxData.tweet.article.media_entities?.reduce(
+                    (
+                      acc: Record<string, { url: string; width?: number; height?: number }>,
+                      entity: {
+                        media_id?: string
+                        media_info?: {
+                          original_img_url?: string
+                          original_img_width?: number
+                          original_img_height?: number
+                        }
+                      },
+                    ) => {
+                      if (entity.media_id && entity.media_info?.original_img_url) {
+                        acc[entity.media_id] = {
+                          url: entity.media_info.original_img_url,
+                          width: entity.media_info.original_img_width,
+                          height: entity.media_info.original_img_height,
+                        }
+                      }
+                      return acc
+                    },
+                    {},
+                  ),
                 }
-                return acc
-              }, {}),
-            } : null
+              : null
 
             await db.insert(bookmarkLinks).values({
               userId,
@@ -461,22 +489,28 @@ async function saveBookmark(
           authorName: fxData.tweet.author.name,
           authorProfileImageUrl: fxData.tweet.author.avatar_url,
           text: fxData.tweet.text,
-          media: fxData.tweet.media ? {
-            photos: fxData.tweet.media.photos,
-            videos: fxData.tweet.media.videos,
-          } : null,
-          article: fxData.tweet.article ? {
-            url: quotedArticleUrl,
-            title: fxData.tweet.article.title,
-            description: fxData.tweet.article.preview_text,
-            imageUrl: fxData.tweet.article.cover_media?.media_info?.original_img_url,
-          } : null,
-          external: fxData.tweet.external ? {
-            url: fxData.tweet.external.expanded_url || fxData.tweet.external.url,
-            title: fxData.tweet.external.title,
-            description: fxData.tweet.external.description,
-            imageUrl: fxData.tweet.external.thumbnail_url,
-          } : null,
+          media: fxData.tweet.media
+            ? {
+                photos: fxData.tweet.media.photos,
+                videos: fxData.tweet.media.videos,
+              }
+            : null,
+          article: fxData.tweet.article
+            ? {
+                url: quotedArticleUrl,
+                title: fxData.tweet.article.title,
+                description: fxData.tweet.article.preview_text,
+                imageUrl: fxData.tweet.article.cover_media?.media_info?.original_img_url,
+              }
+            : null,
+          external: fxData.tweet.external
+            ? {
+                url: fxData.tweet.external.expanded_url || fxData.tweet.external.url,
+                title: fxData.tweet.external.title,
+                description: fxData.tweet.external.description,
+                imageUrl: fxData.tweet.external.thumbnail_url,
+              }
+            : null,
         })
       }
     } catch (error) {
@@ -492,25 +526,28 @@ async function saveBookmark(
   // Insert bookmark with userId for multi-user support and enrichment data
   // Use onConflictDoNothing to handle case where another user already synced this tweet
   // Note: Current schema uses tweet ID as primary key, so same tweet can only exist once
-  await db.insert(bookmarks).values({
-    id: tweet.id,
-    userId, // Include userId for multi-user support
-    author: authorUsername,
-    authorName,
-    authorProfileImageUrl,
-    text: tweet.text,
-    tweetUrl,
-    createdAt: tweet.createdAt ? new Date(tweet.createdAt).toISOString() : null,
-    processedAt: now,
-    category,
-    isReply,
-    isQuote,
-    quoteContext,
-    quotedTweetId, // Reference to the separately stored quoted tweet
-    isRetweet,
-    retweetContext,
-    rawJson: JSON.stringify(tweet),
-  }).onConflictDoNothing()
+  await db
+    .insert(bookmarks)
+    .values({
+      id: tweet.id,
+      userId, // Include userId for multi-user support
+      author: authorUsername,
+      authorName,
+      authorProfileImageUrl,
+      text: tweet.text,
+      tweetUrl,
+      createdAt: tweet.createdAt ? new Date(tweet.createdAt).toISOString() : null,
+      processedAt: now,
+      category,
+      isReply,
+      isQuote,
+      quoteContext,
+      quotedTweetId, // Reference to the separately stored quoted tweet
+      isRetweet,
+      retweetContext,
+      rawJson: JSON.stringify(tweet),
+    })
+    .onConflictDoNothing()
 
   // Insert links (include userId)
   if (tweet.entities?.urls) {
@@ -538,17 +575,20 @@ async function saveBookmark(
       const mediaId = `${tweet.id}_${media.mediaKey}`
       const originalUrl = media.url || media.previewUrl || ''
 
-      await db.insert(bookmarkMedia).values({
-        id: mediaId,
-        userId,
-        bookmarkId: tweet.id,
-        mediaType: media.type,
-        originalUrl,
-        previewUrl: media.previewUrl || null,
-        width: media.width || null,
-        height: media.height || null,
-        durationMs: media.durationMs || null,
-      }).onConflictDoNothing()
+      await db
+        .insert(bookmarkMedia)
+        .values({
+          id: mediaId,
+          userId,
+          bookmarkId: tweet.id,
+          mediaType: media.type,
+          originalUrl,
+          previewUrl: media.previewUrl || null,
+          width: media.width || null,
+          height: media.height || null,
+          durationMs: media.durationMs || null,
+        })
+        .onConflictDoNothing()
     }
   }
 
@@ -580,7 +620,7 @@ async function saveBookmark(
       .where(and(eq(bookmarkLinks.userId, userId), eq(bookmarkLinks.bookmarkId, tweet.id)))
 
     const alreadyExists = existingLinks.some(
-      (link) => link.expandedUrl === enrichment!.external!.url
+      (link) => link.expandedUrl === enrichment!.external!.url,
     )
 
     if (!alreadyExists) {
@@ -633,14 +673,15 @@ async function saveBookmark(
     isRead: false,
     isQuote,
     isRetweet,
-    media: savedMedia.length > 0
-      ? savedMedia.map((m) => ({
-          id: m.id,
-          mediaType: m.mediaType,
-          url: m.originalUrl || '',
-          thumbnailUrl: m.previewUrl || m.originalUrl || '',
-        }))
-      : null,
+    media:
+      savedMedia.length > 0
+        ? savedMedia.map((m) => ({
+            id: m.id,
+            mediaType: m.mediaType,
+            url: m.originalUrl || '',
+            thumbnailUrl: m.previewUrl || m.originalUrl || '',
+          }))
+        : null,
     articlePreview: enrichment?.article
       ? {
           title: enrichment.article.title || null,

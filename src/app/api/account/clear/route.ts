@@ -13,9 +13,10 @@ import {
   userPreferences,
 } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
-import { getCurrentUserId } from '@/lib/auth/session'
 import { runInTransaction } from '@/lib/db'
 import { metrics } from '@/lib/sentry'
+import { withAuth } from '@/lib/api/with-auth'
+import { handleRouteError } from '@/lib/api/response'
 
 /**
  * POST /api/account/clear
@@ -28,13 +29,8 @@ import { metrics } from '@/lib/sentry'
  * - Testing the sync flow
  * - Removing test data
  */
-export async function POST() {
+export const POST = withAuth(async (_req, userId) => {
   try {
-    const userId = await getCurrentUserId()
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     // Delete all user data atomically. If any delete fails, all are rolled back.
     // Uses synchronous .run() inside transaction (required by better-sqlite3).
     runInTransaction(() => {
@@ -57,10 +53,10 @@ export async function POST() {
       message: 'All data cleared successfully. Your Twitter connection is preserved.',
     })
   } catch (error) {
-    console.error('Failed to clear data:', error)
-    return NextResponse.json(
-      { error: 'Failed to clear data' },
-      { status: 500 }
-    )
+    return handleRouteError(error, {
+      endpoint: '/api/account/clear',
+      userId,
+      message: 'Failed to clear data',
+    })
   }
-}
+})

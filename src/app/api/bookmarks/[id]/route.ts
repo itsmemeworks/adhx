@@ -4,171 +4,242 @@ import { bookmarks, bookmarkLinks, bookmarkTags, bookmarkMedia, readStatus } fro
 import { eq, and } from 'drizzle-orm'
 import { resolveMediaUrl, getShareableUrl, getThumbnailUrl } from '@/lib/media/fxembed'
 import { expandUrls } from '@/lib/utils/url-expander'
-import { getCurrentUserId } from '@/lib/auth/session'
 import { captureException, metrics } from '@/lib/sentry'
+import { withAuth } from '@/lib/api/with-auth'
 
 // GET /api/bookmarks/[id]?platform=twitter|instagram|tiktok|youtube - Get single bookmark
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const userId = await getCurrentUserId()
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const GET = withAuth(
+  async (request: NextRequest, userId, { params }: { params: Promise<{ id: string }> }) => {
+    try {
+      const { id } = await params
+      const platform = request.nextUrl.searchParams.get('platform') || 'twitter'
+      const [bookmark] = await db
+        .select()
+        .from(bookmarks)
+        .where(
+          and(eq(bookmarks.userId, userId), eq(bookmarks.platform, platform), eq(bookmarks.id, id)),
+        )
+        .limit(1)
 
-    const { id } = await params
-    const platform = request.nextUrl.searchParams.get('platform') || 'twitter'
-    const [bookmark] = await db
-      .select()
-      .from(bookmarks)
-      .where(and(eq(bookmarks.userId, userId), eq(bookmarks.platform, platform), eq(bookmarks.id, id)))
-      .limit(1)
-
-    if (!bookmark) {
-      return NextResponse.json({ error: 'Bookmark not found' }, { status: 404 })
-    }
-
-    // Get related data (filtered by composite key: userId + platform + bookmarkId)
-    const [links, tags, media, readStatusRecord] = await Promise.all([
-      db.select().from(bookmarkLinks).where(and(eq(bookmarkLinks.userId, userId), eq(bookmarkLinks.platform, platform), eq(bookmarkLinks.bookmarkId, id))),
-      db.select().from(bookmarkTags).where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.platform, platform), eq(bookmarkTags.bookmarkId, id))),
-      db.select().from(bookmarkMedia).where(and(eq(bookmarkMedia.userId, userId), eq(bookmarkMedia.platform, platform), eq(bookmarkMedia.bookmarkId, id))),
-      db.select().from(readStatus).where(and(eq(readStatus.userId, userId), eq(readStatus.platform, platform), eq(readStatus.bookmarkId, id))).limit(1),
-    ])
-
-    // Add FxEmbed URLs to media
-    const mediaWithUrls = media.map((m, index) => {
-      const mediaType = m.mediaType as 'photo' | 'video' | 'animated_gif'
-      const urlOptions = {
-        tweetId: bookmark.id,
-        author: bookmark.author,
-        mediaType,
-        mediaIndex: index + 1,
+      if (!bookmark) {
+        return NextResponse.json({ error: 'Bookmark not found' }, { status: 404 })
       }
-      return {
-        id: m.id,
-        mediaType: m.mediaType,
-        width: m.width,
-        height: m.height,
-        durationMs: m.durationMs,
-        altText: m.altText,
-        url: resolveMediaUrl(urlOptions),
-        thumbnailUrl: getThumbnailUrl({ ...urlOptions, previewUrl: m.previewUrl || undefined }),
-        shareUrl: getShareableUrl(urlOptions),
-      }
-    })
 
-    // Expand t.co URLs in the text
-    const expandedText = expandUrls(bookmark.text, links)
+      // Get related data (filtered by composite key: userId + platform + bookmarkId)
+      const [links, tags, media, readStatusRecord] = await Promise.all([
+        db
+          .select()
+          .from(bookmarkLinks)
+          .where(
+            and(
+              eq(bookmarkLinks.userId, userId),
+              eq(bookmarkLinks.platform, platform),
+              eq(bookmarkLinks.bookmarkId, id),
+            ),
+          ),
+        db
+          .select()
+          .from(bookmarkTags)
+          .where(
+            and(
+              eq(bookmarkTags.userId, userId),
+              eq(bookmarkTags.platform, platform),
+              eq(bookmarkTags.bookmarkId, id),
+            ),
+          ),
+        db
+          .select()
+          .from(bookmarkMedia)
+          .where(
+            and(
+              eq(bookmarkMedia.userId, userId),
+              eq(bookmarkMedia.platform, platform),
+              eq(bookmarkMedia.bookmarkId, id),
+            ),
+          ),
+        db
+          .select()
+          .from(readStatus)
+          .where(
+            and(
+              eq(readStatus.userId, userId),
+              eq(readStatus.platform, platform),
+              eq(readStatus.bookmarkId, id),
+            ),
+          )
+          .limit(1),
+      ])
 
-    return NextResponse.json({
-      ...bookmark,
-      text: expandedText,
-      links,
-      tags: tags.map((t) => t.tag),
-      media: mediaWithUrls,
-      isRead: readStatusRecord.length > 0,
-      readAt: readStatusRecord[0]?.readAt || null,
-    })
-  } catch (error) {
-    console.error('Error fetching bookmark:', error)
-    captureException(error, { endpoint: '/api/bookmarks/[id]', method: 'GET' })
-    return NextResponse.json(
-      { error: 'Failed to fetch bookmark' },
-      { status: 500 }
-    )
-  }
-}
-
-// PATCH /api/bookmarks/[id] - Update bookmark
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const userId = await getCurrentUserId()
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { id } = await params
-    const platform = request.nextUrl.searchParams.get('platform') || 'twitter'
-    const body = await request.json()
-    const { category, summary, tags: newTags } = body
-
-    // Update bookmark (filter by composite key)
-    const updates: Record<string, string> = {}
-    if (category) updates.category = category
-    if (summary !== undefined) updates.summary = summary
-
-    if (Object.keys(updates).length > 0) {
-      await db.update(bookmarks).set(updates).where(and(eq(bookmarks.userId, userId), eq(bookmarks.platform, platform), eq(bookmarks.id, id)))
-    }
-
-    // Update tags if provided - use transaction for atomic delete + insert
-    if (newTags !== undefined) {
-      runInTransaction(() => {
-        db.delete(bookmarkTags).where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.platform, platform), eq(bookmarkTags.bookmarkId, id))).run()
-
-        if (newTags.length > 0) {
-          db.insert(bookmarkTags).values(
-            newTags.map((tag: string) => ({
-              userId,
-              platform,
-              bookmarkId: id,
-              tag,
-            }))
-          ).run()
+      // Add FxEmbed URLs to media
+      const mediaWithUrls = media.map((m, index) => {
+        const mediaType = m.mediaType as 'photo' | 'video' | 'animated_gif'
+        const urlOptions = {
+          tweetId: bookmark.id,
+          author: bookmark.author,
+          mediaType,
+          mediaIndex: index + 1,
+        }
+        return {
+          id: m.id,
+          mediaType: m.mediaType,
+          width: m.width,
+          height: m.height,
+          durationMs: m.durationMs,
+          altText: m.altText,
+          url: resolveMediaUrl(urlOptions),
+          thumbnailUrl: getThumbnailUrl({ ...urlOptions, previewUrl: m.previewUrl || undefined }),
+          shareUrl: getShareableUrl(urlOptions),
         }
       })
-    }
 
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('Error updating bookmark:', error)
-    captureException(error, { endpoint: '/api/bookmarks/[id]', method: 'PATCH' })
-    return NextResponse.json(
-      { error: 'Failed to update bookmark' },
-      { status: 500 }
-    )
-  }
-}
+      // Expand t.co URLs in the text
+      const expandedText = expandUrls(bookmark.text, links)
+
+      return NextResponse.json({
+        ...bookmark,
+        text: expandedText,
+        links,
+        tags: tags.map((t) => t.tag),
+        media: mediaWithUrls,
+        isRead: readStatusRecord.length > 0,
+        readAt: readStatusRecord[0]?.readAt || null,
+      })
+    } catch (error) {
+      console.error('Error fetching bookmark:', error)
+      captureException(error, { endpoint: '/api/bookmarks/[id]', method: 'GET' })
+      return NextResponse.json({ error: 'Failed to fetch bookmark' }, { status: 500 })
+    }
+  },
+)
+
+// PATCH /api/bookmarks/[id] - Update bookmark
+export const PATCH = withAuth(
+  async (request: NextRequest, userId, { params }: { params: Promise<{ id: string }> }) => {
+    try {
+      const { id } = await params
+      const platform = request.nextUrl.searchParams.get('platform') || 'twitter'
+      const body = await request.json()
+      const { category, summary, tags: newTags } = body
+
+      // Update bookmark (filter by composite key)
+      const updates: Record<string, string> = {}
+      if (category) updates.category = category
+      if (summary !== undefined) updates.summary = summary
+
+      if (Object.keys(updates).length > 0) {
+        await db
+          .update(bookmarks)
+          .set(updates)
+          .where(
+            and(
+              eq(bookmarks.userId, userId),
+              eq(bookmarks.platform, platform),
+              eq(bookmarks.id, id),
+            ),
+          )
+      }
+
+      // Update tags if provided - use transaction for atomic delete + insert
+      if (newTags !== undefined) {
+        runInTransaction(() => {
+          db.delete(bookmarkTags)
+            .where(
+              and(
+                eq(bookmarkTags.userId, userId),
+                eq(bookmarkTags.platform, platform),
+                eq(bookmarkTags.bookmarkId, id),
+              ),
+            )
+            .run()
+
+          if (newTags.length > 0) {
+            db.insert(bookmarkTags)
+              .values(
+                newTags.map((tag: string) => ({
+                  userId,
+                  platform,
+                  bookmarkId: id,
+                  tag,
+                })),
+              )
+              .run()
+          }
+        })
+      }
+
+      return NextResponse.json({ success: true })
+    } catch (error) {
+      console.error('Error updating bookmark:', error)
+      captureException(error, { endpoint: '/api/bookmarks/[id]', method: 'PATCH' })
+      return NextResponse.json({ error: 'Failed to update bookmark' }, { status: 500 })
+    }
+  },
+)
 
 // DELETE /api/bookmarks/[id] - Delete bookmark
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const userId = await getCurrentUserId()
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export const DELETE = withAuth(
+  async (request: NextRequest, userId, { params }: { params: Promise<{ id: string }> }) => {
+    try {
+      const { id } = await params
+      const platform = request.nextUrl.searchParams.get('platform') || 'twitter'
+
+      // Delete bookmark and all related records atomically using a transaction.
+      // This ensures all-or-nothing deletion - if any delete fails, all are rolled back.
+      runInTransaction(() => {
+        db.delete(bookmarkTags)
+          .where(
+            and(
+              eq(bookmarkTags.userId, userId),
+              eq(bookmarkTags.platform, platform),
+              eq(bookmarkTags.bookmarkId, id),
+            ),
+          )
+          .run()
+        db.delete(bookmarkMedia)
+          .where(
+            and(
+              eq(bookmarkMedia.userId, userId),
+              eq(bookmarkMedia.platform, platform),
+              eq(bookmarkMedia.bookmarkId, id),
+            ),
+          )
+          .run()
+        db.delete(bookmarkLinks)
+          .where(
+            and(
+              eq(bookmarkLinks.userId, userId),
+              eq(bookmarkLinks.platform, platform),
+              eq(bookmarkLinks.bookmarkId, id),
+            ),
+          )
+          .run()
+        db.delete(readStatus)
+          .where(
+            and(
+              eq(readStatus.userId, userId),
+              eq(readStatus.platform, platform),
+              eq(readStatus.bookmarkId, id),
+            ),
+          )
+          .run()
+        db.delete(bookmarks)
+          .where(
+            and(
+              eq(bookmarks.userId, userId),
+              eq(bookmarks.platform, platform),
+              eq(bookmarks.id, id),
+            ),
+          )
+          .run()
+      })
+
+      metrics.bookmarkDeleted()
+
+      return NextResponse.json({ success: true })
+    } catch (error) {
+      console.error('Error deleting bookmark:', error)
+      captureException(error, { endpoint: '/api/bookmarks/[id]', method: 'DELETE' })
+      return NextResponse.json({ error: 'Failed to delete bookmark' }, { status: 500 })
     }
-
-    const { id } = await params
-    const platform = request.nextUrl.searchParams.get('platform') || 'twitter'
-
-    // Delete bookmark and all related records atomically using a transaction.
-    // This ensures all-or-nothing deletion - if any delete fails, all are rolled back.
-    runInTransaction(() => {
-      db.delete(bookmarkTags).where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.platform, platform), eq(bookmarkTags.bookmarkId, id))).run()
-      db.delete(bookmarkMedia).where(and(eq(bookmarkMedia.userId, userId), eq(bookmarkMedia.platform, platform), eq(bookmarkMedia.bookmarkId, id))).run()
-      db.delete(bookmarkLinks).where(and(eq(bookmarkLinks.userId, userId), eq(bookmarkLinks.platform, platform), eq(bookmarkLinks.bookmarkId, id))).run()
-      db.delete(readStatus).where(and(eq(readStatus.userId, userId), eq(readStatus.platform, platform), eq(readStatus.bookmarkId, id))).run()
-      db.delete(bookmarks).where(and(eq(bookmarks.userId, userId), eq(bookmarks.platform, platform), eq(bookmarks.id, id))).run()
-    })
-
-    metrics.bookmarkDeleted()
-
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('Error deleting bookmark:', error)
-    captureException(error, { endpoint: '/api/bookmarks/[id]', method: 'DELETE' })
-    return NextResponse.json(
-      { error: 'Failed to delete bookmark' },
-      { status: 500 }
-    )
-  }
-}
+  },
+)

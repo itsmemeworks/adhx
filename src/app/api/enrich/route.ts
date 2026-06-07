@@ -3,21 +3,13 @@ import { db } from '@/lib/db'
 import { bookmarks, bookmarkLinks } from '@/lib/db/schema'
 import { eq, isNull, and, sql } from 'drizzle-orm'
 import { fetchTweetData, extractEnrichmentData } from '@/lib/media/fxembed'
-import { getCurrentUserId } from '@/lib/auth/session'
+import { withAuth } from '@/lib/api/with-auth'
 
 // POST /api/enrich - Enrich bookmarks with FxTwitter data (author avatars, article previews)
 // Query params:
 //   ?mode=articles - Re-enrich articles that are missing content
 //   (default) - Enrich bookmarks missing author profile image
-export async function POST(request: NextRequest) {
-  const userId = await getCurrentUserId()
-  if (!userId) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    })
-  }
-
+export const POST = withAuth(async (request: NextRequest, userId) => {
   const searchParams = request.nextUrl.searchParams
   const mode = searchParams.get('mode')
   const encoder = new TextEncoder()
@@ -40,17 +32,20 @@ export async function POST(request: NextRequest) {
               author: bookmarks.author,
             })
             .from(bookmarks)
-            .leftJoin(bookmarkLinks, and(
-              eq(bookmarkLinks.userId, userId),
-              eq(bookmarkLinks.bookmarkId, bookmarks.id),
-              eq(bookmarkLinks.linkType, 'article')
-            ))
+            .leftJoin(
+              bookmarkLinks,
+              and(
+                eq(bookmarkLinks.userId, userId),
+                eq(bookmarkLinks.bookmarkId, bookmarks.id),
+                eq(bookmarkLinks.linkType, 'article'),
+              ),
+            )
             .where(
               and(
                 eq(bookmarks.userId, userId),
                 eq(bookmarks.category, 'article'),
-                sql`(${bookmarkLinks.contentJson} IS NULL OR ${bookmarkLinks.id} IS NULL)`
-              )
+                sql`(${bookmarkLinks.contentJson} IS NULL OR ${bookmarkLinks.id} IS NULL)`,
+              ),
             )
           bookmarksToEnrich = articlesWithMissingContent
         } else {
@@ -103,19 +98,29 @@ export async function POST(request: NextRequest) {
                 const existingArticleLinks = await db
                   .select()
                   .from(bookmarkLinks)
-                  .where(and(
-                    eq(bookmarkLinks.userId, userId),
-                    eq(bookmarkLinks.bookmarkId, bookmark.id),
-                    eq(bookmarkLinks.linkType, 'article')
-                  ))
+                  .where(
+                    and(
+                      eq(bookmarkLinks.userId, userId),
+                      eq(bookmarkLinks.bookmarkId, bookmark.id),
+                      eq(bookmarkLinks.linkType, 'article'),
+                    ),
+                  )
                   .limit(1)
 
                 // Also check for any other existing links (filter by userId)
-                const existingLinks = existingArticleLinks.length > 0 ? existingArticleLinks : await db
-                  .select()
-                  .from(bookmarkLinks)
-                  .where(and(eq(bookmarkLinks.userId, userId), eq(bookmarkLinks.bookmarkId, bookmark.id)))
-                  .limit(1)
+                const existingLinks =
+                  existingArticleLinks.length > 0
+                    ? existingArticleLinks
+                    : await db
+                        .select()
+                        .from(bookmarkLinks)
+                        .where(
+                          and(
+                            eq(bookmarkLinks.userId, userId),
+                            eq(bookmarkLinks.bookmarkId, bookmark.id),
+                          ),
+                        )
+                        .limit(1)
 
                 if (existingLinks.length > 0) {
                   // Update existing link with preview data
@@ -126,10 +131,12 @@ export async function POST(request: NextRequest) {
                       previewDescription: previewData.description,
                       previewImageUrl: previewData.imageUrl,
                       // For articles, also fix the expanded URL, link type, and store content
-                      ...(enrichment.article && previewData.url ? {
-                        expandedUrl: previewData.url,
-                        linkType: 'article',
-                      } : {}),
+                      ...(enrichment.article && previewData.url
+                        ? {
+                            expandedUrl: previewData.url,
+                            linkType: 'article',
+                          }
+                        : {}),
                       ...(articleContentJson ? { contentJson: articleContentJson } : {}),
                     })
                     .where(eq(bookmarkLinks.id, existingLinks[0].id))
@@ -203,22 +210,25 @@ export async function POST(request: NextRequest) {
       Connection: 'keep-alive',
     },
   })
-}
+})
 
 // GET /api/enrich - Get enrichment status
-export async function GET() {
+export const GET = withAuth(async (_req, userId) => {
   try {
-    const userId = await getCurrentUserId()
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     // All queries filtered by userId for multi-user support
-    const [total] = await db.select({ count: sql<number>`count(*)` }).from(bookmarks).where(eq(bookmarks.userId, userId))
+    const [total] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(bookmarks)
+      .where(eq(bookmarks.userId, userId))
     const [enriched] = await db
       .select({ count: sql<number>`count(*)` })
       .from(bookmarks)
-      .where(and(eq(bookmarks.userId, userId), sql`${bookmarks.authorProfileImageUrl} IS NOT NULL AND ${bookmarks.authorProfileImageUrl} != ''`))
+      .where(
+        and(
+          eq(bookmarks.userId, userId),
+          sql`${bookmarks.authorProfileImageUrl} IS NOT NULL AND ${bookmarks.authorProfileImageUrl} != ''`,
+        ),
+      )
     const [needsEnrichment] = await db
       .select({ count: sql<number>`count(*)` })
       .from(bookmarks)
@@ -233,4 +243,4 @@ export async function GET() {
     console.error('Error getting enrichment status:', error)
     return NextResponse.json({ error: 'Failed to get enrichment status' }, { status: 500 })
   }
-}
+})

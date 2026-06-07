@@ -4,16 +4,11 @@ import { bookmarks, bookmarkLinks, bookmarkTags, bookmarkMedia, readStatus } fro
 import { eq, desc, like, and, or, count, notInArray, inArray, SQL } from 'drizzle-orm'
 import { resolveMediaUrl, getShareableUrl, getThumbnailUrl } from '@/lib/media/fxembed'
 import { expandUrls } from '@/lib/utils/url-expander'
-import { getCurrentUserId } from '@/lib/auth/session'
+import { withAuth } from '@/lib/api/with-auth'
+import { handleRouteError } from '@/lib/api/response'
 
 // GET /api/bookmarks - List bookmarks with filters
-export async function GET(request: NextRequest) {
-  // Get current user ID for multi-user data isolation
-  const userId = await getCurrentUserId()
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
+export const GET = withAuth(async (request: NextRequest, userId) => {
   const searchParams = request.nextUrl.searchParams
 
   // Parse query parameters
@@ -42,7 +37,7 @@ export async function GET(request: NextRequest) {
       const searchCondition = or(
         like(bookmarks.text, `%${search}%`),
         like(bookmarks.author, `%${search}%`),
-        like(bookmarks.authorName, `%${search}%`)
+        like(bookmarks.authorName, `%${search}%`),
       )
       if (searchCondition) {
         conditions.push(searchCondition)
@@ -64,10 +59,7 @@ export async function GET(request: NextRequest) {
     const whereClause = and(...conditions)
 
     // Get total count
-    const [totalResult] = await db
-      .select({ count: count() })
-      .from(bookmarks)
-      .where(whereClause)
+    const [totalResult] = await db.select({ count: count() }).from(bookmarks).where(whereClause)
 
     const total = totalResult?.count || 0
 
@@ -84,14 +76,41 @@ export async function GET(request: NextRequest) {
     const bookmarkIds = results.map((b) => b.id)
 
     // Fetch all related data in parallel batches instead of per-bookmark
-    const [allLinks, allTags, allMedia, allReadStatuses] = bookmarkIds.length > 0
-      ? await Promise.all([
-          db.select().from(bookmarkLinks).where(and(eq(bookmarkLinks.userId, userId), inArray(bookmarkLinks.bookmarkId, bookmarkIds))),
-          db.select().from(bookmarkTags).where(and(eq(bookmarkTags.userId, userId), inArray(bookmarkTags.bookmarkId, bookmarkIds))),
-          db.select().from(bookmarkMedia).where(and(eq(bookmarkMedia.userId, userId), inArray(bookmarkMedia.bookmarkId, bookmarkIds))),
-          db.select().from(readStatus).where(and(eq(readStatus.userId, userId), inArray(readStatus.bookmarkId, bookmarkIds))),
-        ])
-      : [[], [], [], []]
+    const [allLinks, allTags, allMedia, allReadStatuses] =
+      bookmarkIds.length > 0
+        ? await Promise.all([
+            db
+              .select()
+              .from(bookmarkLinks)
+              .where(
+                and(
+                  eq(bookmarkLinks.userId, userId),
+                  inArray(bookmarkLinks.bookmarkId, bookmarkIds),
+                ),
+              ),
+            db
+              .select()
+              .from(bookmarkTags)
+              .where(
+                and(eq(bookmarkTags.userId, userId), inArray(bookmarkTags.bookmarkId, bookmarkIds)),
+              ),
+            db
+              .select()
+              .from(bookmarkMedia)
+              .where(
+                and(
+                  eq(bookmarkMedia.userId, userId),
+                  inArray(bookmarkMedia.bookmarkId, bookmarkIds),
+                ),
+              ),
+            db
+              .select()
+              .from(readStatus)
+              .where(
+                and(eq(readStatus.userId, userId), inArray(readStatus.bookmarkId, bookmarkIds)),
+              ),
+          ])
+        : [[], [], [], []]
 
     // Group related data by bookmark ID for O(1) lookups
     const linksByBookmark = new Map<string, typeof allLinks>()
@@ -170,7 +189,7 @@ export async function GET(request: NextRequest) {
       const searchCondition = or(
         like(bookmarks.text, `%${search}%`),
         like(bookmarks.author, `%${search}%`),
-        like(bookmarks.authorName, `%${search}%`)
+        like(bookmarks.authorName, `%${search}%`),
       )
       if (searchCondition) baseConditions.push(searchCondition)
     }
@@ -181,7 +200,10 @@ export async function GET(request: NextRequest) {
       .where(and(...baseConditions))
 
     const totalUnfiltered = totalUnfilteredResult?.count || 0
-    const [readCountResult] = await db.select({ count: count() }).from(readStatus).where(eq(readStatus.userId, userId))
+    const [readCountResult] = await db
+      .select({ count: count() })
+      .from(readStatus)
+      .where(eq(readStatus.userId, userId))
     const unreadCount = totalUnfiltered - (readCountResult?.count || 0)
 
     return NextResponse.json({
@@ -197,10 +219,10 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('Error fetching bookmarks:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch bookmarks' },
-      { status: 500 }
-    )
+    return handleRouteError(error, {
+      endpoint: '/api/bookmarks',
+      userId,
+      message: 'Failed to fetch bookmarks',
+    })
   }
-}
+})
