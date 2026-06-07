@@ -1,8 +1,5 @@
 import { TwitterApi, UserV2 } from 'twitter-api-v2'
-import { getStoredTokens, isTokenExpired, refreshAccessToken, saveTokens } from '@/lib/auth/oauth'
-
-const CLIENT_ID = process.env.TWITTER_CLIENT_ID!
-const CLIENT_SECRET = process.env.TWITTER_CLIENT_SECRET!
+import { getStoredTokens, getValidTokens } from '@/lib/auth/oauth'
 
 export interface TwitterMedia {
   mediaKey: string
@@ -63,32 +60,13 @@ function isAuthError(err: unknown): boolean {
 // Get authenticated Twitter client for a specific user. Pass forceRefresh to
 // refresh the access token even if it looks valid — used to recover from a 401
 // when a token died before its nominal expiry (revoked / rotated / clock skew).
+// Refresh + rotation is handled by getValidTokens, which serializes concurrent
+// refreshes per user so the single-use refresh-token chain isn't broken.
 export async function getTwitterClient(userId: string, forceRefresh = false): Promise<TwitterApi> {
-  const tokens = await getStoredTokens(userId)
+  const tokens = await getValidTokens(userId, { forceRefresh })
 
   if (!tokens) {
     throw new Error('Not authenticated. Please connect your Twitter account.')
-  }
-
-  // Refresh when the token looks expired, or when forced after a 401.
-  if (forceRefresh || isTokenExpired(tokens.expiresAt)) {
-    console.log(
-      forceRefresh ? 'Forcing token refresh after auth error...' : 'Token expired, refreshing...',
-    )
-    const newTokens = await refreshAccessToken(tokens.refreshToken, CLIENT_ID, CLIENT_SECRET)
-
-    // Save new tokens
-    await saveTokens(
-      tokens.userId,
-      tokens.username || '',
-      tokens.profileImageUrl || null,
-      newTokens.accessToken,
-      newTokens.refreshToken,
-      newTokens.expiresIn,
-      '', // scopes don't change
-    )
-
-    return new TwitterApi(newTokens.accessToken)
   }
 
   return new TwitterApi(tokens.accessToken)

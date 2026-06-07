@@ -170,6 +170,27 @@ describe('API: /api/auth/twitter/status', () => {
       const sessionCookie = response.cookies.get('adhx_session')
       expect(sessionCookie?.value).toBe('')
     })
+
+    it('keeps the session on a TRANSIENT refresh failure (5xx)', async () => {
+      // A 5xx / network blip must not force re-auth — keep tokens for a retry.
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        text: () => Promise.resolve('Service Unavailable'),
+      })
+
+      const { GET } = await import('@/app/api/auth/twitter/status/route')
+      const response = await GET()
+
+      const data = await response.json()
+      // Still authenticated — the session is preserved, not torn down.
+      expect(data.authenticated).toBe(true)
+      // The session cookie was NOT cleared.
+      expect(response.cookies.get('adhx_session')?.value).not.toBe('')
+      // Tokens are still stored (available for a later retry).
+      const { getStoredTokens } = await import('@/lib/auth/oauth')
+      expect(await getStoredTokens('user-123')).not.toBeNull()
+    })
   })
 
   describe('Profile image fetching', () => {

@@ -155,6 +155,24 @@ export async function exchangeCodeForTokens(
 }
 
 // Refresh access token
+/**
+ * Error from the token endpoint. `fatal` means the refresh token itself was
+ * rejected (HTTP 400/401) — the rotation chain is dead and only a fresh
+ * re-auth recovers it. Non-fatal (network, 5xx, timeout) is transient and the
+ * caller should keep the stored tokens and retry later rather than forcing
+ * re-auth.
+ */
+export class TokenRefreshError extends Error {
+  status: number
+  fatal: boolean
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'TokenRefreshError'
+    this.status = status
+    this.fatal = status === 400 || status === 401
+  }
+}
+
 export async function refreshAccessToken(
   refreshToken: string,
   clientId: string,
@@ -184,7 +202,7 @@ export async function refreshAccessToken(
 
   if (!response.ok) {
     const error = await response.text()
-    throw new Error(`Token refresh failed: ${error}`)
+    throw new TokenRefreshError(`Token refresh failed: ${error}`, response.status)
   }
 
   const data = await response.json()
@@ -297,6 +315,76 @@ export async function getStoredTokens(userId: string): Promise<{
     accessToken: safeDecryptToken(stored.accessToken),
     refreshToken: safeDecryptToken(stored.refreshToken),
   }
+}
+
+/** Decrypted stored tokens for a user (the non-null shape of getStoredTokens). */
+export type StoredTokens = NonNullable<Awaited<ReturnType<typeof getStoredTokens>>>
+
+/**
+ * In-process per-user dedupe of refreshes.
+ *
+ * X refresh tokens are SINGLE-USE and rotate: each refresh issues a new
+ * access+refresh token and invalidates the previous refresh token. If two
+ * requests refresh concurrently they both spend the same refresh token — the
+ * loser is handed an already-invalidated token, which breaks the rotation
+ * chain and forces a re-auth. Coalescing concurrent refreshes for a user onto
+ * a single in-flight promise keeps the chain intact.
+ *
+ * In-memory is sufficient: the app runs as a single Node process per machine,
+ * and the worst case across machines is one extra refresh (rare), not the
+ * every-page-load race this removes.
+ */
+const inFlightRefreshes = new Map<string, Promise<StoredTokens>>()
+
+async function performRefresh(tokens: StoredTokens): Promise<StoredTokens> {
+  const clientId = process.env.TWITTER_CLIENT_ID!
+  const clientSecret = process.env.TWITTER_CLIENT_SECRET!
+  const refreshed = await refreshAccessToken(tokens.refreshToken, clientId, clientSecret)
+  // Persist the rotated tokens BEFORE returning so the next caller reads the
+  // new refresh token, never the spent one.
+  await saveTokens(
+    tokens.userId,
+    tokens.username || '',
+    tokens.profileImageUrl || null,
+    refreshed.accessToken,
+    refreshed.refreshToken,
+    refreshed.expiresIn,
+    '', // scopes don't change
+  )
+  return {
+    ...tokens,
+    accessToken: refreshed.accessToken,
+    refreshToken: refreshed.refreshToken,
+    expiresAt: Math.floor(Date.now() / 1000) + refreshed.expiresIn,
+  }
+}
+
+/**
+ * Return valid tokens for a user, refreshing if expired (or when `forceRefresh`
+ * is set — used to recover from a 401 where the token died before its nominal
+ * expiry). Concurrent refreshes for the same user are coalesced (see above).
+ *
+ * Returns null if the user has no stored tokens. Throws {@link TokenRefreshError}
+ * if a refresh fails — callers check `.fatal` to decide re-auth vs. retry.
+ */
+export async function getValidTokens(
+  userId: string,
+  opts: { forceRefresh?: boolean } = {},
+): Promise<StoredTokens | null> {
+  const tokens = await getStoredTokens(userId)
+  if (!tokens) return null
+  if (!opts.forceRefresh && !isTokenExpired(tokens.expiresAt)) return tokens
+
+  // A refresh is needed. Join an in-flight one for this user if present;
+  // otherwise start one and register it before the first await yields.
+  const existing = inFlightRefreshes.get(userId)
+  if (existing) return existing
+
+  const refreshPromise = performRefresh(tokens).finally(() => {
+    inFlightRefreshes.delete(userId)
+  })
+  inFlightRefreshes.set(userId, refreshPromise)
+  return refreshPromise
 }
 
 // Check if tokens exist for a user (used to determine new vs returning user)
