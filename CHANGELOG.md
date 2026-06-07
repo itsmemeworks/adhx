@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.36.1](https://github.com/itsmemeworks/adhx/compare/v1.36.0...v1.36.1) (2026-06-07)
+
+
+### Bug Fixes
+
+* classify twitter video posters as video on discover ([#184](https://github.com/itsmemeworks/adhx/issues/184)) ([4097105](https://github.com/itsmemeworks/adhx/commit/40971053a4b1ebd7c518660dc109dd5e475d57ab))
+
+
+### Documentation
+
+* cover the matter redesign, discover, and theme system ([#182](https://github.com/itsmemeworks/adhx/issues/182)) ([90fa922](https://github.com/itsmemeworks/adhx/commit/90fa922b66aa3cd2674e4d4476ca61fc28051650))
+
 ## [1.36.0](https://github.com/itsmemeworks/adhx/compare/v1.35.0...v1.36.0) (2026-06-07)
 
 
