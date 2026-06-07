@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.40.0](https://github.com/itsmemeworks/adhx/compare/v1.39.0...v1.40.0) (2026-06-07)
+
+
+### Features
+
+* indexable trending hubs + cross-network curation seo loop ([#215](https://github.com/itsmemeworks/adhx/issues/215)) ([23776de](https://github.com/itsmemeworks/adhx/commit/23776deb71e4a8a6d90eebe300b821c56d6e3ef7))
+
 ## [1.39.0](https://github.com/itsmemeworks/adhx/compare/v1.38.0...v1.39.0) (2026-06-07)
 
 
