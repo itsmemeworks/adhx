@@ -11,11 +11,12 @@ import {
   PartyPopper,
   ArrowLeft,
   ArrowRight,
+  ArrowDown,
   Share2,
 } from 'lucide-react'
 import type { FeedItem } from './types'
 import { MediaCard, isFullBleedCandidate } from './MediaCard'
-import { isTouchDevice, copyPreviewLink } from './utils'
+import { copyPreviewLink } from './utils'
 import { cn } from '@/lib/utils'
 
 /** User's LOCAL calendar day as YYYY-MM-DD (streaks are per the user's days). */
@@ -81,9 +82,10 @@ export function TriageMode({
   const [streak, setStreak] = useState<Streak>({ current: 0, longest: 0 })
   const [celebrate, setCelebrate] = useState<string | null>(null)
   const [undo, setUndo] = useState<UndoAction | null>(null)
-  const [exiting, setExiting] = useState<'left' | 'right' | 'up' | null>(null)
+  const [exiting, setExiting] = useState<'left' | 'right' | 'down' | null>(null)
+  // Horizontal drag (Keep/Done) and downward drag (Delete) for live swipe feedback.
   const [drag, setDrag] = useState(0)
-  const [isTouch, setIsTouch] = useState(false)
+  const [dragY, setDragY] = useState(0)
   const [copied, setCopied] = useState(false)
 
   const recordedRef = useRef(false)
@@ -103,7 +105,6 @@ export function TriageMode({
   // --- seed queue from the snapshot on open; load streak for display ---
   useEffect(() => {
     if (!isOpen) return
-    setIsTouch(isTouchDevice())
     setQueue(initialQueue)
     setIndex(startIndex)
     recordedRef.current = false
@@ -149,6 +150,7 @@ export function TriageMode({
   const advance = useCallback(() => {
     setExiting(null)
     setDrag(0)
+    setDragY(0)
     setIndex((i) => i + 1)
   }, [])
 
@@ -189,7 +191,7 @@ export function TriageMode({
     }, 5000)
     undoTimer.current = timer
     setUndo({ type: 'delete', item, index, timer })
-    setExiting('up')
+    setExiting('down')
     setTimeout(advance, 220)
   }, [current, index, recordStreak, advance, onItemResolved])
 
@@ -298,14 +300,27 @@ export function TriageMode({
     if (!touchStart.current) return
     const dx = e.touches[0].clientX - touchStart.current.x
     const dy = e.touches[0].clientY - touchStart.current.y
-    if (Math.abs(dx) > Math.abs(dy)) setDrag(dx)
+    // Horizontal gesture → Keep/Done; a downward gesture → Delete. Only one axis
+    // tracks at a time so the live transform stays clean. Upward drag is ignored
+    // (no action), so clamp dy to >= 0.
+    if (Math.abs(dx) > Math.abs(dy)) {
+      setDrag(dx)
+      setDragY(0)
+    } else {
+      setDragY(Math.max(0, dy))
+      setDrag(0)
+    }
   }
   const onTouchEnd = () => {
     // Swipe direction matches the card flight + the keyboard arrows:
-    // right → Done (flies right), left → Keep (flies left).
+    // right → Done (flies right), left → Keep (flies left), down → Delete.
     if (drag > SWIPE_THRESHOLD) archive()
     else if (drag < -SWIPE_THRESHOLD) keep()
-    else setDrag(0)
+    else if (dragY > SWIPE_THRESHOLD) del()
+    else {
+      setDrag(0)
+      setDragY(0)
+    }
     touchStart.current = null
   }
 
@@ -314,10 +329,12 @@ export function TriageMode({
       ? 'translateX(-130%) rotate(-12deg)'
       : exiting === 'right'
         ? 'translateX(130%) rotate(12deg)'
-        : 'translateY(-130%)'
+        : 'translateY(130%)'
     : drag !== 0
       ? `translateX(${drag}px) rotate(${drag / 30}deg)`
-      : undefined
+      : dragY !== 0
+        ? `translateY(${dragY}px)`
+        : undefined
 
   const progress = total ? (done / total) * 100 : 0
 
@@ -453,7 +470,9 @@ export function TriageMode({
                 transform: cardTransform,
                 opacity: exiting ? 0 : 1,
                 transition:
-                  exiting || drag === 0 ? 'transform 0.22s ease, opacity 0.22s ease' : undefined,
+                  exiting || (drag === 0 && dragY === 0)
+                    ? 'transform 0.22s ease, opacity 0.22s ease'
+                    : undefined,
               }}
               onTouchStart={onTouchStart}
               onTouchMove={onTouchMove}
@@ -490,8 +509,26 @@ export function TriageMode({
         </div>
       )}
 
-      {/* Action dock (bottom-center): labelled glass buttons (tap or swipe) +
-          a legend that maps the swipe directions to actions. */}
+      {/* Live swipe feedback for a downward (Delete) gesture. */}
+      {!finished && current && dragY > 0 && !exiting && (
+        <div className="pointer-events-none absolute inset-0 z-[5] flex items-end justify-center pb-28">
+          <div
+            className="inline-flex items-center gap-2 rounded-2xl border-[3px] px-4 py-2.5 text-lg font-extrabold uppercase tracking-wide backdrop-blur"
+            style={{
+              opacity: Math.min(1, dragY / SWIPE_THRESHOLD),
+              color: 'var(--m-fink-2)',
+              borderColor: 'var(--m-fline)',
+              background: 'color-mix(in srgb, var(--m-fink) 10%, transparent)',
+            }}
+          >
+            <Trash2 className="w-5 h-5" />
+            Delete
+          </div>
+        </div>
+      )}
+
+      {/* Action dock (bottom-center): labelled glass buttons (tap or swipe), each
+          showing its swipe/keyboard direction (Keep ←, Delete ↓, Done →). */}
       {!finished && (
         <div
           onClick={(e) => e.stopPropagation()}
@@ -503,6 +540,7 @@ export function TriageMode({
               label="Keep"
               caption="stays unread"
               tone="primary"
+              arrow="left"
               onDark={fullBleed}
             >
               <Bookmark className="w-[25px] h-[25px]" />
@@ -512,6 +550,7 @@ export function TriageMode({
               label="Delete"
               caption="removes it"
               tone="outline"
+              arrow="down"
               onDark={fullBleed}
             >
               <Trash2 className="w-[22px] h-[22px]" />
@@ -521,29 +560,12 @@ export function TriageMode({
               label="Done"
               caption="marks read"
               tone="done"
+              arrow="right"
               onDark={fullBleed}
             >
               <Check className="w-[25px] h-[25px]" />
             </DockButton>
           </div>
-          <span
-            className={cn(
-              'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[12px] font-medium whitespace-nowrap',
-              fullBleed
-                ? 'bg-black/40 backdrop-blur text-white/90'
-                : 'bg-fsurface/60 backdrop-blur text-fink-2 border border-fline',
-            )}
-          >
-            <span className="inline-flex items-center gap-1">
-              <ArrowLeft className="w-3.5 h-3.5" /> Keep
-            </span>
-            <span className="opacity-40">·</span>
-            <span>{isTouch ? 'tap or swipe' : 'tap, swipe, or ←→'}</span>
-            <span className="opacity-40">·</span>
-            <span className="inline-flex items-center gap-1">
-              Done <ArrowRight className="w-3.5 h-3.5" />
-            </span>
-          </span>
         </div>
       )}
 
@@ -592,6 +614,7 @@ function DockButton({
   label,
   caption,
   tone,
+  arrow,
   onDark = false,
   children,
 }: {
@@ -599,9 +622,12 @@ function DockButton({
   label: string
   caption?: string
   tone: 'primary' | 'outline' | 'done'
+  /** The gesture/keyboard direction for this action, shown next to the label. */
+  arrow?: 'left' | 'right' | 'down'
   onDark?: boolean
   children: React.ReactNode
 }) {
+  const Arrow = arrow === 'left' ? ArrowLeft : arrow === 'right' ? ArrowRight : ArrowDown
   const big = tone !== 'outline'
   const background =
     tone === 'primary'
@@ -642,11 +668,13 @@ function DockButton({
       </span>
       <span
         className={cn(
-          'text-[13px] font-semibold leading-none',
+          'inline-flex items-center gap-1 text-[13px] font-semibold leading-none',
           onDark ? 'text-white drop-shadow' : 'text-fink',
         )}
       >
+        {arrow === 'left' && <Arrow className="w-3.5 h-3.5" />}
         {label}
+        {arrow && arrow !== 'left' && <Arrow className="w-3.5 h-3.5" />}
       </span>
       {caption && (
         <span
