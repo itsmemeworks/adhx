@@ -328,7 +328,7 @@ function PreviewHeader() {
 function ValueCard() {
   const rows: Array<[React.ReactNode, string, string]> = [
     [<Sparkles key="s" className="w-[17px] h-[17px]" />, 'One place for everything', 'TikToks, Reels, Shorts, tweets & articles in one searchable home.'],
-    [<Zap key="z" className="w-[17px] h-[17px]" />, 'Download in one tap', 'MP4 straight to your device. No account, no app, no watermark.'],
+    [<Zap key="z" className="w-[17px] h-[17px]" />, 'Save it before it vanishes', 'Preview any TikTok and save it to your collection — alongside your tweets and articles.'],
     [<Search key="f" className="w-[17px] h-[17px]" />, 'Actually find it later', 'Full-text search across everything you save.'],
   ]
   return (

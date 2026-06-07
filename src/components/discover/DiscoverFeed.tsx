@@ -204,8 +204,8 @@ export function DiscoverFeed() {
               What the internet is saving, right now
             </h1>
             <p className="text-[15px] sm:text-[15.5px] text-ink-2 max-w-[640px] mb-2">
-              Anonymous, real-time saves from everyone on ADHX — new posts stream in as they happen. Click any to
-              preview it, then save your own.
+              See what&apos;s trending across X, TikTok, Instagram and YouTube — a live, anonymous feed of what
+              people are saving on ADHX. Tap any post to preview it, then save your own.
             </p>
           </div>
         </>
