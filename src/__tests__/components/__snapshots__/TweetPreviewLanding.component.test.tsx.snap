@@ -18058,26 +18058,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             <div
               class="flex flex-col gap-3.5"
             >
-              <button
-                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span
-                  class="inline-flex items-center gap-1.5"
-                >
-                  Connect with
-                  <svg
-                    aria-hidden="true"
-                    fill="currentColor"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    width="16"
-                  >
-                    <path
-                      d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                    />
-                  </svg>
-                </span>
-              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -18243,26 +18223,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           <div
             class="flex flex-col gap-3.5"
           >
-            <button
-              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span
-                class="inline-flex items-center gap-1.5"
-              >
-                Connect with
-                <svg
-                  aria-hidden="true"
-                  fill="currentColor"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  width="16"
-                >
-                  <path
-                    d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                  />
-                </svg>
-              </span>
-            </button>
             <div
               class="flex gap-2.5"
             >
@@ -19694,26 +19654,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             <div
               class="flex flex-col gap-3.5"
             >
-              <button
-                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span
-                  class="inline-flex items-center gap-1.5"
-                >
-                  Connect with
-                  <svg
-                    aria-hidden="true"
-                    fill="currentColor"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    width="16"
-                  >
-                    <path
-                      d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                    />
-                  </svg>
-                </span>
-              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -19962,26 +19902,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           <div
             class="flex flex-col gap-3.5"
           >
-            <button
-              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span
-                class="inline-flex items-center gap-1.5"
-              >
-                Connect with
-                <svg
-                  aria-hidden="true"
-                  fill="currentColor"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  width="16"
-                >
-                  <path
-                    d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                  />
-                </svg>
-              </span>
-            </button>
             <div
               class="flex gap-2.5"
             >
@@ -22971,26 +22891,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             <div
               class="flex flex-col gap-3.5"
             >
-              <button
-                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span
-                  class="inline-flex items-center gap-1.5"
-                >
-                  Connect with
-                  <svg
-                    aria-hidden="true"
-                    fill="currentColor"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    width="16"
-                  >
-                    <path
-                      d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                    />
-                  </svg>
-                </span>
-              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -23239,26 +23139,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           <div
             class="flex flex-col gap-3.5"
           >
-            <button
-              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span
-                class="inline-flex items-center gap-1.5"
-              >
-                Connect with
-                <svg
-                  aria-hidden="true"
-                  fill="currentColor"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  width="16"
-                >
-                  <path
-                    d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                  />
-                </svg>
-              </span>
-            </button>
             <div
               class="flex gap-2.5"
             >
@@ -24152,26 +24032,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             <div
               class="flex flex-col gap-3.5"
             >
-              <button
-                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span
-                  class="inline-flex items-center gap-1.5"
-                >
-                  Connect with
-                  <svg
-                    aria-hidden="true"
-                    fill="currentColor"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    width="16"
-                  >
-                    <path
-                      d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                    />
-                  </svg>
-                </span>
-              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -24337,26 +24197,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           <div
             class="flex flex-col gap-3.5"
           >
-            <button
-              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span
-                class="inline-flex items-center gap-1.5"
-              >
-                Connect with
-                <svg
-                  aria-hidden="true"
-                  fill="currentColor"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  width="16"
-                >
-                  <path
-                    d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                  />
-                </svg>
-              </span>
-            </button>
             <div
               class="flex gap-2.5"
             >
@@ -25323,26 +25163,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             <div
               class="flex flex-col gap-3.5"
             >
-              <button
-                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span
-                  class="inline-flex items-center gap-1.5"
-                >
-                  Connect with
-                  <svg
-                    aria-hidden="true"
-                    fill="currentColor"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    width="16"
-                  >
-                    <path
-                      d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                    />
-                  </svg>
-                </span>
-              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -25508,26 +25328,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           <div
             class="flex flex-col gap-3.5"
           >
-            <button
-              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span
-                class="inline-flex items-center gap-1.5"
-              >
-                Connect with
-                <svg
-                  aria-hidden="true"
-                  fill="currentColor"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  width="16"
-                >
-                  <path
-                    d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                  />
-                </svg>
-              </span>
-            </button>
             <div
               class="flex gap-2.5"
             >
@@ -26450,26 +26250,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             <div
               class="flex flex-col gap-3.5"
             >
-              <button
-                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span
-                  class="inline-flex items-center gap-1.5"
-                >
-                  Connect with
-                  <svg
-                    aria-hidden="true"
-                    fill="currentColor"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    width="16"
-                  >
-                    <path
-                      d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                    />
-                  </svg>
-                </span>
-              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -26635,26 +26415,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           <div
             class="flex flex-col gap-3.5"
           >
-            <button
-              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span
-                class="inline-flex items-center gap-1.5"
-              >
-                Connect with
-                <svg
-                  aria-hidden="true"
-                  fill="currentColor"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  width="16"
-                >
-                  <path
-                    d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                  />
-                </svg>
-              </span>
-            </button>
             <div
               class="flex gap-2.5"
             >
@@ -27791,26 +27551,6 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
             <div
               class="flex flex-col gap-3.5"
             >
-              <button
-                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span
-                  class="inline-flex items-center gap-1.5"
-                >
-                  Connect with
-                  <svg
-                    aria-hidden="true"
-                    fill="currentColor"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    width="16"
-                  >
-                    <path
-                      d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                    />
-                  </svg>
-                </span>
-              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -27976,26 +27716,6 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
           <div
             class="flex flex-col gap-3.5"
           >
-            <button
-              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span
-                class="inline-flex items-center gap-1.5"
-              >
-                Connect with
-                <svg
-                  aria-hidden="true"
-                  fill="currentColor"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  width="16"
-                >
-                  <path
-                    d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                  />
-                </svg>
-              </span>
-            </button>
             <div
               class="flex gap-2.5"
             >
@@ -28783,26 +28503,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             <div
               class="flex flex-col gap-3.5"
             >
-              <button
-                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span
-                  class="inline-flex items-center gap-1.5"
-                >
-                  Connect with
-                  <svg
-                    aria-hidden="true"
-                    fill="currentColor"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    width="16"
-                  >
-                    <path
-                      d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                    />
-                  </svg>
-                </span>
-              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -28968,26 +28668,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           <div
             class="flex flex-col gap-3.5"
           >
-            <button
-              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span
-                class="inline-flex items-center gap-1.5"
-              >
-                Connect with
-                <svg
-                  aria-hidden="true"
-                  fill="currentColor"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  width="16"
-                >
-                  <path
-                    d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                  />
-                </svg>
-              </span>
-            </button>
             <div
               class="flex gap-2.5"
             >
@@ -29915,26 +29595,6 @@ PS – Repost for early access to the full TikTok Shop content factory system.
             <div
               class="flex flex-col gap-3.5"
             >
-              <button
-                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span
-                  class="inline-flex items-center gap-1.5"
-                >
-                  Connect with
-                  <svg
-                    aria-hidden="true"
-                    fill="currentColor"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    width="16"
-                  >
-                    <path
-                      d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                    />
-                  </svg>
-                </span>
-              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -30100,26 +29760,6 @@ PS – Repost for early access to the full TikTok Shop content factory system.
           <div
             class="flex flex-col gap-3.5"
           >
-            <button
-              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span
-                class="inline-flex items-center gap-1.5"
-              >
-                Connect with
-                <svg
-                  aria-hidden="true"
-                  fill="currentColor"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  width="16"
-                >
-                  <path
-                    d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                  />
-                </svg>
-              </span>
-            </button>
             <div
               class="flex gap-2.5"
             >
@@ -30952,26 +30592,6 @@ This is not a coincidence.
             <div
               class="flex flex-col gap-3.5"
             >
-              <button
-                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span
-                  class="inline-flex items-center gap-1.5"
-                >
-                  Connect with
-                  <svg
-                    aria-hidden="true"
-                    fill="currentColor"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    width="16"
-                  >
-                    <path
-                      d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                    />
-                  </svg>
-                </span>
-              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -31137,26 +30757,6 @@ This is not a coincidence.
           <div
             class="flex flex-col gap-3.5"
           >
-            <button
-              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span
-                class="inline-flex items-center gap-1.5"
-              >
-                Connect with
-                <svg
-                  aria-hidden="true"
-                  fill="currentColor"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  width="16"
-                >
-                  <path
-                    d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                  />
-                </svg>
-              </span>
-            </button>
             <div
               class="flex gap-2.5"
             >
@@ -31953,26 +31553,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             <div
               class="flex flex-col gap-3.5"
             >
-              <button
-                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span
-                  class="inline-flex items-center gap-1.5"
-                >
-                  Connect with
-                  <svg
-                    aria-hidden="true"
-                    fill="currentColor"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    width="16"
-                  >
-                    <path
-                      d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                    />
-                  </svg>
-                </span>
-              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -32138,26 +31718,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           <div
             class="flex flex-col gap-3.5"
           >
-            <button
-              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span
-                class="inline-flex items-center gap-1.5"
-              >
-                Connect with
-                <svg
-                  aria-hidden="true"
-                  fill="currentColor"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  width="16"
-                >
-                  <path
-                    d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                  />
-                </svg>
-              </span>
-            </button>
             <div
               class="flex gap-2.5"
             >
@@ -33078,26 +32638,6 @@ Try it for free in our demo app (link in the thread).
             <div
               class="flex flex-col gap-3.5"
             >
-              <button
-                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span
-                  class="inline-flex items-center gap-1.5"
-                >
-                  Connect with
-                  <svg
-                    aria-hidden="true"
-                    fill="currentColor"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    width="16"
-                  >
-                    <path
-                      d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                    />
-                  </svg>
-                </span>
-              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -33263,26 +32803,6 @@ Try it for free in our demo app (link in the thread).
           <div
             class="flex flex-col gap-3.5"
           >
-            <button
-              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span
-                class="inline-flex items-center gap-1.5"
-              >
-                Connect with
-                <svg
-                  aria-hidden="true"
-                  fill="currentColor"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  width="16"
-                >
-                  <path
-                    d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                  />
-                </svg>
-              </span>
-            </button>
             <div
               class="flex gap-2.5"
             >
@@ -34161,26 +33681,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             <div
               class="flex flex-col gap-3.5"
             >
-              <button
-                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span
-                  class="inline-flex items-center gap-1.5"
-                >
-                  Connect with
-                  <svg
-                    aria-hidden="true"
-                    fill="currentColor"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    width="16"
-                  >
-                    <path
-                      d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                    />
-                  </svg>
-                </span>
-              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -34346,26 +33846,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           <div
             class="flex flex-col gap-3.5"
           >
-            <button
-              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span
-                class="inline-flex items-center gap-1.5"
-              >
-                Connect with
-                <svg
-                  aria-hidden="true"
-                  fill="currentColor"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  width="16"
-                >
-                  <path
-                    d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                  />
-                </svg>
-              </span>
-            </button>
             <div
               class="flex gap-2.5"
             >
@@ -35162,26 +34642,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             <div
               class="flex flex-col gap-3.5"
             >
-              <button
-                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span
-                  class="inline-flex items-center gap-1.5"
-                >
-                  Connect with
-                  <svg
-                    aria-hidden="true"
-                    fill="currentColor"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    width="16"
-                  >
-                    <path
-                      d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                    />
-                  </svg>
-                </span>
-              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -35347,26 +34807,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           <div
             class="flex flex-col gap-3.5"
           >
-            <button
-              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-ink text-surface font-bold text-base transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span
-                class="inline-flex items-center gap-1.5"
-              >
-                Connect with
-                <svg
-                  aria-hidden="true"
-                  fill="currentColor"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  width="16"
-                >
-                  <path
-                    d="M18.9 2H22l-7.3 8.3L23 22h-6.6l-5.2-6.8L5.3 22H2.2l7.8-8.9L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.8L7.4 3.8H5.5L17.7 20z"
-                  />
-                </svg>
-              </span>
-            </button>
             <div
               class="flex gap-2.5"
             >
