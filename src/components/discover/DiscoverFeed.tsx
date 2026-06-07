@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { LiveDot, MatterLogo, ConnectWithX } from '@/components/matter'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { DiscoverCard, inferType } from './DiscoverCard'
 
 export interface ActivityItem {
@@ -181,6 +182,7 @@ export function DiscoverFeed() {
                 How it works
               </Link>
               <span className="hidden sm:inline text-sm font-semibold text-clay">Discover</span>
+              <ThemeToggle className="-mr-1 sm:mr-0" />
               <a
                 href="/api/auth/twitter"
                 className="inline-flex items-center gap-2 rounded-[10px] bg-ink px-4 py-2 text-[13.5px] font-semibold text-surface"

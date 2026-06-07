@@ -11,6 +11,7 @@ import type { ArticleEntityMap } from '@/components/feed/types'
 import { FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
 import Link from 'next/link'
 import { MatterLogo, PlatformGlyph, ConnectWithX } from '@/components/matter'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { AnimatedBackground, LandingAnimations } from '@/components/landing'
 import { formatCount, formatRelativeTime } from '@/lib/utils/format'
 import { cn } from '@/lib/utils'
@@ -332,6 +333,7 @@ export function TweetPreviewLanding({ username, tweetId, tweet, isAuthenticated 
     <div className="min-h-screen flex flex-col bg-paper relative overflow-x-hidden">
       <LandingAnimations />
       <AnimatedBackground />
+      <ThemeToggle className="fixed right-3 top-3 z-50 border border-hairline bg-surface/70 shadow-m-sm backdrop-blur" />
 
       {/* warm ambient glow */}
       <div

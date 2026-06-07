@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Bookmark, Check, ExternalLink, Link2, Loader2, Play, Search, Share2, Sparkles, Zap } from 'lucide-react'
 import Link from 'next/link'
 import { AnimatedBackground, LandingAnimations } from '@/components/landing'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { MatterLogo, PlatformGlyph, ConnectWithX } from '@/components/matter'
 import { cn } from '@/lib/utils'
 import { extractYouTubeId, youtubeEmbedUrl, youtubeShortUrl, youtubeThumbnail } from '@/lib/media/youtube'
@@ -110,6 +111,7 @@ export function YouTubePreviewLanding({
     <div className="min-h-screen flex flex-col bg-paper relative overflow-x-hidden">
       <LandingAnimations />
       <AnimatedBackground />
+      <ThemeToggle className="fixed right-3 top-3 z-50 border border-hairline bg-surface/70 shadow-m-sm backdrop-blur" />
 
       <div
         aria-hidden

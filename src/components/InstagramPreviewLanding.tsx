@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { AnimatedBackground, LandingAnimations } from '@/components/landing'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { MatterLogo, PlatformGlyph, ConnectWithX } from '@/components/matter'
 import { cn } from '@/lib/utils'
 
@@ -123,6 +124,7 @@ export function InstagramPreviewLanding({
     <div className="min-h-screen flex flex-col bg-paper relative overflow-x-hidden">
       <LandingAnimations />
       <AnimatedBackground />
+      <ThemeToggle className="fixed right-3 top-3 z-50 border border-hairline bg-surface/70 shadow-m-sm backdrop-blur" />
 
       <div
         aria-hidden
