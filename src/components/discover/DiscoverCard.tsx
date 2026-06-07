@@ -20,6 +20,12 @@ export function inferType(item: ActivityItem): ContentType {
     return 'video'
   }
   if (item.thumbnailUrl && /profile_images/.test(item.thumbnailUrl)) return 'text'
+  // A Twitter *video* poster (ext_tw_video_thumb / amplify_video_thumb / the
+  // tweet_video_thumb used for GIFs) isn't a photo — only `/media/` URLs are.
+  // Matters for preview-only items, where the server can't derive the type.
+  if (item.thumbnailUrl && /(ext_tw_video_thumb|amplify_video_thumb|tweet_video_thumb)/.test(item.thumbnailUrl)) {
+    return 'video'
+  }
   return item.thumbnailUrl ? 'photo' : 'text'
 }
 
