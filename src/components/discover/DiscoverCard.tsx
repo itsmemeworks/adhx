@@ -98,7 +98,6 @@ export function DiscoverCard({
         <div className="absolute left-2.5 top-2.5">
           <TypeBadge type={type} />
         </div>
-        {TopRight}
         {isVideo && (
           <div className="absolute inset-0 flex items-center justify-center">
             <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md">
@@ -133,7 +132,6 @@ export function DiscoverCard({
         <div className="absolute left-2.5 top-2.5">
           <TypeBadge type="article" />
         </div>
-        {TopRight}
         <div className="absolute inset-x-0 bottom-0 px-4 pb-3.5 pt-8">
           <h3 className="font-serif font-semibold text-[17px] leading-tight text-white line-clamp-3 [text-shadow:0_1px_3px_rgba(0,0,0,.5)]">
             {caption || 'Article'}
@@ -189,9 +187,11 @@ export function DiscoverCard({
         fresh ? 'border-clay/40 bg-clay/[0.08]' : 'border-hairline',
       )}
     >
-      {/* The whole tile links to the on-ADHX preview page. */}
-      <a href={item.url} className="flex flex-1 flex-col">
+      {/* The whole tile links to the on-ADHX preview page. The trend badge is
+          pinned top-right for every card type (media, article, text/quote). */}
+      <a href={item.url} className="relative flex flex-1 flex-col">
         {body}
+        {TopRight}
       </a>
 
       {/* Bottom-pinned footer (aligned across the equal-height grid). Still
