@@ -56,12 +56,13 @@ export function DiscoverCard({
   const caption = (item.text || '').trim()
   const time = formatCompactRelativeTime(item.createdAt)
 
-  const saveCount = item.saveCount ?? 0
-  const hot = saveCount >= 2
+  // Trending score = savers + previews (falls back to savers for older payloads).
+  const trendCount = item.trendCount ?? item.saveCount ?? 0
+  const hot = trendCount >= 2
   const FlameBadge = hot ? (
     <span className="inline-flex items-center gap-1 rounded-full bg-flame px-2 py-0.5 text-[11.5px] font-bold text-white shadow-sm">
       <Flame size={12} fill="currentColor" />
-      {saveCount}
+      {trendCount}
     </span>
   ) : null
 
