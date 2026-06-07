@@ -405,17 +405,19 @@ When generating Open Graph metadata for social unfurling, images are selected in
 - Text-only tweets default to expanded on the preview page
 - User preference persisted via `localStorage` key `adhx-preview-collapsed`
 
-### Discover & Activity Pulse
+### Trending & Activity Pulse (the SEO growth loop)
 
-`/discover` (`src/app/discover/page.tsx` → `DiscoverFeed` in `src/components/discover/DiscoverFeed.tsx`) is a public, real-time, **anonymous** feed of what the community is saving/previewing right now. Filter pills (Trending / Just saved / Photos / Videos / Text / Articles), a live "N people saving now" counter, and per-type cards (`DiscoverCard`). Signed-out shows **Preview** CTAs + a Connect-with-X nav; signed-in shows **Save**. Reachable from the Collection/Discover nav (authed header + landing).
+`/trending` (`src/app/trending/page.tsx`) and the per-lens hubs `/trending/[filter]` (`videos` / `photos` / `text` / `articles` / `just-saved`) are public, **anonymous**, crawlable feeds of what the community is saving/previewing right now — the SEO growth loop that turns user activity into indexable content. **`/discover` 308-redirects to `/trending`** (the old `/discover` page and the `LivePulse` marquee are gone). Each hub server-renders a real, crawlable `sr-only` item list (`src/components/trending/TrendingStaticList.tsx`) + `CollectionPage`/`ItemList` JSON-LD, then mounts the live `DiscoverFeed` grid (12s polling) seeded with the same items so there's no skeleton flash. The selected filter pill is reflected in the URL (tidy path, via `history.replaceState`) so a filtered view is shareable; loading `/trending/<filter>` seeds that filter server-side.
 
-> The old `LivePulse` hover-pausing marquee was **removed** — `src/components/LivePulse.tsx` no longer exists. The activity pulse now surfaces through the Discover page.
+**Runtime-render gotcha — do NOT make these static.** `/trending`, `/trending/[filter]`, the `/sitemap.xml` route, and the preview pages are `export const dynamic = 'force-dynamic'` (and the trending hubs deliberately have **no** `generateStaticParams`). They read the SQLite DB, which is **only migrated at container startup** — pre-rendering them at build queries a table-less DB (`no such table: activity`) and bakes empty HTML. Keep them dynamic. (The trending DB query is a cheap local read, so per-request rendering is fine.)
+
+**Shared trending query — the single anonymity-safe choke point.** `getTrendingItems()` (`src/lib/trending/query.ts`) reads recent `activity`, dedupes to **one row per post** (`platform:bookmarkId`, newest event wins — a post can be both previewed and saved), and enriches it. It **never selects `activity.userId`**; every read path (`/api/activity`, the public `/api/trending` JSON endpoint, and the hubs) goes through it. Filtering/typing lives in `src/lib/trending/filter.ts` (`FilterId`, `FILTERS`, `inferType`, `applyFilter`, `slugToFilter`/`filterToPath`) — shared by the server hubs and the client grid so the crawlable HTML matches the hydrated grid. The sharded sitemap was reverted to a single dynamic `/sitemap.xml` (sharding served only `/sitemap/<id>.xml` with no index, 404ing the robots-declared URL).
 
 **Recorded events** (`recordActivity()` in `src/lib/activity/record.ts`):
 | Action | Hooked into | Notes |
 |--------|-------------|-------|
 | `preview` | the 4 preview page server components | Skipped for bots/OG-unfurl crawlers via `isLikelyBot()` (`src/lib/activity/bot.ts`) so the pulse stays human |
-| `save` | `/api/tweets/add` (twitter, covers the `/api/bookmarks/add` delegation) + the IG/TikTok branches of `/api/bookmarks/add` | |
+| `save` | `/api/tweets/add` (twitter, covers the `/api/bookmarks/add` delegation) + the IG/TikTok branches of `/api/bookmarks/add`, **and `/api/sync`** (each newly-synced bookmark — capped per sync via `SYNC_PULSE_CAP`, freshest first, so a big backfill can't flood the shared feed) | |
 | `read` | `/api/bookmarks/[id]/read` POST (new reads only) | |
 
 **Two invariants enforced in `recordActivity()` — do not break these:**
@@ -425,7 +427,7 @@ When generating Open Graph metadata for social unfurling, images are selected in
 
 **`GET /api/activity` enriches each item server-side** — the recorded `activity` row is intentionally sparse, so the API joins the saved bookmark to fill in display data (this is why Discover cards look right even though the raw row doesn't carry the media):
 
-- `contentType` (video/photo/text/quote/article) — from the saved bookmark's media kinds + `category`; single-format platforms (tiktok/youtube/instagram) are always `video`. `undefined` for preview-only posts (client then infers from platform/thumbnail).
+- `contentType` (video/photo/text/quote/article) — from the saved bookmark's media kinds + `category`; single-format platforms (tiktok/youtube/instagram) are always `video`. For **preview-only** posts (no saved bookmark) it falls back to the **server-resolved `activity.content_type`** recorded at preview time, so an article still renders as an article (cover + headline) instead of a bare "Saved post" — only if that's also absent does the client guess from platform/thumbnail. `content_type` was added via guarded `ALTER TABLE` in `migrate.ts` (like `author_avatar_url`); new `activity` columns must also be added to the in-memory test DDL.
 - `thumbnailUrl` — **TikTok** posters are derived as the `/api/media/tiktok/thumbnail?username=&id=` proxy URL (the CDN needs signing the proxy adds), built from handle+id so they work even for preview-only items; **article** covers come from `bookmark_links.preview_image_url`; everything else keeps the recorded thumbnail. Mirrors how `/api/feed` builds thumbnails for the collection.
 - article `text` is overridden with `bookmark_links.preview_title` (the recorded text is usually just the wrapper tweet's `t.co` link) so the card shows the real headline.
 - `authorAvatarUrl` — the post author's avatar for tweet-style text/quote cards: the saved bookmark's `author_profile_image_url`, else the recorded `activity.author_avatar_url` (populated for preview-only items, server-resolved like `thumbnailUrl`).
@@ -446,6 +448,7 @@ Other details:
 - **article (no cover)**: accent-tinted gradient + `ARTICLE` chip + serif title + a faint oversized `FileText` watermark.
 - **text / quote**: tweet-style — author avatar + name + `@handle` + `PlatformChip`, then the body.
 - Anonymous footer: incognito avatar + time + platform glyph + Save/Preview button.
+- The flame/trend badge is pinned top-right for **every** card type (rendered once at the card-link level, not per-branch). Time-derived text (the "N saving now" counter + each card's relative time) carries `suppressHydrationWarning` — it legitimately differs between the server-rendered HTML and the client (`Date.now()`), and without it React regenerates the tree (which also re-runs the layout's anti-FOUC `<script>` → a spurious "script tag while rendering" warning).
 
 ### Branding Assets
 
@@ -603,7 +606,7 @@ The authed `Header` (`src/components/Header.tsx`) packs many controls. On phones
 
 - Secondary actions (theme toggle + sync) are hidden in the bar (`hidden sm:*`) and moved into the **avatar dropdown menu** (`sm:hidden` section there).
 - The Triage pill hides its streak segment below `sm`.
-- There is **no** separate mobile hamburger — the avatar menu already has Collection / Discover / Settings.
+- There is **no** separate mobile hamburger — the avatar menu already has Collection / Trending / Settings.
 
 When adding header controls, verify the cluster's minimum width still fits ~360px (macOS Chrome won't render below ~500px, so measure item widths in the DOM rather than trusting a visual check).
 
@@ -644,7 +647,7 @@ The authed Collection. Client component with:
 - **FeedGrid** (`src/components/feed/FeedGrid.tsx`): three view modes toggled in the FilterBar — **grid** (masonry via CSS columns, `FeedCard`), **list** (dense rows, `FeedListRow`), **bento** (mixed-size mosaic, `FeedBentoTile`). Infinite scroll via an `IntersectionObserver` sentinel.
 - **Lightbox / Triage**: `MediaCard`-based full-screen focus mode with keyboard navigation (←→, R/U for read/unread, Esc) and an "Apple-glass" Keep/Delete/Done dock; "Triage" starts a full-collection unread pass.
 - **FilterBar**: category filters + **platform filter** (All / X / Instagram / TikTok) + view toggles + tags + search.
-- **Nav**: the top bar carries **Collection / Discover** tabs (replacing the old saved/unread counts) so users can reach `/discover` from anywhere; mobile collapses search to an icon.
+- **Nav**: the top bar carries **Collection / Trending** tabs (replacing the old saved/unread counts) so users can reach `/trending` from anywhere; mobile collapses search to an icon.
 - **FeedCard**: tweet-style per-type cards with a `PlatformChip` + `TimePill`; non-Twitter items show their platform glyph.
 - **Settings** has a gamification **Streak card** (current streak, 7-day dot row, longest/triaged/this-week) fed by `/api/triage/streak`.
 
@@ -878,33 +881,34 @@ export async function GET() {
 
 ## Key API Routes
 
-| Route                                           | Method      | Auth | Description                                                                                           |
-| ----------------------------------------------- | ----------- | ---- | ----------------------------------------------------------------------------------------------------- |
-| `/api/health`                                   | GET         | No   | Health check for monitoring                                                                           |
-| `/api/activity`                                 | GET         | No   | Public anonymous activity pulse (recent previews/saves/reads, no userId, 5s cache)                    |
-| `/api/feed`                                     | GET         | Yes  | Main feed with filtering                                                                              |
-| `/api/bookmarks/[id]/read`                      | POST/DELETE | Yes  | Toggle read status                                                                                    |
-| `/api/bookmarks/[id]/tags`                      | POST/DELETE | Yes  | Add/remove tags                                                                                       |
-| `/api/sync`                                     | GET         | Yes  | SSE sync stream                                                                                       |
-| `/api/tweets/add`                               | POST        | Yes  | Add single tweet (Twitter-only, delegates from `/api/bookmarks/add`)                                  |
-| `/api/bookmarks/add`                            | POST        | Yes  | Platform-agnostic add — accepts X / Instagram / TikTok URLs, dispatches to the right resolver         |
-| `/api/tags`                                     | GET         | Yes  | List user's tags with counts and share URLs                                                           |
-| `/api/tags`                                     | PATCH       | Yes  | Toggle tag public sharing (returns `shareUrl`)                                                        |
-| `/api/tags`                                     | DELETE      | Yes  | Delete tag from all bookmarks                                                                         |
-| `/api/share/tag/by-name/[username]/[tag]`       | GET         | No   | View shared tag collection (friendly URL)                                                             |
-| `/api/share/tag/by-name/[username]/[tag]/clone` | POST        | Yes  | Clone shared tag to user's account                                                                    |
-| `/api/share/tag/[code]`                         | GET         | No   | View shared tag (legacy random code)                                                                  |
-| `/api/share/tweet/[username]/[id]`              | GET         | No   | Public tweet JSON API (LLM-friendly, 5-min cache)                                                     |
-| `/api/auth/twitter`                             | GET         | No   | Start OAuth flow                                                                                      |
-| `/api/auth/twitter/callback`                    | GET         | No   | OAuth callback                                                                                        |
-| `/api/auth/twitter/status`                      | GET         | No   | Check auth status and refresh tokens                                                                  |
-| `/api/media/instagram/video`                    | GET         | No   | Stream Instagram Reel MP4 inline (Range supported)                                                    |
-| `/api/media/instagram/video/download`           | GET         | No   | Stream Reel MP4 with `Content-Disposition: attachment`                                                |
-| `/api/media/tiktok/video`                       | GET         | No   | Stream TikTok MP4 inline (Range supported)                                                            |
-| `/api/media/tiktok/video/download`              | GET         | No   | Stream TikTok MP4 with `Content-Disposition: attachment`                                              |
-| `/api/media/tiktok/thumbnail`                   | GET         | No   | Resolve + proxy a TikTok poster JPEG from `username`+`id` (via tiktxk → CDN); used by feed + Discover |
-| `/api/media/instagram/thumbnail`                | GET         | No   | Resolve + proxy an Instagram poster from `id`                                                         |
-| `/api/triage/streak`                            | GET         | Yes  | Triage streak stats (current streak, total/this-week triaged) for the Settings streak card            |
+| Route                                           | Method      | Auth | Description                                                                                                            |
+| ----------------------------------------------- | ----------- | ---- | ---------------------------------------------------------------------------------------------------------------------- |
+| `/api/health`                                   | GET         | No   | Health check for monitoring                                                                                            |
+| `/api/activity`                                 | GET         | No   | Public anonymous activity pulse (recent previews/saves/reads, no userId, 5s cache)                                     |
+| `/api/trending`                                 | GET         | No   | Public anonymous trending JSON (wraps `getTrendingItems`, optional `?platform=`, no userId) — for GEO/AI search        |
+| `/api/feed`                                     | GET         | Yes  | Main feed with filtering (`?id=` returns one bookmark regardless of read state — used to open a saved tweet in triage) |
+| `/api/bookmarks/[id]/read`                      | POST/DELETE | Yes  | Toggle read status                                                                                                     |
+| `/api/bookmarks/[id]/tags`                      | POST/DELETE | Yes  | Add/remove tags                                                                                                        |
+| `/api/sync`                                     | GET         | Yes  | SSE sync stream                                                                                                        |
+| `/api/tweets/add`                               | POST        | Yes  | Add single tweet (Twitter-only, delegates from `/api/bookmarks/add`)                                                   |
+| `/api/bookmarks/add`                            | POST        | Yes  | Platform-agnostic add — accepts X / Instagram / TikTok URLs, dispatches to the right resolver                          |
+| `/api/tags`                                     | GET         | Yes  | List user's tags with counts and share URLs                                                                            |
+| `/api/tags`                                     | PATCH       | Yes  | Toggle tag public sharing (returns `shareUrl`)                                                                         |
+| `/api/tags`                                     | DELETE      | Yes  | Delete tag from all bookmarks                                                                                          |
+| `/api/share/tag/by-name/[username]/[tag]`       | GET         | No   | View shared tag collection (friendly URL)                                                                              |
+| `/api/share/tag/by-name/[username]/[tag]/clone` | POST        | Yes  | Clone shared tag to user's account                                                                                     |
+| `/api/share/tag/[code]`                         | GET         | No   | View shared tag (legacy random code)                                                                                   |
+| `/api/share/tweet/[username]/[id]`              | GET         | No   | Public tweet JSON API (LLM-friendly, 5-min cache)                                                                      |
+| `/api/auth/twitter`                             | GET         | No   | Start OAuth flow                                                                                                       |
+| `/api/auth/twitter/callback`                    | GET         | No   | OAuth callback                                                                                                         |
+| `/api/auth/twitter/status`                      | GET         | No   | Check auth status and refresh tokens                                                                                   |
+| `/api/media/instagram/video`                    | GET         | No   | Stream Instagram Reel MP4 inline (Range supported)                                                                     |
+| `/api/media/instagram/video/download`           | GET         | No   | Stream Reel MP4 with `Content-Disposition: attachment`                                                                 |
+| `/api/media/tiktok/video`                       | GET         | No   | Stream TikTok MP4 inline (Range supported)                                                                             |
+| `/api/media/tiktok/video/download`              | GET         | No   | Stream TikTok MP4 with `Content-Disposition: attachment`                                                               |
+| `/api/media/tiktok/thumbnail`                   | GET         | No   | Resolve + proxy a TikTok poster JPEG from `username`+`id` (via tiktxk → CDN); used by feed + Discover                  |
+| `/api/media/instagram/thumbnail`                | GET         | No   | Resolve + proxy an Instagram poster from `id`                                                                          |
+| `/api/triage/streak`                            | GET         | Yes  | Triage streak stats (current streak, total/this-week triaged) for the Settings streak card                             |
 
 ## Environment Variables
 
