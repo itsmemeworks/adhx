@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.37.0](https://github.com/itsmemeworks/adhx/compare/v1.36.1...v1.37.0) (2026-06-07)
+
+
+### Features
+
+* count previews toward discover trending + restyle trending badge ([#185](https://github.com/itsmemeworks/adhx/issues/185)) ([1049d83](https://github.com/itsmemeworks/adhx/commit/1049d838c124a47b6d4efd51f94d769b4d548978))
+
 ## [1.36.1](https://github.com/itsmemeworks/adhx/compare/v1.36.0...v1.36.1) (2026-06-07)
 
 
