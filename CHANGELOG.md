@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.36.0](https://github.com/itsmemeworks/adhx/compare/v1.35.0...v1.36.0) (2026-06-07)
+
+
+### Features
+
+* richer discover cards + public light/dark toggle ([#180](https://github.com/itsmemeworks/adhx/issues/180)) ([363f9bb](https://github.com/itsmemeworks/adhx/commit/363f9bbdaa94c460ed3811fdec686759d9773438))
+
 ## [1.35.0](https://github.com/itsmemeworks/adhx/compare/v1.34.0...v1.35.0) (2026-06-06)
 
 
