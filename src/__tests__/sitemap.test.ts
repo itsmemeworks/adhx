@@ -3,15 +3,13 @@ import { createTestDb, type TestDbInstance, USER_A, USER_B } from './api/setup'
 import * as schema from '@/lib/db/schema'
 
 /**
- * Tests for the sharded dynamic sitemap.
+ * Tests for the single dynamic sitemap served at /sitemap.xml.
  *
- * The sitemap is now a sharded index: a `hubs` shard (homepage + /trending hubs
- * + public tag-collection pages) and one shard per content platform (every saved
- * preview URL + preview-only pulse items). The default export takes `{ id }`.
- *
- * Validates that public tag pages live in the hubs shard, private tag *pages* are
- * excluded, saved-content preview URLs live in their platform shard and are
- * deduplicated by preview path.
+ * One sitemap covers: the hubs (homepage + /trending + per-lens hubs), public
+ * tag-collection pages, and every saved + preview-only content preview URL
+ * across platforms (de-duped by preview path). Private tag PAGES are excluded,
+ * but saved CONTENT is indexed regardless of tag visibility, and no userId is
+ * ever exposed.
  */
 
 let testInstance: TestDbInstance
@@ -21,6 +19,9 @@ vi.mock('@/lib/db', () => ({
     return testInstance.db
   },
 }))
+
+// homepage + /trending + 5 per-lens hubs (just-saved/videos/photos/text/articles)
+const HUB_COUNT = 7
 
 describe('Dynamic Sitemap', () => {
   beforeEach(() => {
@@ -32,12 +33,11 @@ describe('Dynamic Sitemap', () => {
     testInstance.close()
   })
 
-  it('hubs shard returns the static hubs (homepage + trending) when no public tags exist', async () => {
+  it('returns just the static hubs when there is no content', async () => {
     const { default: sitemap } = await import('@/app/sitemap')
-    const entries = sitemap({ id: 'hubs' })
+    const entries = sitemap()
 
-    // homepage + /trending + 5 per-lens /trending hubs = 7 static entries
-    expect(entries).toHaveLength(7)
+    expect(entries).toHaveLength(HUB_COUNT)
     expect(entries[0].url).toBe('https://adhx.com')
     expect(entries[0].priority).toBe(1)
     expect(entries.find((e) => e.url === 'https://adhx.com/trending')).toBeDefined()
@@ -46,8 +46,18 @@ describe('Dynamic Sitemap', () => {
     expect(entries.find((e) => e.url.includes('/t/'))).toBeUndefined()
   })
 
-  it('hubs shard includes tag page URLs for public tags', async () => {
-    // Setup: user with username + public tag
+  it('includes the homepage + cross-network + per-lens trending hubs', async () => {
+    const { default: sitemap } = await import('@/app/sitemap')
+    const entries = sitemap()
+
+    expect(entries.find((e) => e.url === 'https://adhx.com')).toBeDefined()
+    expect(entries.find((e) => e.url === 'https://adhx.com/trending')).toBeDefined()
+    for (const slug of ['just-saved', 'videos', 'photos', 'text', 'articles']) {
+      expect(entries.find((e) => e.url === `https://adhx.com/trending/${slug}`)).toBeDefined()
+    }
+  })
+
+  it('includes tag page URLs for public tags', async () => {
     testInstance.db
       .insert(schema.oauthTokens)
       .values({
@@ -61,16 +71,11 @@ describe('Dynamic Sitemap', () => {
 
     testInstance.db
       .insert(schema.tagShares)
-      .values({
-        userId: USER_A,
-        tag: 'ai-tools',
-        shareCode: 'share-1',
-        isPublic: true,
-      })
+      .values({ userId: USER_A, tag: 'ai-tools', shareCode: 'share-1', isPublic: true })
       .run()
 
     const { default: sitemap } = await import('@/app/sitemap')
-    const entries = sitemap({ id: 'hubs' })
+    const entries = sitemap()
 
     const tagEntry = entries.find((e) => e.url.includes('/t/alice/ai-tools'))
     expect(tagEntry).toBeDefined()
@@ -78,7 +83,7 @@ describe('Dynamic Sitemap', () => {
     expect(tagEntry!.priority).toBe(0.7)
   })
 
-  it('twitter shard includes saved tweet preview URLs', async () => {
+  it('includes saved tweet preview URLs', async () => {
     testInstance.db
       .insert(schema.bookmarks)
       .values({
@@ -92,7 +97,7 @@ describe('Dynamic Sitemap', () => {
       .run()
 
     const { default: sitemap } = await import('@/app/sitemap')
-    const entries = sitemap({ id: 'twitter' })
+    const entries = sitemap()
 
     const tweetEntry = entries.find((e) => e.url.includes('/tweetauthor/status/tweet-1'))
     expect(tweetEntry).toBeDefined()
@@ -100,8 +105,7 @@ describe('Dynamic Sitemap', () => {
     expect(tweetEntry!.priority).toBe(0.5)
   })
 
-  it('twitter shard deduplicates the same tweet saved by multiple users', async () => {
-    // Same tweet id saved by two different users (multi-user composite key)
+  it('deduplicates the same tweet saved by multiple users', async () => {
     testInstance.db
       .insert(schema.bookmarks)
       .values([
@@ -125,13 +129,12 @@ describe('Dynamic Sitemap', () => {
       .run()
 
     const { default: sitemap } = await import('@/app/sitemap')
-    const entries = sitemap({ id: 'twitter' })
+    const entries = sitemap()
 
-    const tweetEntries = entries.filter((e) => e.url.includes('/author1/status/tweet-1'))
-    expect(tweetEntries).toHaveLength(1)
+    expect(entries.filter((e) => e.url.includes('/author1/status/tweet-1'))).toHaveLength(1)
   })
 
-  it('hubs shard excludes private tag pages', async () => {
+  it('excludes private tag pages', async () => {
     testInstance.db
       .insert(schema.oauthTokens)
       .values({
@@ -143,26 +146,19 @@ describe('Dynamic Sitemap', () => {
       })
       .run()
 
-    // Private tag (isPublic = false)
     testInstance.db
       .insert(schema.tagShares)
-      .values({
-        userId: USER_A,
-        tag: 'private-stuff',
-        shareCode: 'share-private',
-        isPublic: false,
-      })
+      .values({ userId: USER_A, tag: 'private-stuff', shareCode: 'share-private', isPublic: false })
       .run()
 
     const { default: sitemap } = await import('@/app/sitemap')
-    const entries = sitemap({ id: 'hubs' })
+    const entries = sitemap()
 
-    // Only the static hubs — no private tag page
     expect(entries.find((e) => e.url.includes('private-stuff'))).toBeUndefined()
     expect(entries.find((e) => e.url.includes('/t/'))).toBeUndefined()
   })
 
-  it('hubs shard handles multiple users with public tags', async () => {
+  it('handles multiple users with public tags', async () => {
     testInstance.db
       .insert(schema.oauthTokens)
       .values([
@@ -192,30 +188,13 @@ describe('Dynamic Sitemap', () => {
       .run()
 
     const { default: sitemap } = await import('@/app/sitemap')
-    const entries = sitemap({ id: 'hubs' })
+    const entries = sitemap()
 
     expect(entries.find((e) => e.url.includes('/t/alice/alice-tag'))).toBeDefined()
     expect(entries.find((e) => e.url.includes('/t/bob/bob-tag'))).toBeDefined()
   })
 
-  it('hubs shard includes the static hubs (homepage + cross-network + per-platform trending)', async () => {
-    const { default: sitemap } = await import('@/app/sitemap')
-    const entries = sitemap({ id: 'hubs' })
-
-    // homepage
-    expect(entries.find((e) => e.url === 'https://adhx.com')).toBeDefined()
-    // cross-network trending hub
-    expect(entries.find((e) => e.url === 'https://adhx.com/trending')).toBeDefined()
-    // the five per-lens trending hubs
-    expect(entries.find((e) => e.url === 'https://adhx.com/trending/just-saved')).toBeDefined()
-    expect(entries.find((e) => e.url === 'https://adhx.com/trending/videos')).toBeDefined()
-    expect(entries.find((e) => e.url === 'https://adhx.com/trending/photos')).toBeDefined()
-    expect(entries.find((e) => e.url === 'https://adhx.com/trending/text')).toBeDefined()
-    expect(entries.find((e) => e.url === 'https://adhx.com/trending/articles')).toBeDefined()
-  })
-
-  it('platform shard indexes saved content under a PRIVATE tag (saved content is indexed regardless of tag visibility)', async () => {
-    // A tweet saved by alice, tagged with a tag she has NOT made public.
+  it('indexes saved content under a PRIVATE tag, but not the private tag page', async () => {
     testInstance.db
       .insert(schema.oauthTokens)
       .values({
@@ -239,45 +218,31 @@ describe('Dynamic Sitemap', () => {
       })
       .run()
 
-    // The tweet is tagged with a tag that is NOT public.
     testInstance.db
       .insert(schema.bookmarkTags)
-      .values({
-        userId: USER_A,
-        bookmarkId: 'private-tweet-1',
-        tag: 'secret',
-      })
+      .values({ userId: USER_A, bookmarkId: 'private-tweet-1', tag: 'secret' })
       .run()
 
     testInstance.db
       .insert(schema.tagShares)
-      .values({
-        userId: USER_A,
-        tag: 'secret',
-        shareCode: 'share-secret',
-        isPublic: false,
-      })
+      .values({ userId: USER_A, tag: 'secret', shareCode: 'share-secret', isPublic: false })
       .run()
 
     const { default: sitemap } = await import('@/app/sitemap')
+    const entries = sitemap()
 
-    // The preview URL IS emitted in the platform shard — saved content is
-    // indexed regardless of whether its tags are public.
-    const twitterEntries = sitemap({ id: 'twitter' })
-    const previewEntry = twitterEntries.find((e) =>
-      e.url.includes('/privauthor/status/private-tweet-1'),
-    )
+    // The preview URL IS emitted — saved content is indexed regardless of
+    // whether its tags are public.
+    const previewEntry = entries.find((e) => e.url.includes('/privauthor/status/private-tweet-1'))
     expect(previewEntry).toBeDefined()
     expect(previewEntry!.url).toBe('https://adhx.com/privauthor/status/private-tweet-1')
 
-    // ...but the private TAG PAGE is never in the hubs shard.
-    const hubEntries = sitemap({ id: 'hubs' })
-    expect(hubEntries.find((e) => e.url.includes('/t/alice/secret'))).toBeUndefined()
-    expect(hubEntries.find((e) => e.url.includes('secret'))).toBeUndefined()
+    // ...but the private TAG PAGE is never emitted.
+    expect(entries.find((e) => e.url.includes('/t/alice/secret'))).toBeUndefined()
+    expect(entries.find((e) => e.url.includes('secret'))).toBeUndefined()
   })
 
-  it('platform shard indexes saved content that has NO tag at all', async () => {
-    // Untagged tweet — never shared, never tagged — still gets a preview URL.
+  it('indexes saved content that has NO tag at all', async () => {
     testInstance.db
       .insert(schema.bookmarks)
       .values({
@@ -291,15 +256,14 @@ describe('Dynamic Sitemap', () => {
       .run()
 
     const { default: sitemap } = await import('@/app/sitemap')
-    const entries = sitemap({ id: 'twitter' })
+    const entries = sitemap()
 
     expect(
       entries.find((e) => e.url === 'https://adhx.com/loneauthor/status/untagged-tweet-1'),
     ).toBeDefined()
   })
 
-  it('platform shard includes preview-only activity items, de-duped against saved content', async () => {
-    // One saved tweet...
+  it('includes preview-only activity items, de-duped against saved content', async () => {
     testInstance.db
       .insert(schema.bookmarks)
       .values({
@@ -312,8 +276,8 @@ describe('Dynamic Sitemap', () => {
       })
       .run()
 
-    // ...plus two activity rows: one preview-only (never saved), and one that
-    // duplicates the saved tweet (must be de-duped against the saved set).
+    // One preview-only activity row (never saved), and one that duplicates the
+    // saved tweet (must be de-duped against the saved set).
     testInstance.db
       .insert(schema.activity)
       .values([
@@ -337,22 +301,16 @@ describe('Dynamic Sitemap', () => {
       .run()
 
     const { default: sitemap } = await import('@/app/sitemap')
-    const entries = sitemap({ id: 'twitter' })
+    const entries = sitemap()
 
-    // The preview-only item is indexed.
     expect(
       entries.find((e) => e.url === 'https://adhx.com/previewauthor/status/preview-only-1'),
     ).toBeDefined()
-
-    // The saved tweet appears exactly once, despite also having an activity row.
     const savedEntries = entries.filter((e) => e.url.includes('/savedauthor/status/saved-1'))
     expect(savedEntries).toHaveLength(1)
   })
 
-  it('never exposes a userId — all entries are built from previewPath (platform/handle/id), not user ids', async () => {
-    // Seed every shard with content owned by USER_A / USER_B, plus a tweet
-    // whose author handle differs from the owning user id, so a leak would be
-    // distinguishable from the (legitimate) handle in the URL.
+  it('never exposes a userId — entries are built from previewPath, not user ids', async () => {
     testInstance.db
       .insert(schema.oauthTokens)
       .values({
@@ -406,35 +364,19 @@ describe('Dynamic Sitemap', () => {
       .run()
 
     const { default: sitemap } = await import('@/app/sitemap')
-    const allEntries = [
-      ...sitemap({ id: 'hubs' }),
-      ...sitemap({ id: 'twitter' }),
-      ...sitemap({ id: 'instagram' }),
-      ...sitemap({ id: 'tiktok' }),
-      ...sitemap({ id: 'youtube' }),
-    ]
+    const entries = sitemap()
 
-    // No entry's url contains either raw user id anywhere.
-    for (const entry of allEntries) {
+    for (const entry of entries) {
       expect(entry.url).not.toContain(USER_A)
       expect(entry.url).not.toContain(USER_B)
-      // No entry should expose a `userId`/`user_id` field either.
       expect(entry).not.toHaveProperty('userId')
       expect(entry).not.toHaveProperty('user_id')
     }
 
-    // Confirm the URLs we DO emit are exactly the previewPath shapes (handle/id),
-    // proving they're keyed on public content, not on the owning user id.
-    expect(allEntries.find((e) => e.url === 'https://adhx.com/twhandle/status/tw-1')).toBeDefined()
-    expect(allEntries.find((e) => e.url === 'https://adhx.com/@tkhandle/video/tk-1')).toBeDefined()
-    expect(allEntries.find((e) => e.url === 'https://adhx.com/reels/ig-1')).toBeDefined()
-  })
-
-  it('unknown shard id degrades to homepage-only', async () => {
-    const { default: sitemap } = await import('@/app/sitemap')
-    const entries = sitemap({ id: 'nonsense' })
-
-    expect(entries).toHaveLength(1)
-    expect(entries[0].url).toBe('https://adhx.com')
+    // The URLs we emit are exactly the previewPath shapes (handle/id), proving
+    // they're keyed on public content, not the owning user id.
+    expect(entries.find((e) => e.url === 'https://adhx.com/twhandle/status/tw-1')).toBeDefined()
+    expect(entries.find((e) => e.url === 'https://adhx.com/@tkhandle/video/tk-1')).toBeDefined()
+    expect(entries.find((e) => e.url === 'https://adhx.com/reels/ig-1')).toBeDefined()
   })
 })

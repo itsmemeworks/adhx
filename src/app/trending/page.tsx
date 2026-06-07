@@ -18,9 +18,12 @@ import { TrendingStaticList, itemHref } from '@/components/trending/TrendingStat
  * choke point that never selects `activity.userId`. Nothing here exposes a saver.
  */
 
-// Revalidate the static HTML every 5 minutes (ISR). The client grid keeps the
-// live feel via its own 12s polling.
-export const revalidate = 300
+// Render at request time, not build time: this reads the runtime database
+// (migrated at container startup), which doesn't exist during `next build` —
+// pre-rendering would query a table-less DB. The query is a cheap local SQLite
+// read and the live pulse is best served fresh, so per-request is fine; the
+// client grid still keeps the live feel via its own 12s polling.
+export const dynamic = 'force-dynamic'
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://adhx.com'
 

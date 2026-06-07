@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getTrendingItems, type TrendingItem } from '@/lib/trending/query'
-import { FILTER_SLUGS, applyFilter, filterLabel, slugToFilter } from '@/lib/trending/filter'
+import { applyFilter, filterLabel, slugToFilter } from '@/lib/trending/filter'
 import { DiscoverFeed } from '@/components/discover/DiscoverFeed'
 import { buildCollectionPageLd } from '@/lib/utils/structured-data'
 import { TrendingStaticList, itemHref } from '@/components/trending/TrendingStaticList'
@@ -18,17 +18,17 @@ import { TrendingStaticList, itemHref } from '@/components/trending/TrendingStat
  * ANONYMITY: items come from `getTrendingItems()`, which never selects userId.
  */
 
-export const revalidate = 300
+// Render at request time, not build time: this reads the runtime database
+// (migrated at container startup), absent during `next build`. We deliberately
+// do NOT use generateStaticParams (which would pre-render — and query — each
+// hub at build); slugs are validated at runtime via slugToFilter + notFound.
+// The query is a cheap local SQLite read, so per-request rendering is fine.
+export const dynamic = 'force-dynamic'
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://adhx.com'
 
 interface Props {
   params: Promise<{ filter: string }>
-}
-
-/** Pre-render the known filter hubs at build; unknown slugs 404. */
-export function generateStaticParams() {
-  return FILTER_SLUGS.map((filter) => ({ filter }))
 }
 
 /** Per-filter copy for titles/descriptions. */
