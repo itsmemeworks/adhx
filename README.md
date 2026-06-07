@@ -71,7 +71,10 @@ Once installed it launches standalone, remembers your session, and registers as 
 | ▶️ **YouTube Shorts** | Paste a Shorts (or `youtu.be` / `watch`) link → preview + play inline via the official embed, save it to your collection. |
 | 💾 **Save Across Platforms** | Add Reels, TikToks, and Shorts to your collection alongside tweets. Same feed, one search, platform badges keep things straight. |
 | 📲 **Install as an App** | On mobile, tap "Add to home screen" — ADHX runs full-screen like a native app (PWA), with an Android share-target so you can share any link straight into it. |
-| 🖼️ **Gallery View** | Visual masonry grid with hover previews for videos |
+| 🌐 **Discover** | A live, anonymous feed of what everyone's saving across ADHX right now — filter by type, preview any of it, save your own. Public, no account needed. |
+| 🖼️ **Three Views** | Browse your collection as a masonry **gallery** (hover-preview videos), a dense **list**, or a **bento** mosaic. |
+| ⚡ **Triage Mode** | Full-screen, one-card-at-a-time pass through your backlog — Keep / Delete / Done with arrow keys, plus a daily streak to keep you honest. |
+| 🌗 **Light & Dark** | A warm editorial theme in both modes. Follows your device by default, one-tap toggle everywhere, remembers your choice. |
 | 🔍 **Actually Find Stuff** | Full-text search that works. Revolutionary, we know. |
 | 🏷️ **Tag Everything** | Custom tags to organize your chaos (or don't, we won't tell) |
 | ✅ **Read Tracking** | Mark bookmarks as read so you know what you've ~~actually looked at~~ scrolled past |
@@ -322,16 +325,24 @@ src/
 │   │   ├── auth/          # Twitter OAuth flow
 │   │   ├── bookmarks/     # Bookmark CRUD
 │   │   ├── feed/          # Main feed endpoint
+│   │   ├── activity/      # Public anonymous Discover/pulse feed
+│   │   ├── media/         # Video/photo/thumbnail proxies (X, IG, TikTok)
 │   │   └── sync/          # Sync with Twitter
-│   ├── settings/          # Settings page
-│   └── page.tsx           # Main feed page
+│   ├── discover/          # Public Discover page
+│   ├── settings/          # Settings page (font, theme, streak)
+│   └── page.tsx           # Collection (authed) / landing (signed-out)
 ├── components/
-│   ├── feed/              # Feed components
+│   ├── feed/              # Feed: FeedGrid, FeedCard, FeedListRow, FeedBentoTile, MediaCard (triage)
+│   ├── discover/          # DiscoverFeed + DiscoverCard
+│   ├── matter/            # Matter design primitives (badges, glyphs, logo)
+│   ├── ThemeToggle.tsx    # Light/dark toggle (public + preview surfaces)
 │   └── ...
 └── lib/
-    ├── db/                # Database schema
+    ├── db/                # Database schema + startup migrations
     ├── auth/              # OAuth utilities
-    └── media/             # FxTwitter integration
+    ├── theme/             # ThemeProvider (device-default, localStorage)
+    ├── activity/          # recordActivity() pulse writer
+    └── media/             # FxTwitter / mirror integrations
 ```
 
 ---

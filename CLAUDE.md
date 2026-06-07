@@ -90,7 +90,7 @@ A Twitter/X bookmark manager for people who bookmark everything and read nothing
 pnpm install
 pnpm dev         # Start dev server at localhost:3001
 pnpm build       # Production build
-pnpm test        # Run all 847 tests (46 test files)
+pnpm test        # Run all 872 tests
 ```
 
 ## Tech Stack
@@ -342,8 +342,10 @@ When generating Open Graph metadata for social unfurling, images are selected in
 - Text-only tweets default to expanded on the preview page
 - User preference persisted via `localStorage` key `adhx-preview-collapsed`
 
-### Live Activity Pulse
-A real-time, **anonymous** ticker of community activity ("Someone just saved a tweet by @author") shown as a hover-pausing marquee. It's ambient social proof — what people are previewing, saving, and reading across ADHX right now.
+### Discover & Activity Pulse
+`/discover` (`src/app/discover/page.tsx` → `DiscoverFeed` in `src/components/discover/DiscoverFeed.tsx`) is a public, real-time, **anonymous** feed of what the community is saving/previewing right now. Filter pills (Trending / Just saved / Photos / Videos / Text / Articles), a live "N people saving now" counter, and per-type cards (`DiscoverCard`). Signed-out shows **Preview** CTAs + a Connect-with-X nav; signed-in shows **Save**. Reachable from the Collection/Discover nav (authed header + landing).
+
+> The old `LivePulse` hover-pausing marquee was **removed** — `src/components/LivePulse.tsx` no longer exists. The activity pulse now surfaces through the Discover page.
 
 **Recorded events** (`recordActivity()` in `src/lib/activity/record.ts`):
 | Action | Hooked into | Notes |
@@ -353,16 +355,29 @@ A real-time, **anonymous** ticker of community activity ("Someone just saved a t
 | `read` | `/api/bookmarks/[id]/read` POST (new reads only) | |
 
 **Two invariants enforced in `recordActivity()` — do not break these:**
-1. **Content is always resolved server-side** by the caller (tweet/reel/tiktok metadata already fetched in the route/page). We **never** accept display text/thumbnails from the client — a public "anyone can POST what shows on the front page" endpoint would be a stored-XSS / spam-injection hole. There is intentionally no write endpoint.
+1. **Content is always resolved server-side** by the caller (tweet/reel/tiktok metadata already fetched in the route/page). We **never** accept display text/thumbnails/avatars from the client — a public "anyone can POST what shows on the front page" endpoint would be a stored-XSS / spam-injection hole. There is intentionally no write endpoint.
 2. **`userId` is stored but never exposed.** It exists only for future moderation/rate-limiting. `GET /api/activity` selects an explicit public column list that omits it — the pulse is anonymous by construction. Don't `select()` the whole row there.
+
+**`GET /api/activity` enriches each item server-side** — the recorded `activity` row is intentionally sparse, so the API joins the saved bookmark to fill in display data (this is why Discover cards look right even though the raw row doesn't carry the media):
+- `contentType` (video/photo/text/quote/article) — from the saved bookmark's media kinds + `category`; single-format platforms (tiktok/youtube/instagram) are always `video`. `undefined` for preview-only posts (client then infers from platform/thumbnail).
+- `thumbnailUrl` — **TikTok** posters are derived as the `/api/media/tiktok/thumbnail?username=&id=` proxy URL (the CDN needs signing the proxy adds), built from handle+id so they work even for preview-only items; **article** covers come from `bookmark_links.preview_image_url`; everything else keeps the recorded thumbnail. Mirrors how `/api/feed` builds thumbnails for the collection.
+- article `text` is overridden with `bookmark_links.preview_title` (the recorded text is usually just the wrapper tweet's `t.co` link) so the card shows the real headline.
+- `authorAvatarUrl` — the post author's avatar for tweet-style text/quote cards: the saved bookmark's `author_profile_image_url`, else the recorded `activity.author_avatar_url` (populated for preview-only items, server-resolved like `thumbnailUrl`).
+- `saveCount` — distinct savers (anonymous count) → powers Trending + the flame badge.
 
 Other details:
 - Recording is fire-and-forget and synchronous (better-sqlite3); it swallows all errors so a pulse-write failure can never break a save/preview/read.
 - De-duped on write (same `action+platform+bookmarkId` within 60s) and again on read (same `action+platform+url`), so refreshes/prefetches/double-fires don't flood it.
-- Text is whitespace-collapsed and capped (240 chars); thumbnails must be `http(s)` or an `/api/` proxy path.
-- Pulse item links point to the **on-ADHX** preview path (`previewPath()`), keeping clicks on-site (and showing the save CTA) rather than bouncing to the source platform.
-- `LivePulse` (`src/components/LivePulse.tsx`) polls `/api/activity` every 12s, renders the list twice for a seamless `animate-marquee` loop (keyframe in `tailwind.config.ts`), pauses on hover (CSS `animation-play-state` + a `paused` flag that also halts the poll-driven reshuffle), respects `prefers-reduced-motion`, and renders nothing when there's no activity. Mounted on both the landing page (`LandingPage.tsx`) and the authed feed top (`page.tsx`).
-- Schema: standalone `activity` table (`migration 0004_add_activity`). Append-only, no composite key — it's an event log, not user-owned content, so it's exempt from the `(userId, platform, id)` convention.
+- Text/author are whitespace-collapsed and capped; thumbnails/avatars must be `http(s)` or an `/api/` proxy path (`safeThumb()`).
+- `DiscoverFeed` polls `/api/activity` (5s SWR cache on the API), de-dupes by `platform:bookmarkId`, and links each card to the **on-ADHX** preview path (`previewPath()`) to keep clicks on-site.
+- Schema: standalone `activity` table. Append-only, no composite key — it's an event log, not user-owned content, so it's exempt from the `(userId, platform, id)` convention. The `author_avatar_url` column was added after the initial schema via a **guarded `ALTER TABLE` in `migrate.ts`** (SQLite has no `ADD COLUMN IF NOT EXISTS`, so it's wrapped in try/catch — not a Drizzle table-recreate). The in-memory test DB DDL (`src/__tests__/api/setup.ts`) must include new activity columns too.
+
+**`DiscoverCard`** (`src/components/discover/DiscoverCard.tsx`) renders per content type, mirroring the in-app `FeedCard`, with a **bottom-pinned footer on an equal-height grid** (media flex-fills so footers align across the row):
+- **media** (video/photo): poster fills the card + up to a 2-line caption overlay (white text on a `transparent → rgba(11,11,17,.84)` scrim + `text-shadow`).
+- **article (with cover)**: cover image + serif title overlaid on a dark scrim.
+- **article (no cover)**: accent-tinted gradient + `ARTICLE` chip + serif title + a faint oversized `FileText` watermark.
+- **text / quote**: tweet-style — author avatar + name + `@handle` + `PlatformChip`, then the body.
+- Anonymous footer: incognito avatar + time + platform glyph + Save/Preview button.
 
 ### Branding Assets
 
@@ -479,6 +494,26 @@ Files:
 Additional reading aids:
 - **Bionic Reading** - Bolds first part of each word to guide eyes
 
+### Matter Design System
+The UI is the **"Matter"** warm editorial direction (light + dark). Shared primitives live in `src/components/matter/index.tsx`:
+- `TypeBadge` (dark chip + type-color dot + uppercase label), `PlatformGlyph` / `PlatformChip` (dark circle), `TYPE_META`, `ContentType` / `PlatformId` types, `MatterLogo`, `LiveDot`, `ConnectWithX` (renders "Connect with" + the X glyph).
+- Tailwind tokens (`tailwind.config.ts`): `clay`/`clay-grad` (accent), `done` (green), `flame`, `ink`/`ink-2`/`ink-3`, `surface`/`paper`/`inset`, `hairline`, `font-serif`. All resolve to CSS vars that flip with the `light`/`dark` class on `<html>`.
+- Content cards render **per content type** in both surfaces: the in-app `FeedCard` (`src/components/feed/FeedCard.tsx`) and `DiscoverCard` share the same shapes — article-with-cover (cover + overlaid serif title), article-no-cover (accent gradient + `FileText` watermark), text/quote (tweet-style: avatar + name + `@handle`, no type chip), video/photo (media + up to 2-line caption overlay).
+- **Caption/title clamp gotcha**: put the big padding on a wrapper and the `line-clamp-N` on a *child* with no vertical padding. `-webkit-line-clamp` constrains box height but still paints overflow lines, so bottom padding on the clamped element lets a clipped extra line peek through.
+
+### Theme System (light / dark)
+- `ThemeProvider` (`src/lib/theme/context.tsx`) wraps the whole app in `layout.tsx`. `theme` is `'light' | 'dark' | 'system'`; **defaults to `'system'`** when there's no stored preference, so a new visitor follows their device (`prefers-color-scheme`). The user's explicit toggle persists to `localStorage` key `theme`.
+- **No FOUC**: a blocking script in `layout.tsx` reads `localStorage.theme` (or `prefers-color-scheme` when unset) and paints the `light`/`dark` class on `<html>` before React hydrates. The provider defaults to `'system'` to match it.
+- `ThemeToggle` (`src/components/ThemeToggle.tsx`) is the Moon/Sun toggle for public + preview surfaces — mounted in the landing nav (`LandingPage.tsx`), the public Discover nav (`DiscoverFeed.tsx`), and all four preview pages (fixed top-right). It flips between explicit `light`/`dark` (persisted). The authed `Header` has its **own** inline toggle. ThemeToggle reads via `useThemeOptional()` (non-throwing) so isolated renders/tests that lack a provider degrade to `null` instead of crashing.
+
+### Mobile Header (overflow-safe)
+The authed `Header` (`src/components/Header.tsx`) packs many controls. On phones, keep the row from overflowing the viewport:
+- Secondary actions (theme toggle + sync) are hidden in the bar (`hidden sm:*`) and moved into the **avatar dropdown menu** (`sm:hidden` section there).
+- The Triage pill hides its streak segment below `sm`.
+- There is **no** separate mobile hamburger — the avatar menu already has Collection / Discover / Settings.
+
+When adding header controls, verify the cluster's minimum width still fits ~360px (macOS Chrome won't render below ~500px, so measure item widths in the DOM rather than trusting a visual check).
+
 ### UI Patterns
 
 **Mobile Input Zoom Prevention:**
@@ -507,11 +542,13 @@ useEffect(() => {
 This avoids prop drilling and keeps keyboard logic centralized while allowing distributed UI responses.
 
 ### Main Feed (`src/app/page.tsx`)
-Client component with:
-- **FeedGrid**: Masonry gallery with FeedCard components
-- **Lightbox**: Full-screen modal with keyboard navigation (←→, R/U for read/unread, Esc)
-- **FilterBar**: Category filters + **platform filter** (All / X / Instagram / TikTok) + tags + search
-- **FeedCard platform badge**: non-Twitter items show a small platform glyph (Instagram gradient / TikTok cyan-red SVG) alongside the category label ("Reel" / "TikTok")
+The authed Collection. Client component with:
+- **FeedGrid** (`src/components/feed/FeedGrid.tsx`): three view modes toggled in the FilterBar — **grid** (masonry via CSS columns, `FeedCard`), **list** (dense rows, `FeedListRow`), **bento** (mixed-size mosaic, `FeedBentoTile`). Infinite scroll via an `IntersectionObserver` sentinel.
+- **Lightbox / Triage**: `MediaCard`-based full-screen focus mode with keyboard navigation (←→, R/U for read/unread, Esc) and an "Apple-glass" Keep/Delete/Done dock; "Triage" starts a full-collection unread pass.
+- **FilterBar**: category filters + **platform filter** (All / X / Instagram / TikTok) + view toggles + tags + search.
+- **Nav**: the top bar carries **Collection / Discover** tabs (replacing the old saved/unread counts) so users can reach `/discover` from anywhere; mobile collapses search to an icon.
+- **FeedCard**: tweet-style per-type cards with a `PlatformChip` + `TimePill`; non-Twitter items show their platform glyph.
+- **Settings** has a gamification **Streak card** (current streak, 7-day dot row, longest/triaged/this-week) fed by `/api/triage/streak`.
 
 ### Quote Tweet Handling
 Quote tweets display embedded content showing the quoted tweet. Two data sources:
@@ -676,7 +713,7 @@ Database location: `./data/adhdone.db`
 | `collections` | `id` + `userId` | Custom bookmark collections |
 | `collection_tweets` | `(userId, collectionId, platform, bookmarkId)` | Bookmarks in collections |
 | `tag_shares` | `(userId, tag)` | Public tag sharing settings |
-| `activity` | `id` (auto) | Append-only public activity pulse — anonymous event log (`userId` stored but never exposed). Not user-owned content, so exempt from the composite-key convention |
+| `activity` | `id` (auto) | Append-only public activity pulse — anonymous event log (`userId` stored but never exposed; `author_avatar_url` added via guarded ALTER in `migrate.ts`). Not user-owned content, so exempt from the composite-key convention |
 
 **Why composite keys with `platform`**: Allows User A and User B to both bookmark tweet X independently (multi-user), AND lets the same numeric id exist across platforms without collision (a TikTok video id and a tweet id can both be 19 digits). `platform` is one of `twitter` | `instagram` | `tiktok`, default `twitter`. Every query that filters by `bookmarkId` must also filter by `platform`.
 
@@ -743,6 +780,9 @@ export async function GET() {
 | `/api/media/instagram/video/download` | GET | No | Stream Reel MP4 with `Content-Disposition: attachment` |
 | `/api/media/tiktok/video` | GET | No | Stream TikTok MP4 inline (Range supported) |
 | `/api/media/tiktok/video/download` | GET | No | Stream TikTok MP4 with `Content-Disposition: attachment` |
+| `/api/media/tiktok/thumbnail` | GET | No | Resolve + proxy a TikTok poster JPEG from `username`+`id` (via tiktxk → CDN); used by feed + Discover |
+| `/api/media/instagram/thumbnail` | GET | No | Resolve + proxy an Instagram poster from `id` |
+| `/api/triage/streak` | GET | Yes | Triage streak stats (current streak, total/this-week triaged) for the Settings streak card |
 
 ## Environment Variables
 
@@ -857,7 +897,7 @@ The app will initialize a fresh SQLite database with the new schema. Users will 
 ## Testing
 
 ```bash
-pnpm test         # Run all 719 tests (41 test files)
+pnpm test         # Run all 872 tests
 pnpm test:watch   # Watch mode
 ```
 
