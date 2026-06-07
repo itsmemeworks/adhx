@@ -113,6 +113,41 @@ describe('API: /api/feed', () => {
     })
   })
 
+  describe('Direct id lookup (?id=)', () => {
+    it('returns a bookmark by id even when it is already read (bypasses unreadOnly)', async () => {
+      await testInstance.db
+        .insert(schema.bookmarks)
+        .values([createTestBookmark(USER_A, 'tweet-1'), createTestBookmark(USER_A, 'tweet-2')])
+      // Mark tweet-1 as read — the default feed (unreadOnly) would hide it.
+      await testInstance.db.insert(schema.readStatus).values({
+        userId: USER_A,
+        bookmarkId: 'tweet-1',
+        readAt: new Date().toISOString(),
+      })
+
+      const { GET } = await import('@/app/api/feed/route')
+      // No unreadOnly param → defaults to true; the id lookup must still resolve it.
+      const response = await GET(createRequest({ id: 'tweet-1' }))
+
+      expect(response.status).toBe(200)
+      const data = await response.json()
+      expect(data.items).toHaveLength(1)
+      expect(data.items[0].id).toBe('tweet-1')
+      expect(data.items[0].isRead).toBe(true)
+    })
+
+    it('never returns another user’s bookmark by id', async () => {
+      await testInstance.db.insert(schema.bookmarks).values([createTestBookmark(USER_B, 'tweet-b')])
+
+      const { GET } = await import('@/app/api/feed/route')
+      const response = await GET(createRequest({ id: 'tweet-b' }))
+
+      expect(response.status).toBe(200)
+      const data = await response.json()
+      expect(data.items).toHaveLength(0)
+    })
+  })
+
   describe('Tag filtering', () => {
     beforeEach(async () => {
       // Create bookmarks with tags
