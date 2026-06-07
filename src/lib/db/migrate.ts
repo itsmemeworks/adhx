@@ -41,8 +41,8 @@ if (fs.existsSync(journalPath)) {
   // Get already applied migrations
   const applied = new Set(
     (db.prepare('SELECT hash FROM __drizzle_migrations').all() as { hash: string }[]).map(
-      (row) => row.hash
-    )
+      (row) => row.hash,
+    ),
   )
 
   // Apply new migrations
@@ -71,7 +71,7 @@ if (fs.existsSync(journalPath)) {
         // Record migration as applied
         db.prepare('INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)').run(
           entry.tag,
-          Date.now()
+          Date.now(),
         )
 
         console.log(`[migrate] Applied: ${entry.tag}`)
@@ -161,9 +161,11 @@ try {
 // Normalize non-ISO created_at dates (Twitter format like "Wed Jan 28 02:28:44 +0000 2026")
 // to ISO 8601 format for correct string-based sorting
 try {
-  const nonIsoRows = db.prepare(
-    `SELECT rowid, created_at FROM bookmarks WHERE created_at IS NOT NULL AND created_at NOT LIKE '____-%'`
-  ).all() as { rowid: number; created_at: string }[]
+  const nonIsoRows = db
+    .prepare(
+      `SELECT rowid, created_at FROM bookmarks WHERE created_at IS NOT NULL AND created_at NOT LIKE '____-%'`,
+    )
+    .all() as { rowid: number; created_at: string }[]
 
   if (nonIsoRows.length > 0) {
     const update = db.prepare('UPDATE bookmarks SET created_at = ? WHERE rowid = ?')

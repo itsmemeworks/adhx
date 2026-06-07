@@ -7,11 +7,7 @@ const videoUrlCache = new Map<string, { url: string; timestamp: number }>()
 const CACHE_TTL = 60 * 60 * 1000 // 1 hour
 
 // SSRF Protection: Only allow fetching from trusted Twitter video domains
-const ALLOWED_VIDEO_DOMAINS = [
-  'video.twimg.com',
-  'pbs.twimg.com',
-  'abs.twimg.com',
-]
+const ALLOWED_VIDEO_DOMAINS = ['video.twimg.com', 'pbs.twimg.com', 'abs.twimg.com']
 
 /**
  * Validate that a URL is from an allowed domain (SSRF protection)
@@ -20,7 +16,7 @@ function isAllowedVideoUrl(url: string): boolean {
   try {
     const parsed = new URL(url)
     return ALLOWED_VIDEO_DOMAINS.some(
-      (domain) => parsed.hostname === domain || parsed.hostname.endsWith(`.${domain}`)
+      (domain) => parsed.hostname === domain || parsed.hostname.endsWith(`.${domain}`),
     )
   } catch {
     return false
@@ -85,7 +81,9 @@ export async function GET(request: NextRequest) {
       videoUrl = video.url as string // Default to highest quality
 
       if (video.formats && Array.isArray(video.formats)) {
-        const formats = video.formats.filter((f: VideoFormat) => f.container === 'mp4' && f.bitrate) as VideoFormat[]
+        const formats = video.formats.filter(
+          (f: VideoFormat) => f.container === 'mp4' && f.bitrate,
+        ) as VideoFormat[]
 
         if (formats.length > 0) {
           // Sort by bitrate ascending
@@ -145,7 +143,7 @@ export async function GET(request: NextRequest) {
     const videoResponse = await fetch(videoUrl, {
       headers: {
         'User-Agent': 'ADHX/1.0',
-        ...(rangeHeader && { 'Range': rangeHeader }),
+        ...(rangeHeader && { Range: rangeHeader }),
       },
       // Large file download — if the upstream CDN hangs, don't tie up the proxy forever
       signal: AbortSignal.timeout(30_000),
@@ -179,9 +177,6 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching video:', error)
     captureException(error, { endpoint: '/api/media/video', author, tweetId })
-    return NextResponse.json(
-      { error: 'Failed to fetch video' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch video' }, { status: 500 })
   }
 }

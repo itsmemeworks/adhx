@@ -11,17 +11,16 @@ vi.mock('@/lib/platform', () => ({
 }))
 
 function setStandalone(value: boolean) {
-  window.matchMedia = ((query: string) =>
-    ({
-      matches: value,
-      media: query,
-      addEventListener: () => {},
-      removeEventListener: () => {},
-      addListener: () => {},
-      removeListener: () => {},
-      onchange: null,
-      dispatchEvent: () => false,
-    })) as unknown as typeof window.matchMedia
+  window.matchMedia = ((query: string) => ({
+    matches: value,
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    onchange: null,
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia
 }
 
 function fireBeforeInstallPrompt() {
@@ -93,7 +92,9 @@ describe('PWAInstallPrompt', () => {
     mockPlatform = 'ios'
     render(<PWAInstallPrompt />)
     fireEvent.click(screen.getByLabelText('Dismiss'))
-    await waitFor(() => expect(screen.queryByText('Add ADHX to your home screen')).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.queryByText('Add ADHX to your home screen')).not.toBeInTheDocument(),
+    )
     expect(localStorage.getItem('adhx-a2hs-dismissed')).toBe('1')
   })
 

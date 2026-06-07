@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server'
-import { getStoredTokens, isTokenExpired, getCurrentUser, refreshAccessToken, deleteTokens } from '@/lib/auth/oauth'
+import {
+  getStoredTokens,
+  isTokenExpired,
+  getCurrentUser,
+  refreshAccessToken,
+  deleteTokens,
+} from '@/lib/auth/oauth'
 import { db } from '@/lib/db'
 import { oauthTokens } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
@@ -97,9 +103,6 @@ export async function GET() {
     })
   } catch (error) {
     console.error('Error checking auth status:', error)
-    return NextResponse.json(
-      { error: 'Failed to check auth status' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to check auth status' }, { status: 500 })
   }
 }

@@ -22,8 +22,7 @@ import { isValidUsername, isValidVideoId } from '@/lib/media/tnktok'
 const thumbnailUrlCache = new Map<string, { url: string; ts: number }>()
 const CACHE_TTL = 60 * 60 * 1000
 
-const OG_IMAGE_RE =
-  /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i
+const OG_IMAGE_RE = /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i
 
 export async function GET(request: NextRequest) {
   const username = request.nextUrl.searchParams.get('username')
@@ -45,14 +44,11 @@ export async function GET(request: NextRequest) {
     }
 
     if (!cdnUrl) {
-      const mirrorResponse = await fetch(
-        `https://tiktxk.com/@${handle}/video/${videoId}`,
-        {
-          signal: AbortSignal.timeout(8_000),
-          headers: { 'User-Agent': 'Twitterbot/1.0', Accept: 'text/html' },
-          redirect: 'follow',
-        },
-      )
+      const mirrorResponse = await fetch(`https://tiktxk.com/@${handle}/video/${videoId}`, {
+        signal: AbortSignal.timeout(8_000),
+        headers: { 'User-Agent': 'Twitterbot/1.0', Accept: 'text/html' },
+        redirect: 'follow',
+      })
 
       if (!mirrorResponse.ok) {
         return NextResponse.json({ error: 'Mirror unavailable' }, { status: 502 })
@@ -64,9 +60,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'No thumbnail in mirror response' }, { status: 404 })
       }
 
-      cdnUrl = match[1]
-        .replace(/&amp;/g, '&')
-        .replace(/&#x27;/g, "'")
+      cdnUrl = match[1].replace(/&amp;/g, '&').replace(/&#x27;/g, "'")
       thumbnailUrlCache.set(cacheKey, { url: cdnUrl, ts: Date.now() })
 
       // Trim cache if it grows

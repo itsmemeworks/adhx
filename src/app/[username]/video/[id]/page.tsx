@@ -2,11 +2,7 @@ import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { Metadata } from 'next'
 import { TikTokPreviewLanding } from '@/components/TikTokPreviewLanding'
-import {
-  fetchTikTokMetadata,
-  isValidUsername,
-  isValidVideoId,
-} from '@/lib/media/tnktok'
+import { fetchTikTokMetadata, isValidUsername, isValidVideoId } from '@/lib/media/tnktok'
 import { getSession } from '@/lib/auth/session'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 import { isLikelyBot } from '@/lib/activity/bot'
@@ -29,10 +25,7 @@ export default async function TikTokPreviewPage({ params }: Props) {
     redirect('/')
   }
 
-  const [meta, session] = await Promise.all([
-    fetchTikTokMetadata(handle, id),
-    getSession(),
-  ])
+  const [meta, session] = await Promise.all([fetchTikTokMetadata(handle, id), getSession()])
 
   if (meta && !isLikelyBot((await headers()).get('user-agent'))) {
     recordActivity({

@@ -64,7 +64,9 @@ describe('POST /api/bookmarks/add — YouTube', () => {
 
   it('saves a Short from a /shorts/ URL (with ?si tracking param)', async () => {
     mockOembed()
-    const res = await POST(createRequest({ url: 'https://youtube.com/shorts/Y9aytLYBajw?si=abc', source: 'url_prefix' }))
+    const res = await POST(
+      createRequest({ url: 'https://youtube.com/shorts/Y9aytLYBajw?si=abc', source: 'url_prefix' }),
+    )
     const data = await res.json()
 
     expect(res.status).toBe(200)
@@ -74,7 +76,13 @@ describe('POST /api/bookmarks/add — YouTube', () => {
     const [row] = testInstance.db
       .select()
       .from(schema.bookmarks)
-      .where(and(eq(schema.bookmarks.userId, 'user-123'), eq(schema.bookmarks.platform, 'youtube'), eq(schema.bookmarks.id, 'Y9aytLYBajw')))
+      .where(
+        and(
+          eq(schema.bookmarks.userId, 'user-123'),
+          eq(schema.bookmarks.platform, 'youtube'),
+          eq(schema.bookmarks.id, 'Y9aytLYBajw'),
+        ),
+      )
       .all()
     expect(row).toMatchObject({
       platform: 'youtube',
@@ -88,7 +96,13 @@ describe('POST /api/bookmarks/add — YouTube', () => {
     const [media] = testInstance.db
       .select()
       .from(schema.bookmarkMedia)
-      .where(and(eq(schema.bookmarkMedia.userId, 'user-123'), eq(schema.bookmarkMedia.platform, 'youtube'), eq(schema.bookmarkMedia.bookmarkId, 'Y9aytLYBajw')))
+      .where(
+        and(
+          eq(schema.bookmarkMedia.userId, 'user-123'),
+          eq(schema.bookmarkMedia.platform, 'youtube'),
+          eq(schema.bookmarkMedia.bookmarkId, 'Y9aytLYBajw'),
+        ),
+      )
       .all()
     expect(media.mediaType).toBe('video')
     expect(media.previewUrl).toBe('https://i.ytimg.com/vi/Y9aytLYBajw/hqdefault.jpg')
@@ -99,7 +113,9 @@ describe('POST /api/bookmarks/add — YouTube', () => {
     const a = await (await POST(createRequest({ url: 'https://youtu.be/Y9aytLYBajw' }))).json()
     expect(a.success).toBe(true)
 
-    const b = await (await POST(createRequest({ url: 'https://www.youtube.com/watch?v=Y9aytLYBajw' }))).json()
+    const b = await (
+      await POST(createRequest({ url: 'https://www.youtube.com/watch?v=Y9aytLYBajw' }))
+    ).json()
     // same id → duplicate on the second insert
     expect(b.isDuplicate).toBe(true)
   })

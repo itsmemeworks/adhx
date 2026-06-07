@@ -18,10 +18,7 @@ export default async function ShortPreviewPage({ params }: Props) {
     redirect('/')
   }
 
-  const [meta, session] = await Promise.all([
-    fetchYouTubeMetadata(id),
-    getSession(),
-  ])
+  const [meta, session] = await Promise.all([fetchYouTubeMetadata(id), getSession()])
 
   if (meta && !isLikelyBot((await headers()).get('user-agent'))) {
     const author = meta.author?.replace(/^@/, '') || meta.authorName || 'youtube'

@@ -16,7 +16,7 @@ const getSecretKey = () => {
     }
     throw new Error(
       'SESSION_SECRET or TWITTER_CLIENT_SECRET environment variable is required. ' +
-      'Set one of these in your .env file to enable secure session handling.'
+        'Set one of these in your .env file to enable secure session handling.',
     )
   }
 

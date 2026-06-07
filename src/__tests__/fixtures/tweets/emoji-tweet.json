@@ -10,37 +10,25 @@
       "facets": [
         {
           "type": "mention",
-          "indices": [
-            10,
-            21
-          ],
+          "indices": [10, 21],
           "original": "AviciMoney",
           "id": "1693274243956613120"
         },
         {
           "type": "mention",
-          "indices": [
-            77,
-            85
-          ],
+          "indices": [77, 85],
           "original": "moonpay",
           "id": "1024699964071522305"
         },
         {
           "type": "mention",
-          "indices": [
-            92,
-            97
-          ],
+          "indices": [92, 97],
           "original": "iron",
           "id": "4471841"
         },
         {
           "type": "media",
-          "indices": [
-            276,
-            299
-          ],
+          "indices": [276, 299],
           "id": "2009617113384706048",
           "display": "pic.x.com/MdwF20hNZ6",
           "original": "https://t.co/MdwF20hNZ6",

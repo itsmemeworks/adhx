@@ -10,10 +10,10 @@ Your data matters to us. ADHX stores your Twitter/X bookmarks locally, and we wa
 
 We provide security updates for the latest major version.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.x.x   | ✅ Yes             |
-| < 1.0   | ❌ No              |
+| Version | Supported |
+| ------- | --------- |
+| 1.x.x   | ✅ Yes    |
+| < 1.0   | ❌ No     |
 
 ## Reporting a Vulnerability
 
@@ -90,4 +90,4 @@ The following are **out of scope**:
 
 ---
 
-*Thanks for helping keep ADHX secure. Your future self (and their 1,000 unread bookmarks) thanks you.* 🔒
+_Thanks for helping keep ADHX secure. Your future self (and their 1,000 unread bookmarks) thanks you._ 🔒

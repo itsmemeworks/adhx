@@ -7,10 +7,7 @@ import { encryptToken, safeDecryptToken } from './token-encryption'
 // Retry helper for idempotent Twitter API calls (GET only).
 // Non-idempotent operations (token exchange, refresh) must NOT retry
 // because auth codes are single-use and refresh tokens rotate on each use.
-async function fetchWithRetry(
-  url: string,
-  options: RequestInit,
-): Promise<Response> {
+async function fetchWithRetry(url: string, options: RequestInit): Promise<Response> {
   const maxRetries = 3
   let lastError: unknown
 
@@ -34,7 +31,7 @@ async function fetchWithRetry(
     }
 
     // Exponential backoff: 1s, 2s, 4s
-    await new Promise(resolve => setTimeout(resolve, 1000 * (1 << attempt)))
+    await new Promise((resolve) => setTimeout(resolve, 1000 * (1 << attempt)))
   }
 
   throw lastError
@@ -47,11 +44,7 @@ const SCOPES = ['tweet.read', 'users.read', 'bookmark.read', 'offline.access']
 
 // PKCE helpers
 function base64URLEncode(buffer: Buffer): string {
-  return buffer
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '')
+  return buffer.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
 }
 
 function sha256(buffer: string): Buffer {
@@ -75,7 +68,7 @@ export function buildAuthorizationUrl(
   clientId: string,
   redirectUri: string,
   state: string,
-  codeChallenge: string
+  codeChallenge: string,
 ): string {
   const params = new URLSearchParams({
     response_type: 'code',
@@ -101,11 +94,7 @@ export async function saveOAuthState(state: string, codeVerifier: string): Promi
 
 // Get and delete OAuth state (one-time use)
 export async function consumeOAuthState(state: string): Promise<string | null> {
-  const result = await db
-    .select()
-    .from(oauthState)
-    .where(eq(oauthState.state, state))
-    .limit(1)
+  const result = await db.select().from(oauthState).where(eq(oauthState.state, state)).limit(1)
 
   if (result.length === 0) {
     return null
@@ -123,7 +112,7 @@ export async function exchangeCodeForTokens(
   codeVerifier: string,
   clientId: string,
   clientSecret: string,
-  redirectUri: string
+  redirectUri: string,
 ): Promise<{
   accessToken: string
   refreshToken: string
@@ -169,7 +158,7 @@ export async function exchangeCodeForTokens(
 export async function refreshAccessToken(
   refreshToken: string,
   clientId: string,
-  clientSecret: string
+  clientSecret: string,
 ): Promise<{
   accessToken: string
   refreshToken: string
@@ -214,11 +203,14 @@ export async function getCurrentUser(accessToken: string): Promise<{
   name: string
   profileImageUrl: string | null
 }> {
-  const response = await fetchWithRetry('https://api.twitter.com/2/users/me?user.fields=profile_image_url', {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
+  const response = await fetchWithRetry(
+    'https://api.twitter.com/2/users/me?user.fields=profile_image_url',
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
     },
-  })
+  )
 
   if (!response.ok) {
     const error = await response.text()
@@ -247,7 +239,7 @@ export async function saveTokens(
   accessToken: string,
   refreshToken: string,
   expiresIn: number,
-  scopes: string
+  scopes: string,
 ): Promise<void> {
   const expiresAt = Math.floor(Date.now() / 1000) + expiresIn
   const now = new Date().toISOString()
@@ -292,11 +284,7 @@ export async function getStoredTokens(userId: string): Promise<{
   refreshToken: string
   expiresAt: number
 } | null> {
-  const result = await db
-    .select()
-    .from(oauthTokens)
-    .where(eq(oauthTokens.userId, userId))
-    .limit(1)
+  const result = await db.select().from(oauthTokens).where(eq(oauthTokens.userId, userId)).limit(1)
 
   if (result.length === 0) {
     return null

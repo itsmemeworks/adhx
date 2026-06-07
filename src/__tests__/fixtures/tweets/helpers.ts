@@ -3,8 +3,19 @@
  */
 
 import type { FxTwitterResponse } from '@/lib/media/fxembed'
-import type { FeedItem, MediaItem, QuoteContext, ArticlePreview, ArticleContent } from '@/components/feed/types'
-import { determineCategory, buildQuoteContext, buildArticleContent, buildArticlePreview } from '@/lib/tweets/processor'
+import type {
+  FeedItem,
+  MediaItem,
+  QuoteContext,
+  ArticlePreview,
+  ArticleContent,
+} from '@/components/feed/types'
+import {
+  determineCategory,
+  buildQuoteContext,
+  buildArticleContent,
+  buildArticlePreview,
+} from '@/lib/tweets/processor'
 
 /**
  * Convert an FxTwitterResponse fixture to a FeedItem for component testing.
@@ -57,18 +68,22 @@ export function fxTwitterToFeedItem(response: FxTwitterResponse): FeedItem {
         authorProfileImageUrl: rawQuoteContext.authorProfileImageUrl ?? undefined,
         text: rawQuoteContext.text,
         media: rawQuoteContext.media,
-        article: rawQuoteContext.article ? {
-          url: rawQuoteContext.article.url,
-          title: rawQuoteContext.article.title,
-          description: rawQuoteContext.article.description,
-          imageUrl: rawQuoteContext.article.imageUrl,
-        } : undefined,
-        external: rawQuoteContext.external ? {
-          url: rawQuoteContext.external.url,
-          title: rawQuoteContext.external.title,
-          description: rawQuoteContext.external.description,
-          imageUrl: rawQuoteContext.external.imageUrl,
-        } : undefined,
+        article: rawQuoteContext.article
+          ? {
+              url: rawQuoteContext.article.url,
+              title: rawQuoteContext.article.title,
+              description: rawQuoteContext.article.description,
+              imageUrl: rawQuoteContext.article.imageUrl,
+            }
+          : undefined,
+        external: rawQuoteContext.external
+          ? {
+              url: rawQuoteContext.external.url,
+              title: rawQuoteContext.external.title,
+              description: rawQuoteContext.external.description,
+              imageUrl: rawQuoteContext.external.imageUrl,
+            }
+          : undefined,
       }
     }
   }

@@ -1,8 +1,25 @@
 'use client'
 
 import { useState } from 'react'
-import { EyeOff, ChevronDown, SlidersHorizontal, Instagram, Youtube, LayoutGrid, List as ListIcon, LayoutDashboard } from 'lucide-react'
-import { FILTER_OPTIONS, PLATFORM_OPTIONS, type FilterType, type SortType, type SortDirection, type TagItem, type PlatformFilter } from './types'
+import {
+  EyeOff,
+  ChevronDown,
+  SlidersHorizontal,
+  Instagram,
+  Youtube,
+  LayoutGrid,
+  List as ListIcon,
+  LayoutDashboard,
+} from 'lucide-react'
+import {
+  FILTER_OPTIONS,
+  PLATFORM_OPTIONS,
+  type FilterType,
+  type SortType,
+  type SortDirection,
+  type TagItem,
+  type PlatformFilter,
+} from './types'
 import type { FeedView } from './FeedGrid'
 import { PlatformGlyph } from '@/components/matter'
 import { cn } from '@/lib/utils'
@@ -84,11 +101,13 @@ export function FilterBar({
         {/* Grid / List / Bento view switcher */}
         {onViewChange && (
           <div className="flex-shrink-0 flex items-center gap-0.5 p-[3px] rounded-[10px] bg-inset">
-            {([
-              ['grid', LayoutGrid, 'Grid'],
-              ['list', ListIcon, 'List'],
-              ['bento', LayoutDashboard, 'Bento'],
-            ] as const).map(([id, Ico, label]) => (
+            {(
+              [
+                ['grid', LayoutGrid, 'Grid'],
+                ['list', ListIcon, 'List'],
+                ['bento', LayoutDashboard, 'Bento'],
+              ] as const
+            ).map(([id, Ico, label]) => (
               <button
                 key={id}
                 onClick={() => onViewChange(id)}
@@ -124,12 +143,17 @@ export function FilterBar({
                 <PlatformGlyph platform="x" size={12} className="text-ink-3" />
               )}
               <span className="max-w-[110px] truncate">{currentPlatform.label}</span>
-              <ChevronDown className={cn('w-3.5 h-3.5', platform !== 'all' ? 'text-white' : 'text-ink-3')} />
+              <ChevronDown
+                className={cn('w-3.5 h-3.5', platform !== 'all' ? 'text-white' : 'text-ink-3')}
+              />
             </button>
 
             {showPlatformDropdown && (
               <>
-                <div className="fixed inset-0 z-[100]" onClick={() => setShowPlatformDropdown(false)} />
+                <div
+                  className="fixed inset-0 z-[100]"
+                  onClick={() => setShowPlatformDropdown(false)}
+                />
                 <div className="absolute right-0 top-full mt-1.5 w-48 bg-surface rounded-card shadow-m-sm border border-hairline py-2 z-[101]">
                   {PLATFORM_OPTIONS.map((opt) => (
                     <button
@@ -140,7 +164,9 @@ export function FilterBar({
                       }}
                       className={cn(
                         'w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors',
-                        platform === opt.value ? 'text-clay font-medium' : 'text-ink-2 hover:bg-inset',
+                        platform === opt.value
+                          ? 'text-clay font-medium'
+                          : 'text-ink-2 hover:bg-inset',
                       )}
                     >
                       <PlatformIcon value={opt.value} className="w-4 h-4 flex-shrink-0" />

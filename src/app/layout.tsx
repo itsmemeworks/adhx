@@ -1,5 +1,13 @@
 import type { Metadata, Viewport } from 'next'
-import { IBM_Plex_Sans, Inter, Lexend, Atkinson_Hyperlegible, Indie_Flower, Newsreader, Roboto_Mono } from 'next/font/google'
+import {
+  IBM_Plex_Sans,
+  Inter,
+  Lexend,
+  Atkinson_Hyperlegible,
+  Indie_Flower,
+  Newsreader,
+  Roboto_Mono,
+} from 'next/font/google'
 import './globals.css'
 import { ThemeProvider } from '@/lib/theme/context'
 import { PreferencesProvider } from '@/lib/preferences-context'
@@ -58,7 +66,8 @@ export const metadata: Metadata = {
     default: 'ADHX - Save now. Read never. Find always.',
     template: '%s | ADHX',
   },
-  description: "Sync your X/Twitter bookmarks into one searchable home, discover what's trending, and triage your backlog — every tweet, thread, Reel, TikTok and YouTube Short in one place. The ADHD-friendly bookmark manager.",
+  description:
+    "Sync your X/Twitter bookmarks into one searchable home, discover what's trending, and triage your backlog — every tweet, thread, Reel, TikTok and YouTube Short in one place. The ADHD-friendly bookmark manager.",
   keywords: [
     'X bookmarks',
     'Twitter bookmarks',
@@ -96,20 +105,20 @@ export const metadata: Metadata = {
     url: siteUrl,
     siteName: 'ADHX',
     title: 'ADHX - Save now. Read never. Find always.',
-    description: "Sync your X bookmarks, discover what's trending, and triage your backlog — tweets, threads, Reels, TikToks and Shorts in one searchable home.",
+    description:
+      "Sync your X bookmarks, discover what's trending, and triage your backlog — tweets, threads, Reels, TikToks and Shorts in one searchable home.",
     // Images auto-generated from opengraph-image.tsx
   },
   twitter: {
     card: 'summary_large_image',
     title: 'ADHX - Save now. Read never. Find always.',
-    description: "Sync your X bookmarks, discover what's trending, and triage your backlog — tweets, threads, Reels, TikToks and Shorts in one searchable home.",
+    description:
+      "Sync your X bookmarks, discover what's trending, and triage your backlog — tweets, threads, Reels, TikToks and Shorts in one searchable home.",
     // Images auto-generated from twitter-image.tsx
     creator: '@adhx_app',
   },
   icons: {
-    icon: [
-      { url: '/icon.png', type: 'image/png' },
-    ],
+    icon: [{ url: '/icon.png', type: 'image/png' }],
     apple: '/apple-icon.png',
   },
   manifest: '/manifest.json',
@@ -133,7 +142,8 @@ const jsonLd = {
   name: 'ADHX',
   applicationCategory: 'ProductivityApplication',
   operatingSystem: 'Web',
-  description: "Sync your X/Twitter bookmarks into one searchable home, discover what's trending, and triage your backlog — every tweet, thread, Reel, TikTok and YouTube Short in one place. The ADHD-friendly bookmark manager.",
+  description:
+    "Sync your X/Twitter bookmarks into one searchable home, discover what's trending, and triage your backlog — every tweet, thread, Reel, TikTok and YouTube Short in one place. The ADHD-friendly bookmark manager.",
   url: 'https://adhx.com',
   offers: {
     '@type': 'Offer',
@@ -156,11 +166,7 @@ const jsonLd = {
   ],
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -186,7 +192,9 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className={`${ibmPlex.variable} ${inter.variable} ${lexend.variable} ${atkinson.variable} ${indieFlower.variable} ${newsreader.variable} ${robotoMono.variable}`}>
+      <body
+        className={`${ibmPlex.variable} ${inter.variable} ${lexend.variable} ${atkinson.variable} ${indieFlower.variable} ${newsreader.variable} ${robotoMono.variable}`}
+      >
         <ThemeProvider>
           <PreferencesProvider>
             <FontProvider>

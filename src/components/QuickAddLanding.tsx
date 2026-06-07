@@ -59,11 +59,7 @@ export function QuickAddLanding({ username, tweetId }: QuickAddLandingProps) {
       {/* Header */}
       <header className="p-4">
         <a href="/" className="flex items-center gap-2 w-fit">
-          <img
-            src="/logo.png"
-            alt="ADHX Logo"
-            className="w-8 h-8 object-contain"
-          />
+          <img src="/logo.png" alt="ADHX Logo" className="w-8 h-8 object-contain" />
           <span className="text-2xl font-indie-flower text-ink">ADHX</span>
         </a>
       </header>
@@ -79,12 +75,8 @@ export function QuickAddLanding({ username, tweetId }: QuickAddLandingProps) {
               <Bookmark className="w-8 h-8" style={{ color: ADHX_PURPLE }} />
             </div>
 
-            <h1 className="text-2xl font-bold text-ink mb-2">
-              Save this tweet?
-            </h1>
-            <p className="text-ink-3">
-              Connect with X to add it to your collection.
-            </p>
+            <h1 className="text-2xl font-bold text-ink mb-2">Save this tweet?</h1>
+            <p className="text-ink-3">Connect with X to add it to your collection.</p>
           </div>
 
           {/* Tweet Preview */}
@@ -104,17 +96,11 @@ export function QuickAddLanding({ username, tweetId }: QuickAddLandingProps) {
                     />
                   )}
                   <div>
-                    <p className="font-semibold text-ink">
-                      {preview.author?.name || username}
-                    </p>
-                    <p className="text-sm text-ink-3">
-                      @{preview.author?.screen_name || username}
-                    </p>
+                    <p className="font-semibold text-ink">{preview.author?.name || username}</p>
+                    <p className="text-sm text-ink-3">@{preview.author?.screen_name || username}</p>
                   </div>
                 </div>
-                <p className="text-ink-2 text-sm line-clamp-4">
-                  {preview.text}
-                </p>
+                <p className="text-ink-2 text-sm line-clamp-4">{preview.text}</p>
                 {preview.media?.photos?.[0] && (
                   <div className="mt-3 rounded-xl overflow-hidden">
                     <img

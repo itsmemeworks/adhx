@@ -159,9 +159,15 @@ describe('API: /api/bookmarks/[id]/tags', () => {
       expect(data.tag).toBe('newtag')
 
       // Verify in database
-      const tags = await testInstance.db.select().from(schema.bookmarkTags).where(
-        and(eq(schema.bookmarkTags.userId, USER_A), eq(schema.bookmarkTags.bookmarkId, 'tweet-1'))
-      )
+      const tags = await testInstance.db
+        .select()
+        .from(schema.bookmarkTags)
+        .where(
+          and(
+            eq(schema.bookmarkTags.userId, USER_A),
+            eq(schema.bookmarkTags.bookmarkId, 'tweet-1'),
+          ),
+        )
       expect(tags).toHaveLength(1)
       expect(tags[0].tag).toBe('newtag')
     })
@@ -232,13 +238,19 @@ describe('API: /api/bookmarks/[id]/tags', () => {
 
       expect(response.status).toBe(200)
 
-      const tags = await testInstance.db.select().from(schema.bookmarkTags).where(
-        and(eq(schema.bookmarkTags.userId, USER_A), eq(schema.bookmarkTags.bookmarkId, 'tweet-1'))
-      )
+      const tags = await testInstance.db
+        .select()
+        .from(schema.bookmarkTags)
+        .where(
+          and(
+            eq(schema.bookmarkTags.userId, USER_A),
+            eq(schema.bookmarkTags.bookmarkId, 'tweet-1'),
+          ),
+        )
       expect(tags).toHaveLength(0)
     })
 
-    it('does not affect another user\'s tags', async () => {
+    it("does not affect another user's tags", async () => {
       // Add same tag for User B
       await testInstance.db.insert(schema.bookmarks).values(createTestBookmark(USER_B, 'tweet-1'))
       await testInstance.db.insert(schema.bookmarkTags).values({
@@ -254,9 +266,10 @@ describe('API: /api/bookmarks/[id]/tags', () => {
       })
 
       // User B's tag should still exist
-      const userBTags = await testInstance.db.select().from(schema.bookmarkTags).where(
-        eq(schema.bookmarkTags.userId, USER_B)
-      )
+      const userBTags = await testInstance.db
+        .select()
+        .from(schema.bookmarkTags)
+        .where(eq(schema.bookmarkTags.userId, USER_B))
       expect(userBTags).toHaveLength(1)
     })
   })

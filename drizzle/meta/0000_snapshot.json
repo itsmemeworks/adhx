@@ -88,10 +88,7 @@
       "indexes": {
         "bookmark_links_user_bookmark_idx": {
           "name": "bookmark_links_user_bookmark_idx",
-          "columns": [
-            "user_id",
-            "bookmark_id"
-          ],
+          "columns": ["user_id", "bookmark_id"],
           "isUnique": false
         }
       },
@@ -213,20 +210,14 @@
       "indexes": {
         "bookmark_media_user_bookmark_idx": {
           "name": "bookmark_media_user_bookmark_idx",
-          "columns": [
-            "user_id",
-            "bookmark_id"
-          ],
+          "columns": ["user_id", "bookmark_id"],
           "isUnique": false
         }
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "bookmark_media_user_id_id_pk": {
-          "columns": [
-            "user_id",
-            "id"
-          ],
+          "columns": ["user_id", "id"],
           "name": "bookmark_media_user_id_id_pk"
         }
       },
@@ -261,20 +252,14 @@
       "indexes": {
         "bookmark_tags_user_id_idx": {
           "name": "bookmark_tags_user_id_idx",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": false
         }
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "bookmark_tags_user_id_bookmark_id_tag_pk": {
-          "columns": [
-            "user_id",
-            "bookmark_id",
-            "tag"
-          ],
+          "columns": ["user_id", "bookmark_id", "tag"],
           "name": "bookmark_tags_user_id_bookmark_id_tag_pk"
         }
       },
@@ -447,26 +432,19 @@
       "indexes": {
         "bookmarks_user_id_idx": {
           "name": "bookmarks_user_id_idx",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": false
         },
         "bookmarks_processed_at_idx": {
           "name": "bookmarks_processed_at_idx",
-          "columns": [
-            "processed_at"
-          ],
+          "columns": ["processed_at"],
           "isUnique": false
         }
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "bookmarks_user_id_id_pk": {
-          "columns": [
-            "user_id",
-            "id"
-          ],
+          "columns": ["user_id", "id"],
           "name": "bookmarks_user_id_id_pk"
         }
       },
@@ -517,11 +495,7 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "collection_tweets_user_id_collection_id_bookmark_id_pk": {
-          "columns": [
-            "user_id",
-            "collection_id",
-            "bookmark_id"
-          ],
+          "columns": ["user_id", "collection_id", "bookmark_id"],
           "name": "collection_tweets_user_id_collection_id_bookmark_id_pk"
         }
       },
@@ -607,16 +581,12 @@
       "indexes": {
         "collections_share_code_unique": {
           "name": "collections_share_code_unique",
-          "columns": [
-            "share_code"
-          ],
+          "columns": ["share_code"],
           "isUnique": true
         },
         "collections_user_id_idx": {
           "name": "collections_user_id_idx",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": false
         }
       },
@@ -760,10 +730,7 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "read_status_user_id_bookmark_id_pk": {
-          "columns": [
-            "user_id",
-            "bookmark_id"
-          ],
+          "columns": ["user_id", "bookmark_id"],
           "name": "read_status_user_id_bookmark_id_pk"
         }
       },
@@ -858,9 +825,7 @@
       "indexes": {
         "sync_logs_user_id_idx": {
           "name": "sync_logs_user_id_idx",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": false
         }
       },
@@ -905,10 +870,7 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "sync_state_user_id_key_pk": {
-          "columns": [
-            "user_id",
-            "key"
-          ],
+          "columns": ["user_id", "key"],
           "name": "sync_state_user_id_key_pk"
         }
       },
@@ -951,10 +913,7 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "user_preferences_user_id_key_pk": {
-          "columns": [
-            "user_id",
-            "key"
-          ],
+          "columns": ["user_id", "key"],
           "name": "user_preferences_user_id_key_pk"
         }
       },

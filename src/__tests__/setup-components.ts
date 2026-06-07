@@ -83,15 +83,15 @@ vi.mock('@/lib/preferences-context', () => ({
       name: 'IBM Plex Sans',
       description: 'Clean and professional - the default choice',
     },
-    'lexend': {
+    lexend: {
       name: 'Lexend',
       description: 'Designed specifically for ADHD and reading difficulties',
     },
-    'atkinson': {
+    atkinson: {
       name: 'Atkinson Hyperlegible',
       description: 'Maximum legibility - great letter differentiation',
     },
-    'inter': {
+    inter: {
       name: 'Inter',
       description: 'Neutral and familiar with excellent screen rendering',
     },

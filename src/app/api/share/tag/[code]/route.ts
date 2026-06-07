@@ -5,19 +5,12 @@ import { eq, and, inArray, desc } from 'drizzle-orm'
 import { resolveMediaUrl, getShareableUrl, getThumbnailUrl } from '@/lib/media/fxembed'
 
 // GET /api/share/tag/[code] - Public access to a shared tag
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ code: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ code: string }> }) {
   try {
     const { code } = await params
 
     // Find tag share by share code
-    const [share] = await db
-      .select()
-      .from(tagShares)
-      .where(eq(tagShares.shareCode, code))
-      .limit(1)
+    const [share] = await db.select().from(tagShares).where(eq(tagShares.shareCode, code)).limit(1)
 
     if (!share) {
       return NextResponse.json({ error: 'Tag not found' }, { status: 404 })
@@ -58,7 +51,9 @@ export async function GET(
     const mediaResults = await db
       .select()
       .from(bookmarkMedia)
-      .where(and(eq(bookmarkMedia.userId, tagOwnerId), inArray(bookmarkMedia.bookmarkId, bookmarkIds)))
+      .where(
+        and(eq(bookmarkMedia.userId, tagOwnerId), inArray(bookmarkMedia.bookmarkId, bookmarkIds)),
+      )
 
     // Build tweet objects with media (no read status for public view)
     const tweets = bookmarkResults.map((bookmark) => {

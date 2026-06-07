@@ -10,28 +10,19 @@
       "facets": [
         {
           "type": "mention",
-          "indices": [
-            0,
-            13
-          ],
+          "indices": [0, 13],
           "original": "RichScotford",
           "id": "2460789818"
         },
         {
           "type": "mention",
-          "indices": [
-            14,
-            28
-          ],
+          "indices": [14, 28],
           "original": "BasilTheGreat",
           "id": "1722014154322575360"
         },
         {
           "type": "url",
-          "indices": [
-            459,
-            482
-          ],
+          "indices": [459, 482],
           "original": "https://t.co/5iAuG3VEG6",
           "replacement": "http://GOV.UK",
           "display": "GOV.UK"

@@ -12,13 +12,13 @@ const config: Config = {
       fontFamily: {
         'indie-flower': ['var(--font-indie-flower)', 'cursive'],
         'ibm-plex': ['var(--font-ibm-plex)', 'sans-serif'],
-        'inter': ['var(--font-inter)', 'sans-serif'],
-        'lexend': ['var(--font-lexend)', 'sans-serif'],
-        'atkinson': ['var(--font-atkinson)', 'sans-serif'],
+        inter: ['var(--font-inter)', 'sans-serif'],
+        lexend: ['var(--font-lexend)', 'sans-serif'],
+        atkinson: ['var(--font-atkinson)', 'sans-serif'],
         // Matter type system
-        'serif': ['var(--font-newsreader)', 'Georgia', 'serif'],
-        'newsreader': ['var(--font-newsreader)', 'Georgia', 'serif'],
-        'mono': ['var(--font-roboto-mono)', 'ui-monospace', 'monospace'],
+        serif: ['var(--font-newsreader)', 'Georgia', 'serif'],
+        newsreader: ['var(--font-newsreader)', 'Georgia', 'serif'],
+        mono: ['var(--font-roboto-mono)', 'ui-monospace', 'monospace'],
       },
       colors: {
         border: 'hsl(var(--border))',

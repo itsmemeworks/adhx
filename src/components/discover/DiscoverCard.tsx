@@ -23,7 +23,10 @@ export function inferType(item: ActivityItem): ContentType {
   // A Twitter *video* poster (ext_tw_video_thumb / amplify_video_thumb / the
   // tweet_video_thumb used for GIFs) isn't a photo — only `/media/` URLs are.
   // Matters for preview-only items, where the server can't derive the type.
-  if (item.thumbnailUrl && /(ext_tw_video_thumb|amplify_video_thumb|tweet_video_thumb)/.test(item.thumbnailUrl)) {
+  if (
+    item.thumbnailUrl &&
+    /(ext_tw_video_thumb|amplify_video_thumb|tweet_video_thumb)/.test(item.thumbnailUrl)
+  ) {
     return 'video'
   }
   return item.thumbnailUrl ? 'photo' : 'text'
@@ -141,7 +144,10 @@ export function DiscoverCard({
   } else if (isArticle) {
     body = (
       <div className="relative flex flex-1 min-h-[200px] flex-col overflow-hidden p-4 bg-gradient-to-br from-clay/[0.14] to-surface">
-        <FileText className="absolute -right-5 -bottom-[22px] w-[120px] h-[120px] text-clay/[0.13]" aria-hidden />
+        <FileText
+          className="absolute -right-5 -bottom-[22px] w-[120px] h-[120px] text-clay/[0.13]"
+          aria-hidden
+        />
         <div className="relative flex items-center gap-1.5">
           <TypeBadge type="article" />
         </div>
@@ -155,15 +161,23 @@ export function DiscoverCard({
     body = (
       <div className="flex-1 px-4 pt-4">
         <div className="mb-2.5 flex items-center gap-2.5">
-          <AuthorAvatar src={item.authorAvatarUrl ?? item.thumbnailUrl} author={item.author} size="sm" />
+          <AuthorAvatar
+            src={item.authorAvatarUrl ?? item.thumbnailUrl}
+            author={item.author}
+            size="sm"
+          />
           <div className="min-w-0 flex-1">
             <div className="truncate font-bold text-[13.5px] text-ink">
               {item.authorName || (item.author ? `@${item.author}` : 'Saved post')}
             </div>
-            {item.author && <div className="truncate font-mono text-[11.5px] text-ink-3">@{item.author}</div>}
+            {item.author && (
+              <div className="truncate font-mono text-[11.5px] text-ink-3">@{item.author}</div>
+            )}
           </div>
         </div>
-        <p className="line-clamp-4 text-[14.5px] leading-relaxed text-ink">{caption || 'Saved post'}</p>
+        <p className="line-clamp-4 text-[14.5px] leading-relaxed text-ink">
+          {caption || 'Saved post'}
+        </p>
       </div>
     )
   }

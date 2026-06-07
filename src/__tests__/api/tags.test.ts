@@ -55,11 +55,13 @@ describe('API: /api/tags', () => {
     })
 
     // Seed bookmarks
-    await testInstance.db.insert(schema.bookmarks).values([
-      createTestBookmark(USER_A, 't1'),
-      createTestBookmark(USER_A, 't2'),
-      createTestBookmark(USER_A, 't3'),
-    ])
+    await testInstance.db
+      .insert(schema.bookmarks)
+      .values([
+        createTestBookmark(USER_A, 't1'),
+        createTestBookmark(USER_A, 't2'),
+        createTestBookmark(USER_A, 't3'),
+      ])
   })
 
   afterEach(() => {
@@ -106,17 +108,16 @@ describe('API: /api/tags', () => {
       ])
     })
 
-    it('only returns current user\'s tags', async () => {
+    it("only returns current user's tags", async () => {
       // User A tags
-      await testInstance.db.insert(schema.bookmarkTags).values([
-        { userId: USER_A, bookmarkId: 't1', tag: 'usera' },
-      ])
+      await testInstance.db
+        .insert(schema.bookmarkTags)
+        .values([{ userId: USER_A, bookmarkId: 't1', tag: 'usera' }])
 
       // User B bookmarks and tags
-      await testInstance.db.insert(schema.bookmarks).values([
-        createTestBookmark(USER_B, 't1'),
-        createTestBookmark(USER_B, 't2'),
-      ])
+      await testInstance.db
+        .insert(schema.bookmarks)
+        .values([createTestBookmark(USER_B, 't1'), createTestBookmark(USER_B, 't2')])
       await testInstance.db.insert(schema.bookmarkTags).values([
         { userId: USER_B, bookmarkId: 't1', tag: 'userb' },
         { userId: USER_B, bookmarkId: 't2', tag: 'userb' },
@@ -162,30 +163,30 @@ describe('API: /api/tags', () => {
       expect(response.status).toBe(200)
 
       // Verify tag is removed
-      const remaining = await testInstance.db.select().from(schema.bookmarkTags).where(
-        eq(schema.bookmarkTags.userId, USER_A)
-      )
+      const remaining = await testInstance.db
+        .select()
+        .from(schema.bookmarkTags)
+        .where(eq(schema.bookmarkTags.userId, USER_A))
 
       expect(remaining).toHaveLength(1)
       expect(remaining[0].tag).toBe('keep')
     })
 
-    it('does not affect another user\'s tags', async () => {
+    it("does not affect another user's tags", async () => {
       // User B has the same tag
-      await testInstance.db.insert(schema.bookmarks).values([
-        createTestBookmark(USER_B, 't1'),
-      ])
-      await testInstance.db.insert(schema.bookmarkTags).values([
-        { userId: USER_B, bookmarkId: 't1', tag: 'toremove' },
-      ])
+      await testInstance.db.insert(schema.bookmarks).values([createTestBookmark(USER_B, 't1')])
+      await testInstance.db
+        .insert(schema.bookmarkTags)
+        .values([{ userId: USER_B, bookmarkId: 't1', tag: 'toremove' }])
 
       const { DELETE } = await import('@/app/api/tags/route')
       await DELETE(createRequest('DELETE', { tag: 'toremove' }))
 
       // User B's tag should still exist
-      const userBTags = await testInstance.db.select().from(schema.bookmarkTags).where(
-        eq(schema.bookmarkTags.userId, USER_B)
-      )
+      const userBTags = await testInstance.db
+        .select()
+        .from(schema.bookmarkTags)
+        .where(eq(schema.bookmarkTags.userId, USER_B))
 
       expect(userBTags).toHaveLength(1)
       expect(userBTags[0].tag).toBe('toremove')

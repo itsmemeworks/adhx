@@ -57,11 +57,17 @@ export const bookmarks = sqliteTable(
     userIdIdx: index('bookmarks_user_id_idx').on(table.userId),
     processedAtIdx: index('bookmarks_processed_at_idx').on(table.processedAt),
     // Composite indexes for common query patterns
-    userIdProcessedAtIdx: index('bookmarks_user_processed_at_idx').on(table.userId, table.processedAt),
+    userIdProcessedAtIdx: index('bookmarks_user_processed_at_idx').on(
+      table.userId,
+      table.processedAt,
+    ),
     userIdCategoryIdx: index('bookmarks_user_category_idx').on(table.userId, table.category),
     userIdPlatformIdx: index('bookmarks_user_platform_idx').on(table.userId, table.platform),
-    userIdQuotedTweetIdx: index('bookmarks_user_quoted_tweet_idx').on(table.userId, table.quotedTweetId),
-  })
+    userIdQuotedTweetIdx: index('bookmarks_user_quoted_tweet_idx').on(
+      table.userId,
+      table.quotedTweetId,
+    ),
+  }),
 )
 
 // Links associated with bookmarks - includes userId + platform for FK lookup
@@ -82,8 +88,12 @@ export const bookmarkLinks = sqliteTable(
     previewImageUrl: text('preview_image_url'),
   },
   (table) => ({
-    userBookmarkIdx: index('bookmark_links_user_bookmark_idx').on(table.userId, table.platform, table.bookmarkId),
-  })
+    userBookmarkIdx: index('bookmark_links_user_bookmark_idx').on(
+      table.userId,
+      table.platform,
+      table.bookmarkId,
+    ),
+  }),
 )
 
 // Tags - PK: (userId, platform, bookmarkId, tag)
@@ -99,7 +109,7 @@ export const bookmarkTags = sqliteTable(
   (table) => ({
     pk: primaryKey({ columns: [table.userId, table.platform, table.bookmarkId, table.tag] }),
     userIdIdx: index('bookmark_tags_user_id_idx').on(table.userId),
-  })
+  }),
 )
 
 // Media attachments - PK: (userId, platform, id)
@@ -125,8 +135,12 @@ export const bookmarkMedia = sqliteTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.userId, table.platform, table.id] }),
-    userBookmarkIdx: index('bookmark_media_user_bookmark_idx').on(table.userId, table.platform, table.bookmarkId),
-  })
+    userBookmarkIdx: index('bookmark_media_user_bookmark_idx').on(
+      table.userId,
+      table.platform,
+      table.bookmarkId,
+    ),
+  }),
 )
 
 // OAuth tokens storage - PK: userId (one token per user)
@@ -160,7 +174,7 @@ export const syncState = sqliteTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.userId, table.key] }),
-  })
+  }),
 )
 
 // Read status - PK: (userId, platform, bookmarkId)
@@ -175,7 +189,7 @@ export const readStatus = sqliteTable(
   (table) => ({
     pk: primaryKey({ columns: [table.userId, table.platform, table.bookmarkId] }),
     userIdIdx: index('read_status_user_id_idx').on(table.userId),
-  })
+  }),
 )
 
 // Collections - PK: id (collections are user-owned)
@@ -195,7 +209,7 @@ export const collections = sqliteTable(
   },
   (table) => ({
     userIdIdx: index('collections_user_id_idx').on(table.userId),
-  })
+  }),
 )
 
 // Tweets in collections - PK: (userId, collectionId, platform, bookmarkId)
@@ -210,8 +224,10 @@ export const collectionTweets = sqliteTable(
     notes: text('notes'),
   },
   (table) => ({
-    pk: primaryKey({ columns: [table.userId, table.collectionId, table.platform, table.bookmarkId] }),
-  })
+    pk: primaryKey({
+      columns: [table.userId, table.collectionId, table.platform, table.bookmarkId],
+    }),
+  }),
 )
 
 // Tag shares - track which tags are shared publicly
@@ -228,7 +244,7 @@ export const tagShares = sqliteTable(
   (table) => ({
     pk: primaryKey({ columns: [table.userId, table.tag] }),
     shareCodeIdx: index('tag_shares_share_code_idx').on(table.shareCode),
-  })
+  }),
 )
 
 // User preferences - PK: (userId, key)
@@ -242,7 +258,7 @@ export const userPreferences = sqliteTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.userId, table.key] }),
-  })
+  }),
 )
 
 // Sync logs - PK: id (includes userId for filtering)
@@ -263,7 +279,7 @@ export const syncLogs = sqliteTable(
   },
   (table) => ({
     userIdIdx: index('sync_logs_user_id_idx').on(table.userId),
-  })
+  }),
 )
 
 // Activity — the public "pulse" of community actions shown on the landing page.
@@ -295,7 +311,7 @@ export const activity = sqliteTable(
       table.bookmarkId,
       table.createdAt,
     ),
-  })
+  }),
 )
 
 // ===========================================

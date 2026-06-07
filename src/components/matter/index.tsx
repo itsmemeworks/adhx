@@ -21,7 +21,13 @@ export const TYPE_META: Record<ContentType, { label: string; dot: string }> = {
 export function MatterLogo({ size = 22, className }: { size?: number; className?: string }) {
   return (
     <span className={cn('flex items-center gap-2', className)}>
-      <img src="/adhx-cloud.png" alt="" aria-hidden style={{ height: size * 1.7 }} className="w-auto block" />
+      <img
+        src="/adhx-cloud.png"
+        alt=""
+        aria-hidden
+        style={{ height: size * 1.7 }}
+        className="w-auto block"
+      />
       <span className="font-indie-flower leading-none text-ink" style={{ fontSize: size * 1.5 }}>
         ADHX
       </span>
@@ -40,7 +46,13 @@ export function PlatformGlyph({
   className?: string
 }) {
   const p = platform === 'twitter' ? 'x' : platform
-  const common = { width: size, height: size, viewBox: '0 0 24 24', className, 'aria-hidden': true } as const
+  const common = {
+    width: size,
+    height: size,
+    viewBox: '0 0 24 24',
+    className,
+    'aria-hidden': true,
+  } as const
   if (p === 'x')
     return (
       <svg {...common} fill="currentColor">
@@ -71,7 +83,13 @@ export function PlatformGlyph({
 }
 
 /** Circular translucent platform chip for media tiles (always on dark media). */
-export function PlatformChip({ platform, className }: { platform?: PlatformId | string | null; className?: string }) {
+export function PlatformChip({
+  platform,
+  className,
+}: {
+  platform?: PlatformId | string | null
+  className?: string
+}) {
   if (!platform) return null
   return (
     <span
@@ -108,7 +126,9 @@ export function TypeBadge({ type, className }: { type: ContentType | string; cla
 
 /** Pulsing green "live" dot used on Discover / front-page live panels. */
 export function LiveDot({ className }: { className?: string }) {
-  return <span className={cn('w-2 h-2 rounded-full bg-live animate-live-pulse flex-none', className)} />
+  return (
+    <span className={cn('w-2 h-2 rounded-full bg-live animate-live-pulse flex-none', className)} />
+  )
 }
 
 /**

@@ -28,13 +28,13 @@ function buildTweetResponse(tweet: FxTweet) {
         }
         return acc
       },
-      {}
+      {},
     )
 
     articleContent = articleBlocksToMarkdown(
       tweet.article.content.blocks,
       entityMap as Record<string, never>,
-      mediaEntities
+      mediaEntities,
     )
   }
 
@@ -141,8 +141,8 @@ function buildAdhxContext(tweetId: string) {
         and(
           eq(bookmarkTags.userId, tagShares.userId),
           eq(bookmarkTags.tag, tagShares.tag),
-          eq(tagShares.isPublic, true)
-        )
+          eq(tagShares.isPublic, true),
+        ),
       )
       .innerJoin(oauthTokens, eq(tagShares.userId, oauthTokens.userId))
       .where(and(eq(bookmarkTags.bookmarkId, tweetId), eq(bookmarkTags.platform, 'twitter')))
@@ -182,34 +182,25 @@ function buildAdhxContext(tweetId: string) {
  */
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ username: string; id: string }> }
+  { params }: { params: Promise<{ username: string; id: string }> },
 ) {
   const { username, id } = await params
 
   // Validate username (Twitter handles: 1-15 alphanumeric + underscore)
   if (!/^\w{1,15}$/.test(username)) {
-    return NextResponse.json(
-      { error: 'Invalid username' },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: 'Invalid username' }, { status: 400 })
   }
 
   // Validate tweet ID (numeric only)
   if (!/^\d+$/.test(id)) {
-    return NextResponse.json(
-      { error: 'Invalid tweet ID' },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: 'Invalid tweet ID' }, { status: 400 })
   }
 
   try {
     const data = await fetchTweetData(username, id)
 
     if (!data?.tweet) {
-      return NextResponse.json(
-        { error: 'Tweet not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Tweet not found' }, { status: 404 })
     }
 
     const tweet = data.tweet
@@ -250,9 +241,6 @@ export async function GET(
     })
   } catch (error) {
     console.error('Error fetching tweet:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch tweet' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch tweet' }, { status: 500 })
   }
 }

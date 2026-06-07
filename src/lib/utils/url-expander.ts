@@ -3,7 +3,7 @@
  */
 export function expandUrls(
   text: string,
-  links: Array<{ originalUrl?: string | null; expandedUrl: string }>
+  links: Array<{ originalUrl?: string | null; expandedUrl: string }>,
 ): string {
   let expandedText = text
 
@@ -21,16 +21,15 @@ export function expandUrls(
   // For each remaining t.co URL, try to find a matching expanded URL
   if (remainingTcoUrls.length > 0 && links.length > 0) {
     // Get links that haven't been matched yet (no originalUrl or not yet used)
-    const unmatchedLinks = links.filter(l =>
-      l.expandedUrl &&
-      !l.expandedUrl.includes('t.co/') &&
-      !l.expandedUrl.includes('/status/') // Skip tweet status links
+    const unmatchedLinks = links.filter(
+      (l) =>
+        l.expandedUrl && !l.expandedUrl.includes('t.co/') && !l.expandedUrl.includes('/status/'), // Skip tweet status links
     )
 
     // Try to match remaining t.co URLs with unmatched links by position
     remainingTcoUrls.forEach((tcoUrl, index) => {
       // First try exact match
-      const exactMatch = links.find(l => l.originalUrl === tcoUrl)
+      const exactMatch = links.find((l) => l.originalUrl === tcoUrl)
       if (exactMatch?.expandedUrl) {
         expandedText = expandedText.replace(tcoUrl, exactMatch.expandedUrl)
         return
@@ -69,7 +68,9 @@ export function truncateUrl(url: string, maxLength: number = 50): string {
  * Makes URLs in text clickable by wrapping them in anchor tags
  * Returns an array of text/link segments for React rendering
  */
-export function parseTextWithLinks(text: string): Array<{ type: 'text' | 'link'; content: string; url?: string }> {
+export function parseTextWithLinks(
+  text: string,
+): Array<{ type: 'text' | 'link'; content: string; url?: string }> {
   const urlRegex = /(https?:\/\/[^\s]+)/g
   const parts: Array<{ type: 'text' | 'link'; content: string; url?: string }> = []
   let lastIndex = 0

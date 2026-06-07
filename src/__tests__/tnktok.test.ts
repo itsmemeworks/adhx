@@ -32,7 +32,12 @@ function htmlResponse(html: string) {
 }
 
 function notFoundResponse() {
-  return { ok: false, status: 404, headers: new Headers({ 'content-type': 'text/html' }), body: null }
+  return {
+    ok: false,
+    status: 404,
+    headers: new Headers({ 'content-type': 'text/html' }),
+    body: null,
+  }
 }
 
 const VIDEO_ID = '7619017281691045134'
@@ -99,7 +104,9 @@ describe('resolveTikTokUrl', () => {
   beforeEach(() => mockFetch.mockReset())
 
   it('parses a canonical URL without any network call', async () => {
-    const out = await resolveTikTokUrl('https://www.tiktok.com/@nakayylah/video/7645103968468684046?_t=abc')
+    const out = await resolveTikTokUrl(
+      'https://www.tiktok.com/@nakayylah/video/7645103968468684046?_t=abc',
+    )
     expect(out).toEqual({ handle: 'nakayylah', videoId: '7645103968468684046' })
     expect(mockFetch).not.toHaveBeenCalled()
   })

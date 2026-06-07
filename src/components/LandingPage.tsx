@@ -1,7 +1,19 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Bookmark, Search, Zap, Volume2, ArrowRight, Plus, Smartphone, Monitor, ExternalLink, Copy, Check } from 'lucide-react'
+import {
+  Bookmark,
+  Search,
+  Zap,
+  Volume2,
+  ArrowRight,
+  Plus,
+  Smartphone,
+  Monitor,
+  ExternalLink,
+  Copy,
+  Check,
+} from 'lucide-react'
 import { extractYouTubeId } from '@/lib/media/youtube'
 import { getPlatformType, type PlatformType } from '@/lib/platform'
 import { MatterLogo, PlatformGlyph, LiveDot, ConnectWithX } from '@/components/matter'
@@ -57,9 +69,11 @@ export function LandingPage() {
   }
 
   // Patterns for all supported sources
-  const tweetUrlPattern = /(?:https?:\/\/)?(?:www\.)?(?:x\.com|twitter\.com)\/(\w{1,15})\/status\/(\d+)/i
+  const tweetUrlPattern =
+    /(?:https?:\/\/)?(?:www\.)?(?:x\.com|twitter\.com)\/(\w{1,15})\/status\/(\d+)/i
   const reelUrlPattern = /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:reels?|p)\/([A-Za-z0-9_-]+)/i
-  const tiktokUrlPattern = /(?:https?:\/\/)?(?:www\.|vm\.|m\.)?tiktok\.com\/@([A-Za-z0-9._]{1,30})\/video\/(\d{6,25})/i
+  const tiktokUrlPattern =
+    /(?:https?:\/\/)?(?:www\.|vm\.|m\.)?tiktok\.com\/@([A-Za-z0-9._]{1,30})\/video\/(\d{6,25})/i
 
   const parseAndNavigate = (url: string): boolean => {
     const trimmed = url.trim()
@@ -123,7 +137,9 @@ export function LandingPage() {
     setUrlError('')
 
     if (!parseAndNavigate(tweetUrl)) {
-      setUrlError("That's not an X, Instagram, TikTok, or YouTube link. But we appreciate the mystery.")
+      setUrlError(
+        "That's not an X, Instagram, TikTok, or YouTube link. But we appreciate the mystery.",
+      )
     }
   }
 
@@ -133,7 +149,10 @@ export function LandingPage() {
       <div
         aria-hidden
         className="pointer-events-none absolute -top-36 left-[12%] w-[420px] h-[420px] rounded-full"
-        style={{ background: 'radial-gradient(circle, color-mix(in srgb, var(--m-accent) 18%, transparent), transparent 70%)' }}
+        style={{
+          background:
+            'radial-gradient(circle, color-mix(in srgb, var(--m-accent) 18%, transparent), transparent 70%)',
+        }}
       />
 
       <div className="relative">
@@ -141,10 +160,25 @@ export function LandingPage() {
         <nav className="flex items-center px-5 sm:px-11 py-4 border-b border-hairline">
           <MatterLogo size={20} />
           <div className="ml-auto flex items-center gap-4 sm:gap-6">
-            <a href="#how-it-works" className="hidden sm:inline text-sm font-medium text-ink-2 hover:text-ink transition-colors">How it works</a>
-            <a href="/discover" className="hidden sm:inline text-sm font-medium text-ink-2 hover:text-ink transition-colors">Discover</a>
+            <a
+              href="#how-it-works"
+              className="hidden sm:inline text-sm font-medium text-ink-2 hover:text-ink transition-colors"
+            >
+              How it works
+            </a>
+            <a
+              href="/discover"
+              className="hidden sm:inline text-sm font-medium text-ink-2 hover:text-ink transition-colors"
+            >
+              Discover
+            </a>
             <ThemeToggle className="-mr-1 sm:mr-0" />
-            <button onClick={handleLogin} className="hidden sm:inline text-sm font-semibold text-ink-2 hover:text-ink transition-colors">Log in</button>
+            <button
+              onClick={handleLogin}
+              className="hidden sm:inline text-sm font-semibold text-ink-2 hover:text-ink transition-colors"
+            >
+              Log in
+            </button>
             <button
               onClick={handleLogin}
               disabled={isLoading}
@@ -169,14 +203,20 @@ export function LandingPage() {
                 : 'Real-time community pulse'}
             </span>
 
-            <div className="font-indie-flower leading-[.9] text-ink mb-4 text-[60px] min-[860px]:text-[84px]">ADHX</div>
+            <div className="font-indie-flower leading-[.9] text-ink mb-4 text-[60px] min-[860px]:text-[84px]">
+              ADHX
+            </div>
 
-            <h1 id="hero-title" className="font-serif font-semibold tracking-[-.015em] leading-[1.12] text-ink mb-3.5 text-[28px] min-[860px]:text-[38px]">
+            <h1
+              id="hero-title"
+              className="font-serif font-semibold tracking-[-.015em] leading-[1.12] text-ink mb-3.5 text-[28px] min-[860px]:text-[38px]"
+            >
               Save now. Read never. <span className="text-clay">Find always.</span>
             </h1>
 
             <p className="text-[15px] min-[860px]:text-[17px] text-ink-2 leading-[1.55] mb-7 max-w-[440px]">
-              Sync your X bookmarks, discover what&apos;s trending, and actually get through your backlog — every tweet, thread, Reel, TikTok &amp; Short in one searchable home.
+              Sync your X bookmarks, discover what&apos;s trending, and actually get through your
+              backlog — every tweet, thread, Reel, TikTok &amp; Short in one searchable home.
             </p>
 
             <div className="flex items-center gap-3.5">
@@ -207,28 +247,44 @@ export function LandingPage() {
         </section>
 
         {/* ───────── Live discovery section ───────── */}
-        <section id="discover" aria-labelledby="discover-title" className="px-6 sm:px-10 lg:px-16 pt-6 pb-2 max-w-[1240px] mx-auto">
+        <section
+          id="discover"
+          aria-labelledby="discover-title"
+          className="px-6 sm:px-10 lg:px-16 pt-6 pb-2 max-w-[1240px] mx-auto"
+        >
           <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4 mb-5">
             <div>
               <div className="flex items-center gap-2 mb-1.5">
                 <LiveDot />
-                <span className="text-[12.5px] font-bold uppercase tracking-[.08em] text-clay">Live discovery</span>
+                <span className="text-[12.5px] font-bold uppercase tracking-[.08em] text-clay">
+                  Live discovery
+                </span>
               </div>
-              <h2 id="discover-title" className="font-serif font-semibold tracking-[-.01em] text-ink text-[24px] sm:text-[28px] m-0">
+              <h2
+                id="discover-title"
+                className="font-serif font-semibold tracking-[-.01em] text-ink text-[24px] sm:text-[28px] m-0"
+              >
                 Find your next rabbit hole
               </h2>
               <p className="text-[14.5px] text-ink-2 mt-1.5">
-                Anonymous, real-time. Every save anyone makes streams here — tap to add it to your own collection.
+                Anonymous, real-time. Every save anyone makes streams here — tap to add it to your
+                own collection.
               </p>
             </div>
-            <a href="/discover" className="sm:ml-auto text-sm font-semibold text-clay whitespace-nowrap hover:opacity-80 transition-opacity">
+            <a
+              href="/discover"
+              className="sm:ml-auto text-sm font-semibold text-clay whitespace-nowrap hover:opacity-80 transition-opacity"
+            >
               Open Discover →
             </a>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[18px]">
             {!live.loaded ? (
               Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-64 animate-pulse rounded-card border border-hairline bg-inset" />
+                <div
+                  key={i}
+                  className="h-64 animate-pulse rounded-card border border-hairline bg-inset"
+                />
               ))
             ) : live.items.length === 0 ? (
               <p className="col-span-full py-8 text-center text-[14.5px] text-ink-2">
@@ -241,11 +297,22 @@ export function LandingPage() {
         </section>
 
         {/* ───────── Try it without an account ───────── */}
-        <section id="try-it" aria-labelledby="try-it-title" className="px-6 sm:px-10 lg:px-16 py-11 max-w-[1240px] mx-auto">
+        <section
+          id="try-it"
+          aria-labelledby="try-it-title"
+          className="px-6 sm:px-10 lg:px-16 py-11 max-w-[1240px] mx-auto"
+        >
           <div className="bg-surface border border-hairline rounded-[18px] px-6 sm:px-9 py-8 text-center">
-            <h3 id="try-it-title" className="font-serif font-semibold text-ink text-[22px] mb-1.5">Try it without an account</h3>
-            <p className="text-[14.5px] text-ink-2 mb-5">Paste any X, Instagram, TikTok, or YouTube link to preview it instantly.</p>
-            <form onSubmit={handleTweetUrlSubmit} className="flex flex-col sm:flex-row gap-3 max-w-[620px] mx-auto">
+            <h3 id="try-it-title" className="font-serif font-semibold text-ink text-[22px] mb-1.5">
+              Try it without an account
+            </h3>
+            <p className="text-[14.5px] text-ink-2 mb-5">
+              Paste any X, Instagram, TikTok, or YouTube link to preview it instantly.
+            </p>
+            <form
+              onSubmit={handleTweetUrlSubmit}
+              className="flex flex-col sm:flex-row gap-3 max-w-[620px] mx-auto"
+            >
               <input
                 type="text"
                 value={tweetUrl}
@@ -261,7 +328,9 @@ export function LandingPage() {
               </button>
             </form>
             {urlError && <p className="text-[#EF4444] text-sm mt-3">{urlError}</p>}
-            <p className="text-[12.5px] text-ink-3 mt-3">Works with X, Instagram, TikTok &amp; YouTube.</p>
+            <p className="text-[12.5px] text-ink-3 mt-3">
+              Works with X, Instagram, TikTok &amp; YouTube.
+            </p>
           </div>
         </section>
 
@@ -269,8 +338,14 @@ export function LandingPage() {
         <ShortcutPromo />
 
         {/* ───────── Value props ───────── */}
-        <section id="how-it-works" aria-labelledby="features-title" className="px-6 sm:px-10 lg:px-16 pb-12 max-w-[1240px] mx-auto">
-          <h2 id="features-title" className="sr-only">How it works</h2>
+        <section
+          id="how-it-works"
+          aria-labelledby="features-title"
+          className="px-6 sm:px-10 lg:px-16 pb-12 max-w-[1240px] mx-auto"
+        >
+          <h2 id="features-title" className="sr-only">
+            How it works
+          </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[18px]">
             <ValueProp
               icon={<Bookmark className="w-5 h-5" />}
@@ -297,7 +372,9 @@ export function LandingPage() {
 
         {/* ───────── Footer ───────── */}
         <footer className="text-center py-8 border-t border-hairline">
-          <span className="font-indie-flower text-[22px] text-ink-3">Save now. Read never. Find always.</span>
+          <span className="font-indie-flower text-[22px] text-ink-3">
+            Save now. Read never. Find always.
+          </span>
         </footer>
       </div>
     </div>
@@ -388,18 +465,25 @@ function ShortcutPromo() {
       <div className="bg-surface border border-hairline rounded-card p-6 sm:p-7">
         <div className="flex flex-col sm:flex-row items-center gap-6">
           <div className="w-14 h-14 rounded-[14px] bg-clay/12 text-clay flex items-center justify-center flex-shrink-0">
-            {platform === 'ios' ? <Smartphone className="w-7 h-7" /> : <Monitor className="w-7 h-7" />}
+            {platform === 'ios' ? (
+              <Smartphone className="w-7 h-7" />
+            ) : (
+              <Monitor className="w-7 h-7" />
+            )}
           </div>
 
           <div className="flex-1 text-center sm:text-left">
             <h2 className="font-serif font-semibold text-ink text-[18px] mb-2">
-              {platform === 'ios' ? 'Save straight from the share sheet' : 'Save posts with one click'}
+              {platform === 'ios'
+                ? 'Save straight from the share sheet'
+                : 'Save posts with one click'}
             </h2>
 
             {platform === 'ios' ? (
               <>
                 <p className="text-[14px] text-ink-2 leading-[1.5] mb-4">
-                  Hit share on any post and it opens in ADHX — full content and media, ready to save to your collection or send to a friend.
+                  Hit share on any post and it opens in ADHX — full content and media, ready to save
+                  to your collection or send to a friend.
                 </p>
                 <a
                   href={SHORTCUT_URL}
@@ -414,10 +498,13 @@ function ShortcutPromo() {
             ) : (
               <>
                 <p className="text-[14px] text-ink-2 leading-[1.5] mb-4">
-                  Drag this bookmarklet to your bookmarks bar. Click it on any X, Instagram, TikTok, or YouTube page to instantly open it in ADHX.
+                  Drag this bookmarklet to your bookmarks bar. Click it on any X, Instagram, TikTok,
+                  or YouTube page to instantly open it in ADHX.
                 </p>
                 <div className="bg-inset rounded-card border border-hairline p-3 mb-4">
-                  <code className="text-xs font-mono text-ink-2 break-all select-all">{BOOKMARKLET_CODE}</code>
+                  <code className="text-xs font-mono text-ink-2 break-all select-all">
+                    {BOOKMARKLET_CODE}
+                  </code>
                 </div>
                 <div className="flex flex-wrap items-center gap-3 justify-center sm:justify-start">
                   <button
@@ -430,7 +517,8 @@ function ShortcutPromo() {
                 </div>
                 {platform === 'android' && (
                   <p className="text-[13px] text-ink-3 mt-3">
-                    You can also install ADHX as a PWA from your browser menu for share sheet access.
+                    You can also install ADHX as a PWA from your browser menu for share sheet
+                    access.
                   </p>
                 )}
               </>

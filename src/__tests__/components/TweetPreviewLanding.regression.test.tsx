@@ -60,14 +60,16 @@ describe('Regression: Expand/Share button layout', () => {
         username="Kekius_Sage"
         tweetId="2011872260118716688"
         tweet={fixture.tweet!}
-      />
+      />,
     )
 
     const footer = getFooter(container)
     expect(footer).toBeTruthy()
 
     // Media tweets never show expand button
-    const expandButton = footer!.querySelector('button[title="Collapse tweet"],button[title="Expand tweet"]')
+    const expandButton = footer!.querySelector(
+      'button[title="Collapse tweet"],button[title="Expand tweet"]',
+    )
     expect(expandButton).toBeNull()
 
     const shareButton = footer!.querySelector('button[aria-label="Share this preview"]')
@@ -83,11 +85,13 @@ describe('Regression: Expand/Share button layout', () => {
         username="iamgdsa"
         tweetId="2010782484728873387"
         tweet={fixture.tweet!}
-      />
+      />,
     )
 
     const footer = getFooter(container)
-    const expandButton = footer!.querySelector('button[title="Collapse tweet"],button[title="Expand tweet"]')
+    const expandButton = footer!.querySelector(
+      'button[title="Collapse tweet"],button[title="Expand tweet"]',
+    )
     expect(expandButton).toBeNull()
 
     const shareButton = footer!.querySelector('button[aria-label="Share this preview"]')
@@ -103,13 +107,15 @@ describe('Regression: Expand/Share button layout', () => {
         username="_The_Prophet__"
         tweetId="2011834234642841806"
         tweet={fixture.tweet!}
-      />
+      />,
     )
 
     const footer = getFooter(container)
     expect(footer).toBeTruthy()
 
-    const expandButton = footer!.querySelector('button[title="Collapse tweet"],button[title="Expand tweet"]')
+    const expandButton = footer!.querySelector(
+      'button[title="Collapse tweet"],button[title="Expand tweet"]',
+    )
     const shareButton = footer!.querySelector('button[aria-label="Share this preview"]')
     expect(shareButton).toBeTruthy()
 
@@ -128,7 +134,7 @@ describe('Regression: Expand/Share button layout', () => {
         username="TheCinesthetic"
         tweetId="2010184900599583070"
         tweet={fixture.tweet!}
-      />
+      />,
     )
 
     const footer = getFooter(container)
@@ -147,7 +153,7 @@ describe('Regression: Expand/Share button layout', () => {
         username="TheCinesthetic"
         tweetId="2010184900599583070"
         tweet={fixture.tweet!}
-      />
+      />,
     )
 
     const footer = getFooter(container)
@@ -160,14 +166,14 @@ describe('Regression: Expand/Share button layout', () => {
   })
 
   it.each(
-    fixtureMetadata.filter(f =>
-      ['video-tweet', '4-images', 'quote-of-image-tweet'].includes(f.slug)
-    )
+    fixtureMetadata.filter((f) =>
+      ['video-tweet', '4-images', 'quote-of-image-tweet'].includes(f.slug),
+    ),
   )('media fixture $slug: share has ml-auto (no expand button)', ({ slug, author, tweetId }) => {
     const fixture = fixtures[slug as FixtureSlug]
 
     const { container } = render(
-      <TweetPreviewLanding username={author} tweetId={tweetId} tweet={fixture.tweet!} />
+      <TweetPreviewLanding username={author} tweetId={tweetId} tweet={fixture.tweet!} />,
     )
 
     const footer = getFooter(container)
@@ -194,7 +200,7 @@ describe('Regression: Expand/Share button layout', () => {
         username="_The_Prophet__"
         tweetId="2011834234642841806"
         tweet={fixture.tweet!}
-      />
+      />,
     )
 
     const article = container.querySelector('article[data-content="tweet"]')
@@ -213,7 +219,7 @@ describe('Regression: Expand/Share button layout', () => {
         username="Kekius_Sage"
         tweetId="2011872260118716688"
         tweet={fixture.tweet!}
-      />
+      />,
     )
 
     const article = container.querySelector('article[data-content="tweet"]')
@@ -243,14 +249,14 @@ describe('Regression: RSC serialization safety (JSON-cloned tweet)', () => {
       const clonedTweet = JSON.parse(JSON.stringify(fixture.tweet!))
 
       const { container } = render(
-        <TweetPreviewLanding username={author} tweetId={tweetId} tweet={clonedTweet} />
+        <TweetPreviewLanding username={author} tweetId={tweetId} tweet={clonedTweet} />,
       )
 
       // Should render without crashing
       expect(container.firstChild).toBeTruthy()
       // Author should be visible
       expect(container.textContent).toContain(fixture.tweet!.author.name)
-    }
+    },
   )
 
   it('JSON clone strips non-serializable properties', () => {
@@ -273,7 +279,7 @@ describe('Regression: RSC serialization safety (JSON-cloned tweet)', () => {
         username="TheCinesthetic"
         tweetId="2010184900599583070"
         tweet={cloned}
-      />
+      />,
     )
 
     expect(container.textContent).toContain(fixture.tweet!.text)

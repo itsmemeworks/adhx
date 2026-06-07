@@ -32,7 +32,8 @@ function routeMock() {
   mockFetch.mockImplementation((url: string, opts?: { method?: string }) => {
     const u = String(url)
     if (u.startsWith('/api/triage/streak')) {
-      const body = opts?.method === 'POST' ? { current: 1, longest: 1, grew: 1 } : { current: 0, longest: 0 }
+      const body =
+        opts?.method === 'POST' ? { current: 1, longest: 1, grew: 1 } : { current: 0, longest: 0 }
       return Promise.resolve({ ok: true, json: async () => body })
     }
     return Promise.resolve({ ok: true, json: async () => ({ success: true }) })
@@ -51,7 +52,9 @@ describe('TriageMode', () => {
 
   it('renders the first card of the queue + progress', async () => {
     routeMock()
-    render(<TriageMode {...base} initialQueue={[item('1', 'first tweet'), item('2', 'second tweet')]} />)
+    render(
+      <TriageMode {...base} initialQueue={[item('1', 'first tweet'), item('2', 'second tweet')]} />,
+    )
     expect(await screen.findByText('first tweet')).toBeInTheDocument()
     expect(screen.getByText('1 / 2')).toBeInTheDocument()
   })
@@ -59,7 +62,11 @@ describe('TriageMode', () => {
   it('honors startIndex (gallery jumps to the clicked item)', async () => {
     routeMock()
     render(
-      <TriageMode {...base} startIndex={1} initialQueue={[item('1', 'first tweet'), item('2', 'second tweet')]} />,
+      <TriageMode
+        {...base}
+        startIndex={1}
+        initialQueue={[item('1', 'first tweet'), item('2', 'second tweet')]}
+      />,
     )
     expect(await screen.findByText('second tweet')).toBeInTheDocument()
     expect(screen.getByText('2 / 2')).toBeInTheDocument()
@@ -78,11 +85,17 @@ describe('TriageMode', () => {
     await screen.findByText('first tweet')
     fireEvent.click(screen.getByLabelText('Done'))
     await waitFor(() =>
-      expect(mockFetch).toHaveBeenCalledWith('/api/bookmarks/1/read', expect.objectContaining({ method: 'POST' })),
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/bookmarks/1/read',
+        expect.objectContaining({ method: 'POST' }),
+      ),
     )
     expect(onItemResolved).toHaveBeenCalledWith('1', 'archive')
     expect(await screen.findByText('second tweet')).toBeInTheDocument()
-    expect(mockFetch).toHaveBeenCalledWith('/api/triage/streak', expect.objectContaining({ method: 'POST' }))
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/triage/streak',
+      expect.objectContaining({ method: 'POST' }),
+    )
   })
 
   it('undo reverts an archive and notifies the feed to restore it', async () => {
@@ -104,7 +117,10 @@ describe('TriageMode', () => {
 
     fireEvent.click(screen.getByText('Undo'))
     await waitFor(() =>
-      expect(mockFetch).toHaveBeenCalledWith('/api/bookmarks/1/read', expect.objectContaining({ method: 'DELETE' })),
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/bookmarks/1/read',
+        expect.objectContaining({ method: 'DELETE' }),
+      ),
     )
     // The feed must be told to restore the item (re-increment unread + un-read it).
     expect(onItemRestored).toHaveBeenCalledWith(expect.objectContaining({ id: '1' }))
@@ -113,11 +129,16 @@ describe('TriageMode', () => {
 
   it('ArrowRight archives via keyboard', async () => {
     routeMock()
-    render(<TriageMode {...base} initialQueue={[item('1', 'first tweet'), item('2', 'second tweet')]} />)
+    render(
+      <TriageMode {...base} initialQueue={[item('1', 'first tweet'), item('2', 'second tweet')]} />,
+    )
     await screen.findByText('first tweet')
     fireEvent.keyDown(window, { key: 'ArrowRight' })
     await waitFor(() =>
-      expect(mockFetch).toHaveBeenCalledWith('/api/bookmarks/1/read', expect.objectContaining({ method: 'POST' })),
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/bookmarks/1/read',
+        expect.objectContaining({ method: 'POST' }),
+      ),
     )
   })
 

@@ -230,19 +230,22 @@ export function streamedBookmarkToFeedItem(bookmark: StreamedBookmark): FeedItem
     isRead: bookmark.isRead,
     isQuote: bookmark.isQuote,
     isRetweet: bookmark.isRetweet,
-    media: bookmark.media?.map((m) => ({
-      ...m,
-      width: null,
-      height: null,
-      shareUrl: m.url,
-    })) ?? null,
+    media:
+      bookmark.media?.map((m) => ({
+        ...m,
+        width: null,
+        height: null,
+        shareUrl: m.url,
+      })) ?? null,
     links: null,
-    articlePreview: bookmark.articlePreview ? {
-      ...bookmark.articlePreview,
-      description: null,
-      url: bookmark.tweetUrl,
-      domain: null,
-    } : null,
+    articlePreview: bookmark.articlePreview
+      ? {
+          ...bookmark.articlePreview,
+          description: null,
+          url: bookmark.tweetUrl,
+          domain: null,
+        }
+      : null,
     tags: bookmark.tags,
   }
 }

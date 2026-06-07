@@ -36,7 +36,7 @@ export const rawDb = sqlite
  * deleteBookmark(userId, bookmarkId)
  */
 export function createTransaction<T extends unknown[], R>(
-  fn: (...args: T) => R
+  fn: (...args: T) => R,
 ): (...args: T) => R {
   return sqlite.transaction(fn)
 }

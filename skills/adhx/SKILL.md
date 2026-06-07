@@ -23,11 +23,11 @@ https://adhx.com/api/share/tweet/{username}/{statusId}
 
 Extract `username` and `statusId` from any of these URL formats:
 
-| Format | Example |
-|--------|---------|
-| `x.com/{user}/status/{id}` | `https://x.com/dgt10011/status/2020167690560647464` |
+| Format                           | Example                                                   |
+| -------------------------------- | --------------------------------------------------------- |
+| `x.com/{user}/status/{id}`       | `https://x.com/dgt10011/status/2020167690560647464`       |
 | `twitter.com/{user}/status/{id}` | `https://twitter.com/dgt10011/status/2020167690560647464` |
-| `adhx.com/{user}/status/{id}` | `https://adhx.com/dgt10011/status/2020167690560647464` |
+| `adhx.com/{user}/status/{id}`    | `https://adhx.com/dgt10011/status/2020167690560647464`    |
 
 ## Workflow
 

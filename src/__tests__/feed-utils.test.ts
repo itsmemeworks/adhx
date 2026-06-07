@@ -136,7 +136,12 @@ describe('Feed Utils', () => {
         configurable: true,
       })
 
-      const result = await handleShareMedia(mockEvent, 'https://example.com/image.jpg', 'test.jpg', 'image/jpeg')
+      const result = await handleShareMedia(
+        mockEvent,
+        'https://example.com/image.jpg',
+        'test.jpg',
+        'image/jpeg',
+      )
 
       expect(mockCanShare).toHaveBeenCalled()
       expect(mockShare).toHaveBeenCalled()
@@ -162,8 +167,12 @@ describe('Feed Utils', () => {
         download: '',
         click: vi.fn(),
       }
-      const appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation(() => mockLink as unknown as Node)
-      const removeChildSpy = vi.spyOn(document.body, 'removeChild').mockImplementation(() => mockLink as unknown as Node)
+      const appendChildSpy = vi
+        .spyOn(document.body, 'appendChild')
+        .mockImplementation(() => mockLink as unknown as Node)
+      const removeChildSpy = vi
+        .spyOn(document.body, 'removeChild')
+        .mockImplementation(() => mockLink as unknown as Node)
 
       const result = await handleShareMedia(mockEvent, 'https://example.com/image.jpg', 'test.jpg')
 
@@ -240,8 +249,12 @@ describe('Feed Utils', () => {
         download: '',
         click: vi.fn(),
       }
-      const appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation(() => mockLink as unknown as Node)
-      const removeChildSpy = vi.spyOn(document.body, 'removeChild').mockImplementation(() => mockLink as unknown as Node)
+      const appendChildSpy = vi
+        .spyOn(document.body, 'appendChild')
+        .mockImplementation(() => mockLink as unknown as Node)
+      const removeChildSpy = vi
+        .spyOn(document.body, 'removeChild')
+        .mockImplementation(() => mockLink as unknown as Node)
 
       const result = await handleShareMedia(mockEvent, 'https://example.com/image.jpg', 'test.jpg')
 

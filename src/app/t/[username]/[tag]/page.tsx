@@ -57,7 +57,9 @@ async function getTagMetadata(username: string, tagName: string) {
         previewUrl: bookmarkMedia.previewUrl,
       })
       .from(bookmarkMedia)
-      .where(and(eq(bookmarkMedia.userId, user.userId), inArray(bookmarkMedia.bookmarkId, bookmarkIds)))
+      .where(
+        and(eq(bookmarkMedia.userId, user.userId), inArray(bookmarkMedia.bookmarkId, bookmarkIds)),
+      )
       .limit(1)
 
     let ogImage: string | null = null

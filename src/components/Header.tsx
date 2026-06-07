@@ -58,7 +58,12 @@ export function Header() {
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null)
   const [stats, setStats] = useState<Stats>({ total: 0, unread: 0 })
   const [streak, setStreak] = useState(0)
-  const [cooldown, setCooldown] = useState<CooldownStatus>({ canSync: true, cooldownRemaining: 0, lastSyncAt: null, fetchedAt: Date.now() })
+  const [cooldown, setCooldown] = useState<CooldownStatus>({
+    canSync: true,
+    cooldownRemaining: 0,
+    lastSyncAt: null,
+    fetchedAt: Date.now(),
+  })
   const [displayedCooldown, setDisplayedCooldown] = useState(0)
 
   // Ref for keyboard shortcut focus
@@ -144,12 +149,15 @@ export function Header() {
 
     const result: AddTweetResult = {
       state: addedState,
-      platform: searchParams.get('platform') || (searchParams.get('tweetId') ? 'twitter' : undefined),
-      bookmark: bookmarkId ? {
-        id: bookmarkId,
-        author: searchParams.get('author') || '',
-        text: searchParams.get('text') || '',
-      } : undefined,
+      platform:
+        searchParams.get('platform') || (searchParams.get('tweetId') ? 'twitter' : undefined),
+      bookmark: bookmarkId
+        ? {
+            id: bookmarkId,
+            author: searchParams.get('author') || '',
+            text: searchParams.get('text') || '',
+          }
+        : undefined,
       error: searchParams.get('error') || undefined,
     }
 
@@ -323,9 +331,7 @@ export function Header() {
                   href="/"
                   className={cn(
                     'rounded-full px-3 py-1.5 font-semibold transition-colors',
-                    pathname === '/'
-                      ? 'bg-clay/[0.12] text-clay'
-                      : 'text-ink-2 hover:text-ink',
+                    pathname === '/' ? 'bg-clay/[0.12] text-clay' : 'text-ink-2 hover:text-ink',
                   )}
                 >
                   Collection
@@ -435,12 +441,23 @@ export function Header() {
                 title={resolvedTheme === 'dark' ? 'Switch to light' : 'Switch to dark'}
                 aria-label="Toggle theme"
               >
-                {resolvedTheme === 'dark' ? <Sun className="w-[18px] h-[18px]" /> : <Moon className="w-[18px] h-[18px]" />}
+                {resolvedTheme === 'dark' ? (
+                  <Sun className="w-[18px] h-[18px]" />
+                ) : (
+                  <Moon className="w-[18px] h-[18px]" />
+                )}
               </button>
 
               {/* Sync Button — hidden on phones (lives in the user menu there) */}
               <div className="hidden sm:block">
-                <Tooltip content={cooldown.canSync ? 'Sync bookmarks' : `Available in ${formatCooldown(displayedCooldown)}`} placement="left">
+                <Tooltip
+                  content={
+                    cooldown.canSync
+                      ? 'Sync bookmarks'
+                      : `Available in ${formatCooldown(displayedCooldown)}`
+                  }
+                  placement="left"
+                >
                   <button
                     onClick={() => cooldown.canSync && setShowSync(true)}
                     className={cn(
@@ -486,10 +503,7 @@ export function Header() {
 
                 {showUserMenu && (
                   <>
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setShowUserMenu(false)}
-                    />
+                    <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
                     <div className="absolute right-0 top-full mt-2 w-64 bg-surface rounded-card shadow-m-lg border border-hairline py-2 z-50">
                       {/* User info at top */}
                       {authStatus?.authenticated && authStatus.user && (
@@ -507,7 +521,9 @@ export function Header() {
                               </div>
                             )}
                             <div>
-                              <p className="font-semibold text-ink font-mono">@{authStatus.user.username}</p>
+                              <p className="font-semibold text-ink font-mono">
+                                @{authStatus.user.username}
+                              </p>
                               <p className="text-xs text-ink-3">Connected</p>
                             </div>
                           </div>
@@ -533,7 +549,9 @@ export function Header() {
                           onClick={() => setShowUserMenu(false)}
                           className={cn(
                             'flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset transition-colors',
-                            pathname === '/' ? 'font-semibold text-clay' : 'text-ink-2 hover:text-ink',
+                            pathname === '/'
+                              ? 'font-semibold text-clay'
+                              : 'text-ink-2 hover:text-ink',
                           )}
                         >
                           <Bookmark className="w-4 h-4" />
@@ -544,7 +562,9 @@ export function Header() {
                           onClick={() => setShowUserMenu(false)}
                           className={cn(
                             'flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset transition-colors',
-                            pathname === '/discover' ? 'font-semibold text-clay' : 'text-ink-2 hover:text-ink',
+                            pathname === '/discover'
+                              ? 'font-semibold text-clay'
+                              : 'text-ink-2 hover:text-ink',
                           )}
                         >
                           <Compass className="w-4 h-4" />
@@ -567,7 +587,11 @@ export function Header() {
                           onClick={toggleTheme}
                           className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset text-ink-2 hover:text-ink transition-colors"
                         >
-                          {resolvedTheme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                          {resolvedTheme === 'dark' ? (
+                            <Sun className="w-4 h-4" />
+                          ) : (
+                            <Moon className="w-4 h-4" />
+                          )}
                           {resolvedTheme === 'dark' ? 'Light mode' : 'Dark mode'}
                         </button>
                         <button
@@ -580,11 +604,15 @@ export function Header() {
                           disabled={!cooldown.canSync}
                           className={cn(
                             'w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors',
-                            cooldown.canSync ? 'hover:bg-inset text-ink-2 hover:text-ink' : 'text-ink-3/50 cursor-not-allowed',
+                            cooldown.canSync
+                              ? 'hover:bg-inset text-ink-2 hover:text-ink'
+                              : 'text-ink-3/50 cursor-not-allowed',
                           )}
                         >
                           <RefreshCw className="w-4 h-4" />
-                          {cooldown.canSync ? 'Sync bookmarks' : `Sync in ${formatCooldown(displayedCooldown)}`}
+                          {cooldown.canSync
+                            ? 'Sync bookmarks'
+                            : `Sync in ${formatCooldown(displayedCooldown)}`}
                         </button>
                       </div>
                     </div>
@@ -622,7 +650,6 @@ export function Header() {
             </div>
           </div>
         )}
-
       </header>
 
       {/* Add Tweet Modal */}

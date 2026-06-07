@@ -38,7 +38,11 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function KeyboardShortcutsModal({ isOpen, onClose, inFocusMode = false }: KeyboardShortcutsModalProps) {
+export function KeyboardShortcutsModal({
+  isOpen,
+  onClose,
+  inFocusMode = false,
+}: KeyboardShortcutsModalProps) {
   const [view, setView] = useState<'gallery' | 'focus'>(inFocusMode ? 'focus' : 'gallery')
 
   // Update view when inFocusMode prop changes

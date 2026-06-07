@@ -102,7 +102,7 @@ export const fixtureMetadata = ${JSON.stringify(
       url: `https://x.com/${f.author}/status/${f.id}`,
     })),
     null,
-    2
+    2,
   )} as const
 `
 
@@ -116,9 +116,7 @@ export const fixtureMetadata = ${JSON.stringify(
   console.log(`Successful: ${successful}/${FIXTURES.length}`)
   if (failed > 0) {
     console.log(`Failed: ${failed}`)
-    results
-      .filter((r) => !r.success)
-      .forEach((r) => console.log(`  - ${r.slug}: ${r.error}`))
+    results.filter((r) => !r.success).forEach((r) => console.log(`  - ${r.slug}: ${r.error}`))
   }
 }
 

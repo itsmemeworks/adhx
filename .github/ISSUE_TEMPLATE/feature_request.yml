@@ -1,7 +1,7 @@
-name: "✨ Feature Request"
+name: '✨ Feature Request'
 description: "Got an idea? We love ideas! (Almost as much as we love saving tweets we'll never read)"
-title: "[Feature]: "
-labels: ["enhancement", "needs-triage"]
+title: '[Feature]: '
+labels: ['enhancement', 'needs-triage']
 body:
   - type: markdown
     attributes:
@@ -24,7 +24,7 @@ body:
     attributes:
       label: What's your proposed solution?
       description: Describe what you'd like to happen. Dream big!
-      placeholder: "It would be amazing if ADHX could read my mind and organize everything automatically"
+      placeholder: 'It would be amazing if ADHX could read my mind and organize everything automatically'
     validations:
       required: true
 
@@ -41,10 +41,10 @@ body:
       label: How big is this feature?
       description: Your best guess is fine
       options:
-        - "🐣 Small - A quick tweak"
-        - "🐥 Medium - A few days of work"
-        - "🦅 Large - A significant undertaking"
-        - "🦖 Massive - Would need its own roadmap"
+        - '🐣 Small - A quick tweak'
+        - '🐥 Medium - A few days of work'
+        - '🦅 Large - A significant undertaking'
+        - '🦖 Massive - Would need its own roadmap'
     validations:
       required: true
 

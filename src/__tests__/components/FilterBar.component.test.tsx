@@ -84,7 +84,7 @@ describe('FilterBar Component', () => {
 
     it('FILTER_OPTIONS constant has exactly 7 items', () => {
       expect(FILTER_OPTIONS).toHaveLength(7)
-      expect(FILTER_OPTIONS.map(o => o.value)).not.toContain('needsTranscript')
+      expect(FILTER_OPTIONS.map((o) => o.value)).not.toContain('needsTranscript')
     })
 
     it('applies active gradient styling to selected filter', () => {
@@ -108,7 +108,7 @@ describe('FilterBar Component', () => {
       render(<FilterBar {...defaultProps} platform="all" onPlatformChange={vi.fn()} />)
 
       const buttons = screen.getAllByRole('button')
-      const platformButton = buttons.find(b => b.textContent?.includes('All platforms'))
+      const platformButton = buttons.find((b) => b.textContent?.includes('All platforms'))
       expect(platformButton).toBeTruthy()
     })
 
@@ -116,7 +116,7 @@ describe('FilterBar Component', () => {
       render(<FilterBar {...defaultProps} />)
 
       const buttons = screen.getAllByRole('button')
-      const platformButton = buttons.find(b => b.textContent?.includes('All platforms'))
+      const platformButton = buttons.find((b) => b.textContent?.includes('All platforms'))
       expect(platformButton).toBeFalsy()
     })
 
@@ -124,7 +124,7 @@ describe('FilterBar Component', () => {
       render(<FilterBar {...defaultProps} platform="all" onPlatformChange={vi.fn()} />)
 
       const buttons = screen.getAllByRole('button')
-      const platformButton = buttons.find(b => b.textContent?.includes('All platforms'))
+      const platformButton = buttons.find((b) => b.textContent?.includes('All platforms'))
       fireEvent.click(platformButton!)
 
       expect(screen.getByText('X / Twitter')).toBeTruthy()
@@ -138,7 +138,7 @@ describe('FilterBar Component', () => {
       render(<FilterBar {...defaultProps} platform="all" onPlatformChange={onPlatformChange} />)
 
       const buttons = screen.getAllByRole('button')
-      const platformButton = buttons.find(b => b.textContent?.includes('All platforms'))
+      const platformButton = buttons.find((b) => b.textContent?.includes('All platforms'))
       fireEvent.click(platformButton!)
 
       fireEvent.click(screen.getByText('Instagram'))
@@ -151,7 +151,7 @@ describe('FilterBar Component', () => {
       render(<FilterBar {...defaultProps} sort="added" />)
 
       const buttons = screen.getAllByRole('button')
-      const sortButton = buttons.find(b => b.textContent?.includes('Added'))
+      const sortButton = buttons.find((b) => b.textContent?.includes('Added'))
       expect(sortButton).toBeTruthy()
     })
 
@@ -159,7 +159,7 @@ describe('FilterBar Component', () => {
       render(<FilterBar {...defaultProps} />)
 
       const buttons = screen.getAllByRole('button')
-      const sortButton = buttons.find(b => b.textContent?.includes('Added'))
+      const sortButton = buttons.find((b) => b.textContent?.includes('Added'))
       fireEvent.click(sortButton!)
 
       expect(screen.getByText('Date added')).toBeTruthy()
@@ -173,7 +173,7 @@ describe('FilterBar Component', () => {
       render(<FilterBar {...defaultProps} onSortChange={onSortChange} />)
 
       const buttons = screen.getAllByRole('button')
-      const sortButton = buttons.find(b => b.textContent?.includes('Added'))
+      const sortButton = buttons.find((b) => b.textContent?.includes('Added'))
       fireEvent.click(sortButton!)
 
       fireEvent.click(screen.getByText('Date posted'))
@@ -185,7 +185,7 @@ describe('FilterBar Component', () => {
       render(<FilterBar {...defaultProps} onSortDirectionChange={onSortDirectionChange} />)
 
       const buttons = screen.getAllByRole('button')
-      const sortButton = buttons.find(b => b.textContent?.includes('Added'))
+      const sortButton = buttons.find((b) => b.textContent?.includes('Added'))
       fireEvent.click(sortButton!)
 
       fireEvent.click(screen.getByText('Oldest first'))
@@ -204,7 +204,7 @@ describe('FilterBar Component', () => {
       render(<FilterBar {...defaultProps} unreadOnly={true} />)
 
       const buttons = screen.getAllByRole('button')
-      const toggleButton = buttons.find(b => b.textContent?.includes('Unread only'))
+      const toggleButton = buttons.find((b) => b.textContent?.includes('Unread only'))
       expect(toggleButton?.textContent).toContain('50')
     })
 
@@ -212,7 +212,7 @@ describe('FilterBar Component', () => {
       render(<FilterBar {...defaultProps} unreadOnly={false} />)
 
       const buttons = screen.getAllByRole('button')
-      const toggleButton = buttons.find(b => b.textContent?.includes('Unread only'))
+      const toggleButton = buttons.find((b) => b.textContent?.includes('Unread only'))
       expect(toggleButton?.textContent).toContain('100')
     })
 
@@ -220,7 +220,7 @@ describe('FilterBar Component', () => {
       render(<FilterBar {...defaultProps} unreadOnly={true} />)
 
       const buttons = screen.getAllByRole('button')
-      const toggleButton = buttons.find(b => b.textContent?.includes('Unread only'))
+      const toggleButton = buttons.find((b) => b.textContent?.includes('Unread only'))
       expect(toggleButton?.className).toContain('bg-clay-grad')
     })
 
@@ -229,7 +229,7 @@ describe('FilterBar Component', () => {
       render(<FilterBar {...defaultProps} onUnreadOnlyChange={onUnreadOnlyChange} />)
 
       const buttons = screen.getAllByRole('button')
-      const toggleButton = buttons.find(b => b.textContent?.includes('Unread only'))
+      const toggleButton = buttons.find((b) => b.textContent?.includes('Unread only'))
       fireEvent.click(toggleButton!)
 
       expect(onUnreadOnlyChange).toHaveBeenCalledWith(true)
@@ -241,7 +241,7 @@ describe('FilterBar Component', () => {
       render(<FilterBar {...defaultProps} availableTags={defaultProps.availableTags} />)
 
       const buttons = screen.getAllByRole('button')
-      const tagsButton = buttons.find(b => b.textContent?.includes('Tags'))
+      const tagsButton = buttons.find((b) => b.textContent?.includes('Tags'))
       expect(tagsButton).toBeFalsy()
     })
   })

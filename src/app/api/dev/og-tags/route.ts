@@ -60,7 +60,10 @@ export async function GET(request: NextRequest) {
     })
 
     if (!response.ok) {
-      return NextResponse.json({ error: `Failed to fetch page: ${response.status}` }, { status: 500 })
+      return NextResponse.json(
+        { error: `Failed to fetch page: ${response.status}` },
+        { status: 500 },
+      )
     }
 
     const html = await response.text()
@@ -70,24 +73,32 @@ export async function GET(request: NextRequest) {
       let value: string | null = null
 
       // Try property attribute (OG standard)
-      const propertyMatch = html.match(new RegExp(`<meta[^>]*property=["']${property}["'][^>]*content=["']([^"']*)["']`, 'i'))
+      const propertyMatch = html.match(
+        new RegExp(`<meta[^>]*property=["']${property}["'][^>]*content=["']([^"']*)["']`, 'i'),
+      )
       if (propertyMatch) value = propertyMatch[1]
 
       // Try content before property
       if (!value) {
-        const reverseMatch = html.match(new RegExp(`<meta[^>]*content=["']([^"']*)["'][^>]*property=["']${property}["']`, 'i'))
+        const reverseMatch = html.match(
+          new RegExp(`<meta[^>]*content=["']([^"']*)["'][^>]*property=["']${property}["']`, 'i'),
+        )
         if (reverseMatch) value = reverseMatch[1]
       }
 
       // Try name attribute (Twitter cards)
       if (!value) {
-        const nameMatch = html.match(new RegExp(`<meta[^>]*name=["']${property}["'][^>]*content=["']([^"']*)["']`, 'i'))
+        const nameMatch = html.match(
+          new RegExp(`<meta[^>]*name=["']${property}["'][^>]*content=["']([^"']*)["']`, 'i'),
+        )
         if (nameMatch) value = nameMatch[1]
       }
 
       // Try content before name
       if (!value) {
-        const reverseNameMatch = html.match(new RegExp(`<meta[^>]*content=["']([^"']*)["'][^>]*name=["']${property}["']`, 'i'))
+        const reverseNameMatch = html.match(
+          new RegExp(`<meta[^>]*content=["']([^"']*)["'][^>]*name=["']${property}["']`, 'i'),
+        )
         if (reverseNameMatch) value = reverseNameMatch[1]
       }
 

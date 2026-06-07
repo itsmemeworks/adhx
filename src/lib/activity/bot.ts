@@ -10,7 +10,8 @@
  * adds one noisy row) and careful about false positives (never drop a real
  * human). It is NOT a security control.
  */
-const BOT_UA = /bot|crawl|spider|slurp|facebookexternalhit|embedly|quora|pinterest|preview|fetch|curl|wget|python-requests|headless|lighthouse|monitor|uptime|http-?client|axios|node-fetch|go-http|java\/|okhttp/i
+const BOT_UA =
+  /bot|crawl|spider|slurp|facebookexternalhit|embedly|quora|pinterest|preview|fetch|curl|wget|python-requests|headless|lighthouse|monitor|uptime|http-?client|axios|node-fetch|go-http|java\/|okhttp/i
 
 export function isLikelyBot(userAgent: string | null | undefined): boolean {
   if (!userAgent) return true // no UA at all → almost certainly automated

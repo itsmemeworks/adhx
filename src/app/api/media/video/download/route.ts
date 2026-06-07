@@ -23,10 +23,10 @@ export async function GET(request: NextRequest) {
 
   try {
     // Get video info to find the best MP4 URL
-    const infoResponse = await fetch(
-      `https://api.fxtwitter.com/${author}/status/${tweetId}`,
-      { headers: { 'User-Agent': 'ADHX/1.0' }, signal: AbortSignal.timeout(10_000) }
-    )
+    const infoResponse = await fetch(`https://api.fxtwitter.com/${author}/status/${tweetId}`, {
+      headers: { 'User-Agent': 'ADHX/1.0' },
+      signal: AbortSignal.timeout(10_000),
+    })
 
     if (!infoResponse.ok) {
       return NextResponse.json({ error: 'Failed to fetch video info' }, { status: 404 })
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
     const videoResponse = await fetch(videoUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-        'Referer': 'https://twitter.com/',
+        Referer: 'https://twitter.com/',
       },
       signal: AbortSignal.timeout(30_000),
     })

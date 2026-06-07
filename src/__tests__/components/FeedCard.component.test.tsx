@@ -36,7 +36,7 @@ describe('FeedCard Component Snapshots', () => {
           sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
-        />
+        />,
       )
 
       // Snapshot the rendered markup
@@ -55,7 +55,7 @@ describe('FeedCard Component Snapshots', () => {
           sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
-        />
+        />,
       )
 
       // Text cards are tweet-style: the author handle + the post body.
@@ -73,7 +73,7 @@ describe('FeedCard Component Snapshots', () => {
           sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
-        />
+        />,
       )
 
       // Multi-image cards show a "1/N" count badge
@@ -90,7 +90,7 @@ describe('FeedCard Component Snapshots', () => {
           sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
-        />
+        />,
       )
 
       // Video cards show play icon overlay
@@ -107,7 +107,7 @@ describe('FeedCard Component Snapshots', () => {
           sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
-        />
+        />,
       )
 
       // Article cards render the article body on a surface with a serif title
@@ -126,7 +126,7 @@ describe('FeedCard Component Snapshots', () => {
           sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
-        />
+        />,
       )
 
       // Quote cards are tweet-style with the embedded quoted post beneath.
@@ -150,7 +150,7 @@ describe('FeedCard Component Snapshots', () => {
           sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
-        />
+        />,
       )
 
       // Unread items show a clay-colored "mark as read" button
@@ -169,7 +169,7 @@ describe('FeedCard Component Snapshots', () => {
           sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
-        />
+        />,
       )
 
       // Read items show a translucent black "mark as unread" button
@@ -191,7 +191,7 @@ describe('FeedCard Component Snapshots', () => {
           sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
-        />
+        />,
       )
 
       // New items have shadow glow effect
@@ -211,7 +211,7 @@ describe('FeedCard Component Snapshots', () => {
           sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
-        />
+        />,
       )
 
       // New design: a serif article title (over a cover image, or on an accent
@@ -230,7 +230,7 @@ describe('FeedCard Component Snapshots', () => {
           sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
-        />
+        />,
       )
 
       // New unified TypeBadge renders the "Article" label.
@@ -251,7 +251,7 @@ describe('FeedCard Component Snapshots', () => {
           sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
-        />
+        />,
       )
 
       // The old design had a w-24 h-24 FileText icon centered
@@ -270,7 +270,7 @@ describe('FeedCard Component Snapshots', () => {
           sortField="processedAt"
           onExpand={mockOnExpand}
           onMarkRead={mockOnMarkRead}
-        />
+        />,
       )
 
       // Articles with images should have an img element for the background

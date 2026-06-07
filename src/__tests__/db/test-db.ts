@@ -191,7 +191,7 @@ export function createTestDb(): BetterSQLite3Database<typeof schema> & { close: 
 export function createTestBookmark(
   userId: string,
   id: string,
-  overrides: Partial<schema.NewBookmark> = {}
+  overrides: Partial<schema.NewBookmark> = {},
 ): schema.NewBookmark {
   return {
     id,

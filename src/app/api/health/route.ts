@@ -40,7 +40,7 @@ export async function GET() {
           },
         },
       },
-      { status: 503 }
+      { status: 503 },
     )
   }
 }

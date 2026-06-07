@@ -46,7 +46,9 @@ describe('API: /api/share/tag/[code]/clone', () => {
       mockUserId = null
 
       const { POST } = await import('@/app/api/share/tag/[code]/clone/route')
-      const response = await POST(createRequest(), { params: Promise.resolve({ code: 'test-code' }) })
+      const response = await POST(createRequest(), {
+        params: Promise.resolve({ code: 'test-code' }),
+      })
 
       expect(response.status).toBe(401)
       const data = await response.json()
@@ -57,7 +59,9 @@ describe('API: /api/share/tag/[code]/clone', () => {
   describe('Share validation', () => {
     it('returns 404 for invalid share code', async () => {
       const { POST } = await import('@/app/api/share/tag/[code]/clone/route')
-      const response = await POST(createRequest(), { params: Promise.resolve({ code: 'nonexistent' }) })
+      const response = await POST(createRequest(), {
+        params: Promise.resolve({ code: 'nonexistent' }),
+      })
 
       expect(response.status).toBe(404)
       const data = await response.json()
@@ -74,7 +78,9 @@ describe('API: /api/share/tag/[code]/clone', () => {
       })
 
       const { POST } = await import('@/app/api/share/tag/[code]/clone/route')
-      const response = await POST(createRequest(), { params: Promise.resolve({ code: 'private-code' }) })
+      const response = await POST(createRequest(), {
+        params: Promise.resolve({ code: 'private-code' }),
+      })
 
       expect(response.status).toBe(404)
       const data = await response.json()
@@ -93,11 +99,13 @@ describe('API: /api/share/tag/[code]/clone', () => {
       })
 
       // Create bookmarks owned by USER_B
-      await testInstance.db.insert(schema.bookmarks).values([
-        createTestBookmark(USER_B, 'tweet-1', { text: 'First tweet', author: 'author1' }),
-        createTestBookmark(USER_B, 'tweet-2', { text: 'Second tweet', author: 'author2' }),
-        createTestBookmark(USER_B, 'tweet-3', { text: 'Third tweet', author: 'author3' }),
-      ])
+      await testInstance.db
+        .insert(schema.bookmarks)
+        .values([
+          createTestBookmark(USER_B, 'tweet-1', { text: 'First tweet', author: 'author1' }),
+          createTestBookmark(USER_B, 'tweet-2', { text: 'Second tweet', author: 'author2' }),
+          createTestBookmark(USER_B, 'tweet-3', { text: 'Third tweet', author: 'author3' }),
+        ])
 
       // Tag those bookmarks
       await testInstance.db.insert(schema.bookmarkTags).values([
@@ -109,7 +117,9 @@ describe('API: /api/share/tag/[code]/clone', () => {
 
     it('clones all bookmarks from shared tag to user account', async () => {
       const { POST } = await import('@/app/api/share/tag/[code]/clone/route')
-      const response = await POST(createRequest(), { params: Promise.resolve({ code: 'share123' }) })
+      const response = await POST(createRequest(), {
+        params: Promise.resolve({ code: 'share123' }),
+      })
 
       expect(response.status).toBe(200)
       const data = await response.json()
@@ -159,12 +169,14 @@ describe('API: /api/share/tag/[code]/clone', () => {
 
     it('skips bookmarks user already has', async () => {
       // USER_A already has tweet-1
-      await testInstance.db.insert(schema.bookmarks).values(
-        createTestBookmark(USER_A, 'tweet-1', { text: 'My existing bookmark' })
-      )
+      await testInstance.db
+        .insert(schema.bookmarks)
+        .values(createTestBookmark(USER_A, 'tweet-1', { text: 'My existing bookmark' }))
 
       const { POST } = await import('@/app/api/share/tag/[code]/clone/route')
-      const response = await POST(createRequest(), { params: Promise.resolve({ code: 'share123' }) })
+      const response = await POST(createRequest(), {
+        params: Promise.resolve({ code: 'share123' }),
+      })
 
       expect(response.status).toBe(200)
       const data = await response.json()
@@ -191,7 +203,9 @@ describe('API: /api/share/tag/[code]/clone', () => {
       })
 
       const { POST } = await import('@/app/api/share/tag/[code]/clone/route')
-      const response = await POST(createRequest(), { params: Promise.resolve({ code: 'empty123' }) })
+      const response = await POST(createRequest(), {
+        params: Promise.resolve({ code: 'empty123' }),
+      })
 
       expect(response.status).toBe(200)
       const data = await response.json()
@@ -211,9 +225,9 @@ describe('API: /api/share/tag/[code]/clone', () => {
         isPublic: true,
       })
 
-      await testInstance.db.insert(schema.bookmarks).values(
-        createTestBookmark(USER_B, 'media-tweet', { category: 'video' })
-      )
+      await testInstance.db
+        .insert(schema.bookmarks)
+        .values(createTestBookmark(USER_B, 'media-tweet', { category: 'video' }))
 
       await testInstance.db.insert(schema.bookmarkMedia).values([
         {
@@ -247,7 +261,9 @@ describe('API: /api/share/tag/[code]/clone', () => {
 
     it('clones media along with bookmarks', async () => {
       const { POST } = await import('@/app/api/share/tag/[code]/clone/route')
-      const response = await POST(createRequest(), { params: Promise.resolve({ code: 'media123' }) })
+      const response = await POST(createRequest(), {
+        params: Promise.resolve({ code: 'media123' }),
+      })
 
       expect(response.status).toBe(200)
 
@@ -291,7 +307,7 @@ describe('API: /api/share/tag/[code]/clone', () => {
       })
 
       const bookmarks = Array.from({ length: 101 }, (_, i) =>
-        createTestBookmark(USER_B, `tweet-${i}`)
+        createTestBookmark(USER_B, `tweet-${i}`),
       )
       await testInstance.db.insert(schema.bookmarks).values(bookmarks)
 
@@ -320,7 +336,7 @@ describe('API: /api/share/tag/[code]/clone', () => {
       })
 
       const bookmarks = Array.from({ length: 100 }, (_, i) =>
-        createTestBookmark(USER_B, `tweet-${i}`)
+        createTestBookmark(USER_B, `tweet-${i}`),
       )
       await testInstance.db.insert(schema.bookmarks).values(bookmarks)
 
@@ -350,9 +366,9 @@ describe('API: /api/share/tag/[code]/clone', () => {
         isPublic: true,
       })
 
-      await testInstance.db.insert(schema.bookmarks).values(
-        createTestBookmark(USER_B, 'private-tweet', { text: 'Secret content' })
-      )
+      await testInstance.db
+        .insert(schema.bookmarks)
+        .values(createTestBookmark(USER_B, 'private-tweet', { text: 'Secret content' }))
 
       await testInstance.db.insert(schema.bookmarkTags).values({
         userId: USER_B,

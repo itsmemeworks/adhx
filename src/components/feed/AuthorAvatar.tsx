@@ -16,7 +16,13 @@ export function AuthorAvatar({ src, author, size = 'sm' }: AuthorAvatarProps): R
   const sizeClass = SIZE_CLASSES[size]
 
   if (src) {
-    return <img src={src} alt={author} className={`${sizeClass} rounded-full object-cover flex-shrink-0`} />
+    return (
+      <img
+        src={src}
+        alt={author}
+        className={`${sizeClass} rounded-full object-cover flex-shrink-0`}
+      />
+    )
   }
 
   const initial = author[0]?.toUpperCase() || '?'

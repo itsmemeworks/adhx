@@ -138,13 +138,7 @@ export function parseTweetUrl(url: string): ParsedTweetUrl | null {
 /**
  * Known article/blog URL patterns for categorization
  */
-const ARTICLE_URL_PATTERNS = [
-  'medium.com',
-  'substack.com',
-  'dev.to',
-  '/article/',
-  '/blog/',
-]
+const ARTICLE_URL_PATTERNS = ['medium.com', 'substack.com', 'dev.to', '/article/', '/blog/']
 
 /**
  * Determine tweet category from FxTwitter response.
@@ -164,7 +158,7 @@ export function determineCategory(tweet: FxTwitterResponse['tweet']): TweetCateg
   if (tweet.media?.videos && tweet.media.videos.length > 0) {
     return 'video'
   }
-  if (tweet.media?.all?.some(m => m.type === 'video' || m.type === 'animated_gif')) {
+  if (tweet.media?.all?.some((m) => m.type === 'video' || m.type === 'animated_gif')) {
     return 'video'
   }
 
@@ -172,7 +166,7 @@ export function determineCategory(tweet: FxTwitterResponse['tweet']): TweetCateg
   if (tweet.media?.photos && tweet.media.photos.length > 0) {
     return 'photo'
   }
-  if (tweet.media?.all?.some(m => m.type === 'photo')) {
+  if (tweet.media?.all?.some((m) => m.type === 'photo')) {
     return 'photo'
   }
 
@@ -210,7 +204,7 @@ export function categorizeTweetByUrls(urls: Array<{ expandedUrl: string }>): Twe
  * This is stored in the database for displaying quoted tweets.
  */
 export function buildQuoteContext(
-  quote: NonNullable<FxTwitterResponse['tweet']>['quote']
+  quote: NonNullable<FxTwitterResponse['tweet']>['quote'],
 ): QuoteContext | null {
   if (!quote) return null
 
@@ -242,7 +236,7 @@ export function buildQuoteContext(
  * Used when fetching quoted tweet data separately.
  */
 export function buildQuoteContextFromTweet(
-  tweet: NonNullable<FxTwitterResponse['tweet']>
+  tweet: NonNullable<FxTwitterResponse['tweet']>,
 ): QuoteContext {
   const articleUrl = tweet.article
     ? `https://x.com/${tweet.author.screen_name}/article/${tweet.id}`
@@ -284,7 +278,7 @@ export function buildQuoteContextFromTweet(
  * Build retweet context JSON from FxTwitter tweet data.
  */
 export function buildRetweetContext(
-  tweet: NonNullable<FxTwitterResponse['tweet']>
+  tweet: NonNullable<FxTwitterResponse['tweet']>,
 ): RetweetContext {
   return {
     tweetId: tweet.id,
@@ -310,7 +304,7 @@ export function buildRetweetContext(
  * Handles entityMap conversion from array to dictionary format.
  */
 export function buildArticleContent(
-  article: NonNullable<NonNullable<FxTwitterResponse['tweet']>['article']>
+  article: NonNullable<NonNullable<FxTwitterResponse['tweet']>['article']>,
 ): ArticleContent | null {
   if (!article.content) return null
 
@@ -327,7 +321,7 @@ export function buildArticleContent(
           original_img_width?: number
           original_img_height?: number
         }
-      }
+      },
     ) => {
       if (entity.media_id && entity.media_info?.original_img_url) {
         acc[entity.media_id] = {
@@ -338,7 +332,7 @@ export function buildArticleContent(
       }
       return acc
     },
-    {}
+    {},
   )
 
   return {
@@ -354,7 +348,7 @@ export function buildArticleContent(
 export function buildArticlePreview(
   article: NonNullable<NonNullable<FxTwitterResponse['tweet']>['article']>,
   authorUsername: string,
-  tweetId: string
+  tweetId: string,
 ): {
   title: string
   description: string | null
@@ -385,7 +379,7 @@ export function buildArticlePreview(
 export function generateMediaId(
   tweetId: string,
   mediaType: 'photo' | 'video',
-  index: number
+  index: number,
 ): string {
   return `${tweetId}_${mediaType}_${index}`
 }
@@ -395,7 +389,7 @@ export function generateMediaId(
  */
 export function processPhotos(
   tweetId: string,
-  photos: NonNullable<NonNullable<FxTwitterResponse['tweet']>['media']>['photos']
+  photos: NonNullable<NonNullable<FxTwitterResponse['tweet']>['media']>['photos'],
 ): ProcessedMediaItem[] {
   if (!photos) return []
 
@@ -414,7 +408,7 @@ export function processPhotos(
  */
 export function processVideos(
   tweetId: string,
-  videos: NonNullable<NonNullable<FxTwitterResponse['tweet']>['media']>['videos']
+  videos: NonNullable<NonNullable<FxTwitterResponse['tweet']>['media']>['videos'],
 ): ProcessedMediaItem[] {
   if (!videos) return []
 
@@ -435,7 +429,7 @@ export function processVideos(
  */
 export function processMedia(
   tweetId: string,
-  media: NonNullable<FxTwitterResponse['tweet']>['media']
+  media: NonNullable<FxTwitterResponse['tweet']>['media'],
 ): ProcessedMediaItem[] {
   if (!media) return []
 

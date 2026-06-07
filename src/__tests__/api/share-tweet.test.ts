@@ -76,10 +76,9 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
   describe('Parameter validation', () => {
     it('returns 400 for invalid username with special chars', async () => {
       const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
-      const response = await GET(
-        createRequest('invalid-user!', '123'),
-        { params: Promise.resolve({ username: 'invalid-user!', id: '123' }) }
-      )
+      const response = await GET(createRequest('invalid-user!', '123'), {
+        params: Promise.resolve({ username: 'invalid-user!', id: '123' }),
+      })
       expect(response.status).toBe(400)
       const data = await response.json()
       expect(data.error).toBe('Invalid username')
@@ -87,19 +86,17 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
 
     it('returns 400 for username longer than 15 chars', async () => {
       const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
-      const response = await GET(
-        createRequest('a'.repeat(16), '123'),
-        { params: Promise.resolve({ username: 'a'.repeat(16), id: '123' }) }
-      )
+      const response = await GET(createRequest('a'.repeat(16), '123'), {
+        params: Promise.resolve({ username: 'a'.repeat(16), id: '123' }),
+      })
       expect(response.status).toBe(400)
     })
 
     it('returns 400 for non-numeric tweet ID', async () => {
       const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
-      const response = await GET(
-        createRequest('testuser', 'abc'),
-        { params: Promise.resolve({ username: 'testuser', id: 'abc' }) }
-      )
+      const response = await GET(createRequest('testuser', 'abc'), {
+        params: Promise.resolve({ username: 'testuser', id: 'abc' }),
+      })
       expect(response.status).toBe(400)
       const data = await response.json()
       expect(data.error).toBe('Invalid tweet ID')
@@ -108,10 +105,9 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
     it('accepts valid username with underscores', async () => {
       mockFetchTweetData.mockResolvedValue(buildFxResponse())
       const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
-      const response = await GET(
-        createRequest('_test_user', '123'),
-        { params: Promise.resolve({ username: '_test_user', id: '123' }) }
-      )
+      const response = await GET(createRequest('_test_user', '123'), {
+        params: Promise.resolve({ username: '_test_user', id: '123' }),
+      })
       expect(response.status).toBe(200)
     })
   })
@@ -120,10 +116,9 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
     it('returns 404 when FxTwitter returns null', async () => {
       mockFetchTweetData.mockResolvedValue(null)
       const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
-      const response = await GET(
-        createRequest('testuser', '123'),
-        { params: Promise.resolve({ username: 'testuser', id: '123' }) }
-      )
+      const response = await GET(createRequest('testuser', '123'), {
+        params: Promise.resolve({ username: 'testuser', id: '123' }),
+      })
       expect(response.status).toBe(404)
       const data = await response.json()
       expect(data.error).toBe('Tweet not found')
@@ -132,20 +127,18 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
     it('returns 404 when FxTwitter returns response without tweet', async () => {
       mockFetchTweetData.mockResolvedValue({ code: 404, message: 'Not found' })
       const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
-      const response = await GET(
-        createRequest('testuser', '123'),
-        { params: Promise.resolve({ username: 'testuser', id: '123' }) }
-      )
+      const response = await GET(createRequest('testuser', '123'), {
+        params: Promise.resolve({ username: 'testuser', id: '123' }),
+      })
       expect(response.status).toBe(404)
     })
 
     it('returns 500 when fetchTweetData throws', async () => {
       mockFetchTweetData.mockRejectedValue(new Error('Network error'))
       const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
-      const response = await GET(
-        createRequest('testuser', '123'),
-        { params: Promise.resolve({ username: 'testuser', id: '123' }) }
-      )
+      const response = await GET(createRequest('testuser', '123'), {
+        params: Promise.resolve({ username: 'testuser', id: '123' }),
+      })
       expect(response.status).toBe(500)
     })
   })
@@ -154,10 +147,9 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
     it('returns correct JSON for a regular tweet', async () => {
       mockFetchTweetData.mockResolvedValue(buildFxResponse())
       const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
-      const response = await GET(
-        createRequest('testuser', '123456789'),
-        { params: Promise.resolve({ username: 'testuser', id: '123456789' }) }
-      )
+      const response = await GET(createRequest('testuser', '123456789'), {
+        params: Promise.resolve({ username: 'testuser', id: '123456789' }),
+      })
       expect(response.status).toBe(200)
 
       const data = await response.json()
@@ -189,13 +181,12 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
             photos: [{ url: 'https://img.com/1.jpg', width: 800, height: 600 }],
             videos: [],
           },
-        })
+        }),
       )
       const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
-      const response = await GET(
-        createRequest('testuser', '123'),
-        { params: Promise.resolve({ username: 'testuser', id: '123' }) }
-      )
+      const response = await GET(createRequest('testuser', '123'), {
+        params: Promise.resolve({ username: 'testuser', id: '123' }),
+      })
       const data = await response.json()
       expect(data.media).toBeDefined()
       expect(data.media.photos).toHaveLength(1)
@@ -207,21 +198,22 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
         buildFxResponse({
           media: {
             photos: [],
-            videos: [{
-              url: 'https://video.com/v.mp4',
-              thumbnail_url: 'https://video.com/thumb.jpg',
-              width: 1920,
-              height: 1080,
-              duration: 30,
-            }],
+            videos: [
+              {
+                url: 'https://video.com/v.mp4',
+                thumbnail_url: 'https://video.com/thumb.jpg',
+                width: 1920,
+                height: 1080,
+                duration: 30,
+              },
+            ],
           },
-        })
+        }),
       )
       const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
-      const response = await GET(
-        createRequest('testuser', '123'),
-        { params: Promise.resolve({ username: 'testuser', id: '123' }) }
-      )
+      const response = await GET(createRequest('testuser', '123'), {
+        params: Promise.resolve({ username: 'testuser', id: '123' }),
+      })
       const data = await response.json()
       expect(data.media.videos).toHaveLength(1)
       expect(data.media.videos[0].thumbnailUrl).toBe('https://video.com/thumb.jpg')
@@ -243,13 +235,12 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
               entityMap: {},
             },
           },
-        })
+        }),
       )
       const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
-      const response = await GET(
-        createRequest('testuser', '123'),
-        { params: Promise.resolve({ username: 'testuser', id: '123' }) }
-      )
+      const response = await GET(createRequest('testuser', '123'), {
+        params: Promise.resolve({ username: 'testuser', id: '123' }),
+      })
       const data = await response.json()
       expect(data.article).toBeDefined()
       expect(data.article.title).toBe('My Article')
@@ -275,13 +266,12 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
             retweets: 2,
             likes: 3,
           },
-        })
+        }),
       )
       const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
-      const response = await GET(
-        createRequest('testuser', '123'),
-        { params: Promise.resolve({ username: 'testuser', id: '123' }) }
-      )
+      const response = await GET(createRequest('testuser', '123'), {
+        params: Promise.resolve({ username: 'testuser', id: '123' }),
+      })
       const data = await response.json()
       expect(data.quoteTweet).toBeDefined()
       expect(data.quoteTweet.id).toBe('999')
@@ -299,13 +289,12 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
             description: 'Article description',
             thumbnail_url: 'https://example.com/thumb.jpg',
           },
-        })
+        }),
       )
       const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
-      const response = await GET(
-        createRequest('testuser', '123'),
-        { params: Promise.resolve({ username: 'testuser', id: '123' }) }
-      )
+      const response = await GET(createRequest('testuser', '123'), {
+        params: Promise.resolve({ username: 'testuser', id: '123' }),
+      })
       const data = await response.json()
       expect(data.externalLink).toBeDefined()
       expect(data.externalLink.url).toBe('https://example.com/article')
@@ -317,22 +306,20 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
     it('returns Cache-Control header for successful responses', async () => {
       mockFetchTweetData.mockResolvedValue(buildFxResponse())
       const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
-      const response = await GET(
-        createRequest('testuser', '123'),
-        { params: Promise.resolve({ username: 'testuser', id: '123' }) }
-      )
+      const response = await GET(createRequest('testuser', '123'), {
+        params: Promise.resolve({ username: 'testuser', id: '123' }),
+      })
       expect(response.headers.get('Cache-Control')).toBe(
-        'public, max-age=300, stale-while-revalidate=600'
+        'public, max-age=300, stale-while-revalidate=600',
       )
     })
 
     it('does not return Cache-Control header for error responses', async () => {
       mockFetchTweetData.mockResolvedValue(null)
       const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
-      const response = await GET(
-        createRequest('testuser', '123'),
-        { params: Promise.resolve({ username: 'testuser', id: '123' }) }
-      )
+      const response = await GET(createRequest('testuser', '123'), {
+        params: Promise.resolve({ username: 'testuser', id: '123' }),
+      })
       expect(response.headers.get('Cache-Control')).toBeNull()
     })
   })
@@ -341,62 +328,65 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
     it('omits adhxContext when tweet has no ADHX saves', async () => {
       mockFetchTweetData.mockResolvedValue(buildFxResponse())
       const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
-      const response = await GET(
-        createRequest('testuser', '123456789'),
-        { params: Promise.resolve({ username: 'testuser', id: '123456789' }) }
-      )
+      const response = await GET(createRequest('testuser', '123456789'), {
+        params: Promise.resolve({ username: 'testuser', id: '123456789' }),
+      })
       const data = await response.json()
       expect(data.adhxContext).toBeUndefined()
     })
 
     it('includes savedByCount for bookmarked tweets', async () => {
       // Two users bookmark the same tweet
-      testInstance.db.insert(schema.bookmarks).values([
-        {
-          id: '123456789',
-          userId: USER_A,
-          author: 'testuser',
-          text: 'A tweet',
-          tweetUrl: 'https://x.com/testuser/status/123456789',
-          processedAt: new Date().toISOString(),
-        },
-        {
-          id: '123456789',
-          userId: USER_B,
-          author: 'testuser',
-          text: 'A tweet',
-          tweetUrl: 'https://x.com/testuser/status/123456789',
-          processedAt: new Date().toISOString(),
-        },
-      ]).run()
+      testInstance.db
+        .insert(schema.bookmarks)
+        .values([
+          {
+            id: '123456789',
+            userId: USER_A,
+            author: 'testuser',
+            text: 'A tweet',
+            tweetUrl: 'https://x.com/testuser/status/123456789',
+            processedAt: new Date().toISOString(),
+          },
+          {
+            id: '123456789',
+            userId: USER_B,
+            author: 'testuser',
+            text: 'A tweet',
+            tweetUrl: 'https://x.com/testuser/status/123456789',
+            processedAt: new Date().toISOString(),
+          },
+        ])
+        .run()
 
       mockFetchTweetData.mockResolvedValue(buildFxResponse())
       const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
-      const response = await GET(
-        createRequest('testuser', '123456789'),
-        { params: Promise.resolve({ username: 'testuser', id: '123456789' }) }
-      )
+      const response = await GET(createRequest('testuser', '123456789'), {
+        params: Promise.resolve({ username: 'testuser', id: '123456789' }),
+      })
       const data = await response.json()
       expect(data.adhxContext).toBeDefined()
       expect(data.adhxContext.savedByCount).toBe(2)
     })
 
     it('does not leak user IDs in adhxContext', async () => {
-      testInstance.db.insert(schema.bookmarks).values({
-        id: '123456789',
-        userId: USER_A,
-        author: 'testuser',
-        text: 'A tweet',
-        tweetUrl: 'https://x.com/testuser/status/123456789',
-        processedAt: new Date().toISOString(),
-      }).run()
+      testInstance.db
+        .insert(schema.bookmarks)
+        .values({
+          id: '123456789',
+          userId: USER_A,
+          author: 'testuser',
+          text: 'A tweet',
+          tweetUrl: 'https://x.com/testuser/status/123456789',
+          processedAt: new Date().toISOString(),
+        })
+        .run()
 
       mockFetchTweetData.mockResolvedValue(buildFxResponse())
       const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
-      const response = await GET(
-        createRequest('testuser', '123456789'),
-        { params: Promise.resolve({ username: 'testuser', id: '123456789' }) }
-      )
+      const response = await GET(createRequest('testuser', '123456789'), {
+        params: Promise.resolve({ username: 'testuser', id: '123456789' }),
+      })
       const data = await response.json()
       const json = JSON.stringify(data.adhxContext)
       expect(json).not.toContain(USER_A)
@@ -404,42 +394,53 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
     })
 
     it('includes public tags in adhxContext', async () => {
-      testInstance.db.insert(schema.oauthTokens).values({
-        userId: USER_A,
-        username: 'alice',
-        accessToken: 'enc_token',
-        refreshToken: 'enc_refresh',
-        expiresAt: Date.now() + 3600000,
-      }).run()
+      testInstance.db
+        .insert(schema.oauthTokens)
+        .values({
+          userId: USER_A,
+          username: 'alice',
+          accessToken: 'enc_token',
+          refreshToken: 'enc_refresh',
+          expiresAt: Date.now() + 3600000,
+        })
+        .run()
 
-      testInstance.db.insert(schema.bookmarks).values({
-        id: '123456789',
-        userId: USER_A,
-        author: 'testuser',
-        text: 'A tweet',
-        tweetUrl: 'https://x.com/testuser/status/123456789',
-        processedAt: new Date().toISOString(),
-      }).run()
+      testInstance.db
+        .insert(schema.bookmarks)
+        .values({
+          id: '123456789',
+          userId: USER_A,
+          author: 'testuser',
+          text: 'A tweet',
+          tweetUrl: 'https://x.com/testuser/status/123456789',
+          processedAt: new Date().toISOString(),
+        })
+        .run()
 
-      testInstance.db.insert(schema.bookmarkTags).values({
-        userId: USER_A,
-        bookmarkId: '123456789',
-        tag: 'ai-tools',
-      }).run()
+      testInstance.db
+        .insert(schema.bookmarkTags)
+        .values({
+          userId: USER_A,
+          bookmarkId: '123456789',
+          tag: 'ai-tools',
+        })
+        .run()
 
-      testInstance.db.insert(schema.tagShares).values({
-        userId: USER_A,
-        tag: 'ai-tools',
-        shareCode: 'share-1',
-        isPublic: true,
-      }).run()
+      testInstance.db
+        .insert(schema.tagShares)
+        .values({
+          userId: USER_A,
+          tag: 'ai-tools',
+          shareCode: 'share-1',
+          isPublic: true,
+        })
+        .run()
 
       mockFetchTweetData.mockResolvedValue(buildFxResponse())
       const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
-      const response = await GET(
-        createRequest('testuser', '123456789'),
-        { params: Promise.resolve({ username: 'testuser', id: '123456789' }) }
-      )
+      const response = await GET(createRequest('testuser', '123456789'), {
+        params: Promise.resolve({ username: 'testuser', id: '123456789' }),
+      })
       const data = await response.json()
       expect(data.adhxContext.publicTags).toHaveLength(1)
       expect(data.adhxContext.publicTags[0]).toEqual({
@@ -450,81 +451,117 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
     })
 
     it('excludes private tags from adhxContext', async () => {
-      testInstance.db.insert(schema.oauthTokens).values({
-        userId: USER_A,
-        username: 'alice',
-        accessToken: 'enc_token',
-        refreshToken: 'enc_refresh',
-        expiresAt: Date.now() + 3600000,
-      }).run()
+      testInstance.db
+        .insert(schema.oauthTokens)
+        .values({
+          userId: USER_A,
+          username: 'alice',
+          accessToken: 'enc_token',
+          refreshToken: 'enc_refresh',
+          expiresAt: Date.now() + 3600000,
+        })
+        .run()
 
-      testInstance.db.insert(schema.bookmarks).values({
-        id: '123456789',
-        userId: USER_A,
-        author: 'testuser',
-        text: 'A tweet',
-        tweetUrl: 'https://x.com/testuser/status/123456789',
-        processedAt: new Date().toISOString(),
-      }).run()
+      testInstance.db
+        .insert(schema.bookmarks)
+        .values({
+          id: '123456789',
+          userId: USER_A,
+          author: 'testuser',
+          text: 'A tweet',
+          tweetUrl: 'https://x.com/testuser/status/123456789',
+          processedAt: new Date().toISOString(),
+        })
+        .run()
 
-      testInstance.db.insert(schema.bookmarkTags).values({
-        userId: USER_A,
-        bookmarkId: '123456789',
-        tag: 'private-tag',
-      }).run()
+      testInstance.db
+        .insert(schema.bookmarkTags)
+        .values({
+          userId: USER_A,
+          bookmarkId: '123456789',
+          tag: 'private-tag',
+        })
+        .run()
 
-      testInstance.db.insert(schema.tagShares).values({
-        userId: USER_A,
-        tag: 'private-tag',
-        shareCode: 'share-private',
-        isPublic: false,
-      }).run()
+      testInstance.db
+        .insert(schema.tagShares)
+        .values({
+          userId: USER_A,
+          tag: 'private-tag',
+          shareCode: 'share-private',
+          isPublic: false,
+        })
+        .run()
 
       mockFetchTweetData.mockResolvedValue(buildFxResponse())
       const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
-      const response = await GET(
-        createRequest('testuser', '123456789'),
-        { params: Promise.resolve({ username: 'testuser', id: '123456789' }) }
-      )
+      const response = await GET(createRequest('testuser', '123456789'), {
+        params: Promise.resolve({ username: 'testuser', id: '123456789' }),
+      })
       const data = await response.json()
       expect(data.adhxContext.savedByCount).toBe(1)
       expect(data.adhxContext.publicTags).toHaveLength(0)
     })
 
     it('includes previewUrl in adhxContext', async () => {
-      testInstance.db.insert(schema.bookmarks).values({
-        id: '123456789',
-        userId: USER_A,
-        author: 'testuser',
-        text: 'A tweet',
-        tweetUrl: 'https://x.com/testuser/status/123456789',
-        processedAt: new Date().toISOString(),
-      }).run()
+      testInstance.db
+        .insert(schema.bookmarks)
+        .values({
+          id: '123456789',
+          userId: USER_A,
+          author: 'testuser',
+          text: 'A tweet',
+          tweetUrl: 'https://x.com/testuser/status/123456789',
+          processedAt: new Date().toISOString(),
+        })
+        .run()
 
       mockFetchTweetData.mockResolvedValue(buildFxResponse())
       const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
-      const response = await GET(
-        createRequest('testuser', '123456789'),
-        { params: Promise.resolve({ username: 'testuser', id: '123456789' }) }
-      )
+      const response = await GET(createRequest('testuser', '123456789'), {
+        params: Promise.resolve({ username: 'testuser', id: '123456789' }),
+      })
       const data = await response.json()
       expect(data.adhxContext.previewUrl).toContain('/testuser/status/123456789')
     })
 
     it('counts saves from multiple users correctly', async () => {
       const USER_C = 'user-c-789'
-      testInstance.db.insert(schema.bookmarks).values([
-        { id: '123456789', userId: USER_A, author: 'testuser', text: 'Tweet', tweetUrl: 'https://x.com/testuser/status/123456789', processedAt: new Date().toISOString() },
-        { id: '123456789', userId: USER_B, author: 'testuser', text: 'Tweet', tweetUrl: 'https://x.com/testuser/status/123456789', processedAt: new Date().toISOString() },
-        { id: '123456789', userId: USER_C, author: 'testuser', text: 'Tweet', tweetUrl: 'https://x.com/testuser/status/123456789', processedAt: new Date().toISOString() },
-      ]).run()
+      testInstance.db
+        .insert(schema.bookmarks)
+        .values([
+          {
+            id: '123456789',
+            userId: USER_A,
+            author: 'testuser',
+            text: 'Tweet',
+            tweetUrl: 'https://x.com/testuser/status/123456789',
+            processedAt: new Date().toISOString(),
+          },
+          {
+            id: '123456789',
+            userId: USER_B,
+            author: 'testuser',
+            text: 'Tweet',
+            tweetUrl: 'https://x.com/testuser/status/123456789',
+            processedAt: new Date().toISOString(),
+          },
+          {
+            id: '123456789',
+            userId: USER_C,
+            author: 'testuser',
+            text: 'Tweet',
+            tweetUrl: 'https://x.com/testuser/status/123456789',
+            processedAt: new Date().toISOString(),
+          },
+        ])
+        .run()
 
       mockFetchTweetData.mockResolvedValue(buildFxResponse())
       const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
-      const response = await GET(
-        createRequest('testuser', '123456789'),
-        { params: Promise.resolve({ username: 'testuser', id: '123456789' }) }
-      )
+      const response = await GET(createRequest('testuser', '123456789'), {
+        params: Promise.resolve({ username: 'testuser', id: '123456789' }),
+      })
       const data = await response.json()
       expect(data.adhxContext.savedByCount).toBe(3)
     })

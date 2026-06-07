@@ -52,20 +52,14 @@
         "facets": [
           {
             "type": "url",
-            "indices": [
-              232,
-              255
-            ],
+            "indices": [232, 255],
             "original": "https://t.co/lj73n0ydiO",
             "replacement": "https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72",
             "display": "ft.com/content/df0c08…"
           },
           {
             "type": "media",
-            "indices": [
-              256,
-              279
-            ],
+            "indices": [256, 279],
             "id": "2011786598741086208",
             "display": "pic.x.com/2J2PKMophk",
             "original": "https://t.co/2J2PKMophk",

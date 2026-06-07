@@ -1,7 +1,7 @@
-name: "🐛 Bug Report"
+name: '🐛 Bug Report'
 description: "Something's broken and it's not just your attention span"
-title: "[Bug]: "
-labels: ["bug", "needs-triage"]
+title: '[Bug]: '
+labels: ['bug', 'needs-triage']
 body:
   - type: markdown
     attributes:
@@ -13,7 +13,7 @@ body:
     attributes:
       label: What happened?
       description: Tell us what went wrong. We promise not to judge if you forgot what you were doing mid-report.
-      placeholder: "I clicked the thing and then... wait, what was I doing?"
+      placeholder: 'I clicked the thing and then... wait, what was I doing?'
     validations:
       required: true
 
@@ -22,7 +22,7 @@ body:
     attributes:
       label: What should have happened?
       description: In a perfect world (where we actually read our bookmarks), what would have occurred?
-      placeholder: "It should have saved my tweet so I can ignore it properly later"
+      placeholder: 'It should have saved my tweet so I can ignore it properly later'
     validations:
       required: true
 
@@ -59,7 +59,7 @@ body:
     attributes:
       label: Anything else?
       description: Screenshots, error messages, your bookmark count (we won't judge)
-      placeholder: "I have 1,247 unread bookmarks and zero regrets"
+      placeholder: 'I have 1,247 unread bookmarks and zero regrets'
 
   - type: checkboxes
     id: terms

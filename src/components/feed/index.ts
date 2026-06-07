@@ -30,4 +30,10 @@ export type {
 export { FILTER_OPTIONS, PLATFORM_OPTIONS, streamedBookmarkToFeedItem } from './types'
 
 // Utils
-export { renderTextWithLinks, renderArticleBlock, renderStyledText, stripMediaUrls, decodeHtmlEntities } from './utils'
+export {
+  renderTextWithLinks,
+  renderArticleBlock,
+  renderStyledText,
+  stripMediaUrls,
+  decodeHtmlEntities,
+} from './utils'

@@ -96,11 +96,7 @@
       "indexes": {
         "bookmark_links_user_bookmark_idx": {
           "name": "bookmark_links_user_bookmark_idx",
-          "columns": [
-            "user_id",
-            "platform",
-            "bookmark_id"
-          ],
+          "columns": ["user_id", "platform", "bookmark_id"],
           "isUnique": false
         }
       },
@@ -230,22 +226,14 @@
       "indexes": {
         "bookmark_media_user_bookmark_idx": {
           "name": "bookmark_media_user_bookmark_idx",
-          "columns": [
-            "user_id",
-            "platform",
-            "bookmark_id"
-          ],
+          "columns": ["user_id", "platform", "bookmark_id"],
           "isUnique": false
         }
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "bookmark_media_user_id_platform_id_pk": {
-          "columns": [
-            "user_id",
-            "platform",
-            "id"
-          ],
+          "columns": ["user_id", "platform", "id"],
           "name": "bookmark_media_user_id_platform_id_pk"
         }
       },
@@ -288,21 +276,14 @@
       "indexes": {
         "bookmark_tags_user_id_idx": {
           "name": "bookmark_tags_user_id_idx",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": false
         }
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "bookmark_tags_user_id_platform_bookmark_id_tag_pk": {
-          "columns": [
-            "user_id",
-            "platform",
-            "bookmark_id",
-            "tag"
-          ],
+          "columns": ["user_id", "platform", "bookmark_id", "tag"],
           "name": "bookmark_tags_user_id_platform_bookmark_id_tag_pk"
         }
       },
@@ -491,59 +472,39 @@
       "indexes": {
         "bookmarks_user_id_idx": {
           "name": "bookmarks_user_id_idx",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": false
         },
         "bookmarks_processed_at_idx": {
           "name": "bookmarks_processed_at_idx",
-          "columns": [
-            "processed_at"
-          ],
+          "columns": ["processed_at"],
           "isUnique": false
         },
         "bookmarks_user_processed_at_idx": {
           "name": "bookmarks_user_processed_at_idx",
-          "columns": [
-            "user_id",
-            "processed_at"
-          ],
+          "columns": ["user_id", "processed_at"],
           "isUnique": false
         },
         "bookmarks_user_category_idx": {
           "name": "bookmarks_user_category_idx",
-          "columns": [
-            "user_id",
-            "category"
-          ],
+          "columns": ["user_id", "category"],
           "isUnique": false
         },
         "bookmarks_user_platform_idx": {
           "name": "bookmarks_user_platform_idx",
-          "columns": [
-            "user_id",
-            "platform"
-          ],
+          "columns": ["user_id", "platform"],
           "isUnique": false
         },
         "bookmarks_user_quoted_tweet_idx": {
           "name": "bookmarks_user_quoted_tweet_idx",
-          "columns": [
-            "user_id",
-            "quoted_tweet_id"
-          ],
+          "columns": ["user_id", "quoted_tweet_id"],
           "isUnique": false
         }
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "bookmarks_user_id_platform_id_pk": {
-          "columns": [
-            "user_id",
-            "platform",
-            "id"
-          ],
+          "columns": ["user_id", "platform", "id"],
           "name": "bookmarks_user_id_platform_id_pk"
         }
       },
@@ -602,12 +563,7 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "collection_tweets_user_id_collection_id_platform_bookmark_id_pk": {
-          "columns": [
-            "user_id",
-            "collection_id",
-            "platform",
-            "bookmark_id"
-          ],
+          "columns": ["user_id", "collection_id", "platform", "bookmark_id"],
           "name": "collection_tweets_user_id_collection_id_platform_bookmark_id_pk"
         }
       },
@@ -693,16 +649,12 @@
       "indexes": {
         "collections_share_code_unique": {
           "name": "collections_share_code_unique",
-          "columns": [
-            "share_code"
-          ],
+          "columns": ["share_code"],
           "isUnique": true
         },
         "collections_user_id_idx": {
           "name": "collections_user_id_idx",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": false
         }
       },
@@ -853,20 +805,14 @@
       "indexes": {
         "read_status_user_id_idx": {
           "name": "read_status_user_id_idx",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": false
         }
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "read_status_user_id_platform_bookmark_id_pk": {
-          "columns": [
-            "user_id",
-            "platform",
-            "bookmark_id"
-          ],
+          "columns": ["user_id", "platform", "bookmark_id"],
           "name": "read_status_user_id_platform_bookmark_id_pk"
         }
       },
@@ -961,9 +907,7 @@
       "indexes": {
         "sync_logs_user_id_idx": {
           "name": "sync_logs_user_id_idx",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": false
         }
       },
@@ -1008,10 +952,7 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "sync_state_user_id_key_pk": {
-          "columns": [
-            "user_id",
-            "key"
-          ],
+          "columns": ["user_id", "key"],
           "name": "sync_state_user_id_key_pk"
         }
       },
@@ -1069,26 +1010,19 @@
       "indexes": {
         "tag_shares_share_code_unique": {
           "name": "tag_shares_share_code_unique",
-          "columns": [
-            "share_code"
-          ],
+          "columns": ["share_code"],
           "isUnique": true
         },
         "tag_shares_share_code_idx": {
           "name": "tag_shares_share_code_idx",
-          "columns": [
-            "share_code"
-          ],
+          "columns": ["share_code"],
           "isUnique": false
         }
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "tag_shares_user_id_tag_pk": {
-          "columns": [
-            "user_id",
-            "tag"
-          ],
+          "columns": ["user_id", "tag"],
           "name": "tag_shares_user_id_tag_pk"
         }
       },
@@ -1131,10 +1065,7 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "user_preferences_user_id_key_pk": {
-          "columns": [
-            "user_id",
-            "key"
-          ],
+          "columns": ["user_id", "key"],
           "name": "user_preferences_user_id_key_pk"
         }
       },

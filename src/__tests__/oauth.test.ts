@@ -92,7 +92,7 @@ describe('OAuth Utilities', () => {
         'client-123',
         'https://example.com/callback',
         'state-abc',
-        'challenge-xyz'
+        'challenge-xyz',
       )
 
       expect(url).toContain('https://twitter.com/i/oauth2/authorize')
@@ -166,7 +166,7 @@ describe('OAuth Utilities', () => {
         'access-token-abc',
         'refresh-token-xyz',
         7200, // 2 hours
-        'tweet.read users.read'
+        'tweet.read users.read',
       )
 
       const tokens = await getStoredTokens('user-123')
@@ -186,7 +186,15 @@ describe('OAuth Utilities', () => {
       await saveTokens('user-123', 'olduser', null, 'old-access', 'old-refresh', 3600, 'scope1')
 
       // Update tokens
-      await saveTokens('user-123', 'newuser', 'new-avatar', 'new-access', 'new-refresh', 7200, 'scope2')
+      await saveTokens(
+        'user-123',
+        'newuser',
+        'new-avatar',
+        'new-access',
+        'new-refresh',
+        7200,
+        'scope2',
+      )
 
       const tokens = await getStoredTokens('user-123')
 

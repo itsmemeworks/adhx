@@ -47,25 +47,19 @@ describe('Multi-User Database Isolation', () => {
   describe('Bookmark Isolation', () => {
     it('allows User A and User B to both bookmark the same tweet', async () => {
       // User A bookmarks tweet X
-      await db.insert(bookmarks).values(
-        createTestBookmark(USER_A, SHARED_TWEET_ID, { text: 'User A sees this' })
-      )
+      await db
+        .insert(bookmarks)
+        .values(createTestBookmark(USER_A, SHARED_TWEET_ID, { text: 'User A sees this' }))
 
       // User B bookmarks the same tweet X
-      await db.insert(bookmarks).values(
-        createTestBookmark(USER_B, SHARED_TWEET_ID, { text: 'User B sees this' })
-      )
+      await db
+        .insert(bookmarks)
+        .values(createTestBookmark(USER_B, SHARED_TWEET_ID, { text: 'User B sees this' }))
 
       // Each user should have exactly 1 bookmark
-      const userABookmarks = await db
-        .select()
-        .from(bookmarks)
-        .where(eq(bookmarks.userId, USER_A))
+      const userABookmarks = await db.select().from(bookmarks).where(eq(bookmarks.userId, USER_A))
 
-      const userBBookmarks = await db
-        .select()
-        .from(bookmarks)
-        .where(eq(bookmarks.userId, USER_B))
+      const userBBookmarks = await db.select().from(bookmarks).where(eq(bookmarks.userId, USER_B))
 
       expect(userABookmarks).toHaveLength(1)
       expect(userBBookmarks).toHaveLength(1)
@@ -80,39 +74,37 @@ describe('Multi-User Database Isolation', () => {
 
       // Attempting to insert the same bookmark again should fail
       await expect(
-        db.insert(bookmarks).values(createTestBookmark(USER_A, 'tweet-1'))
+        db.insert(bookmarks).values(createTestBookmark(USER_A, 'tweet-1')),
       ).rejects.toThrow()
     })
 
     it('isolates bookmark queries by user', async () => {
       // Insert bookmarks for both users
-      await db.insert(bookmarks).values([
-        createTestBookmark(USER_A, 'tweet-1'),
-        createTestBookmark(USER_A, 'tweet-2'),
-        createTestBookmark(USER_B, 'tweet-3'),
-        createTestBookmark(USER_B, 'tweet-4'),
-        createTestBookmark(USER_B, 'tweet-5'),
-      ])
+      await db
+        .insert(bookmarks)
+        .values([
+          createTestBookmark(USER_A, 'tweet-1'),
+          createTestBookmark(USER_A, 'tweet-2'),
+          createTestBookmark(USER_B, 'tweet-3'),
+          createTestBookmark(USER_B, 'tweet-4'),
+          createTestBookmark(USER_B, 'tweet-5'),
+        ])
 
-      const userABookmarks = await db
-        .select()
-        .from(bookmarks)
-        .where(eq(bookmarks.userId, USER_A))
+      const userABookmarks = await db.select().from(bookmarks).where(eq(bookmarks.userId, USER_A))
 
-      const userBBookmarks = await db
-        .select()
-        .from(bookmarks)
-        .where(eq(bookmarks.userId, USER_B))
+      const userBBookmarks = await db.select().from(bookmarks).where(eq(bookmarks.userId, USER_B))
 
       expect(userABookmarks).toHaveLength(2)
       expect(userBBookmarks).toHaveLength(3)
     })
 
     it('requires composite key for bookmark lookup', async () => {
-      await db.insert(bookmarks).values([
-        createTestBookmark(USER_A, SHARED_TWEET_ID, { text: 'A version' }),
-        createTestBookmark(USER_B, SHARED_TWEET_ID, { text: 'B version' }),
-      ])
+      await db
+        .insert(bookmarks)
+        .values([
+          createTestBookmark(USER_A, SHARED_TWEET_ID, { text: 'A version' }),
+          createTestBookmark(USER_B, SHARED_TWEET_ID, { text: 'B version' }),
+        ])
 
       // Query with both userId AND id
       const [userABookmark] = await db
@@ -136,10 +128,12 @@ describe('Multi-User Database Isolation', () => {
   describe('Read Status Isolation', () => {
     beforeEach(async () => {
       // Set up bookmarks for both users
-      await db.insert(bookmarks).values([
-        createTestBookmark(USER_A, SHARED_TWEET_ID),
-        createTestBookmark(USER_B, SHARED_TWEET_ID),
-      ])
+      await db
+        .insert(bookmarks)
+        .values([
+          createTestBookmark(USER_A, SHARED_TWEET_ID),
+          createTestBookmark(USER_B, SHARED_TWEET_ID),
+        ])
     })
 
     it('isolates read status between users', async () => {
@@ -193,11 +187,13 @@ describe('Multi-User Database Isolation', () => {
 
     it('correctly counts unread bookmarks per user', async () => {
       // Add more bookmarks
-      await db.insert(bookmarks).values([
-        createTestBookmark(USER_A, 'tweet-a-1'),
-        createTestBookmark(USER_A, 'tweet-a-2'),
-        createTestBookmark(USER_B, 'tweet-b-1'),
-      ])
+      await db
+        .insert(bookmarks)
+        .values([
+          createTestBookmark(USER_A, 'tweet-a-1'),
+          createTestBookmark(USER_A, 'tweet-a-2'),
+          createTestBookmark(USER_B, 'tweet-b-1'),
+        ])
 
       // User A reads 2 tweets (shared + a-1)
       await db.insert(readStatus).values([
@@ -221,10 +217,12 @@ describe('Multi-User Database Isolation', () => {
   // =========================================
   describe('Tag Isolation', () => {
     beforeEach(async () => {
-      await db.insert(bookmarks).values([
-        createTestBookmark(USER_A, SHARED_TWEET_ID),
-        createTestBookmark(USER_B, SHARED_TWEET_ID),
-      ])
+      await db
+        .insert(bookmarks)
+        .values([
+          createTestBookmark(USER_A, SHARED_TWEET_ID),
+          createTestBookmark(USER_B, SHARED_TWEET_ID),
+        ])
     })
 
     it('isolates tags between users', async () => {
@@ -260,10 +258,7 @@ describe('Multi-User Database Isolation', () => {
         { userId: USER_B, bookmarkId: SHARED_TWEET_ID, tag: 'work' },
       ])
 
-      const allWorkTags = await db
-        .select()
-        .from(bookmarkTags)
-        .where(eq(bookmarkTags.tag, 'work'))
+      const allWorkTags = await db.select().from(bookmarkTags).where(eq(bookmarkTags.tag, 'work'))
 
       expect(allWorkTags).toHaveLength(2)
     })
@@ -281,7 +276,7 @@ describe('Multi-User Database Isolation', () => {
           userId: USER_A,
           bookmarkId: SHARED_TWEET_ID,
           tag: 'duplicate',
-        })
+        }),
       ).rejects.toThrow()
     })
 
@@ -306,10 +301,12 @@ describe('Multi-User Database Isolation', () => {
   // =========================================
   describe('Media Isolation', () => {
     beforeEach(async () => {
-      await db.insert(bookmarks).values([
-        createTestBookmark(USER_A, SHARED_TWEET_ID),
-        createTestBookmark(USER_B, SHARED_TWEET_ID),
-      ])
+      await db
+        .insert(bookmarks)
+        .values([
+          createTestBookmark(USER_A, SHARED_TWEET_ID),
+          createTestBookmark(USER_B, SHARED_TWEET_ID),
+        ])
     })
 
     it('isolates media records between users', async () => {
@@ -416,7 +413,7 @@ describe('Multi-User Database Isolation', () => {
           bookmarkId: SHARED_TWEET_ID,
           mediaType: 'photo',
           originalUrl: 'https://example.com/photo.jpg',
-        })
+        }),
       ).rejects.toThrow(/UNIQUE constraint failed/)
     })
 
@@ -433,13 +430,16 @@ describe('Multi-User Database Isolation', () => {
       })
 
       // Second insert with onConflictDoNothing should NOT throw
-      await db.insert(bookmarkMedia).values({
-        id: mediaId,
-        userId: USER_A,
-        bookmarkId: SHARED_TWEET_ID,
-        mediaType: 'photo',
-        originalUrl: 'https://example.com/photo.jpg',
-      }).onConflictDoNothing()
+      await db
+        .insert(bookmarkMedia)
+        .values({
+          id: mediaId,
+          userId: USER_A,
+          bookmarkId: SHARED_TWEET_ID,
+          mediaType: 'photo',
+          originalUrl: 'https://example.com/photo.jpg',
+        })
+        .onConflictDoNothing()
 
       // Should still have only 1 media record
       const media = await db
@@ -454,31 +454,40 @@ describe('Multi-User Database Isolation', () => {
       const mediaId = `${SHARED_TWEET_ID}_photo_0`
 
       // User A inserts media
-      await db.insert(bookmarkMedia).values({
-        id: mediaId,
-        userId: USER_A,
-        bookmarkId: SHARED_TWEET_ID,
-        mediaType: 'photo',
-        originalUrl: 'https://example.com/photo.jpg',
-      }).onConflictDoNothing()
+      await db
+        .insert(bookmarkMedia)
+        .values({
+          id: mediaId,
+          userId: USER_A,
+          bookmarkId: SHARED_TWEET_ID,
+          mediaType: 'photo',
+          originalUrl: 'https://example.com/photo.jpg',
+        })
+        .onConflictDoNothing()
 
       // User B inserts same media ID (different composite key)
-      await db.insert(bookmarkMedia).values({
-        id: mediaId,
-        userId: USER_B,
-        bookmarkId: SHARED_TWEET_ID,
-        mediaType: 'photo',
-        originalUrl: 'https://example.com/photo.jpg',
-      }).onConflictDoNothing()
+      await db
+        .insert(bookmarkMedia)
+        .values({
+          id: mediaId,
+          userId: USER_B,
+          bookmarkId: SHARED_TWEET_ID,
+          mediaType: 'photo',
+          originalUrl: 'https://example.com/photo.jpg',
+        })
+        .onConflictDoNothing()
 
       // User A inserts again (should no-op)
-      await db.insert(bookmarkMedia).values({
-        id: mediaId,
-        userId: USER_A,
-        bookmarkId: SHARED_TWEET_ID,
-        mediaType: 'photo',
-        originalUrl: 'https://example.com/photo.jpg',
-      }).onConflictDoNothing()
+      await db
+        .insert(bookmarkMedia)
+        .values({
+          id: mediaId,
+          userId: USER_A,
+          bookmarkId: SHARED_TWEET_ID,
+          mediaType: 'photo',
+          originalUrl: 'https://example.com/photo.jpg',
+        })
+        .onConflictDoNothing()
 
       // Each user should have exactly 1 media record
       const userAMedia = await db
@@ -515,31 +524,38 @@ describe('Multi-User Database Isolation', () => {
 
     it('handles concurrent media inserts for quoted tweets safely', async () => {
       // Insert the quoted tweet bookmark
-      await db.insert(bookmarks).values(
-        createTestBookmark(USER_A, QUOTED_TWEET_ID)
-      ).onConflictDoNothing()
+      await db
+        .insert(bookmarks)
+        .values(createTestBookmark(USER_A, QUOTED_TWEET_ID))
+        .onConflictDoNothing()
 
       // Simulate two concurrent sync processes trying to insert the same media
       // This is what happens when user double-clicks sync button
       const mediaInserts = [
-        db.insert(bookmarkMedia).values({
-          id: `${QUOTED_TWEET_ID}_photo_0`,
-          userId: USER_A,
-          bookmarkId: QUOTED_TWEET_ID,
-          mediaType: 'photo',
-          originalUrl: 'https://example.com/quoted-photo.jpg',
-          width: 800,
-          height: 600,
-        }).onConflictDoNothing(),
-        db.insert(bookmarkMedia).values({
-          id: `${QUOTED_TWEET_ID}_photo_0`,
-          userId: USER_A,
-          bookmarkId: QUOTED_TWEET_ID,
-          mediaType: 'photo',
-          originalUrl: 'https://example.com/quoted-photo.jpg',
-          width: 800,
-          height: 600,
-        }).onConflictDoNothing(),
+        db
+          .insert(bookmarkMedia)
+          .values({
+            id: `${QUOTED_TWEET_ID}_photo_0`,
+            userId: USER_A,
+            bookmarkId: QUOTED_TWEET_ID,
+            mediaType: 'photo',
+            originalUrl: 'https://example.com/quoted-photo.jpg',
+            width: 800,
+            height: 600,
+          })
+          .onConflictDoNothing(),
+        db
+          .insert(bookmarkMedia)
+          .values({
+            id: `${QUOTED_TWEET_ID}_photo_0`,
+            userId: USER_A,
+            bookmarkId: QUOTED_TWEET_ID,
+            mediaType: 'photo',
+            originalUrl: 'https://example.com/quoted-photo.jpg',
+            width: 800,
+            height: 600,
+          })
+          .onConflictDoNothing(),
       ]
 
       // Both should complete without error
@@ -549,44 +565,48 @@ describe('Multi-User Database Isolation', () => {
       const media = await db
         .select()
         .from(bookmarkMedia)
-        .where(and(
-          eq(bookmarkMedia.userId, USER_A),
-          eq(bookmarkMedia.bookmarkId, QUOTED_TWEET_ID)
-        ))
+        .where(and(eq(bookmarkMedia.userId, USER_A), eq(bookmarkMedia.bookmarkId, QUOTED_TWEET_ID)))
 
       expect(media).toHaveLength(1)
       expect(media[0].id).toBe(`${QUOTED_TWEET_ID}_photo_0`)
     })
 
     it('handles concurrent video media inserts safely', async () => {
-      await db.insert(bookmarks).values(
-        createTestBookmark(USER_A, QUOTED_TWEET_ID)
-      ).onConflictDoNothing()
+      await db
+        .insert(bookmarks)
+        .values(createTestBookmark(USER_A, QUOTED_TWEET_ID))
+        .onConflictDoNothing()
 
       // Simulate concurrent video media inserts
       const videoInserts = [
-        db.insert(bookmarkMedia).values({
-          id: `${QUOTED_TWEET_ID}_video_0`,
-          userId: USER_A,
-          bookmarkId: QUOTED_TWEET_ID,
-          mediaType: 'video',
-          originalUrl: 'https://example.com/video.mp4',
-          previewUrl: 'https://example.com/thumb.jpg',
-          width: 1920,
-          height: 1080,
-          durationMs: 30000,
-        }).onConflictDoNothing(),
-        db.insert(bookmarkMedia).values({
-          id: `${QUOTED_TWEET_ID}_video_0`,
-          userId: USER_A,
-          bookmarkId: QUOTED_TWEET_ID,
-          mediaType: 'video',
-          originalUrl: 'https://example.com/video.mp4',
-          previewUrl: 'https://example.com/thumb.jpg',
-          width: 1920,
-          height: 1080,
-          durationMs: 30000,
-        }).onConflictDoNothing(),
+        db
+          .insert(bookmarkMedia)
+          .values({
+            id: `${QUOTED_TWEET_ID}_video_0`,
+            userId: USER_A,
+            bookmarkId: QUOTED_TWEET_ID,
+            mediaType: 'video',
+            originalUrl: 'https://example.com/video.mp4',
+            previewUrl: 'https://example.com/thumb.jpg',
+            width: 1920,
+            height: 1080,
+            durationMs: 30000,
+          })
+          .onConflictDoNothing(),
+        db
+          .insert(bookmarkMedia)
+          .values({
+            id: `${QUOTED_TWEET_ID}_video_0`,
+            userId: USER_A,
+            bookmarkId: QUOTED_TWEET_ID,
+            mediaType: 'video',
+            originalUrl: 'https://example.com/video.mp4',
+            previewUrl: 'https://example.com/thumb.jpg',
+            width: 1920,
+            height: 1080,
+            durationMs: 30000,
+          })
+          .onConflictDoNothing(),
       ]
 
       await Promise.all(videoInserts)
@@ -594,54 +614,64 @@ describe('Multi-User Database Isolation', () => {
       const media = await db
         .select()
         .from(bookmarkMedia)
-        .where(and(
-          eq(bookmarkMedia.userId, USER_A),
-          eq(bookmarkMedia.bookmarkId, QUOTED_TWEET_ID)
-        ))
+        .where(and(eq(bookmarkMedia.userId, USER_A), eq(bookmarkMedia.bookmarkId, QUOTED_TWEET_ID)))
 
       expect(media).toHaveLength(1)
       expect(media[0].mediaType).toBe('video')
     })
 
     it('handles mixed photo and video concurrent inserts', async () => {
-      await db.insert(bookmarks).values(
-        createTestBookmark(USER_A, QUOTED_TWEET_ID)
-      ).onConflictDoNothing()
+      await db
+        .insert(bookmarks)
+        .values(createTestBookmark(USER_A, QUOTED_TWEET_ID))
+        .onConflictDoNothing()
 
       // Simulate a tweet with multiple media items being processed concurrently
       const mediaInserts = [
         // First sync process inserts photo
-        db.insert(bookmarkMedia).values({
-          id: `${QUOTED_TWEET_ID}_photo_0`,
-          userId: USER_A,
-          bookmarkId: QUOTED_TWEET_ID,
-          mediaType: 'photo',
-          originalUrl: 'https://example.com/photo1.jpg',
-        }).onConflictDoNothing(),
+        db
+          .insert(bookmarkMedia)
+          .values({
+            id: `${QUOTED_TWEET_ID}_photo_0`,
+            userId: USER_A,
+            bookmarkId: QUOTED_TWEET_ID,
+            mediaType: 'photo',
+            originalUrl: 'https://example.com/photo1.jpg',
+          })
+          .onConflictDoNothing(),
         // Second sync process tries same photo
-        db.insert(bookmarkMedia).values({
-          id: `${QUOTED_TWEET_ID}_photo_0`,
-          userId: USER_A,
-          bookmarkId: QUOTED_TWEET_ID,
-          mediaType: 'photo',
-          originalUrl: 'https://example.com/photo1.jpg',
-        }).onConflictDoNothing(),
+        db
+          .insert(bookmarkMedia)
+          .values({
+            id: `${QUOTED_TWEET_ID}_photo_0`,
+            userId: USER_A,
+            bookmarkId: QUOTED_TWEET_ID,
+            mediaType: 'photo',
+            originalUrl: 'https://example.com/photo1.jpg',
+          })
+          .onConflictDoNothing(),
         // First sync also inserts video
-        db.insert(bookmarkMedia).values({
-          id: `${QUOTED_TWEET_ID}_video_0`,
-          userId: USER_A,
-          bookmarkId: QUOTED_TWEET_ID,
-          mediaType: 'video',
-          originalUrl: 'https://example.com/video.mp4',
-        }).onConflictDoNothing(),
+        db
+          .insert(bookmarkMedia)
+          .values({
+            id: `${QUOTED_TWEET_ID}_video_0`,
+            userId: USER_A,
+            bookmarkId: QUOTED_TWEET_ID,
+            mediaType: 'video',
+            originalUrl: 'https://example.com/video.mp4',
+          })
+          .onConflictDoNothing(),
         // Second sync tries same video
-        db.insert(bookmarkMedia).values({
-          id: `${QUOTED_TWEET_ID}_video_0`,
-          userId: USER_A,
-          bookmarkId: QUOTED_TWEET_ID,
-          mediaType: 'video',
-          originalUrl: 'https://example.com/video.mp4',
-        }).onConflictDoNothing(),
+        db
+          .insert(bookmarkMedia)
+          .values({
+            id: `${QUOTED_TWEET_ID}_video_0`,
+            userId: USER_A,
+            bookmarkId: QUOTED_TWEET_ID,
+            mediaType: 'video',
+            originalUrl: 'https://example.com/video.mp4',
+          })
+          .onConflictDoNothing(),
       ]
 
       await Promise.all(mediaInserts)
@@ -649,57 +679,69 @@ describe('Multi-User Database Isolation', () => {
       const media = await db
         .select()
         .from(bookmarkMedia)
-        .where(and(
-          eq(bookmarkMedia.userId, USER_A),
-          eq(bookmarkMedia.bookmarkId, QUOTED_TWEET_ID)
-        ))
+        .where(and(eq(bookmarkMedia.userId, USER_A), eq(bookmarkMedia.bookmarkId, QUOTED_TWEET_ID)))
 
       // Should have exactly 2 media items (1 photo, 1 video)
       expect(media).toHaveLength(2)
-      expect(media.map(m => m.mediaType).sort()).toEqual(['photo', 'video'])
+      expect(media.map((m) => m.mediaType).sort()).toEqual(['photo', 'video'])
     })
 
     it('isolates concurrent inserts between users', async () => {
       // Both users bookmark a tweet that quotes the same tweet
-      await db.insert(bookmarks).values([
-        createTestBookmark(USER_A, QUOTED_TWEET_ID),
-        createTestBookmark(USER_B, QUOTED_TWEET_ID),
-      ]).onConflictDoNothing()
+      await db
+        .insert(bookmarks)
+        .values([
+          createTestBookmark(USER_A, QUOTED_TWEET_ID),
+          createTestBookmark(USER_B, QUOTED_TWEET_ID),
+        ])
+        .onConflictDoNothing()
 
       // Simulate both users syncing at the same time
       const concurrentInserts = [
         // User A's sync
-        db.insert(bookmarkMedia).values({
-          id: `${QUOTED_TWEET_ID}_photo_0`,
-          userId: USER_A,
-          bookmarkId: QUOTED_TWEET_ID,
-          mediaType: 'photo',
-          originalUrl: 'https://example.com/photo.jpg',
-        }).onConflictDoNothing(),
+        db
+          .insert(bookmarkMedia)
+          .values({
+            id: `${QUOTED_TWEET_ID}_photo_0`,
+            userId: USER_A,
+            bookmarkId: QUOTED_TWEET_ID,
+            mediaType: 'photo',
+            originalUrl: 'https://example.com/photo.jpg',
+          })
+          .onConflictDoNothing(),
         // User B's sync
-        db.insert(bookmarkMedia).values({
-          id: `${QUOTED_TWEET_ID}_photo_0`,
-          userId: USER_B,
-          bookmarkId: QUOTED_TWEET_ID,
-          mediaType: 'photo',
-          originalUrl: 'https://example.com/photo.jpg',
-        }).onConflictDoNothing(),
+        db
+          .insert(bookmarkMedia)
+          .values({
+            id: `${QUOTED_TWEET_ID}_photo_0`,
+            userId: USER_B,
+            bookmarkId: QUOTED_TWEET_ID,
+            mediaType: 'photo',
+            originalUrl: 'https://example.com/photo.jpg',
+          })
+          .onConflictDoNothing(),
         // User A's sync retry (double-click)
-        db.insert(bookmarkMedia).values({
-          id: `${QUOTED_TWEET_ID}_photo_0`,
-          userId: USER_A,
-          bookmarkId: QUOTED_TWEET_ID,
-          mediaType: 'photo',
-          originalUrl: 'https://example.com/photo.jpg',
-        }).onConflictDoNothing(),
+        db
+          .insert(bookmarkMedia)
+          .values({
+            id: `${QUOTED_TWEET_ID}_photo_0`,
+            userId: USER_A,
+            bookmarkId: QUOTED_TWEET_ID,
+            mediaType: 'photo',
+            originalUrl: 'https://example.com/photo.jpg',
+          })
+          .onConflictDoNothing(),
         // User B's sync retry
-        db.insert(bookmarkMedia).values({
-          id: `${QUOTED_TWEET_ID}_photo_0`,
-          userId: USER_B,
-          bookmarkId: QUOTED_TWEET_ID,
-          mediaType: 'photo',
-          originalUrl: 'https://example.com/photo.jpg',
-        }).onConflictDoNothing(),
+        db
+          .insert(bookmarkMedia)
+          .values({
+            id: `${QUOTED_TWEET_ID}_photo_0`,
+            userId: USER_B,
+            bookmarkId: QUOTED_TWEET_ID,
+            mediaType: 'photo',
+            originalUrl: 'https://example.com/photo.jpg',
+          })
+          .onConflictDoNothing(),
       ]
 
       await Promise.all(concurrentInserts)
@@ -725,10 +767,12 @@ describe('Multi-User Database Isolation', () => {
   // =========================================
   describe('Links Isolation', () => {
     beforeEach(async () => {
-      await db.insert(bookmarks).values([
-        createTestBookmark(USER_A, SHARED_TWEET_ID),
-        createTestBookmark(USER_B, SHARED_TWEET_ID),
-      ])
+      await db
+        .insert(bookmarks)
+        .values([
+          createTestBookmark(USER_A, SHARED_TWEET_ID),
+          createTestBookmark(USER_B, SHARED_TWEET_ID),
+        ])
     })
 
     it('isolates link records between users', async () => {
@@ -816,7 +860,7 @@ describe('Multi-User Database Isolation', () => {
         createTestBookmark(USER_A, 'tweet-A', {
           isQuote: true,
           quotedTweetId: QUOTED_TWEET_ID,
-        })
+        }),
       )
 
       // User A also bookmarks tweet B which quotes the same Q
@@ -824,21 +868,18 @@ describe('Multi-User Database Isolation', () => {
         createTestBookmark(USER_A, 'tweet-B', {
           isQuote: true,
           quotedTweetId: QUOTED_TWEET_ID,
-        })
+        }),
       )
 
       // Store quoted tweet Q for User A (only once)
       await db.insert(bookmarks).values(
         createTestBookmark(USER_A, QUOTED_TWEET_ID, {
           text: 'This is the quoted tweet content',
-        })
+        }),
       )
 
       // User A should have 3 bookmarks total (A, B, and Q)
-      const userABookmarks = await db
-        .select()
-        .from(bookmarks)
-        .where(eq(bookmarks.userId, USER_A))
+      const userABookmarks = await db.select().from(bookmarks).where(eq(bookmarks.userId, USER_A))
 
       expect(userABookmarks).toHaveLength(3)
 
@@ -853,16 +894,20 @@ describe('Multi-User Database Isolation', () => {
 
     it('allows different users to have their own copy of quoted tweet', async () => {
       // User A and User B both bookmark tweets that quote Q
-      await db.insert(bookmarks).values([
-        createTestBookmark(USER_A, 'tweet-A', { isQuote: true, quotedTweetId: QUOTED_TWEET_ID }),
-        createTestBookmark(USER_B, 'tweet-C', { isQuote: true, quotedTweetId: QUOTED_TWEET_ID }),
-      ])
+      await db
+        .insert(bookmarks)
+        .values([
+          createTestBookmark(USER_A, 'tweet-A', { isQuote: true, quotedTweetId: QUOTED_TWEET_ID }),
+          createTestBookmark(USER_B, 'tweet-C', { isQuote: true, quotedTweetId: QUOTED_TWEET_ID }),
+        ])
 
       // Each user stores their own copy of Q
-      await db.insert(bookmarks).values([
-        createTestBookmark(USER_A, QUOTED_TWEET_ID, { text: 'Quoted Q for User A' }),
-        createTestBookmark(USER_B, QUOTED_TWEET_ID, { text: 'Quoted Q for User B' }),
-      ])
+      await db
+        .insert(bookmarks)
+        .values([
+          createTestBookmark(USER_A, QUOTED_TWEET_ID, { text: 'Quoted Q for User A' }),
+          createTestBookmark(USER_B, QUOTED_TWEET_ID, { text: 'Quoted Q for User B' }),
+        ])
 
       // Each user has their own Q
       const [userAQuoted] = await db
@@ -886,13 +931,15 @@ describe('Multi-User Database Isolation', () => {
   describe('Account Clear Isolation', () => {
     beforeEach(async () => {
       // Set up data for both users
-      await db.insert(bookmarks).values([
-        createTestBookmark(USER_A, 'tweet-a-1'),
-        createTestBookmark(USER_A, 'tweet-a-2'),
-        createTestBookmark(USER_B, 'tweet-b-1'),
-        createTestBookmark(USER_B, 'tweet-b-2'),
-        createTestBookmark(USER_B, 'tweet-b-3'),
-      ])
+      await db
+        .insert(bookmarks)
+        .values([
+          createTestBookmark(USER_A, 'tweet-a-1'),
+          createTestBookmark(USER_A, 'tweet-a-2'),
+          createTestBookmark(USER_B, 'tweet-b-1'),
+          createTestBookmark(USER_B, 'tweet-b-2'),
+          createTestBookmark(USER_B, 'tweet-b-3'),
+        ])
 
       await db.insert(readStatus).values([
         { userId: USER_A, bookmarkId: 'tweet-a-1', readAt: new Date().toISOString() },
@@ -912,36 +959,24 @@ describe('Multi-User Database Isolation', () => {
       await db.delete(bookmarks).where(eq(bookmarks.userId, USER_A))
 
       // User A should have nothing
-      const userABookmarks = await db
-        .select()
-        .from(bookmarks)
-        .where(eq(bookmarks.userId, USER_A))
+      const userABookmarks = await db.select().from(bookmarks).where(eq(bookmarks.userId, USER_A))
       const userAReadStatus = await db
         .select()
         .from(readStatus)
         .where(eq(readStatus.userId, USER_A))
-      const userATags = await db
-        .select()
-        .from(bookmarkTags)
-        .where(eq(bookmarkTags.userId, USER_A))
+      const userATags = await db.select().from(bookmarkTags).where(eq(bookmarkTags.userId, USER_A))
 
       expect(userABookmarks).toHaveLength(0)
       expect(userAReadStatus).toHaveLength(0)
       expect(userATags).toHaveLength(0)
 
       // User B should still have all their data
-      const userBBookmarks = await db
-        .select()
-        .from(bookmarks)
-        .where(eq(bookmarks.userId, USER_B))
+      const userBBookmarks = await db.select().from(bookmarks).where(eq(bookmarks.userId, USER_B))
       const userBReadStatus = await db
         .select()
         .from(readStatus)
         .where(eq(readStatus.userId, USER_B))
-      const userBTags = await db
-        .select()
-        .from(bookmarkTags)
-        .where(eq(bookmarkTags.userId, USER_B))
+      const userBTags = await db.select().from(bookmarkTags).where(eq(bookmarkTags.userId, USER_B))
 
       expect(userBBookmarks).toHaveLength(3)
       expect(userBReadStatus).toHaveLength(1)
@@ -1014,12 +1049,16 @@ describe('Multi-User Database Isolation', () => {
       const media = await db
         .select()
         .from(bookmarkMedia)
-        .where(and(eq(bookmarkMedia.userId, USER_A), eq(bookmarkMedia.bookmarkId, 'complete-tweet')))
+        .where(
+          and(eq(bookmarkMedia.userId, USER_A), eq(bookmarkMedia.bookmarkId, 'complete-tweet')),
+        )
 
       const links = await db
         .select()
         .from(bookmarkLinks)
-        .where(and(eq(bookmarkLinks.userId, USER_A), eq(bookmarkLinks.bookmarkId, 'complete-tweet')))
+        .where(
+          and(eq(bookmarkLinks.userId, USER_A), eq(bookmarkLinks.bookmarkId, 'complete-tweet')),
+        )
 
       const tags = await db
         .select()

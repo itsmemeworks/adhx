@@ -139,7 +139,9 @@ const mockTweetWithMediaAndQuote = {
         avatar_url: 'https://pbs.twimg.com/profile/quoteduser.jpg',
       },
       media: {
-        photos: [{ url: 'https://pbs.twimg.com/quoted-photo-in-combo.jpg', width: 800, height: 600 }],
+        photos: [
+          { url: 'https://pbs.twimg.com/quoted-photo-in-combo.jpg', width: 800, height: 600 },
+        ],
       },
     },
   },
@@ -194,7 +196,9 @@ describe('API: /api/tweets/add', () => {
       })
 
       const { POST } = await import('@/app/api/tweets/add/route')
-      const response = await POST(createRequest({ url: 'https://twitter.com/testuser/status/123456789' }))
+      const response = await POST(
+        createRequest({ url: 'https://twitter.com/testuser/status/123456789' }),
+      )
 
       expect(response.status).toBe(200)
     })
@@ -218,7 +222,9 @@ describe('API: /api/tweets/add', () => {
       })
 
       const { POST } = await import('@/app/api/tweets/add/route')
-      const response = await POST(createRequest({ url: 'https://mobile.twitter.com/testuser/status/123456789' }))
+      const response = await POST(
+        createRequest({ url: 'https://mobile.twitter.com/testuser/status/123456789' }),
+      )
 
       expect(response.status).toBe(200)
     })
@@ -230,7 +236,9 @@ describe('API: /api/tweets/add', () => {
       })
 
       const { POST } = await import('@/app/api/tweets/add/route')
-      const response = await POST(createRequest({ url: 'https://vxtwitter.com/testuser/status/123456789' }))
+      const response = await POST(
+        createRequest({ url: 'https://vxtwitter.com/testuser/status/123456789' }),
+      )
 
       expect(response.status).toBe(200)
     })
@@ -249,7 +257,9 @@ describe('API: /api/tweets/add', () => {
       })
 
       const { POST } = await import('@/app/api/tweets/add/route')
-      const response = await POST(createRequest({ url: 'https://twitter.com/testuser/status/123456789' }))
+      const response = await POST(
+        createRequest({ url: 'https://twitter.com/testuser/status/123456789' }),
+      )
 
       expect(response.status).toBe(200)
       const data = await response.json()
@@ -275,7 +285,9 @@ describe('API: /api/tweets/add', () => {
       })
 
       const { POST } = await import('@/app/api/tweets/add/route')
-      const response = await POST(createRequest({ url: 'https://twitter.com/testuser/status/123456789' }))
+      const response = await POST(
+        createRequest({ url: 'https://twitter.com/testuser/status/123456789' }),
+      )
 
       expect(response.status).toBe(200)
       const data = await response.json()
@@ -292,7 +304,9 @@ describe('API: /api/tweets/add', () => {
       })
 
       const { POST } = await import('@/app/api/tweets/add/route')
-      const response = await POST(createRequest({ url: 'https://twitter.com/user/status/123456789' }))
+      const response = await POST(
+        createRequest({ url: 'https://twitter.com/user/status/123456789' }),
+      )
 
       expect(response.status).toBe(200)
       const data = await response.json()
@@ -306,7 +320,9 @@ describe('API: /api/tweets/add', () => {
       })
 
       const { POST } = await import('@/app/api/tweets/add/route')
-      const response = await POST(createRequest({ url: 'https://twitter.com/user/status/123456789' }))
+      const response = await POST(
+        createRequest({ url: 'https://twitter.com/user/status/123456789' }),
+      )
 
       expect(response.status).toBe(200)
       const data = await response.json()
@@ -320,7 +336,9 @@ describe('API: /api/tweets/add', () => {
       })
 
       const { POST } = await import('@/app/api/tweets/add/route')
-      const response = await POST(createRequest({ url: 'https://twitter.com/user/status/123456789' }))
+      const response = await POST(
+        createRequest({ url: 'https://twitter.com/user/status/123456789' }),
+      )
 
       expect(response.status).toBe(200)
       const data = await response.json()
@@ -334,7 +352,9 @@ describe('API: /api/tweets/add', () => {
       })
 
       const { POST } = await import('@/app/api/tweets/add/route')
-      const response = await POST(createRequest({ url: 'https://twitter.com/user/status/123456789' }))
+      const response = await POST(
+        createRequest({ url: 'https://twitter.com/user/status/123456789' }),
+      )
 
       expect(response.status).toBe(200)
       const data = await response.json()
@@ -367,7 +387,9 @@ describe('API: /api/tweets/add', () => {
       })
 
       const { POST } = await import('@/app/api/tweets/add/route')
-      await POST(createRequest({ url: 'https://twitter.com/user/status/123456789', source: 'url_prefix' }))
+      await POST(
+        createRequest({ url: 'https://twitter.com/user/status/123456789', source: 'url_prefix' }),
+      )
 
       const [bookmark] = await testInstance.db
         .select()
@@ -406,7 +428,9 @@ describe('API: /api/tweets/add', () => {
       })
 
       const { POST } = await import('@/app/api/tweets/add/route')
-      const response = await POST(createRequest({ url: 'https://twitter.com/quoter/status/999888777' }))
+      const response = await POST(
+        createRequest({ url: 'https://twitter.com/quoter/status/999888777' }),
+      )
 
       expect(response.status).toBe(200)
       const data = await response.json()
@@ -438,7 +462,9 @@ describe('API: /api/tweets/add', () => {
 
       expect(quotedBookmark).toHaveLength(1)
       expect(quotedBookmark[0].author).toBe('originalauthor')
-      expect(quotedBookmark[0].text).toBe('This is the original quoted tweet with important content')
+      expect(quotedBookmark[0].text).toBe(
+        'This is the original quoted tweet with important content',
+      )
       expect(quotedBookmark[0].source).toBe('quoted')
     })
 
@@ -501,7 +527,9 @@ describe('API: /api/tweets/add', () => {
       })
 
       const { POST } = await import('@/app/api/tweets/add/route')
-      const response = await POST(createRequest({ url: 'https://twitter.com/mediaandquoter/status/555666777' }))
+      const response = await POST(
+        createRequest({ url: 'https://twitter.com/mediaandquoter/status/555666777' }),
+      )
 
       expect(response.status).toBe(200)
       const data = await response.json()
@@ -599,7 +627,9 @@ describe('API: /api/tweets/add', () => {
       })
 
       const { POST } = await import('@/app/api/tweets/add/route')
-      const response = await POST(createRequest({ url: 'https://twitter.com/user/status/123456789' }))
+      const response = await POST(
+        createRequest({ url: 'https://twitter.com/user/status/123456789' }),
+      )
 
       expect(response.status).toBe(500)
       const data = await response.json()
@@ -610,7 +640,9 @@ describe('API: /api/tweets/add', () => {
       mockFetch.mockRejectedValueOnce(new Error('Network error'))
 
       const { POST } = await import('@/app/api/tweets/add/route')
-      const response = await POST(createRequest({ url: 'https://twitter.com/user/status/123456789' }))
+      const response = await POST(
+        createRequest({ url: 'https://twitter.com/user/status/123456789' }),
+      )
 
       expect(response.status).toBe(500)
     })

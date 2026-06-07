@@ -57,11 +57,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
         const tweetsInTag = db
           .select({ id: bookmarks.id, author: bookmarks.author })
           .from(bookmarks)
-          .where(and(
-            eq(bookmarks.userId, share.userId),
-            eq(bookmarks.platform, 'twitter'),
-            inArray(bookmarks.id, bookmarkIds)
-          ))
+          .where(
+            and(
+              eq(bookmarks.userId, share.userId),
+              eq(bookmarks.platform, 'twitter'),
+              inArray(bookmarks.id, bookmarkIds),
+            ),
+          )
           .all()
 
         for (const tweet of tweetsInTag) {

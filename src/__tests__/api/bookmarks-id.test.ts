@@ -34,7 +34,7 @@ vi.mock('@/lib/db', () => ({
 vi.mock('@/lib/auth/session', () => ({
   getCurrentUserId: vi.fn(() => Promise.resolve(mockUserId)),
   getSession: vi.fn(() =>
-    Promise.resolve(mockUserId ? { userId: mockUserId, username: 'testuser' } : null)
+    Promise.resolve(mockUserId ? { userId: mockUserId, username: 'testuser' } : null),
   ),
 }))
 
@@ -138,7 +138,11 @@ function createTestDatabase() {
 }
 
 // Helper to create test bookmark
-function createTestBookmark(userId: string, id: string, overrides: Partial<schema.NewBookmark> = {}) {
+function createTestBookmark(
+  userId: string,
+  id: string,
+  overrides: Partial<schema.NewBookmark> = {},
+) {
   return {
     id,
     userId,
@@ -232,7 +236,7 @@ describe('API: /api/bookmarks/[id]', () => {
       expect(data.readAt).toBe('2024-01-15T10:00:00Z')
     })
 
-    it('does not return another user\'s bookmark', async () => {
+    it("does not return another user's bookmark", async () => {
       // Seed bookmark for User B
       await testDb.insert(schema.bookmarks).values(createTestBookmark(USER_B, 'tweet-1'))
 
@@ -317,16 +321,21 @@ describe('API: /api/bookmarks/[id]', () => {
       const tags = await testDb
         .select()
         .from(schema.bookmarkTags)
-        .where(and(eq(schema.bookmarkTags.userId, USER_A), eq(schema.bookmarkTags.bookmarkId, 'tweet-1')))
+        .where(
+          and(
+            eq(schema.bookmarkTags.userId, USER_A),
+            eq(schema.bookmarkTags.bookmarkId, 'tweet-1'),
+          ),
+        )
 
       expect(tags).toHaveLength(3)
       expect(tags.map((t) => t.tag).sort()).toEqual(['new1', 'new2', 'new3'])
     })
 
     it('clears tags when empty array provided', async () => {
-      await testDb.insert(schema.bookmarkTags).values([
-        { userId: USER_A, bookmarkId: 'tweet-1', tag: 'tag1' },
-      ])
+      await testDb
+        .insert(schema.bookmarkTags)
+        .values([{ userId: USER_A, bookmarkId: 'tweet-1', tag: 'tag1' }])
 
       const { PATCH } = await import('@/app/api/bookmarks/[id]/route')
       const request = createRequest('PATCH', '/api/bookmarks/tweet-1', { tags: [] })
@@ -337,12 +346,17 @@ describe('API: /api/bookmarks/[id]', () => {
       const tags = await testDb
         .select()
         .from(schema.bookmarkTags)
-        .where(and(eq(schema.bookmarkTags.userId, USER_A), eq(schema.bookmarkTags.bookmarkId, 'tweet-1')))
+        .where(
+          and(
+            eq(schema.bookmarkTags.userId, USER_A),
+            eq(schema.bookmarkTags.bookmarkId, 'tweet-1'),
+          ),
+        )
 
       expect(tags).toHaveLength(0)
     })
 
-    it('does not update another user\'s bookmark tags', async () => {
+    it("does not update another user's bookmark tags", async () => {
       // User B's bookmark
       await testDb.insert(schema.bookmarks).values(createTestBookmark(USER_B, 'tweet-b'))
       await testDb.insert(schema.bookmarkTags).values({
@@ -424,19 +438,36 @@ describe('API: /api/bookmarks/[id]', () => {
       const tagsResult = await testDb
         .select()
         .from(schema.bookmarkTags)
-        .where(and(eq(schema.bookmarkTags.userId, USER_A), eq(schema.bookmarkTags.bookmarkId, 'tweet-1')))
+        .where(
+          and(
+            eq(schema.bookmarkTags.userId, USER_A),
+            eq(schema.bookmarkTags.bookmarkId, 'tweet-1'),
+          ),
+        )
       const mediaResult = await testDb
         .select()
         .from(schema.bookmarkMedia)
-        .where(and(eq(schema.bookmarkMedia.userId, USER_A), eq(schema.bookmarkMedia.bookmarkId, 'tweet-1')))
+        .where(
+          and(
+            eq(schema.bookmarkMedia.userId, USER_A),
+            eq(schema.bookmarkMedia.bookmarkId, 'tweet-1'),
+          ),
+        )
       const linksResult = await testDb
         .select()
         .from(schema.bookmarkLinks)
-        .where(and(eq(schema.bookmarkLinks.userId, USER_A), eq(schema.bookmarkLinks.bookmarkId, 'tweet-1')))
+        .where(
+          and(
+            eq(schema.bookmarkLinks.userId, USER_A),
+            eq(schema.bookmarkLinks.bookmarkId, 'tweet-1'),
+          ),
+        )
       const readResult = await testDb
         .select()
         .from(schema.readStatus)
-        .where(and(eq(schema.readStatus.userId, USER_A), eq(schema.readStatus.bookmarkId, 'tweet-1')))
+        .where(
+          and(eq(schema.readStatus.userId, USER_A), eq(schema.readStatus.bookmarkId, 'tweet-1')),
+        )
 
       expect(bookmarkResult).toHaveLength(0)
       expect(tagsResult).toHaveLength(0)
@@ -445,7 +476,7 @@ describe('API: /api/bookmarks/[id]', () => {
       expect(readResult).toHaveLength(0)
     })
 
-    it('does not delete another user\'s bookmark', async () => {
+    it("does not delete another user's bookmark", async () => {
       // Create User B's bookmark
       await testDb.insert(schema.bookmarks).values(createTestBookmark(USER_B, 'tweet-b'))
 

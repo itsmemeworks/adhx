@@ -22,7 +22,7 @@ export async function fetchOgMetadata(url: string): Promise<OgMetadata | null> {
         // Use Twitterbot UA — sites whitelist social crawlers for OG tag serving,
         // while blocking generic bots with Cloudflare etc.
         'User-Agent': 'Twitterbot/1.0',
-        'Accept': 'text/html',
+        Accept: 'text/html',
       },
       redirect: 'follow',
     })
@@ -60,8 +60,8 @@ function parseOgTags(html: string): OgMetadata | null {
     // Match <meta property="og:title" content="..."> or <meta name="og:title" content="...">
     const pattern = new RegExp(
       `<meta[^>]+(?:property|name)=["']${property}["'][^>]+content=["']([^"']+)["']` +
-      `|<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${property}["']`,
-      'i'
+        `|<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${property}["']`,
+      'i',
     )
     const match = html.match(pattern)
     if (match) return decodeHtmlEntities(match[1] || match[2])
@@ -75,7 +75,7 @@ function parseOgTags(html: string): OgMetadata | null {
     // Fallback to meta description for description
     if (property === 'og:description') {
       const descMatch = html.match(
-        /<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']|<meta[^>]+content=["']([^"']+)["'][^>]+name=["']description["']/i
+        /<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']|<meta[^>]+content=["']([^"']+)["'][^>]+name=["']description["']/i,
       )
       if (descMatch) return decodeHtmlEntities(descMatch[1] || descMatch[2])
     }

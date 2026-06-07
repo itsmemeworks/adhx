@@ -57,7 +57,7 @@ describe('Twitter Client', () => {
       const { getTwitterClient } = await import('@/lib/twitter/client')
 
       await expect(getTwitterClient('nonexistent-user')).rejects.toThrow(
-        'Not authenticated. Please connect your Twitter account.'
+        'Not authenticated. Please connect your Twitter account.',
       )
     })
 
@@ -109,7 +109,7 @@ describe('Twitter Client', () => {
       expect(client).toBeDefined()
       expect(mockFetch).toHaveBeenCalledWith(
         'https://api.twitter.com/2/oauth2/token',
-        expect.objectContaining({ method: 'POST' })
+        expect.objectContaining({ method: 'POST' }),
       )
     })
 
@@ -212,7 +212,7 @@ describe('Twitter Client', () => {
       expect(mockTwitterApi.v2.bookmarks).toHaveBeenCalledWith(
         expect.objectContaining({
           pagination_token: 'current-page-token',
-        })
+        }),
       )
     })
 
@@ -260,7 +260,9 @@ describe('Twitter Client', () => {
               id: 'tweet-long',
               text: 'Truncated version...',
               author_id: 'author-4',
-              note_tweet: { text: 'This is the full very long tweet text that exceeds 280 characters...' },
+              note_tweet: {
+                text: 'This is the full very long tweet text that exceeds 280 characters...',
+              },
             },
           ],
           meta: { result_count: 1 },
@@ -272,7 +274,7 @@ describe('Twitter Client', () => {
       const result = await fetchBookmarks('user-123')
 
       expect(result.bookmarks[0].text).toBe(
-        'This is the full very long tweet text that exceeds 280 characters...'
+        'This is the full very long tweet text that exceeds 280 characters...',
       )
     })
 

@@ -1,10 +1,5 @@
 import { TwitterApi, UserV2 } from 'twitter-api-v2'
-import {
-  getStoredTokens,
-  isTokenExpired,
-  refreshAccessToken,
-  saveTokens,
-} from '@/lib/auth/oauth'
+import { getStoredTokens, isTokenExpired, refreshAccessToken, saveTokens } from '@/lib/auth/oauth'
 
 const CLIENT_ID = process.env.TWITTER_CLIENT_ID!
 const CLIENT_SECRET = process.env.TWITTER_CLIENT_SECRET!
@@ -70,11 +65,7 @@ export async function getTwitterClient(userId: string): Promise<TwitterApi> {
   // Check if token needs refresh
   if (isTokenExpired(tokens.expiresAt)) {
     console.log('Token expired, refreshing...')
-    const newTokens = await refreshAccessToken(
-      tokens.refreshToken,
-      CLIENT_ID,
-      CLIENT_SECRET
-    )
+    const newTokens = await refreshAccessToken(tokens.refreshToken, CLIENT_ID, CLIENT_SECRET)
 
     // Save new tokens
     await saveTokens(
@@ -84,7 +75,7 @@ export async function getTwitterClient(userId: string): Promise<TwitterApi> {
       newTokens.accessToken,
       newTokens.refreshToken,
       newTokens.expiresIn,
-      '' // scopes don't change
+      '', // scopes don't change
     )
 
     return new TwitterApi(newTokens.accessToken)
@@ -99,7 +90,7 @@ export async function fetchBookmarks(
   options: {
     maxResults?: number
     paginationToken?: string
-  } = {}
+  } = {},
 ): Promise<FetchBookmarksResult> {
   const { maxResults = 100, paginationToken } = options
   const client = await getTwitterClient(userId)
@@ -218,7 +209,7 @@ export async function fetchAllBookmarks(
   options: {
     maxPages?: number
     onProgress?: (fetched: number, total: number) => void
-  } = {}
+  } = {},
 ): Promise<TwitterBookmark[]> {
   const { maxPages = 10, onProgress } = options
   const allBookmarks: TwitterBookmark[] = []

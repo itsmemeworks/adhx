@@ -30,15 +30,11 @@ export function selectArticleLink(links: BookmarkLink[]): BookmarkLink | null {
   if (!links || links.length === 0) return null
 
   // First priority: article type with preview title (fully enriched article)
-  const articleWithTitle = links.find(
-    (l) => l.linkType === 'article' && l.previewTitle
-  )
+  const articleWithTitle = links.find((l) => l.linkType === 'article' && l.previewTitle)
   if (articleWithTitle) return articleWithTitle
 
   // Second priority: any link with preview data
-  const linkWithPreview = links.find(
-    (l) => l.previewTitle || l.previewImageUrl
-  )
+  const linkWithPreview = links.find((l) => l.previewTitle || l.previewImageUrl)
   if (linkWithPreview) return linkWithPreview
 
   return null
@@ -49,7 +45,7 @@ export function selectArticleLink(links: BookmarkLink[]): BookmarkLink | null {
  */
 export function buildArticlePreview(
   link: BookmarkLink,
-  isXArticle: boolean
+  isXArticle: boolean,
 ): {
   title: string | null
   description: string | null

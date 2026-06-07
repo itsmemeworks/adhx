@@ -48,7 +48,13 @@ describe('activity — recordActivity', () => {
   })
 
   it('de-dupes the same action+platform+bookmark inside the window', () => {
-    const input = { action: 'preview' as const, platform: 'twitter', bookmarkId: '1', author: 'a', url: '/a/status/1' }
+    const input = {
+      action: 'preview' as const,
+      platform: 'twitter',
+      bookmarkId: '1',
+      author: 'a',
+      url: '/a/status/1',
+    }
     recordActivity(input)
     recordActivity(input)
     recordActivity(input)
@@ -56,9 +62,27 @@ describe('activity — recordActivity', () => {
   })
 
   it('keeps distinct content and distinct actions on the same item', () => {
-    recordActivity({ action: 'preview', platform: 'twitter', bookmarkId: '1', author: 'a', url: '/a/status/1' })
-    recordActivity({ action: 'save', platform: 'twitter', bookmarkId: '1', author: 'a', url: '/a/status/1' })
-    recordActivity({ action: 'preview', platform: 'tiktok', bookmarkId: '1', author: 'a', url: '/@a/video/1' })
+    recordActivity({
+      action: 'preview',
+      platform: 'twitter',
+      bookmarkId: '1',
+      author: 'a',
+      url: '/a/status/1',
+    })
+    recordActivity({
+      action: 'save',
+      platform: 'twitter',
+      bookmarkId: '1',
+      author: 'a',
+      url: '/a/status/1',
+    })
+    recordActivity({
+      action: 'preview',
+      platform: 'tiktok',
+      bookmarkId: '1',
+      author: 'a',
+      url: '/@a/video/1',
+    })
     expect(rows()).toHaveLength(3)
   })
 
@@ -77,9 +101,30 @@ describe('activity — recordActivity', () => {
   })
 
   it('drops a non-http thumbnail but keeps http(s) and /api/ proxy urls', () => {
-    recordActivity({ action: 'save', platform: 'twitter', bookmarkId: 'a', author: 'a', url: '/a/status/a', thumbnailUrl: 'javascript:alert(1)' })
-    recordActivity({ action: 'save', platform: 'twitter', bookmarkId: 'b', author: 'a', url: '/a/status/b', thumbnailUrl: '/api/media/instagram/thumbnail?id=x' })
-    recordActivity({ action: 'save', platform: 'twitter', bookmarkId: 'c', author: 'a', url: '/a/status/c', thumbnailUrl: 'https://cdn/x.jpg' })
+    recordActivity({
+      action: 'save',
+      platform: 'twitter',
+      bookmarkId: 'a',
+      author: 'a',
+      url: '/a/status/a',
+      thumbnailUrl: 'javascript:alert(1)',
+    })
+    recordActivity({
+      action: 'save',
+      platform: 'twitter',
+      bookmarkId: 'b',
+      author: 'a',
+      url: '/a/status/b',
+      thumbnailUrl: '/api/media/instagram/thumbnail?id=x',
+    })
+    recordActivity({
+      action: 'save',
+      platform: 'twitter',
+      bookmarkId: 'c',
+      author: 'a',
+      url: '/a/status/c',
+      thumbnailUrl: 'https://cdn/x.jpg',
+    })
     const byId = Object.fromEntries(rows().map((r) => [r.bookmarkId, r.thumbnailUrl]))
     expect(byId['a']).toBeNull()
     expect(byId['b']).toBe('/api/media/instagram/thumbnail?id=x')

@@ -10,7 +10,9 @@ interface AnimatedBackgroundProps {
   showFloatingTweets?: boolean
 }
 
-export function AnimatedBackground({ showFloatingTweets = false }: AnimatedBackgroundProps): React.ReactElement {
+export function AnimatedBackground({
+  showFloatingTweets = false,
+}: AnimatedBackgroundProps): React.ReactElement {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       {/* Gradient blobs */}
@@ -44,14 +46,54 @@ export function AnimatedBackground({ showFloatingTweets = false }: AnimatedBackg
  */
 function FloatingTweets(): React.ReactElement {
   const tweets = [
-    { top: '25%', left: '10%', delay: '0s', color: 'bg-purple-100 dark:bg-purple-900/60 border-purple-200 dark:border-purple-700' },
-    { top: '33%', right: '15%', delay: '-3s', color: 'bg-pink-100 dark:bg-pink-900/60 border-pink-200 dark:border-pink-700' },
-    { top: '50%', left: '8%', delay: '-7s', color: 'bg-blue-100 dark:bg-blue-900/60 border-blue-200 dark:border-blue-700' },
-    { top: '66%', right: '12%', delay: '-11s', color: 'bg-green-100 dark:bg-green-900/60 border-green-200 dark:border-green-700' },
-    { bottom: '25%', left: '15%', delay: '-5s', color: 'bg-yellow-100 dark:bg-yellow-900/60 border-yellow-200 dark:border-yellow-700' },
-    { top: '15%', right: '8%', delay: '-9s', color: 'bg-orange-100 dark:bg-orange-900/60 border-orange-200 dark:border-orange-700' },
-    { top: '40%', right: '5%', delay: '-13s', color: 'bg-indigo-100 dark:bg-indigo-900/60 border-indigo-200 dark:border-indigo-700' },
-    { bottom: '35%', right: '18%', delay: '-2s', color: 'bg-rose-100 dark:bg-rose-900/60 border-rose-200 dark:border-rose-700' },
+    {
+      top: '25%',
+      left: '10%',
+      delay: '0s',
+      color: 'bg-purple-100 dark:bg-purple-900/60 border-purple-200 dark:border-purple-700',
+    },
+    {
+      top: '33%',
+      right: '15%',
+      delay: '-3s',
+      color: 'bg-pink-100 dark:bg-pink-900/60 border-pink-200 dark:border-pink-700',
+    },
+    {
+      top: '50%',
+      left: '8%',
+      delay: '-7s',
+      color: 'bg-blue-100 dark:bg-blue-900/60 border-blue-200 dark:border-blue-700',
+    },
+    {
+      top: '66%',
+      right: '12%',
+      delay: '-11s',
+      color: 'bg-green-100 dark:bg-green-900/60 border-green-200 dark:border-green-700',
+    },
+    {
+      bottom: '25%',
+      left: '15%',
+      delay: '-5s',
+      color: 'bg-yellow-100 dark:bg-yellow-900/60 border-yellow-200 dark:border-yellow-700',
+    },
+    {
+      top: '15%',
+      right: '8%',
+      delay: '-9s',
+      color: 'bg-orange-100 dark:bg-orange-900/60 border-orange-200 dark:border-orange-700',
+    },
+    {
+      top: '40%',
+      right: '5%',
+      delay: '-13s',
+      color: 'bg-indigo-100 dark:bg-indigo-900/60 border-indigo-200 dark:border-indigo-700',
+    },
+    {
+      bottom: '35%',
+      right: '18%',
+      delay: '-2s',
+      color: 'bg-rose-100 dark:bg-rose-900/60 border-rose-200 dark:border-rose-700',
+    },
   ]
 
   return (
@@ -129,5 +171,9 @@ export const LANDING_ANIMATION_STYLES = `
  * LandingAnimations component that injects the animation styles
  */
 export function LandingAnimations(): React.ReactElement {
-  return <style jsx global>{LANDING_ANIMATION_STYLES}</style>
+  return (
+    <style jsx global>
+      {LANDING_ANIMATION_STYLES}
+    </style>
+  )
 }

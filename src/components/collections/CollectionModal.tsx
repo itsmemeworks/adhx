@@ -103,7 +103,10 @@ export function CollectionModal({ isOpen, onClose, collection, onSuccess }: Coll
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      onClick={onClose}
+    >
       <div
         className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md mx-4 shadow-xl"
         onClick={(e) => e.stopPropagation()}
@@ -169,7 +172,8 @@ export function CollectionModal({ isOpen, onClose, collection, onSuccess }: Coll
                   onClick={() => setColor(c)}
                   className={cn(
                     'w-8 h-8 rounded-full transition-transform hover:scale-110',
-                    color === c && 'ring-2 ring-offset-2 ring-gray-900 dark:ring-white dark:ring-offset-gray-900'
+                    color === c &&
+                      'ring-2 ring-offset-2 ring-gray-900 dark:ring-white dark:ring-offset-gray-900',
                   )}
                   style={{ backgroundColor: c }}
                 />
@@ -199,13 +203,13 @@ export function CollectionModal({ isOpen, onClose, collection, onSuccess }: Coll
               onClick={() => setIsPublic(!isPublic)}
               className={cn(
                 'relative w-11 h-6 rounded-full transition-colors',
-                isPublic ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+                isPublic ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600',
               )}
             >
               <span
                 className={cn(
                   'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform',
-                  isPublic && 'translate-x-5'
+                  isPublic && 'translate-x-5',
                 )}
               />
             </button>
@@ -216,7 +220,8 @@ export function CollectionModal({ isOpen, onClose, collection, onSuccess }: Coll
             <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
               <p className="text-xs text-green-700 dark:text-green-300 mb-1">Share link:</p>
               <code className="text-xs text-green-800 dark:text-green-200 break-all">
-                {typeof window !== 'undefined' ? window.location.origin : ''}/share/{collection.shareCode}
+                {typeof window !== 'undefined' ? window.location.origin : ''}/share/
+                {collection.shareCode}
               </code>
             </div>
           )}

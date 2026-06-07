@@ -25,10 +25,16 @@ function htmlResponse(html: string) {
 }
 
 function notFoundResponse() {
-  return { ok: false, status: 404, headers: new Headers({ 'content-type': 'text/html' }), body: null }
+  return {
+    ok: false,
+    status: 404,
+    headers: new Headers({ 'content-type': 'text/html' }),
+    body: null,
+  }
 }
 
-const CDN_IMAGE = 'https://scontent-lhr6-1.cdninstagram.com/v/t51.71878-15/503057746_n.jpg?stp=x&_nc=1'
+const CDN_IMAGE =
+  'https://scontent-lhr6-1.cdninstagram.com/v/t51.71878-15/503057746_n.jpg?stp=x&_nc=1'
 
 // Mirrors the OG tags Instagram serves to a Twitterbot UA for a public reel.
 const validHtml = `
