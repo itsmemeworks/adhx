@@ -43,13 +43,13 @@ Tweets land in your collection and open in the lightbox. Reels and TikToks rende
 
 Pick whatever's least friction for your device — every route ends up at the same `adhx.com` preview:
 
-| Method | Best for | How |
-|--------|----------|-----|
-| **URL-prefix trick** | Everyone | Replace the link's host with `adhx.com` (see above). Works on any device, no setup. |
-| **Bookmarklet** | Desktop + Android | Drag the one-click bookmarklet to your toolbar; click it on any X / Instagram / TikTok / YouTube page. |
-| **Add to ADHX** | Logged-in users | Paste any link into the in-app "Add" box (X, Instagram, TikTok, YouTube — auto-detected). |
-| **Android share sheet** | Android | Install the app (below), then **Share → ADHX** from any app — it's a PWA share target. |
-| **iOS Shortcut** | iOS | One-tap Share Sheet shortcut. _Currently rewrites `x.com` only; for Reels / TikToks / Shorts on iOS use the URL-prefix trick._ |
+| Method                  | Best for          | How                                                                                                                            |
+| ----------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **URL-prefix trick**    | Everyone          | Replace the link's host with `adhx.com` (see above). Works on any device, no setup.                                            |
+| **Bookmarklet**         | Desktop + Android | Drag the one-click bookmarklet to your toolbar; click it on any X / Instagram / TikTok / YouTube page.                         |
+| **Add to ADHX**         | Logged-in users   | Paste any link into the in-app "Add" box (X, Instagram, TikTok, YouTube — auto-detected).                                      |
+| **Android share sheet** | Android           | Install the app (below), then **Share → ADHX** from any app — it's a PWA share target.                                         |
+| **iOS Shortcut**        | iOS               | One-tap Share Sheet shortcut. _Currently rewrites `x.com` only; for Reels / TikToks / Shorts on iOS use the URL-prefix trick._ |
 
 ### Install as an app (PWA)
 
@@ -64,25 +64,25 @@ Once installed it launches standalone, remembers your session, and registers as 
 
 ## ✨ Features
 
-| Feature | Description |
-|---------|-------------|
-| 🐿️ **Hoard Mode** | Sync up to 800 bookmarks from Twitter/X. No judgment here. |
-| 🎬 **Reels & TikToks** | Paste any Instagram Reel or TikTok URL → preview it inline and save it to your collection alongside your tweets. |
-| ▶️ **YouTube Shorts** | Paste a Shorts (or `youtu.be` / `watch`) link → preview + play inline via the official embed, save it to your collection. |
-| 💾 **Save Across Platforms** | Add Reels, TikToks, and Shorts to your collection alongside tweets. Same feed, one search, platform badges keep things straight. |
-| 📲 **Install as an App** | On mobile, tap "Add to home screen" — ADHX runs full-screen like a native app (PWA), with an Android share-target so you can share any link straight into it. |
-| 🌐 **Discover** | A live, anonymous feed of what everyone's saving across ADHX right now — filter by type, preview any of it, save your own. Public, no account needed. |
-| 🖼️ **Three Views** | Browse your collection as a masonry **gallery** (hover-preview videos), a dense **list**, or a **bento** mosaic. |
-| ⚡ **Triage Mode** | Full-screen, one-card-at-a-time pass through your backlog — Keep / Delete / Done with arrow keys, plus a daily streak to keep you honest. |
-| 🌗 **Light & Dark** | A warm editorial theme in both modes. Follows your device by default, one-tap toggle everywhere, remembers your choice. |
-| 🔍 **Actually Find Stuff** | Full-text search that works. Revolutionary, we know. |
-| 🏷️ **Tag Everything** | Custom tags to organize your chaos (or don't, we won't tell) |
-| ✅ **Read Tracking** | Mark bookmarks as read so you know what you've ~~actually looked at~~ scrolled past |
-| 📖 **Article Support** | Full rendering of X Articles with rich text and images |
-| ⌨️ **Keyboard Shortcuts** | ← → to browse, R/U for read/unread, Esc to close |
-| 🔤 **ADHD-Friendly Fonts** | Choose from 4 fonts designed for readability (Lexend, Atkinson Hyperlegible, etc.) |
-| 📖 **Bionic Reading** | Bold the first part of each word to help your eyes flow |
-| 👥 **Multi-User Ready** | Each user gets their own bookmarks, tags, and read status |
+| Feature                      | Description                                                                                                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🐿️ **Hoard Mode**            | Sync up to 800 bookmarks from Twitter/X. No judgment here.                                                                                                    |
+| 🎬 **Reels & TikToks**       | Paste any Instagram Reel or TikTok URL → preview it inline and save it to your collection alongside your tweets.                                              |
+| ▶️ **YouTube Shorts**        | Paste a Shorts (or `youtu.be` / `watch`) link → preview + play inline via the official embed, save it to your collection.                                     |
+| 💾 **Save Across Platforms** | Add Reels, TikToks, and Shorts to your collection alongside tweets. Same feed, one search, platform badges keep things straight.                              |
+| 📲 **Install as an App**     | On mobile, tap "Add to home screen" — ADHX runs full-screen like a native app (PWA), with an Android share-target so you can share any link straight into it. |
+| 🌐 **Discover**              | A live, anonymous feed of what everyone's saving across ADHX right now — filter by type, preview any of it, save your own. Public, no account needed.         |
+| 🖼️ **Three Views**           | Browse your collection as a masonry **gallery** (hover-preview videos), a dense **list**, or a **bento** mosaic.                                              |
+| ⚡ **Triage Mode**           | Full-screen, one-card-at-a-time pass through your backlog — Keep / Delete / Done with arrow keys, plus a daily streak to keep you honest.                     |
+| 🌗 **Light & Dark**          | A warm editorial theme in both modes. Follows your device by default, one-tap toggle everywhere, remembers your choice.                                       |
+| 🔍 **Actually Find Stuff**   | Full-text search that works. Revolutionary, we know.                                                                                                          |
+| 🏷️ **Tag Everything**        | Custom tags to organize your chaos (or don't, we won't tell)                                                                                                  |
+| ✅ **Read Tracking**         | Mark bookmarks as read so you know what you've ~~actually looked at~~ scrolled past                                                                           |
+| 📖 **Article Support**       | Full rendering of X Articles with rich text and images                                                                                                        |
+| ⌨️ **Keyboard Shortcuts**    | ← → to browse, R/U for read/unread, Esc to close                                                                                                              |
+| 🔤 **ADHD-Friendly Fonts**   | Choose from 4 fonts designed for readability (Lexend, Atkinson Hyperlegible, etc.)                                                                            |
+| 📖 **Bionic Reading**        | Bold the first part of each word to help your eyes flow                                                                                                       |
+| 👥 **Multi-User Ready**      | Each user gets their own bookmarks, tags, and read status                                                                                                     |
 
 ---
 
@@ -143,15 +143,15 @@ SESSION_SECRET=your-secret-key-here
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| **Framework** | Next.js 16 (App Router) + React 19 |
-| **Database** | SQLite + Drizzle ORM (multi-user ready) |
-| **Styling** | Tailwind CSS |
-| **Auth** | Twitter OAuth 2.0 PKCE + JWT sessions |
-| **Media** | FxTwitter for X, InstaFix for Instagram Reels, fxTikTok for TikToks, YouTube oEmbed + iframe for Shorts |
-| **Deployment** | Fly.io with automated releases |
-| **Testing** | Vitest (800+ tests) |
+| Layer          | Technology                                                                                              |
+| -------------- | ------------------------------------------------------------------------------------------------------- |
+| **Framework**  | Next.js 16 (App Router) + React 19                                                                      |
+| **Database**   | SQLite + Drizzle ORM (multi-user ready)                                                                 |
+| **Styling**    | Tailwind CSS                                                                                            |
+| **Auth**       | Twitter OAuth 2.0 PKCE + JWT sessions                                                                   |
+| **Media**      | FxTwitter for X, InstaFix for Instagram Reels, fxTikTok for TikToks, YouTube oEmbed + iframe for Shorts |
+| **Deployment** | Fly.io with automated releases                                                                          |
+| **Testing**    | Vitest (800+ tests)                                                                                     |
 
 ---
 
@@ -232,16 +232,16 @@ The `adhx` skill follows the [agentskills.io specification](https://agentskills.
 
 The skill is a single folder you drop into your agent's skills directory. Location varies by agent:
 
-| Agent | Skills directory |
-|-------|------------------|
-| Claude Code | `~/.claude/skills/` |
-| Claude (web/desktop) | Settings → Skills → Upload |
-| Cursor | `.cursor/skills/` (project) or `~/.cursor/skills/` (global) |
-| Gemini CLI | `~/.gemini/skills/` |
-| OpenCode | `~/.config/opencode/skills/` |
-| OpenAI Codex | `~/.codex/skills/` |
-| GitHub Copilot / VS Code | `.github/skills/` (workspace) |
-| Goose | `~/.config/goose/skills/` |
+| Agent                    | Skills directory                                            |
+| ------------------------ | ----------------------------------------------------------- |
+| Claude Code              | `~/.claude/skills/`                                         |
+| Claude (web/desktop)     | Settings → Skills → Upload                                  |
+| Cursor                   | `.cursor/skills/` (project) or `~/.cursor/skills/` (global) |
+| Gemini CLI               | `~/.gemini/skills/`                                         |
+| OpenCode                 | `~/.config/opencode/skills/`                                |
+| OpenAI Codex             | `~/.codex/skills/`                                          |
+| GitHub Copilot / VS Code | `.github/skills/` (workspace)                               |
+| Goose                    | `~/.config/goose/skills/`                                   |
 
 > Check your agent's docs if your client isn't listed — the install path may differ, but the skill file itself is identical everywhere.
 
@@ -317,6 +317,8 @@ feat!: breaking change     # → Major version bump
 ---
 
 ## 📁 Project Structure
+
+For a narrative walkthrough of the data flow, auth, preview model, and database design, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ```
 src/

@@ -16,11 +16,14 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "prepare": "husky"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "eslint --fix"
+      "eslint --fix",
+      "prettier --write"
     ]
   },
   "keywords": [
@@ -31,8 +34,16 @@
     "markdown",
     "nextjs"
   ],
-  "author": "",
+  "author": "Alex Hillman",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/itsmemeworks/adhx.git"
+  },
+  "homepage": "https://adhx.com",
+  "bugs": {
+    "url": "https://github.com/itsmemeworks/adhx/issues"
+  },
   "dependencies": {
     "@sentry/node": "^10.33.0",
     "better-sqlite3": "^11.10.0",
@@ -67,10 +78,12 @@
     "drizzle-kit": "^0.31.8",
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.1.1",
+    "eslint-config-prettier": "^9.1.0",
     "husky": "^9.1.7",
     "jsdom": "^27.4.0",
     "lint-staged": "^16.2.7",
     "postcss": "^8.5.10",
+    "prettier": "^3.4.2",
     "tailwindcss": "^3.4.0",
     "tsx": "^4.0.0",
     "typescript": "^5.3.0",

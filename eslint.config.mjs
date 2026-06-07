@@ -1,5 +1,6 @@
 import tseslint from '@typescript-eslint/eslint-plugin'
 import tsparser from '@typescript-eslint/parser'
+import prettier from 'eslint-config-prettier'
 
 export default [
   {
@@ -48,4 +49,7 @@ export default [
       'drizzle.config.ts',
     ],
   },
+  // Disable stylistic rules that conflict with Prettier. Must be last so it
+  // overrides any conflicting rules declared above.
+  prettier,
 ]

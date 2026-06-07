@@ -47,3 +47,6 @@ CLAUDE.local.md
 
 plans/
 todos/
+
+# Claude Code workspace (local-only)
+.claude/
