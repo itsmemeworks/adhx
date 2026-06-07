@@ -53,23 +53,26 @@ jobs:
             const pr = prs[0];
             console.log(`Found release PR #${pr.number} with head SHA: ${pr.head.sha}`);
 
-            // Create a check run on the PR's HEAD commit
-            // This satisfies the branch protection requirement for 'build' check
-            const { data: checkRun } = await github.rest.checks.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              name: 'build',
-              head_sha: pr.head.sha,
-              status: 'completed',
-              conclusion: 'success',
-              output: {
-                title: 'Release PR Build Check',
-                summary: 'Release PRs skip full build verification - only version/changelog updates.',
-                text: `This check was created automatically for release PR #${pr.number}.\n\nRelease PRs only contain automated version bumps and changelog updates, so full CI is skipped.`
-              }
-            });
-
-            console.log(`✅ Created check run ${checkRun.id} for PR #${pr.number}`);
+            // Create check runs on the PR's HEAD commit to satisfy branch
+            // protection's required checks. Release PRs only bump version /
+            // changelog, so the real CI jobs are skipped — synthesize a passing
+            // check for each required context.
+            for (const name of ['build', 'format']) {
+              const { data: checkRun } = await github.rest.checks.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name,
+                head_sha: pr.head.sha,
+                status: 'completed',
+                conclusion: 'success',
+                output: {
+                  title: `Release PR ${name} check`,
+                  summary: 'Release PRs skip full CI - only version/changelog updates.',
+                  text: `This check was created automatically for release PR #${pr.number}.\n\nRelease PRs only contain automated version bumps and changelog updates, so full CI is skipped.`
+                }
+              });
+              console.log(`✅ Created '${name}' check run ${checkRun.id} for PR #${pr.number}`);
+            }
 
   build:
     runs-on: ubuntu-latest
@@ -96,6 +99,30 @@ jobs:
       - name: Build
         run: pnpm build
 
+  # Dedicated formatting gate. Kept as its own job (rather than a step in `test`)
+  # so it surfaces as a distinct required status check on PRs.
+  format:
+    if: |
+      github.event_name != 'workflow_run' &&
+      (github.event_name == 'push' || !startsWith(github.head_ref || '', 'release-please--'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Version is read from the "packageManager" field in package.json
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check formatting (prettier)
+        run: pnpm format:check
+
   test:
     # Skip for release-please PRs (only update version/changelog) and workflow_run events
     # For push events, always run
@@ -119,9 +146,6 @@ jobs:
 
       - name: Lint
         run: pnpm lint
-
-      - name: Format check
-        run: pnpm format:check
 
       - name: Type check
         run: pnpm typecheck
