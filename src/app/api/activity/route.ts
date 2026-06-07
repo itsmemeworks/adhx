@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { activity, bookmarks, bookmarkMedia } from '@/lib/db/schema'
+import { activity, bookmarks, bookmarkMedia, bookmarkLinks } from '@/lib/db/schema'
 import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm'
 
 /**
@@ -16,6 +16,10 @@ import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm'
  *     tweet isn't mislabelled "photo", a video tweet isn't "photo", etc.). Left
  *     undefined for preview-only posts that were never saved; the client then
  *     falls back to a platform/thumbnail heuristic.
+ *   - `thumbnailUrl` — resolved so Discover shows the same hero image as the
+ *     collection: TikTok posters are derived as the deterministic proxy URL
+ *     (the CDN needs signing the proxy adds), and article covers are pulled
+ *     from the saved bookmark's enriched link.
  * Short cache + SWR keeps it lively without hammering the DB.
  */
 export const dynamic = 'force-dynamic'
@@ -63,6 +67,7 @@ export async function GET() {
     const counts = new Map<string, number>()
     const flags = new Map<string, { isQuote: boolean; category: string | null }>()
     const mediaKinds = new Map<string, { video: boolean; photo: boolean }>()
+    const articleCovers = new Map<string, string>()
     if (ids.length > 0) {
       const aggRows = db
         .select({
@@ -98,6 +103,25 @@ export async function GET() {
         else if (m.mediaType === 'photo') cur.photo = true
         mediaKinds.set(k, cur)
       }
+
+      // Article cover images — the same hero the collection card uses. Cross-user
+      // is fine (the cover is identical regardless of who saved it). Prefer an
+      // explicit article link's image; otherwise take any link that has one.
+      const linkRows = db
+        .select({
+          platform: bookmarkLinks.platform,
+          bookmarkId: bookmarkLinks.bookmarkId,
+          linkType: bookmarkLinks.linkType,
+          imageUrl: bookmarkLinks.previewImageUrl,
+        })
+        .from(bookmarkLinks)
+        .where(inArray(bookmarkLinks.bookmarkId, ids))
+        .all()
+      for (const l of linkRows) {
+        if (!l.imageUrl) continue
+        const k = `${l.platform}:${l.bookmarkId}`
+        if (!articleCovers.has(k) || l.linkType === 'article') articleCovers.set(k, l.imageUrl)
+      }
     }
 
     /** Real type from the saved bookmark; undefined if the post was never saved. */
@@ -113,12 +137,28 @@ export async function GET() {
       return 'text'
     }
 
+    /**
+     * The hero image for the card. TikTok posters come from our proxy (the CDN
+     * URL needs signing/referer the proxy adds) and are derived from the handle
+     * + id, so they work even for preview-only items. Article cards use the
+     * saved cover when one exists. Everything else keeps its recorded thumbnail.
+     */
+    const thumbOf = (i: (typeof items)[number], key: string, type: ContentType | undefined): string | null => {
+      if (i.platform === 'tiktok' && i.author && i.bookmarkId) {
+        return `/api/media/tiktok/thumbnail?username=${encodeURIComponent(i.author)}&id=${encodeURIComponent(i.bookmarkId)}`
+      }
+      if (type === 'article') return articleCovers.get(key) ?? i.thumbnailUrl ?? null
+      return i.thumbnailUrl ?? null
+    }
+
     const enriched = items.map((i) => {
       const key = `${i.platform}:${i.bookmarkId}`
+      const contentType = typeOf(i.platform, key)
       return {
         ...i,
         saveCount: counts.get(key) ?? 0,
-        contentType: typeOf(i.platform, key),
+        contentType,
+        thumbnailUrl: thumbOf(i, key, contentType),
       }
     })
 
