@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { LiveDot, MatterLogo, ConnectWithX } from '@/components/matter'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { DiscoverCard, inferType } from './DiscoverCard'
 
 export interface ActivityItem {
@@ -14,6 +15,8 @@ export interface ActivityItem {
   authorName?: string | null
   text?: string | null
   thumbnailUrl?: string | null
+  /** The post author's avatar, for tweet-style text/quote cards. */
+  authorAvatarUrl?: string | null
   url: string
   createdAt: string
   /** Distinct ADHX users who've saved this post (anonymous count). Drives the flame. */
@@ -47,6 +50,7 @@ function dedupeByPost(items: ActivityItem[]): ActivityItem[] {
       prev.saveCount = Math.max(prev.saveCount ?? 0, it.saveCount ?? 0)
       prev.contentType = prev.contentType ?? it.contentType
       prev.thumbnailUrl = prev.thumbnailUrl ?? it.thumbnailUrl
+      prev.authorAvatarUrl = prev.authorAvatarUrl ?? it.authorAvatarUrl
     }
   }
   return [...byPost.values()]
@@ -178,6 +182,7 @@ export function DiscoverFeed() {
                 How it works
               </Link>
               <span className="hidden sm:inline text-sm font-semibold text-clay">Discover</span>
+              <ThemeToggle className="-mr-1 sm:mr-0" />
               <a
                 href="/api/auth/twitter"
                 className="inline-flex items-center gap-2 rounded-[10px] bg-ink px-4 py-2 text-[13.5px] font-semibold text-surface"

@@ -190,6 +190,7 @@ export const FULL_SCHEMA_SQL = `
     bookmark_id TEXT NOT NULL,
     author TEXT NOT NULL,
     author_name TEXT,
+    author_avatar_url TEXT,
     text TEXT,
     thumbnail_url TEXT,
     url TEXT NOT NULL,

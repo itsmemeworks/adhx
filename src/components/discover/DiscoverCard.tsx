@@ -154,7 +154,7 @@ export function DiscoverCard({
     body = (
       <div className="flex-1 px-4 pt-4">
         <div className="mb-2.5 flex items-center gap-2.5">
-          <AuthorAvatar src={item.thumbnailUrl} author={item.author} size="sm" />
+          <AuthorAvatar src={item.authorAvatarUrl ?? item.thumbnailUrl} author={item.author} size="sm" />
           <div className="min-w-0 flex-1">
             <div className="truncate font-bold text-[13.5px] text-ink">
               {item.authorName || (item.author ? `@${item.author}` : 'Saved post')}

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { AnimatedBackground, LandingAnimations } from '@/components/landing'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { isTouchDevice } from '@/components/feed/utils'
 import { MatterLogo, PlatformGlyph, ConnectWithX } from '@/components/matter'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
@@ -158,6 +159,7 @@ export function TikTokPreviewLanding({
     <div className="min-h-screen flex flex-col bg-paper relative overflow-x-hidden">
       <LandingAnimations />
       <AnimatedBackground />
+      <ThemeToggle className="fixed right-3 top-3 z-50 border border-hairline bg-surface/70 shadow-m-sm backdrop-blur" />
 
       {/* warm ambient glow */}
       <div

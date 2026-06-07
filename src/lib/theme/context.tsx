@@ -22,8 +22,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light')
 
   useEffect(() => {
-    const stored = (localStorage.getItem('theme') as Theme) || 'light'
-    if (stored !== 'light') setThemeState(stored)
+    // No stored preference → follow the device ('system'); the blocking script
+    // in layout.tsx already painted the matching colours, so this just keeps
+    // React in sync. Once the user toggles, their explicit choice is persisted.
+    const stored = (localStorage.getItem('theme') as Theme) || 'system'
+    setThemeState(stored)
   }, [])
 
   useEffect(() => {
@@ -80,4 +83,13 @@ export function useTheme() {
     throw new Error('useTheme must be used within a ThemeProvider')
   }
   return context
+}
+
+/**
+ * Non-throwing variant for leaf components (e.g. ThemeToggle) that can render
+ * outside a provider — isolated component tests, SSR fallbacks. Returns
+ * undefined instead of throwing so those renders don't crash.
+ */
+export function useThemeOptional() {
+  return useContext(ThemeContext)
 }

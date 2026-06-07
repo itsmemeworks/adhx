@@ -39,6 +39,8 @@ export interface ActivityInput {
   bookmarkId: string
   author: string
   authorName?: string | null
+  /** The post author's avatar — shown on tweet-style text/quote cards. */
+  authorAvatarUrl?: string | null
   text?: string | null
   thumbnailUrl?: string | null
   url: string
@@ -98,6 +100,7 @@ export function recordActivity(input: ActivityInput): void {
       bookmarkId: input.bookmarkId,
       author: clean(input.author, AUTHOR_CAP) || 'unknown',
       authorName: clean(input.authorName, AUTHOR_NAME_CAP),
+      authorAvatarUrl: safeThumb(input.authorAvatarUrl),
       text: clean(input.text, TEXT_CAP),
       thumbnailUrl: safeThumb(input.thumbnailUrl),
       url: input.url,

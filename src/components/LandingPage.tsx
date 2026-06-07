@@ -5,6 +5,7 @@ import { Bookmark, Search, Zap, Volume2, ArrowRight, Plus, Smartphone, Monitor, 
 import { extractYouTubeId } from '@/lib/media/youtube'
 import { getPlatformType, type PlatformType } from '@/lib/platform'
 import { MatterLogo, PlatformGlyph, LiveDot, ConnectWithX } from '@/components/matter'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { DiscoverCard } from '@/components/discover/DiscoverCard'
 import type { ActivityItem } from '@/components/discover/DiscoverFeed'
 
@@ -142,6 +143,7 @@ export function LandingPage() {
           <div className="ml-auto flex items-center gap-4 sm:gap-6">
             <a href="#how-it-works" className="hidden sm:inline text-sm font-medium text-ink-2 hover:text-ink transition-colors">How it works</a>
             <a href="#discover" className="hidden sm:inline text-sm font-medium text-ink-2 hover:text-ink transition-colors">Discover</a>
+            <ThemeToggle className="-mr-1 sm:mr-0" />
             <button onClick={handleLogin} className="hidden sm:inline text-sm font-semibold text-ink-2 hover:text-ink transition-colors">Log in</button>
             <button
               onClick={handleLogin}
