@@ -236,7 +236,7 @@ export const USER_B = 'user-b-456'
 export function createTestBookmark(
   userId: string,
   id: string,
-  overrides: Partial<schema.NewBookmark> = {}
+  overrides: Partial<schema.NewBookmark> = {},
 ): schema.NewBookmark {
   return {
     id,

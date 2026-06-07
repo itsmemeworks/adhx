@@ -70,11 +70,13 @@ describe('API: /api/feed', () => {
   describe('Multi-user isolation', () => {
     it('only returns bookmarks for current user', async () => {
       // Create bookmarks for both users
-      await testInstance.db.insert(schema.bookmarks).values([
-        createTestBookmark(USER_A, 'tweet-a1'),
-        createTestBookmark(USER_A, 'tweet-a2'),
-        createTestBookmark(USER_B, 'tweet-b1'),
-      ])
+      await testInstance.db
+        .insert(schema.bookmarks)
+        .values([
+          createTestBookmark(USER_A, 'tweet-a1'),
+          createTestBookmark(USER_A, 'tweet-a2'),
+          createTestBookmark(USER_B, 'tweet-b1'),
+        ])
 
       const { GET } = await import('@/app/api/feed/route')
       const response = await GET(createRequest({ unreadOnly: 'false' }))
@@ -89,10 +91,9 @@ describe('API: /api/feed', () => {
 
     it('does not leak read status between users', async () => {
       // Create same bookmark for both users
-      await testInstance.db.insert(schema.bookmarks).values([
-        createTestBookmark(USER_A, 'tweet-1'),
-        createTestBookmark(USER_B, 'tweet-1'),
-      ])
+      await testInstance.db
+        .insert(schema.bookmarks)
+        .values([createTestBookmark(USER_A, 'tweet-1'), createTestBookmark(USER_B, 'tweet-1')])
 
       // Mark as read for User B only
       await testInstance.db.insert(schema.readStatus).values({
@@ -115,11 +116,13 @@ describe('API: /api/feed', () => {
   describe('Tag filtering', () => {
     beforeEach(async () => {
       // Create bookmarks with tags
-      await testInstance.db.insert(schema.bookmarks).values([
-        createTestBookmark(USER_A, 'tweet-1'),
-        createTestBookmark(USER_A, 'tweet-2'),
-        createTestBookmark(USER_A, 'tweet-3'),
-      ])
+      await testInstance.db
+        .insert(schema.bookmarks)
+        .values([
+          createTestBookmark(USER_A, 'tweet-1'),
+          createTestBookmark(USER_A, 'tweet-2'),
+          createTestBookmark(USER_A, 'tweet-3'),
+        ])
 
       await testInstance.db.insert(schema.bookmarkTags).values([
         { userId: USER_A, bookmarkId: 'tweet-1', tag: 'javascript' },
@@ -228,7 +231,7 @@ describe('API: /api/feed', () => {
       const bookmarks = Array.from({ length: 15 }, (_, i) =>
         createTestBookmark(USER_A, `tweet-${i + 1}`, {
           processedAt: new Date(Date.now() - i * 1000).toISOString(), // Different timestamps
-        })
+        }),
       )
       await testInstance.db.insert(schema.bookmarks).values(bookmarks)
     })
@@ -260,11 +263,13 @@ describe('API: /api/feed', () => {
 
   describe('Unread filter', () => {
     beforeEach(async () => {
-      await testInstance.db.insert(schema.bookmarks).values([
-        createTestBookmark(USER_A, 'tweet-1'),
-        createTestBookmark(USER_A, 'tweet-2'),
-        createTestBookmark(USER_A, 'tweet-3'),
-      ])
+      await testInstance.db
+        .insert(schema.bookmarks)
+        .values([
+          createTestBookmark(USER_A, 'tweet-1'),
+          createTestBookmark(USER_A, 'tweet-2'),
+          createTestBookmark(USER_A, 'tweet-3'),
+        ])
 
       // Mark tweet-1 as read
       await testInstance.db.insert(schema.readStatus).values({
@@ -298,11 +303,13 @@ describe('API: /api/feed', () => {
 
   describe('Stats', () => {
     beforeEach(async () => {
-      await testInstance.db.insert(schema.bookmarks).values([
-        createTestBookmark(USER_A, 'tweet-1'),
-        createTestBookmark(USER_A, 'tweet-2'),
-        createTestBookmark(USER_A, 'tweet-3'),
-      ])
+      await testInstance.db
+        .insert(schema.bookmarks)
+        .values([
+          createTestBookmark(USER_A, 'tweet-1'),
+          createTestBookmark(USER_A, 'tweet-2'),
+          createTestBookmark(USER_A, 'tweet-3'),
+        ])
 
       await testInstance.db.insert(schema.readStatus).values({
         userId: USER_A,
@@ -395,7 +402,9 @@ describe('API: /api/feed', () => {
       ])
 
       const { GET } = await import('@/app/api/feed/route')
-      const response = await GET(createRequest({ sort: 'posted', sortDir: 'asc', unreadOnly: 'false' }))
+      const response = await GET(
+        createRequest({ sort: 'posted', sortDir: 'asc', unreadOnly: 'false' }),
+      )
       const data = await response.json()
 
       expect(data.items[0].id).toBe('tweet-old-post') // older createdAt first
@@ -466,11 +475,13 @@ describe('API: /api/feed', () => {
 
   describe('Manual filter', () => {
     beforeEach(async () => {
-      await testInstance.db.insert(schema.bookmarks).values([
-        createTestBookmark(USER_A, 'tweet-synced', { source: 'sync' }),
-        createTestBookmark(USER_A, 'tweet-manual', { source: 'manual' }),
-        createTestBookmark(USER_A, 'tweet-url-prefix', { source: 'url_prefix' }),
-      ])
+      await testInstance.db
+        .insert(schema.bookmarks)
+        .values([
+          createTestBookmark(USER_A, 'tweet-synced', { source: 'sync' }),
+          createTestBookmark(USER_A, 'tweet-manual', { source: 'manual' }),
+          createTestBookmark(USER_A, 'tweet-url-prefix', { source: 'url_prefix' }),
+        ])
     })
 
     it('filters by manual source', async () => {

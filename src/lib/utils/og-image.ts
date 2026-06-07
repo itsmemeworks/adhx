@@ -55,39 +55,47 @@ export function getOgImages(tweet: FxTweet, baseUrl: string): OgImageResult[] {
   }
   if (tweet.media?.videos?.[0]?.thumbnail_url) {
     const video = tweet.media.videos[0]
-    return [{
-      url: video.thumbnail_url,
-      width: video.width,
-      height: video.height,
-    }]
+    return [
+      {
+        url: video.thumbnail_url,
+        width: video.width,
+        height: video.height,
+      },
+    ]
   }
 
   // 2. Article cover image (X Articles feature)
   const articleMedia = tweet.article?.cover_media?.media_info
   if (articleMedia?.original_img_url) {
-    return [{
-      url: articleMedia.original_img_url,
-      width: articleMedia.original_img_width,
-      height: articleMedia.original_img_height,
-    }]
+    return [
+      {
+        url: articleMedia.original_img_url,
+        width: articleMedia.original_img_width,
+        height: articleMedia.original_img_height,
+      },
+    ]
   }
 
   // 3. Quote tweet media (when parent tweet has no media)
   if (tweet.quote?.media?.photos?.[0]?.url) {
     const photo = tweet.quote.media.photos[0]
-    return [{
-      url: stripTwitterMediaParams(photo.url),
-      width: photo.width,
-      height: photo.height,
-    }]
+    return [
+      {
+        url: stripTwitterMediaParams(photo.url),
+        width: photo.width,
+        height: photo.height,
+      },
+    ]
   }
   if (tweet.quote?.media?.videos?.[0]?.thumbnail_url) {
     const video = tweet.quote.media.videos[0]
-    return [{
-      url: video.thumbnail_url,
-      width: video.width,
-      height: video.height,
-    }]
+    return [
+      {
+        url: video.thumbnail_url,
+        width: video.width,
+        height: video.height,
+      },
+    ]
   }
 
   // 4. External link thumbnail (Twitter Card previews — no dimensions available)

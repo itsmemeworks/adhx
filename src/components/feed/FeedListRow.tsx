@@ -81,7 +81,13 @@ export function FeedListRow({
       )}
     >
       {/* unread dot */}
-      <span className={cn('flex-none rounded-full', compact ? 'w-[7px] h-[7px]' : 'w-2 h-2', unread ? 'bg-clay' : 'bg-transparent')} />
+      <span
+        className={cn(
+          'flex-none rounded-full',
+          compact ? 'w-[7px] h-[7px]' : 'w-2 h-2',
+          unread ? 'bg-clay' : 'bg-transparent',
+        )}
+      />
       {Thumb}
 
       <span className="flex-1 min-w-0">
@@ -97,7 +103,9 @@ export function FeedListRow({
         <span className="flex items-center gap-2 text-[12.5px] text-ink-3 min-w-0">
           {compact && <span className={cn('flex-none w-1.5 h-1.5 rounded-full', DOT[type])} />}
           <PlatformGlyph platform={item.platform} size={12} className="flex-none text-ink-3" />
-          <span className="font-semibold text-ink-2 truncate">{item.authorName || item.author}</span>
+          <span className="font-semibold text-ink-2 truncate">
+            {item.authorName || item.author}
+          </span>
           {!compact && <span className="font-mono text-ink-3 truncate">@{item.author}</span>}
           {compact && <span className="flex-none">· {time}</span>}
         </span>
@@ -107,7 +115,9 @@ export function FeedListRow({
       {!compact && (
         <>
           <TypeBadge type={type} className="flex-none" />
-          <span className="flex-none w-12 text-right font-mono text-[12.5px] text-ink-3">{time}</span>
+          <span className="flex-none w-12 text-right font-mono text-[12.5px] text-ink-3">
+            {time}
+          </span>
           <ChevronRight className="flex-none w-[17px] h-[17px] text-ink-3" />
         </>
       )}

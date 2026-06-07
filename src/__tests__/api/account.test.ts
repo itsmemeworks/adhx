@@ -38,33 +38,42 @@ vi.mock('@/lib/sentry', () => ({
 }))
 
 async function seedUserData(userId: string) {
-  await testInstance.db.insert(schema.bookmarks).values([
-    createTestBookmark(userId, 't1'),
-    createTestBookmark(userId, 't2'),
-  ])
-  await testInstance.db.insert(schema.bookmarkTags).values([
-    { userId, bookmarkId: 't1', tag: 'tag1' },
-  ])
-  await testInstance.db.insert(schema.bookmarkMedia).values([
-    { id: `${userId}-m1`, userId, bookmarkId: 't1', mediaType: 'photo', originalUrl: 'u' },
-  ])
-  await testInstance.db.insert(schema.bookmarkLinks).values([
-    { userId, bookmarkId: 't1', expandedUrl: 'https://example.com' },
-  ])
-  await testInstance.db.insert(schema.readStatus).values([
-    { userId, bookmarkId: 't1', readAt: '2024-01-01T10:00:00Z' },
-  ])
-  await testInstance.db.insert(schema.userPreferences).values([
-    { userId, key: 'theme', value: 'dark' },
-  ])
-  await testInstance.db.insert(schema.syncState).values([
-    { userId, key: 'lastSync', value: '2024-01-01T10:00:00Z' },
-  ])
-  await testInstance.db.insert(schema.syncLogs).values([
-    { id: `log-${userId}`, userId, startedAt: '2024-01-01T10:00:00Z', status: 'completed' },
-  ])
+  await testInstance.db
+    .insert(schema.bookmarks)
+    .values([createTestBookmark(userId, 't1'), createTestBookmark(userId, 't2')])
+  await testInstance.db
+    .insert(schema.bookmarkTags)
+    .values([{ userId, bookmarkId: 't1', tag: 'tag1' }])
+  await testInstance.db
+    .insert(schema.bookmarkMedia)
+    .values([
+      { id: `${userId}-m1`, userId, bookmarkId: 't1', mediaType: 'photo', originalUrl: 'u' },
+    ])
+  await testInstance.db
+    .insert(schema.bookmarkLinks)
+    .values([{ userId, bookmarkId: 't1', expandedUrl: 'https://example.com' }])
+  await testInstance.db
+    .insert(schema.readStatus)
+    .values([{ userId, bookmarkId: 't1', readAt: '2024-01-01T10:00:00Z' }])
+  await testInstance.db
+    .insert(schema.userPreferences)
+    .values([{ userId, key: 'theme', value: 'dark' }])
+  await testInstance.db
+    .insert(schema.syncState)
+    .values([{ userId, key: 'lastSync', value: '2024-01-01T10:00:00Z' }])
+  await testInstance.db
+    .insert(schema.syncLogs)
+    .values([
+      { id: `log-${userId}`, userId, startedAt: '2024-01-01T10:00:00Z', status: 'completed' },
+    ])
   await testInstance.db.insert(schema.oauthTokens).values([
-    { userId, username: 'test', accessToken: 'at', refreshToken: 'rt', expiresAt: Date.now() + 3600000 },
+    {
+      userId,
+      username: 'test',
+      accessToken: 'at',
+      refreshToken: 'rt',
+      expiresAt: Date.now() + 3600000,
+    },
   ])
 }
 
@@ -99,14 +108,38 @@ describe('API: /api/account/clear', () => {
     expect(response.status).toBe(200)
 
     // Verify User A's data is cleared
-    const bookmarks = await testInstance.db.select().from(schema.bookmarks).where(eq(schema.bookmarks.userId, USER_A))
-    const tags = await testInstance.db.select().from(schema.bookmarkTags).where(eq(schema.bookmarkTags.userId, USER_A))
-    const media = await testInstance.db.select().from(schema.bookmarkMedia).where(eq(schema.bookmarkMedia.userId, USER_A))
-    const links = await testInstance.db.select().from(schema.bookmarkLinks).where(eq(schema.bookmarkLinks.userId, USER_A))
-    const readStatuses = await testInstance.db.select().from(schema.readStatus).where(eq(schema.readStatus.userId, USER_A))
-    const prefs = await testInstance.db.select().from(schema.userPreferences).where(eq(schema.userPreferences.userId, USER_A))
-    const syncStates = await testInstance.db.select().from(schema.syncState).where(eq(schema.syncState.userId, USER_A))
-    const syncLogs = await testInstance.db.select().from(schema.syncLogs).where(eq(schema.syncLogs.userId, USER_A))
+    const bookmarks = await testInstance.db
+      .select()
+      .from(schema.bookmarks)
+      .where(eq(schema.bookmarks.userId, USER_A))
+    const tags = await testInstance.db
+      .select()
+      .from(schema.bookmarkTags)
+      .where(eq(schema.bookmarkTags.userId, USER_A))
+    const media = await testInstance.db
+      .select()
+      .from(schema.bookmarkMedia)
+      .where(eq(schema.bookmarkMedia.userId, USER_A))
+    const links = await testInstance.db
+      .select()
+      .from(schema.bookmarkLinks)
+      .where(eq(schema.bookmarkLinks.userId, USER_A))
+    const readStatuses = await testInstance.db
+      .select()
+      .from(schema.readStatus)
+      .where(eq(schema.readStatus.userId, USER_A))
+    const prefs = await testInstance.db
+      .select()
+      .from(schema.userPreferences)
+      .where(eq(schema.userPreferences.userId, USER_A))
+    const syncStates = await testInstance.db
+      .select()
+      .from(schema.syncState)
+      .where(eq(schema.syncState.userId, USER_A))
+    const syncLogs = await testInstance.db
+      .select()
+      .from(schema.syncLogs)
+      .where(eq(schema.syncLogs.userId, USER_A))
 
     expect(bookmarks).toHaveLength(0)
     expect(tags).toHaveLength(0)
@@ -118,20 +151,38 @@ describe('API: /api/account/clear', () => {
     expect(syncLogs).toHaveLength(0)
 
     // OAuth token should still exist
-    const oauth = await testInstance.db.select().from(schema.oauthTokens).where(eq(schema.oauthTokens.userId, USER_A))
+    const oauth = await testInstance.db
+      .select()
+      .from(schema.oauthTokens)
+      .where(eq(schema.oauthTokens.userId, USER_A))
     expect(oauth).toHaveLength(1)
   })
 
-  it('does not affect other user\'s data', async () => {
+  it("does not affect other user's data", async () => {
     const { POST } = await import('@/app/api/account/clear/route')
     await POST()
 
     // Verify User B's data is intact
-    const bookmarks = await testInstance.db.select().from(schema.bookmarks).where(eq(schema.bookmarks.userId, USER_B))
-    const tags = await testInstance.db.select().from(schema.bookmarkTags).where(eq(schema.bookmarkTags.userId, USER_B))
-    const media = await testInstance.db.select().from(schema.bookmarkMedia).where(eq(schema.bookmarkMedia.userId, USER_B))
-    const readStatuses = await testInstance.db.select().from(schema.readStatus).where(eq(schema.readStatus.userId, USER_B))
-    const oauth = await testInstance.db.select().from(schema.oauthTokens).where(eq(schema.oauthTokens.userId, USER_B))
+    const bookmarks = await testInstance.db
+      .select()
+      .from(schema.bookmarks)
+      .where(eq(schema.bookmarks.userId, USER_B))
+    const tags = await testInstance.db
+      .select()
+      .from(schema.bookmarkTags)
+      .where(eq(schema.bookmarkTags.userId, USER_B))
+    const media = await testInstance.db
+      .select()
+      .from(schema.bookmarkMedia)
+      .where(eq(schema.bookmarkMedia.userId, USER_B))
+    const readStatuses = await testInstance.db
+      .select()
+      .from(schema.readStatus)
+      .where(eq(schema.readStatus.userId, USER_B))
+    const oauth = await testInstance.db
+      .select()
+      .from(schema.oauthTokens)
+      .where(eq(schema.oauthTokens.userId, USER_B))
 
     expect(bookmarks).toHaveLength(2)
     expect(tags).toHaveLength(1)
@@ -171,20 +222,32 @@ describe('API: /api/account', () => {
     expect(response.status).toBe(200)
 
     // Verify User A's data is completely deleted
-    const bookmarks = await testInstance.db.select().from(schema.bookmarks).where(eq(schema.bookmarks.userId, USER_A))
-    const oauth = await testInstance.db.select().from(schema.oauthTokens).where(eq(schema.oauthTokens.userId, USER_A))
+    const bookmarks = await testInstance.db
+      .select()
+      .from(schema.bookmarks)
+      .where(eq(schema.bookmarks.userId, USER_A))
+    const oauth = await testInstance.db
+      .select()
+      .from(schema.oauthTokens)
+      .where(eq(schema.oauthTokens.userId, USER_A))
 
     expect(bookmarks).toHaveLength(0)
     expect(oauth).toHaveLength(0)
   })
 
-  it('does not affect other user\'s data', async () => {
+  it("does not affect other user's data", async () => {
     const { DELETE } = await import('@/app/api/account/route')
     await DELETE()
 
     // Verify User B's data is intact
-    const bookmarks = await testInstance.db.select().from(schema.bookmarks).where(eq(schema.bookmarks.userId, USER_B))
-    const oauth = await testInstance.db.select().from(schema.oauthTokens).where(eq(schema.oauthTokens.userId, USER_B))
+    const bookmarks = await testInstance.db
+      .select()
+      .from(schema.bookmarks)
+      .where(eq(schema.bookmarks.userId, USER_B))
+    const oauth = await testInstance.db
+      .select()
+      .from(schema.oauthTokens)
+      .where(eq(schema.oauthTokens.userId, USER_B))
 
     expect(bookmarks).toHaveLength(2)
     expect(oauth).toHaveLength(1)

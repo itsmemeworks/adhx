@@ -9,7 +9,7 @@ describe('Feed Types', () => {
   describe('FILTER_OPTIONS', () => {
     it('should have all expected filter options', () => {
       expect(FILTER_OPTIONS).toHaveLength(7)
-      expect(FILTER_OPTIONS.map(o => o.value)).toEqual([
+      expect(FILTER_OPTIONS.map((o) => o.value)).toEqual([
         'all',
         'photos',
         'videos',
@@ -21,7 +21,7 @@ describe('Feed Types', () => {
     })
 
     it('should have labels for all options', () => {
-      FILTER_OPTIONS.forEach(option => {
+      FILTER_OPTIONS.forEach((option) => {
         expect(option.label).toBeTruthy()
         expect(typeof option.label).toBe('string')
       })

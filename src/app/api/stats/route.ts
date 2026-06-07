@@ -2,17 +2,11 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { bookmarks, bookmarkMedia, readStatus } from '@/lib/db/schema'
 import { count, sql, eq, and, or } from 'drizzle-orm'
-import { getCurrentUserId } from '@/lib/auth/session'
+import { withAuth } from '@/lib/api/with-auth'
 
 // GET /api/stats - Get dashboard stats
-export async function GET() {
+export const GET = withAuth(async (_req, userId) => {
   try {
-    // Get current user ID for multi-user data isolation
-    const userId = await getCurrentUserId()
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     // Total bookmarks for this user (strict userId check)
     const [totalResult] = await db
       .select({ count: count() })
@@ -64,11 +58,8 @@ export async function GET() {
       .where(
         and(
           eq(bookmarks.userId, userId),
-          or(
-            eq(bookmarks.source, 'manual'),
-            eq(bookmarks.source, 'url_prefix')
-          )
-        )
+          or(eq(bookmarks.source, 'manual'), eq(bookmarks.source, 'url_prefix')),
+        ),
       )
     const manualCount = manualResult?.count || 0
 
@@ -83,9 +74,6 @@ export async function GET() {
     })
   } catch (error) {
     console.error('Error fetching stats:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch stats' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch stats' }, { status: 500 })
   }
-}
+})

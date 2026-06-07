@@ -62,7 +62,9 @@ export function VideoPlayer({
   // Non-Twitter platforms always skip the preflight (no HLS, no /info endpoint).
   const nonTwitter = platform !== 'twitter'
   // Known-short videos can skip the /info preflight and start streaming immediately.
-  const canSkipPreflight = nonTwitter || (typeof duration === 'number' && duration > 0 && duration <= MP4_FAST_PATH_MAX_DURATION)
+  const canSkipPreflight =
+    nonTwitter ||
+    (typeof duration === 'number' && duration > 0 && duration <= MP4_FAST_PATH_MAX_DURATION)
   const [loading, setLoading] = useState(!canSkipPreflight)
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState(canSkipPreflight) // Tracks if we've determined the playback strategy
@@ -81,9 +83,7 @@ export function VideoPlayer({
     async function initVideo() {
       try {
         // Fetch video info to determine playback strategy
-        const response = await fetch(
-          `/api/media/video/info?author=${author}&tweetId=${tweetId}`
-        )
+        const response = await fetch(`/api/media/video/info?author=${author}&tweetId=${tweetId}`)
 
         if (!response.ok) {
           throw new Error('Failed to fetch video info')
@@ -194,7 +194,9 @@ export function VideoPlayer({
   // Show error state with fallback to X
   if (error) {
     return (
-      <div className={`flex flex-col items-center justify-center gap-4 p-8 bg-gray-900 rounded-xl ${className}`}>
+      <div
+        className={`flex flex-col items-center justify-center gap-4 p-8 bg-gray-900 rounded-xl ${className}`}
+      >
         <AlertCircle className="w-12 h-12 text-gray-400" />
         <p className="text-gray-400 text-center">{error}</p>
         {tweetUrl && (
@@ -215,13 +217,14 @@ export function VideoPlayer({
   // Don't render video until we've determined the strategy
   // For HLS: src is set by the useEffect after HLS.js attaches
   // For MP4: src is set directly on the element
-  const videoSrc = ready && !useHls
-    ? platform === 'instagram'
-      ? `/api/media/instagram/video?id=${encodeURIComponent(tweetId)}`
-      : platform === 'tiktok'
-        ? `/api/media/tiktok/video?username=${encodeURIComponent(author)}&id=${encodeURIComponent(tweetId)}`
-        : `/api/media/video?author=${author}&tweetId=${tweetId}&quality=hd`
-    : undefined
+  const videoSrc =
+    ready && !useHls
+      ? platform === 'instagram'
+        ? `/api/media/instagram/video?id=${encodeURIComponent(tweetId)}`
+        : platform === 'tiktok'
+          ? `/api/media/tiktok/video?username=${encodeURIComponent(author)}&id=${encodeURIComponent(tweetId)}`
+          : `/api/media/video?author=${author}&tweetId=${tweetId}&quality=hd`
+      : undefined
 
   return (
     <div className="relative">

@@ -119,7 +119,12 @@ describe('API: /api/media/tiktok/video/download', () => {
 
     it('returns 502 when the upstream fetch fails', async () => {
       mockFetchTikTokMetadata.mockResolvedValueOnce({ videoUrl: VIDEO_URL })
-      mockFetch.mockResolvedValueOnce({ ok: false, status: 403, body: null, headers: new Headers() })
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        body: null,
+        headers: new Headers(),
+      })
 
       const { GET } = await import('@/app/api/media/tiktok/video/download/route')
       const response = await GET(createRequest({ username: HANDLE, id: VIDEO_ID }))

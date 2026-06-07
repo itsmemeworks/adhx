@@ -23,10 +23,11 @@ export async function GET(request: NextRequest) {
   try {
     // Validate URL is from Twitter's video CDN (strict domain check to prevent SSRF)
     const url = new URL(hlsUrl)
-    const isAllowed = url.hostname === 'video.twimg.com'
-      || url.hostname.endsWith('.twimg.com')
-      || url.hostname === 'twitter.com'
-      || url.hostname.endsWith('.twitter.com')
+    const isAllowed =
+      url.hostname === 'video.twimg.com' ||
+      url.hostname.endsWith('.twimg.com') ||
+      url.hostname === 'twitter.com' ||
+      url.hostname.endsWith('.twitter.com')
     if (!isAllowed) {
       return NextResponse.json({ error: 'Invalid HLS URL' }, { status: 400 })
     }
@@ -34,9 +35,10 @@ export async function GET(request: NextRequest) {
     // Fetch the m3u8 playlist
     const response = await fetch(hlsUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': 'https://twitter.com/',
-        'Origin': 'https://twitter.com',
+        'User-Agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Referer: 'https://twitter.com/',
+        Origin: 'https://twitter.com',
       },
       signal: AbortSignal.timeout(10_000),
     })
@@ -45,7 +47,7 @@ export async function GET(request: NextRequest) {
       console.error(`HLS proxy failed: ${response.status} for ${hlsUrl}`)
       return NextResponse.json(
         { error: `Failed to fetch HLS playlist: ${response.status}` },
-        { status: response.status }
+        { status: response.status },
       )
     }
 

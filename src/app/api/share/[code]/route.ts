@@ -5,10 +5,7 @@ import { eq, and, inArray, desc } from 'drizzle-orm'
 import { resolveMediaUrl, getShareableUrl, getThumbnailUrl } from '@/lib/media/fxembed'
 
 // GET /api/share/[code] - Public access to a shared collection
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ code: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ code: string }> }) {
   try {
     const { code } = await params
 
@@ -60,7 +57,12 @@ export async function GET(
     const mediaResults = await db
       .select()
       .from(bookmarkMedia)
-      .where(and(eq(bookmarkMedia.userId, collectionOwnerId), inArray(bookmarkMedia.bookmarkId, bookmarkIds)))
+      .where(
+        and(
+          eq(bookmarkMedia.userId, collectionOwnerId),
+          inArray(bookmarkMedia.bookmarkId, bookmarkIds),
+        ),
+      )
 
     // Build tweet objects with media (no read status for public view)
     const tweets = bookmarkResults.map((bookmark) => {

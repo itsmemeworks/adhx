@@ -28,8 +28,6 @@ describe('cn utility', () => {
   })
 
   it('handles complex combinations', () => {
-    expect(cn('base', { active: true, disabled: false }, ['extra'])).toBe(
-      'base active extra'
-    )
+    expect(cn('base', { active: true, disabled: false }, ['extra'])).toBe('base active extra')
   })
 })

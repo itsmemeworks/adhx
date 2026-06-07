@@ -1,0 +1,10 @@
+node_modules
+.next
+next-env.d.ts
+out
+data
+pnpm-lock.yaml
+CHANGELOG.md
+drizzle/*.md
+coverage
+.claude

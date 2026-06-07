@@ -12,8 +12,14 @@ interface CollectionPickerProps {
   align?: 'left' | 'right'
 }
 
-export function CollectionPicker({ bookmarkId, onCreateNew, trigger, align = 'right' }: CollectionPickerProps) {
-  const { collections, addToCollection, removeFromCollection, getBookmarkCollections } = useCollections()
+export function CollectionPicker({
+  bookmarkId,
+  onCreateNew,
+  trigger,
+  align = 'right',
+}: CollectionPickerProps) {
+  const { collections, addToCollection, removeFromCollection, getBookmarkCollections } =
+    useCollections()
   const [isOpen, setIsOpen] = useState(false)
   const [memberCollectionIds, setMemberCollectionIds] = useState<Set<string>>(new Set())
   const [loadingCollections, setLoadingCollections] = useState<Set<string>>(new Set())
@@ -95,7 +101,7 @@ export function CollectionPicker({ bookmarkId, onCreateNew, trigger, align = 'ri
             'p-2 rounded-full transition-colors',
             isOpen
               ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-              : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
+              : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400',
           )}
           title="Add to collection"
         >
@@ -108,7 +114,7 @@ export function CollectionPicker({ bookmarkId, onCreateNew, trigger, align = 'ri
         <div
           className={cn(
             'absolute bottom-full mb-2 w-64 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden z-50',
-            align === 'right' ? 'right-0' : 'left-0'
+            align === 'right' ? 'right-0' : 'left-0',
           )}
         >
           <div className="p-2 border-b border-gray-100 dark:border-gray-800">
@@ -141,7 +147,7 @@ export function CollectionPicker({ bookmarkId, onCreateNew, trigger, align = 'ri
                       'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors',
                       isInCollection
                         ? 'bg-blue-50 dark:bg-blue-900/20'
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-800',
                     )}
                   >
                     <div

@@ -1,16 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { syncLogs } from '@/lib/db/schema'
 import { desc, eq, count } from 'drizzle-orm'
-import { getCurrentUserId } from '@/lib/auth/session'
+import { withAuth } from '@/lib/api/with-auth'
 
 // GET /api/sync/logs - List sync logs with pagination
-export async function GET(request: NextRequest) {
-  const userId = await getCurrentUserId()
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
+export const GET = withAuth(async (request, userId) => {
   const searchParams = request.nextUrl.searchParams
   const page = parseInt(searchParams.get('page') || '1')
   const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100)
@@ -40,10 +35,7 @@ export async function GET(request: NextRequest) {
         .orderBy(desc(syncLogs.startedAt))
         .limit(limit)
         .offset(offset),
-      db
-        .select({ count: count() })
-        .from(syncLogs)
-        .where(eq(syncLogs.userId, userId))
+      db.select({ count: count() }).from(syncLogs).where(eq(syncLogs.userId, userId)),
     ])
 
     const total = countResult[0]?.count ?? 0
@@ -61,4 +53,4 @@ export async function GET(request: NextRequest) {
     console.error('Failed to fetch sync logs:', error)
     return NextResponse.json({ error: 'Failed to fetch sync logs' }, { status: 500 })
   }
-}
+})

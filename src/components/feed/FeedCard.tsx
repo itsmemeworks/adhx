@@ -23,7 +23,12 @@ interface FeedCardProps {
 /** Time pill — mono white on translucent black, for media/article overlays. */
 function TimePill({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <span className={cn('font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5', className)}>
+    <span
+      className={cn(
+        'font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5',
+        className,
+      )}
+    >
       {children}
     </span>
   )
@@ -54,9 +59,12 @@ export function FeedCard({
   const isNew = lastSyncAt && item.processedAt >= lastSyncAt
 
   const articleLink = isArticle ? item.links?.[0] : null
-  const articleDomain = articleLink?.domain || (articleLink?.expandedUrl ? new URL(articleLink.expandedUrl).hostname : null)
+  const articleDomain =
+    articleLink?.domain ||
+    (articleLink?.expandedUrl ? new URL(articleLink.expandedUrl).hostname : null)
 
-  const aspectRatio = primaryMedia?.width && primaryMedia?.height ? primaryMedia.width / primaryMedia.height : 1
+  const aspectRatio =
+    primaryMedia?.width && primaryMedia?.height ? primaryMedia.width / primaryMedia.height : 1
 
   function handleMarkReadWithAnimation(e: React.MouseEvent): void {
     e.stopPropagation()
@@ -77,9 +85,10 @@ export function FeedCard({
     }
   }
 
-  const newGlowClass = isNew && !isHovered
-    ? 'shadow-[0_0_8px_2px_rgba(194,96,63,0.4),0_0_20px_4px_rgba(194,96,63,0.22),0_0_35px_8px_rgba(194,96,63,0.1)]'
-    : ''
+  const newGlowClass =
+    isNew && !isHovered
+      ? 'shadow-[0_0_8px_2px_rgba(194,96,63,0.4),0_0_20px_4px_rgba(194,96,63,0.22),0_0_35px_8px_rgba(194,96,63,0.1)]'
+      : ''
 
   const timeDate = sortField === 'createdAt' && item.createdAt ? item.createdAt : item.processedAt
   const timeBadge = formatCompactRelativeTime(timeDate)
@@ -99,7 +108,9 @@ export function FeedCard({
   const platform = (item.platform || 'twitter') as PlatformId
 
   return (
-    <div className={`mb-4 break-inside-avoid transition-all duration-300 ${isExiting ? 'opacity-0 scale-95 -translate-y-2' : ''}`}>
+    <div
+      className={`mb-4 break-inside-avoid transition-all duration-300 ${isExiting ? 'opacity-0 scale-95 -translate-y-2' : ''}`}
+    >
       <div
         className={cn(
           'group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer',
@@ -236,12 +247,24 @@ function MediaContent({
   return (
     <div className="relative">
       {isVideo && isHovered && hoverVideoUrl ? (
-        <video src={hoverVideoUrl} muted loop playsInline autoPlay className={mediaClass} style={arStyle} />
+        <video
+          src={hoverVideoUrl}
+          muted
+          loop
+          playsInline
+          autoPlay
+          className={mediaClass}
+          style={arStyle}
+        />
       ) : (
         <img
           src={primaryMedia.thumbnailUrl}
           alt=""
-          className={cn(mediaClass, !isVideo && 'transition-opacity', !isVideo && (loaded ? 'opacity-100' : 'opacity-0'))}
+          className={cn(
+            mediaClass,
+            !isVideo && 'transition-opacity',
+            !isVideo && (loaded ? 'opacity-100' : 'opacity-0'),
+          )}
           style={arStyle}
           onLoad={onLoad}
           referrerPolicy="no-referrer"
@@ -295,7 +318,12 @@ function MediaContent({
           no padding of its own — putting the bottom padding on the clamp box
           itself lets a clipped 3rd line peek through the padding zone. */}
       {caption && (
-        <div className={cn('absolute left-0 right-0 bottom-0 px-3.5 pb-3 pt-8', cornerBadge && 'pr-14')}>
+        <div
+          className={cn(
+            'absolute left-0 right-0 bottom-0 px-3.5 pb-3 pt-8',
+            cornerBadge && 'pr-14',
+          )}
+        >
           <p className="text-white font-medium text-[13.5px] leading-snug line-clamp-2 [text-shadow:0_1px_3px_rgba(0,0,0,.55)]">
             {caption}
           </p>
@@ -321,7 +349,9 @@ function MediaOverlays({
         <TypeBadge type={badgeType} />
         <PlatformChip platform={platform} />
       </div>
-      <TimePill className="absolute top-2.5 right-2.5 group-hover:opacity-0 transition-opacity">{timeBadge}</TimePill>
+      <TimePill className="absolute top-2.5 right-2.5 group-hover:opacity-0 transition-opacity">
+        {timeBadge}
+      </TimePill>
     </>
   )
 }
@@ -345,7 +375,12 @@ function ArticleCardContent({
   if (cover) {
     return (
       <div className="relative">
-        <img src={cover} alt="" className="w-full aspect-[16/10] object-cover bg-black" referrerPolicy="no-referrer" />
+        <img
+          src={cover}
+          alt=""
+          className="w-full aspect-[16/10] object-cover bg-black"
+          referrerPolicy="no-referrer"
+        />
         <div
           className="absolute inset-0"
           style={{ background: 'linear-gradient(transparent 32%, rgba(11,11,17,.86))' }}
@@ -368,12 +403,17 @@ function ArticleCardContent({
   // No cover: accent-tinted gradient fallback with a faint file-text watermark.
   return (
     <div className="relative overflow-hidden p-4 bg-gradient-to-br from-clay/[0.14] to-surface">
-      <FileText className="absolute -right-[18px] -bottom-5 w-[110px] h-[110px] text-clay/[0.13]" aria-hidden />
+      <FileText
+        className="absolute -right-[18px] -bottom-5 w-[110px] h-[110px] text-clay/[0.13]"
+        aria-hidden
+      />
       <div className="relative flex items-center gap-1.5 mb-3">
         <TypeBadge type="article" />
         <PlatformChip platform={platform} />
       </div>
-      <h3 className="relative font-serif font-semibold text-[17px] leading-tight text-ink line-clamp-3">{title}</h3>
+      <h3 className="relative font-serif font-semibold text-[17px] leading-tight text-ink line-clamp-3">
+        {title}
+      </h3>
     </div>
   )
 }
@@ -394,7 +434,9 @@ function CardHeader({
     <div className="flex items-center gap-2.5 mb-2.5">
       <AuthorAvatar src={item.authorProfileImageUrl} author={item.author} size="sm" />
       <div className="min-w-0 flex-1">
-        <div className="font-bold text-[13.5px] text-ink truncate">{item.authorName || item.author || 'Saved post'}</div>
+        <div className="font-bold text-[13.5px] text-ink truncate">
+          {item.authorName || item.author || 'Saved post'}
+        </div>
         <div className="font-mono text-[11.5px] text-ink-3 truncate">
           @{item.author}
           {timeBadge ? ` · ${timeBadge}` : ''}
@@ -419,7 +461,9 @@ function QuoteCardContent({
   return (
     <div className="bg-surface p-4">
       <CardHeader item={item} platform={platform} timeBadge={timeBadge} />
-      <div className="text-[14px] text-ink leading-normal whitespace-pre-line">{renderText(item.text)}</div>
+      <div className="text-[14px] text-ink leading-normal whitespace-pre-line">
+        {renderText(item.text)}
+      </div>
       <div className="bg-inset border border-hairline rounded-[10px] pt-[11px] px-[13px] pb-[11px] mt-3">
         <div className="text-clay font-bold text-[12.5px] mb-0.5">@{item.quoteContext!.author}</div>
         <div className="text-[12.5px] text-ink-2 leading-snug line-clamp-2">

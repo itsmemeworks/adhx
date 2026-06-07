@@ -36,7 +36,11 @@ describe('GET /api/activity', () => {
 
     const res = await GET()
     const { items } = await res.json()
-    expect(items.map((i: { url: string }) => i.url)).toEqual(['/a/status/3', '/a/status/2', '/a/status/1'])
+    expect(items.map((i: { url: string }) => i.url)).toEqual([
+      '/a/status/3',
+      '/a/status/2',
+      '/a/status/1',
+    ])
   })
 
   it('NEVER exposes userId (pulse is anonymous)', async () => {

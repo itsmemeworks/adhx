@@ -248,7 +248,9 @@ describe('OG Metadata with Real Fixtures', () => {
      */
 
     // Helper to check if a URL returns an image
-    async function isImageAccessible(url: string): Promise<{ ok: boolean; contentType?: string; status?: number }> {
+    async function isImageAccessible(
+      url: string,
+    ): Promise<{ ok: boolean; contentType?: string; status?: number }> {
       try {
         const response = await fetch(url, {
           method: 'HEAD',

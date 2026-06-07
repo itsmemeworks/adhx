@@ -14,8 +14,23 @@ export default function GlobalError({
 }) {
   return (
     <html lang="en">
-      <body style={{ margin: 0, fontFamily: 'system-ui, sans-serif', backgroundColor: '#0a0a0a', color: '#fff' }}>
-        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+      <body
+        style={{
+          margin: 0,
+          fontFamily: 'system-ui, sans-serif',
+          backgroundColor: '#0a0a0a',
+          color: '#fff',
+        }}
+      >
+        <div
+          style={{
+            minHeight: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '2rem',
+          }}
+        >
           <div style={{ maxWidth: '28rem', textAlign: 'center' }}>
             <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
               Something went wrong

@@ -75,7 +75,7 @@ const nextConfig = {
             "font-src 'self' data:",
             "connect-src 'self' https://api.fxtwitter.com https://*.sentry.io",
             // YouTube Shorts play via the official privacy-enhanced iframe embed.
-            "frame-src https://www.youtube-nocookie.com https://www.youtube.com",
+            'frame-src https://www.youtube-nocookie.com https://www.youtube.com',
             "frame-ancestors 'none'",
           ].join('; '),
         },

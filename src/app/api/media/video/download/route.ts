@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { captureException } from '@/lib/sentry'
+import {
+  downloadResponse,
+  isAllowedTwitterMediaUrl,
+  isValidTweetAuthor,
+  isValidTweetId,
+} from '@/lib/media/proxy'
 
 /**
  * Video Download Endpoint - Streams video with Content-Disposition for instant browser download
@@ -21,12 +27,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Missing author or tweetId' }, { status: 400 })
   }
 
+  // Sanitise the user-provided params before interpolating them into the
+  // FxTwitter API URL (prevents request-forgery via a crafted author/tweetId).
+  if (!isValidTweetAuthor(author) || !isValidTweetId(tweetId)) {
+    return NextResponse.json({ error: 'Invalid author or tweetId' }, { status: 400 })
+  }
+
   try {
     // Get video info to find the best MP4 URL
-    const infoResponse = await fetch(
-      `https://api.fxtwitter.com/${author}/status/${tweetId}`,
-      { headers: { 'User-Agent': 'ADHX/1.0' }, signal: AbortSignal.timeout(10_000) }
-    )
+    const infoResponse = await fetch(`https://api.fxtwitter.com/${author}/status/${tweetId}`, {
+      headers: { 'User-Agent': 'ADHX/1.0' },
+      signal: AbortSignal.timeout(10_000),
+    })
 
     if (!infoResponse.ok) {
       return NextResponse.json({ error: 'Failed to fetch video info' }, { status: 404 })
@@ -59,11 +71,19 @@ export async function GET(request: NextRequest) {
 
     const videoUrl = selectedFormat.url
 
+    // SSRF Protection: the MP4 URL comes from the third-party FxTwitter
+    // response, so re-validate it against the Twitter CDN allowlist before
+    // fetching it server-side.
+    if (!isAllowedTwitterMediaUrl(videoUrl)) {
+      console.error(`SSRF blocked: download URL from untrusted domain: ${videoUrl}`)
+      return NextResponse.json({ error: 'Invalid video source' }, { status: 403 })
+    }
+
     // Fetch the video with streaming (30s timeout for large files)
     const videoResponse = await fetch(videoUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-        'Referer': 'https://twitter.com/',
+        Referer: 'https://twitter.com/',
       },
       signal: AbortSignal.timeout(30_000),
     })
@@ -72,22 +92,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch video' }, { status: 502 })
     }
 
-    // Generate filename
-    const filename = `${author}-${tweetId}.mp4`
-
-    // Stream the response with download headers
-    const headers = new Headers()
-    headers.set('Content-Type', 'video/mp4')
-    headers.set('Content-Disposition', `attachment; filename="${filename}"`)
-
-    // Pass through Content-Length for progress indication
-    const contentLength = videoResponse.headers.get('Content-Length')
-    if (contentLength) {
-      headers.set('Content-Length', contentLength)
-    }
-
-    // Stream the video directly to the client
-    return new Response(videoResponse.body, { headers })
+    // Stream the video to the client as an attachment download
+    return downloadResponse(videoResponse, `${author}-${tweetId}.mp4`)
   } catch (error) {
     console.error('Video download error:', error)
     captureException(error, { endpoint: '/api/media/video/download', author, tweetId })

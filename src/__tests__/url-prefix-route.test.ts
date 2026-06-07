@@ -117,24 +117,18 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
 
   describe('Metadata generation', () => {
     it('returns fallback metadata for invalid username', async () => {
-      const { generateMetadata } = await import(
-        '@/app/[username]/status/[id]/page'
-      )
+      const { generateMetadata } = await import('@/app/[username]/status/[id]/page')
 
       const metadata = await generateMetadata({
         params: Promise.resolve({ username: 'invalid-user', id: '123' }),
       })
 
       expect(metadata.title).toBe('ADHX - Save now. Read never. Find always.')
-      expect(metadata.description).toBe(
-        'For people who bookmark everything and read nothing.'
-      )
+      expect(metadata.description).toBe('For people who bookmark everything and read nothing.')
     })
 
     it('returns fallback metadata for invalid tweet ID', async () => {
-      const { generateMetadata } = await import(
-        '@/app/[username]/status/[id]/page'
-      )
+      const { generateMetadata } = await import('@/app/[username]/status/[id]/page')
 
       const metadata = await generateMetadata({
         params: Promise.resolve({ username: 'validuser', id: 'not-numeric' }),
@@ -147,9 +141,7 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
       const { fetchTweetData } = await import('@/lib/media/fxembed')
       vi.mocked(fetchTweetData).mockResolvedValue(null)
 
-      const { generateMetadata } = await import(
-        '@/app/[username]/status/[id]/page'
-      )
+      const { generateMetadata } = await import('@/app/[username]/status/[id]/page')
 
       const metadata = await generateMetadata({
         params: Promise.resolve({ username: 'testuser', id: '123456789' }),
@@ -175,16 +167,14 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
             avatar_url: 'https://example.com/avatar.jpg',
           },
           created_at: '2024-01-01T00:00:00Z',
-                    replies: 0,
+          replies: 0,
           retweets: 0,
           likes: 0,
           views: 0,
         },
       })
 
-      const { generateMetadata } = await import(
-        '@/app/[username]/status/[id]/page'
-      )
+      const { generateMetadata } = await import('@/app/[username]/status/[id]/page')
 
       const metadata = await generateMetadata({
         params: Promise.resolve({ username: 'testauthor', id: '123456789' }),
@@ -192,9 +182,7 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
 
       expect(metadata.title).toContain('@testauthor')
       expect(metadata.title).toContain('This is a test tweet')
-      expect(metadata.description).toBe(
-        'This is a test tweet with some interesting content'
-      )
+      expect(metadata.description).toBe('This is a test tweet with some interesting content')
       expect(metadata.openGraph?.title).toBe("Preview @testauthor's tweet")
     })
 
@@ -216,16 +204,14 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
             avatar_url: 'https://example.com/avatar.jpg',
           },
           created_at: '2024-01-01T00:00:00Z',
-                    replies: 0,
+          replies: 0,
           retweets: 0,
           likes: 0,
           views: 0,
         },
       })
 
-      const { generateMetadata } = await import(
-        '@/app/[username]/status/[id]/page'
-      )
+      const { generateMetadata } = await import('@/app/[username]/status/[id]/page')
 
       const metadata = await generateMetadata({
         params: Promise.resolve({ username: 'user', id: '123' }),
@@ -238,24 +224,22 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
 
   describe('Page rendering', () => {
     it('redirects to home for invalid username', async () => {
-      const QuickAddPage = (await import('@/app/[username]/status/[id]/page'))
-        .default
+      const QuickAddPage = (await import('@/app/[username]/status/[id]/page')).default
 
       await expect(
         QuickAddPage({
           params: Promise.resolve({ username: 'invalid-user-name', id: '123' }),
-        })
+        }),
       ).rejects.toThrow('REDIRECT:/')
     })
 
     it('redirects to home for invalid tweet ID', async () => {
-      const QuickAddPage = (await import('@/app/[username]/status/[id]/page'))
-        .default
+      const QuickAddPage = (await import('@/app/[username]/status/[id]/page')).default
 
       await expect(
         QuickAddPage({
           params: Promise.resolve({ username: 'validuser', id: 'abc123' }),
-        })
+        }),
       ).rejects.toThrow('REDIRECT:/')
     })
 
@@ -263,8 +247,7 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
       const { fetchTweetData } = await import('@/lib/media/fxembed')
       vi.mocked(fetchTweetData).mockResolvedValue(null)
 
-      const QuickAddPage = (await import('@/app/[username]/status/[id]/page'))
-        .default
+      const QuickAddPage = (await import('@/app/[username]/status/[id]/page')).default
 
       // Should not throw for valid params
       const result = await QuickAddPage({
@@ -305,8 +288,7 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
         tweet: originalTweet,
       })
 
-      const QuickAddPage = (await import('@/app/[username]/status/[id]/page'))
-        .default
+      const QuickAddPage = (await import('@/app/[username]/status/[id]/page')).default
 
       const result = await QuickAddPage({
         params: Promise.resolve({ username: 'testuser', id: '999888777' }),
@@ -319,7 +301,8 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
       const previewElement = children.find(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (child): child is React.ReactElement<any> =>
-          React.isValidElement(child) && (child.type as { name?: string })?.name === 'TweetPreviewLanding'
+          React.isValidElement(child) &&
+          (child.type as { name?: string })?.name === 'TweetPreviewLanding',
       )
 
       expect(previewElement).toBeTruthy()
@@ -342,13 +325,15 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
         text: 'Check this out https://t.co/abc123',
         raw_text: {
           text: 'Check this out https://t.co/abc123',
-          facets: [{
-            type: 'url',
-            indices: [15, 38] as [number, number],
-            original: 'https://t.co/abc123',
-            replacement: 'https://example.com/article',
-            display: 'example.com/article',
-          }],
+          facets: [
+            {
+              type: 'url',
+              indices: [15, 38] as [number, number],
+              original: 'https://t.co/abc123',
+              replacement: 'https://example.com/article',
+              display: 'example.com/article',
+            },
+          ],
         },
         author: {
           id: '42',
@@ -375,8 +360,7 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
         image: 'https://example.com/og.jpg',
       })
 
-      const QuickAddPage = (await import('@/app/[username]/status/[id]/page'))
-        .default
+      const QuickAddPage = (await import('@/app/[username]/status/[id]/page')).default
 
       const result = await QuickAddPage({
         params: Promise.resolve({ username: 'testuser', id: '111222333' }),
@@ -389,7 +373,8 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
       const previewElement = children.find(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (child): child is React.ReactElement<any> =>
-          React.isValidElement(child) && (child.type as { name?: string })?.name === 'TweetPreviewLanding'
+          React.isValidElement(child) &&
+          (child.type as { name?: string })?.name === 'TweetPreviewLanding',
       )
 
       expect(previewElement).toBeTruthy()

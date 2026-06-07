@@ -1,27 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { bookmarks, bookmarkLinks, bookmarkMedia } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { metrics, captureException } from '@/lib/sentry'
-import { getCurrentUserId } from '@/lib/auth/session'
-import {
-  parseTweetUrl,
-  fetchTweetFromFxTwitter,
-  determineCategory,
-} from '@/lib/tweets/processor'
+import { withAuth } from '@/lib/api/with-auth'
+import { parseTweetUrl, fetchTweetFromFxTwitter, determineCategory } from '@/lib/tweets/processor'
 import { extractUrlsFromFacets } from '@/lib/media/fxembed'
 import { fetchOgMetadata } from '@/lib/utils/og-fetch'
 import { normalizeEntityMap } from '@/lib/utils/article-text'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 
 // POST /api/tweets/add - Add a tweet by URL
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, userId) => {
   try {
-    const userId = await getCurrentUserId()
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const body = await request.json()
     const { url, source = 'manual' } = body
 
@@ -33,8 +24,11 @@ export async function POST(request: NextRequest) {
     const parsed = parseTweetUrl(url)
     if (!parsed) {
       return NextResponse.json(
-        { error: 'Invalid tweet URL. Supported formats: twitter.com/user/status/123, x.com/user/status/123' },
-        { status: 400 }
+        {
+          error:
+            'Invalid tweet URL. Supported formats: twitter.com/user/status/123, x.com/user/status/123',
+        },
+        { status: 400 },
       )
     }
 
@@ -51,9 +45,9 @@ export async function POST(request: NextRequest) {
           success: false,
           isDuplicate: true,
           message: 'This tweet is already in your bookmarks',
-          bookmark: existing[0]
+          bookmark: existing[0],
         },
-        { status: 200 }
+        { status: 200 },
       )
     }
 
@@ -72,13 +66,15 @@ export async function POST(request: NextRequest) {
     // Note: url is often null, construct it ourselves with /article/ path for proper detection
     // Note: description is often null, use preview_text instead
     const authorUsername = tweet.author?.screen_name || parsed.author
-    const articlePreview = tweet.article ? {
-      title: tweet.article.title,
-      description: tweet.article.preview_text || null,
-      imageUrl: tweet.article.cover_media?.media_info?.original_img_url || null,
-      url: `https://x.com/${authorUsername}/article/${parsed.tweetId}`,
-      domain: 'x.com',
-    } : null
+    const articlePreview = tweet.article
+      ? {
+          title: tweet.article.title,
+          description: tweet.article.preview_text || null,
+          imageUrl: tweet.article.cover_media?.media_info?.original_img_url || null,
+          url: `https://x.com/${authorUsername}/article/${parsed.tweetId}`,
+          domain: 'x.com',
+        }
+      : null
 
     // Create bookmark
     const now = new Date().toISOString()
@@ -99,16 +95,20 @@ export async function POST(request: NextRequest) {
         authorName: tweet.quote.author?.name,
         authorProfileImageUrl: tweet.quote.author?.avatar_url,
         text: tweet.quote.text,
-        media: tweet.quote.media ? {
-          photos: tweet.quote.media.photos,
-          videos: tweet.quote.media.videos,
-        } : null,
-        article: tweet.quote.article ? {
-          url: `https://x.com/${tweet.quote.author?.screen_name}/article/${tweet.quote.id}`,
-          title: tweet.quote.article.title,
-          description: tweet.quote.article.preview_text,
-          imageUrl: tweet.quote.article.cover_media?.media_info?.original_img_url,
-        } : null,
+        media: tweet.quote.media
+          ? {
+              photos: tweet.quote.media.photos,
+              videos: tweet.quote.media.videos,
+            }
+          : null,
+        article: tweet.quote.article
+          ? {
+              url: `https://x.com/${tweet.quote.author?.screen_name}/article/${tweet.quote.id}`,
+              title: tweet.quote.article.title,
+              description: tweet.quote.article.preview_text,
+              imageUrl: tweet.quote.article.cover_media?.media_info?.original_img_url,
+            }
+          : null,
         external: tweet.quote.external || null,
         createdAt: tweet.quote.created_at,
       })
@@ -133,48 +133,59 @@ export async function POST(request: NextRequest) {
           quotedCategory = 'photo'
         }
 
-        await db.insert(bookmarks).values({
-          id: tweet.quote.id,
-          userId,
-          author: quotedAuthor,
-          authorName: tweet.quote.author?.name || null,
-          authorProfileImageUrl: tweet.quote.author?.avatar_url || null,
-          text: tweet.quote.text || '',
-          tweetUrl: `https://x.com/${quotedAuthor}/status/${tweet.quote.id}`,
-          createdAt: tweet.quote.created_at ? new Date(tweet.quote.created_at).toISOString() : now,
-          processedAt: now,
-          category: quotedCategory,
-          source: 'quoted', // Mark as saved via quote
-        }).onConflictDoNothing()
+        await db
+          .insert(bookmarks)
+          .values({
+            id: tweet.quote.id,
+            userId,
+            author: quotedAuthor,
+            authorName: tweet.quote.author?.name || null,
+            authorProfileImageUrl: tweet.quote.author?.avatar_url || null,
+            text: tweet.quote.text || '',
+            tweetUrl: `https://x.com/${quotedAuthor}/status/${tweet.quote.id}`,
+            createdAt: tweet.quote.created_at
+              ? new Date(tweet.quote.created_at).toISOString()
+              : now,
+            processedAt: now,
+            category: quotedCategory,
+            source: 'quoted', // Mark as saved via quote
+          })
+          .onConflictDoNothing()
 
         // Save media for the quoted tweet
         if (tweet.quote.media?.photos) {
           for (let i = 0; i < tweet.quote.media.photos.length; i++) {
             const photo = tweet.quote.media.photos[i]
-            await db.insert(bookmarkMedia).values({
-              id: `${tweet.quote.id}_photo_${i}`,
-              userId,
-              bookmarkId: tweet.quote.id,
-              mediaType: 'photo',
-              originalUrl: photo.url,
-              width: photo.width,
-              height: photo.height,
-            }).onConflictDoNothing()
+            await db
+              .insert(bookmarkMedia)
+              .values({
+                id: `${tweet.quote.id}_photo_${i}`,
+                userId,
+                bookmarkId: tweet.quote.id,
+                mediaType: 'photo',
+                originalUrl: photo.url,
+                width: photo.width,
+                height: photo.height,
+              })
+              .onConflictDoNothing()
           }
         }
         if (tweet.quote.media?.videos) {
           for (let i = 0; i < tweet.quote.media.videos.length; i++) {
             const video = tweet.quote.media.videos[i]
-            await db.insert(bookmarkMedia).values({
-              id: `${tweet.quote.id}_video_${i}`,
-              userId,
-              bookmarkId: tweet.quote.id,
-              mediaType: 'video',
-              originalUrl: video.url,
-              previewUrl: video.thumbnail_url,
-              width: video.width,
-              height: video.height,
-            }).onConflictDoNothing()
+            await db
+              .insert(bookmarkMedia)
+              .values({
+                id: `${tweet.quote.id}_video_${i}`,
+                userId,
+                bookmarkId: tweet.quote.id,
+                mediaType: 'video',
+                originalUrl: video.url,
+                previewUrl: video.thumbnail_url,
+                width: video.width,
+                height: video.height,
+              })
+              .onConflictDoNothing()
           }
         }
       }
@@ -201,16 +212,19 @@ export async function POST(request: NextRequest) {
     if (tweet.media?.all && Array.isArray(tweet.media.all)) {
       for (let i = 0; i < tweet.media.all.length; i++) {
         const m = tweet.media.all[i]
-        await db.insert(bookmarkMedia).values({
-          id: `${parsed.tweetId}_${i}`,
-          userId,
-          bookmarkId: parsed.tweetId,
-          mediaType: m.type || 'photo',
-          originalUrl: m.url || '',
-          previewUrl: m.thumbnail_url || m.url || '',
-          width: m.width || null,
-          height: m.height || null,
-        }).onConflictDoNothing()
+        await db
+          .insert(bookmarkMedia)
+          .values({
+            id: `${parsed.tweetId}_${i}`,
+            userId,
+            bookmarkId: parsed.tweetId,
+            mediaType: m.type || 'photo',
+            originalUrl: m.url || '',
+            previewUrl: m.thumbnail_url || m.url || '',
+            width: m.width || null,
+            height: m.height || null,
+          })
+          .onConflictDoNothing()
       }
     }
 
@@ -222,16 +236,29 @@ export async function POST(request: NextRequest) {
         const entityMap = normalizeEntityMap(tweet.article.content.entityMap)
 
         // Build mediaEntities mapping from media_entities array
-        const mediaEntities = tweet.article.media_entities?.reduce((acc: Record<string, { url: string; width?: number; height?: number }>, entity: { media_id: string; media_info?: { original_img_url?: string; original_img_width?: number; original_img_height?: number } }) => {
-          if (entity.media_id && entity.media_info?.original_img_url) {
-            acc[entity.media_id] = {
-              url: entity.media_info.original_img_url,
-              width: entity.media_info.original_img_width,
-              height: entity.media_info.original_img_height,
+        const mediaEntities = tweet.article.media_entities?.reduce(
+          (
+            acc: Record<string, { url: string; width?: number; height?: number }>,
+            entity: {
+              media_id: string
+              media_info?: {
+                original_img_url?: string
+                original_img_width?: number
+                original_img_height?: number
+              }
+            },
+          ) => {
+            if (entity.media_id && entity.media_info?.original_img_url) {
+              acc[entity.media_id] = {
+                url: entity.media_info.original_img_url,
+                width: entity.media_info.original_img_width,
+                height: entity.media_info.original_img_height,
+              }
             }
-          }
-          return acc
-        }, {})
+            return acc
+          },
+          {},
+        )
 
         contentJson = JSON.stringify({
           blocks: tweet.article.content.blocks,
@@ -320,4 +347,4 @@ export async function POST(request: NextRequest) {
     const message = error instanceof Error ? error.message : 'Failed to add tweet'
     return NextResponse.json({ error: message }, { status: 500 })
   }
-}
+})

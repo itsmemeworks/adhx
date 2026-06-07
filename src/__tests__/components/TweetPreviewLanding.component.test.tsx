@@ -48,7 +48,7 @@ describe('TweetPreviewLanding Component Snapshots', () => {
           tweetId={tweetId}
           tweet={fixture.tweet!}
           isAuthenticated={false}
-        />
+        />,
       )
 
       // Snapshot the rendered markup
@@ -57,21 +57,24 @@ describe('TweetPreviewLanding Component Snapshots', () => {
   })
 
   describe('Renders all fixture types correctly (authenticated)', () => {
-    it.each(fixtureMetadata)('$slug: renders with authenticated CTA', ({ slug, author, tweetId }) => {
-      const fixture = fixtures[slug as FixtureSlug]
+    it.each(fixtureMetadata)(
+      '$slug: renders with authenticated CTA',
+      ({ slug, author, tweetId }) => {
+        const fixture = fixtures[slug as FixtureSlug]
 
-      const { container } = render(
-        <TweetPreviewLanding
-          username={author}
-          tweetId={tweetId}
-          tweet={fixture.tweet!}
-          isAuthenticated={true}
-        />
-      )
+        const { container } = render(
+          <TweetPreviewLanding
+            username={author}
+            tweetId={tweetId}
+            tweet={fixture.tweet!}
+            isAuthenticated={true}
+          />,
+        )
 
-      // Snapshot the rendered markup
-      expect(container.firstChild).toMatchSnapshot()
-    })
+        // Snapshot the rendered markup
+        expect(container.firstChild).toMatchSnapshot()
+      },
+    )
   })
 
   describe('Content type rendering', () => {
@@ -83,7 +86,7 @@ describe('TweetPreviewLanding Component Snapshots', () => {
           username="TheCinesthetic"
           tweetId="2010184900599583070"
           tweet={fixture.tweet!}
-        />
+        />,
       )
 
       // Should show the tweet text
@@ -101,7 +104,7 @@ describe('TweetPreviewLanding Component Snapshots', () => {
           username="Kekius_Sage"
           tweetId="2011872260118716688"
           tweet={fixture.tweet!}
-        />
+        />,
       )
 
       // Should have play button
@@ -117,7 +120,7 @@ describe('TweetPreviewLanding Component Snapshots', () => {
           username="iamgdsa"
           tweetId="2010782484728873387"
           tweet={fixture.tweet!}
-        />
+        />,
       )
 
       // Should have multiple images in grid
@@ -133,7 +136,7 @@ describe('TweetPreviewLanding Component Snapshots', () => {
           username="NoahRyanCo"
           tweetId="2008957369212866843"
           tweet={fixture.tweet!}
-        />
+        />,
       )
 
       // Should show article title
@@ -150,7 +153,7 @@ describe('TweetPreviewLanding Component Snapshots', () => {
           username="elonmusk"
           tweetId="2012040892719169884"
           tweet={fixture.tweet!}
-        />
+        />,
       )
 
       // Should show quoted author
@@ -165,7 +168,7 @@ describe('TweetPreviewLanding Component Snapshots', () => {
           username="skalskip92"
           tweetId="1996677567642996772"
           tweet={fixture.tweet!}
-        />
+        />,
       )
 
       // Should show external link title or domain
@@ -186,7 +189,7 @@ describe('TweetPreviewLanding Component Snapshots', () => {
           username="TheCinesthetic"
           tweetId="2010184900599583070"
           tweet={fixture.tweet!}
-        />
+        />,
       )
 
       // Should have author avatar
@@ -202,7 +205,7 @@ describe('TweetPreviewLanding Component Snapshots', () => {
           username="TheCinesthetic"
           tweetId="2010184900599583070"
           tweet={fixture.tweet!}
-        />
+        />,
       )
 
       expect(container.textContent).toContain(fixture.tweet!.author.name)
@@ -219,7 +222,7 @@ describe('TweetPreviewLanding Component Snapshots', () => {
           username="TheCinesthetic"
           tweetId="2010184900599583070"
           tweet={fixture.tweet!}
-        />
+        />,
       )
 
       // Stats section exists (may be formatted with K/M suffixes)
@@ -238,7 +241,7 @@ describe('TweetPreviewLanding Component Snapshots', () => {
           tweetId="2010184900599583070"
           tweet={fixture.tweet!}
           isAuthenticated={false}
-        />
+        />,
       )
 
       // The X logo now stands in for the word "X" (glyph, not text).
@@ -254,7 +257,7 @@ describe('TweetPreviewLanding Component Snapshots', () => {
           tweetId="2010184900599583070"
           tweet={fixture.tweet!}
           isAuthenticated={true}
-        />
+        />,
       )
 
       expect(container.textContent).toContain('Save to collection')
@@ -269,7 +272,7 @@ describe('TweetPreviewLanding Component Snapshots', () => {
           tweetId="2010184900599583070"
           tweet={fixture.tweet!}
           isAuthenticated={true}
-        />
+        />,
       )
 
       expect(container.textContent).toContain('Continue to gallery')
@@ -285,7 +288,7 @@ describe('TweetPreviewLanding Component Snapshots', () => {
           username="TheCinesthetic"
           tweetId="2010184900599583070"
           tweet={fixture.tweet!}
-        />
+        />,
       )
 
       expect(container.textContent).toContain('Preview another link')
@@ -305,7 +308,7 @@ describe('TweetPreviewLanding Component Snapshots', () => {
           username="TheCinesthetic"
           tweetId="2010184900599583070"
           tweet={fixture.tweet!}
-        />
+        />,
       )
 
       const shareButton = container.querySelector('button[aria-label="Share this preview"]')
@@ -320,7 +323,7 @@ describe('TweetPreviewLanding Component Snapshots', () => {
           username="TheCinesthetic"
           tweetId="2010184900599583070"
           tweet={fixture.tweet!}
-        />
+        />,
       )
 
       const footer = container.querySelector('article[data-content="tweet"] footer')
@@ -339,7 +342,7 @@ describe('TweetPreviewLanding Component Snapshots', () => {
           username="TheCinesthetic"
           tweetId="2010184900599583070"
           tweet={fixture.tweet!}
-        />
+        />,
       )
 
       // The complementary section (right column) should have preview-another before benefits
@@ -357,7 +360,7 @@ describe('TweetPreviewLanding Component Snapshots', () => {
           username="TheCinesthetic"
           tweetId="2010184900599583070"
           tweet={fixture.tweet!}
-        />
+        />,
       )
 
       // There should be two preview-another sections (mobile + desktop)

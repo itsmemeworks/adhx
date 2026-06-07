@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { formatCount, formatRelativeTime, formatCompactRelativeTime, truncate } from '@/lib/utils/format'
+import {
+  formatCount,
+  formatRelativeTime,
+  formatCompactRelativeTime,
+  truncate,
+} from '@/lib/utils/format'
 
 /**
  * Format Utilities Tests

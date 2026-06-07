@@ -11,10 +11,14 @@ import {
 describe('youtube — extractYouTubeId', () => {
   it('pulls the id from every URL form', () => {
     expect(extractYouTubeId('https://youtube.com/shorts/Y9aytLYBajw')).toBe('Y9aytLYBajw')
-    expect(extractYouTubeId('https://www.youtube.com/shorts/Y9aytLYBajw?si=Ns240PHC8T7l5ZZC')).toBe('Y9aytLYBajw')
+    expect(extractYouTubeId('https://www.youtube.com/shorts/Y9aytLYBajw?si=Ns240PHC8T7l5ZZC')).toBe(
+      'Y9aytLYBajw',
+    )
     expect(extractYouTubeId('https://m.youtube.com/shorts/Y9aytLYBajw')).toBe('Y9aytLYBajw')
     expect(extractYouTubeId('https://youtu.be/Y9aytLYBajw')).toBe('Y9aytLYBajw')
-    expect(extractYouTubeId('https://www.youtube.com/watch?v=Y9aytLYBajw&t=10s')).toBe('Y9aytLYBajw')
+    expect(extractYouTubeId('https://www.youtube.com/watch?v=Y9aytLYBajw&t=10s')).toBe(
+      'Y9aytLYBajw',
+    )
     expect(extractYouTubeId('https://www.youtube.com/embed/Y9aytLYBajw')).toBe('Y9aytLYBajw')
     expect(extractYouTubeId('youtube.com/shorts/Y9aytLYBajw')).toBe('Y9aytLYBajw') // no protocol
   })
@@ -43,7 +47,9 @@ describe('youtube — id validation + url builders', () => {
 
   it('builds thumbnail/embed/short urls', () => {
     expect(youtubeThumbnail('Y9aytLYBajw')).toBe('https://i.ytimg.com/vi/Y9aytLYBajw/hqdefault.jpg')
-    expect(youtubeEmbedUrl('Y9aytLYBajw')).toBe('https://www.youtube-nocookie.com/embed/Y9aytLYBajw')
+    expect(youtubeEmbedUrl('Y9aytLYBajw')).toBe(
+      'https://www.youtube-nocookie.com/embed/Y9aytLYBajw',
+    )
     expect(youtubeShortUrl('Y9aytLYBajw')).toBe('https://www.youtube.com/shorts/Y9aytLYBajw')
   })
 })

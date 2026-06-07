@@ -61,7 +61,7 @@ describe('API: /api/auth/twitter/callback', () => {
         createCallbackRequest({
           error: 'access_denied',
           error_description: 'User denied access',
-        })
+        }),
       )
 
       expect(response.status).toBe(307) // Redirect
@@ -96,7 +96,7 @@ describe('API: /api/auth/twitter/callback', () => {
         createCallbackRequest({
           code: 'valid-code',
           state: 'invalid-state',
-        })
+        }),
       )
 
       expect(response.status).toBe(307)
@@ -111,7 +111,7 @@ describe('API: /api/auth/twitter/callback', () => {
         createCallbackRequest({
           code: 'valid-code',
           state: 'nonexistent-state',
-        })
+        }),
       )
 
       expect(response.status).toBe(307)
@@ -162,7 +162,7 @@ describe('API: /api/auth/twitter/callback', () => {
         createCallbackRequest({
           code: 'valid-code',
           state: 'valid-state',
-        })
+        }),
       )
 
       expect(response.status).toBe(307)
@@ -217,7 +217,7 @@ describe('API: /api/auth/twitter/callback', () => {
       // Verify return URL cookie was cleared
       const cookies = response.headers.getSetCookie()
       expect(cookies.some((c) => c.includes('adhx_return_url') && c.includes('Max-Age=0'))).toBe(
-        true
+        true,
       )
     })
 
@@ -250,7 +250,7 @@ describe('API: /api/auth/twitter/callback', () => {
         createCallbackRequest({
           code: 'valid-code',
           state: 'valid-state',
-        })
+        }),
       )
 
       expect(metrics.authCompleted).toHaveBeenCalledWith(true)
@@ -296,7 +296,7 @@ describe('API: /api/auth/twitter/callback', () => {
         createCallbackRequest({
           code: 'valid-code',
           state: 'valid-state',
-        })
+        }),
       )
 
       expect(metrics.authCompleted).toHaveBeenCalledWith(false)
@@ -323,7 +323,7 @@ describe('API: /api/auth/twitter/callback', () => {
         createCallbackRequest({
           code: 'invalid-code',
           state: 'valid-state',
-        })
+        }),
       )
 
       expect(response.status).toBe(307)
@@ -339,7 +339,7 @@ describe('API: /api/auth/twitter/callback', () => {
         createCallbackRequest({
           code: 'valid-code',
           state: 'valid-state',
-        })
+        }),
       )
 
       expect(response.status).toBe(307)

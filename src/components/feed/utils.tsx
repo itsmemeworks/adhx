@@ -5,7 +5,6 @@ import React from 'react'
 import { Download, Monitor } from 'lucide-react'
 import type { ArticleContentBlock, ArticleEntityMap, MediaEntitiesMap } from './types'
 
-
 /**
  * `onError` handler for media images: if the primary (proxy) URL fails to load,
  * swap once to the source CDN `originalUrl`. The FxEmbed photo proxy occasionally
@@ -28,7 +27,11 @@ export function fallbackToOriginal(
  * Download media helper - fetches image as blob and triggers download
  * This is necessary because the download attribute doesn't work for cross-origin URLs
  */
-export async function handleDownloadMedia(e: React.MouseEvent, url: string, filename: string): Promise<void> {
+export async function handleDownloadMedia(
+  e: React.MouseEvent,
+  url: string,
+  filename: string,
+): Promise<void> {
   e.stopPropagation()
   e.preventDefault()
 
@@ -87,14 +90,14 @@ export function VideoDownloadBlocked({
     <div
       style={aspectRatio ? { aspectRatio } : undefined}
       className={`flex flex-col items-center justify-center gap-4 bg-inset w-full ${
-        compact
-          ? 'p-6 rounded-xl'
-          : 'p-8 rounded-xl lg:rounded-2xl max-w-md mx-auto'
+        compact ? 'p-6 rounded-xl' : 'p-8 rounded-xl lg:rounded-2xl max-w-md mx-auto'
       }`}
     >
-      <div className={`rounded-full bg-clay/15 flex items-center justify-center ${
-        compact ? 'w-16 h-16' : 'w-20 h-20'
-      }`}>
+      <div
+        className={`rounded-full bg-clay/15 flex items-center justify-center ${
+          compact ? 'w-16 h-16' : 'w-20 h-20'
+        }`}
+      >
         <Monitor className={compact ? 'w-8 h-8 text-clay' : 'w-10 h-10 text-clay'} />
       </div>
       <div className="text-center">
@@ -106,7 +109,8 @@ export function VideoDownloadBlocked({
         </p>
       </div>
       <p className={`text-ink-3 text-center ${compact ? 'text-sm max-w-xs' : ''}`}>
-        This chunky boi is too thicc for your phone. Pop open your laptop for instant downloads with a progress bar and everything.
+        This chunky boi is too thicc for your phone. Pop open your laptop for instant downloads with
+        a progress bar and everything.
       </p>
       <button
         onClick={onDismiss}
@@ -140,7 +144,7 @@ export async function handleShareMedia(
   e: React.MouseEvent,
   url: string,
   filename: string,
-  mimeType: string = 'image/jpeg'
+  mimeType: string = 'image/jpeg',
 ): Promise<ShareMediaResult> {
   e.stopPropagation()
   e.preventDefault()
@@ -205,7 +209,7 @@ export async function handleShareMedia(
         // Fetch video info to check size. withSizes=true triggers HEAD requests
         // upstream so we get actual byte counts — playback flow skips this.
         const infoResponse = await fetch(
-          `/api/media/video/info?author=${encodeURIComponent(author)}&tweetId=${encodeURIComponent(tweetId)}&withSizes=true`
+          `/api/media/video/info?author=${encodeURIComponent(author)}&tweetId=${encodeURIComponent(tweetId)}&withSizes=true`,
         )
 
         if (infoResponse.ok) {
@@ -286,8 +290,10 @@ export function isIOSDevice(): boolean {
 
   // Check for iPhone, iPad, iPod
   // Also check for iPad on iOS 13+ which reports as MacIntel but has touch
-  return /iPad|iPhone|iPod/.test(userAgent) ||
+  return (
+    /iPad|iPhone|iPod/.test(userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  )
 }
 
 /**
@@ -324,12 +330,7 @@ function MediaWithActions({
   return (
     <figure className="my-6">
       <div className="relative group">
-        <img
-          src={src}
-          alt={alt || ''}
-          className={className}
-          loading="lazy"
-        />
+        <img src={src} alt={alt || ''} className={className} loading="lazy" />
         <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={(e) => handleDownloadMedia(e, src, getFilename())}
@@ -352,7 +353,8 @@ function MediaWithActions({
  */
 function containsEmoji(str: string): boolean {
   // Match emoji and other special Unicode ranges
-  const emojiRegex = /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2300}-\u{23FF}]|[\u{2B50}]|[\u{200D}]|[\u{FE0F}]/u
+  const emojiRegex =
+    /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2300}-\u{23FF}]|[\u{2B50}]|[\u{200D}]|[\u{FE0F}]/u
   return emojiRegex.test(str)
 }
 
@@ -411,7 +413,11 @@ export function toBionicText(text: string): React.ReactNode {
  * Render text with clickable links and optional Bionic Reading formatting
  * @param bionicReading - When true, applies bionic formatting to text portions
  */
-export function renderTextWithLinks(text: string, className?: string, bionicReading?: boolean): React.ReactNode {
+export function renderTextWithLinks(
+  text: string,
+  className?: string,
+  bionicReading?: boolean,
+): React.ReactNode {
   const decodedText = decodeHtmlEntities(text)
   const lines = decodedText.split('\n')
   const urlPattern = /(https?:\/\/[^\s]+)/g
@@ -481,7 +487,10 @@ export function decodeHtmlEntities(text: string): string {
   }
 
   // First handle named entities
-  let result = text.replace(/&(?:amp|lt|gt|quot|#39|apos|nbsp);/g, (match) => namedEntities[match] || match)
+  let result = text.replace(
+    /&(?:amp|lt|gt|quot|#39|apos|nbsp);/g,
+    (match) => namedEntities[match] || match,
+  )
 
   // Handle decimal numeric entities (&#12345;)
   result = result.replace(/&#(\d+);/g, (_, dec) => {
@@ -498,7 +507,6 @@ export function decodeHtmlEntities(text: string): string {
   return result
 }
 
-
 /**
  * Render article text with inline styles and entity links
  */
@@ -507,11 +515,18 @@ export function renderStyledText(
   inlineStyleRanges?: Array<{ length: number; offset: number; style: string }>,
   entityRanges?: Array<{ key: number; length: number; offset: number }>,
   entityMap?: ArticleEntityMap,
-  bionicReading?: boolean
+  bionicReading?: boolean,
 ): React.ReactNode {
   if (!text) return null
 
-  type Segment = { start: number; end: number; text: string; bold?: boolean; italic?: boolean; link?: string }
+  type Segment = {
+    start: number
+    end: number
+    text: string
+    bold?: boolean
+    italic?: boolean
+    link?: string
+  }
   const segments: Segment[] = []
 
   const charStyles: Array<{ bold?: boolean; italic?: boolean; link?: string }> = Array(text.length)
@@ -563,9 +578,8 @@ export function renderStyledText(
 
   return segments.map((seg, i) => {
     // Apply bionic reading to unstyled text segments (not bold/italic)
-    let content: React.ReactNode = bionicReading && !seg.bold && !seg.italic && !seg.link
-      ? toBionicText(seg.text)
-      : seg.text
+    let content: React.ReactNode =
+      bionicReading && !seg.bold && !seg.italic && !seg.link ? toBionicText(seg.text) : seg.text
 
     if (seg.bold && seg.italic) {
       content = (
@@ -606,10 +620,14 @@ export function renderArticleBlock(
   entityMap: ArticleEntityMap | undefined,
   index: number,
   mediaEntities?: MediaEntitiesMap,
-  bionicReading?: boolean
+  bionicReading?: boolean,
 ): React.ReactNode {
   // Choose the appropriate text renderer based on bionic reading preference
-  const renderBlockText = (text: string, inlineStyleRanges?: Array<{ length: number; offset: number; style: string }>, entityRanges?: Array<{ key: number; length: number; offset: number }>) => {
+  const renderBlockText = (
+    text: string,
+    inlineStyleRanges?: Array<{ length: number; offset: number; style: string }>,
+    entityRanges?: Array<{ key: number; length: number; offset: number }>,
+  ) => {
     if (bionicReading) {
       // For bionic reading, we apply it to the plain text portions
       return renderStyledText(text, inlineStyleRanges, entityRanges, entityMap, true)
@@ -641,7 +659,12 @@ export function renderArticleBlock(
         <figure key={block.key || index} className="my-6">
           <div className="w-full aspect-video bg-gradient-to-br bg-inset rounded-xl flex flex-col items-center justify-center border border-hairline gap-3">
             <div className="w-12 h-12 rounded-full bg-inset flex items-center justify-center">
-              <svg className="w-6 h-6 text-ink-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg
+                className="w-6 h-6 text-ink-3"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -652,7 +675,9 @@ export function renderArticleBlock(
             </div>
             <span className="text-ink-3 text-sm">Image unavailable</span>
           </div>
-          {caption && <figcaption className="text-ink-3 text-sm mt-3 text-center">{caption}</figcaption>}
+          {caption && (
+            <figcaption className="text-ink-3 text-sm mt-3 text-center">{caption}</figcaption>
+          )}
         </figure>
       )
     }
@@ -701,7 +726,10 @@ export function renderArticleBlock(
 
   if (block.type === 'blockquote') {
     return (
-      <blockquote key={block.key || index} className="border-l-4 border-hairline pl-4 my-4 text-ink-2 italic">
+      <blockquote
+        key={block.key || index}
+        className="border-l-4 border-hairline pl-4 my-4 text-ink-2 italic"
+      >
         {renderBlockText(block.text, block.inlineStyleRanges, block.entityRanges)}
       </blockquote>
     )
@@ -734,15 +762,15 @@ export function renderArticleBlock(
     const paragraphs = block.text.split('\n\n')
     return (
       <div key={block.key || index} className="space-y-4">
-        {paragraphs.map((para, i) => (
+        {paragraphs.map((para, i) =>
           para.trim() ? (
             <p key={i} className="text-ink-2 leading-relaxed">
               {bionicReading ? toBionicText(para) : para}
             </p>
           ) : (
             <div key={i} className="h-2" />
-          )
-        ))}
+          ),
+        )}
       </div>
     )
   }

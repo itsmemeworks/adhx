@@ -17,7 +17,12 @@ export function feedItemTitle(item: FeedItem): string {
   if (item.articlePreview?.title) return item.articlePreview.title
   const body = (item.text || '').trim()
   if (body) {
-    return body.split('\n')[0].replace(/^[^\w@#]+/, '').slice(0, 80) || body.slice(0, 80)
+    return (
+      body
+        .split('\n')[0]
+        .replace(/^[^\w@#]+/, '')
+        .slice(0, 80) || body.slice(0, 80)
+    )
   }
   return TYPE_META[feedItemType(item)].label
 }

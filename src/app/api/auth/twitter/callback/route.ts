@@ -27,24 +27,20 @@ export async function GET(request: NextRequest) {
     console.error('OAuth error:', error, errorDescription)
     metrics.authFailed(error)
     return NextResponse.redirect(
-      new URL(`/?error=${encodeURIComponent(errorDescription || error)}`, BASE_URL)
+      new URL(`/?error=${encodeURIComponent(errorDescription || error)}`, BASE_URL),
     )
   }
 
   // Verify required parameters
   if (!code || !state) {
-    return NextResponse.redirect(
-      new URL('/?error=Missing%20code%20or%20state', BASE_URL)
-    )
+    return NextResponse.redirect(new URL('/?error=Missing%20code%20or%20state', BASE_URL))
   }
 
   try {
     // Verify state and get code verifier
     const codeVerifier = await consumeOAuthState(state)
     if (!codeVerifier) {
-      return NextResponse.redirect(
-        new URL('/?error=Invalid%20or%20expired%20state', BASE_URL)
-      )
+      return NextResponse.redirect(new URL('/?error=Invalid%20or%20expired%20state', BASE_URL))
     }
 
     // Exchange code for tokens
@@ -53,7 +49,7 @@ export async function GET(request: NextRequest) {
       codeVerifier,
       CLIENT_ID,
       CLIENT_SECRET,
-      REDIRECT_URI
+      REDIRECT_URI,
     )
 
     // Get user info
@@ -70,7 +66,7 @@ export async function GET(request: NextRequest) {
       tokens.accessToken,
       tokens.refreshToken,
       tokens.expiresIn,
-      tokens.scope
+      tokens.scope,
     )
 
     // Successfully authenticated - metrics are tracked below
@@ -118,8 +114,6 @@ export async function GET(request: NextRequest) {
     captureException(err, { endpoint: '/api/auth/twitter/callback' })
     const message = err instanceof Error ? err.message : 'Unknown error'
     metrics.authFailed(message)
-    return NextResponse.redirect(
-      new URL(`/?error=${encodeURIComponent(message)}`, BASE_URL)
-    )
+    return NextResponse.redirect(new URL(`/?error=${encodeURIComponent(message)}`, BASE_URL))
   }
 }

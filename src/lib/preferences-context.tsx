@@ -9,15 +9,15 @@ export const FONT_OPTIONS: Record<BodyFont, { name: string; description: string 
     name: 'IBM Plex Sans',
     description: 'Clean and professional - the default choice',
   },
-  'lexend': {
+  lexend: {
     name: 'Lexend',
     description: 'Designed specifically for ADHD and reading difficulties',
   },
-  'atkinson': {
+  atkinson: {
     name: 'Atkinson Hyperlegible',
     description: 'Maximum legibility - great letter differentiation',
   },
-  'inter': {
+  inter: {
     name: 'Inter',
     description: 'Neutral and familiar with excellent screen rendering',
   },
@@ -76,32 +76,32 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     fetchPreferences()
   }, [])
 
-  const updatePreference = useCallback(async <K extends keyof Preferences>(
-    key: K,
-    value: Preferences[K]
-  ) => {
-    // Store previous value for revert
-    const previousValue = preferences[key]
+  const updatePreference = useCallback(
+    async <K extends keyof Preferences>(key: K, value: Preferences[K]) => {
+      // Store previous value for revert
+      const previousValue = preferences[key]
 
-    // Optimistic update
-    setPreferences((prev) => ({ ...prev, [key]: value }))
+      // Optimistic update
+      setPreferences((prev) => ({ ...prev, [key]: value }))
 
-    try {
-      const response = await fetch('/api/preferences', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [key]: String(value) }),
-      })
+      try {
+        const response = await fetch('/api/preferences', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ [key]: String(value) }),
+        })
 
-      if (!response.ok) {
-        throw new Error('Failed to update preference')
+        if (!response.ok) {
+          throw new Error('Failed to update preference')
+        }
+      } catch (error) {
+        console.error('Failed to update preference:', error)
+        // Revert on error
+        setPreferences((prev) => ({ ...prev, [key]: previousValue }))
       }
-    } catch (error) {
-      console.error('Failed to update preference:', error)
-      // Revert on error
-      setPreferences((prev) => ({ ...prev, [key]: previousValue }))
-    }
-  }, [preferences])
+    },
+    [preferences],
+  )
 
   return (
     <PreferencesContext.Provider value={{ preferences, updatePreference, loading }}>

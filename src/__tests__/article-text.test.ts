@@ -3,30 +3,22 @@ import { articleBlocksToMarkdown, normalizeEntityMap } from '@/lib/utils/article
 
 describe('articleBlocksToMarkdown', () => {
   it('converts header-one to # heading', () => {
-    const blocks = [
-      { key: '1', text: 'Main Title', type: 'header-one' },
-    ]
+    const blocks = [{ key: '1', text: 'Main Title', type: 'header-one' }]
     expect(articleBlocksToMarkdown(blocks)).toBe('# Main Title')
   })
 
   it('converts header-two to ## heading', () => {
-    const blocks = [
-      { key: '1', text: 'Sub Title', type: 'header-two' },
-    ]
+    const blocks = [{ key: '1', text: 'Sub Title', type: 'header-two' }]
     expect(articleBlocksToMarkdown(blocks)).toBe('## Sub Title')
   })
 
   it('converts header-three to ### heading', () => {
-    const blocks = [
-      { key: '1', text: 'Section', type: 'header-three' },
-    ]
+    const blocks = [{ key: '1', text: 'Section', type: 'header-three' }]
     expect(articleBlocksToMarkdown(blocks)).toBe('### Section')
   })
 
   it('converts blockquote to > prefix', () => {
-    const blocks = [
-      { key: '1', text: 'A wise person once said this.', type: 'blockquote' },
-    ]
+    const blocks = [{ key: '1', text: 'A wise person once said this.', type: 'blockquote' }]
     expect(articleBlocksToMarkdown(blocks)).toBe('> A wise person once said this.')
   })
 
@@ -79,7 +71,9 @@ describe('articleBlocksToMarkdown', () => {
         data: { src: 'https://example.com/photo.jpg', alt: 'A photo' },
       },
     }
-    expect(articleBlocksToMarkdown(blocks, entityMap)).toBe('![A photo](https://example.com/photo.jpg)')
+    expect(articleBlocksToMarkdown(blocks, entityMap)).toBe(
+      '![A photo](https://example.com/photo.jpg)',
+    )
   })
 
   it('resolves atomic MEDIA blocks via mediaEntities', () => {
@@ -101,7 +95,7 @@ describe('articleBlocksToMarkdown', () => {
       media_123: { url: 'https://pbs.twimg.com/media/abc.jpg', width: 800, height: 600 },
     }
     expect(articleBlocksToMarkdown(blocks, entityMap, mediaEntities)).toBe(
-      '![My caption](https://pbs.twimg.com/media/abc.jpg)'
+      '![My caption](https://pbs.twimg.com/media/abc.jpg)',
     )
   })
 
@@ -173,7 +167,7 @@ describe('articleBlocksToMarkdown', () => {
       },
     }
     expect(articleBlocksToMarkdown(blocks, entityMap)).toBe(
-      'Visit our [website for](https://example.com) more.'
+      'Visit our [website for](https://example.com) more.',
     )
   })
 
@@ -197,9 +191,7 @@ describe('articleBlocksToMarkdown', () => {
   })
 
   it('handles null/undefined entityMap and mediaEntities', () => {
-    const blocks = [
-      { key: '1', text: 'Plain text.', type: 'unstyled' },
-    ]
+    const blocks = [{ key: '1', text: 'Plain text.', type: 'unstyled' }]
     expect(articleBlocksToMarkdown(blocks, null, null)).toBe('Plain text.')
     expect(articleBlocksToMarkdown(blocks, undefined, undefined)).toBe('Plain text.')
   })
@@ -259,12 +251,18 @@ describe('normalizeEntityMap', () => {
     const input = {
       '0': { key: '0', value: { type: 'MEDIA', data: { mediaItems: [{ mediaId: 'm1' }] } } },
       '1': { key: '1', value: { type: 'LINK', data: { url: 'https://example.com' } } },
-      '2': { key: '2', value: { type: 'IMAGE', data: { src: 'https://example.com/img.jpg', alt: 'Photo' } } },
+      '2': {
+        key: '2',
+        value: { type: 'IMAGE', data: { src: 'https://example.com/img.jpg', alt: 'Photo' } },
+      },
     }
     const result = normalizeEntityMap(input)
     expect(result['0']).toEqual({ type: 'MEDIA', data: { mediaItems: [{ mediaId: 'm1' }] } })
     expect(result['1']).toEqual({ type: 'LINK', data: { url: 'https://example.com' } })
-    expect(result['2']).toEqual({ type: 'IMAGE', data: { src: 'https://example.com/img.jpg', alt: 'Photo' } })
+    expect(result['2']).toEqual({
+      type: 'IMAGE',
+      data: { src: 'https://example.com/img.jpg', alt: 'Photo' },
+    })
   })
 
   it('detects wrappers by value having type property', () => {

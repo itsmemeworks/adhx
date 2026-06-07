@@ -204,9 +204,7 @@ export function setupApiMocks(options: { userId?: string | null } = {}) {
   // Mock the session module
   vi.doMock('@/lib/auth/session', () => ({
     getCurrentUserId: vi.fn().mockResolvedValue(userId),
-    getSession: vi.fn().mockResolvedValue(
-      userId ? { userId, username: 'testuser' } : null
-    ),
+    getSession: vi.fn().mockResolvedValue(userId ? { userId, username: 'testuser' } : null),
     requireAuth: vi.fn().mockImplementation(async () => {
       if (!userId) throw new Error('Unauthorized')
       return userId
@@ -233,7 +231,7 @@ export function createRequest(
   options: {
     body?: object
     headers?: Record<string, string>
-  } = {}
+  } = {},
 ): NextRequest {
   const { body, headers = {} } = options
   const shouldIncludeBody = body && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)
@@ -261,7 +259,7 @@ export async function parseResponse<T = unknown>(response: Response): Promise<T>
 export function createTestBookmark(
   userId: string,
   id: string,
-  overrides: Partial<schema.NewBookmark> = {}
+  overrides: Partial<schema.NewBookmark> = {},
 ): schema.NewBookmark {
   return {
     id,
@@ -282,13 +280,13 @@ export function createTestBookmark(
 export async function seedTestData(
   db: BetterSQLite3Database<typeof schema>,
   userId: string,
-  count: number = 3
+  count: number = 3,
 ) {
   const bookmarkData = Array.from({ length: count }, (_, i) =>
     createTestBookmark(userId, `tweet-${i + 1}`, {
       text: `Test tweet number ${i + 1}`,
       category: i % 2 === 0 ? 'tweet' : 'github',
-    })
+    }),
   )
 
   await db.insert(schema.bookmarks).values(bookmarkData)

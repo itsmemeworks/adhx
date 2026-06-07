@@ -41,7 +41,7 @@ export function getPhotoUrl(author: string, tweetId: string, index: number = 1):
  */
 export function getTwitterImageUrl(
   mediaKey: string,
-  size: 'small' | 'medium' | 'large' | 'orig' = 'large'
+  size: 'small' | 'medium' | 'large' | 'orig' = 'large',
 ): string {
   return `https://pbs.twimg.com/media/${mediaKey}?format=jpg&name=${size}`
 }
@@ -139,9 +139,9 @@ export interface FxTwitterResponse {
       facets?: Array<{
         type: string
         indices: [number, number]
-        original: string      // t.co URL
-        replacement: string   // expanded URL
-        display: string       // truncated display URL
+        original: string // t.co URL
+        replacement: string // expanded URL
+        display: string // truncated display URL
       }>
     }
     author: {
@@ -298,19 +298,21 @@ export interface FxTwitterResponse {
  * Filters out tweet/status links (those are quote tweets, not external links)
  */
 export function extractUrlsFromFacets(tweet: FxTwitterResponse['tweet']): Array<{
-  url: string           // t.co original
-  expanded_url: string  // full expanded URL
+  url: string // t.co original
+  expanded_url: string // full expanded URL
   domain: string
 }> {
   if (!tweet?.raw_text?.facets) return []
 
   return tweet.raw_text.facets
-    .filter(f => f.type === 'url' && f.replacement && !/\/status\//.test(f.replacement))
-    .map(f => {
+    .filter((f) => f.type === 'url' && f.replacement && !/\/status\//.test(f.replacement))
+    .map((f) => {
       let domain = ''
       try {
         domain = new URL(f.replacement).hostname.replace(/^www\./, '')
-      } catch { /* invalid URL */ }
+      } catch {
+        /* invalid URL */
+      }
       return {
         url: f.original,
         expanded_url: f.replacement,
@@ -323,7 +325,10 @@ export function extractUrlsFromFacets(tweet: FxTwitterResponse['tweet']): Array<
  * Fetch tweet data from FxTwitter API
  * Returns author profile image and external link preview data
  */
-export async function fetchTweetData(author: string, tweetId: string): Promise<FxTwitterResponse | null> {
+export async function fetchTweetData(
+  author: string,
+  tweetId: string,
+): Promise<FxTwitterResponse | null> {
   try {
     // Add 5 second timeout to prevent hanging when FxTwitter is slow/down
     const controller = new AbortController()
@@ -343,7 +348,7 @@ export async function fetchTweetData(author: string, tweetId: string): Promise<F
       return null
     }
 
-    const data = await response.json() as FxTwitterResponse
+    const data = (await response.json()) as FxTwitterResponse
     return data
   } catch (error) {
     // AbortError means timeout - log differently for clarity
@@ -371,35 +376,47 @@ export function extractEnrichmentData(data: FxTwitterResponse) {
     authorProfileImageUrl: data.tweet.author.avatar_url,
     authorName: data.tweet.author.name,
     // External link preview
-    external: data.tweet.external ? {
-      url: data.tweet.external.expanded_url || data.tweet.external.url,
-      title: data.tweet.external.title,
-      description: data.tweet.external.description,
-      imageUrl: data.tweet.external.thumbnail_url,
-    } : null,
+    external: data.tweet.external
+      ? {
+          url: data.tweet.external.expanded_url || data.tweet.external.url,
+          title: data.tweet.external.title,
+          description: data.tweet.external.description,
+          imageUrl: data.tweet.external.thumbnail_url,
+        }
+      : null,
     // X Article data with full content including entityMap for images/links
-    article: data.tweet.article ? {
-      url: articleUrl,
-      title: data.tweet.article.title,
-      description: data.tweet.article.preview_text,
-      imageUrl: data.tweet.article.cover_media?.media_info?.original_img_url,
-      // Include full article content with blocks, entityMap, and media_entities for rendering
-      content: data.tweet.article.content ? {
-        blocks: data.tweet.article.content.blocks,
-        entityMap: normalizeEntityMap(data.tweet.article.content.entityMap),
-        // Include media_entities to map mediaId to actual image URLs
-        mediaEntities: data.tweet.article.media_entities?.reduce((acc: Record<string, { url: string; width?: number; height?: number }>, entity) => {
-          if (entity.media_id && entity.media_info?.original_img_url) {
-            acc[entity.media_id] = {
-              url: entity.media_info.original_img_url,
-              width: entity.media_info.original_img_width,
-              height: entity.media_info.original_img_height,
-            }
-          }
-          return acc
-        }, {}),
-      } : null,
-    } : null,
+    article: data.tweet.article
+      ? {
+          url: articleUrl,
+          title: data.tweet.article.title,
+          description: data.tweet.article.preview_text,
+          imageUrl: data.tweet.article.cover_media?.media_info?.original_img_url,
+          // Include full article content with blocks, entityMap, and media_entities for rendering
+          content: data.tweet.article.content
+            ? {
+                blocks: data.tweet.article.content.blocks,
+                entityMap: normalizeEntityMap(data.tweet.article.content.entityMap),
+                // Include media_entities to map mediaId to actual image URLs
+                mediaEntities: data.tweet.article.media_entities?.reduce(
+                  (
+                    acc: Record<string, { url: string; width?: number; height?: number }>,
+                    entity,
+                  ) => {
+                    if (entity.media_id && entity.media_info?.original_img_url) {
+                      acc[entity.media_id] = {
+                        url: entity.media_info.original_img_url,
+                        width: entity.media_info.original_img_width,
+                        height: entity.media_info.original_img_height,
+                      }
+                    }
+                    return acc
+                  },
+                  {},
+                ),
+              }
+            : null,
+        }
+      : null,
   }
 }
 
@@ -413,7 +430,7 @@ export function buildMediaUrls(
     mediaType: string
     previewUrl?: string | null
     originalUrl: string
-  }>
+  }>,
 ): Array<{
   id: string
   type: string

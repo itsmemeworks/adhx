@@ -35,7 +35,8 @@ function buildJsonLd(tweet: FxTweet, baseUrl: string, username: string, id: stri
   const jsonLd: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'SocialMediaPosting',
-    headline: tweet.article?.title || truncate(tweet.text || `Tweet by @${tweet.author.screen_name}`, 110),
+    headline:
+      tweet.article?.title || truncate(tweet.text || `Tweet by @${tweet.author.screen_name}`, 110),
     articleBody: tweet.text || undefined,
     author: {
       '@type': 'Person',
@@ -153,7 +154,12 @@ export default async function QuickAddPage({ params }: Props) {
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-        <TweetPreviewLanding username={username} tweetId={id} tweet={JSON.parse(JSON.stringify(tweet))} isAuthenticated={!!session} />
+        <TweetPreviewLanding
+          username={username}
+          tweetId={id}
+          tweet={JSON.parse(JSON.stringify(tweet))}
+          isAuthenticated={!!session}
+        />
       </>
     )
   }

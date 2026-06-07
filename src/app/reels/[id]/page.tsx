@@ -18,10 +18,7 @@ export default async function ReelPreviewPage({ params }: Props) {
     redirect('/')
   }
 
-  const [meta, session] = await Promise.all([
-    fetchReelMetadata(id),
-    getSession(),
-  ])
+  const [meta, session] = await Promise.all([fetchReelMetadata(id), getSession()])
 
   if (meta && !isLikelyBot((await headers()).get('user-agent'))) {
     const author = meta.author || 'instagram'
@@ -32,7 +29,9 @@ export default async function ReelPreviewPage({ params }: Props) {
       author,
       authorName: meta.authorName || meta.author || null,
       text: meta.caption || meta.description || null,
-      thumbnailUrl: meta.imageUrl ? `/api/media/instagram/thumbnail?id=${encodeURIComponent(id)}` : null,
+      thumbnailUrl: meta.imageUrl
+        ? `/api/media/instagram/thumbnail?id=${encodeURIComponent(id)}`
+        : null,
       url: previewPath('instagram', author, id),
     })
   }
@@ -43,7 +42,9 @@ export default async function ReelPreviewPage({ params }: Props) {
       caption={meta?.caption}
       description={meta?.description}
       // Served via the proxy (re-resolves the signed CDN URL fresh).
-      imageUrl={meta?.imageUrl ? `/api/media/instagram/thumbnail?id=${encodeURIComponent(id)}` : undefined}
+      imageUrl={
+        meta?.imageUrl ? `/api/media/instagram/thumbnail?id=${encodeURIComponent(id)}` : undefined
+      }
       author={meta?.author}
       authorName={meta?.authorName}
       isAuthenticated={!!session}

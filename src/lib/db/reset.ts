@@ -11,11 +11,7 @@ import { execSync } from 'child_process'
 const DB_PATH = process.env.DATABASE_PATH || './data/adhdone.db'
 
 // SQLite WAL mode creates additional files that must also be deleted
-const filesToDelete = [
-  DB_PATH,
-  `${DB_PATH}-wal`,
-  `${DB_PATH}-shm`,
-]
+const filesToDelete = [DB_PATH, `${DB_PATH}-wal`, `${DB_PATH}-shm`]
 
 console.warn('[reset] Removing existing database files...')
 

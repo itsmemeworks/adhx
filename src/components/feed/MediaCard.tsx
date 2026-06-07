@@ -26,7 +26,13 @@ import { cn } from '@/lib/utils'
 function PlatformWordmark({ platform }: { platform?: FeedItem['platform'] }) {
   const p = (platform ?? 'twitter') as PlatformId
   const label =
-    p === 'instagram' ? 'Instagram' : p === 'tiktok' ? 'TikTok' : p === 'youtube' ? 'YouTube' : 'x.com'
+    p === 'instagram'
+      ? 'Instagram'
+      : p === 'tiktok'
+        ? 'TikTok'
+        : p === 'youtube'
+          ? 'YouTube'
+          : 'x.com'
   return (
     <span className="flex items-center gap-1.5 font-semibold text-fink">
       <PlatformGlyph platform={p} size={15} />
@@ -61,7 +67,13 @@ type ArticleRenderBlock =
 
 type LooseEntity = {
   type?: string
-  data?: { url?: string; src?: string; alt?: string; caption?: string; mediaItems?: Array<{ mediaId: string }> }
+  data?: {
+    url?: string
+    src?: string
+    alt?: string
+    caption?: string
+    mediaItems?: Array<{ mediaId: string }>
+  }
 }
 
 /**
@@ -126,7 +138,8 @@ function isArticleItem(item: FeedItem): boolean {
   return (
     !!item.isXArticle ||
     !!(item.articleContent?.blocks && item.articleContent.blocks.length > 0) ||
-    (!hasMedia && !!(item.articlePreview && (item.articlePreview.title || item.articlePreview.description)))
+    (!hasMedia &&
+      !!(item.articlePreview && (item.articlePreview.title || item.articlePreview.description)))
   )
 }
 
@@ -150,7 +163,8 @@ function videoSrc(item: FeedItem): string {
     : `/api/media/video?author=${encodeURIComponent(item.author)}&tweetId=${encodeURIComponent(item.id)}&quality=hd`
 }
 
-const FRAMED_MEDIA_CLASS = 'h-full max-h-full w-auto max-w-full object-contain rounded-2xl bg-black shadow-m-lg'
+const FRAMED_MEDIA_CLASS =
+  'h-full max-h-full w-auto max-w-full object-contain rounded-2xl bg-black shadow-m-lg'
 
 /**
  * Remember the focus-mode mute choice across items and sessions. Desktop
@@ -293,7 +307,11 @@ function FullBleedMedia({ item }: { item: FeedItem }) {
           aria-label={muted ? 'Unmute' : 'Mute'}
           className="absolute top-[68px] right-4 z-[4] w-10 h-10 rounded-full bg-black/40 backdrop-blur text-white flex items-center justify-center"
         >
-          {muted ? <VolumeX className="w-[18px] h-[18px]" /> : <Volume2 className="w-[18px] h-[18px]" />}
+          {muted ? (
+            <VolumeX className="w-[18px] h-[18px]" />
+          ) : (
+            <Volume2 className="w-[18px] h-[18px]" />
+          )}
         </button>
       )}
 
@@ -318,7 +336,9 @@ function FullBleedMedia({ item }: { item: FeedItem }) {
           </div>
         </div>
         {text && (
-          <p className="text-white/90 text-[14.5px] leading-snug line-clamp-3 drop-shadow">{text}</p>
+          <p className="text-white/90 text-[14.5px] leading-snug line-clamp-3 drop-shadow">
+            {text}
+          </p>
         )}
       </div>
     </>
@@ -404,7 +424,10 @@ function AuthorCard({ item }: { item: FeedItem }) {
     : null
 
   return (
-    <article data-triage-content className="w-full md:w-[330px] flex-shrink-0 bg-fsurface border border-fline rounded-2xl shadow-m-lg flex flex-col max-h-[32vh] md:max-h-full overflow-hidden">
+    <article
+      data-triage-content
+      className="w-full md:w-[330px] flex-shrink-0 bg-fsurface border border-fline rounded-2xl shadow-m-lg flex flex-col max-h-[32vh] md:max-h-full overflow-hidden"
+    >
       <header className="flex items-start gap-3 p-4 pb-2 flex-shrink-0">
         <AuthorAvatar src={item.authorProfileImageUrl} author={item.author} size="md" />
         <div className="min-w-0 flex-1">
@@ -555,7 +578,11 @@ function TtsPlayer({ text, minutes }: { text: string; minutes: number }) {
         aria-label={playing ? 'Pause' : 'Listen to article'}
         className="w-[42px] h-[42px] flex-none rounded-full bg-clay-grad shadow-glow flex items-center justify-center text-white disabled:opacity-40"
       >
-        {playing ? <Pause className="w-[19px] h-[19px]" fill="currentColor" /> : <Play className="w-[19px] h-[19px]" fill="currentColor" />}
+        {playing ? (
+          <Pause className="w-[19px] h-[19px]" fill="currentColor" />
+        ) : (
+          <Play className="w-[19px] h-[19px]" fill="currentColor" />
+        )}
       </button>
       <div className="flex items-center justify-between flex-1 min-w-0 h-[26px] overflow-hidden">
         {Array.from({ length: bars }).map((_, i) => {
@@ -564,7 +591,10 @@ function TtsPlayer({ text, minutes }: { text: string; minutes: number }) {
           return (
             <span
               key={i}
-              className={cn('w-[3px] flex-none rounded-[3px] transition-colors', on ? 'bg-clay' : 'bg-fline')}
+              className={cn(
+                'w-[3px] flex-none rounded-[3px] transition-colors',
+                on ? 'bg-clay' : 'bg-fline',
+              )}
               style={{ height: h }}
             />
           )
@@ -600,19 +630,35 @@ function ArticleBlockView({ block }: { block: ArticleRenderBlock }) {
             loading="lazy"
           />
           {block.caption && (
-            <figcaption className="mt-2 text-center text-xs text-fink-3 not-italic">{block.caption}</figcaption>
+            <figcaption className="mt-2 text-center text-xs text-fink-3 not-italic">
+              {block.caption}
+            </figcaption>
           )}
         </figure>
       )
     case 'h1':
-      return <h2 className="font-serif text-[24px] leading-snug font-semibold text-fink mt-7 mb-2">{block.text}</h2>
+      return (
+        <h2 className="font-serif text-[24px] leading-snug font-semibold text-fink mt-7 mb-2">
+          {block.text}
+        </h2>
+      )
     case 'h2':
-      return <h3 className="font-serif text-[21px] leading-snug font-semibold text-fink mt-6 mb-2">{block.text}</h3>
+      return (
+        <h3 className="font-serif text-[21px] leading-snug font-semibold text-fink mt-6 mb-2">
+          {block.text}
+        </h3>
+      )
     case 'h3':
-      return <h4 className="font-serif text-[19px] leading-snug font-semibold text-fink mt-5 mb-1.5">{block.text}</h4>
+      return (
+        <h4 className="font-serif text-[19px] leading-snug font-semibold text-fink mt-5 mb-1.5">
+          {block.text}
+        </h4>
+      )
     case 'quote':
       return (
-        <blockquote className="my-4 border-l-[3px] border-clay pl-4 italic text-fink-2">{block.text}</blockquote>
+        <blockquote className="my-4 border-l-[3px] border-clay pl-4 italic text-fink-2">
+          {block.text}
+        </blockquote>
       )
     case 'li':
       return (
@@ -629,9 +675,13 @@ function ArticleBlockView({ block }: { block: ArticleRenderBlock }) {
 function ArticleReader({ item }: { item: FeedItem }) {
   const blocks = useMemo(() => buildArticleBlocks(item.articleContent), [item.articleContent])
   const fallbackText = stripMediaUrls(item.text || '', !!item.media?.[0])
-  const fallbackParas = blocks.length === 0 && fallbackText ? fallbackText.split(/\n{2,}/).filter(Boolean) : []
+  const fallbackParas =
+    blocks.length === 0 && fallbackText ? fallbackText.split(/\n{2,}/).filter(Boolean) : []
   const title = item.articlePreview?.title || item.authorName || item.author
-  const source = item.articlePreview?.domain || (item.platform === 'twitter' ? 'x.com' : item.platform) || 'x.com'
+  const source =
+    item.articlePreview?.domain ||
+    (item.platform === 'twitter' ? 'x.com' : item.platform) ||
+    'x.com'
 
   // Reading text excludes images; used for TTS + reading-time estimate.
   const fullText =
@@ -642,14 +692,19 @@ function ArticleReader({ item }: { item: FeedItem }) {
   const minutes = readMinutes(fullText || title || '')
 
   // Header/cover image — skip if it's already one of the inline images.
-  const inlineSrcs = new Set(blocks.filter((b) => b.kind === 'image').map((b) => (b as { src: string }).src))
+  const inlineSrcs = new Set(
+    blocks.filter((b) => b.kind === 'image').map((b) => (b as { src: string }).src),
+  )
   const cover =
     item.articlePreview?.imageUrl && !inlineSrcs.has(item.articlePreview.imageUrl)
       ? item.articlePreview.imageUrl
       : null
 
   return (
-    <div data-triage-content className="w-full max-w-[700px] h-full flex flex-col gap-[18px] pt-1.5">
+    <div
+      data-triage-content
+      className="w-full max-w-[700px] h-full flex flex-col gap-[18px] pt-1.5"
+    >
       {/* source line */}
       <div className="flex items-center gap-2.5 flex-none">
         <span className="w-[26px] h-[26px] rounded-[7px] bg-inset flex items-center justify-center text-fink-2">
@@ -664,7 +719,11 @@ function ArticleReader({ item }: { item: FeedItem }) {
         {title}
       </h1>
 
-      {fullText && <div className="flex-none"><TtsPlayer text={fullText} minutes={minutes} /></div>}
+      {fullText && (
+        <div className="flex-none">
+          <TtsPlayer text={fullText} minutes={minutes} />
+        </div>
+      )}
 
       {/* full untruncated body (cover + images + text) — scrolls in-app */}
       <div className="font-serif text-[17px] lg:text-[19px] leading-[1.72] text-fink overflow-y-auto flex-1 min-h-0">
@@ -702,7 +761,10 @@ function QuoteView({ item }: { item: FeedItem }) {
   const qThumb = quoteThumb(item)
 
   return (
-    <div data-triage-content className="w-full max-w-[640px] max-h-full overflow-y-auto bg-fsurface border border-fline rounded-2xl shadow-m-lg p-6 lg:p-7">
+    <div
+      data-triage-content
+      className="w-full max-w-[640px] max-h-full overflow-y-auto bg-fsurface border border-fline rounded-2xl shadow-m-lg p-6 lg:p-7"
+    >
       {/* quoting post header */}
       <div className="flex items-center gap-3 mb-4">
         <AuthorAvatar src={item.authorProfileImageUrl} author={item.author} size="md" />
@@ -710,8 +772,18 @@ function QuoteView({ item }: { item: FeedItem }) {
           <p className="font-semibold text-fink truncate">{item.authorName || item.author}</p>
           <p className="text-xs font-mono text-fink-3 truncate">@{item.author}</p>
         </div>
-        <a href={item.tweetUrl} target="_blank" rel="noopener noreferrer" title="Open source" className="hover:opacity-80 flex-none">
-          <PlatformGlyph platform={(item.platform ?? 'twitter') as PlatformId} size={17} className="text-fink-2" />
+        <a
+          href={item.tweetUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Open source"
+          className="hover:opacity-80 flex-none"
+        >
+          <PlatformGlyph
+            platform={(item.platform ?? 'twitter') as PlatformId}
+            size={17}
+            className="text-fink-2"
+          />
         </a>
       </div>
 
@@ -724,8 +796,12 @@ function QuoteView({ item }: { item: FeedItem }) {
       {/* embedded quoted post — shown in full */}
       <div className="p-[18px] lg:px-5 lg:py-[18px] bg-inset border border-fline rounded-xl">
         <div className="flex items-center gap-2.5 mb-3">
-          {(q?.authorProfileImageUrl || qc?.authorProfileImageUrl) ? (
-            <AuthorAvatar src={q?.authorProfileImageUrl || qc?.authorProfileImageUrl} author={qHandle} size="sm" />
+          {q?.authorProfileImageUrl || qc?.authorProfileImageUrl ? (
+            <AuthorAvatar
+              src={q?.authorProfileImageUrl || qc?.authorProfileImageUrl}
+              author={qHandle}
+              size="sm"
+            />
           ) : (
             <AuthorAvatar author={qHandle} size="sm" />
           )}
@@ -767,14 +843,23 @@ function TextCard({ item }: { item: FeedItem }) {
     : null
 
   return (
-    <article data-triage-content className="w-full max-w-xl max-h-full overflow-y-auto bg-fsurface border border-fline rounded-2xl shadow-m-lg p-6 lg:p-7">
+    <article
+      data-triage-content
+      className="w-full max-w-xl max-h-full overflow-y-auto bg-fsurface border border-fline rounded-2xl shadow-m-lg p-6 lg:p-7"
+    >
       <div className="flex items-center gap-3 mb-4">
         <AuthorAvatar src={item.authorProfileImageUrl} author={item.author} size="md" />
         <div className="min-w-0 flex-1">
           <p className="font-semibold text-fink truncate">{item.authorName || item.author}</p>
           <p className="text-xs font-mono text-fink-3 truncate">@{item.author}</p>
         </div>
-        <a href={item.tweetUrl} target="_blank" rel="noopener noreferrer" title="Open source" className="flex items-center gap-1 hover:opacity-80 flex-none">
+        <a
+          href={item.tweetUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Open source"
+          className="flex items-center gap-1 hover:opacity-80 flex-none"
+        >
           <PlatformWordmark platform={item.platform} />
           <ExternalLink className="w-3.5 h-3.5 text-fink-3" />
         </a>
@@ -839,7 +924,10 @@ export function MediaCard({ item, fullBleed = false }: { item: FeedItem; fullBle
   // centered together (gap 8); a grown cell would strand the card at the edge.
   return (
     <div className="w-full h-full flex flex-col md:flex-row gap-4 md:gap-8 items-center justify-center">
-      <div data-triage-content className="min-w-0 max-w-full h-full min-h-0 flex items-center justify-center">
+      <div
+        data-triage-content
+        className="min-w-0 max-w-full h-full min-h-0 flex items-center justify-center"
+      >
         <MediaPanel item={item} />
       </div>
       <AuthorCard item={item} />

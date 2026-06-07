@@ -2,25 +2,15 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { syncLogs } from '@/lib/db/schema'
 import { eq, desc, and } from 'drizzle-orm'
-import { getCurrentUserId } from '@/lib/auth/session'
+import { withAuth } from '@/lib/api/with-auth'
 import { getSyncCooldownMs } from '@/lib/sync/config'
 
 // GET /api/sync/cooldown - Check if user can sync
-export async function GET() {
-  const userId = await getCurrentUserId()
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
+export const GET = withAuth(async (_request, userId) => {
   const [lastSync] = await db
     .select()
     .from(syncLogs)
-    .where(
-      and(
-        eq(syncLogs.status, 'completed'),
-        eq(syncLogs.userId, userId)
-      )
-    )
+    .where(and(eq(syncLogs.status, 'completed'), eq(syncLogs.userId, userId)))
     .orderBy(desc(syncLogs.completedAt))
     .limit(1)
 
@@ -41,4 +31,4 @@ export async function GET() {
     cooldownRemaining,
     lastSyncAt: lastSync.completedAt,
   })
-}
+})

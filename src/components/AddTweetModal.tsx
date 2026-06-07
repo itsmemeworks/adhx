@@ -38,11 +38,21 @@ interface AddTweetModalProps {
   initialResult?: AddTweetResult | null
 }
 
-export function AddTweetModal({ isOpen, onClose, onSuccess, onOpenTweet, initialResult }: AddTweetModalProps) {
+export function AddTweetModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  onOpenTweet,
+  initialResult,
+}: AddTweetModalProps) {
   const [url, setUrl] = useState('')
   const [state, setState] = useState<AddState>('idle')
   const [error, setError] = useState<string | null>(null)
-  const [addedBookmark, setAddedBookmark] = useState<{ id: string; author: string; text: string } | null>(null)
+  const [addedBookmark, setAddedBookmark] = useState<{
+    id: string
+    author: string
+    text: string
+  } | null>(null)
   const [platform, setPlatform] = useState<Platform | undefined>(undefined)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -159,7 +169,8 @@ export function AddTweetModal({ isOpen, onClose, onSuccess, onOpenTweet, initial
           {state === 'idle' || state === 'loading' ? (
             <>
               <p className="text-sm text-muted-foreground mb-4">
-                Paste a link to add it to your collection. Works with X, Instagram, TikTok, and YouTube.
+                Paste a link to add it to your collection. Works with X, Instagram, TikTok, and
+                YouTube.
               </p>
 
               <div className="flex gap-2">

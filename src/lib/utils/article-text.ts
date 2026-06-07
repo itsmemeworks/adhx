@@ -42,9 +42,7 @@ type MediaEntities = Record<string, { url: string; width?: number; height?: numb
  * Detection: an entry is a wrapper if it has a `value` property that is
  * an object containing `type` or `data`.
  */
-export function normalizeEntityMap(
-  entityMap: unknown
-): Record<string, unknown> {
+export function normalizeEntityMap(entityMap: unknown): Record<string, unknown> {
   if (!entityMap || typeof entityMap !== 'object') return {}
 
   // Format 1: Array [{key, value}]
@@ -54,7 +52,7 @@ export function normalizeEntityMap(
         acc[item.key] = item.value
         return acc
       },
-      {}
+      {},
     )
   }
 
@@ -91,13 +89,15 @@ function applyInlineFormatting(
   text: string,
   inlineStyleRanges?: ArticleBlock['inlineStyleRanges'],
   entityRanges?: ArticleBlock['entityRanges'],
-  entityMap?: EntityMap
+  entityMap?: EntityMap,
 ): string {
   if (!text) return ''
 
   // Build character-level annotations
-  const chars: Array<{ bold?: boolean; italic?: boolean; linkUrl?: string }> =
-    Array.from({ length: text.length }, () => ({}))
+  const chars: Array<{ bold?: boolean; italic?: boolean; linkUrl?: string }> = Array.from(
+    { length: text.length },
+    () => ({}),
+  )
 
   if (inlineStyleRanges) {
     for (const range of inlineStyleRanges) {
@@ -164,7 +164,7 @@ function applyInlineFormatting(
 export function articleBlocksToMarkdown(
   blocks: ArticleBlock[],
   entityMap?: EntityMap | null,
-  mediaEntities?: MediaEntities | null
+  mediaEntities?: MediaEntities | null,
 ): string {
   const lines: string[] = []
   const map = entityMap || {}
@@ -174,7 +174,7 @@ export function articleBlocksToMarkdown(
       block.text,
       block.inlineStyleRanges,
       block.entityRanges,
-      map
+      map,
     )
 
     switch (block.type) {

@@ -102,9 +102,9 @@ describe('API: /api/preferences', () => {
 
     it('isolates preferences between users', async () => {
       // User A preferences
-      await testDb.insert(schema.userPreferences).values([
-        { userId: USER_A, key: 'theme', value: 'dark' },
-      ])
+      await testDb
+        .insert(schema.userPreferences)
+        .values([{ userId: USER_A, key: 'theme', value: 'dark' }])
 
       // User B preferences
       await testDb.insert(schema.userPreferences).values([
@@ -140,19 +140,22 @@ describe('API: /api/preferences', () => {
 
     it('creates new preferences', async () => {
       const { PATCH } = await import('@/app/api/preferences/route')
-      const response = await PATCH(createRequest('PATCH', {
-        theme: 'dark',
-        font: 'inter',
-      }))
+      const response = await PATCH(
+        createRequest('PATCH', {
+          theme: 'dark',
+          font: 'inter',
+        }),
+      )
 
       expect(response.status).toBe(200)
       const data = await response.json()
       expect(data.success).toBe(true)
 
       // Verify in database
-      const prefs = await testDb.select().from(schema.userPreferences).where(
-        eq(schema.userPreferences.userId, USER_A)
-      )
+      const prefs = await testDb
+        .select()
+        .from(schema.userPreferences)
+        .where(eq(schema.userPreferences.userId, USER_A))
       expect(prefs).toHaveLength(2)
     })
 
@@ -164,20 +167,28 @@ describe('API: /api/preferences', () => {
       ])
 
       const { PATCH } = await import('@/app/api/preferences/route')
-      const response = await PATCH(createRequest('PATCH', {
-        theme: 'dark',
-        font: 'inter',
-      }))
+      const response = await PATCH(
+        createRequest('PATCH', {
+          theme: 'dark',
+          font: 'inter',
+        }),
+      )
 
       expect(response.status).toBe(200)
 
       // Verify updated
-      const [theme] = await testDb.select().from(schema.userPreferences).where(
-        and(eq(schema.userPreferences.userId, USER_A), eq(schema.userPreferences.key, 'theme'))
-      )
-      const [font] = await testDb.select().from(schema.userPreferences).where(
-        and(eq(schema.userPreferences.userId, USER_A), eq(schema.userPreferences.key, 'font'))
-      )
+      const [theme] = await testDb
+        .select()
+        .from(schema.userPreferences)
+        .where(
+          and(eq(schema.userPreferences.userId, USER_A), eq(schema.userPreferences.key, 'theme')),
+        )
+      const [font] = await testDb
+        .select()
+        .from(schema.userPreferences)
+        .where(
+          and(eq(schema.userPreferences.userId, USER_A), eq(schema.userPreferences.key, 'font')),
+        )
 
       expect(theme.value).toBe('dark')
       expect(font.value).toBe('inter')
@@ -185,20 +196,23 @@ describe('API: /api/preferences', () => {
 
     it('can mix creating and updating preferences', async () => {
       // Create one existing preference
-      await testDb.insert(schema.userPreferences).values([
-        { userId: USER_A, key: 'theme', value: 'light' },
-      ])
+      await testDb
+        .insert(schema.userPreferences)
+        .values([{ userId: USER_A, key: 'theme', value: 'light' }])
 
       const { PATCH } = await import('@/app/api/preferences/route')
-      await PATCH(createRequest('PATCH', {
-        theme: 'dark', // update
-        font: 'inter', // create
-        bionicReading: 'true', // create
-      }))
-
-      const prefs = await testDb.select().from(schema.userPreferences).where(
-        eq(schema.userPreferences.userId, USER_A)
+      await PATCH(
+        createRequest('PATCH', {
+          theme: 'dark', // update
+          font: 'inter', // create
+          bionicReading: 'true', // create
+        }),
       )
+
+      const prefs = await testDb
+        .select()
+        .from(schema.userPreferences)
+        .where(eq(schema.userPreferences.userId, USER_A))
 
       expect(prefs).toHaveLength(3)
       expect(prefs.find((p) => p.key === 'theme')?.value).toBe('dark')
@@ -208,34 +222,40 @@ describe('API: /api/preferences', () => {
 
     it('ignores non-string values', async () => {
       const { PATCH } = await import('@/app/api/preferences/route')
-      await PATCH(createRequest('PATCH', {
-        theme: 'dark',
-        invalid: 123, // should be ignored
-        alsoInvalid: { nested: 'object' }, // should be ignored
-      }))
-
-      const prefs = await testDb.select().from(schema.userPreferences).where(
-        eq(schema.userPreferences.userId, USER_A)
+      await PATCH(
+        createRequest('PATCH', {
+          theme: 'dark',
+          invalid: 123, // should be ignored
+          alsoInvalid: { nested: 'object' }, // should be ignored
+        }),
       )
+
+      const prefs = await testDb
+        .select()
+        .from(schema.userPreferences)
+        .where(eq(schema.userPreferences.userId, USER_A))
 
       expect(prefs).toHaveLength(1)
       expect(prefs[0].key).toBe('theme')
     })
 
-    it('does not affect another user\'s preferences', async () => {
+    it("does not affect another user's preferences", async () => {
       // User B has preferences
-      await testDb.insert(schema.userPreferences).values([
-        { userId: USER_B, key: 'theme', value: 'light' },
-      ])
+      await testDb
+        .insert(schema.userPreferences)
+        .values([{ userId: USER_B, key: 'theme', value: 'light' }])
 
       // User A updates preferences
       const { PATCH } = await import('@/app/api/preferences/route')
       await PATCH(createRequest('PATCH', { theme: 'dark' }))
 
       // User B's preferences should be unchanged
-      const [userBPref] = await testDb.select().from(schema.userPreferences).where(
-        and(eq(schema.userPreferences.userId, USER_B), eq(schema.userPreferences.key, 'theme'))
-      )
+      const [userBPref] = await testDb
+        .select()
+        .from(schema.userPreferences)
+        .where(
+          and(eq(schema.userPreferences.userId, USER_B), eq(schema.userPreferences.key, 'theme')),
+        )
       expect(userBPref.value).toBe('light')
     })
   })

@@ -96,7 +96,8 @@ function applyFilter(items: ActivityItem[], filter: FilterId): ActivityItem[] {
 
   if (filter === 'photos') return items.filter((it) => inferType(it) === 'photo')
   if (filter === 'videos') return items.filter((it) => inferType(it) === 'video')
-  if (filter === 'text') return items.filter((it) => inferType(it) === 'text' || inferType(it) === 'quote')
+  if (filter === 'text')
+    return items.filter((it) => inferType(it) === 'text' || inferType(it) === 'quote')
   if (filter === 'articles') return items.filter((it) => inferType(it) === 'article')
 
   // just-saved (default): already newest-first from the API.
@@ -182,7 +183,10 @@ export function DiscoverFeed() {
               <MatterLogo size={20} />
             </Link>
             <div className="ml-auto flex items-center gap-5 sm:gap-[22px]">
-              <Link href="/" className="hidden sm:inline text-sm font-medium text-ink-2 hover:text-ink">
+              <Link
+                href="/"
+                className="hidden sm:inline text-sm font-medium text-ink-2 hover:text-ink"
+              >
                 How it works
               </Link>
               <span className="hidden sm:inline text-sm font-semibold text-clay">Discover</span>
@@ -198,14 +202,17 @@ export function DiscoverFeed() {
           <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-6">
             <div className="flex items-center gap-2 mb-2">
               <LiveDot />
-              <span className="text-[12.5px] font-bold uppercase tracking-[0.08em] text-clay">Live · public</span>
+              <span className="text-[12.5px] font-bold uppercase tracking-[0.08em] text-clay">
+                Live · public
+              </span>
             </div>
             <h1 className="font-serif font-semibold text-[27px] sm:text-[34px] leading-tight tracking-[-0.01em] text-ink mb-2">
               What the internet is saving, right now
             </h1>
             <p className="text-[15px] sm:text-[15.5px] text-ink-2 max-w-[640px] mb-2">
-              See what&apos;s trending across X, TikTok, Instagram and YouTube — a live, anonymous feed of what
-              people are saving on ADHX. Tap any post to preview it, then save your own.
+              See what&apos;s trending across X, TikTok, Instagram and YouTube — a live, anonymous
+              feed of what people are saving on ADHX. Tap any post to preview it, then save your
+              own.
             </p>
           </div>
         </>
@@ -264,7 +271,12 @@ export function DiscoverFeed() {
         ) : (
           <div className="grid grid-cols-1 items-stretch gap-[18px] sm:grid-cols-2 lg:grid-cols-4">
             {visible.map((item) => (
-              <DiscoverCard key={keyOf(item)} item={item} fresh={freshKeys.has(keyOf(item))} pub={signedOut} />
+              <DiscoverCard
+                key={keyOf(item)}
+                item={item}
+                fresh={freshKeys.has(keyOf(item))}
+                pub={signedOut}
+              />
             ))}
           </div>
         )}

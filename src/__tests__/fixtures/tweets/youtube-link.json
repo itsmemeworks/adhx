@@ -10,10 +10,7 @@
       "facets": [
         {
           "type": "url",
-          "indices": [
-            6,
-            29
-          ],
+          "indices": [6, 29],
           "original": "https://t.co/HBn6sMhZua",
           "replacement": "https://www.youtube.com/watch?v=yGQb9KkvQ1Q",
           "display": "youtube.com/watch?v=yGQb9K…"

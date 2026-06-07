@@ -20,7 +20,13 @@ interface CollectionsContextType {
   loading: boolean
   error: string | null
   refreshCollections: () => Promise<void>
-  createCollection: (data: { name: string; description?: string; color?: string; icon?: string; isPublic?: boolean }) => Promise<Collection | null>
+  createCollection: (data: {
+    name: string
+    description?: string
+    color?: string
+    icon?: string
+    isPublic?: boolean
+  }) => Promise<Collection | null>
   updateCollection: (id: string, data: Partial<Collection>) => Promise<Collection | null>
   deleteCollection: (id: string) => Promise<boolean>
   addToCollection: (collectionId: string, bookmarkId: string, notes?: string) => Promise<boolean>
@@ -62,47 +68,53 @@ export function CollectionsProvider({ children }: { children: ReactNode }) {
     refreshCollections()
   }, [refreshCollections])
 
-  const createCollection = useCallback(async (data: {
-    name: string
-    description?: string
-    color?: string
-    icon?: string
-    isPublic?: boolean
-  }): Promise<Collection | null> => {
-    try {
-      const response = await fetch('/api/collections', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      })
-      if (!response.ok) throw new Error('Failed to create collection')
-      const result = await response.json()
-      const newCollection = result.collection
-      setCollections((prev) => [newCollection, ...prev])
-      return newCollection
-    } catch (err) {
-      console.error('Failed to create collection:', err)
-      return null
-    }
-  }, [])
+  const createCollection = useCallback(
+    async (data: {
+      name: string
+      description?: string
+      color?: string
+      icon?: string
+      isPublic?: boolean
+    }): Promise<Collection | null> => {
+      try {
+        const response = await fetch('/api/collections', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        })
+        if (!response.ok) throw new Error('Failed to create collection')
+        const result = await response.json()
+        const newCollection = result.collection
+        setCollections((prev) => [newCollection, ...prev])
+        return newCollection
+      } catch (err) {
+        console.error('Failed to create collection:', err)
+        return null
+      }
+    },
+    [],
+  )
 
-  const updateCollection = useCallback(async (id: string, data: Partial<Collection>): Promise<Collection | null> => {
-    try {
-      const response = await fetch(`/api/collections/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      })
-      if (!response.ok) throw new Error('Failed to update collection')
-      const result = await response.json()
-      const updated = result.collection
-      setCollections((prev) => prev.map((c) => (c.id === id ? { ...c, ...updated } : c)))
-      return updated
-    } catch (err) {
-      console.error('Failed to update collection:', err)
-      return null
-    }
-  }, [])
+  const updateCollection = useCallback(
+    async (id: string, data: Partial<Collection>): Promise<Collection | null> => {
+      try {
+        const response = await fetch(`/api/collections/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        })
+        if (!response.ok) throw new Error('Failed to update collection')
+        const result = await response.json()
+        const updated = result.collection
+        setCollections((prev) => prev.map((c) => (c.id === id ? { ...c, ...updated } : c)))
+        return updated
+      } catch (err) {
+        console.error('Failed to update collection:', err)
+        return null
+      }
+    },
+    [],
+  )
 
   const deleteCollection = useCallback(async (id: string): Promise<boolean> => {
     try {
@@ -118,43 +130,51 @@ export function CollectionsProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const addToCollection = useCallback(async (collectionId: string, bookmarkId: string, notes?: string): Promise<boolean> => {
-    try {
-      const response = await fetch(`/api/collections/${collectionId}/tweets`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookmarkId, notes }),
-      })
-      if (!response.ok) throw new Error('Failed to add to collection')
-      // Update local count
-      setCollections((prev) =>
-        prev.map((c) => (c.id === collectionId ? { ...c, tweetCount: c.tweetCount + 1 } : c))
-      )
-      return true
-    } catch (err) {
-      console.error('Failed to add to collection:', err)
-      return false
-    }
-  }, [])
+  const addToCollection = useCallback(
+    async (collectionId: string, bookmarkId: string, notes?: string): Promise<boolean> => {
+      try {
+        const response = await fetch(`/api/collections/${collectionId}/tweets`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bookmarkId, notes }),
+        })
+        if (!response.ok) throw new Error('Failed to add to collection')
+        // Update local count
+        setCollections((prev) =>
+          prev.map((c) => (c.id === collectionId ? { ...c, tweetCount: c.tweetCount + 1 } : c)),
+        )
+        return true
+      } catch (err) {
+        console.error('Failed to add to collection:', err)
+        return false
+      }
+    },
+    [],
+  )
 
-  const removeFromCollection = useCallback(async (collectionId: string, bookmarkId: string): Promise<boolean> => {
-    try {
-      const response = await fetch(`/api/collections/${collectionId}/tweets`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookmarkId }),
-      })
-      if (!response.ok) throw new Error('Failed to remove from collection')
-      // Update local count
-      setCollections((prev) =>
-        prev.map((c) => (c.id === collectionId ? { ...c, tweetCount: Math.max(0, c.tweetCount - 1) } : c))
-      )
-      return true
-    } catch (err) {
-      console.error('Failed to remove from collection:', err)
-      return false
-    }
-  }, [])
+  const removeFromCollection = useCallback(
+    async (collectionId: string, bookmarkId: string): Promise<boolean> => {
+      try {
+        const response = await fetch(`/api/collections/${collectionId}/tweets`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bookmarkId }),
+        })
+        if (!response.ok) throw new Error('Failed to remove from collection')
+        // Update local count
+        setCollections((prev) =>
+          prev.map((c) =>
+            c.id === collectionId ? { ...c, tweetCount: Math.max(0, c.tweetCount - 1) } : c,
+          ),
+        )
+        return true
+      } catch (err) {
+        console.error('Failed to remove from collection:', err)
+        return false
+      }
+    },
+    [],
+  )
 
   const getBookmarkCollections = useCallback(async (bookmarkId: string): Promise<string[]> => {
     try {

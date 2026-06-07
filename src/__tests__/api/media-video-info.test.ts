@@ -164,7 +164,9 @@ describe('API: /api/media/video/info', () => {
       })
 
       const { GET } = await import('@/app/api/media/video/info/route')
-      const response = await GET(createRequest({ author: 'user', tweetId: '123', withSizes: 'true' }))
+      const response = await GET(
+        createRequest({ author: 'user', tweetId: '123', withSizes: 'true' }),
+      )
 
       const data = await response.json()
       expect(data.formats).toHaveLength(3)
@@ -195,9 +197,7 @@ describe('API: /api/media/video/info', () => {
       await GET(createRequest({ author: 'user', tweetId: '123', withSizes: 'true' }))
 
       // Verify HEAD requests were made with correct headers
-      const headCalls = mockFetch.mock.calls.filter(
-        (call) => call[1]?.method === 'HEAD'
-      )
+      const headCalls = mockFetch.mock.calls.filter((call) => call[1]?.method === 'HEAD')
       expect(headCalls.length).toBeGreaterThan(0)
       expect(headCalls[0][1].headers).toHaveProperty('User-Agent')
       expect(headCalls[0][1].headers).toHaveProperty('Referer', 'https://twitter.com/')
@@ -241,7 +241,9 @@ describe('API: /api/media/video/info', () => {
       })
 
       const { GET } = await import('@/app/api/media/video/info/route')
-      const response = await GET(createRequest({ author: 'user', tweetId: '123', withSizes: 'true' }))
+      const response = await GET(
+        createRequest({ author: 'user', tweetId: '123', withSizes: 'true' }),
+      )
 
       const data = await response.json()
 

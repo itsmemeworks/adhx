@@ -5,7 +5,7 @@ describe('expandUrls', () => {
   it('expands t.co URLs using link mappings', () => {
     const text = 'Check this out https://t.co/abc123'
     const links = [
-      { originalUrl: 'https://t.co/abc123', expandedUrl: 'https://example.com/article' }
+      { originalUrl: 'https://t.co/abc123', expandedUrl: 'https://example.com/article' },
     ]
     expect(expandUrls(text, links)).toBe('Check this out https://example.com/article')
   })
@@ -14,16 +14,16 @@ describe('expandUrls', () => {
     const text = 'Link 1: https://t.co/abc and Link 2: https://t.co/xyz'
     const links = [
       { originalUrl: 'https://t.co/abc', expandedUrl: 'https://example.com/1' },
-      { originalUrl: 'https://t.co/xyz', expandedUrl: 'https://example.com/2' }
+      { originalUrl: 'https://t.co/xyz', expandedUrl: 'https://example.com/2' },
     ]
-    expect(expandUrls(text, links)).toBe('Link 1: https://example.com/1 and Link 2: https://example.com/2')
+    expect(expandUrls(text, links)).toBe(
+      'Link 1: https://example.com/1 and Link 2: https://example.com/2',
+    )
   })
 
   it('leaves non-matching URLs unchanged', () => {
     const text = 'Regular URL https://google.com and t.co https://t.co/unknown'
-    const links = [
-      { originalUrl: 'https://t.co/other', expandedUrl: 'https://example.com' }
-    ]
+    const links = [{ originalUrl: 'https://t.co/other', expandedUrl: 'https://example.com' }]
     const result = expandUrls(text, links)
     expect(result).toContain('https://google.com')
   })
@@ -35,9 +35,7 @@ describe('expandUrls', () => {
 
   it('handles null originalUrl in links', () => {
     const text = 'Some text https://t.co/abc'
-    const links = [
-      { originalUrl: null, expandedUrl: 'https://example.com' }
-    ]
+    const links = [{ originalUrl: null, expandedUrl: 'https://example.com' }]
     // Should use positional matching for remaining t.co URLs
     expect(expandUrls(text, links)).toBe('Some text https://example.com')
   })
@@ -46,7 +44,7 @@ describe('expandUrls', () => {
     const text = 'Tweet https://t.co/abc'
     const links = [
       { originalUrl: null, expandedUrl: 'https://twitter.com/user/status/123' },
-      { originalUrl: null, expandedUrl: 'https://example.com/real-link' }
+      { originalUrl: null, expandedUrl: 'https://example.com/real-link' },
     ]
     // Should skip the status link and use the real link
     expect(expandUrls(text, links)).toBe('Tweet https://example.com/real-link')
@@ -101,7 +99,7 @@ describe('parseTextWithLinks', () => {
   it('parses multiple links', () => {
     const result = parseTextWithLinks('First https://a.com then https://b.com end')
     expect(result).toHaveLength(5)
-    expect(result.filter(r => r.type === 'link')).toHaveLength(2)
+    expect(result.filter((r) => r.type === 'link')).toHaveLength(2)
   })
 
   it('handles link at start of text', () => {
@@ -120,7 +118,7 @@ describe('parseTextWithLinks', () => {
   it('truncates long URLs in display content', () => {
     const longUrl = 'https://example.com/' + 'a'.repeat(100)
     const result = parseTextWithLinks(`Check ${longUrl}`)
-    const linkPart = result.find(r => r.type === 'link')
+    const linkPart = result.find((r) => r.type === 'link')
     expect(linkPart?.url).toBe(longUrl)
     expect(linkPart?.content.length).toBeLessThanOrEqual(50)
   })

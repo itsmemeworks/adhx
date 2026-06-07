@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { dayDiff, effectiveCurrent, recordDay, isValidDay, type StreakState } from '@/lib/triage/streak'
+import {
+  dayDiff,
+  effectiveCurrent,
+  recordDay,
+  isValidDay,
+  type StreakState,
+} from '@/lib/triage/streak'
 
 describe('triage streak — dayDiff', () => {
   it('counts whole calendar days, including month/year boundaries', () => {
@@ -39,7 +45,11 @@ describe('triage streak — effectiveCurrent (display, no mutation)', () => {
 
 describe('triage streak — recordDay (mutation)', () => {
   it('starts a streak from nothing', () => {
-    expect(recordDay(null, '2026-06-05')).toEqual({ current: 1, longest: 1, lastActiveDate: '2026-06-05' })
+    expect(recordDay(null, '2026-06-05')).toEqual({
+      current: 1,
+      longest: 1,
+      lastActiveDate: '2026-06-05',
+    })
   })
 
   it('is idempotent within the same day', () => {
@@ -49,17 +59,29 @@ describe('triage streak — recordDay (mutation)', () => {
 
   it('increments on a consecutive day', () => {
     const s: StreakState = { current: 3, longest: 5, lastActiveDate: '2026-06-05' }
-    expect(recordDay(s, '2026-06-06')).toEqual({ current: 4, longest: 5, lastActiveDate: '2026-06-06' })
+    expect(recordDay(s, '2026-06-06')).toEqual({
+      current: 4,
+      longest: 5,
+      lastActiveDate: '2026-06-06',
+    })
   })
 
   it('updates longest when the current run exceeds it', () => {
     const s: StreakState = { current: 5, longest: 5, lastActiveDate: '2026-06-05' }
-    expect(recordDay(s, '2026-06-06')).toEqual({ current: 6, longest: 6, lastActiveDate: '2026-06-06' })
+    expect(recordDay(s, '2026-06-06')).toEqual({
+      current: 6,
+      longest: 6,
+      lastActiveDate: '2026-06-06',
+    })
   })
 
   it('resets to 1 after a missed day (keeps longest)', () => {
     const s: StreakState = { current: 9, longest: 9, lastActiveDate: '2026-06-05' }
-    expect(recordDay(s, '2026-06-08')).toEqual({ current: 1, longest: 9, lastActiveDate: '2026-06-08' })
+    expect(recordDay(s, '2026-06-08')).toEqual({
+      current: 1,
+      longest: 9,
+      lastActiveDate: '2026-06-08',
+    })
   })
 
   it('ignores out-of-order (clock-skew) days', () => {

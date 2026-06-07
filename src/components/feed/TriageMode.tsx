@@ -1,7 +1,17 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { X, Check, Bookmark, Trash2, Flame, Undo2, PartyPopper, ArrowLeft, ArrowRight } from 'lucide-react'
+import {
+  X,
+  Check,
+  Bookmark,
+  Trash2,
+  Flame,
+  Undo2,
+  PartyPopper,
+  ArrowLeft,
+  ArrowRight,
+} from 'lucide-react'
 import type { FeedItem } from './types'
 import { MediaCard, isFullBleedCandidate } from './MediaCard'
 import { isTouchDevice } from './utils'
@@ -99,7 +109,9 @@ export function TriageMode({
     let cancelled = false
     fetch(`/api/triage/streak?today=${localToday()}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((s) => !cancelled && s && setStreak({ current: s.current ?? 0, longest: s.longest ?? 0 }))
+      .then(
+        (s) => !cancelled && s && setStreak({ current: s.current ?? 0, longest: s.longest ?? 0 }),
+      )
       .catch(() => {})
     return () => {
       cancelled = true
@@ -201,18 +213,26 @@ export function TriageMode({
       if (e.target instanceof HTMLInputElement) return
       switch (e.key) {
         case 'ArrowRight':
-          e.preventDefault(); archive(); break
+          e.preventDefault()
+          archive()
+          break
         case 'ArrowLeft':
-          e.preventDefault(); keep(); break
+          e.preventDefault()
+          keep()
+          break
         case 'ArrowDown':
         case 'Backspace':
         case 'Delete':
-          e.preventDefault(); del(); break
+          e.preventDefault()
+          del()
+          break
         case 'u':
         case 'U':
-          doUndo(); break
+          doUndo()
+          break
         case 'Escape':
-          onClose(); break
+          onClose()
+          break
       }
     }
     window.addEventListener('keydown', onKey)
@@ -303,7 +323,10 @@ export function TriageMode({
         <>
           <div
             className="pointer-events-none absolute left-0 top-0 bottom-0 w-[150px] z-[1]"
-            style={{ background: 'linear-gradient(to right, color-mix(in srgb, var(--m-accent) 20%, transparent), transparent)' }}
+            style={{
+              background:
+                'linear-gradient(to right, color-mix(in srgb, var(--m-accent) 20%, transparent), transparent)',
+            }}
             aria-hidden
           />
           <div
@@ -334,8 +357,16 @@ export function TriageMode({
         >
           {finished ? `${total} done` : `${done + 1} / ${total}`}
         </span>
-        <div className={cn('flex-1 h-[5px] rounded-full overflow-hidden', fullBleed ? 'bg-white/25' : 'bg-fline')}>
-          <div className="h-full bg-clay-grad transition-all duration-300" style={{ width: `${progress}%` }} />
+        <div
+          className={cn(
+            'flex-1 h-[5px] rounded-full overflow-hidden',
+            fullBleed ? 'bg-white/25' : 'bg-fline',
+          )}
+        >
+          <div
+            className="h-full bg-clay-grad transition-all duration-300"
+            style={{ width: `${progress}%` }}
+          />
         </div>
         {streak.current > 0 && (
           <span
@@ -365,7 +396,8 @@ export function TriageMode({
           style={{
             transform: cardTransform,
             opacity: exiting ? 0 : 1,
-            transition: exiting || drag === 0 ? 'transform 0.22s ease, opacity 0.22s ease' : undefined,
+            transition:
+              exiting || drag === 0 ? 'transform 0.22s ease, opacity 0.22s ease' : undefined,
           }}
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
@@ -390,7 +422,8 @@ export function TriageMode({
               style={{
                 transform: cardTransform,
                 opacity: exiting ? 0 : 1,
-                transition: exiting || drag === 0 ? 'transform 0.22s ease, opacity 0.22s ease' : undefined,
+                transition:
+                  exiting || drag === 0 ? 'transform 0.22s ease, opacity 0.22s ease' : undefined,
               }}
               onTouchStart={onTouchStart}
               onTouchMove={onTouchMove}
@@ -422,10 +455,14 @@ export function TriageMode({
           <span
             className={cn(
               'inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold whitespace-nowrap',
-              fullBleed ? 'bg-black/40 backdrop-blur text-white/90' : 'bg-fsurface/60 backdrop-blur text-fink-2 border border-fline',
+              fullBleed
+                ? 'bg-black/40 backdrop-blur text-white/90'
+                : 'bg-fsurface/60 backdrop-blur text-fink-2 border border-fline',
             )}
           >
-            <ArrowLeft className="w-3.5 h-3.5" /> {isTouch ? 'Swipe to sort' : 'Swipe or use arrow keys'} <ArrowRight className="w-3.5 h-3.5" />
+            <ArrowLeft className="w-3.5 h-3.5" />{' '}
+            {isTouch ? 'Swipe to sort' : 'Swipe or use arrow keys'}{' '}
+            <ArrowRight className="w-3.5 h-3.5" />
           </span>
         </div>
       )}
@@ -436,7 +473,9 @@ export function TriageMode({
           onClick={(e) => e.stopPropagation()}
           className="fixed bottom-[150px] left-1/2 -translate-x-1/2 z-[8] flex items-center gap-3 bg-fsurface border border-fline text-fink px-4 py-2 rounded-full shadow-m-lg text-sm"
         >
-          <span>{undo.type === 'archive' ? 'Done' : undo.type === 'delete' ? 'Deleted' : 'Kept'}</span>
+          <span>
+            {undo.type === 'archive' ? 'Done' : undo.type === 'delete' ? 'Deleted' : 'Kept'}
+          </span>
           <button onClick={doUndo} className="flex items-center gap-1 font-semibold text-clay">
             <Undo2 className="w-4 h-4" /> Undo
           </button>
@@ -482,7 +521,12 @@ function DockButton({
         : onDark
           ? 'rgba(255,255,255,.12)'
           : 'color-mix(in srgb, var(--m-fink) 8%, transparent)'
-  const borderColor = tone === 'outline' ? (onDark ? 'rgba(255,255,255,.4)' : 'var(--m-fline)') : 'rgba(255,255,255,.4)'
+  const borderColor =
+    tone === 'outline'
+      ? onDark
+        ? 'rgba(255,255,255,.4)'
+        : 'var(--m-fline)'
+      : 'rgba(255,255,255,.4)'
   const iconColor = tone === 'outline' && !onDark ? 'text-fink-2' : 'text-white'
   return (
     <button
@@ -506,7 +550,15 @@ function DockButton({
   )
 }
 
-function FinishCard({ total, streak, onClose }: { total: number; streak: Streak; onClose: () => void }) {
+function FinishCard({
+  total,
+  streak,
+  onClose,
+}: {
+  total: number
+  streak: Streak
+  onClose: () => void
+}) {
   return (
     <div className="text-center max-w-sm">
       <PartyPopper className="w-16 h-16 mx-auto mb-4 text-clay" />

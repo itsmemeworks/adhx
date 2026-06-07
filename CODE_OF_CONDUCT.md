@@ -9,6 +9,7 @@ Be cool. We're all just trying to organize our chaotic bookmark collections here
 ### We Welcome Everyone
 
 ADHX is for anyone who:
+
 - Has 847 unread bookmarks (and counting)
 - Saves tweets "to read later" (we both know you won't)
 - Gets distracted mid-sentence and forgets what they were—oh look, a squirrel!
@@ -33,6 +34,7 @@ Seriously though, we welcome contributors regardless of experience level, backgr
 ### Enforcement
 
 If someone's being uncool:
+
 1. They'll get a friendly heads-up
 2. Continued issues = temporary timeout
 3. Serious violations = permanent ban
@@ -51,4 +53,4 @@ Don't be a jerk. Help each other out. Save more bookmarks than you'll ever read.
 
 ---
 
-*This Code of Conduct is adapted from the [Contributor Covenant](https://www.contributor-covenant.org/), but with more personality.*
+_This Code of Conduct is adapted from the [Contributor Covenant](https://www.contributor-covenant.org/), but with more personality._

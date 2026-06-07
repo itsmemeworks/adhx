@@ -98,10 +98,13 @@ export function PWAInstallPrompt() {
           <p className="text-sm font-semibold text-ink">Add ADHX to your home screen</p>
           {platform === 'ios' ? (
             <p className="text-xs text-ink-3 flex items-center gap-1 flex-wrap">
-              Tap <Share className="w-3.5 h-3.5 inline" aria-label="the Share button" /> then &ldquo;Add to Home Screen&rdquo;
+              Tap <Share className="w-3.5 h-3.5 inline" aria-label="the Share button" /> then
+              &ldquo;Add to Home Screen&rdquo;
             </p>
           ) : (
-            <p className="text-xs text-ink-3">One tap — open it like an app, no app store needed.</p>
+            <p className="text-xs text-ink-3">
+              One tap — open it like an app, no app store needed.
+            </p>
           )}
         </div>
         {deferred && (

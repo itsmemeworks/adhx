@@ -28,7 +28,8 @@ interface FeedGridProps {
 // Calm Matter grid: mobile 1 col → tablet 2 col (≥640) → 3 col (≥820) →
 // desktop 4 col (≥1024). 20px gap, ~26px page gutters (applied by the page
 // container). Masonry via CSS columns so cards flow by natural height.
-const GRID_CLASS = 'columns-1 [@media(min-width:640px)]:columns-2 [@media(min-width:820px)]:columns-3 lg:columns-4 gap-5'
+const GRID_CLASS =
+  'columns-1 [@media(min-width:640px)]:columns-2 [@media(min-width:820px)]:columns-3 lg:columns-4 gap-5'
 
 export function FeedGrid({
   items,
@@ -65,7 +66,7 @@ export function FeedGrid({
       },
       // Start loading before the sentinel is fully visible so content is
       // ready by the time the user reaches the bottom.
-      { rootMargin: '600px 0px' }
+      { rootMargin: '600px 0px' },
     )
 
     observer.observe(sentinel)
@@ -113,7 +114,15 @@ export function FeedGrid({
         <div className="grid grid-cols-2 [@media(min-width:820px)]:grid-cols-4 gap-3 sm:gap-4 [grid-auto-rows:108px] sm:[grid-auto-rows:168px]">
           {items.map((item, index) => {
             const [cs, rs] = BENTO_SPANS[index % BENTO_SPANS.length]
-            return <FeedBentoTile key={item.id} item={item} cs={cs} rs={rs} onClick={() => onExpand(index)} />
+            return (
+              <FeedBentoTile
+                key={item.id}
+                item={item}
+                cs={cs}
+                rs={rs}
+                onClick={() => onExpand(index)}
+              />
+            )
           })}
         </div>
       )}
@@ -149,7 +158,11 @@ function LoadingSkeleton(): React.ReactElement {
   return (
     <div className={GRID_CLASS}>
       {Array.from({ length: 12 }).map((_, i) => (
-        <div key={i} className="mb-4 break-inside-avoid" style={{ height: `${180 + (i % 3) * 80}px` }}>
+        <div
+          key={i}
+          className="mb-4 break-inside-avoid"
+          style={{ height: `${180 + (i % 3) * 80}px` }}
+        >
           <div className="w-full h-full bg-inset rounded-card animate-pulse" />
         </div>
       ))}

@@ -60,13 +60,15 @@ describe('API: /api/stats', () => {
 
   it('returns correct bookmark counts', async () => {
     // Add 5 bookmarks with different categories
-    await testInstance.db.insert(schema.bookmarks).values([
-      createTestBookmark(USER_A, 't1', { category: 'tweet' }),
-      createTestBookmark(USER_A, 't2', { category: 'tweet' }),
-      createTestBookmark(USER_A, 't3', { category: 'github' }),
-      createTestBookmark(USER_A, 't4', { category: 'article' }),
-      createTestBookmark(USER_A, 't5', { category: 'tweet' }),
-    ])
+    await testInstance.db
+      .insert(schema.bookmarks)
+      .values([
+        createTestBookmark(USER_A, 't1', { category: 'tweet' }),
+        createTestBookmark(USER_A, 't2', { category: 'tweet' }),
+        createTestBookmark(USER_A, 't3', { category: 'github' }),
+        createTestBookmark(USER_A, 't4', { category: 'article' }),
+        createTestBookmark(USER_A, 't5', { category: 'tweet' }),
+      ])
 
     const { GET } = await import('@/app/api/stats/route')
     const response = await GET()
@@ -84,13 +86,15 @@ describe('API: /api/stats', () => {
 
   it('calculates read/unread correctly', async () => {
     // Add 5 bookmarks
-    await testInstance.db.insert(schema.bookmarks).values([
-      createTestBookmark(USER_A, 't1'),
-      createTestBookmark(USER_A, 't2'),
-      createTestBookmark(USER_A, 't3'),
-      createTestBookmark(USER_A, 't4'),
-      createTestBookmark(USER_A, 't5'),
-    ])
+    await testInstance.db
+      .insert(schema.bookmarks)
+      .values([
+        createTestBookmark(USER_A, 't1'),
+        createTestBookmark(USER_A, 't2'),
+        createTestBookmark(USER_A, 't3'),
+        createTestBookmark(USER_A, 't4'),
+        createTestBookmark(USER_A, 't5'),
+      ])
 
     // Mark 2 as read
     await testInstance.db.insert(schema.readStatus).values([
@@ -108,11 +112,13 @@ describe('API: /api/stats', () => {
   })
 
   it('counts bookmarks with media', async () => {
-    await testInstance.db.insert(schema.bookmarks).values([
-      createTestBookmark(USER_A, 't1'),
-      createTestBookmark(USER_A, 't2'),
-      createTestBookmark(USER_A, 't3'),
-    ])
+    await testInstance.db
+      .insert(schema.bookmarks)
+      .values([
+        createTestBookmark(USER_A, 't1'),
+        createTestBookmark(USER_A, 't2'),
+        createTestBookmark(USER_A, 't3'),
+      ])
 
     // Add media to 2 bookmarks
     await testInstance.db.insert(schema.bookmarkMedia).values([
@@ -129,11 +135,13 @@ describe('API: /api/stats', () => {
   })
 
   it('counts bookmarks needing transcript', async () => {
-    await testInstance.db.insert(schema.bookmarks).values([
-      createTestBookmark(USER_A, 't1', { needsTranscript: true }),
-      createTestBookmark(USER_A, 't2', { needsTranscript: true }),
-      createTestBookmark(USER_A, 't3', { needsTranscript: false }),
-    ])
+    await testInstance.db
+      .insert(schema.bookmarks)
+      .values([
+        createTestBookmark(USER_A, 't1', { needsTranscript: true }),
+        createTestBookmark(USER_A, 't2', { needsTranscript: true }),
+        createTestBookmark(USER_A, 't3', { needsTranscript: false }),
+      ])
 
     const { GET } = await import('@/app/api/stats/route')
     const response = await GET()
@@ -144,23 +152,27 @@ describe('API: /api/stats', () => {
 
   it('isolates stats between users', async () => {
     // User A: 3 bookmarks, 1 read
-    await testInstance.db.insert(schema.bookmarks).values([
-      createTestBookmark(USER_A, 't1'),
-      createTestBookmark(USER_A, 't2'),
-      createTestBookmark(USER_A, 't3'),
-    ])
-    await testInstance.db.insert(schema.readStatus).values([
-      { userId: USER_A, bookmarkId: 't1', readAt: '2024-01-01T10:00:00Z' },
-    ])
+    await testInstance.db
+      .insert(schema.bookmarks)
+      .values([
+        createTestBookmark(USER_A, 't1'),
+        createTestBookmark(USER_A, 't2'),
+        createTestBookmark(USER_A, 't3'),
+      ])
+    await testInstance.db
+      .insert(schema.readStatus)
+      .values([{ userId: USER_A, bookmarkId: 't1', readAt: '2024-01-01T10:00:00Z' }])
 
     // User B: 5 bookmarks, 3 read
-    await testInstance.db.insert(schema.bookmarks).values([
-      createTestBookmark(USER_B, 't1'),
-      createTestBookmark(USER_B, 't2'),
-      createTestBookmark(USER_B, 't3'),
-      createTestBookmark(USER_B, 't4'),
-      createTestBookmark(USER_B, 't5'),
-    ])
+    await testInstance.db
+      .insert(schema.bookmarks)
+      .values([
+        createTestBookmark(USER_B, 't1'),
+        createTestBookmark(USER_B, 't2'),
+        createTestBookmark(USER_B, 't3'),
+        createTestBookmark(USER_B, 't4'),
+        createTestBookmark(USER_B, 't5'),
+      ])
     await testInstance.db.insert(schema.readStatus).values([
       { userId: USER_B, bookmarkId: 't1', readAt: '2024-01-01T10:00:00Z' },
       { userId: USER_B, bookmarkId: 't2', readAt: '2024-01-01T10:00:00Z' },
@@ -192,11 +204,13 @@ describe('API: /api/stats', () => {
   // =========================================
   describe('manual bookmark counts', () => {
     it('counts manually added bookmarks', async () => {
-      await testInstance.db.insert(schema.bookmarks).values([
-        createTestBookmark(USER_A, 't1', { source: 'manual' }),
-        createTestBookmark(USER_A, 't2', { source: 'manual' }),
-        createTestBookmark(USER_A, 't3', { source: 'sync' }),
-      ])
+      await testInstance.db
+        .insert(schema.bookmarks)
+        .values([
+          createTestBookmark(USER_A, 't1', { source: 'manual' }),
+          createTestBookmark(USER_A, 't2', { source: 'manual' }),
+          createTestBookmark(USER_A, 't3', { source: 'sync' }),
+        ])
 
       const { GET } = await import('@/app/api/stats/route')
       const response = await GET()
@@ -207,12 +221,14 @@ describe('API: /api/stats', () => {
     })
 
     it('counts url_prefix as manual additions', async () => {
-      await testInstance.db.insert(schema.bookmarks).values([
-        createTestBookmark(USER_A, 't1', { source: 'url_prefix' }),
-        createTestBookmark(USER_A, 't2', { source: 'url_prefix' }),
-        createTestBookmark(USER_A, 't3', { source: 'manual' }),
-        createTestBookmark(USER_A, 't4', { source: 'sync' }),
-      ])
+      await testInstance.db
+        .insert(schema.bookmarks)
+        .values([
+          createTestBookmark(USER_A, 't1', { source: 'url_prefix' }),
+          createTestBookmark(USER_A, 't2', { source: 'url_prefix' }),
+          createTestBookmark(USER_A, 't3', { source: 'manual' }),
+          createTestBookmark(USER_A, 't4', { source: 'sync' }),
+        ])
 
       const { GET } = await import('@/app/api/stats/route')
       const response = await GET()
@@ -239,19 +255,23 @@ describe('API: /api/stats', () => {
 
     it('isolates manual counts between users', async () => {
       // User A: 2 manual, 1 sync
-      await testInstance.db.insert(schema.bookmarks).values([
-        createTestBookmark(USER_A, 't1', { source: 'manual' }),
-        createTestBookmark(USER_A, 't2', { source: 'url_prefix' }),
-        createTestBookmark(USER_A, 't3', { source: 'sync' }),
-      ])
+      await testInstance.db
+        .insert(schema.bookmarks)
+        .values([
+          createTestBookmark(USER_A, 't1', { source: 'manual' }),
+          createTestBookmark(USER_A, 't2', { source: 'url_prefix' }),
+          createTestBookmark(USER_A, 't3', { source: 'sync' }),
+        ])
 
       // User B: 1 manual, 3 sync
-      await testInstance.db.insert(schema.bookmarks).values([
-        createTestBookmark(USER_B, 't1', { source: 'manual' }),
-        createTestBookmark(USER_B, 't2', { source: 'sync' }),
-        createTestBookmark(USER_B, 't3', { source: 'sync' }),
-        createTestBookmark(USER_B, 't4', { source: 'sync' }),
-      ])
+      await testInstance.db
+        .insert(schema.bookmarks)
+        .values([
+          createTestBookmark(USER_B, 't1', { source: 'manual' }),
+          createTestBookmark(USER_B, 't2', { source: 'sync' }),
+          createTestBookmark(USER_B, 't3', { source: 'sync' }),
+          createTestBookmark(USER_B, 't4', { source: 'sync' }),
+        ])
 
       // User A stats
       mockUserId = USER_A

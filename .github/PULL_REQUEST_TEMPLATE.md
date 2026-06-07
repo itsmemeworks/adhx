@@ -53,4 +53,4 @@ We're all friends here.
 
 ---
 
-*Thanks for contributing! You're helping fellow bookmark hoarders everywhere.* 🙏
+_Thanks for contributing! You're helping fellow bookmark hoarders everywhere._ 🙏

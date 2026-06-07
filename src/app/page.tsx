@@ -23,11 +23,13 @@ import { useTheme } from '@/lib/theme/context'
 
 export default function FeedPage(): React.ReactElement {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-paper flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-ink-3" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-paper flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-ink-3" />
+        </div>
+      }
+    >
       <FeedPageContent />
     </Suspense>
   )
@@ -40,10 +42,16 @@ function FeedPageContent(): React.ReactElement {
 
   const [items, setItems] = useState<FeedItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<FilterType>((searchParams.get('filter') as FilterType) || 'all')
-  const [platformFilter, setPlatformFilter] = useState<PlatformFilter>((searchParams.get('platform') as PlatformFilter) || 'all')
+  const [filter, setFilter] = useState<FilterType>(
+    (searchParams.get('filter') as FilterType) || 'all',
+  )
+  const [platformFilter, setPlatformFilter] = useState<PlatformFilter>(
+    (searchParams.get('platform') as PlatformFilter) || 'all',
+  )
   const [sort, setSort] = useState<SortType>((searchParams.get('sort') as SortType) || 'added')
-  const [sortDirection, setSortDirection] = useState<SortDirection>((searchParams.get('sortDir') as SortDirection) || 'desc')
+  const [sortDirection, setSortDirection] = useState<SortDirection>(
+    (searchParams.get('sortDir') as SortDirection) || 'desc',
+  )
   const [unreadOnly, setUnreadOnly] = useState(searchParams.get('unreadOnly') !== 'false')
   const [view, setView] = useState<'grid' | 'list' | 'bento'>('grid')
   const [search, setSearch] = useState(searchParams.get('search') || '')
@@ -59,11 +67,18 @@ function FeedPageContent(): React.ReactElement {
   const [isSyncing, setIsSyncing] = useState(false)
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [availableTags, setAvailableTags] = useState<TagItem[]>([])
-  const [syncProgress, setSyncProgress] = useState<{ current: number; total: number; message?: string } | null>(null)
+  const [syncProgress, setSyncProgress] = useState<{
+    current: number
+    total: number
+    message?: string
+  } | null>(null)
   const [showSyncModal, setShowSyncModal] = useState(false)
   const [streamedItems, setStreamedItems] = useState<FeedItem[]>([])
   const syncTriggeredRef = useRef(false)
-  const [pendingNavigation, setPendingNavigation] = useState<{ id: string; fallbackUrl?: string } | null>(null)
+  const [pendingNavigation, setPendingNavigation] = useState<{
+    id: string
+    fallbackUrl?: string
+  } | null>(null)
   // Set when arriving via `?triage=1` (e.g. the Triage pill pressed on /discover);
   // opens the focus queue once the feed has loaded.
   const [pendingTriage, setPendingTriage] = useState(false)
@@ -120,113 +135,120 @@ function FeedPageContent(): React.ReactElement {
     openTriage(queue, 0)
   }, [items, openTriage])
 
-  const startSync = useCallback(async (firstLogin = false) => {
-    if (isSyncing) return
+  const startSync = useCallback(
+    async (firstLogin = false) => {
+      if (isSyncing) return
 
-    try {
-      // Check cooldown before starting sync
-      const cooldownRes = await fetch('/api/sync/cooldown')
-      const cooldownData = await cooldownRes.json()
-      if (!cooldownData.canSync) {
-        // On cooldown - don't show modal, just skip sync silently on first login
-        return
-      }
-
-      // Cooldown passed - now start sync
-      setIsSyncing(true)
-      setSyncProgress({ current: 0, total: 0, message: 'Starting sync...' })
-      // Allow gallery to render streamed items immediately (fixes skeleton showing forever)
-      setLoading(false)
-      // Initialize seen IDs Set with current items for O(1) duplicate detection
-      seenItemIdsRef.current = new Set(itemsRef.current.map(i => i.id))
-
-      // Show modal for first login, clear streamed items
-      if (firstLogin) {
-        setShowSyncModal(true)
-        setStreamedItems([])
-      }
-
-      const eventSource = new EventSource('/api/sync')
-      eventSourceRef.current = eventSource
-
-      eventSource.addEventListener('start', () => {
-        setSyncProgress({ current: 0, total: 0, message: 'Fetching bookmarks...' })
-      })
-
-      eventSource.addEventListener('page', (e) => {
-        const data = JSON.parse(e.data)
-        setSyncProgress({ current: 0, total: data.tweetsFound, message: `Found ${data.tweetsFound} bookmarks...` })
-      })
-
-      eventSource.addEventListener('processing', (e) => {
-        const data = JSON.parse(e.data)
-        setSyncProgress({
-          current: data.current,
-          total: data.total,
-          message: `Saving bookmark ${data.current}/${data.total}...`,
-        })
-
-        // Add streamed bookmark to gallery in real-time
-        if (data.bookmark) {
-          const feedItem = streamedBookmarkToFeedItem(data.bookmark as StreamedBookmark)
-          // O(1) duplicate check using Set
-          if (!seenItemIdsRef.current.has(feedItem.id)) {
-            seenItemIdsRef.current.add(feedItem.id)
-            // Add to streamed items for modal view
-            setStreamedItems(prev => [feedItem, ...prev])
-            // Add to main items array for immediate gallery update
-            setItems(prev => [feedItem, ...prev])
-          }
+      try {
+        // Check cooldown before starting sync
+        const cooldownRes = await fetch('/api/sync/cooldown')
+        const cooldownData = await cooldownRes.json()
+        if (!cooldownData.canSync) {
+          // On cooldown - don't show modal, just skip sync silently on first login
+          return
         }
-      })
 
-      eventSource.addEventListener('complete', (e) => {
-        const data = JSON.parse(e.data)
-        setSyncProgress({
-          current: data.stats.total,
-          total: data.stats.total,
-          message: `Synced ${data.stats.new} new bookmarks!`,
-        })
-        eventSource.close()
-        eventSourceRef.current = null
-        setIsSyncing(false)
-        router.replace('/', { scroll: false })
-        window.dispatchEvent(new CustomEvent('sync-complete'))
+        // Cooldown passed - now start sync
+        setIsSyncing(true)
+        setSyncProgress({ current: 0, total: 0, message: 'Starting sync...' })
+        // Allow gallery to render streamed items immediately (fixes skeleton showing forever)
+        setLoading(false)
+        // Initialize seen IDs Set with current items for O(1) duplicate detection
+        seenItemIdsRef.current = new Set(itemsRef.current.map((i) => i.id))
 
-        // Keep modal open for 2s after completion so user can see final state
+        // Show modal for first login, clear streamed items
         if (firstLogin) {
-          setTimeout(() => {
-            setShowSyncModal(false)
-            setSyncProgress(null)
-          }, 2000)
-        } else {
-          setTimeout(() => setSyncProgress(null), 3000)
+          setShowSyncModal(true)
+          setStreamedItems([])
         }
-      })
 
-      eventSource.addEventListener('error', (e) => {
-        console.error('Sync error:', e)
-        setSyncProgress({ current: 0, total: 0, message: 'Sync failed' })
-        eventSource.close()
-        eventSourceRef.current = null
+        const eventSource = new EventSource('/api/sync')
+        eventSourceRef.current = eventSource
+
+        eventSource.addEventListener('start', () => {
+          setSyncProgress({ current: 0, total: 0, message: 'Fetching bookmarks...' })
+        })
+
+        eventSource.addEventListener('page', (e) => {
+          const data = JSON.parse(e.data)
+          setSyncProgress({
+            current: 0,
+            total: data.tweetsFound,
+            message: `Found ${data.tweetsFound} bookmarks...`,
+          })
+        })
+
+        eventSource.addEventListener('processing', (e) => {
+          const data = JSON.parse(e.data)
+          setSyncProgress({
+            current: data.current,
+            total: data.total,
+            message: `Saving bookmark ${data.current}/${data.total}...`,
+          })
+
+          // Add streamed bookmark to gallery in real-time
+          if (data.bookmark) {
+            const feedItem = streamedBookmarkToFeedItem(data.bookmark as StreamedBookmark)
+            // O(1) duplicate check using Set
+            if (!seenItemIdsRef.current.has(feedItem.id)) {
+              seenItemIdsRef.current.add(feedItem.id)
+              // Add to streamed items for modal view
+              setStreamedItems((prev) => [feedItem, ...prev])
+              // Add to main items array for immediate gallery update
+              setItems((prev) => [feedItem, ...prev])
+            }
+          }
+        })
+
+        eventSource.addEventListener('complete', (e) => {
+          const data = JSON.parse(e.data)
+          setSyncProgress({
+            current: data.stats.total,
+            total: data.stats.total,
+            message: `Synced ${data.stats.new} new bookmarks!`,
+          })
+          eventSource.close()
+          eventSourceRef.current = null
+          setIsSyncing(false)
+          router.replace('/', { scroll: false })
+          window.dispatchEvent(new CustomEvent('sync-complete'))
+
+          // Keep modal open for 2s after completion so user can see final state
+          if (firstLogin) {
+            setTimeout(() => {
+              setShowSyncModal(false)
+              setSyncProgress(null)
+            }, 2000)
+          } else {
+            setTimeout(() => setSyncProgress(null), 3000)
+          }
+        })
+
+        eventSource.addEventListener('error', (e) => {
+          console.error('Sync error:', e)
+          setSyncProgress({ current: 0, total: 0, message: 'Sync failed' })
+          eventSource.close()
+          eventSourceRef.current = null
+          setIsSyncing(false)
+          setShowSyncModal(false)
+          setTimeout(() => setSyncProgress(null), 3000)
+        })
+
+        eventSource.onerror = () => {
+          eventSource.close()
+          eventSourceRef.current = null
+          setIsSyncing(false)
+          setShowSyncModal(false)
+        }
+      } catch (error) {
+        console.error('Failed to start sync:', error)
         setIsSyncing(false)
         setShowSyncModal(false)
-        setTimeout(() => setSyncProgress(null), 3000)
-      })
-
-      eventSource.onerror = () => {
-        eventSource.close()
-        eventSourceRef.current = null
-        setIsSyncing(false)
-        setShowSyncModal(false)
+        setSyncProgress(null)
       }
-    } catch (error) {
-      console.error('Failed to start sync:', error)
-      setIsSyncing(false)
-      setShowSyncModal(false)
-      setSyncProgress(null)
-    }
-  }, [isSyncing, router])
+    },
+    [isSyncing, router],
+  )
 
   // Cleanup EventSource on unmount to prevent memory leaks
   useEffect(() => {
@@ -245,7 +267,11 @@ function FeedPageContent(): React.ReactElement {
         const data = await response.json()
         setIsAuthenticated(data.authenticated)
 
-        if (data.authenticated && searchParams.get('firstLogin') === 'true' && !syncTriggeredRef.current) {
+        if (
+          data.authenticated &&
+          searchParams.get('firstLogin') === 'true' &&
+          !syncTriggeredRef.current
+        ) {
           syncTriggeredRef.current = true
           // Start sync with firstLogin=true to show full modal
           setTimeout(() => startSync(true), 500)
@@ -305,7 +331,7 @@ function FeedPageContent(): React.ReactElement {
         setLoading(false)
       }
     },
-    [filter, platformFilter, sort, sortDirection, unreadOnly, search, page, selectedTags]
+    [filter, platformFilter, sort, sortDirection, unreadOnly, search, page, selectedTags],
   )
 
   useEffect(() => {
@@ -329,7 +355,17 @@ function FeedPageContent(): React.ReactElement {
     // and sync-complete will trigger a proper fetch when done
     if (isSyncing) return
     fetchFeed(true)
-  }, [filter, platformFilter, sort, sortDirection, unreadOnly, search, selectedTags, isSyncing, isAuthenticated])
+  }, [
+    filter,
+    platformFilter,
+    sort,
+    sortDirection,
+    unreadOnly,
+    search,
+    selectedTags,
+    isSyncing,
+    isAuthenticated,
+  ])
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -376,7 +412,7 @@ function FeedPageContent(): React.ReactElement {
         openTriage(items, targetIndex)
       } else if (pendingNavigation.fallbackUrl) {
         // Parent tweet not in user's collection - open externally as fallback
-        window.open(pendingNavigation.fallbackUrl, "_blank")
+        window.open(pendingNavigation.fallbackUrl, '_blank')
       }
       // Clear pending navigation regardless of outcome
       setPendingNavigation(null)
@@ -498,10 +534,11 @@ function FeedPageContent(): React.ReactElement {
 
   // Undo of a triage archive: restore the item to unread + bump the count back.
   const handleTriageRestored = useCallback((item: FeedItem) => {
-    setItems((prev) =>
-      prev.some((i) => i.id === item.id)
-        ? prev.map((i) => (i.id === item.id ? { ...i, isRead: false } : i))
-        : [{ ...item, isRead: false }, ...prev], // was dropped under unreadOnly — re-add it
+    setItems(
+      (prev) =>
+        prev.some((i) => i.id === item.id)
+          ? prev.map((i) => (i.id === item.id ? { ...i, isRead: false } : i))
+          : [{ ...item, isRead: false }, ...prev], // was dropped under unreadOnly — re-add it
     )
     setStats((prev) => ({ ...prev, unread: prev.unread + 1 }))
   }, [])
@@ -529,7 +566,7 @@ function FeedPageContent(): React.ReactElement {
         setMarkingRead(false)
       }
     },
-    [markingRead, items]
+    [markingRead, items],
   )
 
   const handleAddTag = useCallback(
@@ -544,11 +581,13 @@ function FeedPageContent(): React.ReactElement {
         throw new Error(data.error || 'Failed to add tag')
       }
       setItems((prev) =>
-        prev.map((i) => (i.id === itemId && !i.tags.includes(tag) ? { ...i, tags: [...i.tags, tag] } : i))
+        prev.map((i) =>
+          i.id === itemId && !i.tags.includes(tag) ? { ...i, tags: [...i.tags, tag] } : i,
+        ),
       )
       fetchTags()
     },
-    [fetchTags]
+    [fetchTags],
   )
 
   const handleRemoveTag = useCallback(
@@ -561,12 +600,13 @@ function FeedPageContent(): React.ReactElement {
       if (!response.ok) {
         throw new Error('Failed to remove tag')
       }
-      setItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, tags: i.tags.filter((t) => t !== tag) } : i)))
+      setItems((prev) =>
+        prev.map((i) => (i.id === itemId ? { ...i, tags: i.tags.filter((t) => t !== tag) } : i)),
+      )
       fetchTags()
     },
-    [fetchTags]
+    [fetchTags],
   )
-
 
   // Global keyboard shortcuts (when lightbox is NOT open)
   useEffect(() => {
@@ -676,7 +716,15 @@ function FeedPageContent(): React.ReactElement {
 
     window.addEventListener('keydown', handleGlobalKeyDown)
     return () => window.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [triageOpen, isAuthenticated, router, showShortcutsModal, items.length, resolvedTheme, setTheme])
+  }, [
+    triageOpen,
+    isAuthenticated,
+    router,
+    showShortcutsModal,
+    items.length,
+    resolvedTheme,
+    setTheme,
+  ])
 
   function loadMore(): void {
     if (!loading && hasMore) {
@@ -724,9 +772,7 @@ function FeedPageContent(): React.ReactElement {
                 ) : (
                   <CheckCircle2 className="w-5 h-5 text-green-500" />
                 )}
-                <span className="text-sm font-medium text-ink-2">
-                  {syncProgress?.message}
-                </span>
+                <span className="text-sm font-medium text-ink-2">{syncProgress?.message}</span>
                 {syncProgress && syncProgress.total > 0 && (
                   <span className="ml-auto text-xs font-medium bg-inset px-2 py-1 rounded">
                     {syncProgress.current}/{syncProgress.total}
@@ -792,9 +838,7 @@ function FeedPageContent(): React.ReactElement {
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-ink-2 line-clamp-2">
-                        {item.text}
-                      </p>
+                      <p className="text-sm text-ink-2 line-clamp-2">{item.text}</p>
                     </div>
                   </div>
                 ))}
@@ -804,9 +848,7 @@ function FeedPageContent(): React.ReactElement {
                   </p>
                 )}
                 {streamedItems.length === 0 && isSyncing && (
-                  <p className="text-center text-sm text-ink-3 py-8">
-                    Waiting for bookmarks...
-                  </p>
+                  <p className="text-center text-sm text-ink-3 py-8">Waiting for bookmarks...</p>
                 )}
               </div>
             </div>
@@ -850,7 +892,7 @@ function FeedPageContent(): React.ReactElement {
           onTagUpdated={(tag, isPublic, shareUrl) => {
             // Update the local availableTags state with the new share info
             setAvailableTags((prev) =>
-              prev.map((t) => (t.tag === tag ? { ...t, isPublic, shareUrl } : t))
+              prev.map((t) => (t.tag === tag ? { ...t, isPublic, shareUrl } : t)),
             )
           }}
         />

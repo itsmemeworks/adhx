@@ -18,6 +18,8 @@
  * (`/api/media/instagram/thumbnail?id=`), which re-resolves it fresh.
  */
 
+import { makeHostAllowlist } from '@/lib/media/proxy'
+
 // Hosts we trust to serve a Reel thumbnail (SSRF allowlist for the proxy).
 const ALLOWED_IMAGE_HOSTS = ['cdninstagram.com', 'fbcdn.net'] as const
 
@@ -38,19 +40,11 @@ export interface ReelMetadata {
 
 /**
  * Whether a URL points at a trusted Instagram image host. Exact-match or
- * dot-prefixed subdomain (never `.includes()` — that's an SSRF footgun).
+ * dot-prefixed subdomain (never `.includes()` — that's an SSRF footgun), https only.
  */
-export function isAllowedImageUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url)
-    if (parsed.protocol !== 'https:') return false
-    return ALLOWED_IMAGE_HOSTS.some(
-      (host) => parsed.hostname === host || parsed.hostname.endsWith(`.${host}`),
-    )
-  } catch {
-    return false
-  }
-}
+export const isAllowedImageUrl = makeHostAllowlist(
+  ALLOWED_IMAGE_HOSTS.flatMap((host) => [host, `.${host}`]),
+)
 
 /** Validate a Reel id shape without hitting the network. */
 export function isValidReelId(id: string): boolean {
@@ -174,18 +168,20 @@ function getMeta(html: string, property: string): string | undefined {
 }
 
 function decodeHtmlEntities(str: string): string {
-  return str
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&#x27;/gi, "'")
-    .replace(/&#x2F;/gi, '/')
-    // Numeric entities (emoji etc.) — IG captions are full of these.
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => codePoint(parseInt(h, 16)))
-    .replace(/&#(\d+);/g, (_, d) => codePoint(parseInt(d, 10)))
-    // Ampersand last, so it doesn't corrupt the entities above.
-    .replace(/&amp;/g, '&')
+  return (
+    str
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&#x27;/gi, "'")
+      .replace(/&#x2F;/gi, '/')
+      // Numeric entities (emoji etc.) — IG captions are full of these.
+      .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => codePoint(parseInt(h, 16)))
+      .replace(/&#(\d+);/g, (_, d) => codePoint(parseInt(d, 10)))
+      // Ampersand last, so it doesn't corrupt the entities above.
+      .replace(/&amp;/g, '&')
+  )
 }
 
 function codePoint(n: number): string {

@@ -144,15 +144,18 @@ export async function GET() {
         .all()
       for (const l of linkRows) {
         const k = `${l.platform}:${l.bookmarkId}`
-        if (l.imageUrl && (!articleCovers.has(k) || l.linkType === 'article')) articleCovers.set(k, l.imageUrl)
-        if (l.title && (!articleTitles.has(k) || l.linkType === 'article')) articleTitles.set(k, l.title)
+        if (l.imageUrl && (!articleCovers.has(k) || l.linkType === 'article'))
+          articleCovers.set(k, l.imageUrl)
+        if (l.title && (!articleTitles.has(k) || l.linkType === 'article'))
+          articleTitles.set(k, l.title)
       }
     }
 
     /** Real type from the saved bookmark; undefined if the post was never saved. */
     const typeOf = (platform: string, key: string): ContentType | undefined => {
       // Single-format platforms: always video, even without a stored poster.
-      if (platform === 'tiktok' || platform === 'youtube' || platform === 'instagram') return 'video'
+      if (platform === 'tiktok' || platform === 'youtube' || platform === 'instagram')
+        return 'video'
       if (!flags.has(key)) return undefined // preview-only — let the client guess
       const m = mediaKinds.get(key)
       if (m?.video) return 'video'
@@ -168,7 +171,11 @@ export async function GET() {
      * + id, so they work even for preview-only items. Article cards use the
      * saved cover when one exists. Everything else keeps its recorded thumbnail.
      */
-    const thumbOf = (i: (typeof items)[number], key: string, type: ContentType | undefined): string | null => {
+    const thumbOf = (
+      i: (typeof items)[number],
+      key: string,
+      type: ContentType | undefined,
+    ): string | null => {
       if (i.platform === 'tiktok' && i.author && i.bookmarkId) {
         return `/api/media/tiktok/thumbnail?username=${encodeURIComponent(i.author)}&id=${encodeURIComponent(i.bookmarkId)}`
       }

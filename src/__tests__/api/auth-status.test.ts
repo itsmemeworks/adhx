@@ -125,11 +125,12 @@ describe('API: /api/auth/twitter/status', () => {
       // Mock successful token refresh
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({
-          access_token: 'new-access-token',
-          refresh_token: 'new-refresh-token',
-          expires_in: 7200,
-        }),
+        json: () =>
+          Promise.resolve({
+            access_token: 'new-access-token',
+            refresh_token: 'new-refresh-token',
+            expires_in: 7200,
+          }),
       })
 
       const { GET } = await import('@/app/api/auth/twitter/status/route')
@@ -145,7 +146,7 @@ describe('API: /api/auth/twitter/status', () => {
         'https://api.twitter.com/2/oauth2/token',
         expect.objectContaining({
           method: 'POST',
-        })
+        }),
       )
     })
 
@@ -190,14 +191,15 @@ describe('API: /api/auth/twitter/status', () => {
       // Mock Twitter API response for user info
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({
-          data: {
-            id: 'user-123',
-            username: 'testuser',
-            name: 'Test User',
-            profile_image_url: 'https://pbs.twimg.com/profile_images/123_normal.jpg',
-          },
-        }),
+        json: () =>
+          Promise.resolve({
+            data: {
+              id: 'user-123',
+              username: 'testuser',
+              name: 'Test User',
+              profile_image_url: 'https://pbs.twimg.com/profile_images/123_normal.jpg',
+            },
+          }),
       })
 
       const { GET } = await import('@/app/api/auth/twitter/status/route')

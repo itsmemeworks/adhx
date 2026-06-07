@@ -85,7 +85,9 @@ describe('API: /api/media/video/download', () => {
       const response = await GET(createRequest({ author: 'testuser', tweetId: '123456' }))
 
       expect(response.status).toBe(200)
-      expect(response.headers.get('content-disposition')).toBe('attachment; filename="testuser-123456.mp4"')
+      expect(response.headers.get('content-disposition')).toBe(
+        'attachment; filename="testuser-123456.mp4"',
+      )
     })
 
     it('sets Content-Type as video/mp4', async () => {
@@ -147,7 +149,7 @@ describe('API: /api/media/video/download', () => {
       // Should fetch 720p (HD) by default
       expect(mockFetch).toHaveBeenLastCalledWith(
         'https://video.twimg.com/720p.mp4',
-        expect.any(Object)
+        expect.any(Object),
       )
     })
 
@@ -168,7 +170,7 @@ describe('API: /api/media/video/download', () => {
       // Should fetch 1080p (full)
       expect(mockFetch).toHaveBeenLastCalledWith(
         'https://video.twimg.com/1080p.mp4',
-        expect.any(Object)
+        expect.any(Object),
       )
     })
 
@@ -189,7 +191,7 @@ describe('API: /api/media/video/download', () => {
       // Should fetch 360p (preview)
       expect(mockFetch).toHaveBeenLastCalledWith(
         'https://video.twimg.com/360p.mp4',
-        expect.any(Object)
+        expect.any(Object),
       )
     })
   })

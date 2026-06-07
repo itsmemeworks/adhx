@@ -1,31 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { captureException } from '@/lib/sentry'
+import {
+  isAllowedTwitterMediaUrl,
+  isValidTweetAuthor,
+  isValidTweetId,
+  streamingResponse,
+} from '@/lib/media/proxy'
 
 // Simple in-memory cache for video URLs (survives for 1 hour)
 // Cache key includes quality for different variants
 const videoUrlCache = new Map<string, { url: string; timestamp: number }>()
 const CACHE_TTL = 60 * 60 * 1000 // 1 hour
-
-// SSRF Protection: Only allow fetching from trusted Twitter video domains
-const ALLOWED_VIDEO_DOMAINS = [
-  'video.twimg.com',
-  'pbs.twimg.com',
-  'abs.twimg.com',
-]
-
-/**
- * Validate that a URL is from an allowed domain (SSRF protection)
- */
-function isAllowedVideoUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url)
-    return ALLOWED_VIDEO_DOMAINS.some(
-      (domain) => parsed.hostname === domain || parsed.hostname.endsWith(`.${domain}`)
-    )
-  } catch {
-    return false
-  }
-}
 
 interface VideoFormat {
   url: string
@@ -49,6 +34,12 @@ export async function GET(request: NextRequest) {
 
   if (!author || !tweetId) {
     return NextResponse.json({ error: 'Missing author or tweetId' }, { status: 400 })
+  }
+
+  // Sanitise the user-provided params before interpolating them into the
+  // FxTwitter API URL (prevents request-forgery via a crafted author/tweetId).
+  if (!isValidTweetAuthor(author) || !isValidTweetId(tweetId)) {
+    return NextResponse.json({ error: 'Invalid author or tweetId' }, { status: 400 })
   }
 
   const cacheKey = `${author}/${tweetId}/${quality}`
@@ -85,7 +76,9 @@ export async function GET(request: NextRequest) {
       videoUrl = video.url as string // Default to highest quality
 
       if (video.formats && Array.isArray(video.formats)) {
-        const formats = video.formats.filter((f: VideoFormat) => f.container === 'mp4' && f.bitrate) as VideoFormat[]
+        const formats = video.formats.filter(
+          (f: VideoFormat) => f.container === 'mp4' && f.bitrate,
+        ) as VideoFormat[]
 
         if (formats.length > 0) {
           // Sort by bitrate ascending
@@ -134,7 +127,7 @@ export async function GET(request: NextRequest) {
     }
 
     // SSRF Protection: Validate video URL is from trusted domain before fetching
-    if (!isAllowedVideoUrl(videoUrl)) {
+    if (!isAllowedTwitterMediaUrl(videoUrl)) {
       console.error(`SSRF blocked: Video URL from untrusted domain: ${videoUrl}`)
       return NextResponse.json({ error: 'Invalid video source' }, { status: 403 })
     }
@@ -145,7 +138,7 @@ export async function GET(request: NextRequest) {
     const videoResponse = await fetch(videoUrl, {
       headers: {
         'User-Agent': 'ADHX/1.0',
-        ...(rangeHeader && { 'Range': rangeHeader }),
+        ...(rangeHeader && { Range: rangeHeader }),
       },
       // Large file download — if the upstream CDN hangs, don't tie up the proxy forever
       signal: AbortSignal.timeout(30_000),
@@ -155,33 +148,11 @@ export async function GET(request: NextRequest) {
       throw new Error(`Video fetch failed with status ${videoResponse.status}`)
     }
 
-    // Build response headers
-    const responseHeaders: Record<string, string> = {
-      'Content-Type': videoResponse.headers.get('content-type') || 'video/mp4',
-      'Accept-Ranges': 'bytes',
-      'Cache-Control': 'public, max-age=3600',
-    }
-
-    const contentLength = videoResponse.headers.get('content-length')
-    if (contentLength) {
-      responseHeaders['Content-Length'] = contentLength
-    }
-
-    const contentRange = videoResponse.headers.get('content-range')
-    if (contentRange) {
-      responseHeaders['Content-Range'] = contentRange
-    }
-
-    return new Response(videoResponse.body, {
-      status: videoResponse.status,
-      headers: responseHeaders,
-    })
+    // Stream the upstream response through with range-aware headers
+    return streamingResponse(videoResponse)
   } catch (error) {
     console.error('Error fetching video:', error)
     captureException(error, { endpoint: '/api/media/video', author, tweetId })
-    return NextResponse.json(
-      { error: 'Failed to fetch video' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch video' }, { status: 500 })
   }
 }

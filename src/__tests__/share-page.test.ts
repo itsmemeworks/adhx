@@ -10,24 +10,38 @@ import { parseShareUrl } from '@/lib/utils/parse-share-url'
 
 describe('parseShareUrl — X / Twitter', () => {
   it('parses x.com and twitter.com', () => {
-    expect(parseShareUrl('https://x.com/elonmusk/status/1234567890')).toEqual({ path: '/elonmusk/status/1234567890' })
-    expect(parseShareUrl('https://twitter.com/jack/status/9876543210')).toEqual({ path: '/jack/status/9876543210' })
+    expect(parseShareUrl('https://x.com/elonmusk/status/1234567890')).toEqual({
+      path: '/elonmusk/status/1234567890',
+    })
+    expect(parseShareUrl('https://twitter.com/jack/status/9876543210')).toEqual({
+      path: '/jack/status/9876543210',
+    })
   })
 
   it('handles no-protocol, www, query params, trailing segments, whitespace, case', () => {
     expect(parseShareUrl('x.com/user/status/111')).toEqual({ path: '/user/status/111' })
     expect(parseShareUrl('https://www.x.com/user/status/111')).toEqual({ path: '/user/status/111' })
-    expect(parseShareUrl('https://x.com/user/status/111?s=20&t=abc')).toEqual({ path: '/user/status/111' })
-    expect(parseShareUrl('https://x.com/user/status/111/photo/1')).toEqual({ path: '/user/status/111' })
-    expect(parseShareUrl('  https://x.com/my_user_name/status/111  ')).toEqual({ path: '/my_user_name/status/111' })
+    expect(parseShareUrl('https://x.com/user/status/111?s=20&t=abc')).toEqual({
+      path: '/user/status/111',
+    })
+    expect(parseShareUrl('https://x.com/user/status/111/photo/1')).toEqual({
+      path: '/user/status/111',
+    })
+    expect(parseShareUrl('  https://x.com/my_user_name/status/111  ')).toEqual({
+      path: '/my_user_name/status/111',
+    })
     expect(parseShareUrl('https://X.COM/user/status/111')).toEqual({ path: '/user/status/111' })
   })
 })
 
 describe('parseShareUrl — Instagram', () => {
   it('maps reels/reel/p to /reels/{id}', () => {
-    expect(parseShareUrl('https://www.instagram.com/reels/DXVsqQ7CSXw')).toEqual({ path: '/reels/DXVsqQ7CSXw' })
-    expect(parseShareUrl('https://instagram.com/reel/DXVsqQ7CSXw/')).toEqual({ path: '/reels/DXVsqQ7CSXw' })
+    expect(parseShareUrl('https://www.instagram.com/reels/DXVsqQ7CSXw')).toEqual({
+      path: '/reels/DXVsqQ7CSXw',
+    })
+    expect(parseShareUrl('https://instagram.com/reel/DXVsqQ7CSXw/')).toEqual({
+      path: '/reels/DXVsqQ7CSXw',
+    })
   })
 })
 
@@ -41,9 +55,13 @@ describe('parseShareUrl — TikTok', () => {
 
 describe('parseShareUrl — YouTube', () => {
   it('maps shorts / youtu.be / watch to /shorts/{id}', () => {
-    expect(parseShareUrl('https://youtube.com/shorts/Y9aytLYBajw?si=abc')).toEqual({ path: '/shorts/Y9aytLYBajw' })
+    expect(parseShareUrl('https://youtube.com/shorts/Y9aytLYBajw?si=abc')).toEqual({
+      path: '/shorts/Y9aytLYBajw',
+    })
     expect(parseShareUrl('https://youtu.be/Y9aytLYBajw')).toEqual({ path: '/shorts/Y9aytLYBajw' })
-    expect(parseShareUrl('https://www.youtube.com/watch?v=Y9aytLYBajw&t=5s')).toEqual({ path: '/shorts/Y9aytLYBajw' })
+    expect(parseShareUrl('https://www.youtube.com/watch?v=Y9aytLYBajw&t=5s')).toEqual({
+      path: '/shorts/Y9aytLYBajw',
+    })
   })
 })
 

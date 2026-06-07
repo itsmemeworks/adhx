@@ -107,7 +107,9 @@ function SCard({
       )}
     >
       {(title || IconCmp || right) && (
-        <div className={cn('flex items-center gap-3 px-5 pt-[18px]', children ? 'pb-0' : 'pb-[18px]')}>
+        <div
+          className={cn('flex items-center gap-3 px-5 pt-[18px]', children ? 'pb-0' : 'pb-[18px]')}
+        >
           {IconCmp && (
             <div
               className={cn(
@@ -119,7 +121,12 @@ function SCard({
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <div className={cn('font-serif font-semibold text-base', danger ? 'text-red-600' : 'text-ink')}>
+            <div
+              className={cn(
+                'font-serif font-semibold text-base',
+                danger ? 'text-red-600' : 'text-ink',
+              )}
+            >
               {title}
             </div>
             {sub && <div className="text-[13px] text-ink-3 mt-0.5">{sub}</div>}
@@ -150,7 +157,10 @@ function SettingsLoadingSkeleton() {
         </div>
         <div className="flex flex-col gap-5">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-surface border border-hairline rounded-card p-6 animate-pulse">
+            <div
+              key={i}
+              className="bg-surface border border-hairline rounded-card p-6 animate-pulse"
+            >
               <div className="h-6 bg-inset rounded w-1/3 mb-4" />
               <div className="h-20 bg-inset rounded-card" />
             </div>
@@ -179,8 +189,8 @@ function ShortcutCard() {
     return (
       <SCard icon={Smartphone} title="iOS Shortcut" sub="Save posts from the share sheet">
         <p className="text-[13.5px] text-ink-2 leading-relaxed mb-3">
-          Hit share on any post and it opens in ADHX — a clean preview with full media, ready to save to your
-          collection or send to a friend.
+          Hit share on any post and it opens in ADHX — a clean preview with full media, ready to
+          save to your collection or send to a friend.
         </p>
         <a
           href={SHORTCUT_URL}
@@ -192,7 +202,9 @@ function ShortcutCard() {
           Get the Shortcut
         </a>
         <div className="mt-4">
-          <p className="text-[12.5px] font-bold tracking-wide uppercase text-ink-3 mb-2">How it works</p>
+          <p className="text-[12.5px] font-bold tracking-wide uppercase text-ink-3 mb-2">
+            How it works
+          </p>
           <ol className="list-decimal list-inside text-[13px] text-ink-3 space-y-1.5 ml-1">
             <li>See a post you want to share? Tap the share button</li>
             <li>Select &quot;ADHX Preview&quot; from your shortcuts</li>
@@ -206,8 +218,8 @@ function ShortcutCard() {
   return (
     <SCard icon={Monitor} title="Bookmarklet" sub="Save posts with one click">
       <p className="text-[13.5px] text-ink-2 leading-relaxed mb-[13px]">
-        Drag this to your bookmarks bar, or copy it. Click it on any X, Instagram, TikTok or YouTube page to open it in
-        ADHX.
+        Drag this to your bookmarks bar, or copy it. Click it on any X, Instagram, TikTok or YouTube
+        page to open it in ADHX.
       </p>
       <div className="px-[15px] py-[13px] bg-inset rounded-[11px] font-mono text-xs text-ink-2 leading-relaxed break-all select-all mb-[13px]">
         {BOOKMARKLET_CODE}
@@ -355,7 +367,12 @@ function SettingsPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [showSyncModal, setShowSyncModal] = useState(false)
   const [stats, setStats] = useState<Stats>({ total: 0, unread: 0, manual: 0 })
-  const [cooldown, setCooldown] = useState<CooldownStatus>({ canSync: true, cooldownRemaining: 0, lastSyncAt: null, fetchedAt: Date.now() })
+  const [cooldown, setCooldown] = useState<CooldownStatus>({
+    canSync: true,
+    cooldownRemaining: 0,
+    lastSyncAt: null,
+    fetchedAt: Date.now(),
+  })
   const [displayedCooldown, setDisplayedCooldown] = useState(0)
 
   // Sync log state
@@ -593,7 +610,10 @@ function SettingsPage() {
     try {
       const response = await fetch('/api/account/clear', { method: 'POST' })
       if (response.ok) {
-        setMessage({ type: 'success', text: 'All data cleared. Your Twitter connection is preserved.' })
+        setMessage({
+          type: 'success',
+          text: 'All data cleared. Your Twitter connection is preserved.',
+        })
         setShowClearDataModal(false)
         setConfirmText('')
         // Refresh local data
@@ -627,7 +647,11 @@ function SettingsPage() {
     }
   }
 
-  const themeOptions: { value: 'light' | 'dark' | 'system'; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  const themeOptions: {
+    value: 'light' | 'dark' | 'system'
+    label: string
+    icon: React.ComponentType<{ className?: string }>
+  }[] = [
     { value: 'light', label: 'Light', icon: Sun },
     { value: 'dark', label: 'Dark', icon: Moon },
     { value: 'system', label: 'System', icon: Monitor },
@@ -645,8 +669,12 @@ function SettingsPage() {
       <div className="max-w-[760px] mx-auto px-4 sm:px-8 py-8 sm:py-10 flex flex-col gap-5">
         {/* Header */}
         <div>
-          <h1 className="font-serif text-[30px] sm:text-[38px] font-semibold tracking-tight text-ink mb-1">Settings</h1>
-          <p className="text-[15px] text-ink-2">Manage your connection, reading and sync preferences.</p>
+          <h1 className="font-serif text-[30px] sm:text-[38px] font-semibold tracking-tight text-ink mb-1">
+            Settings
+          </h1>
+          <p className="text-[15px] text-ink-2">
+            Manage your connection, reading and sync preferences.
+          </p>
         </div>
 
         {/* Streak / gamification */}
@@ -705,7 +733,9 @@ function SettingsPage() {
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-mono font-bold text-base text-ink">@{authStatus.user?.username}</p>
+                  <p className="font-mono font-bold text-base text-ink">
+                    @{authStatus.user?.username}
+                  </p>
                   <p className="text-[13px] font-semibold text-green-700 flex items-center gap-1.5 mt-0.5">
                     <CheckCircle className="h-3.5 w-3.5" /> Connected
                   </p>
@@ -793,7 +823,11 @@ function SettingsPage() {
 
         {/* Sync Bookmarks Card */}
         {authStatus?.authenticated && (
-          <SCard icon={RefreshCw} title="Sync Bookmarks" sub="Pull your most recent bookmarks from X">
+          <SCard
+            icon={RefreshCw}
+            title="Sync Bookmarks"
+            sub="Pull your most recent bookmarks from X"
+          >
             <button
               onClick={() => cooldown.canSync && setShowSyncModal(true)}
               disabled={!cooldown.canSync}
@@ -805,7 +839,9 @@ function SettingsPage() {
               )}
             >
               <RefreshCw className="h-[18px] w-[18px]" />
-              {cooldown.canSync ? 'Sync Bookmarks' : `Available in ${formatCooldown(displayedCooldown)}`}
+              {cooldown.canSync
+                ? 'Sync Bookmarks'
+                : `Available in ${formatCooldown(displayedCooldown)}`}
             </button>
 
             {!cooldown.canSync && (
@@ -829,7 +865,9 @@ function SettingsPage() {
             right={
               latestLog ? (
                 <div className="text-right">
-                  <div className="font-mono font-bold text-[13.5px] text-ink">{getTimeSince(latestLog.startedAt)}</div>
+                  <div className="font-mono font-bold text-[13.5px] text-ink">
+                    {getTimeSince(latestLog.startedAt)}
+                  </div>
                   <div className="text-xs text-ink-3">Last sync</div>
                 </div>
               ) : undefined
@@ -866,12 +904,15 @@ function SettingsPage() {
                           {formatDate(log.startedAt)}
                         </div>
                         <div className="text-xs text-ink-3">
-                          {log.triggerType === 'scheduled' ? 'Auto' : 'Manual'} · {formatDuration(log.startedAt, log.completedAt)}
+                          {log.triggerType === 'scheduled' ? 'Auto' : 'Manual'} ·{' '}
+                          {formatDuration(log.startedAt, log.completedAt)}
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0">
                         {log.newBookmarks > 0 ? (
-                          <div className="font-mono font-bold text-[13.5px] text-green-700">+{log.newBookmarks}</div>
+                          <div className="font-mono font-bold text-[13.5px] text-green-700">
+                            +{log.newBookmarks}
+                          </div>
                         ) : (
                           <div className="font-mono text-[13.5px] text-ink-3">0 new</div>
                         )}
@@ -888,9 +929,13 @@ function SettingsPage() {
                     className="w-full mt-3 py-2 text-sm font-medium text-ink-3 hover:text-ink flex items-center justify-center gap-1"
                   >
                     {showAllLogs ? (
-                      <>Show Less <ChevronUp className="h-4 w-4" /></>
+                      <>
+                        Show Less <ChevronUp className="h-4 w-4" />
+                      </>
                     ) : (
-                      <>Show More <ChevronDown className="h-4 w-4" /></>
+                      <>
+                        Show More <ChevronDown className="h-4 w-4" />
+                      </>
                     )}
                   </button>
                 )}
@@ -924,7 +969,9 @@ function SettingsPage() {
               onClick={() => updatePreference('bionicReading', !preferences.bionicReading)}
               className={cn(
                 'relative inline-flex h-6 w-[42px] flex-shrink-0 cursor-pointer rounded-full p-[3px] transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2',
-                preferences.bionicReading ? 'bg-clay-grad justify-end' : 'bg-surface border border-hairline justify-start',
+                preferences.bionicReading
+                  ? 'bg-clay-grad justify-end'
+                  : 'bg-surface border border-hairline justify-start',
               )}
               role="switch"
               aria-checked={preferences.bionicReading}
@@ -939,7 +986,9 @@ function SettingsPage() {
             Body Font
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {(Object.entries(FONT_OPTIONS) as [BodyFont, { name: string; description: string }][]).map(([key, { name, description }]) => {
+            {(
+              Object.entries(FONT_OPTIONS) as [BodyFont, { name: string; description: string }][]
+            ).map(([key, { name, description }]) => {
               const fontVar = `var(--font-${key})`
               const selected = preferences.bodyFont === key
               return (
@@ -948,7 +997,9 @@ function SettingsPage() {
                   onClick={() => updatePreference('bodyFont', key)}
                   className={cn(
                     'px-[15px] py-[13px] min-h-[44px] rounded-[12px] text-left border-[1.5px] transition-all',
-                    selected ? 'border-clay bg-clay/[0.07]' : 'border-hairline bg-surface hover:border-ink-3',
+                    selected
+                      ? 'border-clay bg-clay/[0.07]'
+                      : 'border-hairline bg-surface hover:border-ink-3',
                   )}
                 >
                   <p className="font-bold text-[14.5px] text-ink" style={{ fontFamily: fontVar }}>
@@ -1013,11 +1064,18 @@ function SettingsPage() {
         {!authStatus?.authenticated && !loading && (
           <SCard>
             <div className="px-5 py-[18px]">
-              <h2 className="font-serif text-base font-semibold text-ink mb-4">Setup Instructions</h2>
+              <h2 className="font-serif text-base font-semibold text-ink mb-4">
+                Setup Instructions
+              </h2>
               <ol className="list-decimal list-inside space-y-3 text-sm text-ink-2">
                 <li>
                   Go to{' '}
-                  <a href="https://developer.x.com/en/portal/dashboard" target="_blank" rel="noopener noreferrer" className="text-clay hover:underline">
+                  <a
+                    href="https://developer.x.com/en/portal/dashboard"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-clay hover:underline"
+                  >
                     X Developer Portal
                   </a>
                 </li>
@@ -1031,9 +1089,11 @@ function SettingsPage() {
                 </li>
                 <li>Copy Client ID and Client Secret</li>
                 <li>
-                  Add to <code className="bg-inset px-2 py-0.5 rounded text-xs font-mono">.env.local</code>:
+                  Add to{' '}
+                  <code className="bg-inset px-2 py-0.5 rounded text-xs font-mono">.env.local</code>
+                  :
                   <pre className="mt-2 bg-inset p-3 rounded-card text-xs overflow-x-auto font-mono text-ink-2">
-{`TWITTER_CLIENT_ID=your_client_id
+                    {`TWITTER_CLIENT_ID=your_client_id
 TWITTER_CLIENT_SECRET=your_client_secret`}
                   </pre>
                 </li>
@@ -1063,7 +1123,10 @@ TWITTER_CLIENT_SECRET=your_client_secret`}
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => { setShowClearDataModal(false); setConfirmText('') }}
+            onClick={() => {
+              setShowClearDataModal(false)
+              setConfirmText('')
+            }}
           />
           <div className="relative bg-surface border border-hairline rounded-card p-6 max-w-md w-full shadow-m-sm">
             <div className="flex items-center gap-3 mb-4">
@@ -1083,7 +1146,8 @@ TWITTER_CLIENT_SECRET=your_client_secret`}
               <p className="text-sm text-green-700">✓ Your X connection will be preserved</p>
               <div>
                 <label className="block text-sm font-medium text-ink-2 mb-2">
-                  Type <span className="font-mono bg-inset px-1.5 py-0.5 rounded">CLEAR</span> to confirm:
+                  Type <span className="font-mono bg-inset px-1.5 py-0.5 rounded">CLEAR</span> to
+                  confirm:
                 </label>
                 <input
                   ref={clearDataInputRef}
@@ -1097,7 +1161,10 @@ TWITTER_CLIENT_SECRET=your_client_secret`}
             </div>
             <div className="flex gap-3">
               <button
-                onClick={() => { setShowClearDataModal(false); setConfirmText('') }}
+                onClick={() => {
+                  setShowClearDataModal(false)
+                  setConfirmText('')
+                }}
                 disabled={dangerActionLoading}
                 className="flex-1 px-4 py-2.5 min-h-[44px] rounded-[11px] font-medium text-ink-2 bg-inset hover:bg-hairline transition-colors disabled:opacity-50"
               >
@@ -1125,7 +1192,10 @@ TWITTER_CLIENT_SECRET=your_client_secret`}
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => { setShowDeleteAccountModal(false); setConfirmText('') }}
+            onClick={() => {
+              setShowDeleteAccountModal(false)
+              setConfirmText('')
+            }}
           />
           <div className="relative bg-surface rounded-card p-6 max-w-md w-full shadow-m-sm border border-red-500/40">
             <div className="flex items-center gap-3 mb-4">
@@ -1149,7 +1219,8 @@ TWITTER_CLIENT_SECRET=your_client_secret`}
               </ul>
               <div>
                 <label className="block text-sm font-medium text-ink-2 mb-2">
-                  Type <span className="font-mono bg-inset px-1.5 py-0.5 rounded">DELETE</span> to confirm:
+                  Type <span className="font-mono bg-inset px-1.5 py-0.5 rounded">DELETE</span> to
+                  confirm:
                 </label>
                 <input
                   type="text"
@@ -1162,7 +1233,10 @@ TWITTER_CLIENT_SECRET=your_client_secret`}
             </div>
             <div className="flex gap-3">
               <button
-                onClick={() => { setShowDeleteAccountModal(false); setConfirmText('') }}
+                onClick={() => {
+                  setShowDeleteAccountModal(false)
+                  setConfirmText('')
+                }}
                 disabled={dangerActionLoading}
                 className="flex-1 px-4 py-2.5 min-h-[44px] rounded-[11px] font-medium text-ink-2 bg-inset hover:bg-hairline transition-colors disabled:opacity-50"
               >

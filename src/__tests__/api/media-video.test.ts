@@ -92,7 +92,7 @@ describe('API: /api/media/video', () => {
       expect(response.status).toBe(200)
       expect(mockFetch).toHaveBeenCalledWith(
         'https://api.fxtwitter.com/testuser/status/123456',
-        expect.any(Object)
+        expect.any(Object),
       )
     })
 
@@ -130,7 +130,7 @@ describe('API: /api/media/video', () => {
       // Second fetch should be for 360p video
       expect(mockFetch).toHaveBeenLastCalledWith(
         'https://video.twimg.com/360p.mp4',
-        expect.any(Object)
+        expect.any(Object),
       )
     })
 
@@ -152,7 +152,7 @@ describe('API: /api/media/video', () => {
       // Second fetch should be for 720p video
       expect(mockFetch).toHaveBeenLastCalledWith(
         'https://video.twimg.com/720p.mp4',
-        expect.any(Object)
+        expect.any(Object),
       )
     })
 
@@ -174,7 +174,7 @@ describe('API: /api/media/video', () => {
       // Second fetch should be for 1080p video
       expect(mockFetch).toHaveBeenLastCalledWith(
         'https://video.twimg.com/1080p.mp4',
-        expect.any(Object)
+        expect.any(Object),
       )
     })
   })
@@ -341,7 +341,7 @@ describe('API: /api/media/video', () => {
       expect(mockFetch).toHaveBeenCalledTimes(1)
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('video.twimg.com'),
-        expect.any(Object)
+        expect.any(Object),
       )
     })
   })

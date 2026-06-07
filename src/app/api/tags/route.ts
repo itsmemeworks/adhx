@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { bookmarkTags, tagShares, oauthTokens } from '@/lib/db/schema'
 import { eq, sql, and } from 'drizzle-orm'
-import { getCurrentUserId } from '@/lib/auth/session'
+import { withAuth } from '@/lib/api/with-auth'
 
 // Get username for a user (for constructing friendly share URLs)
 async function getUsername(userId: string): Promise<string | null> {
@@ -27,12 +27,7 @@ function generateShareCode(): string {
 }
 
 // GET /api/tags - List all unique tags with bookmark counts and share info
-export async function GET() {
-  const userId = await getCurrentUserId()
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
+export const GET = withAuth(async (_request, userId) => {
   // Get username for constructing friendly share URLs
   const username = await getUsername(userId)
 
@@ -48,10 +43,7 @@ export async function GET() {
     .orderBy(sql`COUNT(*) DESC`)
 
   // Get all tag shares for this user
-  const shares = await db
-    .select()
-    .from(tagShares)
-    .where(eq(tagShares.userId, userId))
+  const shares = await db.select().from(tagShares).where(eq(tagShares.userId, userId))
 
   // Merge tags with share info, using friendly URLs
   const tagsWithShares = tags.map((t) => {
@@ -66,15 +58,10 @@ export async function GET() {
   })
 
   return NextResponse.json({ tags: tagsWithShares })
-}
+})
 
 // PATCH /api/tags - Toggle public sharing for a tag
-export async function PATCH(request: NextRequest) {
-  const userId = await getCurrentUserId()
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
+export const PATCH = withAuth(async (request, userId) => {
   const { tag, isPublic } = await request.json()
   if (!tag || typeof isPublic !== 'boolean') {
     return NextResponse.json({ error: 'Tag and isPublic are required' }, { status: 400 })
@@ -113,35 +100,22 @@ export async function PATCH(request: NextRequest) {
 
   // Return friendly URL format: /t/{username}/{tag}
   return NextResponse.json({ success: true, shareUrl: `/t/${username}/${tag}`, isPublic })
-}
+})
 
 // DELETE /api/tags - Delete a tag from all bookmarks
-export async function DELETE(request: NextRequest) {
-  const userId = await getCurrentUserId()
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
+export const DELETE = withAuth(async (request, userId) => {
   const { tag } = await request.json()
   if (!tag) {
     return NextResponse.json({ error: 'Tag is required' }, { status: 400 })
   }
 
   // Delete the tag from all user's bookmarks
-  await db.delete(bookmarkTags).where(
-    and(
-      eq(bookmarkTags.userId, userId),
-      eq(bookmarkTags.tag, tag)
-    )
-  )
+  await db
+    .delete(bookmarkTags)
+    .where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.tag, tag)))
 
   // Also delete any share settings for this tag
-  await db.delete(tagShares).where(
-    and(
-      eq(tagShares.userId, userId),
-      eq(tagShares.tag, tag)
-    )
-  )
+  await db.delete(tagShares).where(and(eq(tagShares.userId, userId), eq(tagShares.tag, tag)))
 
   return NextResponse.json({ success: true })
-}
+})

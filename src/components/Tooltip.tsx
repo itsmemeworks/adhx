@@ -9,7 +9,12 @@ interface TooltipProps {
   placement?: 'right' | 'left'
 }
 
-export function Tooltip({ content, children, disabled = false, placement = 'right' }: TooltipProps) {
+export function Tooltip({
+  content,
+  children,
+  disabled = false,
+  placement = 'right',
+}: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false)
   const [position, setPosition] = useState({ x: 0, y: 0 })
 

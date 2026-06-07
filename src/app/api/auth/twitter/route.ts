@@ -17,10 +17,7 @@ const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:300
 // Supports ?returnUrl=/path to redirect after login
 export async function GET(request: NextRequest) {
   if (!CLIENT_ID) {
-    return NextResponse.json(
-      { error: 'Twitter client ID not configured' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Twitter client ID not configured' }, { status: 500 })
   }
 
   // Generate PKCE values

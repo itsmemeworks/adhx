@@ -143,7 +143,11 @@ export function SyncProgress({ isOpen, onClose, fetchAll = false, onComplete }: 
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold">
-            {state === 'complete' ? 'Sync Complete!' : state === 'error' ? 'Sync Failed' : 'Syncing Bookmarks'}
+            {state === 'complete'
+              ? 'Sync Complete!'
+              : state === 'error'
+                ? 'Sync Failed'
+                : 'Syncing Bookmarks'}
           </h2>
           {(state === 'complete' || state === 'error') && (
             <button onClick={onClose} className="p-1 hover:bg-secondary rounded">
@@ -169,8 +173,12 @@ export function SyncProgress({ isOpen, onClose, fetchAll = false, onComplete }: 
             <div className="h-2 bg-secondary rounded-full overflow-hidden">
               <div
                 className={cn(
-                  "h-full transition-all duration-300",
-                  state === 'error' ? 'bg-red-500' : state === 'complete' ? 'bg-green-500' : 'bg-primary'
+                  'h-full transition-all duration-300',
+                  state === 'error'
+                    ? 'bg-red-500'
+                    : state === 'complete'
+                      ? 'bg-green-500'
+                      : 'bg-primary',
                 )}
                 style={{ width: `${progress}%` }}
               />
@@ -180,21 +188,15 @@ export function SyncProgress({ isOpen, onClose, fetchAll = false, onComplete }: 
           {/* Stats Grid */}
           <div className="grid grid-cols-3 gap-4 mb-6">
             <div className="text-center p-3 bg-secondary/50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">
-                {newBookmarks}
-              </div>
+              <div className="text-2xl font-bold text-green-600">{newBookmarks}</div>
               <div className="text-xs text-muted-foreground">New</div>
             </div>
             <div className="text-center p-3 bg-secondary/50 rounded-lg">
-              <div className="text-2xl font-bold text-muted-foreground">
-                {duplicates}
-              </div>
+              <div className="text-2xl font-bold text-muted-foreground">{duplicates}</div>
               <div className="text-xs text-muted-foreground">Duplicates</div>
             </div>
             <div className="text-center p-3 bg-secondary/50 rounded-lg">
-              <div className="text-2xl font-bold">
-                {totalTweets}
-              </div>
+              <div className="text-2xl font-bold">{totalTweets}</div>
               <div className="text-xs text-muted-foreground">Total</div>
             </div>
           </div>
@@ -206,9 +208,7 @@ export function SyncProgress({ isOpen, onClose, fetchAll = false, onComplete }: 
                 <Loader2 className="w-3 h-3 animate-spin text-primary" />
                 <span className="text-sm font-medium">@{currentTweet.author}</span>
               </div>
-              <p className="text-xs text-muted-foreground line-clamp-2">
-                {currentTweet.text}
-              </p>
+              <p className="text-xs text-muted-foreground line-clamp-2">{currentTweet.text}</p>
             </div>
           )}
 
@@ -216,9 +216,7 @@ export function SyncProgress({ isOpen, onClose, fetchAll = false, onComplete }: 
           {state === 'complete' && (
             <div className="flex items-center justify-center gap-2 text-green-600 mb-4">
               <CheckCircle className="w-8 h-8" />
-              <span className="font-medium">
-                {stats?.new || newBookmarks} new bookmarks added!
-              </span>
+              <span className="font-medium">{stats?.new || newBookmarks} new bookmarks added!</span>
             </div>
           )}
 

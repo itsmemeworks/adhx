@@ -11,7 +11,16 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Monitor, Tablet, Smartphone, ExternalLink, ChevronRight, Share2, Eye, Loader2 } from 'lucide-react'
+import {
+  Monitor,
+  Tablet,
+  Smartphone,
+  ExternalLink,
+  ChevronRight,
+  Share2,
+  Eye,
+  Loader2,
+} from 'lucide-react'
 
 // OG tags interface
 interface OgTags {
@@ -30,27 +39,111 @@ interface OgTags {
 
 // Fixture metadata matching the test fixtures
 const fixtures = [
-  { slug: 'text-quoting-video', author: 'swyx', tweetId: '2011861139689513314', type: 'Quote (video)', description: 'Text tweet quoting a video tweet' },
-  { slug: 'long-text-2-images', author: 'BasilTheGreat', tweetId: '2012044480556208542', type: 'Photo', description: 'Long text with 2 images' },
-  { slug: 'long-text-1-image', author: 'maverickecom', tweetId: '2011489837094683034', type: 'Photo', description: 'Long text with 1 image' },
-  { slug: 'quote-of-image-tweet', author: 'Nate_Google_', tweetId: '2011791917122547826', type: 'Quote (image)', description: 'Quote of an image tweet' },
-  { slug: 'quote-of-text-tweet', author: 'elonmusk', tweetId: '2012040892719169884', type: 'Quote (text)', description: 'Quote of a text-only tweet' },
-  { slug: 'video-tweet', author: 'Kekius_Sage', tweetId: '2011872260118716688', type: 'Video', description: 'Video tweet with thumbnail' },
-  { slug: 'long-text-with-quote', author: '_The_Prophet__', tweetId: '2011834234642841806', type: 'Quote + Image', description: 'Long text quoting image tweet' },
-  { slug: 'article-no-header', author: 'aliniikk', tweetId: '2009347948816335031', type: 'X Article', description: 'X Article without cover image' },
-  { slug: 'article-with-media', author: 'NoahRyanCo', tweetId: '2008957369212866843', type: 'X Article', description: 'X Article with cover image + content' },
-  { slug: 'plain-text', author: 'TheCinesthetic', tweetId: '2010184900599583070', type: 'Text', description: 'Plain text tweet (no media)' },
-  { slug: '4-images', author: 'iamgdsa', tweetId: '2010782484728873387', type: 'Photo Grid', description: '4 images in grid layout' },
-  { slug: 'emoji-tweet', author: 'moonpay', tweetId: '2009626024968118554', type: 'Video + Emoji', description: 'Emoji-heavy tweet with video' },
-  { slug: 'youtube-link', author: 'skalskip92', tweetId: '1996677567642996772', type: 'External Link', description: 'Tweet with YouTube link' },
-  { slug: 'reply-tweet', author: 'grok', tweetId: '2011596457824923855', type: 'Reply', description: 'Reply tweet context' },
+  {
+    slug: 'text-quoting-video',
+    author: 'swyx',
+    tweetId: '2011861139689513314',
+    type: 'Quote (video)',
+    description: 'Text tweet quoting a video tweet',
+  },
+  {
+    slug: 'long-text-2-images',
+    author: 'BasilTheGreat',
+    tweetId: '2012044480556208542',
+    type: 'Photo',
+    description: 'Long text with 2 images',
+  },
+  {
+    slug: 'long-text-1-image',
+    author: 'maverickecom',
+    tweetId: '2011489837094683034',
+    type: 'Photo',
+    description: 'Long text with 1 image',
+  },
+  {
+    slug: 'quote-of-image-tweet',
+    author: 'Nate_Google_',
+    tweetId: '2011791917122547826',
+    type: 'Quote (image)',
+    description: 'Quote of an image tweet',
+  },
+  {
+    slug: 'quote-of-text-tweet',
+    author: 'elonmusk',
+    tweetId: '2012040892719169884',
+    type: 'Quote (text)',
+    description: 'Quote of a text-only tweet',
+  },
+  {
+    slug: 'video-tweet',
+    author: 'Kekius_Sage',
+    tweetId: '2011872260118716688',
+    type: 'Video',
+    description: 'Video tweet with thumbnail',
+  },
+  {
+    slug: 'long-text-with-quote',
+    author: '_The_Prophet__',
+    tweetId: '2011834234642841806',
+    type: 'Quote + Image',
+    description: 'Long text quoting image tweet',
+  },
+  {
+    slug: 'article-no-header',
+    author: 'aliniikk',
+    tweetId: '2009347948816335031',
+    type: 'X Article',
+    description: 'X Article without cover image',
+  },
+  {
+    slug: 'article-with-media',
+    author: 'NoahRyanCo',
+    tweetId: '2008957369212866843',
+    type: 'X Article',
+    description: 'X Article with cover image + content',
+  },
+  {
+    slug: 'plain-text',
+    author: 'TheCinesthetic',
+    tweetId: '2010184900599583070',
+    type: 'Text',
+    description: 'Plain text tweet (no media)',
+  },
+  {
+    slug: '4-images',
+    author: 'iamgdsa',
+    tweetId: '2010782484728873387',
+    type: 'Photo Grid',
+    description: '4 images in grid layout',
+  },
+  {
+    slug: 'emoji-tweet',
+    author: 'moonpay',
+    tweetId: '2009626024968118554',
+    type: 'Video + Emoji',
+    description: 'Emoji-heavy tweet with video',
+  },
+  {
+    slug: 'youtube-link',
+    author: 'skalskip92',
+    tweetId: '1996677567642996772',
+    type: 'External Link',
+    description: 'Tweet with YouTube link',
+  },
+  {
+    slug: 'reply-tweet',
+    author: 'grok',
+    tweetId: '2011596457824923855',
+    type: 'Reply',
+    description: 'Reply tweet context',
+  },
 ]
 
 const typeColors: Record<string, string> = {
-  'Text': 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
-  'Photo': 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+  Text: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+  Photo: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
   'Photo Grid': 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
-  'Video': 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',
+  Video: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',
   'Video + Emoji': 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',
   'X Article': 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
   'Quote (video)': 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
@@ -58,7 +151,7 @@ const typeColors: Record<string, string> = {
   'Quote (text)': 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
   'Quote + Image': 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
   'External Link': 'bg-pink-100 text-pink-700 dark:bg-pink-900 dark:text-pink-300',
-  'Reply': 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900 dark:text-cyan-300',
+  Reply: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900 dark:text-cyan-300',
 }
 
 // Device frame sizes
@@ -71,14 +164,14 @@ const devices = [
 type ViewMode = 'devices' | 'og'
 
 export default function DevFixturesPage() {
-  const [selectedFixture, setSelectedFixture] = useState<typeof fixtures[0] | null>(null)
+  const [selectedFixture, setSelectedFixture] = useState<(typeof fixtures)[0] | null>(null)
   const [loadedUrl, setLoadedUrl] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('devices')
   const [ogTags, setOgTags] = useState<OgTags | null>(null)
   const [ogLoading, setOgLoading] = useState(false)
   const [ogError, setOgError] = useState<string | null>(null)
 
-  const handleSelectFixture = (fixture: typeof fixtures[0]) => {
+  const handleSelectFixture = (fixture: (typeof fixtures)[0]) => {
     setSelectedFixture(fixture)
     const path = `/${fixture.author}/status/${fixture.tweetId}`
     setLoadedUrl(path)
@@ -140,7 +233,9 @@ export default function DevFixturesPage() {
               key={fixture.slug}
               onClick={() => handleSelectFixture(fixture)}
               className={`w-full text-left p-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors flex items-center gap-3 ${
-                selectedFixture?.slug === fixture.slug ? 'bg-purple-50 dark:bg-purple-900/20 border-l-2 border-l-purple-500' : ''
+                selectedFixture?.slug === fixture.slug
+                  ? 'bg-purple-50 dark:bg-purple-900/20 border-l-2 border-l-purple-500'
+                  : ''
               }`}
             >
               <span className="text-xs text-gray-400 dark:text-gray-500 font-mono w-5">
@@ -148,7 +243,9 @@ export default function DevFixturesPage() {
               </span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${typeColors[fixture.type] || 'bg-gray-100 text-gray-700'}`}>
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${typeColors[fixture.type] || 'bg-gray-100 text-gray-700'}`}
+                  >
                     {fixture.type}
                   </span>
                 </div>
@@ -159,7 +256,9 @@ export default function DevFixturesPage() {
                   {fixture.description}
                 </div>
               </div>
-              <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform ${selectedFixture?.slug === fixture.slug ? 'text-purple-500' : ''}`} />
+              <ChevronRight
+                className={`w-4 h-4 text-gray-400 transition-transform ${selectedFixture?.slug === fixture.slug ? 'text-purple-500' : ''}`}
+              />
             </button>
           ))}
         </div>
@@ -182,7 +281,9 @@ export default function DevFixturesPage() {
                 <span className="text-sm font-medium text-gray-900 dark:text-white">
                   @{selectedFixture.author}
                 </span>
-                <span className={`px-2 py-0.5 rounded text-xs font-medium ${typeColors[selectedFixture.type]}`}>
+                <span
+                  className={`px-2 py-0.5 rounded text-xs font-medium ${typeColors[selectedFixture.type]}`}
+                >
                   {selectedFixture.type}
                 </span>
               </div>
@@ -245,20 +346,11 @@ export default function DevFixturesPage() {
             viewMode === 'devices' ? (
               <div className="flex gap-6 justify-center items-start min-h-full">
                 {devices.map((device) => (
-                  <DeviceFrame
-                    key={device.name}
-                    device={device}
-                    url={loadedUrl}
-                  />
+                  <DeviceFrame key={device.name} device={device} url={loadedUrl} />
                 ))}
               </div>
             ) : (
-              <OgPreview
-                ogTags={ogTags}
-                loading={ogLoading}
-                error={ogError}
-                url={loadedUrl}
-              />
+              <OgPreview ogTags={ogTags} loading={ogLoading} error={ogError} url={loadedUrl} />
             )
           ) : (
             <div className="h-full flex items-center justify-center">
@@ -280,7 +372,7 @@ export default function DevFixturesPage() {
   )
 }
 
-function DeviceFrame({ device, url }: { device: typeof devices[0]; url: string }) {
+function DeviceFrame({ device, url }: { device: (typeof devices)[0]; url: string }) {
   const Icon = device.icon
   const scale = device.name === 'Desktop' ? 0.5 : device.name === 'Tablet' ? 0.55 : 0.7
 
@@ -387,7 +479,7 @@ function OgPreview({
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
             {ogTags.twitterImage && (
               <div className="aspect-[1.91/1] bg-gray-100 dark:bg-gray-700 relative">
-                                <img
+                <img
                   src={ogTags.twitterImage}
                   alt={ogTags.imageAlt || 'OG Image'}
                   className="w-full h-full object-cover"
@@ -410,7 +502,10 @@ function OgPreview({
             </div>
           </div>
           <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-            Card type: <code className="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded">{ogTags.twitterCard || 'not set'}</code>
+            Card type:{' '}
+            <code className="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded">
+              {ogTags.twitterCard || 'not set'}
+            </code>
           </div>
         </div>
 
@@ -437,7 +532,7 @@ function OgPreview({
               </div>
               {ogTags.image && (
                 <div className="w-20 h-20 flex-shrink-0 rounded overflow-hidden bg-gray-100 dark:bg-gray-700">
-                                    <img
+                  <img
                     src={ogTags.image}
                     alt={ogTags.imageAlt || 'OG Image'}
                     className="w-full h-full object-cover"
@@ -454,15 +549,17 @@ function OgPreview({
 
       {/* Raw OG Tags Table */}
       <div>
-        <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3">
-          Raw Meta Tags
-        </h3>
+        <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3">Raw Meta Tags</h3>
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-700/50">
-                <th className="text-left px-4 py-2 font-medium text-gray-600 dark:text-gray-300 w-48">Property</th>
-                <th className="text-left px-4 py-2 font-medium text-gray-600 dark:text-gray-300">Value</th>
+                <th className="text-left px-4 py-2 font-medium text-gray-600 dark:text-gray-300 w-48">
+                  Property
+                </th>
+                <th className="text-left px-4 py-2 font-medium text-gray-600 dark:text-gray-300">
+                  Value
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -505,12 +602,13 @@ function OgPreview({
           </h3>
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
             <div className="max-w-2xl">
-                            <img
+              <img
                 src={ogTags.image}
                 alt={ogTags.imageAlt || 'OG Image'}
                 className="rounded-lg shadow-sm max-w-full h-auto"
                 onError={(e) => {
-                  e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200"><rect fill="%23f3f4f6" width="400" height="200"/><text x="50%" y="50%" fill="%239ca3af" text-anchor="middle" dy=".3em">Failed to load image</text></svg>'
+                  e.currentTarget.src =
+                    'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200"><rect fill="%23f3f4f6" width="400" height="200"/><text x="50%" y="50%" fill="%239ca3af" text-anchor="middle" dy=".3em">Failed to load image</text></svg>'
                 }}
               />
             </div>

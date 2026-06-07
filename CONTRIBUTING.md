@@ -18,20 +18,20 @@ We use [Conventional Commits](https://www.conventionalcommits.org/) for commit m
 
 ### Types
 
-| Type | Description | Version Bump |
-|------|-------------|--------------|
-| `feat` | New feature | Minor |
-| `fix` | Bug fix | Patch |
-| `docs` | Documentation only | None |
-| `style` | Formatting, missing semicolons | None |
-| `refactor` | Code change (no new feature or fix) | None |
-| `perf` | Performance improvement | Patch |
-| `test` | Adding or updating tests | None |
-| `build` | Build system or dependencies | None |
-| `ci` | CI/CD configuration | None |
-| `chore` | Other changes | None |
-| `revert` | Revert a previous commit | Patch |
-| `security` | Security improvements | Patch |
+| Type       | Description                         | Version Bump |
+| ---------- | ----------------------------------- | ------------ |
+| `feat`     | New feature                         | Minor        |
+| `fix`      | Bug fix                             | Patch        |
+| `docs`     | Documentation only                  | None         |
+| `style`    | Formatting, missing semicolons      | None         |
+| `refactor` | Code change (no new feature or fix) | None         |
+| `perf`     | Performance improvement             | Patch        |
+| `test`     | Adding or updating tests            | None         |
+| `build`    | Build system or dependencies        | None         |
+| `ci`       | CI/CD configuration                 | None         |
+| `chore`    | Other changes                       | None         |
+| `revert`   | Revert a previous commit            | Patch        |
+| `security` | Security improvements               | Patch        |
 
 ### Examples
 
@@ -88,6 +88,7 @@ We use Husky to run checks before commits:
 - **pre-commit**: Runs tests
 
 If you need to bypass hooks temporarily:
+
 ```bash
 git commit --no-verify -m "your message"
 ```

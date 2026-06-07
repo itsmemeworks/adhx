@@ -10,7 +10,7 @@ import { resolveMediaUrl, getShareableUrl, getThumbnailUrl } from '@/lib/media/f
  */
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ username: string; tag: string }> }
+  { params }: { params: Promise<{ username: string; tag: string }> },
 ) {
   try {
     const { username, tag: tagName } = await params
@@ -72,7 +72,9 @@ export async function GET(
     const mediaResults = await db
       .select()
       .from(bookmarkMedia)
-      .where(and(eq(bookmarkMedia.userId, tagOwnerId), inArray(bookmarkMedia.bookmarkId, bookmarkIds)))
+      .where(
+        and(eq(bookmarkMedia.userId, tagOwnerId), inArray(bookmarkMedia.bookmarkId, bookmarkIds)),
+      )
 
     // Build tweet objects with media
     const tweets = bookmarkResults.map((bookmark) => {

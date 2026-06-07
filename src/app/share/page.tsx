@@ -29,12 +29,10 @@ function ShareRedirect() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-paper px-4">
         <div className="text-center max-w-md">
-          <h1 className="text-2xl font-bold text-ink mb-3">
-            Not a supported link
-          </h1>
+          <h1 className="text-2xl font-bold text-ink mb-3">Not a supported link</h1>
           <p className="text-ink-2 mb-6">
-            The shared URL doesn&apos;t look like a post we can preview. Try an X, Instagram, TikTok, or YouTube link
-            like x.com/user/status/123 or youtube.com/shorts/abc.
+            The shared URL doesn&apos;t look like a post we can preview. Try an X, Instagram,
+            TikTok, or YouTube link like x.com/user/status/123 or youtube.com/shorts/abc.
           </p>
           <a
             href="/"

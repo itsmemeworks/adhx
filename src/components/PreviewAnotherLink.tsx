@@ -36,7 +36,9 @@ export function PreviewAnotherLink({ className }: { className?: string }) {
     setUrl(value)
     setError('')
     // Auto-navigate the moment a recognised link is pasted.
-    if (/(?:x\.com|twitter\.com|instagram\.com|tiktok\.com|youtube\.com|youtu\.be)\//i.test(value)) {
+    if (
+      /(?:x\.com|twitter\.com|instagram\.com|tiktok\.com|youtube\.com|youtu\.be)\//i.test(value)
+    ) {
       parseAndNavigate(value)
     }
   }
@@ -50,7 +52,10 @@ export function PreviewAnotherLink({ className }: { className?: string }) {
   }
 
   return (
-    <div data-section="preview-another" className={cn('rounded-2xl border border-hairline bg-surface px-4 py-4', className)}>
+    <div
+      data-section="preview-another"
+      className={cn('rounded-2xl border border-hairline bg-surface px-4 py-4', className)}
+    >
       <p className="font-bold text-[13.5px] text-ink mb-2.5">Preview another link</p>
       <form onSubmit={onSubmit}>
         <div className="flex gap-2.5">

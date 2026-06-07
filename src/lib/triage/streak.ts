@@ -46,8 +46,10 @@ export function recordDay(state: StreakState | null, today: string): StreakState
   if (d < 0) return state // clock skew / out-of-order — ignore
 
   let current: number
-  if (d === 0) current = state.current // already counted today
-  else if (d === 1) current = state.current + 1 // consecutive day
+  if (d === 0)
+    current = state.current // already counted today
+  else if (d === 1)
+    current = state.current + 1 // consecutive day
   else current = 1 // missed at least a day — restart
 
   return {

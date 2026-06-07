@@ -42,7 +42,10 @@ export function FeedBentoTile({
           src={thumb}
           alt=""
           referrerPolicy="no-referrer"
-          className={cn('absolute inset-0 w-full h-full object-cover', type === 'article' && 'opacity-55')}
+          className={cn(
+            'absolute inset-0 w-full h-full object-cover',
+            type === 'article' && 'opacity-55',
+          )}
         />
         <span
           className={cn(
@@ -73,11 +76,16 @@ export function FeedBentoTile({
         {(type === 'article' || cs > 1) && (
           <span className="absolute left-0 right-0 bottom-0 px-3.5 pb-3.5 pt-10 bg-gradient-to-t from-black/85 via-black/45 to-transparent">
             <span
-              className={cn('block font-serif font-semibold text-white leading-tight [text-shadow:0_1px_3px_rgba(0,0,0,.6)]', cs > 1 ? 'text-[18px]' : 'text-[15px]')}
+              className={cn(
+                'block font-serif font-semibold text-white leading-tight [text-shadow:0_1px_3px_rgba(0,0,0,.6)]',
+                cs > 1 ? 'text-[18px]' : 'text-[15px]',
+              )}
             >
               {feedItemTitle(item)}
             </span>
-            <span className="block text-[11.5px] font-medium text-white/85 mt-1 [text-shadow:0_1px_2px_rgba(0,0,0,.6)]">{author}</span>
+            <span className="block text-[11.5px] font-medium text-white/85 mt-1 [text-shadow:0_1px_2px_rgba(0,0,0,.6)]">
+              {author}
+            </span>
           </span>
         )}
       </button>
@@ -116,6 +124,18 @@ export function FeedBentoTile({
 
 /** Span pattern (col, row) cycled across the mosaic — from the handoff. */
 export const BENTO_SPANS: ReadonlyArray<readonly [number, number]> = [
-  [2, 2], [1, 1], [2, 1], [1, 2], [1, 1], [1, 1], [2, 1],
-  [1, 1], [1, 1], [2, 2], [1, 1], [1, 1], [2, 1], [1, 1],
+  [2, 2],
+  [1, 1],
+  [2, 1],
+  [1, 2],
+  [1, 1],
+  [1, 1],
+  [2, 1],
+  [1, 1],
+  [1, 1],
+  [2, 2],
+  [1, 1],
+  [1, 1],
+  [2, 1],
+  [1, 1],
 ]

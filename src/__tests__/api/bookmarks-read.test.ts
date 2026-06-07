@@ -90,7 +90,9 @@ describe('API: /api/bookmarks/[id]/read', () => {
       const [status] = await testInstance.db
         .select()
         .from(schema.readStatus)
-        .where(and(eq(schema.readStatus.userId, USER_A), eq(schema.readStatus.bookmarkId, 'tweet-1')))
+        .where(
+          and(eq(schema.readStatus.userId, USER_A), eq(schema.readStatus.bookmarkId, 'tweet-1')),
+        )
 
       expect(status).toBeDefined()
     })
@@ -113,7 +115,7 @@ describe('API: /api/bookmarks/[id]/read', () => {
       expect(data.readAt).toBe(existingReadAt)
     })
 
-    it('does not mark another user\'s bookmark as read', async () => {
+    it("does not mark another user's bookmark as read", async () => {
       // Create User B's bookmark
       await testInstance.db.insert(schema.bookmarks).values(createTestBookmark(USER_B, 'tweet-b'))
 
@@ -162,12 +164,14 @@ describe('API: /api/bookmarks/[id]/read', () => {
       const result = await testInstance.db
         .select()
         .from(schema.readStatus)
-        .where(and(eq(schema.readStatus.userId, USER_A), eq(schema.readStatus.bookmarkId, 'tweet-1')))
+        .where(
+          and(eq(schema.readStatus.userId, USER_A), eq(schema.readStatus.bookmarkId, 'tweet-1')),
+        )
 
       expect(result).toHaveLength(0)
     })
 
-    it('does not affect another user\'s read status', async () => {
+    it("does not affect another user's read status", async () => {
       // Create User B's bookmark and read status
       await testInstance.db.insert(schema.bookmarks).values(createTestBookmark(USER_B, 'tweet-1'))
       await testInstance.db.insert(schema.readStatus).values({

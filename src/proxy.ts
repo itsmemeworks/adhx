@@ -44,8 +44,7 @@ const TIKTOK_SHORTLINK_PATTERN =
 const YOUTUBE_PATH_ID_PATTERN =
   /^\/(?:https?:\/?\/?)?(?:(?:www\.|m\.)?youtube\.com\/(?:shorts|embed|v|live)\/|youtu\.be\/)([A-Za-z0-9_-]{11})/i
 
-const YOUTUBE_WATCH_PATTERN =
-  /^\/(?:https?:\/?\/?)?(?:www\.|m\.)?youtube\.com\/watch\b/i
+const YOUTUBE_WATCH_PATTERN = /^\/(?:https?:\/?\/?)?(?:www\.|m\.)?youtube\.com\/watch\b/i
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl

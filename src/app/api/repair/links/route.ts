@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { bookmarks, bookmarkLinks } from '@/lib/db/schema'
 import { notInArray, sql, eq, and } from 'drizzle-orm'
-import { getCurrentUserId } from '@/lib/auth/session'
+import { withAuth } from '@/lib/api/with-auth'
 
 interface TwitterUrl {
   url: string
@@ -17,13 +17,8 @@ interface RawTweet {
 }
 
 // POST /api/repair/links - Backfill bookmark_links from rawJson
-export async function POST() {
+export const POST = withAuth(async (_req, userId) => {
   try {
-    const userId = await getCurrentUserId()
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     // Get all bookmarks that don't have links yet (filtered by userId)
     const bookmarksWithLinks = await db
       .select({ bookmarkId: bookmarkLinks.bookmarkId })
@@ -73,14 +68,17 @@ export async function POST() {
           const linkType = determineLinkType(url.expandedUrl)
 
           // Insert link (include userId)
-          await db.insert(bookmarkLinks).values({
-            userId,
-            bookmarkId: bookmark.id,
-            originalUrl: url.url,
-            expandedUrl: url.expandedUrl,
-            domain,
-            linkType,
-          }).onConflictDoNothing()
+          await db
+            .insert(bookmarkLinks)
+            .values({
+              userId,
+              bookmarkId: bookmark.id,
+              originalUrl: url.url,
+              expandedUrl: url.expandedUrl,
+              domain,
+              linkType,
+            })
+            .onConflictDoNothing()
 
           linksAdded++
         }
@@ -102,7 +100,7 @@ export async function POST() {
     const message = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json({ error: message }, { status: 500 })
   }
-}
+})
 
 function determineLinkType(url: string): string {
   const lower = url.toLowerCase()
@@ -116,12 +114,7 @@ function determineLinkType(url: string): string {
 }
 
 // GET /api/repair/links - Check status
-export async function GET() {
-  const userId = await getCurrentUserId()
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
+export const GET = withAuth(async (_req, userId) => {
   // All queries filtered by userId for multi-user support
   const totalBookmarks = await db
     .select({ count: sql<number>`count(*)` })
@@ -143,4 +136,4 @@ export async function GET() {
     bookmarksWithLinks: bookmarksWithLinksCount[0]?.count || 0,
     totalLinks: totalLinks[0]?.count || 0,
   })
-}
+})

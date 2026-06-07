@@ -99,7 +99,15 @@ describe('Tweet Processor', () => {
         retweets: 0,
         likes: 0,
         media: {
-          videos: [{ url: 'video.mp4', thumbnail_url: 'thumb.jpg', width: 1920, height: 1080, duration: 30 }],
+          videos: [
+            {
+              url: 'video.mp4',
+              thumbnail_url: 'thumb.jpg',
+              width: 1920,
+              height: 1080,
+              duration: 30,
+            },
+          ],
         },
       } as FxTwitterResponse['tweet']
 
@@ -207,7 +215,15 @@ describe('Tweet Processor', () => {
         likes: 0,
         article: { id: '1', title: 'Article' },
         media: {
-          videos: [{ url: 'video.mp4', thumbnail_url: 'thumb.jpg', width: 1920, height: 1080, duration: 30 }],
+          videos: [
+            {
+              url: 'video.mp4',
+              thumbnail_url: 'thumb.jpg',
+              width: 1920,
+              height: 1080,
+              duration: 30,
+            },
+          ],
         },
       } as FxTwitterResponse['tweet']
 
@@ -221,11 +237,15 @@ describe('Tweet Processor', () => {
     })
 
     it('returns "article" for substack.com URLs', () => {
-      expect(categorizeTweetByUrls([{ expandedUrl: 'https://example.substack.com/p/post' }])).toBe('article')
+      expect(categorizeTweetByUrls([{ expandedUrl: 'https://example.substack.com/p/post' }])).toBe(
+        'article',
+      )
     })
 
     it('returns "article" for URLs containing /article/', () => {
-      expect(categorizeTweetByUrls([{ expandedUrl: 'https://example.com/article/123' }])).toBe('article')
+      expect(categorizeTweetByUrls([{ expandedUrl: 'https://example.com/article/123' }])).toBe(
+        'article',
+      )
     })
 
     it('returns "tweet" for non-article URLs', () => {
@@ -415,7 +435,13 @@ describe('Tweet Processor', () => {
 
     it('processes videos into media items', () => {
       const videos = [
-        { url: 'https://video.mp4', thumbnail_url: 'https://thumb.jpg', width: 1920, height: 1080, duration: 30 },
+        {
+          url: 'https://video.mp4',
+          thumbnail_url: 'https://thumb.jpg',
+          width: 1920,
+          height: 1080,
+          duration: 30,
+        },
       ]
 
       const result = processVideos('123', videos)
@@ -443,7 +469,9 @@ describe('Tweet Processor', () => {
     it('combines photos and videos', () => {
       const media = {
         photos: [{ url: 'photo.jpg', width: 800, height: 600 }],
-        videos: [{ url: 'video.mp4', thumbnail_url: 'thumb.jpg', width: 1920, height: 1080, duration: 10 }],
+        videos: [
+          { url: 'video.mp4', thumbnail_url: 'thumb.jpg', width: 1920, height: 1080, duration: 10 },
+        ],
       }
 
       const result = processMedia('123', media)

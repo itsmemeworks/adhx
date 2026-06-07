@@ -122,9 +122,7 @@ export default function TagCollectionClient({ username, tag }: { username: strin
             <Lock className="w-8 h-8 text-gray-400" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Private Tag</h1>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            This tag is not publicly shared.
-          </p>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">This tag is not publicly shared.</p>
           <Link
             href="/"
             className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full font-medium hover:opacity-90 transition-opacity"
@@ -185,9 +183,7 @@ export default function TagCollectionClient({ username, tag }: { username: strin
               {cloning ? 'Adding...' : 'Add to My Collection'}
             </button>
           </div>
-          {cloneError && (
-            <p className="text-red-500 text-sm mt-2 text-right">{cloneError}</p>
-          )}
+          {cloneError && <p className="text-red-500 text-sm mt-2 text-right">{cloneError}</p>}
         </div>
       </header>
 
@@ -214,8 +210,8 @@ export default function TagCollectionClient({ username, tag }: { username: strin
             Shared via{' '}
             <Link href="/" className="text-blue-500 hover:underline">
               ADHX
-            </Link>
-            {' '}— Save now. Read never. Find always.
+            </Link>{' '}
+            — Save now. Read never. Find always.
           </p>
         </div>
       </footer>
@@ -238,11 +234,7 @@ function TweetCard({ tweet }: { tweet: SharedTweet }) {
         <div className="relative aspect-square bg-gray-100 dark:bg-gray-800">
           {primaryMedia.mediaType === 'video' || primaryMedia.mediaType === 'animated_gif' ? (
             <div className="relative w-full h-full">
-              <img
-                src={primaryMedia.thumbnailUrl}
-                alt=""
-                className="w-full h-full object-cover"
-              />
+              <img src={primaryMedia.thumbnailUrl} alt="" className="w-full h-full object-cover" />
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="w-12 h-12 rounded-full bg-black/60 flex items-center justify-center">
                   <Play className="h-6 w-6 text-white ml-1" fill="white" />
@@ -250,11 +242,7 @@ function TweetCard({ tweet }: { tweet: SharedTweet }) {
               </div>
             </div>
           ) : (
-            <img
-              src={primaryMedia.url}
-              alt=""
-              className="w-full h-full object-cover"
-            />
+            <img src={primaryMedia.url} alt="" className="w-full h-full object-cover" />
           )}
           {tweet.media.length > 1 && (
             <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
@@ -287,9 +275,7 @@ function TweetCard({ tweet }: { tweet: SharedTweet }) {
           <ExternalLink className="w-3 h-3 text-gray-400 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
         {hasMedia && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
-            {tweet.text}
-          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">{tweet.text}</p>
         )}
       </div>
     </a>

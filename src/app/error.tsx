@@ -25,8 +25,7 @@ export default function Error({
         </div>
         <h1 className="text-2xl font-bold mb-2">Something went wrong</h1>
         <p className="text-muted-foreground mb-6">
-          An unexpected error occurred. Please try again or return to the
-          dashboard.
+          An unexpected error occurred. Please try again or return to the dashboard.
         </p>
         <div className="flex items-center justify-center gap-4">
           <button
@@ -45,9 +44,7 @@ export default function Error({
           </Link>
         </div>
         {error.digest && (
-          <p className="text-xs text-muted-foreground mt-6">
-            Error ID: {error.digest}
-          </p>
+          <p className="text-xs text-muted-foreground mt-6">Error ID: {error.digest}</p>
         )}
       </div>
     </div>
