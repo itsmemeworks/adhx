@@ -108,12 +108,15 @@ export async function getTrendingItems(
     .limit(FETCH)
     .all()
 
-  // Collapse repeats so the same item doesn't appear twice in a row in the
-  // ticker (e.g. previewed then saved within seconds).
+  // Collapse to ONE row per post (platform + source id), keeping the newest
+  // event. A post can have several events — e.g. previewed then saved (now
+  // common since sync records a save per new bookmark) — and they must not
+  // surface as two cards with the same React key. Matches DiscoverFeed's
+  // dedupeByPost so the server list and the hydrated grid agree.
   const seen = new Set<string>()
   const items: typeof rows = []
   for (const row of rows) {
-    const key = `${row.action}:${row.platform}:${row.url}`
+    const key = `${row.platform}:${row.bookmarkId || row.url}`
     if (seen.has(key)) continue
     seen.add(key)
     items.push(row)

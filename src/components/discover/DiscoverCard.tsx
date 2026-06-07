@@ -176,7 +176,10 @@ export function DiscoverCard({
         <span className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full border border-hairline bg-inset text-ink-2">
           <PlatformGlyph platform={item.platform} size={17} />
         </span>
-        <span className="font-mono text-[12.5px] text-ink-3">{time}</span>
+        {/* Relative time (Date.now-based) differs between ISR HTML and client. */}
+        <span className="font-mono text-[12.5px] text-ink-3" suppressHydrationWarning>
+          {time}
+        </span>
         <a
           href={item.url}
           className="ml-auto flex-none inline-flex items-center gap-1.5 rounded-full bg-clay-grad px-3.5 py-2 text-[13px] font-semibold text-white shadow-glow transition-opacity duration-150 hover:opacity-90"

@@ -203,7 +203,10 @@ export function DiscoverFeed({
         <div className="flex flex-wrap items-center gap-3">
           <span className="inline-flex items-center gap-2.5 rounded-full border border-clay/25 bg-clay/[0.09] px-4 py-2">
             <LiveDot />
-            <span className="text-[14px] font-bold text-ink">
+            {/* Time-derived (savingNow uses Date.now), so it legitimately differs
+                between the ISR-cached server HTML and the client — suppress the
+                hydration warning rather than regenerate the tree. */}
+            <span className="text-[14px] font-bold text-ink" suppressHydrationWarning>
               {count} {count === 1 ? 'person' : 'people'} saving right now
             </span>
           </span>

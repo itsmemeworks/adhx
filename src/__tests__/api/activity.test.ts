@@ -83,6 +83,18 @@ describe('GET /api/activity', () => {
     expect(urls).toEqual(['/a/status/2', '/a/status/1'])
   })
 
+  it('collapses a post that was both previewed and saved into one item', async () => {
+    // Different actions for the same post (common now that sync records a save
+    // per new bookmark) must yield ONE card — two would collide on the React
+    // key `platform:bookmarkId` and warn / duplicate.
+    seed({ bookmarkId: 'p1', action: 'preview', createdAt: '2026-06-06T10:00:00Z' })
+    seed({ bookmarkId: 'p1', action: 'save', createdAt: '2026-06-06T10:00:30Z' })
+
+    const res = await GET()
+    const { items } = await res.json()
+    expect(items.filter((i: { bookmarkId: string }) => i.bookmarkId === 'p1')).toHaveLength(1)
+  })
+
   it('caps the number of items returned', async () => {
     for (let i = 0; i < 45; i++) {
       seed({ bookmarkId: String(i), createdAt: `2026-06-06T10:${String(i).padStart(2, '0')}:00Z` })
