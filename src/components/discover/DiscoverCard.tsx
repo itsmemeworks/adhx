@@ -3,7 +3,7 @@
 import { Plus, Play, EyeOff, Flame, ExternalLink, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
-import { PlatformGlyph, PlatformChip, TypeBadge, type ContentType } from '@/components/matter'
+import { PlatformGlyph, TypeBadge, type ContentType } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import type { ActivityItem } from './DiscoverFeed'
 
@@ -56,23 +56,19 @@ export function DiscoverCard({
   const caption = (item.text || '').trim()
   const time = formatCompactRelativeTime(item.createdAt)
 
-  const saveCount = item.saveCount ?? 0
-  const hot = saveCount >= 2
-  const FlameBadge = hot ? (
-    <span className="inline-flex items-center gap-1 rounded-full bg-flame px-2 py-0.5 text-[11.5px] font-bold text-white shadow-sm">
-      <Flame size={12} fill="currentColor" />
-      {saveCount}
-    </span>
-  ) : null
-
-  const TopRight = (
-    <div className="absolute right-2.5 top-2.5 flex items-center gap-1.5">
-      {FlameBadge}
-      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md">
-        <PlatformGlyph platform={item.platform} size={13} />
+  // Trending score = savers + previews (falls back to savers for older payloads).
+  // The flame badge is a dark chip (matches the type badge) with an orange flame
+  // + count. Platform isn't shown here — it lives in the footer.
+  const trendCount = item.trendCount ?? item.saveCount ?? 0
+  const hot = trendCount >= 2
+  const TopRight = hot ? (
+    <div className="absolute right-2.5 top-2.5">
+      <span className="inline-flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 text-[11.5px] font-bold text-orange-300 backdrop-blur-sm">
+        <Flame size={12} className="text-orange-400" fill="currentColor" />
+        {trendCount}
       </span>
     </div>
-  )
+  ) : null
 
   let body: React.ReactNode
   if (isMedia) {
@@ -148,7 +144,6 @@ export function DiscoverCard({
         <FileText className="absolute -right-5 -bottom-[22px] w-[120px] h-[120px] text-clay/[0.13]" aria-hidden />
         <div className="relative flex items-center gap-1.5">
           <TypeBadge type="article" />
-          <PlatformChip platform={item.platform} />
         </div>
         <h3 className="relative mt-3.5 font-serif font-semibold text-[18px] leading-tight text-ink line-clamp-4">
           {caption || 'Article'}
@@ -167,7 +162,6 @@ export function DiscoverCard({
             </div>
             {item.author && <div className="truncate font-mono text-[11.5px] text-ink-3">@{item.author}</div>}
           </div>
-          <PlatformChip platform={item.platform} />
         </div>
         <p className="line-clamp-4 text-[14.5px] leading-relaxed text-ink">{caption || 'Saved post'}</p>
       </div>

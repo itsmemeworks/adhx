@@ -19,8 +19,10 @@ export interface ActivityItem {
   authorAvatarUrl?: string | null
   url: string
   createdAt: string
-  /** Distinct ADHX users who've saved this post (anonymous count). Drives the flame. */
+  /** Distinct ADHX users who've saved this post (anonymous count). */
   saveCount?: number
+  /** Trending score = savers + preview events. Drives the flame + Trending sort. */
+  trendCount?: number
   /** Real post type from the saved bookmark, when known (else client infers it). */
   contentType?: 'video' | 'photo' | 'text' | 'quote' | 'article'
 }
@@ -48,6 +50,7 @@ function dedupeByPost(items: ActivityItem[]): ActivityItem[] {
       byPost.set(k, it)
     } else {
       prev.saveCount = Math.max(prev.saveCount ?? 0, it.saveCount ?? 0)
+      prev.trendCount = Math.max(prev.trendCount ?? 0, it.trendCount ?? 0)
       prev.contentType = prev.contentType ?? it.contentType
       prev.thumbnailUrl = prev.thumbnailUrl ?? it.thumbnailUrl
       prev.authorAvatarUrl = prev.authorAvatarUrl ?? it.authorAvatarUrl
@@ -76,15 +79,16 @@ function keyOf(item: ActivityItem): string {
 
 /**
  * Filter + sort an already-deduped list. "Just saved" (default) = newest first.
- * "Trending" surfaces posts saved by 2+ people, ranked by that count (newest as
- * the tiebreaker). Photos/Videos/Text/Articles filter by type (Text includes quotes).
+ * "Trending" surfaces posts with 2+ interactions (saves + previews), ranked by
+ * that score (newest as the tiebreaker). Photos/Videos/Text/Articles filter by
+ * type (Text includes quotes).
  */
 function applyFilter(items: ActivityItem[], filter: FilterId): ActivityItem[] {
   if (filter === 'trending') {
     return items
-      .filter((it) => (it.saveCount ?? 0) >= 2)
+      .filter((it) => (it.trendCount ?? 0) >= 2)
       .sort((a, b) => {
-        const d = (b.saveCount ?? 0) - (a.saveCount ?? 0)
+        const d = (b.trendCount ?? 0) - (a.trendCount ?? 0)
         if (d !== 0) return d
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       })

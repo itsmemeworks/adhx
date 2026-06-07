@@ -9,8 +9,9 @@ import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm'
  * Returns the most recent community actions. Deliberately selects ONLY public
  * fields: `userId` is never included, so the feed can't be tied back to anyone.
  * Each item is enriched with:
- *   - `saveCount` — DISTINCT users who saved the post (anonymous count) → powers
- *     the "Trending" ranking + flame badge.
+ *   - `saveCount` — DISTINCT users who saved the post (anonymous count).
+ *   - `trendCount` — savers + preview events → powers the "Trending" ranking +
+ *     flame badge, so a heavily-previewed post trends before anyone saves it.
  *   - `contentType` — the post's real type (video/photo/text/quote/article),
  *     derived from the saved bookmark's media so the badge is accurate (a text
  *     tweet isn't mislabelled "photo", a video tweet isn't "photo", etc.). Left
@@ -71,6 +72,7 @@ export async function GET() {
     const articleCovers = new Map<string, string>()
     const articleTitles = new Map<string, string>()
     const avatars = new Map<string, string>()
+    const previewCounts = new Map<string, number>()
     if (ids.length > 0) {
       const aggRows = db
         .select({
@@ -90,6 +92,23 @@ export async function GET() {
         counts.set(k, Number(r.saveCount) || 0)
         flags.set(k, { isQuote: !!Number(r.isQuote), category: r.category ?? null })
         if (r.avatar) avatars.set(k, r.avatar)
+      }
+
+      // Preview interest — how many times each post has been previewed (events,
+      // not users; already de-duped per 60s on write). Folded into the trending
+      // score so a much-previewed post trends even before anyone saves it.
+      const previewRows = db
+        .select({
+          platform: activity.platform,
+          bookmarkId: activity.bookmarkId,
+          n: sql<number>`count(*)`,
+        })
+        .from(activity)
+        .where(and(eq(activity.action, 'preview'), inArray(activity.bookmarkId, ids)))
+        .groupBy(activity.platform, activity.bookmarkId)
+        .all()
+      for (const r of previewRows) {
+        previewCounts.set(`${r.platform}:${r.bookmarkId}`, Number(r.n) || 0)
       }
 
       const mediaRows = db
@@ -166,6 +185,9 @@ export async function GET() {
         // usually just the wrapper tweet's t.co link), matching the collection.
         text: contentType === 'article' ? (articleTitles.get(key) ?? i.text) : i.text,
         saveCount: counts.get(key) ?? 0,
+        // Trending score = distinct savers + preview events. Previews count, so
+        // a heavily-previewed post trends even with zero saves.
+        trendCount: (counts.get(key) ?? 0) + (previewCounts.get(key) ?? 0),
         contentType,
         thumbnailUrl: thumbOf(i, key, contentType),
         // The post author's avatar for tweet-style cards — the recorded value
