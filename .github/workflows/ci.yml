@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Create check run for release PR
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             // Find open release PR
@@ -83,12 +83,12 @@ jobs:
       github.event_name != 'workflow_run' &&
       (github.event_name == 'push' || !startsWith(github.head_ref || '', 'release-please--'))
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # Version is read from the "packageManager" field in package.json
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -107,12 +107,12 @@ jobs:
       (github.event_name == 'push' || !startsWith(github.head_ref || '', 'release-please--'))
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # Version is read from the "packageManager" field in package.json
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -131,12 +131,12 @@ jobs:
       (github.event_name == 'push' || !startsWith(github.head_ref || '', 'release-please--'))
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # Version is read from the "packageManager" field in package.json
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: 'pnpm'
