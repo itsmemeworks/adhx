@@ -1,6 +1,6 @@
 'use client'
 
-import { Plus, Play, EyeOff, Flame, ExternalLink, FileText } from 'lucide-react'
+import { Plus, Play, Flame, ExternalLink, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
 import { PlatformGlyph, TypeBadge, type ContentType } from '@/components/matter'
@@ -180,19 +180,13 @@ export function DiscoverCard({
         {body}
       </a>
 
-      {/* Bottom-pinned anonymous footer (aligned across the equal-height grid). */}
+      {/* Bottom-pinned footer (aligned across the equal-height grid). Still
+          anonymous — we surface the platform, not the saver. */}
       <div className="mt-auto flex items-center gap-2.5 px-3.5 py-3">
-        <span
-          className="inline-flex h-[22px] w-[22px] flex-none items-center justify-center rounded-full border border-hairline bg-inset text-ink-3"
-          title="Saved anonymously"
-        >
-          <EyeOff size={12} />
+        <span className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full border border-hairline bg-inset text-ink-2">
+          <PlatformGlyph platform={item.platform} size={17} />
         </span>
-        <span className="flex items-center gap-1.5 font-mono text-[12px] text-ink-3">
-          <span>{time}</span>
-          <span aria-hidden>·</span>
-          <PlatformGlyph platform={item.platform} size={12} />
-        </span>
+        <span className="font-mono text-[12.5px] text-ink-3">{time}</span>
         <a
           href={item.url}
           className="ml-auto flex-none inline-flex items-center gap-1.5 rounded-full bg-clay-grad px-3.5 py-2 text-[13px] font-semibold text-white shadow-glow transition-opacity duration-150 hover:opacity-90"
