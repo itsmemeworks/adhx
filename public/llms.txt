@@ -1,6 +1,6 @@
 # ADHX
 
-> ADHX is a public Twitter/X content viewer and bookmark manager. Public tweet previews, curated tag collections, and structured tweet data are available without authentication.
+> ADHX is a bookmark manager for X/Twitter and a live feed for discovering what people are saving. It syncs your bookmarks into one searchable home and lets you triage, search, and read them later. Curated public tag collections and structured data for the posts members have saved are available as a read-only API.
 
 ## Public APIs
 
@@ -9,7 +9,7 @@
 
 ## Public Pages
 
-- [Tweet Previews](/{username}/status/{id}): Rich HTML preview of any tweet with Schema.org JSON-LD (SocialMediaPosting), OG tags, and semantic HTML. No login wall.
+- [Tweet Previews](/{username}/status/{id}): Rich HTML preview of a saved tweet with Schema.org JSON-LD (SocialMediaPosting), OG tags, and semantic HTML.
 - [Tag Collections](/t/{username}/{tag}): Browsable gallery of curated tweet collections organized by tag.
 
 ## Content Types

@@ -176,7 +176,7 @@ export function LandingPage() {
             </h1>
 
             <p className="text-[15px] min-[860px]:text-[17px] text-ink-2 leading-[1.55] mb-7 max-w-[440px]">
-              One private home for every tweet, Reel, TikTok, YouTube Short and article you hoard — then a calm way to actually get through it.
+              Sync your X bookmarks, discover what&apos;s trending, and actually get through your backlog — every tweet, thread, Reel, TikTok &amp; Short in one searchable home.
             </p>
 
             <div className="flex items-center gap-3.5">
@@ -393,13 +393,13 @@ function ShortcutPromo() {
 
           <div className="flex-1 text-center sm:text-left">
             <h2 className="font-serif font-semibold text-ink text-[18px] mb-2">
-              {platform === 'ios' ? 'Share posts without the X drama' : 'Save posts with one click'}
+              {platform === 'ios' ? 'Save straight from the share sheet' : 'Save posts with one click'}
             </h2>
 
             {platform === 'ios' ? (
               <>
                 <p className="text-[14px] text-ink-2 leading-[1.5] mb-4">
-                  Hit share on any post → get the full content with media, no login walls or algorithm nonsense. Perfect for sending posts to friends who refuse to make an account.
+                  Hit share on any post and it opens in ADHX — full content and media, ready to save to your collection or send to a friend.
                 </p>
                 <a
                   href={SHORTCUT_URL}

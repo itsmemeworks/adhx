@@ -2,8 +2,9 @@ import type { Metadata } from 'next'
 import { DiscoverFeed } from '@/components/discover/DiscoverFeed'
 
 export const metadata: Metadata = {
-  title: 'Discover — ADHX',
-  description: 'A real-time, anonymous feed of what people are saving on ADHX right now.',
+  title: "Discover what's trending",
+  description:
+    'A live, anonymous feed of trending tweets, TikToks, Reels and Shorts people are saving on ADHX right now. Preview any post and save it to your collection.',
 }
 
 /**

@@ -733,7 +733,7 @@ function SidebarActions({
 function ValueCard(): React.ReactElement {
   const rows: Array<[React.ReactNode, string, string]> = [
     [<Sparkles key="s" className="w-[17px] h-[17px]" />, 'One place for everything', 'Tweets, TikToks, Reels, Shorts & articles in one searchable home.'],
-    [<Zap key="z" className="w-[17px] h-[17px]" />, 'Media at your fingertips', 'Full-screen viewer with one-click downloads.'],
+    [<Zap key="z" className="w-[17px] h-[17px]" />, 'Media at your fingertips', 'Full-screen viewer for photos and video — save any post to your collection.'],
     [<Search key="f" className="w-[17px] h-[17px]" />, 'Actually find it later', 'Full-text search across everything you save.'],
   ]
   return (

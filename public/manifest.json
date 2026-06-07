@@ -1,7 +1,7 @@
 {
   "name": "ADHX - Save now. Read never. Find always.",
   "short_name": "ADHX",
-  "description": "For people who bookmark everything and read nothing. The ADHD-friendly X/Twitter bookmark manager.",
+  "description": "Sync your X bookmarks, discover what's trending, and triage your backlog — tweets, threads, Reels, TikToks and Shorts in one searchable home.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

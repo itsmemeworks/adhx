@@ -177,10 +177,10 @@ function ShortcutCard() {
 
   if (platform === 'ios') {
     return (
-      <SCard icon={Smartphone} title="iOS Shortcut" sub="Share posts without the X tax">
+      <SCard icon={Smartphone} title="iOS Shortcut" sub="Save posts from the share sheet">
         <p className="text-[13.5px] text-ink-2 leading-relaxed mb-3">
-          Share posts without forcing people to log in. Hit share on any post → get a clean preview with full media. No
-          login walls, no &quot;sign up to see more&quot; nonsense.
+          Hit share on any post and it opens in ADHX — a clean preview with full media, ready to save to your
+          collection or send to a friend.
         </p>
         <a
           href={SHORTCUT_URL}
