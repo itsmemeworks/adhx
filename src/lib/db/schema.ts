@@ -299,6 +299,10 @@ export const activity = sqliteTable(
     authorAvatarUrl: text('author_avatar_url'),
     text: text('text'),
     thumbnailUrl: text('thumbnail_url'),
+    // Server-resolved content type (video/photo/text/quote/article) so
+    // preview-only items (no saved bookmark to derive it from) still render the
+    // right card. Saved items prefer the bookmark-derived type.
+    contentType: text('content_type'),
     url: text('url').notNull(),
     userId: text('user_id'), // private — never exposed publicly
     createdAt: text('created_at').notNull(),

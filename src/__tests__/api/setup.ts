@@ -193,6 +193,7 @@ export const FULL_SCHEMA_SQL = `
     author_avatar_url TEXT,
     text TEXT,
     thumbnail_url TEXT,
+    content_type TEXT,
     url TEXT NOT NULL,
     user_id TEXT,
     created_at TEXT NOT NULL

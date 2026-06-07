@@ -158,6 +158,16 @@ try {
   // Column already exists — nothing to do.
 }
 
+// activity.content_type — server-resolved post type so preview-only items (no
+// saved bookmark) render the right card (e.g. an article shows its cover +
+// headline, not a bare "Saved post"). Guarded for re-runs (no IF NOT EXISTS).
+try {
+  db.exec('ALTER TABLE activity ADD COLUMN content_type text')
+  console.log('[migrate] Added activity.content_type')
+} catch {
+  // Column already exists — nothing to do.
+}
+
 // Normalize non-ISO created_at dates (Twitter format like "Wed Jan 28 02:28:44 +0000 2026")
 // to ISO 8601 format for correct string-based sorting
 try {

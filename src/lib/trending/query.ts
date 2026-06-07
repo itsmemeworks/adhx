@@ -30,6 +30,12 @@ import type { PlatformId } from '@/lib/platform/url'
 
 type ContentType = 'video' | 'photo' | 'text' | 'quote' | 'article'
 
+const CONTENT_TYPES = new Set<string>(['video', 'photo', 'text', 'quote', 'article'])
+/** Coerce a recorded `activity.content_type` string to a known ContentType. */
+function asContentType(v: string | null | undefined): ContentType | undefined {
+  return v && CONTENT_TYPES.has(v) ? (v as ContentType) : undefined
+}
+
 /**
  * Canonical public item shape returned to clients. Matches the enriched
  * `/api/activity` items + the fields `DiscoverFeed`'s `ActivityItem` needs.
@@ -92,6 +98,7 @@ export async function getTrendingItems(
       authorAvatarUrl: activity.authorAvatarUrl,
       text: activity.text,
       thumbnailUrl: activity.thumbnailUrl,
+      contentType: activity.contentType,
       url: activity.url,
       createdAt: activity.createdAt,
     })
@@ -235,7 +242,10 @@ export async function getTrendingItems(
 
   let enriched: TrendingItem[] = items.map((i) => {
     const key = `${i.platform}:${i.bookmarkId}`
-    const contentType = typeOf(i.platform, key)
+    // Bookmark-derived type is authoritative (saved items); otherwise fall back
+    // to the type recorded at preview time so preview-only items (esp. articles)
+    // still render the right card instead of a bare text "Saved post".
+    const contentType = typeOf(i.platform, key) ?? asContentType(i.contentType)
     return {
       ...i,
       // Article cards show the article's own headline (the recorded `text` is

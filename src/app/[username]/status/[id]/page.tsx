@@ -120,6 +120,17 @@ export default async function QuickAddPage({ params }: Props) {
     const ua = (await headers()).get('user-agent')
     if (!isLikelyBot(ua)) {
       const previewAuthor = tweet.author?.screen_name || username
+      // An X Article keeps its headline + cover in `tweet.article` (not
+      // tweet.text/media), so resolve those explicitly — otherwise a
+      // preview-only article would land in the pulse as a bare "Saved post".
+      const articleCover = tweet.article?.cover_media?.media_info?.original_img_url || null
+      const previewType = tweet.article?.title
+        ? 'article'
+        : tweet.media?.videos?.length
+          ? 'video'
+          : tweet.media?.photos?.length
+            ? 'photo'
+            : 'text'
       recordActivity({
         action: 'preview',
         platform: 'twitter',
@@ -127,10 +138,15 @@ export default async function QuickAddPage({ params }: Props) {
         author: previewAuthor,
         authorName: tweet.author?.name || null,
         authorAvatarUrl: tweet.author?.avatar_url || null,
-        text: tweet.text || null,
-        // Real media only — no avatar fallback, so text tweets stay "text"
-        // in the pulse/Discover rather than being mistaken for photos.
-        thumbnailUrl: tweet.media?.all?.[0]?.thumbnail_url || tweet.media?.all?.[0]?.url || null,
+        text: tweet.article?.title || tweet.text || null,
+        // Real media (or the article cover) only — no avatar fallback, so text
+        // tweets stay "text" rather than being mistaken for photos.
+        thumbnailUrl:
+          articleCover ||
+          tweet.media?.all?.[0]?.thumbnail_url ||
+          tweet.media?.all?.[0]?.url ||
+          null,
+        contentType: previewType,
         url: previewPath('twitter', previewAuthor, id),
       })
     }
