@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { captureException } from '@/lib/sentry'
-import { isAllowedTwitterMediaUrl, streamingResponse } from '@/lib/media/proxy'
+import {
+  isAllowedTwitterMediaUrl,
+  isValidTweetAuthor,
+  isValidTweetId,
+  streamingResponse,
+} from '@/lib/media/proxy'
 
 // Simple in-memory cache for video URLs (survives for 1 hour)
 // Cache key includes quality for different variants
@@ -29,6 +34,12 @@ export async function GET(request: NextRequest) {
 
   if (!author || !tweetId) {
     return NextResponse.json({ error: 'Missing author or tweetId' }, { status: 400 })
+  }
+
+  // Sanitise the user-provided params before interpolating them into the
+  // FxTwitter API URL (prevents request-forgery via a crafted author/tweetId).
+  if (!isValidTweetAuthor(author) || !isValidTweetId(tweetId)) {
+    return NextResponse.json({ error: 'Invalid author or tweetId' }, { status: 400 })
   }
 
   const cacheKey = `${author}/${tweetId}/${quality}`

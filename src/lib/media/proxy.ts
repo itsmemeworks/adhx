@@ -53,6 +53,20 @@ export const TWITTER_MEDIA_HOSTS = [
 export const isAllowedTwitterMediaUrl = makeHostAllowlist(TWITTER_MEDIA_HOSTS)
 
 /**
+ * Validate a Twitter handle (1–15 word chars). Used to sanitise the
+ * user-provided `author` query param before it's interpolated into the
+ * FxTwitter API URL, so a malicious value can't steer the server-side request.
+ */
+export function isValidTweetAuthor(author: string): boolean {
+  return /^[A-Za-z0-9_]{1,15}$/.test(author)
+}
+
+/** Validate a numeric tweet/status id (sanitises the `tweetId` query param). */
+export function isValidTweetId(tweetId: string): boolean {
+  return /^\d+$/.test(tweetId)
+}
+
+/**
  * Build the inline, range-aware streaming `Response` shared by the video
  * proxies. Copies through the upstream status (200/206) and the standard
  * streaming headers (Content-Type, Accept-Ranges, Cache-Control, and

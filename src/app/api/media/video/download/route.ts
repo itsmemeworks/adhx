@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { captureException } from '@/lib/sentry'
-import { downloadResponse, isAllowedTwitterMediaUrl } from '@/lib/media/proxy'
+import {
+  downloadResponse,
+  isAllowedTwitterMediaUrl,
+  isValidTweetAuthor,
+  isValidTweetId,
+} from '@/lib/media/proxy'
 
 /**
  * Video Download Endpoint - Streams video with Content-Disposition for instant browser download
@@ -20,6 +25,12 @@ export async function GET(request: NextRequest) {
 
   if (!author || !tweetId) {
     return NextResponse.json({ error: 'Missing author or tweetId' }, { status: 400 })
+  }
+
+  // Sanitise the user-provided params before interpolating them into the
+  // FxTwitter API URL (prevents request-forgery via a crafted author/tweetId).
+  if (!isValidTweetAuthor(author) || !isValidTweetId(tweetId)) {
+    return NextResponse.json({ error: 'Invalid author or tweetId' }, { status: 400 })
   }
 
   try {
