@@ -6,6 +6,7 @@ import {
   isValidUsername,
   isValidVideoId,
 } from '@/lib/media/tnktok'
+import { downloadResponse } from '@/lib/media/proxy'
 
 /**
  * TikTok video download — streams the MP4 through the server with
@@ -44,13 +45,7 @@ export async function GET(request: NextRequest) {
     }
 
     const handle = username.startsWith('@') ? username.slice(1) : username
-    const headers = new Headers()
-    headers.set('Content-Type', 'video/mp4')
-    headers.set('Content-Disposition', `attachment; filename="tiktok-${handle}-${videoId}.mp4"`)
-    const contentLength = videoResponse.headers.get('Content-Length')
-    if (contentLength) headers.set('Content-Length', contentLength)
-
-    return new Response(videoResponse.body, { headers })
+    return downloadResponse(videoResponse, `tiktok-${handle}-${videoId}.mp4`)
   } catch (error) {
     console.error('TikTok download error:', error)
     captureException(error, { endpoint: '/api/media/tiktok/video/download', username, videoId })

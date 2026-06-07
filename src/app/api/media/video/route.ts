@@ -1,27 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { captureException } from '@/lib/sentry'
+import { isAllowedTwitterMediaUrl, streamingResponse } from '@/lib/media/proxy'
 
 // Simple in-memory cache for video URLs (survives for 1 hour)
 // Cache key includes quality for different variants
 const videoUrlCache = new Map<string, { url: string; timestamp: number }>()
 const CACHE_TTL = 60 * 60 * 1000 // 1 hour
-
-// SSRF Protection: Only allow fetching from trusted Twitter video domains
-const ALLOWED_VIDEO_DOMAINS = ['video.twimg.com', 'pbs.twimg.com', 'abs.twimg.com']
-
-/**
- * Validate that a URL is from an allowed domain (SSRF protection)
- */
-function isAllowedVideoUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url)
-    return ALLOWED_VIDEO_DOMAINS.some(
-      (domain) => parsed.hostname === domain || parsed.hostname.endsWith(`.${domain}`),
-    )
-  } catch {
-    return false
-  }
-}
 
 interface VideoFormat {
   url: string
@@ -132,7 +116,7 @@ export async function GET(request: NextRequest) {
     }
 
     // SSRF Protection: Validate video URL is from trusted domain before fetching
-    if (!isAllowedVideoUrl(videoUrl)) {
+    if (!isAllowedTwitterMediaUrl(videoUrl)) {
       console.error(`SSRF blocked: Video URL from untrusted domain: ${videoUrl}`)
       return NextResponse.json({ error: 'Invalid video source' }, { status: 403 })
     }
@@ -153,27 +137,8 @@ export async function GET(request: NextRequest) {
       throw new Error(`Video fetch failed with status ${videoResponse.status}`)
     }
 
-    // Build response headers
-    const responseHeaders: Record<string, string> = {
-      'Content-Type': videoResponse.headers.get('content-type') || 'video/mp4',
-      'Accept-Ranges': 'bytes',
-      'Cache-Control': 'public, max-age=3600',
-    }
-
-    const contentLength = videoResponse.headers.get('content-length')
-    if (contentLength) {
-      responseHeaders['Content-Length'] = contentLength
-    }
-
-    const contentRange = videoResponse.headers.get('content-range')
-    if (contentRange) {
-      responseHeaders['Content-Range'] = contentRange
-    }
-
-    return new Response(videoResponse.body, {
-      status: videoResponse.status,
-      headers: responseHeaders,
-    })
+    // Stream the upstream response through with range-aware headers
+    return streamingResponse(videoResponse)
   } catch (error) {
     console.error('Error fetching video:', error)
     captureException(error, { endpoint: '/api/media/video', author, tweetId })

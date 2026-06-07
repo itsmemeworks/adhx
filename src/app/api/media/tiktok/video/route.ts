@@ -6,6 +6,7 @@ import {
   isValidUsername,
   isValidVideoId,
 } from '@/lib/media/tnktok'
+import { streamingResponse } from '@/lib/media/proxy'
 
 /**
  * TikTok video proxy — streams the MP4 through the server for inline playback
@@ -47,20 +48,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch video' }, { status: 502 })
     }
 
-    const responseHeaders: Record<string, string> = {
-      'Content-Type': videoResponse.headers.get('content-type') || 'video/mp4',
-      'Accept-Ranges': 'bytes',
-      'Cache-Control': 'public, max-age=3600',
-    }
-    const contentLength = videoResponse.headers.get('content-length')
-    if (contentLength) responseHeaders['Content-Length'] = contentLength
-    const contentRange = videoResponse.headers.get('content-range')
-    if (contentRange) responseHeaders['Content-Range'] = contentRange
-
-    return new Response(videoResponse.body, {
-      status: videoResponse.status,
-      headers: responseHeaders,
-    })
+    return streamingResponse(videoResponse)
   } catch (error) {
     console.error('TikTok video proxy error:', error)
     captureException(error, { endpoint: '/api/media/tiktok/video', username, videoId })

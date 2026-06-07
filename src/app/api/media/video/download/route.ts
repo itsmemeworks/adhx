@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { captureException } from '@/lib/sentry'
+import { downloadResponse, isAllowedTwitterMediaUrl } from '@/lib/media/proxy'
 
 /**
  * Video Download Endpoint - Streams video with Content-Disposition for instant browser download
@@ -59,6 +60,14 @@ export async function GET(request: NextRequest) {
 
     const videoUrl = selectedFormat.url
 
+    // SSRF Protection: the MP4 URL comes from the third-party FxTwitter
+    // response, so re-validate it against the Twitter CDN allowlist before
+    // fetching it server-side.
+    if (!isAllowedTwitterMediaUrl(videoUrl)) {
+      console.error(`SSRF blocked: download URL from untrusted domain: ${videoUrl}`)
+      return NextResponse.json({ error: 'Invalid video source' }, { status: 403 })
+    }
+
     // Fetch the video with streaming (30s timeout for large files)
     const videoResponse = await fetch(videoUrl, {
       headers: {
@@ -72,22 +81,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch video' }, { status: 502 })
     }
 
-    // Generate filename
-    const filename = `${author}-${tweetId}.mp4`
-
-    // Stream the response with download headers
-    const headers = new Headers()
-    headers.set('Content-Type', 'video/mp4')
-    headers.set('Content-Disposition', `attachment; filename="${filename}"`)
-
-    // Pass through Content-Length for progress indication
-    const contentLength = videoResponse.headers.get('Content-Length')
-    if (contentLength) {
-      headers.set('Content-Length', contentLength)
-    }
-
-    // Stream the video directly to the client
-    return new Response(videoResponse.body, { headers })
+    // Stream the video to the client as an attachment download
+    return downloadResponse(videoResponse, `${author}-${tweetId}.mp4`)
   } catch (error) {
     console.error('Video download error:', error)
     captureException(error, { endpoint: '/api/media/video/download', author, tweetId })
