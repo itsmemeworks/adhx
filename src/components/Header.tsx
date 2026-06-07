@@ -449,7 +449,7 @@ export function Header() {
               </button>
 
               {/* Sync Button — hidden on phones (lives in the user menu there) */}
-              <div className="hidden sm:block">
+              <div className="hidden sm:flex items-center">
                 <Tooltip
                   content={
                     cooldown.canSync
@@ -461,7 +461,7 @@ export function Header() {
                   <button
                     onClick={() => cooldown.canSync && setShowSync(true)}
                     className={cn(
-                      'p-2 rounded-full transition-colors',
+                      'inline-flex items-center justify-center p-2 rounded-full transition-colors',
                       cooldown.canSync
                         ? 'hover:bg-inset text-ink-3 hover:text-ink'
                         : 'text-ink-3/50 cursor-not-allowed',
