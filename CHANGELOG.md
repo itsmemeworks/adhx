@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.45.1](https://github.com/itsmemeworks/adhx/compare/v1.45.0...v1.45.1) (2026-06-08)
+
+
+### Bug Fixes
+
+* auto-hide reel top bar when native controls are on (mobile clash) ([#246](https://github.com/itsmemeworks/adhx/issues/246)) ([cd4e277](https://github.com/itsmemeworks/adhx/commit/cd4e277a7a307c31c4c5eca5d2b21e58af030faf))
+
 ## [1.45.0](https://github.com/itsmemeworks/adhx/compare/v1.44.0...v1.45.0) (2026-06-08)
 
 
