@@ -67,6 +67,88 @@ describe('API: /api/feed', () => {
     })
   })
 
+  describe('Per-platform media URLs', () => {
+    async function feedMedia(id: string) {
+      const { GET } = await import('@/app/api/feed/route')
+      const data = await (await GET(createRequest({ unreadOnly: 'false' }))).json()
+      return data.items.find((i: { id: string }) => i.id === id)?.media?.[0]
+    }
+
+    it('Instagram video → IG stream + download + thumbnail proxy URLs (NOT the Twitter proxy)', async () => {
+      await testInstance.db.insert(schema.bookmarks).values(
+        createTestBookmark(USER_A, 'DXVsqQ7CSXw', {
+          platform: 'instagram',
+          category: 'video',
+          tweetUrl: 'https://www.instagram.com/reel/DXVsqQ7CSXw/',
+        }),
+      )
+      await testInstance.db.insert(schema.bookmarkMedia).values({
+        id: 'DXVsqQ7CSXw_photo_0',
+        userId: USER_A,
+        platform: 'instagram',
+        bookmarkId: 'DXVsqQ7CSXw',
+        mediaType: 'video',
+        originalUrl: 'https://scontent.cdninstagram.com/poster.jpg',
+        previewUrl: 'https://scontent.cdninstagram.com/poster.jpg',
+      })
+
+      const media = await feedMedia('DXVsqQ7CSXw')
+      expect(media.mediaType).toBe('video')
+      expect(media.url).toBe('/api/media/instagram/video?id=DXVsqQ7CSXw')
+      expect(media.shareUrl).toBe('/api/media/instagram/video/download?id=DXVsqQ7CSXw')
+      expect(media.thumbnailUrl).toBe('/api/media/instagram/thumbnail?id=DXVsqQ7CSXw')
+      expect(media.url).not.toContain('/api/media/video?author=')
+    })
+
+    it('TikTok video → TikTok stream + download + thumbnail proxy URLs', async () => {
+      await testInstance.db.insert(schema.bookmarks).values(
+        createTestBookmark(USER_A, '7648011069385919752', {
+          platform: 'tiktok',
+          author: 'animalsunseenofficial',
+          category: 'video',
+        }),
+      )
+      await testInstance.db.insert(schema.bookmarkMedia).values({
+        id: '7648011069385919752_video_0',
+        userId: USER_A,
+        platform: 'tiktok',
+        bookmarkId: '7648011069385919752',
+        mediaType: 'video',
+        originalUrl: 'tiktok',
+      })
+
+      const media = await feedMedia('7648011069385919752')
+      expect(media.url).toBe(
+        '/api/media/tiktok/video?username=animalsunseenofficial&id=7648011069385919752',
+      )
+      expect(media.shareUrl).toContain('/api/media/tiktok/video/download')
+      expect(media.thumbnailUrl).toContain('/api/media/tiktok/thumbnail')
+    })
+
+    it('Instagram photo row → poster + IG link-out (graceful fallback, not a dead player)', async () => {
+      await testInstance.db.insert(schema.bookmarks).values(
+        createTestBookmark(USER_A, 'photopost1', {
+          platform: 'instagram',
+          category: 'photo',
+          tweetUrl: 'https://www.instagram.com/p/photopost1/',
+        }),
+      )
+      await testInstance.db.insert(schema.bookmarkMedia).values({
+        id: 'photopost1_photo_0',
+        userId: USER_A,
+        platform: 'instagram',
+        bookmarkId: 'photopost1',
+        mediaType: 'photo',
+        originalUrl: 'https://scontent.cdninstagram.com/p.jpg',
+      })
+
+      const media = await feedMedia('photopost1')
+      expect(media.mediaType).toBe('photo')
+      expect(media.url).toBe('/api/media/instagram/thumbnail?id=photopost1')
+      expect(media.shareUrl).toBe('https://www.instagram.com/p/photopost1/')
+    })
+  })
+
   describe('Multi-user isolation', () => {
     it('only returns bookmarks for current user', async () => {
       // Create bookmarks for both users

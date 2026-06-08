@@ -191,8 +191,10 @@ export function VideoPlayer({
     }
   }, [ready, useHls, hlsUrl])
 
-  // Show error state with fallback to X
+  // Show error state with a platform-aware link out to the source.
   if (error) {
+    const platformName =
+      platform === 'instagram' ? 'Instagram' : platform === 'tiktok' ? 'TikTok' : 'X'
     return (
       <div
         className={`flex flex-col items-center justify-center gap-4 p-8 bg-gray-900 rounded-xl ${className}`}
@@ -207,7 +209,7 @@ export function VideoPlayer({
             className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
           >
             <ExternalLink className="w-4 h-4" />
-            Watch on X
+            Watch on {platformName}
           </a>
         )}
       </div>

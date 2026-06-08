@@ -9,6 +9,7 @@ import { formatDurationMs, formatCompactRelativeTime } from '@/lib/utils/format'
 import { TypeBadge, PlatformChip, type ContentType, type PlatformId } from '@/components/matter'
 import { cn } from '@/lib/utils'
 import type { FeedItem } from './types'
+import { feedHoverSrc } from './video-src'
 
 interface FeedCardProps {
   item: FeedItem
@@ -188,15 +189,9 @@ function MediaContent({
   const hasDuration = isVideo && !!primaryMedia.durationMs
   const cornerBadge = hasDuration || (!isVideo && imageCount > 1)
 
-  // Hover-to-play. Twitter has a light 360p `quality=preview` tier; Instagram
-  // and TikTok serve a single quality, so they stream their (short) clip via
-  // the feed-provided proxy URL. YouTube has no MP4 (iframe only) → no hover.
-  const hoverVideoUrl =
-    item.platform === 'twitter' || !item.platform
-      ? `/api/media/video?author=${item.author}&tweetId=${item.id}&quality=preview`
-      : item.platform === 'tiktok' || item.platform === 'instagram'
-        ? primaryMedia.url
-        : null
+  // Hover-to-play src (single source of truth in ./video-src). Twitter uses a
+  // light 360p preview tier; IG/TikTok stream their short clip; YouTube → null.
+  const hoverVideoUrl = feedHoverSrc(item)
 
   return (
     <div className="relative">

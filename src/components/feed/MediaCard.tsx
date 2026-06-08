@@ -7,6 +7,7 @@ import { youtubeEmbedUrl } from '@/lib/media/youtube'
 import { normalizeEntityMap } from '@/lib/utils/article-text'
 import { AuthorAvatar } from './AuthorAvatar'
 import { renderTextWithLinks, stripMediaUrls, fallbackToOriginal } from './utils'
+import { feedVideoSrc } from './video-src'
 import { PlatformGlyph, type PlatformId } from '@/components/matter'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
 import { cn } from '@/lib/utils'
@@ -137,16 +138,7 @@ export function isFullBleedCandidate(item: FeedItem): boolean {
  * Focus mode is a deliberate viewing surface, so it streams HD (720p) — the
  * 360p `preview` quality is only for gallery hover previews.
  */
-function videoSrc(item: FeedItem): string {
-  const primary = item.media?.[0]
-  // TikTok and Instagram stream through their own proxy (the feed already built
-  // the right URL into the media row); only Twitter uses the quality-keyed
-  // FxTwitter proxy. Sending Instagram down the Twitter path was why IG video
-  // played on the preview page but not in the feed/triage cards.
-  return (item.platform === 'tiktok' || item.platform === 'instagram') && primary
-    ? primary.url
-    : `/api/media/video?author=${encodeURIComponent(item.author)}&tweetId=${encodeURIComponent(item.id)}&quality=hd`
-}
+const videoSrc = feedVideoSrc
 
 const FRAMED_MEDIA_CLASS =
   'h-full max-h-full w-auto max-w-full object-contain rounded-2xl bg-black shadow-m-lg'
