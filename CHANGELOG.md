@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.46.0](https://github.com/itsmemeworks/adhx/compare/v1.45.2...v1.46.0) (2026-06-08)
+
+
+### Features
+
+* restore Instagram video (playback, download, reel) via pluggable mirror registry ([#250](https://github.com/itsmemeworks/adhx/issues/250)) ([074ec05](https://github.com/itsmemeworks/adhx/commit/074ec056fe1701b6b2226fe3564681985d8908f0))
+
 ## [1.45.2](https://github.com/itsmemeworks/adhx/compare/v1.45.1...v1.45.2) (2026-06-08)
 
 
