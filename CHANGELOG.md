@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.42.1](https://github.com/itsmemeworks/adhx/compare/v1.42.0...v1.42.1) (2026-06-08)
+
+
+### Bug Fixes
+
+* mobile full-screen viewer — multi-image sizing, video controls, scroll vs delete ([#224](https://github.com/itsmemeworks/adhx/issues/224)) ([e73667f](https://github.com/itsmemeworks/adhx/commit/e73667f7c176ecd3744e8ea81f5daa24565301a1))
+
 ## [1.42.0](https://github.com/itsmemeworks/adhx/compare/v1.41.0...v1.42.0) (2026-06-08)
 
 
