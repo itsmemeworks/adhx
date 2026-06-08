@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.46.4](https://github.com/itsmemeworks/adhx/compare/v1.46.3...v1.46.4) (2026-06-08)
+
+
+### Bug Fixes
+
+* platform-aware video error label + consolidate/test per-platform video src ([#258](https://github.com/itsmemeworks/adhx/issues/258)) ([7c5080e](https://github.com/itsmemeworks/adhx/commit/7c5080e717a39b2fd90de85ee5f370d91ef2d4fd))
+
 ## [1.46.3](https://github.com/itsmemeworks/adhx/compare/v1.46.2...v1.46.3) (2026-06-08)
 
 
