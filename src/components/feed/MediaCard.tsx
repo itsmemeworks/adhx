@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Play, Pause, Volume2, VolumeX, Minimize2 } from 'lucide-react'
+import { Play, Pause, Volume2, VolumeX, Maximize2 } from 'lucide-react'
 import type { FeedItem, ArticleContent } from './types'
 import { youtubeEmbedUrl } from '@/lib/media/youtube'
 import { normalizeEntityMap } from '@/lib/utils/article-text'
@@ -247,6 +247,16 @@ function FullBleedMedia({
     if (!v.muted) v.play().catch(() => {})
   }
 
+  // Open the native fullscreen player — full controls (scrub / cast / timeline)
+  // without overlaying clashing chrome. iOS uses webkitEnterFullscreen on the
+  // <video>; everywhere else the standard Fullscreen API.
+  const goFullscreen = () => {
+    const v = videoRef.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null
+    if (!v) return
+    if (typeof v.webkitEnterFullscreen === 'function') v.webkitEnterFullscreen()
+    else void v.requestFullscreen?.()
+  }
+
   // Browsers pause backgrounded videos and don't always resume on return — and a
   // looping autoplay clip has no play button. Resume when the tab becomes visible.
   useEffect(() => {
@@ -282,19 +292,14 @@ function FullBleedMedia({
         muted
         loop
         playsInline
-        // Immersive shows the native controls (scrub / fullscreen / cast / play)
-        // and drops the tap-to-toggle so the controls work normally — the
-        // collapse button (below) returns to the framed view. Non-immersive is a
-        // clean autoplay preview; tapping it enters immersive.
-        controls={immersive}
-        onClick={
-          immersive
-            ? undefined
-            : (e) => {
-                e.stopPropagation()
-                onToggleImmersive?.()
-              }
-        }
+        // No inline native controls (they claim the corners and clash with the
+        // app chrome). Tapping the video toggles immersive (hide/show the dock +
+        // caption); the fullscreen button opens the native player for scrub /
+        // cast / timeline. The mute + fullscreen buttons are the only controls.
+        onClick={(e) => {
+          e.stopPropagation()
+          onToggleImmersive?.()
+        }}
         className="absolute inset-0 w-full h-full object-contain"
       />
     )
@@ -366,37 +371,36 @@ function FullBleedMedia({
         />
       )}
 
-      {/* Tap-to-unmute (video only) — top-right, clear of the dock. */}
-      {isVideo && !immersive && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            toggleMute()
-          }}
-          aria-label={muted ? 'Unmute' : 'Mute'}
-          className="absolute top-[68px] right-4 z-[4] w-10 h-10 rounded-full bg-black/40 backdrop-blur text-white flex items-center justify-center"
-        >
-          {muted ? (
-            <VolumeX className="w-[18px] h-[18px]" />
-          ) : (
-            <Volume2 className="w-[18px] h-[18px]" />
-          )}
-        </button>
-      )}
-
-      {/* Collapse out of immersive (video) — the top bar is hidden here, so this
-          is the way back to the framed chrome. Sits above the native controls. */}
-      {isVideo && immersive && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onToggleImmersive?.()
-          }}
-          aria-label="Exit immersive"
-          className="absolute top-4 left-4 z-[5] w-[38px] h-[38px] rounded-full bg-black/40 backdrop-blur text-white flex items-center justify-center"
-        >
-          <Minimize2 className="w-[18px] h-[18px]" />
-        </button>
+      {/* Video controls — mute + fullscreen. The only controls (no inline native
+          ones), so they never clash. Top-right; shown in both immersive and
+          framed. Fullscreen opens the native player for scrub / cast / timeline. */}
+      {isVideo && (
+        <div className="absolute top-[68px] right-4 z-[5] flex items-center gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              toggleMute()
+            }}
+            aria-label={muted ? 'Unmute' : 'Mute'}
+            className="w-10 h-10 rounded-full bg-black/40 backdrop-blur text-white flex items-center justify-center"
+          >
+            {muted ? (
+              <VolumeX className="w-[18px] h-[18px]" />
+            ) : (
+              <Volume2 className="w-[18px] h-[18px]" />
+            )}
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              goFullscreen()
+            }}
+            aria-label="Fullscreen"
+            className="w-10 h-10 rounded-full bg-black/40 backdrop-blur text-white flex items-center justify-center"
+          >
+            <Maximize2 className="w-[18px] h-[18px]" />
+          </button>
+        </div>
       )}
 
       {/* Page dots for the multi-photo carousel, just above the caption. */}
