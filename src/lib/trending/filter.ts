@@ -9,11 +9,11 @@ import type { ContentType } from '@/components/matter'
  * Pure module (no React, no DB) — safe to import from server components.
  */
 
-export type FilterId = 'trending' | 'latest' | 'photos' | 'videos' | 'text' | 'articles'
+export type FilterId = 'latest' | 'popular' | 'photos' | 'videos' | 'text' | 'articles'
 
 export const FILTERS: { id: FilterId; label: string }[] = [
-  { id: 'trending', label: 'Trending' },
   { id: 'latest', label: 'Latest' },
+  { id: 'popular', label: 'Popular' },
   { id: 'photos', label: 'Photos' },
   { id: 'videos', label: 'Videos' },
   { id: 'text', label: 'Text' },
@@ -22,10 +22,10 @@ export const FILTERS: { id: FilterId; label: string }[] = [
 
 /**
  * Filters that get their own tidy path `/trending/<slug>`. The default lens
- * ("trending") lives at the bare `/trending`, so it isn't a sub-path.
+ * ("latest") lives at the bare `/trending`, so it isn't a sub-path.
  */
-export const FILTER_SLUGS: Exclude<FilterId, 'trending'>[] = [
-  'latest',
+export const FILTER_SLUGS: Exclude<FilterId, 'latest'>[] = [
+  'popular',
   'photos',
   'videos',
   'text',
@@ -36,17 +36,17 @@ const VALID_FILTERS = new Set<string>(FILTERS.map((f) => f.id))
 
 /** `/trending/<slug>` → FilterId, or null for an unknown slug (route should 404). */
 export function slugToFilter(slug: string): FilterId | null {
-  return slug !== 'trending' && VALID_FILTERS.has(slug) ? (slug as FilterId) : null
+  return slug !== 'latest' && VALID_FILTERS.has(slug) ? (slug as FilterId) : null
 }
 
-/** FilterId → on-site path. The default lens (trending) is the bare `/trending`. */
+/** FilterId → on-site path. The default lens (latest) is the bare `/trending`. */
 export function filterToPath(filter: FilterId): string {
-  return filter === 'trending' ? '/trending' : `/trending/${filter}`
+  return filter === 'latest' ? '/trending' : `/trending/${filter}`
 }
 
 /** A human label for a filter (used in hub titles/headings). */
 export function filterLabel(filter: FilterId): string {
-  return FILTERS.find((f) => f.id === filter)?.label ?? 'Trending'
+  return FILTERS.find((f) => f.id === filter)?.label ?? 'Latest'
 }
 
 /**
@@ -74,15 +74,30 @@ export function inferType(item: TrendingItem): ContentType {
 }
 
 /**
- * Filter + sort a deduped list by lens. "Latest" = newest first (the API
- * already returns newest-first) and shows EVERY recent item regardless of how
- * it entered the pulse (saved / synced / added / previewed). "Trending"
+ * Whether a trending item can play in the autoplay **Reel** (`/trending/play`).
+ * v1 supports the platforms that expose a clean MP4 stream + a native `ended`
+ * event we can chain on: **TikTok** (`/api/media/tiktok/video`) and **X video**
+ * (`/api/media/video`). YouTube (iframe embed, no MP4) and Instagram
+ * (poster-only — mirrors dead) are excluded until their playback paths support
+ * inline auto-advance. Requires a `bookmarkId` (the source video id) to build
+ * the stream URL.
+ */
+export function isReelPlayable(item: TrendingItem): boolean {
+  if (!item.bookmarkId) return false
+  if (item.platform !== 'twitter' && item.platform !== 'tiktok') return false
+  return inferType(item) === 'video'
+}
+
+/**
+ * Filter + sort a deduped list by lens. "Latest" (the default) = newest first
+ * (the API already returns newest-first) and shows EVERY recent item regardless
+ * of how it entered the pulse (saved / synced / added / previewed). "Popular"
  * surfaces posts with 2+ interactions (saves + previews), ranked by that score
  * (newest as tiebreaker). Photos/Videos/Text/Articles filter by type (Text
  * includes quotes).
  */
 export function applyFilter(items: TrendingItem[], filter: FilterId): TrendingItem[] {
-  if (filter === 'trending') {
+  if (filter === 'popular') {
     return items
       .filter((it) => (it.trendCount ?? 0) >= 2)
       .sort((a, b) => {

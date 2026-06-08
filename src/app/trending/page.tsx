@@ -49,17 +49,16 @@ export const metadata: Metadata = {
 }
 
 export default async function TrendingPage() {
-  // Overall hub: sort by trending score, filtered to genuinely-trending posts
-  // (2+ interactions) so the crawlable list leads with the strongest content,
-  // then fall back to recent if the threshold leaves it thin.
+  // The bare hub defaults to the "Latest" lens — the newest items, newest-first,
+  // however they entered the pulse. (The "Popular" lens, ranked by interactions,
+  // is a pill / the /trending/popular sub-path.)
   //
   // Resilience: a DB failure during build/ISR degrades to an empty hub (zero
   // items) instead of throwing a 500 — matching sitemap.ts's graceful fallback.
   let items: TrendingItem[] = []
   try {
-    const { items: trending } = await getTrendingItems({ minTrend: 2, limit: 30 })
     const { items: recent } = await getTrendingItems({ limit: 30 })
-    items = trending.length >= 4 ? trending : recent
+    items = recent
   } catch (error) {
     console.error('Trending: failed to query trending items:', error)
   }
@@ -82,8 +81,8 @@ export default async function TrendingPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <h1 className="sr-only">What people are saving across X, TikTok, Instagram and YouTube</h1>
-      <TrendingStaticList items={items} heading="Trending posts" />
-      <DiscoverFeed initialItems={items} initialFilter="trending" />
+      <TrendingStaticList items={items} heading="Latest posts" />
+      <DiscoverFeed initialItems={items} initialFilter="latest" />
     </>
   )
 }

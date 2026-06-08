@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { Play } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { LiveDot, MatterLogo, ConnectWithX } from '@/components/matter'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -101,11 +102,11 @@ export function DiscoverFeed({
   const signedOut = authed === false
 
   // Restore the last-used lens on the bare /trending hub (where the URL didn't
-  // pin a specific filter — i.e. initialFilter is the default 'trending'). A
+  // pin a specific filter — i.e. initialFilter is the default 'latest'). A
   // /trending/<filter> URL always wins. Runs in an effect (not the initial
   // useState) so server + first client render match — no hydration mismatch.
   useEffect(() => {
-    if (initialFilter && initialFilter !== 'trending') return
+    if (initialFilter && initialFilter !== 'latest') return
     try {
       const saved = localStorage.getItem(FILTER_STORAGE_KEY)
       if (saved && FILTERS.some((f) => f.id === saved)) setFilter(saved as FilterId)
@@ -223,7 +224,7 @@ export function DiscoverFeed({
       {/* Live status + filters */}
       <div className="mx-auto max-w-7xl px-4 pb-2 pt-4 sm:px-6">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="inline-flex items-center gap-2.5 rounded-full border border-clay/25 bg-clay/[0.09] px-4 py-2">
+          <span className="hidden items-center gap-2.5 rounded-full border border-clay/25 bg-clay/[0.09] px-4 py-2 sm:inline-flex">
             <LiveDot />
             {/* Real saves + previews in the last 24h (from /api/activity). It's 0
                 on the server render (client-fetched), so it legitimately differs
@@ -256,7 +257,15 @@ export function DiscoverFeed({
             })}
           </div>
 
-          <span className="ml-auto font-mono text-[12.5px] text-ink-3">updates live</span>
+          {/* Play the trending videos as a full-bleed autoplay reel. */}
+          <Link
+            href="/trending/play"
+            className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-clay-grad px-4 py-2 text-[13.5px] font-semibold text-white shadow-glow transition-opacity duration-150 hover:opacity-90"
+          >
+            <Play size={14} fill="currentColor" />
+            Play
+          </Link>
+          <span className="hidden font-mono text-[12.5px] text-ink-3 sm:inline">updates live</span>
         </div>
       </div>
 
