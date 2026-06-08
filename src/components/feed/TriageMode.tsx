@@ -684,21 +684,15 @@ function DockButton({
       >
         {children}
       </span>
-      {/* The LABEL is centered under the button; the direction arrow is absolutely
-          positioned beside it so it doesn't shift the label off-center. */}
       <span
         className={cn(
-          'relative inline-block text-[13px] font-semibold leading-none',
+          'inline-flex items-center gap-1 text-[13px] font-semibold leading-none',
           onDark ? 'text-white drop-shadow' : 'text-fink',
         )}
       >
-        {arrow === 'left' && (
-          <Arrow className="absolute right-full mr-1 top-1/2 -translate-y-1/2 w-3.5 h-3.5" />
-        )}
+        {arrow === 'left' && <Arrow className="w-3.5 h-3.5" />}
         {label}
-        {arrow && arrow !== 'left' && (
-          <Arrow className="absolute left-full ml-1 top-1/2 -translate-y-1/2 w-3.5 h-3.5" />
-        )}
+        {arrow && arrow !== 'left' && <Arrow className="w-3.5 h-3.5" />}
       </span>
     </button>
   )
