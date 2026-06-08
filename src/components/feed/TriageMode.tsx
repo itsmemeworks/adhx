@@ -327,13 +327,14 @@ export function TriageMode({
     if (!touchStart.current) return
     const dx = e.touches[0].clientX - touchStart.current.x
     const dy = e.touches[0].clientY - touchStart.current.y
-    // Horizontal gesture → Later/Done; a downward gesture → Delete. Only one axis
-    // tracks at a time so the live transform stays clean. Upward drag is ignored
-    // (no action), so clamp dy to >= 0.
+    // Horizontal gesture → Later/Done. A downward gesture → Delete, but ONLY for
+    // full-bleed media (which doesn't scroll). Framed text/articles/quotes are
+    // scrollable, so we leave the vertical axis to native scroll there —
+    // otherwise scrolling back up fires the delete swipe.
     if (Math.abs(dx) > Math.abs(dy)) {
       setDrag(dx)
       setDragY(0)
-    } else {
+    } else if (fullBleed) {
       setDragY(Math.max(0, dy))
       setDrag(0)
     }
