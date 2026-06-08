@@ -14,8 +14,8 @@ export type FilterId = 'latest' | 'popular' | 'photos' | 'videos' | 'text' | 'ar
 export const FILTERS: { id: FilterId; label: string }[] = [
   { id: 'latest', label: 'Latest' },
   { id: 'popular', label: 'Popular' },
-  { id: 'photos', label: 'Photos' },
   { id: 'videos', label: 'Videos' },
+  { id: 'photos', label: 'Photos' },
   { id: 'text', label: 'Text' },
   { id: 'articles', label: 'Articles' },
 ]

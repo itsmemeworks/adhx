@@ -1,8 +1,9 @@
 'use client'
 
-import { Download, ExternalLink, Search, Sparkles, Zap } from 'lucide-react'
+import { ExternalLink, Search, Sparkles, Zap } from 'lucide-react'
 import { PlatformGlyph } from '@/components/matter'
 import { VideoPlayer } from '@/components/feed/VideoPlayer'
+import { MediaShareOverlayButton } from '@/components/previews/MediaShareOverlayButton'
 import { PreviewAnotherLink } from '@/components/PreviewAnotherLink'
 import {
   PreviewShell,
@@ -50,6 +51,8 @@ export function InstagramPreviewLanding({
         onAdd={addToCollection}
         onConnect={connect}
         shareTitle="Instagram — ADHX Preview"
+        downloadUrl={`/api/media/instagram/video/download?id=${encodeURIComponent(reelId)}`}
+        showDownload={!!imageUrl}
       />
       <PreviewAnotherLink className="mt-4" />
     </>
@@ -117,14 +120,24 @@ export function InstagramPreviewLanding({
           link-out on a mirror miss (VideoPlayer's own error state). */}
       {imageUrl && (
         <div className="px-4 pb-3">
-          <VideoPlayer
-            author={author || 'instagram'}
-            tweetId={reelId}
-            platform="instagram"
-            poster={imageUrl}
-            tweetUrl={instagramUrl}
-            className="w-full aspect-[9/16] object-contain rounded-2xl bg-black"
-          />
+          <div className="group relative">
+            <VideoPlayer
+              author={author || 'instagram'}
+              tweetId={reelId}
+              platform="instagram"
+              poster={imageUrl}
+              tweetUrl={instagramUrl}
+              className="w-full aspect-[9/16] object-contain rounded-2xl bg-black"
+            />
+            {/* Touch: share the video to another app; desktop: hover → download. */}
+            <div className="pointer-events-auto absolute right-3 top-3 z-10">
+              <MediaShareOverlayButton
+                streamUrl={`/api/media/instagram/video?id=${encodeURIComponent(reelId)}`}
+                downloadUrl={`/api/media/instagram/video/download?id=${encodeURIComponent(reelId)}`}
+                title={`Instagram Reel ${reelId}`}
+              />
+            </div>
+          </div>
         </div>
       )}
 
@@ -146,28 +159,16 @@ export function InstagramPreviewLanding({
           <PlatformGlyph platform="instagram" size={14} />
           Instagram post
         </span>
-        <div className="flex items-center gap-3">
-          {imageUrl && (
-            <a
-              href={`/api/media/instagram/video/download?id=${encodeURIComponent(reelId)}`}
-              className="flex items-center gap-1.5 text-[13px] font-semibold text-ink-2 hover:text-clay transition-colors"
-              title="Download video"
-            >
-              <Download className="w-3.5 h-3.5" />
-              Download
-            </a>
-          )}
-          <a
-            href={instagramUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-[13px] font-semibold text-clay hover:opacity-80 transition-opacity"
-            title="View on Instagram"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            View original
-          </a>
-        </div>
+        <a
+          href={instagramUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 text-[13px] font-semibold text-clay hover:opacity-80 transition-opacity"
+          title="View on Instagram"
+        >
+          <ExternalLink className="w-3.5 h-3.5" />
+          View original
+        </a>
       </footer>
     </article>
   )

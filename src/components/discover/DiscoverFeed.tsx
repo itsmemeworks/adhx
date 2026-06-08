@@ -4,8 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Play } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { LiveDot, MatterLogo, ConnectWithX } from '@/components/matter'
-import { ThemeToggle } from '@/components/ThemeToggle'
+import { LiveDot } from '@/components/matter'
+import { PublicNav } from '@/components/PublicNav'
 import { DiscoverCard } from './DiscoverCard'
 import type { TrendingItem } from '@/lib/trending/query'
 import { type FilterId, FILTERS, applyFilter, filterToPath } from '@/lib/trending/filter'
@@ -181,27 +181,12 @@ export function DiscoverFeed({
           Discover nav, so we go straight to the live banner. */}
       {signedOut && (
         <>
-          <nav className="flex items-center border-b border-hairline px-5 py-4 sm:px-11">
-            <Link href="/" aria-label="ADHX home">
-              <MatterLogo size={20} />
-            </Link>
-            <div className="ml-auto flex items-center gap-5 sm:gap-[22px]">
-              <Link
-                href="/"
-                className="hidden sm:inline text-sm font-medium text-ink-2 hover:text-ink"
-              >
-                How it works
-              </Link>
-              <span className="hidden sm:inline text-sm font-semibold text-clay">Trending</span>
-              <ThemeToggle className="-mr-1 sm:mr-0" />
-              <a
-                href="/api/auth/twitter"
-                className="inline-flex items-center gap-2 rounded-[10px] bg-ink px-4 py-2 text-[13.5px] font-semibold text-surface"
-              >
-                <ConnectWithX size={14} />
-              </a>
-            </div>
-          </nav>
+          <PublicNav
+            active="trending"
+            onConnect={() => {
+              window.location.href = '/api/auth/twitter'
+            }}
+          />
           <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-6">
             <div className="flex items-center gap-2 mb-2">
               <LiveDot />

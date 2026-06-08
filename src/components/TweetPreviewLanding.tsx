@@ -337,6 +337,8 @@ export function TweetPreviewLanding({
         onLogin={handleLogin}
         onShare={handleSharePreview}
         shareStatus={shareStatus}
+        showDownload={videos.length > 0}
+        downloadUrl={`/api/media/video/download?author=${encodeURIComponent(username)}&tweetId=${encodeURIComponent(tweetId)}&quality=hd`}
       />
       <PreviewAnotherLink />
     </>
@@ -649,6 +651,8 @@ function SidebarActions({
   onLogin,
   onShare,
   shareStatus,
+  downloadUrl,
+  showDownload = false,
 }: {
   isAuthenticated: boolean
   isAdding: boolean
@@ -658,6 +662,9 @@ function SidebarActions({
   onLogin: () => void
   onShare: () => void
   shareStatus: 'idle' | 'shared' | 'copied'
+  /** Tweet video download URL — shown next to Share when the tweet has video. */
+  downloadUrl?: string
+  showDownload?: boolean
 }): React.ReactElement {
   const [copied, setCopied] = useState(false)
 
@@ -669,6 +676,16 @@ function SidebarActions({
     } catch {
       /* clipboard unavailable */
     }
+  }
+
+  const download = () => {
+    if (!downloadUrl) return
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = ''
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   return (
@@ -700,7 +717,7 @@ function SidebarActions({
         </>
       )}
 
-      {/* Secondary action row — Download omitted for tweets (per-media download lives on the media itself) */}
+      {/* Secondary action row — Copy link / Share, plus Download for video tweets. */}
       <div className="flex gap-2.5">
         <button
           onClick={copyLink}
@@ -726,6 +743,15 @@ function SidebarActions({
             {shareStatus === 'shared' ? 'Shared' : shareStatus === 'copied' ? 'Copied' : 'Share'}
           </span>
         </button>
+        {showDownload && (
+          <button
+            onClick={download}
+            className="flex-1 flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl border border-hairline bg-surface text-ink-2 hover:text-clay hover:border-clay/30 transition-colors"
+          >
+            <Download className="w-[19px] h-[19px]" />
+            <span className="text-[12.5px] font-semibold">Download</span>
+          </button>
+        )}
       </div>
 
       {/* Keep it forever — only when unauthenticated */}
