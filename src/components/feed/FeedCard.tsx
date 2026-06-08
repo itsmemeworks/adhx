@@ -65,10 +65,9 @@ export function FeedCard({
   const aspectRatio =
     primaryMedia?.width && primaryMedia?.height ? primaryMedia.width / primaryMedia.height : 1
 
-  const newGlowClass =
-    isNew && !isHovered
-      ? 'shadow-[0_0_8px_2px_rgba(194,96,63,0.4),0_0_20px_4px_rgba(194,96,63,0.22),0_0_35px_8px_rgba(194,96,63,0.1)]'
-      : ''
+  const newGlowClass = isNew
+    ? 'shadow-[0_0_8px_2px_rgba(194,96,63,0.4),0_0_20px_4px_rgba(194,96,63,0.22),0_0_35px_8px_rgba(194,96,63,0.1)]'
+    : ''
 
   const timeDate = sortField === 'createdAt' && item.createdAt ? item.createdAt : item.processedAt
   const timeBadge = formatCompactRelativeTime(timeDate)
@@ -92,7 +91,6 @@ export function FeedCard({
       <div
         className={cn(
           'group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer',
-          'hover:shadow-m-md transition-shadow duration-150',
           newGlowClass,
         )}
         onClick={onExpand}
@@ -299,13 +297,11 @@ function MediaOverlays({
 }): React.ReactElement {
   return (
     <>
-      <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 group-hover:opacity-0 transition-opacity">
+      <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
         <TypeBadge type={badgeType} />
         <PlatformChip platform={platform} />
       </div>
-      <TimePill className="absolute top-2.5 right-2.5 group-hover:opacity-0 transition-opacity">
-        {timeBadge}
-      </TimePill>
+      <TimePill className="absolute top-2.5 right-2.5">{timeBadge}</TimePill>
     </>
   )
 }

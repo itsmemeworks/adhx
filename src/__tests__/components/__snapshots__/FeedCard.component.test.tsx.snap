@@ -5,7 +5,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > '4
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="relative"
@@ -27,7 +27,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > '4
         style="background: linear-gradient(transparent 40%, rgba(11, 11, 17, 0.84));"
       />
       <div
-        class="absolute top-2.5 left-2.5 flex items-center gap-1.5 group-hover:opacity-0 transition-opacity"
+        class="absolute top-2.5 left-2.5 flex items-center gap-1.5"
       >
         <span
           class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
@@ -54,7 +54,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > '4
         </span>
       </div>
       <span
-        class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5 group-hover:opacity-0 transition-opacity"
+        class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5"
       >
         now
       </span>
@@ -87,7 +87,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="relative overflow-hidden p-4 bg-gradient-to-br from-clay/[0.14] to-surface"
@@ -163,7 +163,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="relative"
@@ -230,7 +230,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'e
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="relative"
@@ -272,7 +272,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'e
         </div>
       </div>
       <div
-        class="absolute top-2.5 left-2.5 flex items-center gap-1.5 group-hover:opacity-0 transition-opacity"
+        class="absolute top-2.5 left-2.5 flex items-center gap-1.5"
       >
         <span
           class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
@@ -299,7 +299,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'e
         </span>
       </div>
       <span
-        class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5 group-hover:opacity-0 transition-opacity"
+        class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5"
       >
         now
       </span>
@@ -330,7 +330,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="relative"
@@ -352,7 +352,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
         style="background: linear-gradient(transparent 40%, rgba(11, 11, 17, 0.84));"
       />
       <div
-        class="absolute top-2.5 left-2.5 flex items-center gap-1.5 group-hover:opacity-0 transition-opacity"
+        class="absolute top-2.5 left-2.5 flex items-center gap-1.5"
       >
         <span
           class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
@@ -379,7 +379,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
         </span>
       </div>
       <span
-        class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5 group-hover:opacity-0 transition-opacity"
+        class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5"
       >
         now
       </span>
@@ -440,7 +440,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="relative"
@@ -462,7 +462,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
         style="background: linear-gradient(transparent 40%, rgba(11, 11, 17, 0.84));"
       />
       <div
-        class="absolute top-2.5 left-2.5 flex items-center gap-1.5 group-hover:opacity-0 transition-opacity"
+        class="absolute top-2.5 left-2.5 flex items-center gap-1.5"
       >
         <span
           class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
@@ -489,7 +489,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
         </span>
       </div>
       <span
-        class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5 group-hover:opacity-0 transition-opacity"
+        class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5"
       >
         now
       </span>
@@ -529,7 +529,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="bg-surface p-4"
@@ -875,7 +875,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'p
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="bg-surface p-4"
@@ -939,7 +939,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="bg-surface p-4"
@@ -1154,7 +1154,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="bg-surface p-4"
@@ -1249,7 +1249,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'r
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="bg-surface p-4"
@@ -1322,7 +1322,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 't
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="bg-surface p-4"
@@ -1429,7 +1429,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'v
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="relative"
@@ -1471,7 +1471,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'v
         </div>
       </div>
       <div
-        class="absolute top-2.5 left-2.5 flex items-center gap-1.5 group-hover:opacity-0 transition-opacity"
+        class="absolute top-2.5 left-2.5 flex items-center gap-1.5"
       >
         <span
           class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
@@ -1498,7 +1498,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'v
         </span>
       </div>
       <span
-        class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5 group-hover:opacity-0 transition-opacity"
+        class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5"
       >
         now
       </span>
@@ -1525,7 +1525,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'y
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="bg-surface p-4"
