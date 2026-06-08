@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.42.0](https://github.com/itsmemeworks/adhx/compare/v1.41.0...v1.42.0) (2026-06-08)
+
+
+### Features
+
+* mobile triage/media polish — multi-image, immersive video, progress counter, filter dropdown fix ([#222](https://github.com/itsmemeworks/adhx/issues/222)) ([bd9b404](https://github.com/itsmemeworks/adhx/commit/bd9b40448852d45b6fec9df18fc391d02f10691a))
+
 ## [1.41.0](https://github.com/itsmemeworks/adhx/compare/v1.40.1...v1.41.0) (2026-06-08)
 
 
