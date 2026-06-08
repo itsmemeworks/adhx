@@ -97,7 +97,11 @@ describe('OAuth Utilities', () => {
 
       expect(url).toContain('https://twitter.com/i/oauth2/authorize')
       expect(url).toContain('client_id=client-123')
-      expect(url).toContain('redirect_uri=https%3A%2F%2Fexample.com%2Fcallback')
+      // Dots in redirect_uri are percent-encoded (%2E) to dodge X's logged-out
+      // "x.com" → "twitter.com" rewrite bug — see buildAuthorizationUrl comment.
+      expect(url).toContain('redirect_uri=https%3A%2F%2Fexample%2Ecom%2Fcallback')
+      // The raw URL X scans must NOT contain the literal substring "x.com".
+      expect(url).not.toContain('example.com')
       expect(url).toContain('state=state-abc')
       expect(url).toContain('code_challenge=challenge-xyz')
       expect(url).toContain('code_challenge_method=S256')
