@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   X,
   Check,
-  Bookmark,
+  Clock,
   Trash2,
   Flame,
   Undo2,
@@ -84,7 +84,7 @@ export function TriageMode({
   const [celebrate, setCelebrate] = useState<string | null>(null)
   const [undo, setUndo] = useState<UndoAction | null>(null)
   const [exiting, setExiting] = useState<'left' | 'right' | 'down' | null>(null)
-  // Horizontal drag (Keep/Done) and downward drag (Delete) for live swipe feedback.
+  // Horizontal drag (Later/Done) and downward drag (Delete) for live swipe feedback.
   const [drag, setDrag] = useState(0)
   const [dragY, setDragY] = useState(0)
   // Transient confirmation for the Copy / Share buttons.
@@ -170,7 +170,7 @@ export function TriageMode({
     setTimeout(advance, 220)
   }, [current, index, recordStreak, advance, onItemResolved])
 
-  // Keep: save & advance (no DB change).
+  // Later: defer — advance without changing read state.
   const keep = useCallback(() => {
     if (!current) return
     recordStreak()
@@ -231,7 +231,7 @@ export function TriageMode({
     }
   }, [current])
 
-  // --- keyboard: ← Keep, → Done, ↓ Delete, U undo, Esc close ---
+  // --- keyboard: ← Later, → Done, ↓ Delete, U undo, Esc close ---
   useEffect(() => {
     if (!isOpen) return
     const onKey = (e: KeyboardEvent) => {
@@ -312,7 +312,7 @@ export function TriageMode({
     if (!touchStart.current) return
     const dx = e.touches[0].clientX - touchStart.current.x
     const dy = e.touches[0].clientY - touchStart.current.y
-    // Horizontal gesture → Keep/Done; a downward gesture → Delete. Only one axis
+    // Horizontal gesture → Later/Done; a downward gesture → Delete. Only one axis
     // tracks at a time so the live transform stays clean. Upward drag is ignored
     // (no action), so clamp dy to >= 0.
     if (Math.abs(dx) > Math.abs(dy)) {
@@ -325,7 +325,7 @@ export function TriageMode({
   }
   const onTouchEnd = () => {
     // Swipe direction matches the card flight + the keyboard arrows:
-    // right → Done (flies right), left → Keep (flies left), down → Delete.
+    // right → Done (flies right), left → Later (flies left), down → Delete.
     if (drag > SWIPE_THRESHOLD) archive()
     else if (drag < -SWIPE_THRESHOLD) keep()
     else if (dragY > SWIPE_THRESHOLD) del()
@@ -520,7 +520,7 @@ export function TriageMode({
       )}
 
       {/* Live swipe feedback: the action you're about to trigger, on the side
-          the card is heading toward (left = Keep, right = Done). */}
+          the card is heading toward (left = Later, right = Done). */}
       {!finished && current && drag !== 0 && !exiting && (
         <div
           className={cn(
@@ -538,8 +538,8 @@ export function TriageMode({
               background: `color-mix(in srgb, ${drag < 0 ? 'var(--m-accent)' : 'var(--m-done)'} 14%, transparent)`,
             }}
           >
-            {drag < 0 ? <Bookmark className="w-5 h-5" /> : <Check className="w-5 h-5" />}
-            {drag < 0 ? 'Keep' : 'Done'}
+            {drag < 0 ? <Clock className="w-5 h-5" /> : <Check className="w-5 h-5" />}
+            {drag < 0 ? 'Later' : 'Done'}
           </div>
         </div>
       )}
@@ -563,41 +563,20 @@ export function TriageMode({
       )}
 
       {/* Action dock (bottom-center): labelled glass buttons (tap or swipe), each
-          showing its swipe/keyboard direction (Keep ←, Delete ↓, Done →). */}
+          showing its swipe/keyboard direction (Later ←, Delete ↓, Done →). */}
       {!finished && (
         <div
           onClick={(e) => e.stopPropagation()}
           className="absolute bottom-6 left-0 right-0 z-[7] flex flex-col items-center gap-3"
         >
           <div className="flex items-end gap-6 sm:gap-[40px]">
-            <DockButton
-              onClick={keep}
-              label="Keep"
-              caption="stays unread"
-              tone="primary"
-              arrow="left"
-              onDark={fullBleed}
-            >
-              <Bookmark className="w-[25px] h-[25px]" />
+            <DockButton onClick={keep} label="Later" tone="primary" arrow="left" onDark={fullBleed}>
+              <Clock className="w-[25px] h-[25px]" />
             </DockButton>
-            <DockButton
-              onClick={del}
-              label="Delete"
-              caption="removes it"
-              tone="outline"
-              arrow="down"
-              onDark={fullBleed}
-            >
+            <DockButton onClick={del} label="Delete" tone="outline" arrow="down" onDark={fullBleed}>
               <Trash2 className="w-[22px] h-[22px]" />
             </DockButton>
-            <DockButton
-              onClick={archive}
-              label="Done"
-              caption="marks read"
-              tone="done"
-              arrow="right"
-              onDark={fullBleed}
-            >
+            <DockButton onClick={archive} label="Done" tone="done" arrow="right" onDark={fullBleed}>
               <Check className="w-[25px] h-[25px]" />
             </DockButton>
           </div>
@@ -611,7 +590,7 @@ export function TriageMode({
           className="fixed bottom-[150px] left-1/2 -translate-x-1/2 z-[8] flex items-center gap-3 bg-fsurface border border-fline text-fink px-4 py-2 rounded-full shadow-m-lg text-sm"
         >
           <span>
-            {undo.type === 'archive' ? 'Done' : undo.type === 'delete' ? 'Deleted' : 'Kept'}
+            {undo.type === 'archive' ? 'Done' : undo.type === 'delete' ? 'Deleted' : 'Later'}
           </span>
           <button onClick={doUndo} className="flex items-center gap-1 font-semibold text-clay">
             <Undo2 className="w-4 h-4" /> Undo
@@ -639,15 +618,14 @@ export function TriageMode({
 }
 
 /**
- * "Apple-glass" dock button — translucent fill + backdrop blur. Keep = accent
+ * "Apple-glass" dock button — translucent fill + backdrop blur. Later = accent
  * glass, Delete = subtle outline glass, Done = green glass. The whole stack
- * (circle + label + caption) is the tap target, so it works by tap as well as
- * swipe, and the always-visible label/caption say what each action does.
+ * (circle + label) is the tap target, so it works by tap as well as swipe, and
+ * the label + direction arrow say what each action does.
  */
 function DockButton({
   onClick,
   label,
-  caption,
   tone,
   arrow,
   onDark = false,
@@ -655,7 +633,6 @@ function DockButton({
 }: {
   onClick: () => void
   label: string
-  caption?: string
   tone: 'primary' | 'outline' | 'done'
   /** The gesture/keyboard direction for this action, shown next to the label. */
   arrow?: 'left' | 'right' | 'down'
@@ -711,16 +688,6 @@ function DockButton({
         {label}
         {arrow && arrow !== 'left' && <Arrow className="w-3.5 h-3.5" />}
       </span>
-      {caption && (
-        <span
-          className={cn(
-            'text-[10.5px] leading-none',
-            onDark ? 'text-white/75 drop-shadow' : 'text-fink-3',
-          )}
-        >
-          {caption}
-        </span>
-      )}
     </button>
   )
 }
