@@ -1,20 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import {
-  Check,
-  Download,
-  ExternalLink,
-  Loader2,
-  Play,
-  Search,
-  Share2,
-  Sparkles,
-  Zap,
-} from 'lucide-react'
-import { isTouchDevice } from '@/components/feed/utils'
+import { useState } from 'react'
+import { ExternalLink, Play, Search, Sparkles, Zap } from 'lucide-react'
 import { PlatformGlyph } from '@/components/matter'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
+import { MediaShareOverlayButton } from '@/components/previews/MediaShareOverlayButton'
 import { PreviewAnotherLink } from '@/components/PreviewAnotherLink'
 import {
   PreviewShell,
@@ -183,11 +173,11 @@ export function TikTokPreviewLanding({
               </>
             )}
             <div className="absolute top-3 right-3 pointer-events-auto">
-              <TikTokShareButton
-                handle={handle}
-                videoId={videoId}
+              <MediaShareOverlayButton
                 streamUrl={streamUrl}
                 downloadUrl={downloadUrl}
+                filename={`tiktok-${handle}-${videoId}.mp4`}
+                title={`TikTok @${handle} ${videoId}`}
               />
             </div>
           </div>
@@ -269,78 +259,5 @@ function TikTokGlyph({ className }: { className?: string }) {
         d="M19.045 7.236a4.793 4.793 0 0 1-3.77-4.245v-.5h-3.445v13.672a2.896 2.896 0 0 1-5.201 1.743 2.896 2.896 0 0 1 2.342-4.585c.28 0 .55.04.808.115v-3.51a6.327 6.327 0 0 0-.808-.051 6.272 6.272 0 0 0-6.272 6.272A6.272 6.272 0 0 0 8.97 22.5h.005a6.272 6.272 0 0 0 6.272-6.272V9.187a8.182 8.182 0 0 0 4.773 1.526V7.28a4.795 4.795 0 0 1-.976-.094z"
       />
     </svg>
-  )
-}
-
-function TikTokShareButton({
-  handle,
-  videoId,
-  streamUrl,
-  downloadUrl,
-}: {
-  handle: string
-  videoId: string
-  streamUrl: string
-  downloadUrl: string
-}) {
-  const [isLoading, setIsLoading] = useState(false)
-  const [showSuccess, setShowSuccess] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    setIsMobile(isTouchDevice())
-  }, [])
-
-  const handleClick = async (e: React.MouseEvent) => {
-    e.stopPropagation()
-    e.preventDefault()
-    setIsLoading(true)
-    try {
-      if (isMobile && typeof navigator.share === 'function') {
-        await navigator.share({
-          url: new URL(streamUrl, window.location.origin).toString(),
-          title: `TikTok @${handle} ${videoId}`,
-        })
-        setShowSuccess(true)
-      } else {
-        const link = document.createElement('a')
-        link.href = downloadUrl
-        link.download = ''
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        setShowSuccess(true)
-      }
-    } catch {
-      // User cancelled share sheet or download failed — silently reset
-    } finally {
-      setIsLoading(false)
-      setTimeout(() => setShowSuccess(false), 1500)
-    }
-  }
-
-  const visibilityClass = isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-
-  return (
-    <button
-      onClick={handleClick}
-      disabled={isLoading}
-      className={cn(
-        'p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80',
-        visibilityClass,
-      )}
-      title={isMobile ? 'Share' : 'Download'}
-      aria-label={isMobile ? 'Share TikTok' : 'Download TikTok'}
-    >
-      {isLoading ? (
-        <Loader2 className="w-4 h-4 text-white animate-spin" />
-      ) : showSuccess ? (
-        <Check className="w-4 h-4 text-white" />
-      ) : isMobile ? (
-        <Share2 className="w-4 h-4 text-white" />
-      ) : (
-        <Download className="w-4 h-4 text-white" />
-      )}
-    </button>
   )
 }
