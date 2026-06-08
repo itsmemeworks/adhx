@@ -10,6 +10,12 @@ primary_region = 'lhr'
   NODE_ENV = 'production'
   DATABASE_PATH = '/data/adhx.db'
   SENTRY_ENVIRONMENT = 'production'
+  # OAuth callback host. adhx.com ends in "x.com", which X's logged-out login
+  # flow rewrites to "twitter.com" (→ adhtwitter.com), breaking login for users
+  # not already signed into X. The Fly host has no "x.com", so X leaves it alone;
+  # the callback route then bounces back to adhx.com to set the session cookie.
+  # This exact URL must also be registered as a callback in the X Developer Portal.
+  TWITTER_OAUTH_REDIRECT_URI = 'https://adhx-prod.fly.dev/api/auth/twitter/callback'
 
 [http_service]
   internal_port = 3000
