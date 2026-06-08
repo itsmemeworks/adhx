@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.43.3](https://github.com/itsmemeworks/adhx/compare/v1.43.2...v1.43.3) (2026-06-08)
+
+
+### Bug Fixes
+
+* route prod oauth callback through fly.dev host to dodge x.com rewrite ([#237](https://github.com/itsmemeworks/adhx/issues/237)) ([a24a7e8](https://github.com/itsmemeworks/adhx/commit/a24a7e8c19643f762cdaa01199f9811c12dc378f))
+
 ## [1.43.2](https://github.com/itsmemeworks/adhx/compare/v1.43.1...v1.43.2) (2026-06-08)
 
 
