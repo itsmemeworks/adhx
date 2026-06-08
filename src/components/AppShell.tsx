@@ -26,8 +26,10 @@ function HeaderSkeleton() {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
-  // Full-width pages without header (public share pages, URL prefix quick-add pages)
+  // Full-width pages without header (public share pages, URL prefix quick-add pages,
+  // the full-screen trending reel)
   const isFullWidth =
+    pathname === '/trending/play' ||
     pathname.startsWith('/share/') ||
     /^\/\w+\/status\/\d+$/.test(pathname) ||
     /^\/reels?\/[A-Za-z0-9_-]+$/.test(pathname) ||

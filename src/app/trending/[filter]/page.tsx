@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { getTrendingItems, type TrendingItem } from '@/lib/trending/query'
 import { applyFilter, filterLabel, slugToFilter } from '@/lib/trending/filter'
 import { DiscoverFeed } from '@/components/discover/DiscoverFeed'
@@ -33,11 +33,11 @@ interface Props {
 
 /** Per-filter copy for titles/descriptions. */
 function copy(label: string): { title: string; description: string } {
-  if (label === 'Latest') {
+  if (label === 'Popular') {
     return {
-      title: 'Latest — the newest on ADHX',
+      title: 'Popular — what people are saving most',
       description:
-        'The newest things happening across X, TikTok, Instagram and YouTube on ADHX right now — saved, synced, added or previewed. A live, anonymous feed — preview any of them and save your own to ADHX.',
+        'The most-saved and most-previewed posts across X, TikTok, Instagram and YouTube on ADHX right now. A live, anonymous feed — preview any of them and save your own to ADHX.',
     }
   }
   const lower = label.toLowerCase()
@@ -63,6 +63,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function TrendingFilterPage({ params }: Props) {
   const { filter: slug } = await params
+  // "latest" is the default lens at the bare /trending now — keep the old
+  // /trending/latest URL working by sending it there.
+  if (slug === 'latest') redirect('/trending')
   const filter = slugToFilter(slug)
   if (!filter) notFound()
 

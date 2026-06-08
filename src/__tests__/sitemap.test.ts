@@ -52,7 +52,8 @@ describe('Dynamic Sitemap', () => {
 
     expect(entries.find((e) => e.url === 'https://adhx.com')).toBeDefined()
     expect(entries.find((e) => e.url === 'https://adhx.com/trending')).toBeDefined()
-    for (const slug of ['latest', 'videos', 'photos', 'text', 'articles']) {
+    // "latest" is the bare /trending hub now; "popular" is the ranked sub-path.
+    for (const slug of ['popular', 'videos', 'photos', 'text', 'articles']) {
       expect(entries.find((e) => e.url === `https://adhx.com/trending/${slug}`)).toBeDefined()
     }
   })
