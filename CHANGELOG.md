@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.42.2](https://github.com/itsmemeworks/adhx/compare/v1.42.1...v1.42.2) (2026-06-08)
+
+
+### Bug Fixes
+
+* immersive collapse button placement + disable swipe for video scrubbing ([#226](https://github.com/itsmemeworks/adhx/issues/226)) ([6fc738d](https://github.com/itsmemeworks/adhx/commit/6fc738d6cb6913f7fcc8f96ee1f9804f13cef2ba))
+
 ## [1.42.1](https://github.com/itsmemeworks/adhx/compare/v1.42.0...v1.42.1) (2026-06-08)
 
 
