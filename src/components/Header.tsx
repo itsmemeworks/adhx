@@ -21,7 +21,6 @@ import { cn } from '@/lib/utils'
 import { MatterLogo } from '@/components/matter'
 import { AddTweetModal, AddTweetResult } from './AddTweetModal'
 import { SyncProgress } from './sync/SyncProgress'
-import { Tooltip } from './Tooltip'
 
 interface AuthStatus {
   authenticated: boolean
@@ -434,45 +433,8 @@ export function Header() {
                 )}
               </button>
 
-              {/* Theme toggle — hidden on phones (lives in the user menu there) */}
-              <button
-                onClick={toggleTheme}
-                className="hidden sm:flex items-center justify-center p-2 rounded-full hover:bg-inset transition-colors text-ink-3 hover:text-ink"
-                title={resolvedTheme === 'dark' ? 'Switch to light' : 'Switch to dark'}
-                aria-label="Toggle theme"
-              >
-                {resolvedTheme === 'dark' ? (
-                  <Sun className="w-[18px] h-[18px]" />
-                ) : (
-                  <Moon className="w-[18px] h-[18px]" />
-                )}
-              </button>
-
-              {/* Sync Button — hidden on phones (lives in the user menu there) */}
-              <div className="hidden sm:flex items-center">
-                <Tooltip
-                  content={
-                    cooldown.canSync
-                      ? 'Sync bookmarks'
-                      : `Available in ${formatCooldown(displayedCooldown)}`
-                  }
-                  placement="left"
-                >
-                  <button
-                    onClick={() => cooldown.canSync && setShowSync(true)}
-                    disabled={!cooldown.canSync}
-                    className={cn(
-                      'inline-flex items-center justify-center p-2 rounded-full transition-colors',
-                      // Available → clearly interactive; cooling down → clearly dimmed.
-                      cooldown.canSync
-                        ? 'text-ink-2 hover:text-ink hover:bg-inset cursor-pointer'
-                        : 'text-ink-3 opacity-40 cursor-not-allowed',
-                    )}
-                  >
-                    <RefreshCw className="w-[18px] h-[18px]" />
-                  </button>
-                </Tooltip>
-              </div>
+              {/* Theme toggle + Sync are secondary actions — they live in the
+                  avatar menu (all viewports), not the main nav bar. */}
 
               {/* Add Button */}
               <button
@@ -582,9 +544,9 @@ export function Header() {
                         </Link>
                       </div>
 
-                      {/* Theme + Sync — phones only; on larger screens these sit
-                          in the top bar, so showing them here too would duplicate. */}
-                      <div className="sm:hidden border-t border-hairline py-1">
+                      {/* Theme + Sync — secondary actions, in the menu on all
+                          viewports (no longer in the main nav bar). */}
+                      <div className="border-t border-hairline py-1">
                         <button
                           onClick={toggleTheme}
                           className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset text-ink-2 hover:text-ink transition-colors"
