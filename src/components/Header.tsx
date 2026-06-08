@@ -466,7 +466,7 @@ export function Header() {
                       // Available → clearly interactive; cooling down → clearly dimmed.
                       cooldown.canSync
                         ? 'text-ink-2 hover:text-ink hover:bg-inset cursor-pointer'
-                        : 'text-ink-3/40 cursor-not-allowed',
+                        : 'text-ink-3 opacity-40 cursor-not-allowed',
                     )}
                   >
                     <RefreshCw className="w-[18px] h-[18px]" />
@@ -608,7 +608,7 @@ export function Header() {
                             'w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors',
                             cooldown.canSync
                               ? 'hover:bg-inset text-ink hover:text-ink'
-                              : 'text-ink-3/40 cursor-not-allowed',
+                              : 'text-ink-3 opacity-40 cursor-not-allowed',
                           )}
                         >
                           <RefreshCw className="w-4 h-4" />

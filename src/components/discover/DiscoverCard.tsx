@@ -6,6 +6,7 @@ import { formatCompactRelativeTime } from '@/lib/utils/format'
 import { PlatformGlyph, TypeBadge } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { inferType } from '@/lib/trending/filter'
+import { sourceUrl } from '@/lib/activity/preview-path'
 import type { ActivityItem } from './DiscoverFeed'
 
 /**
@@ -34,6 +35,8 @@ export function DiscoverCard({
   const hasThumb = Boolean(item.thumbnailUrl)
   const caption = (item.text || '').trim()
   const time = formatCompactRelativeTime(item.createdAt)
+  // The footer platform + time link out to the post on its native platform.
+  const origin = sourceUrl(item.platform, item.author, item.bookmarkId ?? '')
 
   // Trending score = savers + previews (falls back to savers for older payloads).
   // The flame badge is a dark chip (matches the type badge) with an orange flame
@@ -173,13 +176,22 @@ export function DiscoverCard({
       {/* Bottom-pinned footer (aligned across the equal-height grid). Still
           anonymous — we surface the platform, not the saver. */}
       <div className="mt-auto flex items-center gap-2.5 px-3.5 py-3">
-        <span className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full border border-hairline bg-inset text-ink-2">
-          <PlatformGlyph platform={item.platform} size={17} />
-        </span>
-        {/* Relative time (Date.now-based) differs between ISR HTML and client. */}
-        <span className="font-mono text-[12.5px] text-ink-3" suppressHydrationWarning>
-          {time}
-        </span>
+        {/* Platform glyph + time link out to the post on its native platform. */}
+        <a
+          href={origin ?? item.url}
+          target={origin ? '_blank' : undefined}
+          rel={origin ? 'noopener noreferrer' : undefined}
+          title={origin ? 'View original' : undefined}
+          className="inline-flex items-center gap-2.5 hover:opacity-80"
+        >
+          <span className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full border border-hairline bg-inset text-ink-2">
+            <PlatformGlyph platform={item.platform} size={17} />
+          </span>
+          {/* Relative time (Date.now-based) differs between ISR HTML and client. */}
+          <span className="font-mono text-[12.5px] text-ink-3" suppressHydrationWarning>
+            {time}
+          </span>
+        </a>
         <a
           href={item.url}
           className="ml-auto flex-none inline-flex items-center gap-1.5 rounded-full bg-clay-grad px-3.5 py-2 text-[13px] font-semibold text-white shadow-glow transition-opacity duration-150 hover:opacity-90"
