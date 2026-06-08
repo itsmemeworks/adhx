@@ -506,9 +506,12 @@ export function TriageMode({
             transition:
               exiting || drag === 0 ? 'transform 0.22s ease, opacity 0.22s ease' : undefined,
           }}
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
+          // In immersive video mode the triage swipes are disabled so gestures
+          // reach the native video controls (scrub the timeline, etc.). Exit via
+          // the collapse button to triage again.
+          onTouchStart={immersive ? undefined : onTouchStart}
+          onTouchMove={immersive ? undefined : onTouchMove}
+          onTouchEnd={immersive ? undefined : onTouchEnd}
         >
           <MediaCard
             item={current}

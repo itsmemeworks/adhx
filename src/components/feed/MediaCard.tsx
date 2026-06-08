@@ -393,7 +393,7 @@ function FullBleedMedia({
             onToggleImmersive?.()
           }}
           aria-label="Exit immersive"
-          className="absolute top-[68px] left-4 z-[5] w-10 h-10 rounded-full bg-black/40 backdrop-blur text-white flex items-center justify-center"
+          className="absolute top-4 left-4 z-[5] w-[38px] h-[38px] rounded-full bg-black/40 backdrop-blur text-white flex items-center justify-center"
         >
           <Minimize2 className="w-[18px] h-[18px]" />
         </button>
