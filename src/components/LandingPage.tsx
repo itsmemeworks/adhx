@@ -16,8 +16,8 @@ import {
 } from 'lucide-react'
 import { extractYouTubeId } from '@/lib/media/youtube'
 import { getPlatformType, type PlatformType } from '@/lib/platform'
-import { MatterLogo, PlatformGlyph, LiveDot, ConnectWithX } from '@/components/matter'
-import { ThemeToggle } from '@/components/ThemeToggle'
+import { PlatformGlyph, LiveDot, ConnectWithX } from '@/components/matter'
+import { PublicNav } from '@/components/PublicNav'
 import { DiscoverCard } from '@/components/discover/DiscoverCard'
 import type { ActivityItem } from '@/components/discover/DiscoverFeed'
 
@@ -161,37 +161,7 @@ export function LandingPage() {
 
       <div className="relative">
         {/* ───────── Nav ───────── */}
-        <nav className="flex items-center px-5 sm:px-11 py-4 border-b border-hairline">
-          <MatterLogo size={20} />
-          <div className="ml-auto flex items-center gap-4 sm:gap-6">
-            <a
-              href="#how-it-works"
-              className="hidden sm:inline text-sm font-medium text-ink-2 hover:text-ink transition-colors"
-            >
-              How it works
-            </a>
-            <a
-              href="/trending"
-              className="hidden sm:inline text-sm font-medium text-ink-2 hover:text-ink transition-colors"
-            >
-              Trending
-            </a>
-            <ThemeToggle className="-mr-1 sm:mr-0" />
-            <button
-              onClick={handleLogin}
-              className="hidden sm:inline text-sm font-semibold text-ink-2 hover:text-ink transition-colors"
-            >
-              Log in
-            </button>
-            <button
-              onClick={handleLogin}
-              disabled={isLoading}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-[10px] bg-ink text-surface font-semibold text-sm transition-opacity hover:opacity-90 disabled:opacity-50"
-            >
-              <ConnectWithX size={14} />
-            </button>
-          </div>
-        </nav>
+        <PublicNav onConnect={handleLogin} connecting={isLoading} />
 
         {/* ───────── Hero ───────── */}
         <section

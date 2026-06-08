@@ -193,6 +193,26 @@ try {
 } catch (error) {
   console.log('[migrate] Warning: failed to normalize created_at dates', error)
 }
+// Instagram video restored (vxinstagram mirror, see src/lib/media/mirrors.ts).
+// While IG was degraded, saved Reels were stored as poster-only `photo` media
+// rows. Flip them back to `video` so they play again. IG saves are reel-centric
+// (the add path routes everything through addInstagramReel), so this is safe;
+// a rare photo post that gets flipped just falls back to its poster on a play
+// error. Idempotent (no-op once flipped) and guarded.
+try {
+  const res = db
+    .prepare(
+      `UPDATE bookmark_media SET media_type = 'video'
+       WHERE platform = 'instagram' AND media_type = 'photo'`,
+    )
+    .run()
+  if (res.changes > 0) {
+    console.log(`[migrate] Instagram media photo→video: ${res.changes} rows`)
+  }
+} catch (error) {
+  console.log('[migrate] Warning: Instagram media backfill failed', error)
+}
+
 console.log(`[migrate] Database ready at: ${path.resolve(DB_PATH)}`)
 
 db.close()

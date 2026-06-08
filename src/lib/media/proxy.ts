@@ -74,13 +74,17 @@ export function isValidTweetId(tweetId: string): boolean {
  *
  * Forward the incoming `Range` header on the upstream fetch yourself; this
  * helper only mirrors the upstream response back to the client.
+ *
+ * `opts.contentType`, when given, OVERRIDES the upstream Content-Type — use it
+ * when a mirror/CDN mislabels an MP4 (e.g. `application/octet-stream`) so the
+ * `<video>` element still recognises it. Otherwise the upstream type is used.
  */
 export function streamingResponse(
   upstream: Response,
   opts?: { cacheControl?: string; contentType?: string },
 ): Response {
   const headers: Record<string, string> = {
-    'Content-Type': upstream.headers.get('content-type') || opts?.contentType || 'video/mp4',
+    'Content-Type': opts?.contentType || upstream.headers.get('content-type') || 'video/mp4',
     'Accept-Ranges': 'bytes',
     'Cache-Control': opts?.cacheControl ?? 'public, max-age=3600',
   }
