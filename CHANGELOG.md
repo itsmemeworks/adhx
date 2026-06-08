@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.44.0](https://github.com/itsmemeworks/adhx/compare/v1.43.4...v1.44.0) (2026-06-08)
+
+
+### Features
+
+* handle tiktok short links + text-field links in the pwa share target ([#242](https://github.com/itsmemeworks/adhx/issues/242)) ([0966109](https://github.com/itsmemeworks/adhx/commit/0966109bafe09e64e2ff5f940a3e625f27003510))
+
 ## [1.43.4](https://github.com/itsmemeworks/adhx/compare/v1.43.3...v1.43.4) (2026-06-08)
 
 
