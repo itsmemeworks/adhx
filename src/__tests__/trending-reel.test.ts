@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { isReelPlayable } from '@/lib/trending/filter'
+import { reelVideoSrc } from '@/components/trending/ReelPlayer'
 import type { TrendingItem } from '@/lib/trending/query'
 
 /**
@@ -51,5 +52,25 @@ describe('isReelPlayable', () => {
     expect(isReelPlayable(item({ platform: 'twitter', contentType: 'text' }))).toBe(false)
     expect(isReelPlayable(item({ bookmarkId: null }))).toBe(false)
     expect(isReelPlayable(item({ bookmarkId: '' }))).toBe(false)
+  })
+})
+
+describe('reelVideoSrc — per-platform stream URL in the reel', () => {
+  it('TikTok → the TikTok proxy (username + id)', () => {
+    expect(reelVideoSrc(item({ platform: 'tiktok', author: 'bob', bookmarkId: '7' }))).toBe(
+      '/api/media/tiktok/video?username=bob&id=7',
+    )
+  })
+
+  it('Instagram → the IG proxy (id only)', () => {
+    expect(reelVideoSrc(item({ platform: 'instagram', bookmarkId: 'DXVsqQ7CSXw' }))).toBe(
+      '/api/media/instagram/video?id=DXVsqQ7CSXw',
+    )
+  })
+
+  it('X → the FxTwitter proxy (author + tweetId, hd)', () => {
+    expect(reelVideoSrc(item({ platform: 'twitter', author: 'jack', bookmarkId: '99' }))).toBe(
+      '/api/media/video?author=jack&tweetId=99&quality=hd',
+    )
   })
 })

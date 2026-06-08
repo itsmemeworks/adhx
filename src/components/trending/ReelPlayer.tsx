@@ -37,7 +37,7 @@ function postKey(item: TrendingItem): string {
 }
 
 /** Build the inline MP4 stream URL for a playable reel item (TikTok | IG | X). */
-function reelVideoSrc(item: TrendingItem): string {
+export function reelVideoSrc(item: TrendingItem): string {
   const id = encodeURIComponent(item.bookmarkId ?? '')
   const author = encodeURIComponent(item.author ?? '')
   if (item.platform === 'tiktok') {
