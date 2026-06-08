@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { parseShareUrl } from '@/lib/utils/parse-share-url'
+import { parseShareUrl, extractSharedUrl } from '@/lib/utils/parse-share-url'
 
 function ShareRedirect() {
   const searchParams = useSearchParams()
@@ -10,18 +10,32 @@ function ShareRedirect() {
   const [error, setError] = useState(false)
 
   useEffect(() => {
-    const url = searchParams.get('url')
+    // Apps don't agree on which field carries the link: a clean share sets
+    // `url`, but TikTok (and others) drop it into `text` alongside a caption.
+    const shared = extractSharedUrl(
+      searchParams.get('url'),
+      searchParams.get('text'),
+      searchParams.get('title'),
+    )
 
-    if (!url) {
+    if (!shared) {
       router.replace('/')
       return
     }
 
-    const parsed = parseShareUrl(url)
-    if (parsed) {
-      router.replace(parsed.path)
-    } else {
+    const parsed = parseShareUrl(shared)
+    if (!parsed) {
       setError(true)
+      return
+    }
+
+    // TikTok short links resolve via an /api route that 307s to the preview;
+    // the client router can't follow a cross-route redirect, so do a real
+    // navigation. App routes use the client router (no full reload).
+    if (parsed.path.startsWith('/api/')) {
+      window.location.replace(parsed.path)
+    } else {
+      router.replace(parsed.path)
     }
   }, [searchParams, router])
 

@@ -542,11 +542,12 @@ javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tikt
 - Shown with copy-to-clipboard button and drag-to-toolbar instructions
 - No auth needed — redirects to preview page which handles auth/unauth
 
-**PWA Share Target** (Android):
+**PWA Share Target** (Android only — Web Share Target is unsupported on iOS Safari; requires the PWA installed):
 
-- `public/manifest.json` includes `share_target` config: `action: "/share"`, `method: "GET"`, `params: { url: "url" }`
-- `src/app/share/page.tsx` — client component that parses the shared URL and redirects to the matching preview path
-- `parseShareUrl()` (`src/lib/utils/parse-share-url.ts`) maps **all four platforms** to their preview path and returns `{ path }`: X → `/{user}/status/{id}`, Instagram → `/reels/{id}`, TikTok → `/@{user}/video/{id}`, YouTube (shorts / youtu.be / watch?v=) → `/shorts/{id}`
+- `public/manifest.json` includes `share_target` config: `action: "/share"`, `method: "GET"`, `params: { url, text, title }`. **All three params are captured** because apps disagree on which field carries the link — a clean share sets `url`, but TikTok (and others) drop it into `text` alongside a caption.
+- `src/app/share/page.tsx` — client component that extracts the link from the shared payload and redirects to the matching preview path
+- `extractSharedUrl(...candidates)` (`src/lib/utils/parse-share-url.ts`) returns the first http(s) URL across `url`/`text`/`title`, pulling a URL embedded in caption text when the whole field isn't one.
+- `parseShareUrl()` maps **all four platforms** to their preview path and returns `{ path }`: X → `/{user}/status/{id}`, Instagram → `/reels/{id}`, TikTok → `/@{user}/video/{id}`, YouTube (shorts / youtu.be / watch?v=) → `/shorts/{id}`. **TikTok short links** (`vm.`/`vt.tiktok.com/{code}`, `tiktok.com/t/{code}` — the native share format) can't be resolved client-side, so it returns the `/api/tiktok/resolve?url=…&go=1` resolver path instead, which 307s to the preview. The share page does a full `window.location.replace` for `/api/` paths (the client router can't follow a cross-route redirect) and `router.replace` for app routes.
 - Shows a "Not a supported link" error for unrecognised URLs with a link back to homepage
 
 **Add to Home Screen (PWA install)**:
