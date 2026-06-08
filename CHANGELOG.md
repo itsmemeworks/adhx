@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.43.2](https://github.com/itsmemeworks/adhx/compare/v1.43.1...v1.43.2) (2026-06-08)
+
+
+### Bug Fixes
+
+* dodge x's logged-out "x.com"→"twitter.com" redirect_uri rewrite ([#235](https://github.com/itsmemeworks/adhx/issues/235)) ([8f84812](https://github.com/itsmemeworks/adhx/commit/8f84812654126f6fdf621c47df7c1bd9b1043306))
+
 ## [1.43.1](https://github.com/itsmemeworks/adhx/compare/v1.43.0...v1.43.1) (2026-06-08)
 
 
