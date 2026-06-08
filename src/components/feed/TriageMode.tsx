@@ -19,6 +19,7 @@ import type { FeedItem } from './types'
 import { MediaCard, isFullBleedCandidate } from './MediaCard'
 import { copyPreviewLink, sharePreviewLink } from './utils'
 import { cn } from '@/lib/utils'
+import { useThemeOptional } from '@/lib/theme/context'
 
 /** User's LOCAL calendar day as YYYY-MM-DD (streaks are per the user's days). */
 function localToday(): string {
@@ -684,27 +685,27 @@ function DockButton({
 }) {
   const Arrow = arrow === 'left' ? ArrowLeft : arrow === 'right' ? ArrowRight : ArrowDown
   const big = tone !== 'outline'
-  // Translucent tint per action — kept light so the backdrop reads through as
-  // glass rather than a solid pill.
-  const tint =
-    tone === 'primary'
-      ? 'color-mix(in srgb, var(--m-accent) 48%, transparent)'
-      : tone === 'done'
-        ? 'color-mix(in srgb, var(--m-done) 48%, transparent)'
-        : onDark
-          ? 'rgba(255,255,255,.10)'
-          : 'color-mix(in srgb, var(--m-fink) 7%, transparent)'
-  // Liquid-glass depth: a crisp top edge highlight, a bottom inner shadow for
-  // volume, a hairline rim, and an outer drop. (The literal refraction needs
-  // backdrop SVG filters, unsupported on iOS — this layered look reads as glass
-  // everywhere.)
+  // Full-bleed media is always dark; otherwise follow the resolved theme so the
+  // glass + glyph stay visible on either surface.
+  const theme = useThemeOptional()
+  const dark = onDark || theme?.resolvedTheme === 'dark'
+  // CLEAR, see-through glass (Apple style) — no colour tint. Just a faint frost
+  // so the content behind reads through, blurred; the rim + specular highlight
+  // give it shape. White-based on dark, dark-based on light.
+  const frost = dark ? 'rgba(255,255,255,.1)' : 'rgba(255,255,255,.4)'
+  const topHi = dark ? 'rgba(255,255,255,.65)' : 'rgba(255,255,255,.9)'
+  const rim = dark ? 'rgba(255,255,255,.28)' : 'rgba(0,0,0,.1)'
+  const sheen = dark ? 'rgba(255,255,255,.4)' : 'rgba(255,255,255,.55)'
   const glassShadow = [
-    'inset 0 1px 1.5px rgba(255,255,255,.6)',
-    'inset 0 -10px 18px rgba(0,0,0,.22)',
-    `inset 0 0 0 1px ${onDark || tone !== 'outline' ? 'rgba(255,255,255,.22)' : 'var(--m-fline)'}`,
-    big ? '0 12px 30px rgba(0,0,0,.28)' : '0 8px 18px rgba(0,0,0,.2)',
+    `inset 0 1px 1.5px ${topHi}`,
+    `inset 0 -10px 18px rgba(0,0,0,${dark ? '.2' : '.08'})`,
+    `inset 0 0 0 1px ${rim}`,
+    big
+      ? `0 12px 30px rgba(0,0,0,${dark ? '.3' : '.16'})`
+      : `0 8px 18px rgba(0,0,0,${dark ? '.22' : '.12'})`,
   ].join(', ')
-  const iconColor = tone === 'outline' && !onDark ? 'text-fink-2' : 'text-white'
+  // Monochrome glyph that adapts to the surface — no colour fill on the glass.
+  const iconColor = dark ? 'text-white' : 'text-fink'
   return (
     <button
       onClick={onClick}
@@ -718,9 +719,9 @@ function DockButton({
           iconColor,
         )}
         style={{
-          background: tint,
-          backdropFilter: 'blur(20px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          background: frost,
+          backdropFilter: 'blur(22px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(22px) saturate(180%)',
           boxShadow: glassShadow,
         }}
       >
@@ -729,8 +730,7 @@ function DockButton({
           aria-hidden
           className="pointer-events-none absolute inset-0 rounded-full"
           style={{
-            background:
-              'radial-gradient(125% 90% at 28% 10%, rgba(255,255,255,.5), rgba(255,255,255,.05) 46%, rgba(255,255,255,0) 62%)',
+            background: `radial-gradient(125% 90% at 28% 10%, ${sheen}, rgba(255,255,255,.04) 46%, rgba(255,255,255,0) 62%)`,
           }}
         />
         <span className="relative flex items-center justify-center">{children}</span>
