@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.43.0](https://github.com/itsmemeworks/adhx/compare/v1.42.3...v1.43.0) (2026-06-08)
+
+
+### Features
+
+* liquid-glass treatment for the triage dock buttons ([#230](https://github.com/itsmemeworks/adhx/issues/230)) ([99cb349](https://github.com/itsmemeworks/adhx/commit/99cb3498f554459cdfdcbdad2d216224287ae144))
+
 ## [1.42.3](https://github.com/itsmemeworks/adhx/compare/v1.42.2...v1.42.3) (2026-06-08)
 
 
