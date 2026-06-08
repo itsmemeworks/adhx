@@ -134,6 +134,7 @@ export function InstagramPreviewLanding({
               <MediaShareOverlayButton
                 streamUrl={`/api/media/instagram/video?id=${encodeURIComponent(reelId)}`}
                 downloadUrl={`/api/media/instagram/video/download?id=${encodeURIComponent(reelId)}`}
+                filename={`instagram-${reelId}.mp4`}
                 title={`Instagram Reel ${reelId}`}
               />
             </div>

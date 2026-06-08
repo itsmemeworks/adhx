@@ -8,21 +8,27 @@ import { cn } from '@/lib/utils'
 /**
  * Floating share/download button pinned over preview-page media (top-right).
  *
- * On **touch devices** it opens the native share sheet (share the video to
- * another app), always visible. On desktop it downloads the file and reveals on
- * hover (`group-hover` — the parent media wrapper must be `group`). Mirrors the
- * TikTok/X preview buttons so all platforms behave the same.
+ * On **touch devices** it fetches the video and opens the native share sheet
+ * with the actual FILE (`navigator.share({ files })`) — so it shares the video
+ * to another app, not just a link. On desktop it downloads the file and reveals
+ * on hover (`group-hover` — the parent media wrapper must be `group`). Matches
+ * the X preview's `handleShareMedia` behaviour; used by Instagram + TikTok.
  */
 export function MediaShareOverlayButton({
   streamUrl,
   downloadUrl,
+  filename,
   title,
+  mimeType = 'video/mp4',
 }: {
-  /** Inline stream URL (shared via the native sheet on touch devices). */
+  /** Inline stream URL — fetched to a Blob to share the file on touch devices. */
   streamUrl: string
-  /** Attachment URL (downloaded on desktop). */
+  /** Attachment URL — used for the direct desktop download. */
   downloadUrl: string
-  title: string
+  /** Filename for the shared/downloaded file. */
+  filename: string
+  title?: string
+  mimeType?: string
 }) {
   const [isLoading, setIsLoading] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -37,13 +43,8 @@ export function MediaShareOverlayButton({
     e.preventDefault()
     setIsLoading(true)
     try {
-      if (isMobile && typeof navigator.share === 'function') {
-        await navigator.share({
-          url: new URL(streamUrl, window.location.origin).toString(),
-          title,
-        })
-        setShowSuccess(true)
-      } else {
+      // Desktop: download directly (the share sheet is clunky on desktop).
+      if (!isMobile) {
         const link = document.createElement('a')
         link.href = downloadUrl
         link.download = ''
@@ -51,9 +52,32 @@ export function MediaShareOverlayButton({
         link.click()
         document.body.removeChild(link)
         setShowSuccess(true)
+        return
       }
-    } catch {
-      // User cancelled the share sheet / download — silently reset.
+
+      // Touch: share the actual video FILE via the native sheet.
+      const blob = await (await fetch(streamUrl)).blob()
+      const file = new File([blob], filename, { type: mimeType })
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title })
+        setShowSuccess(true)
+        return
+      }
+
+      // No file-share support → download the blob instead.
+      const blobUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = blobUrl
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 100)
+      setShowSuccess(true)
+    } catch (error) {
+      // AbortError = user dismissed the share sheet; anything else we just reset.
+      if (error instanceof Error && error.name === 'AbortError') setShowSuccess(true)
     } finally {
       setIsLoading(false)
       setTimeout(() => setShowSuccess(false), 1500)
