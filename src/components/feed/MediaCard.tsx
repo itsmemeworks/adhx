@@ -139,7 +139,11 @@ export function isFullBleedCandidate(item: FeedItem): boolean {
  */
 function videoSrc(item: FeedItem): string {
   const primary = item.media?.[0]
-  return item.platform === 'tiktok' && primary
+  // TikTok and Instagram stream through their own proxy (the feed already built
+  // the right URL into the media row); only Twitter uses the quality-keyed
+  // FxTwitter proxy. Sending Instagram down the Twitter path was why IG video
+  // played on the preview page but not in the feed/triage cards.
+  return (item.platform === 'tiktok' || item.platform === 'instagram') && primary
     ? primary.url
     : `/api/media/video?author=${encodeURIComponent(item.author)}&tweetId=${encodeURIComponent(item.id)}&quality=hd`
 }

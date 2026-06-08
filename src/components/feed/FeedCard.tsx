@@ -188,13 +188,15 @@ function MediaContent({
   const hasDuration = isVideo && !!primaryMedia.durationMs
   const cornerBadge = hasDuration || (!isVideo && imageCount > 1)
 
-  // Hover preview only works for Twitter (its proxy exposes a 360p `quality=preview`
-  // tier). Instagram/TikTok proxies serve a single quality, so for non-Twitter
-  // we keep the thumbnail on hover instead of swapping to the heavier stream.
+  // Hover-to-play. Twitter has a light 360p `quality=preview` tier; Instagram
+  // and TikTok serve a single quality, so they stream their (short) clip via
+  // the feed-provided proxy URL. YouTube has no MP4 (iframe only) → no hover.
   const hoverVideoUrl =
     item.platform === 'twitter' || !item.platform
       ? `/api/media/video?author=${item.author}&tweetId=${item.id}&quality=preview`
-      : null
+      : item.platform === 'tiktok' || item.platform === 'instagram'
+        ? primaryMedia.url
+        : null
 
   return (
     <div className="relative">
