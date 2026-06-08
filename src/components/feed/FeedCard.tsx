@@ -1,14 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Image, Play, Check, FileText, Share2 } from 'lucide-react'
+import { Image, Play, FileText } from 'lucide-react'
 import { AuthorAvatar } from './AuthorAvatar'
-import {
-  renderTextWithLinks,
-  renderBionicTextWithLinks,
-  stripMediaUrls,
-  copyPreviewLink,
-} from './utils'
+import { renderTextWithLinks, renderBionicTextWithLinks, stripMediaUrls } from './utils'
 import { usePreferences } from '@/lib/preferences-context'
 import { formatDurationMs, formatCompactRelativeTime } from '@/lib/utils/format'
 import { TypeBadge, PlatformChip, type ContentType, type PlatformId } from '@/components/matter'
@@ -45,15 +40,13 @@ export function FeedCard({
   const [error, setError] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
-  // Hover affordances (video autoplay + the share overlay) are desktop-only.
-  // On touch the browser emulates :hover on the FIRST tap, revealing the overlay
-  // and swallowing that tap — which is why opening took two taps. Gate them to
-  // hover-capable devices so a tap just opens the item.
+  // Video hover-autoplay is desktop-only. On touch the browser emulates :hover
+  // on the FIRST tap, which would start playback and swallow that tap; gate it to
+  // hover-capable devices so a tap just opens the item in triage.
   const [canHover, setCanHover] = useState(false)
   useEffect(() => {
     setCanHover(window.matchMedia('(hover: hover)').matches)
   }, [])
-  const [copiedLink, setCopiedLink] = useState(false)
   const { preferences } = usePreferences()
   const renderText = preferences.bionicReading ? renderBionicTextWithLinks : renderTextWithLinks
 
@@ -143,39 +136,6 @@ export function FeedCard({
             platform={platform}
             timeBadge={timeBadge}
           />
-        )}
-
-        {/* Hover overlay — desktop only (see canHover). Rendering it on touch
-            would make the first tap reveal it instead of opening the item. */}
-        {canHover && (
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
-              <div className="flex items-center gap-2">
-                <AuthorAvatar src={item.authorProfileImageUrl} author={item.author} size="sm" />
-                <span className="text-white text-xs font-medium truncate flex-1">
-                  @{item.author}
-                </span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    copyPreviewLink(item).then((ok) => {
-                      if (ok) {
-                        setCopiedLink(true)
-                        setTimeout(() => setCopiedLink(false), 1500)
-                      }
-                    })
-                  }}
-                  className={cn(
-                    'p-2 rounded-full pointer-events-auto text-white transition-all duration-200',
-                    copiedLink ? 'bg-done scale-110 shadow-lg' : 'bg-clay hover:opacity-90',
-                  )}
-                  title={copiedLink ? 'Link copied!' : 'Copy link to this post'}
-                >
-                  {copiedLink ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-          </div>
         )}
       </div>
     </div>

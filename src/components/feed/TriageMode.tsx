@@ -13,10 +13,11 @@ import {
   ArrowRight,
   ArrowDown,
   Share2,
+  Link2,
 } from 'lucide-react'
 import type { FeedItem } from './types'
 import { MediaCard, isFullBleedCandidate } from './MediaCard'
-import { copyPreviewLink } from './utils'
+import { copyPreviewLink, sharePreviewLink } from './utils'
 import { cn } from '@/lib/utils'
 
 /** User's LOCAL calendar day as YYYY-MM-DD (streaks are per the user's days). */
@@ -86,7 +87,8 @@ export function TriageMode({
   // Horizontal drag (Keep/Done) and downward drag (Delete) for live swipe feedback.
   const [drag, setDrag] = useState(0)
   const [dragY, setDragY] = useState(0)
-  const [copied, setCopied] = useState(false)
+  // Transient confirmation for the Copy / Share buttons.
+  const [flash, setFlash] = useState<null | 'copied' | 'shared'>(null)
 
   const recordedRef = useRef(false)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
@@ -210,12 +212,22 @@ export function TriageMode({
     setUndo(null)
   }, [undo, onItemRestored])
 
-  // Copy the current post's on-ADHX preview link (quick share).
-  const shareCurrent = useCallback(async () => {
+  // Copy the current post's on-ADHX preview link to the clipboard.
+  const copyCurrent = useCallback(async () => {
     if (!current) return
     if (await copyPreviewLink(current)) {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1600)
+      setFlash('copied')
+      setTimeout(() => setFlash(null), 1600)
+    }
+  }, [current])
+
+  // Share the link via the native share sheet (falls back to copy on desktop).
+  const shareCurrent = useCallback(async () => {
+    if (!current) return
+    const result = await sharePreviewLink(current)
+    if (result === 'shared' || result === 'copied') {
+      setFlash(result === 'shared' ? 'shared' : 'copied')
+      setTimeout(() => setFlash(null), 1600)
     }
   }, [current])
 
@@ -399,21 +411,44 @@ export function TriageMode({
           />
         </div>
         {current && (
-          <button
-            onClick={shareCurrent}
-            className={cn(
-              'w-[38px] h-[38px] flex-none rounded-full flex items-center justify-center hover:opacity-80 transition-opacity',
-              fullBleed ? 'bg-black/40 backdrop-blur text-white' : 'bg-fsurface text-fink-2',
-            )}
-            aria-label="Copy link to this post"
-            title="Copy link"
-          >
-            {copied ? (
-              <Check className="w-[18px] h-[18px]" />
-            ) : (
-              <Share2 className="w-[18px] h-[18px]" />
-            )}
-          </button>
+          <div className="flex-none flex items-center gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                copyCurrent()
+              }}
+              className={cn(
+                'w-[38px] h-[38px] rounded-full flex items-center justify-center hover:opacity-80 transition-opacity',
+                fullBleed ? 'bg-black/40 backdrop-blur text-white' : 'bg-fsurface text-fink-2',
+              )}
+              aria-label="Copy link to this post"
+              title="Copy link"
+            >
+              {flash === 'copied' ? (
+                <Check className="w-[18px] h-[18px]" />
+              ) : (
+                <Link2 className="w-[18px] h-[18px]" />
+              )}
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                shareCurrent()
+              }}
+              className={cn(
+                'w-[38px] h-[38px] rounded-full flex items-center justify-center hover:opacity-80 transition-opacity',
+                fullBleed ? 'bg-black/40 backdrop-blur text-white' : 'bg-fsurface text-fink-2',
+              )}
+              aria-label="Share this post"
+              title="Share"
+            >
+              {flash === 'shared' ? (
+                <Check className="w-[18px] h-[18px]" />
+              ) : (
+                <Share2 className="w-[18px] h-[18px]" />
+              )}
+            </button>
+          </div>
         )}
         {streak.current > 0 && (
           <span
@@ -584,10 +619,10 @@ export function TriageMode({
         </div>
       )}
 
-      {/* Link-copied toast */}
-      {copied && (
+      {/* Copy / share confirmation toast */}
+      {flash && (
         <div className="fixed top-[68px] left-1/2 -translate-x-1/2 z-[9] bg-fink text-fsurface px-4 py-2 rounded-full text-sm font-semibold shadow-m-lg">
-          Link copied
+          {flash === 'shared' ? 'Shared' : 'Link copied'}
         </div>
       )}
 

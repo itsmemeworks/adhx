@@ -31,6 +31,29 @@ export async function copyPreviewLink(
 }
 
 /**
+ * Share a saved item's preview link via the Web Share API (the native share
+ * sheet on mobile). Falls back to copying the link when the API is unavailable
+ * (most desktop browsers). Returns what actually happened so the UI can show the
+ * right confirmation. A user-cancelled share sheet resolves to `'cancelled'`.
+ */
+export async function sharePreviewLink(
+  item: Pick<FeedItem, 'platform' | 'author' | 'id'>,
+): Promise<'shared' | 'copied' | 'cancelled' | 'failed'> {
+  const url = previewUrlForItem(item)
+  if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+    try {
+      await navigator.share({ url })
+      return 'shared'
+    } catch (err) {
+      // The user dismissing the share sheet throws AbortError — not a failure.
+      if (err instanceof DOMException && err.name === 'AbortError') return 'cancelled'
+      // Any other error (e.g. NotAllowedError) → fall back to copy.
+    }
+  }
+  return (await copyPreviewLink(item)) ? 'copied' : 'failed'
+}
+
+/**
  * `onError` handler for media images: if the primary (proxy) URL fails to load,
  * swap once to the source CDN `originalUrl`. The FxEmbed photo proxy occasionally
  * fails in-browser for a given photo (e.g. the first photo of a multi-image
