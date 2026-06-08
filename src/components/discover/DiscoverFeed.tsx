@@ -64,9 +64,10 @@ export function DiscoverFeed({
   initialFilter,
 }: {
   /**
-   * Server-rendered items to seed from (e.g. the /trending hub's ISR data).
-   * When provided, the grid paints immediately with no skeleton flash and the
-   * redundant first fetch is skipped — but the 12s live polling continues.
+   * Server-rendered items to seed from (e.g. the /trending hub's data). When
+   * provided, the grid paints immediately with no skeleton flash; the client
+   * still reconciles with /api/activity on mount (and polls every 12s) so a
+   * point-in-time seed can't leave the grid stale.
    */
   initialItems?: ActivityItem[]
   /** Initial filter pill selection (defaults to "latest"). */
