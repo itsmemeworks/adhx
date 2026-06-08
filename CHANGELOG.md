@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.46.1](https://github.com/itsmemeworks/adhx/compare/v1.46.0...v1.46.1) (2026-06-08)
+
+
+### Bug Fixes
+
+* retry instagram mirror on transient rate-limits/5xx ([#252](https://github.com/itsmemeworks/adhx/issues/252)) ([5780c9f](https://github.com/itsmemeworks/adhx/commit/5780c9f93abe064121db2bd51803ae957dd9b5a5))
+
 ## [1.46.0](https://github.com/itsmemeworks/adhx/compare/v1.45.2...v1.46.0) (2026-06-08)
 
 
