@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.45.0](https://github.com/itsmemeworks/adhx/compare/v1.44.0...v1.45.0) (2026-06-08)
+
+
+### Features
+
+* trending reel + default-to-latest / rename trending lens to popular ([#244](https://github.com/itsmemeworks/adhx/issues/244)) ([4c5f3df](https://github.com/itsmemeworks/adhx/commit/4c5f3dfb444f41dd88effac4f27be2b69d6c81a5))
+
 ## [1.44.0](https://github.com/itsmemeworks/adhx/compare/v1.43.4...v1.44.0) (2026-06-08)
 
 
