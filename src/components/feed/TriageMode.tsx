@@ -363,8 +363,10 @@ export function TriageMode({
         ? `translateY(${dragY}px)`
         : undefined
 
-  // Progress reflects cleared items only — Later doesn't fill the bar.
-  const progress = total ? (cleared / total) * 100 : 0
+  // The bar tracks session position — how far through the queue you've moved
+  // (advances on every action, including Later) — so cycling always shows
+  // forward motion. The "N left" count is the dopamine signal (Done/Delete only).
+  const progress = total ? (Math.min(index, total) / total) * 100 : 0
 
   return (
     // Full-screen focus surface. Media posts on mobile go full-bleed on black;
