@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { ExternalLink, Play, Pause, Volume2, VolumeX } from 'lucide-react'
+import { Play, Pause, Volume2, VolumeX } from 'lucide-react'
 import type { FeedItem, ArticleContent } from './types'
 import { youtubeEmbedUrl } from '@/lib/media/youtube'
 import { normalizeEntityMap } from '@/lib/utils/article-text'
@@ -21,25 +21,6 @@ import { cn } from '@/lib/utils'
  *    available height with the author card alongside; article reader (serif + TTS),
  *    quote (both posts in full), or text-only hero.
  */
-
-/** Clear "which platform" wordmark, used in card headers / source lines. */
-function PlatformWordmark({ platform }: { platform?: FeedItem['platform'] }) {
-  const p = (platform ?? 'twitter') as PlatformId
-  const label =
-    p === 'instagram'
-      ? 'Instagram'
-      : p === 'tiktok'
-        ? 'TikTok'
-        : p === 'youtube'
-          ? 'YouTube'
-          : 'x.com'
-  return (
-    <span className="flex items-center gap-1.5 font-semibold text-fink">
-      <PlatformGlyph platform={p} size={15} />
-      {label}
-    </span>
-  )
-}
 
 function quoteThumb(item: FeedItem): string | null {
   const q = item.quotedTweet
@@ -777,13 +758,12 @@ function QuoteView({ item }: { item: FeedItem }) {
           target="_blank"
           rel="noopener noreferrer"
           title="Open source"
-          className="hover:opacity-80 flex-none"
+          className="inline-flex items-center gap-1.5 flex-none rounded-full bg-inset px-2.5 py-1 text-fink-2 hover:opacity-80"
         >
-          <PlatformGlyph
-            platform={(item.platform ?? 'twitter') as PlatformId}
-            size={17}
-            className="text-fink-2"
-          />
+          <PlatformGlyph platform={(item.platform ?? 'twitter') as PlatformId} size={13} />
+          {item.createdAt && (
+            <span className="font-mono text-xs">{formatCompactRelativeTime(item.createdAt)}</span>
+          )}
         </a>
       </div>
 
@@ -832,15 +812,6 @@ function QuoteView({ item }: { item: FeedItem }) {
 
 function TextCard({ item }: { item: FeedItem }) {
   const text = stripMediaUrls(item.text || '', !!item.media?.[0])
-  const created = item.createdAt
-    ? new Date(item.createdAt).toLocaleString(undefined, {
-        hour: '2-digit',
-        minute: '2-digit',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      })
-    : null
 
   return (
     <article
@@ -853,15 +824,19 @@ function TextCard({ item }: { item: FeedItem }) {
           <p className="font-semibold text-fink truncate">{item.authorName || item.author}</p>
           <p className="text-xs font-mono text-fink-3 truncate">@{item.author}</p>
         </div>
+        {/* Platform glyph + human time chip — links to the source post (no x.com
+            wordmark or external-link icon, matching the other triage cards). */}
         <a
           href={item.tweetUrl}
           target="_blank"
           rel="noopener noreferrer"
           title="Open source"
-          className="flex items-center gap-1 hover:opacity-80 flex-none"
+          className="inline-flex items-center gap-1.5 flex-none rounded-full bg-inset px-2.5 py-1 text-fink-2 hover:opacity-80"
         >
-          <PlatformWordmark platform={item.platform} />
-          <ExternalLink className="w-3.5 h-3.5 text-fink-3" />
+          <PlatformGlyph platform={(item.platform ?? 'twitter') as PlatformId} size={13} />
+          {item.createdAt && (
+            <span className="font-mono text-xs">{formatCompactRelativeTime(item.createdAt)}</span>
+          )}
         </a>
       </div>
 
@@ -874,8 +849,6 @@ function TextCard({ item }: { item: FeedItem }) {
       {item.summary && (
         <p className="mt-4 text-sm text-fink-2 border-t border-fline pt-3">{item.summary}</p>
       )}
-
-      {created && <p className="mt-4 text-xs font-mono text-fink-3">{created}</p>}
     </article>
   )
 }

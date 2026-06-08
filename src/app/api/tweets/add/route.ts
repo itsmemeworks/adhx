@@ -40,6 +40,29 @@ export const POST = withAuth(async (request, userId) => {
       .limit(1)
 
     if (existing.length > 0) {
+      // Already saved — but the user still acted on it (re-added), so surface it
+      // in the Latest pulse. Without this, re-adding a saved tweet is invisible
+      // to Trending/Latest (the "missed loop"). De-duped within 60s. Pull the
+      // thumbnail from stored media so a saved photo/video tweet still reads
+      // rich (getTrendingItems also derives type/cover from the bookmark).
+      const dup = existing[0]
+      const [firstMedia] = await db
+        .select({ previewUrl: bookmarkMedia.previewUrl, originalUrl: bookmarkMedia.originalUrl })
+        .from(bookmarkMedia)
+        .where(and(eq(bookmarkMedia.userId, userId), eq(bookmarkMedia.bookmarkId, parsed.tweetId)))
+        .limit(1)
+      recordActivity({
+        action: 'save',
+        platform: 'twitter',
+        bookmarkId: parsed.tweetId,
+        author: dup.author,
+        authorName: dup.authorName,
+        text: dup.text || null,
+        thumbnailUrl: firstMedia?.previewUrl || firstMedia?.originalUrl || null,
+        contentType: dup.category,
+        url: previewPath('twitter', dup.author, parsed.tweetId),
+        userId,
+      })
       return NextResponse.json(
         {
           success: false,

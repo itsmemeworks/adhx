@@ -105,6 +105,20 @@ async function addInstagramReel(userId: string, reelId: string, source: string) 
     .limit(1)
 
   if (existing) {
+    // Already saved — but the user still *acted* on it (re-added), so surface it
+    // in the Latest pulse. Without this, re-adding a saved item is invisible to
+    // Trending/Latest (the "missed loop"). recordActivity de-dupes within 60s.
+    recordActivity({
+      action: 'save',
+      platform: 'instagram',
+      bookmarkId: reelId,
+      author: existing.author,
+      authorName: existing.authorName,
+      text: existing.text || null,
+      thumbnailUrl: `/api/media/instagram/thumbnail?id=${encodeURIComponent(reelId)}`,
+      url: previewPath('instagram', existing.author, reelId),
+      userId,
+    })
     return NextResponse.json(
       { success: false, isDuplicate: true, platform: 'instagram', bookmark: existing },
       { status: 200 },
@@ -203,6 +217,19 @@ async function addTikTokVideo(userId: string, handle: string, videoId: string, s
     .limit(1)
 
   if (existing) {
+    // Already saved — still record the re-add so it surfaces in Latest/Trending
+    // (see addInstagramReel for the rationale). De-duped within 60s.
+    recordActivity({
+      action: 'save',
+      platform: 'tiktok',
+      bookmarkId: videoId,
+      author: existing.author,
+      authorName: existing.authorName,
+      text: existing.text || null,
+      thumbnailUrl: null, // tnktok exposes no poster; card falls back to the glyph
+      url: previewPath('tiktok', existing.author, videoId),
+      userId,
+    })
     return NextResponse.json(
       { success: false, isDuplicate: true, platform: 'tiktok', bookmark: existing },
       { status: 200 },
@@ -294,6 +321,19 @@ async function addYouTubeShort(userId: string, videoId: string, source: string) 
     .limit(1)
 
   if (existing) {
+    // Already saved — still record the re-add so it surfaces in Latest/Trending
+    // (see addInstagramReel for the rationale). De-duped within 60s.
+    recordActivity({
+      action: 'save',
+      platform: 'youtube',
+      bookmarkId: videoId,
+      author: existing.author,
+      authorName: existing.authorName,
+      text: existing.text || null,
+      thumbnailUrl: youtubeThumbnail(videoId),
+      url: previewPath('youtube', existing.author, videoId),
+      userId,
+    })
     return NextResponse.json(
       { success: false, isDuplicate: true, platform: 'youtube', bookmark: existing },
       { status: 200 },

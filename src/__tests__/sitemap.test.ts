@@ -20,7 +20,7 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 
-// homepage + /trending + 5 per-lens hubs (just-saved/videos/photos/text/articles)
+// homepage + /trending + 5 per-lens hubs (latest/videos/photos/text/articles)
 const HUB_COUNT = 7
 
 describe('Dynamic Sitemap', () => {
@@ -52,7 +52,7 @@ describe('Dynamic Sitemap', () => {
 
     expect(entries.find((e) => e.url === 'https://adhx.com')).toBeDefined()
     expect(entries.find((e) => e.url === 'https://adhx.com/trending')).toBeDefined()
-    for (const slug of ['just-saved', 'videos', 'photos', 'text', 'articles']) {
+    for (const slug of ['latest', 'videos', 'photos', 'text', 'articles']) {
       expect(entries.find((e) => e.url === `https://adhx.com/trending/${slug}`)).toBeDefined()
     }
   })

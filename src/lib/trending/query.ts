@@ -82,7 +82,7 @@ export interface GetTrendingOptions {
  */
 export async function getTrendingItems(
   opts: GetTrendingOptions = {},
-): Promise<{ items: TrendingItem[]; savedToday: number }> {
+): Promise<{ items: TrendingItem[]; savedToday: number; recentActivity: number }> {
   const limit = opts.limit ?? LIMIT
   const platformFilter = opts.platform
 
@@ -281,5 +281,16 @@ export async function getTrendingItems(
     .get()
   const savedToday = Number(savedTodayRow?.c) || 0
 
-  return { items: enriched, savedToday }
+  // Rolling-24h engagement count — saves + previews — for the "lots of activity"
+  // live pill. Previews dominate, so this reads much livelier than saves alone
+  // while staying a real number (reads are excluded — they're not engagement).
+  const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+  const recentActivityRow = db
+    .select({ c: sql<number>`count(*)` })
+    .from(activity)
+    .where(and(inArray(activity.action, ['save', 'preview']), gte(activity.createdAt, dayAgo)))
+    .get()
+  const recentActivity = Number(recentActivityRow?.c) || 0
+
+  return { items: enriched, savedToday, recentActivity }
 }

@@ -19,8 +19,6 @@ interface FeedGridProps {
   stats: { total: number; unread: number }
   view?: FeedView
   onExpand: (index: number) => void
-  onMarkRead: (id: string) => void
-  onRemove: (id: string) => void
   onLoadMore: () => void
   onShowAll: () => void
 }
@@ -41,8 +39,6 @@ export function FeedGrid({
   stats,
   view = 'grid',
   onExpand,
-  onMarkRead,
-  onRemove,
   onLoadMore,
   onShowAll,
 }: FeedGridProps): React.ReactElement {
@@ -92,9 +88,6 @@ export function FeedGrid({
               lastSyncAt={lastSyncAt}
               sortField={sortField}
               onExpand={() => onExpand(index)}
-              onMarkRead={() => onMarkRead(item.id)}
-              unreadOnly={unreadOnly}
-              onRemove={() => onRemove(item.id)}
             />
           ))}
         </div>

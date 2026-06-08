@@ -328,11 +328,16 @@ export function extractUrlsFromFacets(tweet: FxTwitterResponse['tweet']): Array<
 export async function fetchTweetData(
   author: string,
   tweetId: string,
+  opts: { timeoutMs?: number } = {},
 ): Promise<FxTwitterResponse | null> {
   try {
-    // Add 5 second timeout to prevent hanging when FxTwitter is slow/down
+    // Timeout to prevent hanging when FxTwitter is slow/down. Defaults to 5s for
+    // latency-sensitive preview pages; background sync passes a longer value
+    // because article payloads (full content blocks) are large and reliably
+    // exceeding 5s under bulk load is exactly why synced articles arrived bare
+    // in Trending until they were individually previewed.
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 5000)
+    const timeoutId = setTimeout(() => controller.abort(), opts.timeoutMs ?? 5000)
 
     const response = await fetch(`https://api.fxtwitter.com/${author}/status/${tweetId}`, {
       headers: {
@@ -358,7 +363,7 @@ export async function fetchTweetData(
   } catch (error) {
     // AbortError means timeout - log differently for clarity
     if (error instanceof Error && error.name === 'AbortError') {
-      console.error('FxTwitter API request timed out after 5s')
+      console.error(`FxTwitter API request timed out after ${opts.timeoutMs ?? 5000}ms`)
     } else {
       console.error('Failed to fetch tweet data from FxTwitter:', error)
     }

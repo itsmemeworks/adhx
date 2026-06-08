@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Image, Play, Check, EyeOff, FileText } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Image, Play, FileText } from 'lucide-react'
 import { AuthorAvatar } from './AuthorAvatar'
 import { renderTextWithLinks, renderBionicTextWithLinks, stripMediaUrls } from './utils'
 import { usePreferences } from '@/lib/preferences-context'
@@ -15,9 +15,6 @@ interface FeedCardProps {
   lastSyncAt: string | null
   sortField: 'processedAt' | 'createdAt'
   onExpand: () => void
-  onMarkRead: () => void
-  unreadOnly?: boolean
-  onRemove?: () => void
 }
 
 /** Time pill — mono white on translucent black, for media/article overlays. */
@@ -39,15 +36,17 @@ export function FeedCard({
   lastSyncAt,
   sortField,
   onExpand,
-  onMarkRead,
-  unreadOnly,
-  onRemove,
 }: FeedCardProps): React.ReactElement {
   const [error, setError] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
-  const [showDopamine, setShowDopamine] = useState(false)
-  const [isExiting, setIsExiting] = useState(false)
+  // Video hover-autoplay is desktop-only. On touch the browser emulates :hover
+  // on the FIRST tap, which would start playback and swallow that tap; gate it to
+  // hover-capable devices so a tap just opens the item in triage.
+  const [canHover, setCanHover] = useState(false)
+  useEffect(() => {
+    setCanHover(window.matchMedia('(hover: hover)').matches)
+  }, [])
   const { preferences } = usePreferences()
   const renderText = preferences.bionicReading ? renderBionicTextWithLinks : renderTextWithLinks
 
@@ -66,29 +65,9 @@ export function FeedCard({
   const aspectRatio =
     primaryMedia?.width && primaryMedia?.height ? primaryMedia.width / primaryMedia.height : 1
 
-  function handleMarkReadWithAnimation(e: React.MouseEvent): void {
-    e.stopPropagation()
-
-    if (item.isRead) {
-      onMarkRead()
-      return
-    }
-
-    setShowDopamine(true)
-    setTimeout(() => onMarkRead(), 150)
-
-    if (unreadOnly && onRemove) {
-      setTimeout(() => setIsExiting(true), 400)
-      setTimeout(() => onRemove(), 700)
-    } else {
-      setTimeout(() => setShowDopamine(false), 800)
-    }
-  }
-
-  const newGlowClass =
-    isNew && !isHovered
-      ? 'shadow-[0_0_8px_2px_rgba(194,96,63,0.4),0_0_20px_4px_rgba(194,96,63,0.22),0_0_35px_8px_rgba(194,96,63,0.1)]'
-      : ''
+  const newGlowClass = isNew
+    ? 'shadow-[0_0_8px_2px_rgba(194,96,63,0.4),0_0_20px_4px_rgba(194,96,63,0.22),0_0_35px_8px_rgba(194,96,63,0.1)]'
+    : ''
 
   const timeDate = sortField === 'createdAt' && item.createdAt ? item.createdAt : item.processedAt
   const timeBadge = formatCompactRelativeTime(timeDate)
@@ -108,18 +87,15 @@ export function FeedCard({
   const platform = (item.platform || 'twitter') as PlatformId
 
   return (
-    <div
-      className={`mb-4 break-inside-avoid transition-all duration-300 ${isExiting ? 'opacity-0 scale-95 -translate-y-2' : ''}`}
-    >
+    <div className="mb-4 break-inside-avoid transition-all duration-300">
       <div
         className={cn(
           'group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer',
-          'hover:shadow-m-md transition-shadow duration-150',
           newGlowClass,
         )}
         onClick={onExpand}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        onMouseEnter={canHover ? () => setIsHovered(true) : undefined}
+        onMouseLeave={canHover ? () => setIsHovered(false) : undefined}
       >
         {/* Content based on type */}
         {hasMedia && primaryMedia ? (
@@ -159,30 +135,6 @@ export function FeedCard({
             timeBadge={timeBadge}
           />
         )}
-
-        {/* Hover overlay */}
-        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-          <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
-            <div className="flex items-center gap-2">
-              <AuthorAvatar src={item.authorProfileImageUrl} author={item.author} size="sm" />
-              <span className="text-white text-xs font-medium truncate flex-1">@{item.author}</span>
-              <button
-                onClick={handleMarkReadWithAnimation}
-                className={cn(
-                  'p-2 rounded-full pointer-events-auto transition-all duration-200',
-                  showDopamine
-                    ? 'bg-clay text-white scale-125 shadow-lg'
-                    : item.isRead
-                      ? 'bg-black/50 hover:bg-black/40 text-white'
-                      : 'bg-clay hover:opacity-90 text-white',
-                )}
-                title={item.isRead ? 'Mark as unread' : 'Mark as read'}
-              >
-                {item.isRead ? <EyeOff className="w-4 h-4" /> : <Check className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   )
@@ -345,13 +297,11 @@ function MediaOverlays({
 }): React.ReactElement {
   return (
     <>
-      <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 group-hover:opacity-0 transition-opacity">
+      <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
         <TypeBadge type={badgeType} />
         <PlatformChip platform={platform} />
       </div>
-      <TimePill className="absolute top-2.5 right-2.5 group-hover:opacity-0 transition-opacity">
-        {timeBadge}
-      </TimePill>
+      <TimePill className="absolute top-2.5 right-2.5">{timeBadge}</TimePill>
     </>
   )
 }

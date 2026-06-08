@@ -9,11 +9,11 @@ import type { ContentType } from '@/components/matter'
  * Pure module (no React, no DB) — safe to import from server components.
  */
 
-export type FilterId = 'trending' | 'just-saved' | 'photos' | 'videos' | 'text' | 'articles'
+export type FilterId = 'trending' | 'latest' | 'photos' | 'videos' | 'text' | 'articles'
 
 export const FILTERS: { id: FilterId; label: string }[] = [
   { id: 'trending', label: 'Trending' },
-  { id: 'just-saved', label: 'Just saved' },
+  { id: 'latest', label: 'Latest' },
   { id: 'photos', label: 'Photos' },
   { id: 'videos', label: 'Videos' },
   { id: 'text', label: 'Text' },
@@ -25,7 +25,7 @@ export const FILTERS: { id: FilterId; label: string }[] = [
  * ("trending") lives at the bare `/trending`, so it isn't a sub-path.
  */
 export const FILTER_SLUGS: Exclude<FilterId, 'trending'>[] = [
-  'just-saved',
+  'latest',
   'photos',
   'videos',
   'text',
@@ -74,10 +74,12 @@ export function inferType(item: TrendingItem): ContentType {
 }
 
 /**
- * Filter + sort a deduped list by lens. "Just saved" = newest first (the API
- * already returns newest-first). "Trending" surfaces posts with 2+ interactions
- * (saves + previews), ranked by that score (newest as tiebreaker).
- * Photos/Videos/Text/Articles filter by type (Text includes quotes).
+ * Filter + sort a deduped list by lens. "Latest" = newest first (the API
+ * already returns newest-first) and shows EVERY recent item regardless of how
+ * it entered the pulse (saved / synced / added / previewed). "Trending"
+ * surfaces posts with 2+ interactions (saves + previews), ranked by that score
+ * (newest as tiebreaker). Photos/Videos/Text/Articles filter by type (Text
+ * includes quotes).
  */
 export function applyFilter(items: TrendingItem[], filter: FilterId): TrendingItem[] {
   if (filter === 'trending') {
@@ -96,6 +98,8 @@ export function applyFilter(items: TrendingItem[], filter: FilterId): TrendingIt
     return items.filter((it) => inferType(it) === 'text' || inferType(it) === 'quote')
   if (filter === 'articles') return items.filter((it) => inferType(it) === 'article')
 
-  // just-saved (default): already newest-first from the query.
+  // latest: every recent item, newest-first, no matter how it entered the
+  // pulse (saved / synced / added / previewed). The API already returns the
+  // deduped list newest-first, so this is a pass-through.
   return items
 }

@@ -61,7 +61,6 @@ function FeedPageContent(): React.ReactElement {
   const [hasMore, setHasMore] = useState(true)
   const [stats, setStats] = useState({ total: 0, unread: 0 })
   const [triageOpen, setTriageOpen] = useState(false)
-  const [markingRead, setMarkingRead] = useState(false)
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)
@@ -134,6 +133,37 @@ function FeedPageContent(): React.ReactElement {
     }
     openTriage(queue, 0)
   }, [items, openTriage])
+
+  // Open triage from a tapped gallery item: triage the FULL unread backlog (not
+  // just the loaded page) so the progress count reflects everything, but start
+  // on the item the user tapped.
+  const openTriageFromItem = useCallback(
+    async (idx: number) => {
+      const clicked = items[idx]
+      let queue: FeedItem[] = items.filter((i) => !i.isRead)
+      try {
+        const res = await fetch('/api/feed?filter=all&unreadOnly=true&limit=100')
+        if (res.ok) {
+          const data = await res.json()
+          const all: FeedItem[] = (data.items || []).filter((i: FeedItem) => !i.isRead)
+          if (all.length) queue = all
+        }
+      } catch {
+        /* fall back to the loaded unread items */
+      }
+      const plat = (i: FeedItem) => i.platform ?? 'twitter'
+      let start = clicked
+        ? queue.findIndex((i) => i.id === clicked.id && plat(i) === plat(clicked))
+        : 0
+      if (start === -1) {
+        // Tapped item isn't in the unread set (e.g. already read) — open it alone.
+        queue = clicked ? [clicked] : queue
+        start = 0
+      }
+      openTriage(queue, Math.max(0, start))
+    },
+    [items, openTriage],
+  )
 
   const startSync = useCallback(
     async (firstLogin = false) => {
@@ -551,32 +581,6 @@ function FeedPageContent(): React.ReactElement {
     setStats((prev) => ({ ...prev, unread: prev.unread + 1 }))
   }, [])
 
-  const handleMarkAsRead = useCallback(
-    async (id: string) => {
-      if (markingRead) return
-      setMarkingRead(true)
-
-      try {
-        const item = items.find((i) => i.id === id)
-        const method = item?.isRead ? 'DELETE' : 'POST'
-
-        await fetch(`/api/bookmarks/${id}/read`, { method })
-
-        setItems((prev) => prev.map((i) => (i.id === id ? { ...i, isRead: !i.isRead } : i)))
-        setStats((prev) => ({
-          ...prev,
-          unread: item?.isRead ? prev.unread + 1 : Math.max(0, prev.unread - 1),
-        }))
-        window.dispatchEvent(new CustomEvent('stats-updated'))
-      } catch (error) {
-        console.error('Failed to mark as read:', error)
-      } finally {
-        setMarkingRead(false)
-      }
-    },
-    [markingRead, items],
-  )
-
   const handleAddTag = useCallback(
     async (itemId: string, tag: string) => {
       const response = await fetch(`/api/bookmarks/${itemId}/tags`, {
@@ -691,10 +695,10 @@ function FeedPageContent(): React.ReactElement {
           break
         case 'f':
         case 'F':
-          // Focus mode - open first item
+          // Focus mode - open first item (full unread backlog)
           e.preventDefault()
           if (items.length > 0) {
-            openTriage(items, 0)
+            openTriageFromItem(0)
           }
           break
         case 't':
@@ -919,9 +923,7 @@ function FeedPageContent(): React.ReactElement {
             unreadOnly={unreadOnly}
             stats={stats}
             view={view}
-            onExpand={(idx) => openTriage(items, idx)}
-            onMarkRead={handleMarkAsRead}
-            onRemove={(id) => setItems((prev) => prev.filter((i) => i.id !== id))}
+            onExpand={openTriageFromItem}
             onLoadMore={loadMore}
             onShowAll={() => setUnreadOnly(false)}
           />

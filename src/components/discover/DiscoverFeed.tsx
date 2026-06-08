@@ -51,17 +51,12 @@ function dedupeByPost(items: ActivityItem[]): ActivityItem[] {
 
 const POLL_MS = 12_000
 
+/** Remembers the user's last-used lens so the bare /trending hub restores it. */
+const FILTER_STORAGE_KEY = 'adhx-trending-filter'
+
 /** Stable React key / identity for an activity item. */
 function keyOf(item: ActivityItem): string {
   return postKey(item)
-}
-
-/** A plausible "saving right now" count derived from real recent volume. */
-function savingNow(items: ActivityItem[]): number {
-  const cutoff = Date.now() - 5 * 60 * 1000
-  const recent = items.filter((it) => new Date(it.createdAt).getTime() >= cutoff).length
-  // Scale so a lively feed reads naturally; floor so it never claims "0 people".
-  return Math.max(1, recent || Math.min(items.length, 12))
 }
 
 export function DiscoverFeed({
@@ -69,18 +64,22 @@ export function DiscoverFeed({
   initialFilter,
 }: {
   /**
-   * Server-rendered items to seed from (e.g. the /trending hub's ISR data).
-   * When provided, the grid paints immediately with no skeleton flash and the
-   * redundant first fetch is skipped — but the 12s live polling continues.
+   * Server-rendered items to seed from (e.g. the /trending hub's data). When
+   * provided, the grid paints immediately with no skeleton flash; the client
+   * still reconciles with /api/activity on mount (and polls every 12s) so a
+   * point-in-time seed can't leave the grid stale.
    */
   initialItems?: ActivityItem[]
-  /** Initial filter pill selection (defaults to "just saved"). */
+  /** Initial filter pill selection (defaults to "latest"). */
   initialFilter?: FilterId
 } = {}) {
   const seeded = (initialItems?.length ?? 0) > 0
   const [items, setItems] = useState<ActivityItem[]>(initialItems ?? [])
-  const [filter, setFilter] = useState<FilterId>(initialFilter ?? 'just-saved')
+  const [filter, setFilter] = useState<FilterId>(initialFilter ?? 'latest')
   const [loaded, setLoaded] = useState(seeded)
+  // Real rolling-24h engagement count (saves + previews, from /api/activity) —
+  // drives the live activity pill. 0 until the first fetch resolves.
+  const [recentActivity, setRecentActivity] = useState(0)
   const [freshKeys, setFreshKeys] = useState<Set<string>>(new Set())
   // null while unknown; once known, signed-out gets the public shell (the global
   // header is hidden when signed out) and Preview (not Save) actions.
@@ -101,6 +100,20 @@ export function DiscoverFeed({
   }, [])
   const signedOut = authed === false
 
+  // Restore the last-used lens on the bare /trending hub (where the URL didn't
+  // pin a specific filter — i.e. initialFilter is the default 'trending'). A
+  // /trending/<filter> URL always wins. Runs in an effect (not the initial
+  // useState) so server + first client render match — no hydration mismatch.
+  useEffect(() => {
+    if (initialFilter && initialFilter !== 'trending') return
+    try {
+      const saved = localStorage.getItem(FILTER_STORAGE_KEY)
+      if (saved && FILTERS.some((f) => f.id === saved)) setFilter(saved as FilterId)
+    } catch {
+      /* localStorage unavailable — keep the default */
+    }
+  }, [initialFilter])
+
   const load = useCallback(async (initial: boolean) => {
     try {
       const res = await fetch('/api/activity', { cache: 'no-store' })
@@ -108,6 +121,7 @@ export function DiscoverFeed({
       const data = await res.json()
       if (!Array.isArray(data.items)) return
       const next: ActivityItem[] = data.items
+      if (typeof data.recentActivity === 'number') setRecentActivity(data.recentActivity)
 
       if (initial) {
         // Seed the known set without flashing every card as "new".
@@ -130,12 +144,16 @@ export function DiscoverFeed({
   }, [])
 
   useEffect(() => {
-    // When seeded from the server we already have items + a primed known-set,
-    // so skip the redundant initial fetch and go straight to live polling.
-    if (!seeded) load(true)
+    // Always reconcile with /api/activity on mount — even when seeded from the
+    // server. The SSR seed is a point-in-time snapshot; if it differs from the
+    // live pulse (timing/window), reconciling here corrects it instantly rather
+    // than letting the grid sit stale until the first poll fires (~POLL_MS),
+    // which read as items "popping in" seconds after load. load(true) seeds the
+    // known-set so this reconcile doesn't flash the delta as "new".
+    load(true)
     const t = window.setInterval(() => load(false), POLL_MS)
     return () => window.clearInterval(t)
-  }, [load, seeded])
+  }, [load])
 
   // Select a lens AND reflect it in the address bar (tidy path) so the current
   // view is shareable + crawlable, without a full navigation — the grid already
@@ -143,13 +161,17 @@ export function DiscoverFeed({
   // the matching filter server-side (see the [filter] route).
   const selectFilter = useCallback((id: FilterId) => {
     setFilter(id)
+    try {
+      localStorage.setItem(FILTER_STORAGE_KEY, id)
+    } catch {
+      /* ignore */
+    }
     if (typeof window !== 'undefined') {
       window.history.replaceState(null, '', filterToPath(id))
     }
   }, [])
 
   const visible = applyFilter(dedupeByPost(items), filter)
-  const count = savingNow(items)
 
   return (
     <div className="min-h-screen bg-paper">
@@ -203,11 +225,13 @@ export function DiscoverFeed({
         <div className="flex flex-wrap items-center gap-3">
           <span className="inline-flex items-center gap-2.5 rounded-full border border-clay/25 bg-clay/[0.09] px-4 py-2">
             <LiveDot />
-            {/* Time-derived (savingNow uses Date.now), so it legitimately differs
-                between the ISR-cached server HTML and the client — suppress the
-                hydration warning rather than regenerate the tree. */}
+            {/* Real saves + previews in the last 24h (from /api/activity). It's 0
+                on the server render (client-fetched), so it legitimately differs
+                at hydration — suppress the warning rather than regenerate the tree. */}
             <span className="text-[14px] font-bold text-ink" suppressHydrationWarning>
-              {count} {count === 1 ? 'person' : 'people'} saving right now
+              {recentActivity > 0
+                ? `${recentActivity.toLocaleString()} saved & previewed today`
+                : 'Live'}
             </span>
           </span>
 

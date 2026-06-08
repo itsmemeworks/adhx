@@ -2,10 +2,10 @@
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > '4-images': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="relative"
@@ -27,7 +27,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > '4
         style="background: linear-gradient(transparent 40%, rgba(11, 11, 17, 0.84));"
       />
       <div
-        class="absolute top-2.5 left-2.5 flex items-center gap-1.5 group-hover:opacity-0 transition-opacity"
+        class="absolute top-2.5 left-2.5 flex items-center gap-1.5"
       >
         <span
           class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
@@ -54,7 +54,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > '4
         </span>
       </div>
       <span
-        class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5 group-hover:opacity-0 transition-opacity"
+        class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5"
       >
         now
       </span>
@@ -78,60 +78,16 @@ Open this to see the entire post
         </p>
       </div>
     </div>
-    <div
-      class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-    >
-      <div
-        class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent"
-      >
-        <div
-          class="flex items-center gap-2"
-        >
-          <img
-            alt="iamgdsa"
-            class="w-5 h-5 text-[10px] rounded-full object-cover flex-shrink-0"
-            src="https://pbs.twimg.com/profile_images/1730210378754236416/ghhY2XyX_200x200.jpg"
-          />
-          <span
-            class="text-white text-xs font-medium truncate flex-1"
-          >
-            @
-            iamgdsa
-          </span>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 `;
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'article-no-header': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="relative overflow-hidden p-4 bg-gradient-to-br from-clay/[0.14] to-surface"
@@ -198,60 +154,16 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
         human data will be a $1 trillion/year market
       </h3>
     </div>
-    <div
-      class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-    >
-      <div
-        class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent"
-      >
-        <div
-          class="flex items-center gap-2"
-        >
-          <img
-            alt="aliniikk"
-            class="w-5 h-5 text-[10px] rounded-full object-cover flex-shrink-0"
-            src="https://pbs.twimg.com/profile_images/1987673473108582402/yFQu0vw1_200x200.jpg"
-          />
-          <span
-            class="text-white text-xs font-medium truncate flex-1"
-          >
-            @
-            aliniikk
-          </span>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 `;
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'article-with-media': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="relative"
@@ -309,60 +221,16 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
         </h3>
       </div>
     </div>
-    <div
-      class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-    >
-      <div
-        class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent"
-      >
-        <div
-          class="flex items-center gap-2"
-        >
-          <img
-            alt="NoahRyanCo"
-            class="w-5 h-5 text-[10px] rounded-full object-cover flex-shrink-0"
-            src="https://pbs.twimg.com/profile_images/1761233957524541440/s5EXk28X_200x200.jpg"
-          />
-          <span
-            class="text-white text-xs font-medium truncate flex-1"
-          >
-            @
-            NoahRyanCo
-          </span>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 `;
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'emoji-tweet': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="relative"
@@ -404,7 +272,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'e
         </div>
       </div>
       <div
-        class="absolute top-2.5 left-2.5 flex items-center gap-1.5 group-hover:opacity-0 transition-opacity"
+        class="absolute top-2.5 left-2.5 flex items-center gap-1.5"
       >
         <span
           class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
@@ -431,7 +299,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'e
         </span>
       </div>
       <span
-        class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5 group-hover:opacity-0 transition-opacity"
+        class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5"
       >
         now
       </span>
@@ -453,60 +321,16 @@ Live now 🚀
         </p>
       </div>
     </div>
-    <div
-      class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-    >
-      <div
-        class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent"
-      >
-        <div
-          class="flex items-center gap-2"
-        >
-          <img
-            alt="moonpay"
-            class="w-5 h-5 text-[10px] rounded-full object-cover flex-shrink-0"
-            src="https://pbs.twimg.com/profile_images/1974903278400872448/XgE1PBG6_200x200.jpg"
-          />
-          <span
-            class="text-white text-xs font-medium truncate flex-1"
-          >
-            @
-            moonpay
-          </span>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 `;
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'long-text-1-image': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="relative"
@@ -528,7 +352,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
         style="background: linear-gradient(transparent 40%, rgba(11, 11, 17, 0.84));"
       />
       <div
-        class="absolute top-2.5 left-2.5 flex items-center gap-1.5 group-hover:opacity-0 transition-opacity"
+        class="absolute top-2.5 left-2.5 flex items-center gap-1.5"
       >
         <span
           class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
@@ -555,7 +379,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
         </span>
       </div>
       <span
-        class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5 group-hover:opacity-0 transition-opacity"
+        class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5"
       >
         now
       </span>
@@ -607,60 +431,16 @@ PS – Repost for early access to the full TikTok Shop content factory system.
         </p>
       </div>
     </div>
-    <div
-      class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-    >
-      <div
-        class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent"
-      >
-        <div
-          class="flex items-center gap-2"
-        >
-          <img
-            alt="maverickecom"
-            class="w-5 h-5 text-[10px] rounded-full object-cover flex-shrink-0"
-            src="https://pbs.twimg.com/profile_images/1997552793674985472/YA-0dCZO_200x200.jpg"
-          />
-          <span
-            class="text-white text-xs font-medium truncate flex-1"
-          >
-            @
-            maverickecom
-          </span>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 `;
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'long-text-2-images': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="relative"
@@ -682,7 +462,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
         style="background: linear-gradient(transparent 40%, rgba(11, 11, 17, 0.84));"
       />
       <div
-        class="absolute top-2.5 left-2.5 flex items-center gap-1.5 group-hover:opacity-0 transition-opacity"
+        class="absolute top-2.5 left-2.5 flex items-center gap-1.5"
       >
         <span
           class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
@@ -709,7 +489,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
         </span>
       </div>
       <span
-        class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5 group-hover:opacity-0 transition-opacity"
+        class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5"
       >
         now
       </span>
@@ -740,60 +520,16 @@ His days are numbered
         </p>
       </div>
     </div>
-    <div
-      class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-    >
-      <div
-        class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent"
-      >
-        <div
-          class="flex items-center gap-2"
-        >
-          <img
-            alt="BasilTheGreat"
-            class="w-5 h-5 text-[10px] rounded-full object-cover flex-shrink-0"
-            src="https://pbs.twimg.com/profile_images/1870853024798715904/f7G0cKa9_200x200.jpg"
-          />
-          <span
-            class="text-white text-xs font-medium truncate flex-1"
-          >
-            @
-            BasilTheGreat
-          </span>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 `;
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'long-text-with-quote': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="bg-surface p-4"
@@ -1130,60 +866,16 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
         </div>
       </div>
     </div>
-    <div
-      class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-    >
-      <div
-        class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent"
-      >
-        <div
-          class="flex items-center gap-2"
-        >
-          <img
-            alt="_The_Prophet__"
-            class="w-5 h-5 text-[10px] rounded-full object-cover flex-shrink-0"
-            src="https://pbs.twimg.com/profile_images/1996761764684500992/THPeAaeJ_200x200.jpg"
-          />
-          <span
-            class="text-white text-xs font-medium truncate flex-1"
-          >
-            @
-            _The_Prophet__
-          </span>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 `;
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'plain-text': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="bg-surface p-4"
@@ -1238,60 +930,16 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'p
         </span>
       </div>
     </div>
-    <div
-      class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-    >
-      <div
-        class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent"
-      >
-        <div
-          class="flex items-center gap-2"
-        >
-          <img
-            alt="TheCinesthetic"
-            class="w-5 h-5 text-[10px] rounded-full object-cover flex-shrink-0"
-            src="https://pbs.twimg.com/profile_images/1385452682517745667/mfcIUnoX_200x200.jpg"
-          />
-          <span
-            class="text-white text-xs font-medium truncate flex-1"
-          >
-            @
-            TheCinesthetic
-          </span>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 `;
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'quote-of-image-tweet': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="bg-surface p-4"
@@ -1497,60 +1145,16 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
         </div>
       </div>
     </div>
-    <div
-      class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-    >
-      <div
-        class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent"
-      >
-        <div
-          class="flex items-center gap-2"
-        >
-          <img
-            alt="Nate_Google_"
-            class="w-5 h-5 text-[10px] rounded-full object-cover flex-shrink-0"
-            src="https://pbs.twimg.com/profile_images/2001053423257473035/J8H1pEIw_200x200.jpg"
-          />
-          <span
-            class="text-white text-xs font-medium truncate flex-1"
-          >
-            @
-            Nate_Google_
-          </span>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 `;
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'quote-of-text-tweet': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="bg-surface p-4"
@@ -1636,60 +1240,16 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
         </div>
       </div>
     </div>
-    <div
-      class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-    >
-      <div
-        class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent"
-      >
-        <div
-          class="flex items-center gap-2"
-        >
-          <img
-            alt="elonmusk"
-            class="w-5 h-5 text-[10px] rounded-full object-cover flex-shrink-0"
-            src="https://pbs.twimg.com/profile_images/2008546467615580160/57KcqsTA_200x200.jpg"
-          />
-          <span
-            class="text-white text-xs font-medium truncate flex-1"
-          >
-            @
-            elonmusk
-          </span>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 `;
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'reply-tweet': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="bg-surface p-4"
@@ -1753,60 +1313,16 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'r
         </span>
       </div>
     </div>
-    <div
-      class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-    >
-      <div
-        class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent"
-      >
-        <div
-          class="flex items-center gap-2"
-        >
-          <img
-            alt="grok"
-            class="w-5 h-5 text-[10px] rounded-full object-cover flex-shrink-0"
-            src="https://pbs.twimg.com/profile_images/1893219113717342208/Vgg2hEPa_200x200.jpg"
-          />
-          <span
-            class="text-white text-xs font-medium truncate flex-1"
-          >
-            @
-            grok
-          </span>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 `;
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'text-quoting-video': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="bg-surface p-4"
@@ -1904,60 +1420,16 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 't
         </div>
       </div>
     </div>
-    <div
-      class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-    >
-      <div
-        class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent"
-      >
-        <div
-          class="flex items-center gap-2"
-        >
-          <img
-            alt="swyx"
-            class="w-5 h-5 text-[10px] rounded-full object-cover flex-shrink-0"
-            src="https://pbs.twimg.com/profile_images/1867875781676007424/RIF4Kt7U_200x200.jpg"
-          />
-          <span
-            class="text-white text-xs font-medium truncate flex-1"
-          >
-            @
-            swyx
-          </span>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 `;
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'video-tweet': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="relative"
@@ -1999,7 +1471,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'v
         </div>
       </div>
       <div
-        class="absolute top-2.5 left-2.5 flex items-center gap-1.5 group-hover:opacity-0 transition-opacity"
+        class="absolute top-2.5 left-2.5 flex items-center gap-1.5"
       >
         <span
           class="inline-flex items-center gap-1.5 rounded-md bg-black/50 backdrop-blur-sm px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.09em] text-white"
@@ -2026,7 +1498,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'v
         </span>
       </div>
       <span
-        class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5 group-hover:opacity-0 transition-opacity"
+        class="font-mono text-[11px] text-white bg-black/55 backdrop-blur rounded-full px-2 py-0.5 absolute top-2.5 right-2.5"
       >
         now
       </span>
@@ -2044,60 +1516,16 @@ Hidden order.
         </p>
       </div>
     </div>
-    <div
-      class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-    >
-      <div
-        class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent"
-      >
-        <div
-          class="flex items-center gap-2"
-        >
-          <img
-            alt="Kekius_Sage"
-            class="w-5 h-5 text-[10px] rounded-full object-cover flex-shrink-0"
-            src="https://pbs.twimg.com/profile_images/2005014228202389504/6S-JQ6zy_200x200.jpg"
-          />
-          <span
-            class="text-white text-xs font-medium truncate flex-1"
-          >
-            @
-            Kekius_Sage
-          </span>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 `;
 
 exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'youtube-link': renders correctly 1`] = `
 <div
-  class="mb-4 break-inside-avoid transition-all duration-300 "
+  class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer hover:shadow-m-md transition-shadow duration-150"
+    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
   >
     <div
       class="bg-surface p-4"
@@ -2159,50 +1587,6 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'y
           </a>
           <span />
         </span>
-      </div>
-    </div>
-    <div
-      class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-    >
-      <div
-        class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent"
-      >
-        <div
-          class="flex items-center gap-2"
-        >
-          <img
-            alt="skalskip92"
-            class="w-5 h-5 text-[10px] rounded-full object-cover flex-shrink-0"
-            src="https://pbs.twimg.com/profile_images/1557421659925237763/RzJu2YI3_200x200.jpg"
-          />
-          <span
-            class="text-white text-xs font-medium truncate flex-1"
-          >
-            @
-            skalskip92
-          </span>
-          <button
-            class="p-2 rounded-full pointer-events-auto transition-all duration-200 bg-clay hover:opacity-90 text-white"
-            title="Mark as read"
-          >
-            <svg
-              class="lucide lucide-check w-4 h-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 6 9 17l-5-5"
-              />
-            </svg>
-          </button>
-        </div>
       </div>
     </div>
   </div>

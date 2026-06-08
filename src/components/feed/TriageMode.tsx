@@ -4,17 +4,20 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   X,
   Check,
-  Bookmark,
+  Clock,
   Trash2,
   Flame,
   Undo2,
   PartyPopper,
   ArrowLeft,
   ArrowRight,
+  ArrowDown,
+  Share2,
+  Link2,
 } from 'lucide-react'
 import type { FeedItem } from './types'
 import { MediaCard, isFullBleedCandidate } from './MediaCard'
-import { isTouchDevice } from './utils'
+import { copyPreviewLink, sharePreviewLink } from './utils'
 import { cn } from '@/lib/utils'
 
 /** User's LOCAL calendar day as YYYY-MM-DD (streaks are per the user's days). */
@@ -80,9 +83,12 @@ export function TriageMode({
   const [streak, setStreak] = useState<Streak>({ current: 0, longest: 0 })
   const [celebrate, setCelebrate] = useState<string | null>(null)
   const [undo, setUndo] = useState<UndoAction | null>(null)
-  const [exiting, setExiting] = useState<'left' | 'right' | 'up' | null>(null)
+  const [exiting, setExiting] = useState<'left' | 'right' | 'down' | null>(null)
+  // Horizontal drag (Later/Done) and downward drag (Delete) for live swipe feedback.
   const [drag, setDrag] = useState(0)
-  const [isTouch, setIsTouch] = useState(false)
+  const [dragY, setDragY] = useState(0)
+  // Transient confirmation for the Copy / Share buttons.
+  const [flash, setFlash] = useState<null | 'copied' | 'shared'>(null)
 
   const recordedRef = useRef(false)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
@@ -101,7 +107,6 @@ export function TriageMode({
   // --- seed queue from the snapshot on open; load streak for display ---
   useEffect(() => {
     if (!isOpen) return
-    setIsTouch(isTouchDevice())
     setQueue(initialQueue)
     setIndex(startIndex)
     recordedRef.current = false
@@ -147,6 +152,7 @@ export function TriageMode({
   const advance = useCallback(() => {
     setExiting(null)
     setDrag(0)
+    setDragY(0)
     setIndex((i) => i + 1)
   }, [])
 
@@ -164,7 +170,7 @@ export function TriageMode({
     setTimeout(advance, 220)
   }, [current, index, recordStreak, advance, onItemResolved])
 
-  // Keep: save & advance (no DB change).
+  // Later: defer — advance without changing read state.
   const keep = useCallback(() => {
     if (!current) return
     recordStreak()
@@ -187,7 +193,7 @@ export function TriageMode({
     }, 5000)
     undoTimer.current = timer
     setUndo({ type: 'delete', item, index, timer })
-    setExiting('up')
+    setExiting('down')
     setTimeout(advance, 220)
   }, [current, index, recordStreak, advance, onItemResolved])
 
@@ -206,7 +212,26 @@ export function TriageMode({
     setUndo(null)
   }, [undo, onItemRestored])
 
-  // --- keyboard: ← Keep, → Done, ↓ Delete, U undo, Esc close ---
+  // Copy the current post's on-ADHX preview link to the clipboard.
+  const copyCurrent = useCallback(async () => {
+    if (!current) return
+    if (await copyPreviewLink(current)) {
+      setFlash('copied')
+      setTimeout(() => setFlash(null), 1600)
+    }
+  }, [current])
+
+  // Share the link via the native share sheet (falls back to copy on desktop).
+  const shareCurrent = useCallback(async () => {
+    if (!current) return
+    const result = await sharePreviewLink(current)
+    if (result === 'shared' || result === 'copied') {
+      setFlash(result === 'shared' ? 'shared' : 'copied')
+      setTimeout(() => setFlash(null), 1600)
+    }
+  }, [current])
+
+  // --- keyboard: ← Later, → Done, ↓ Delete, U undo, Esc close ---
   useEffect(() => {
     if (!isOpen) return
     const onKey = (e: KeyboardEvent) => {
@@ -287,12 +312,27 @@ export function TriageMode({
     if (!touchStart.current) return
     const dx = e.touches[0].clientX - touchStart.current.x
     const dy = e.touches[0].clientY - touchStart.current.y
-    if (Math.abs(dx) > Math.abs(dy)) setDrag(dx)
+    // Horizontal gesture → Later/Done; a downward gesture → Delete. Only one axis
+    // tracks at a time so the live transform stays clean. Upward drag is ignored
+    // (no action), so clamp dy to >= 0.
+    if (Math.abs(dx) > Math.abs(dy)) {
+      setDrag(dx)
+      setDragY(0)
+    } else {
+      setDragY(Math.max(0, dy))
+      setDrag(0)
+    }
   }
   const onTouchEnd = () => {
-    if (drag > SWIPE_THRESHOLD) keep()
-    else if (drag < -SWIPE_THRESHOLD) archive()
-    else setDrag(0)
+    // Swipe direction matches the card flight + the keyboard arrows:
+    // right → Done (flies right), left → Later (flies left), down → Delete.
+    if (drag > SWIPE_THRESHOLD) archive()
+    else if (drag < -SWIPE_THRESHOLD) keep()
+    else if (dragY > SWIPE_THRESHOLD) del()
+    else {
+      setDrag(0)
+      setDragY(0)
+    }
     touchStart.current = null
   }
 
@@ -301,10 +341,12 @@ export function TriageMode({
       ? 'translateX(-130%) rotate(-12deg)'
       : exiting === 'right'
         ? 'translateX(130%) rotate(12deg)'
-        : 'translateY(-130%)'
+        : 'translateY(130%)'
     : drag !== 0
       ? `translateX(${drag}px) rotate(${drag / 30}deg)`
-      : undefined
+      : dragY !== 0
+        ? `translateY(${dragY}px)`
+        : undefined
 
   const progress = total ? (done / total) * 100 : 0
 
@@ -368,6 +410,46 @@ export function TriageMode({
             style={{ width: `${progress}%` }}
           />
         </div>
+        {current && (
+          <div className="flex-none flex items-center gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                copyCurrent()
+              }}
+              className={cn(
+                'w-[38px] h-[38px] rounded-full flex items-center justify-center hover:opacity-80 transition-opacity',
+                fullBleed ? 'bg-black/40 backdrop-blur text-white' : 'bg-fsurface text-fink-2',
+              )}
+              aria-label="Copy link to this post"
+              title="Copy link"
+            >
+              {flash === 'copied' ? (
+                <Check className="w-[18px] h-[18px]" />
+              ) : (
+                <Link2 className="w-[18px] h-[18px]" />
+              )}
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                shareCurrent()
+              }}
+              className={cn(
+                'w-[38px] h-[38px] rounded-full flex items-center justify-center hover:opacity-80 transition-opacity',
+                fullBleed ? 'bg-black/40 backdrop-blur text-white' : 'bg-fsurface text-fink-2',
+              )}
+              aria-label="Share this post"
+              title="Share"
+            >
+              {flash === 'shared' ? (
+                <Check className="w-[18px] h-[18px]" />
+              ) : (
+                <Share2 className="w-[18px] h-[18px]" />
+              )}
+            </button>
+          </div>
+        )}
         {streak.current > 0 && (
           <span
             className={cn(
@@ -413,17 +495,25 @@ export function TriageMode({
             </div>
           ) : current ? (
             <div
-              // Click-away: only clicks on the actual media/card/text keep triage
-              // open; clicks in the surrounding gutter fall through to the backdrop.
+              // Click-away: clicks on the card keep triage open; clicks in the
+              // surrounding gutter fall through to the backdrop. Also stay open if
+              // the user just finished selecting text (mouseup may land off-card).
               onClick={(e) => {
-                if ((e.target as HTMLElement).closest('[data-triage-content]')) e.stopPropagation()
+                if (
+                  (e.target as HTMLElement).closest('[data-triage-content]') ||
+                  (window.getSelection()?.toString().length ?? 0) > 0
+                ) {
+                  e.stopPropagation()
+                }
               }}
-              className="w-full h-full flex items-center justify-center select-none touch-pan-y"
+              className="w-full h-full flex items-center justify-center select-text touch-pan-y"
               style={{
                 transform: cardTransform,
                 opacity: exiting ? 0 : 1,
                 transition:
-                  exiting || drag === 0 ? 'transform 0.22s ease, opacity 0.22s ease' : undefined,
+                  exiting || (drag === 0 && dragY === 0)
+                    ? 'transform 0.22s ease, opacity 0.22s ease'
+                    : undefined,
               }}
               onTouchStart={onTouchStart}
               onTouchMove={onTouchMove}
@@ -435,35 +525,67 @@ export function TriageMode({
         </div>
       )}
 
-      {/* Single action dock (bottom-center): glass buttons, hint below. */}
+      {/* Live swipe feedback: the action you're about to trigger, on the side
+          the card is heading toward (left = Later, right = Done). */}
+      {!finished && current && drag !== 0 && !exiting && (
+        <div
+          className={cn(
+            'pointer-events-none absolute inset-0 z-[5] flex items-center',
+            drag < 0 ? 'justify-start pl-6 sm:pl-14' : 'justify-end pr-6 sm:pr-14',
+          )}
+        >
+          <div
+            className="inline-flex items-center gap-2 rounded-2xl border-[3px] px-4 py-2.5 text-lg font-extrabold uppercase tracking-wide backdrop-blur"
+            style={{
+              opacity: Math.min(1, Math.abs(drag) / SWIPE_THRESHOLD),
+              transform: `rotate(${drag < 0 ? -8 : 8}deg)`,
+              color: drag < 0 ? 'var(--m-accent)' : 'var(--m-done)',
+              borderColor: drag < 0 ? 'var(--m-accent)' : 'var(--m-done)',
+              background: `color-mix(in srgb, ${drag < 0 ? 'var(--m-accent)' : 'var(--m-done)'} 14%, transparent)`,
+            }}
+          >
+            {drag < 0 ? <Clock className="w-5 h-5" /> : <Check className="w-5 h-5" />}
+            {drag < 0 ? 'Later' : 'Done'}
+          </div>
+        </div>
+      )}
+
+      {/* Live swipe feedback for a downward (Delete) gesture. */}
+      {!finished && current && dragY > 0 && !exiting && (
+        <div className="pointer-events-none absolute inset-0 z-[5] flex items-end justify-center pb-28">
+          <div
+            className="inline-flex items-center gap-2 rounded-2xl border-[3px] px-4 py-2.5 text-lg font-extrabold uppercase tracking-wide backdrop-blur"
+            style={{
+              opacity: Math.min(1, dragY / SWIPE_THRESHOLD),
+              color: 'var(--m-fink-2)',
+              borderColor: 'var(--m-fline)',
+              background: 'color-mix(in srgb, var(--m-fink) 10%, transparent)',
+            }}
+          >
+            <Trash2 className="w-5 h-5" />
+            Delete
+          </div>
+        </div>
+      )}
+
+      {/* Action dock (bottom-center): labelled glass buttons (tap or swipe), each
+          showing its swipe/keyboard direction (Later ←, Delete ↓, Done →). */}
       {!finished && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className="absolute bottom-6 left-0 right-0 z-[7] flex flex-col items-center gap-[15px]"
+          className="absolute bottom-6 left-0 right-0 z-[7] flex flex-col items-center gap-3"
         >
-          <div className="flex items-center gap-5 sm:gap-[30px]">
-            <DockButton onClick={keep} label="Keep" tone="primary" onDark={fullBleed}>
-              <Bookmark className="w-[25px] h-[25px]" />
+          <div className="flex items-end gap-6 sm:gap-[40px]">
+            <DockButton onClick={keep} label="Later" tone="primary" arrow="left" onDark={fullBleed}>
+              <Clock className="w-[25px] h-[25px]" />
             </DockButton>
-            <DockButton onClick={del} label="Delete" tone="outline" onDark={fullBleed}>
+            <DockButton onClick={del} label="Delete" tone="outline" arrow="down" onDark={fullBleed}>
               <Trash2 className="w-[22px] h-[22px]" />
             </DockButton>
-            <DockButton onClick={archive} label="Done" tone="done" onDark={fullBleed}>
+            <DockButton onClick={archive} label="Done" tone="done" arrow="right" onDark={fullBleed}>
               <Check className="w-[25px] h-[25px]" />
             </DockButton>
           </div>
-          <span
-            className={cn(
-              'inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold whitespace-nowrap',
-              fullBleed
-                ? 'bg-black/40 backdrop-blur text-white/90'
-                : 'bg-fsurface/60 backdrop-blur text-fink-2 border border-fline',
-            )}
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />{' '}
-            {isTouch ? 'Swipe to sort' : 'Swipe or use arrow keys'}{' '}
-            <ArrowRight className="w-3.5 h-3.5" />
-          </span>
         </div>
       )}
 
@@ -474,11 +596,18 @@ export function TriageMode({
           className="fixed bottom-[150px] left-1/2 -translate-x-1/2 z-[8] flex items-center gap-3 bg-fsurface border border-fline text-fink px-4 py-2 rounded-full shadow-m-lg text-sm"
         >
           <span>
-            {undo.type === 'archive' ? 'Done' : undo.type === 'delete' ? 'Deleted' : 'Kept'}
+            {undo.type === 'archive' ? 'Done' : undo.type === 'delete' ? 'Deleted' : 'Later'}
           </span>
           <button onClick={doUndo} className="flex items-center gap-1 font-semibold text-clay">
             <Undo2 className="w-4 h-4" /> Undo
           </button>
+        </div>
+      )}
+
+      {/* Copy / share confirmation toast */}
+      {flash && (
+        <div className="fixed top-[68px] left-1/2 -translate-x-1/2 z-[9] bg-fink text-fsurface px-4 py-2 rounded-full text-sm font-semibold shadow-m-lg">
+          {flash === 'shared' ? 'Shared' : 'Link copied'}
         </div>
       )}
 
@@ -495,23 +624,28 @@ export function TriageMode({
 }
 
 /**
- * "Apple-glass" dock button — translucent fill + backdrop blur so the content
- * behind blurs through. Keep = accent glass, Delete = subtle outline glass,
- * Done = green glass. No text label (the hint below covers the gesture).
+ * "Apple-glass" dock button — translucent fill + backdrop blur. Later = accent
+ * glass, Delete = subtle outline glass, Done = green glass. The whole stack
+ * (circle + label) is the tap target, so it works by tap as well as swipe, and
+ * the label + direction arrow say what each action does.
  */
 function DockButton({
   onClick,
   label,
   tone,
+  arrow,
   onDark = false,
   children,
 }: {
   onClick: () => void
   label: string
   tone: 'primary' | 'outline' | 'done'
+  /** The gesture/keyboard direction for this action, shown next to the label. */
+  arrow?: 'left' | 'right' | 'down'
   onDark?: boolean
   children: React.ReactNode
 }) {
+  const Arrow = arrow === 'left' ? ArrowLeft : arrow === 'right' ? ArrowRight : ArrowDown
   const big = tone !== 'outline'
   const background =
     tone === 'primary'
@@ -532,20 +666,34 @@ function DockButton({
     <button
       onClick={onClick}
       aria-label={label}
-      className={cn(
-        'rounded-full border flex items-center justify-center transition-transform hover:scale-105 active:scale-95',
-        big ? 'w-16 h-16' : 'w-[54px] h-[54px]',
-        iconColor,
-      )}
-      style={{
-        background,
-        borderColor,
-        backdropFilter: 'blur(16px) saturate(1.4)',
-        WebkitBackdropFilter: 'blur(16px) saturate(1.4)',
-        boxShadow: big ? '0 8px 24px rgba(0,0,0,.18)' : undefined,
-      }}
+      className="group flex flex-col items-center gap-1.5"
     >
-      {children}
+      <span
+        className={cn(
+          'rounded-full border flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95',
+          big ? 'w-16 h-16' : 'w-[54px] h-[54px]',
+          iconColor,
+        )}
+        style={{
+          background,
+          borderColor,
+          backdropFilter: 'blur(16px) saturate(1.4)',
+          WebkitBackdropFilter: 'blur(16px) saturate(1.4)',
+          boxShadow: big ? '0 8px 24px rgba(0,0,0,.18)' : undefined,
+        }}
+      >
+        {children}
+      </span>
+      <span
+        className={cn(
+          'inline-flex items-center gap-1 text-[13px] font-semibold leading-none',
+          onDark ? 'text-white drop-shadow' : 'text-fink',
+        )}
+      >
+        {arrow === 'left' && <Arrow className="w-3.5 h-3.5" />}
+        {label}
+        {arrow && arrow !== 'left' && <Arrow className="w-3.5 h-3.5" />}
+      </span>
     </button>
   )
 }
