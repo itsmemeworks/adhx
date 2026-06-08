@@ -209,7 +209,15 @@ function FramedVideo({ item }: { item: FeedItem }) {
 
 /* ===================== FULL-BLEED MEDIA (mobile) ===================== */
 
-function FullBleedMedia({ item }: { item: FeedItem }) {
+function FullBleedMedia({
+  item,
+  immersive = false,
+  onToggleImmersive,
+}: {
+  item: FeedItem
+  immersive?: boolean
+  onToggleImmersive?: () => void
+}) {
   const primary = item.media?.[0]
   const isVideo = primary?.mediaType === 'video' || primary?.mediaType === 'animated_gif'
   const text = stripMediaUrls(item.text || '', !!item.media?.[0])
@@ -263,6 +271,12 @@ function FullBleedMedia({ item }: { item: FeedItem }) {
         muted
         loop
         playsInline
+        onClick={(e) => {
+          // Tap the video to toggle the chrome (dock, caption, mute) so you can
+          // watch unobstructed; tap again to bring it back.
+          e.stopPropagation()
+          onToggleImmersive?.()
+        }}
         className="absolute inset-0 w-full h-full object-contain"
       />
     )
@@ -319,18 +333,21 @@ function FullBleedMedia({ item }: { item: FeedItem }) {
     <>
       {media}
 
-      {/* Scrim — darkens top (for the chrome) and bottom (for the caption/dock). */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            'linear-gradient(180deg, rgba(0,0,0,.55), transparent 22%, transparent 48%, rgba(0,0,0,.86))',
-        }}
-        aria-hidden
-      />
+      {/* Scrim — darkens top (for the chrome) and bottom (for the caption/dock).
+          Hidden in immersive mode so the video is fully unobstructed. */}
+      {!immersive && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              'linear-gradient(180deg, rgba(0,0,0,.55), transparent 22%, transparent 48%, rgba(0,0,0,.86))',
+          }}
+          aria-hidden
+        />
+      )}
 
       {/* Tap-to-unmute (video only) — top-right, clear of the dock. */}
-      {isVideo && (
+      {isVideo && !immersive && (
         <button
           onClick={(e) => {
             e.stopPropagation()
@@ -365,32 +382,35 @@ function FullBleedMedia({ item }: { item: FeedItem }) {
         </div>
       )}
 
-      {/* Caption — author + text, sitting just above the dock. */}
-      <div className="absolute left-0 right-0 z-[3] px-5" style={{ bottom: 150 }}>
-        <div className="flex items-center gap-2.5 mb-1.5">
-          <AuthorAvatar src={item.authorProfileImageUrl} author={item.author} size="sm" />
-          <div className="min-w-0">
-            <p className="text-white font-semibold text-sm leading-tight truncate drop-shadow">
-              {item.authorName || item.author}
-            </p>
-            <p className="text-white/70 font-mono text-xs truncate flex items-center gap-1.5">
-              @{item.author}
-              <PlatformGlyph platform={(item.platform ?? 'twitter') as PlatformId} size={11} />
-              {item.createdAt && (
-                <>
-                  <span aria-hidden>·</span>
-                  {formatCompactRelativeTime(item.createdAt)}
-                </>
-              )}
-            </p>
+      {/* Caption — author + text, sitting just above the dock. Hidden in
+          immersive mode so it doesn't cover the video. */}
+      {!immersive && (
+        <div className="absolute left-0 right-0 z-[3] px-5" style={{ bottom: 150 }}>
+          <div className="flex items-center gap-2.5 mb-1.5">
+            <AuthorAvatar src={item.authorProfileImageUrl} author={item.author} size="sm" />
+            <div className="min-w-0">
+              <p className="text-white font-semibold text-sm leading-tight truncate drop-shadow">
+                {item.authorName || item.author}
+              </p>
+              <p className="text-white/70 font-mono text-xs truncate flex items-center gap-1.5">
+                @{item.author}
+                <PlatformGlyph platform={(item.platform ?? 'twitter') as PlatformId} size={11} />
+                {item.createdAt && (
+                  <>
+                    <span aria-hidden>·</span>
+                    {formatCompactRelativeTime(item.createdAt)}
+                  </>
+                )}
+              </p>
+            </div>
           </div>
+          {text && (
+            <p className="text-white/90 text-[14.5px] leading-snug line-clamp-3 drop-shadow">
+              {text}
+            </p>
+          )}
         </div>
-        {text && (
-          <p className="text-white/90 text-[14.5px] leading-snug line-clamp-3 drop-shadow">
-            {text}
-          </p>
-        )}
-      </div>
+      )}
     </>
   )
 }
@@ -924,10 +944,24 @@ function TextCard({ item }: { item: FeedItem }) {
 
 /* ============================ ROOT ============================ */
 
-export function MediaCard({ item, fullBleed = false }: { item: FeedItem; fullBleed?: boolean }) {
+export function MediaCard({
+  item,
+  fullBleed = false,
+  immersive = false,
+  onToggleImmersive,
+}: {
+  item: FeedItem
+  fullBleed?: boolean
+  /** Full-bleed video only: chrome (caption/scrim/mute) hidden for clean viewing. */
+  immersive?: boolean
+  /** Tap-the-video handler that toggles immersive mode (owned by TriageMode). */
+  onToggleImmersive?: () => void
+}) {
   // Mobile full-bleed media — the whole viewer is the media, chrome overlays it.
   if (fullBleed) {
-    return <FullBleedMedia item={item} />
+    return (
+      <FullBleedMedia item={item} immersive={immersive} onToggleImmersive={onToggleImmersive} />
+    )
   }
 
   const hasMedia = !!heroImageUrl(item)

@@ -89,6 +89,9 @@ export function TriageMode({
   const [dragY, setDragY] = useState(0)
   // Transient confirmation for the Copy / Share buttons.
   const [flash, setFlash] = useState<null | 'copied' | 'shared'>(null)
+  // Immersive mode (full-bleed video only): tap the video to hide all chrome
+  // (dock, top bar, caption) for unobstructed viewing; tap again to restore.
+  const [immersive, setImmersive] = useState(false)
 
   const recordedRef = useRef(false)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
@@ -109,6 +112,7 @@ export function TriageMode({
     if (!isOpen) return
     setQueue(initialQueue)
     setIndex(startIndex)
+    setImmersive(false)
     recordedRef.current = false
 
     let cancelled = false
@@ -153,6 +157,7 @@ export function TriageMode({
     setExiting(null)
     setDrag(0)
     setDragY(0)
+    setImmersive(false) // each new card starts with chrome visible
     setIndex((i) => i + 1)
   }, [])
 
@@ -379,8 +384,14 @@ export function TriageMode({
         </>
       )}
 
-      {/* Top bar (absolute): close · count · progress · streak — one line, even on mobile */}
-      <div className="absolute top-0 left-0 right-0 z-[6] flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4">
+      {/* Top bar (absolute): close · count · progress · streak — one line, even on mobile.
+          Fades out in immersive (tap-to-hide) mode. */}
+      <div
+        className={cn(
+          'absolute top-0 left-0 right-0 z-[6] flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 transition-opacity duration-200',
+          immersive && 'opacity-0 pointer-events-none',
+        )}
+      >
         <button
           onClick={onClose}
           className={cn(
@@ -485,7 +496,12 @@ export function TriageMode({
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
         >
-          <MediaCard item={current} fullBleed />
+          <MediaCard
+            item={current}
+            fullBleed
+            immersive={immersive}
+            onToggleImmersive={() => setImmersive((v) => !v)}
+          />
         </div>
       ) : (
         <div className="flex-1 flex items-center justify-center px-6 sm:px-16 lg:px-24 pt-[72px] pb-[150px] overflow-hidden z-[2]">
@@ -569,11 +585,15 @@ export function TriageMode({
       )}
 
       {/* Action dock (bottom-center): labelled glass buttons (tap or swipe), each
-          showing its swipe/keyboard direction (Later ←, Delete ↓, Done →). */}
+          showing its swipe/keyboard direction (Later ←, Delete ↓, Done →). Fades
+          out in immersive (tap-to-hide) mode. */}
       {!finished && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className="absolute bottom-6 left-0 right-0 z-[7] flex flex-col items-center gap-3"
+          className={cn(
+            'absolute bottom-6 left-0 right-0 z-[7] flex flex-col items-center gap-3 transition-opacity duration-200',
+            immersive && 'opacity-0 pointer-events-none',
+          )}
         >
           <div className="flex items-end gap-6 sm:gap-[40px]">
             <DockButton onClick={keep} label="Later" tone="primary" arrow="left" onDark={fullBleed}>
