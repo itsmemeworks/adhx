@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.42.3](https://github.com/itsmemeworks/adhx/compare/v1.42.2...v1.42.3) (2026-06-08)
+
+
+### Bug Fixes
+
+* drop inline native video controls; add a fullscreen button instead ([#228](https://github.com/itsmemeworks/adhx/issues/228)) ([55191a2](https://github.com/itsmemeworks/adhx/commit/55191a2a1539f647fb2769528d6ea8a1fe63e91b))
+
 ## [1.42.2](https://github.com/itsmemeworks/adhx/compare/v1.42.1...v1.42.2) (2026-06-08)
 
 
