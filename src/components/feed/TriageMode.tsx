@@ -89,6 +89,13 @@ export function TriageMode({
   const [dragY, setDragY] = useState(0)
   // Transient confirmation for the Copy / Share buttons.
   const [flash, setFlash] = useState<null | 'copied' | 'shared'>(null)
+  // Immersive mode (full-bleed video only): tap the video to hide all chrome
+  // (dock, top bar, caption) for unobstructed viewing; tap again to restore.
+  const [immersive, setImmersive] = useState(false)
+  // Count of cleared items (Done + Delete) this session. Drives the shrinking
+  // "N left" counter + progress bar — the dopamine of clearing the backlog.
+  // "Later" deliberately doesn't count (the item stays unread for next time).
+  const [cleared, setCleared] = useState(0)
 
   const recordedRef = useRef(false)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
@@ -96,7 +103,8 @@ export function TriageMode({
 
   const isMobile = useIsMobile()
   const total = queue.length
-  const done = Math.min(index, total)
+  // Backlog still to clear — shrinks on Done/Delete, NOT on Later.
+  const remaining = Math.max(0, total - cleared)
   const current = index < queue.length ? queue[index] : null
   const finished = index >= queue.length
   // On phones, media posts take over the whole screen (Reels/TikTok style) and
@@ -109,6 +117,8 @@ export function TriageMode({
     if (!isOpen) return
     setQueue(initialQueue)
     setIndex(startIndex)
+    setImmersive(false)
+    setCleared(0)
     recordedRef.current = false
 
     let cancelled = false
@@ -153,6 +163,7 @@ export function TriageMode({
     setExiting(null)
     setDrag(0)
     setDragY(0)
+    setImmersive(false) // each new card starts with chrome visible
     setIndex((i) => i + 1)
   }, [])
 
@@ -166,6 +177,7 @@ export function TriageMode({
     onItemResolved?.(item.id, 'archive')
     clearUndoTimer()
     setUndo({ type: 'archive', item, index })
+    setCleared((c) => c + 1) // Done counts as progress
     setExiting('right')
     setTimeout(advance, 220)
   }, [current, index, recordStreak, advance, onItemResolved])
@@ -193,6 +205,7 @@ export function TriageMode({
     }, 5000)
     undoTimer.current = timer
     setUndo({ type: 'delete', item, index, timer })
+    setCleared((c) => c + 1) // Delete counts as progress
     setExiting('down')
     setTimeout(advance, 220)
   }, [current, index, recordStreak, advance, onItemResolved])
@@ -203,8 +216,10 @@ export function TriageMode({
       fetch(`/api/bookmarks/${undo.item.id}/read`, { method: 'DELETE' }).catch(() => {})
       // archive decremented the feed's unread count immediately — restore it
       onItemRestored?.(undo.item)
+      setCleared((c) => Math.max(0, c - 1)) // undid a Done → restore the count
     } else if (undo.type === 'delete') {
       clearUndoTimer() // cancel the pending delete — nothing was deleted yet
+      setCleared((c) => Math.max(0, c - 1)) // undid a Delete → restore the count
     }
     setIndex(undo.index)
     setExiting(null)
@@ -348,7 +363,10 @@ export function TriageMode({
         ? `translateY(${dragY}px)`
         : undefined
 
-  const progress = total ? (done / total) * 100 : 0
+  // The bar tracks session position — how far through the queue you've moved
+  // (advances on every action, including Later) — so cycling always shows
+  // forward motion. The "N left" count is the dopamine signal (Done/Delete only).
+  const progress = total ? (Math.min(index, total) / total) * 100 : 0
 
   return (
     // Full-screen focus surface. Media posts on mobile go full-bleed on black;
@@ -379,8 +397,14 @@ export function TriageMode({
         </>
       )}
 
-      {/* Top bar (absolute): close · count · progress · streak — one line, even on mobile */}
-      <div className="absolute top-0 left-0 right-0 z-[6] flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4">
+      {/* Top bar (absolute): close · count · progress · streak — one line, even on mobile.
+          Fades out in immersive (tap-to-hide) mode. */}
+      <div
+        className={cn(
+          'absolute top-0 left-0 right-0 z-[6] flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 transition-opacity duration-200',
+          immersive && 'opacity-0 pointer-events-none',
+        )}
+      >
         <button
           onClick={onClose}
           className={cn(
@@ -397,7 +421,7 @@ export function TriageMode({
             fullBleed ? 'text-white/90 drop-shadow' : 'text-fink-2',
           )}
         >
-          {finished ? `${total} done` : `${done + 1} / ${total}`}
+          {finished ? `${cleared} done` : `${remaining} left`}
         </span>
         <div
           className={cn(
@@ -485,7 +509,12 @@ export function TriageMode({
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
         >
-          <MediaCard item={current} fullBleed />
+          <MediaCard
+            item={current}
+            fullBleed
+            immersive={immersive}
+            onToggleImmersive={() => setImmersive((v) => !v)}
+          />
         </div>
       ) : (
         <div className="flex-1 flex items-center justify-center px-6 sm:px-16 lg:px-24 pt-[72px] pb-[150px] overflow-hidden z-[2]">
@@ -569,11 +598,15 @@ export function TriageMode({
       )}
 
       {/* Action dock (bottom-center): labelled glass buttons (tap or swipe), each
-          showing its swipe/keyboard direction (Later ←, Delete ↓, Done →). */}
+          showing its swipe/keyboard direction (Later ←, Delete ↓, Done →). Fades
+          out in immersive (tap-to-hide) mode. */}
       {!finished && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className="absolute bottom-6 left-0 right-0 z-[7] flex flex-col items-center gap-3"
+          className={cn(
+            'absolute bottom-6 left-0 right-0 z-[7] flex flex-col items-center gap-3 transition-opacity duration-200',
+            immersive && 'opacity-0 pointer-events-none',
+          )}
         >
           <div className="flex items-end gap-6 sm:gap-[40px]">
             <DockButton onClick={keep} label="Later" tone="primary" arrow="left" onDark={fullBleed}>

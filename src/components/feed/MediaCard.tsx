@@ -209,12 +209,35 @@ function FramedVideo({ item }: { item: FeedItem }) {
 
 /* ===================== FULL-BLEED MEDIA (mobile) ===================== */
 
-function FullBleedMedia({ item }: { item: FeedItem }) {
+function FullBleedMedia({
+  item,
+  immersive = false,
+  onToggleImmersive,
+}: {
+  item: FeedItem
+  immersive?: boolean
+  onToggleImmersive?: () => void
+}) {
   const primary = item.media?.[0]
   const isVideo = primary?.mediaType === 'video' || primary?.mediaType === 'animated_gif'
   const text = stripMediaUrls(item.text || '', !!item.media?.[0])
   const videoRef = useRef<HTMLVideoElement>(null)
   const [muted, setMuted] = useState(true)
+  // Multi-photo posts become a swipeable, full-screen carousel (Instagram/X
+  // style). photoIdx tracks the visible page for the dot indicator.
+  const photos = (item.media ?? []).filter((m) => m.mediaType === 'photo')
+  const multiPhoto = !isVideo && item.platform !== 'youtube' && photos.length > 1
+  const [photoIdx, setPhotoIdx] = useState(0)
+  const carouselRef = useRef<HTMLDivElement>(null)
+
+  // Tap the photo to advance to the next one, wrapping back to the first — the
+  // swipe gesture still works too (scroll-snap). Smooth-scrolls the carousel.
+  const cyclePhoto = () => {
+    const el = carouselRef.current
+    if (!el) return
+    const next = (Math.round(el.scrollLeft / el.clientWidth) + 1) % photos.length
+    el.scrollTo({ left: next * el.clientWidth, behavior: 'smooth' })
+  }
 
   const toggleMute = () => {
     const v = videoRef.current
@@ -248,8 +271,50 @@ function FullBleedMedia({ item }: { item: FeedItem }) {
         muted
         loop
         playsInline
+        onClick={(e) => {
+          // Tap the video to toggle the chrome (dock, caption, mute) so you can
+          // watch unobstructed; tap again to bring it back.
+          e.stopPropagation()
+          onToggleImmersive?.()
+        }}
         className="absolute inset-0 w-full h-full object-contain"
       />
+    )
+  } else if (multiPhoto) {
+    // Horizontal scroll-snap carousel — one full-screen photo per page. Touch
+    // events stopPropagation so swiping between photos doesn't also trigger the
+    // triage Keep/Done swipe on the wrapper; triage those via the dock buttons.
+    media = (
+      <div
+        ref={carouselRef}
+        className="absolute inset-0 flex snap-x snap-mandatory overflow-x-auto overflow-y-hidden"
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation()
+          cyclePhoto()
+        }}
+        onScroll={(e) => {
+          const el = e.currentTarget
+          setPhotoIdx(Math.round(el.scrollLeft / el.clientWidth))
+        }}
+      >
+        {photos.map((p, i) => (
+          <div
+            key={p.id}
+            className="flex h-full w-full flex-shrink-0 snap-center items-center justify-center"
+          >
+            <img
+              src={p.url}
+              alt={`Image ${i + 1} of ${photos.length}`}
+              className="max-h-full max-w-full object-contain"
+              referrerPolicy="no-referrer"
+              onError={fallbackToOriginal(p.originalUrl)}
+            />
+          </div>
+        ))}
+      </div>
     )
   } else {
     const img = primary?.url || heroImageUrl(item)
@@ -268,18 +333,21 @@ function FullBleedMedia({ item }: { item: FeedItem }) {
     <>
       {media}
 
-      {/* Scrim — darkens top (for the chrome) and bottom (for the caption/dock). */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            'linear-gradient(180deg, rgba(0,0,0,.55), transparent 22%, transparent 48%, rgba(0,0,0,.86))',
-        }}
-        aria-hidden
-      />
+      {/* Scrim — darkens top (for the chrome) and bottom (for the caption/dock).
+          Hidden in immersive mode so the video is fully unobstructed. */}
+      {!immersive && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              'linear-gradient(180deg, rgba(0,0,0,.55), transparent 22%, transparent 48%, rgba(0,0,0,.86))',
+          }}
+          aria-hidden
+        />
+      )}
 
       {/* Tap-to-unmute (video only) — top-right, clear of the dock. */}
-      {isVideo && (
+      {isVideo && !immersive && (
         <button
           onClick={(e) => {
             e.stopPropagation()
@@ -296,32 +364,53 @@ function FullBleedMedia({ item }: { item: FeedItem }) {
         </button>
       )}
 
-      {/* Caption — author + text, sitting just above the dock. */}
-      <div className="absolute left-0 right-0 z-[3] px-5" style={{ bottom: 150 }}>
-        <div className="flex items-center gap-2.5 mb-1.5">
-          <AuthorAvatar src={item.authorProfileImageUrl} author={item.author} size="sm" />
-          <div className="min-w-0">
-            <p className="text-white font-semibold text-sm leading-tight truncate drop-shadow">
-              {item.authorName || item.author}
-            </p>
-            <p className="text-white/70 font-mono text-xs truncate flex items-center gap-1.5">
-              @{item.author}
-              <PlatformGlyph platform={(item.platform ?? 'twitter') as PlatformId} size={11} />
-              {item.createdAt && (
-                <>
-                  <span aria-hidden>·</span>
-                  {formatCompactRelativeTime(item.createdAt)}
-                </>
+      {/* Page dots for the multi-photo carousel, just above the caption. */}
+      {multiPhoto && (
+        <div
+          className="absolute left-0 right-0 z-[4] flex justify-center gap-1.5"
+          style={{ bottom: 210 }}
+        >
+          {photos.map((_, i) => (
+            <span
+              key={i}
+              className={cn(
+                'h-1.5 rounded-full transition-all duration-200',
+                i === photoIdx ? 'w-5 bg-white' : 'w-1.5 bg-white/45',
               )}
-            </p>
-          </div>
+            />
+          ))}
         </div>
-        {text && (
-          <p className="text-white/90 text-[14.5px] leading-snug line-clamp-3 drop-shadow">
-            {text}
-          </p>
-        )}
-      </div>
+      )}
+
+      {/* Caption — author + text, sitting just above the dock. Hidden in
+          immersive mode so it doesn't cover the video. */}
+      {!immersive && (
+        <div className="absolute left-0 right-0 z-[3] px-5" style={{ bottom: 150 }}>
+          <div className="flex items-center gap-2.5 mb-1.5">
+            <AuthorAvatar src={item.authorProfileImageUrl} author={item.author} size="sm" />
+            <div className="min-w-0">
+              <p className="text-white font-semibold text-sm leading-tight truncate drop-shadow">
+                {item.authorName || item.author}
+              </p>
+              <p className="text-white/70 font-mono text-xs truncate flex items-center gap-1.5">
+                @{item.author}
+                <PlatformGlyph platform={(item.platform ?? 'twitter') as PlatformId} size={11} />
+                {item.createdAt && (
+                  <>
+                    <span aria-hidden>·</span>
+                    {formatCompactRelativeTime(item.createdAt)}
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+          {text && (
+            <p className="text-white/90 text-[14.5px] leading-snug line-clamp-3 drop-shadow">
+              {text}
+            </p>
+          )}
+        </div>
+      )}
     </>
   )
 }
@@ -855,10 +944,24 @@ function TextCard({ item }: { item: FeedItem }) {
 
 /* ============================ ROOT ============================ */
 
-export function MediaCard({ item, fullBleed = false }: { item: FeedItem; fullBleed?: boolean }) {
+export function MediaCard({
+  item,
+  fullBleed = false,
+  immersive = false,
+  onToggleImmersive,
+}: {
+  item: FeedItem
+  fullBleed?: boolean
+  /** Full-bleed video only: chrome (caption/scrim/mute) hidden for clean viewing. */
+  immersive?: boolean
+  /** Tap-the-video handler that toggles immersive mode (owned by TriageMode). */
+  onToggleImmersive?: () => void
+}) {
   // Mobile full-bleed media — the whole viewer is the media, chrome overlays it.
   if (fullBleed) {
-    return <FullBleedMedia item={item} />
+    return (
+      <FullBleedMedia item={item} immersive={immersive} onToggleImmersive={onToggleImmersive} />
+    )
   }
 
   const hasMedia = !!heroImageUrl(item)

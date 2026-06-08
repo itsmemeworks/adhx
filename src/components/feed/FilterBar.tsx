@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   EyeOff,
   ChevronDown,
@@ -54,6 +55,62 @@ function PlatformIcon({ value, className }: { value: PlatformFilter; className?:
   return null
 }
 
+/**
+ * A dropdown menu rendered in a portal on `document.body`, anchored under its
+ * trigger button. The filter row is `overflow-x-auto` (so the pills scroll on
+ * mobile), which clips an `absolute` dropdown — the portal escapes that, and
+ * `fixed` positioning from the trigger's rect keeps it aligned. Right-edge
+ * aligned, clamped to the viewport.
+ */
+function AnchoredMenu({
+  open,
+  onClose,
+  anchorRef,
+  width,
+  children,
+}: {
+  open: boolean
+  onClose: () => void
+  anchorRef: React.RefObject<HTMLButtonElement | null>
+  width: number
+  children: React.ReactNode
+}) {
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const place = () => {
+      const el = anchorRef.current
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      const left = Math.max(8, Math.min(r.right - width, window.innerWidth - width - 8))
+      setPos({ top: r.bottom + 6, left })
+    }
+    place()
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place, true)
+    return () => {
+      window.removeEventListener('resize', place)
+      window.removeEventListener('scroll', place, true)
+    }
+  }, [open, anchorRef, width])
+
+  if (!open || typeof document === 'undefined' || !pos) return null
+
+  return createPortal(
+    <>
+      <div className="fixed inset-0 z-[200]" onClick={onClose} />
+      <div
+        className="fixed z-[201] bg-surface rounded-card shadow-m-sm border border-hairline py-2"
+        style={{ top: pos.top, left: pos.left, width }}
+      >
+        {children}
+      </div>
+    </>,
+    document.body,
+  )
+}
+
 export function FilterBar({
   filter,
   onFilterChange,
@@ -71,6 +128,8 @@ export function FilterBar({
 }: FilterBarProps): React.ReactElement {
   const [showPlatformDropdown, setShowPlatformDropdown] = useState(false)
   const [showSortDropdown, setShowSortDropdown] = useState(false)
+  const platformBtnRef = useRef<HTMLButtonElement>(null)
+  const sortBtnRef = useRef<HTMLButtonElement>(null)
   const currentPlatform = PLATFORM_OPTIONS.find((o) => o.value === platform) || PLATFORM_OPTIONS[0]
 
   return (
@@ -126,8 +185,9 @@ export function FilterBar({
 
         {/* Platform dropdown pill */}
         {onPlatformChange && (
-          <div className="relative flex-shrink-0">
+          <div className="flex-shrink-0">
             <button
+              ref={platformBtnRef}
               onClick={() => setShowPlatformDropdown((v) => !v)}
               className={cn(
                 'flex items-center gap-1.5 px-3.5 py-[7px] rounded-full text-[13.5px] font-semibold whitespace-nowrap transition-all duration-150',
@@ -148,40 +208,36 @@ export function FilterBar({
               />
             </button>
 
-            {showPlatformDropdown && (
-              <>
-                <div
-                  className="fixed inset-0 z-[100]"
-                  onClick={() => setShowPlatformDropdown(false)}
-                />
-                <div className="absolute right-0 top-full mt-1.5 w-48 bg-surface rounded-card shadow-m-sm border border-hairline py-2 z-[101]">
-                  {PLATFORM_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => {
-                        onPlatformChange(opt.value)
-                        setShowPlatformDropdown(false)
-                      }}
-                      className={cn(
-                        'w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors',
-                        platform === opt.value
-                          ? 'text-clay font-medium'
-                          : 'text-ink-2 hover:bg-inset',
-                      )}
-                    >
-                      <PlatformIcon value={opt.value} className="w-4 h-4 flex-shrink-0" />
-                      <span>{opt.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
+            <AnchoredMenu
+              open={showPlatformDropdown}
+              onClose={() => setShowPlatformDropdown(false)}
+              anchorRef={platformBtnRef}
+              width={192}
+            >
+              {PLATFORM_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => {
+                    onPlatformChange(opt.value)
+                    setShowPlatformDropdown(false)
+                  }}
+                  className={cn(
+                    'w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors',
+                    platform === opt.value ? 'text-clay font-medium' : 'text-ink-2 hover:bg-inset',
+                  )}
+                >
+                  <PlatformIcon value={opt.value} className="w-4 h-4 flex-shrink-0" />
+                  <span>{opt.label}</span>
+                </button>
+              ))}
+            </AnchoredMenu>
           </div>
         )}
 
         {/* Sort dropdown pill */}
-        <div className="relative flex-shrink-0">
+        <div className="flex-shrink-0">
           <button
+            ref={sortBtnRef}
             onClick={() => setShowSortDropdown((v) => !v)}
             className="flex items-center gap-1.5 px-3.5 py-[7px] rounded-full text-[13.5px] font-semibold whitespace-nowrap bg-surface border border-hairline text-ink-2 hover:text-ink transition-all duration-150"
             title="Sort options"
@@ -191,42 +247,42 @@ export function FilterBar({
             <ChevronDown className="w-3.5 h-3.5 text-ink-3" />
           </button>
 
-          {showSortDropdown && (
-            <>
-              <div className="fixed inset-0 z-[100]" onClick={() => setShowSortDropdown(false)} />
-              <div className="absolute right-0 top-full mt-1.5 w-44 bg-surface rounded-card shadow-m-sm border border-hairline py-2 z-[101]">
-                {(['added', 'posted'] as const).map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => {
-                      onSortChange(s)
-                    }}
-                    className={cn(
-                      'w-full px-3 py-2 text-left text-sm transition-colors',
-                      sort === s ? 'text-clay font-medium' : 'text-ink-2 hover:bg-inset',
-                    )}
-                  >
-                    {s === 'added' ? 'Date added' : 'Date posted'}
-                  </button>
-                ))}
-                <div className="my-1 border-t border-hairline" />
-                {(['desc', 'asc'] as const).map((dir) => (
-                  <button
-                    key={dir}
-                    onClick={() => {
-                      onSortDirectionChange(dir)
-                    }}
-                    className={cn(
-                      'w-full px-3 py-2 text-left text-sm transition-colors',
-                      sortDirection === dir ? 'text-clay font-medium' : 'text-ink-2 hover:bg-inset',
-                    )}
-                  >
-                    {dir === 'desc' ? 'Newest first' : 'Oldest first'}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
+          <AnchoredMenu
+            open={showSortDropdown}
+            onClose={() => setShowSortDropdown(false)}
+            anchorRef={sortBtnRef}
+            width={176}
+          >
+            {(['added', 'posted'] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => {
+                  onSortChange(s)
+                }}
+                className={cn(
+                  'w-full px-3 py-2 text-left text-sm transition-colors',
+                  sort === s ? 'text-clay font-medium' : 'text-ink-2 hover:bg-inset',
+                )}
+              >
+                {s === 'added' ? 'Date added' : 'Date posted'}
+              </button>
+            ))}
+            <div className="my-1 border-t border-hairline" />
+            {(['desc', 'asc'] as const).map((dir) => (
+              <button
+                key={dir}
+                onClick={() => {
+                  onSortDirectionChange(dir)
+                }}
+                className={cn(
+                  'w-full px-3 py-2 text-left text-sm transition-colors',
+                  sortDirection === dir ? 'text-clay font-medium' : 'text-ink-2 hover:bg-inset',
+                )}
+              >
+                {dir === 'desc' ? 'Newest first' : 'Oldest first'}
+              </button>
+            ))}
+          </AnchoredMenu>
         </div>
 
         {/* Unread only toggle */}
