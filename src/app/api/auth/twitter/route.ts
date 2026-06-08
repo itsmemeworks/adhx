@@ -4,6 +4,7 @@ import {
   generateCodeChallenge,
   generateState,
   buildAuthorizationUrl,
+  getOAuthRedirectUri,
   saveOAuthState,
   deleteTokens,
 } from '@/lib/auth/oauth'
@@ -11,7 +12,6 @@ import { getSession, clearSessionCookie } from '@/lib/auth/session'
 import { metrics } from '@/lib/sentry'
 
 const CLIENT_ID = process.env.TWITTER_CLIENT_ID!
-const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/twitter/callback`
 
 // GET /api/auth/twitter - Initiate OAuth flow
 // Supports ?returnUrl=/path to redirect after login
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
   await saveOAuthState(state, codeVerifier)
 
   // Build authorization URL
-  const authUrl = buildAuthorizationUrl(CLIENT_ID, REDIRECT_URI, state, codeChallenge)
+  const authUrl = buildAuthorizationUrl(CLIENT_ID, getOAuthRedirectUri(), state, codeChallenge)
 
   // Track auth flow start
   metrics.authStarted()

@@ -97,11 +97,7 @@ describe('OAuth Utilities', () => {
 
       expect(url).toContain('https://twitter.com/i/oauth2/authorize')
       expect(url).toContain('client_id=client-123')
-      // Dots in redirect_uri are percent-encoded (%2E) to dodge X's logged-out
-      // "x.com" → "twitter.com" rewrite bug — see buildAuthorizationUrl comment.
-      expect(url).toContain('redirect_uri=https%3A%2F%2Fexample%2Ecom%2Fcallback')
-      // The raw URL X scans must NOT contain the literal substring "x.com".
-      expect(url).not.toContain('example.com')
+      expect(url).toContain('redirect_uri=https%3A%2F%2Fexample.com%2Fcallback')
       expect(url).toContain('state=state-abc')
       expect(url).toContain('code_challenge=challenge-xyz')
       expect(url).toContain('code_challenge_method=S256')
@@ -118,6 +114,26 @@ describe('OAuth Utilities', () => {
       expect(url).toContain('users.read')
       expect(url).toContain('bookmark.read')
       expect(url).toContain('offline.access')
+    })
+  })
+
+  describe('OAuth redirect URI resolution', () => {
+    afterEach(() => vi.unstubAllEnvs())
+
+    it('uses TWITTER_OAUTH_REDIRECT_URI when set (prod dodges X x.com rewrite)', async () => {
+      vi.stubEnv(
+        'TWITTER_OAUTH_REDIRECT_URI',
+        'https://adhx-prod.fly.dev/api/auth/twitter/callback',
+      )
+      const { getOAuthRedirectUri } = await import('@/lib/auth/oauth')
+      expect(getOAuthRedirectUri()).toBe('https://adhx-prod.fly.dev/api/auth/twitter/callback')
+    })
+
+    it('falls back to the NEXT_PUBLIC_APP_URL callback when the override is unset', async () => {
+      vi.stubEnv('TWITTER_OAUTH_REDIRECT_URI', '')
+      vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://adhx.fly.dev')
+      const { getOAuthRedirectUri } = await import('@/lib/auth/oauth')
+      expect(getOAuthRedirectUri()).toBe('https://adhx.fly.dev/api/auth/twitter/callback')
     })
   })
 

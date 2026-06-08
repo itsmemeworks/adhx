@@ -303,6 +303,33 @@ describe('API: /api/auth/twitter/callback', () => {
     })
   })
 
+  describe('OAuth host bounce', () => {
+    // In production redirect_uri points at adhx-prod.fly.dev (a host with no
+    // "x.com" for X to mangle). X lands the browser there; the callback must
+    // bounce to the canonical origin so the session cookie is set on adhx.com.
+    it('bounces to the canonical origin when it lands on the redirect_uri host', async () => {
+      vi.stubEnv(
+        'TWITTER_OAUTH_REDIRECT_URI',
+        'https://adhx-prod.fly.dev/api/auth/twitter/callback',
+      )
+      const url = new URL('https://adhx-prod.fly.dev/api/auth/twitter/callback')
+      url.searchParams.set('code', 'abc')
+      url.searchParams.set('state', 'xyz')
+      const request = new NextRequest(url, { headers: { host: 'adhx-prod.fly.dev' } })
+
+      const { GET } = await import('@/app/api/auth/twitter/callback/route')
+      const response = await GET(request)
+
+      expect(response.status).toBe(307)
+      expect(response.headers.get('location')).toBe(
+        'http://localhost:3000/api/auth/twitter/callback?code=abc&state=xyz',
+      )
+      // Nothing consumed: no token exchange, state still intact for the retry.
+      expect(mockFetch).not.toHaveBeenCalled()
+      vi.stubEnv('TWITTER_OAUTH_REDIRECT_URI', '')
+    })
+  })
+
   describe('Token exchange errors', () => {
     beforeEach(async () => {
       await testInstance.db.insert(schema.oauthState).values({

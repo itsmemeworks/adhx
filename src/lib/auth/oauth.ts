@@ -63,6 +63,33 @@ export function generateState(): string {
   return base64URLEncode(crypto.randomBytes(16))
 }
 
+/**
+ * The redirect_uri sent to X for OAuth and used in the token exchange.
+ *
+ * X has a confirmed bug: during the *logged-out* login flow it runs a regex that
+ * rewrites every "x.com" → "twitter.com" across the authorize URL, and it
+ * greedily catches the host inside `redirect_uri`. Our production host
+ * `adhx.com` ends in "x.com", so the callback gets mangled to the dead
+ * `adhtwitter.com` and login fails for anyone not already signed into X
+ * (incognito, fresh device, most Android-web users). Logged-in users skip that
+ * redirect, so it works for them. URL-encoding the dots does NOT help — X
+ * decodes them back before applying the rewrite. See:
+ * https://devcommunity.x.com/t/oauth2-bug-twitter-replaces-x-com-string-in-the-oauth-redirect-with-twitter-com/232600
+ *
+ * Fix: use a callback host with no "x.com" substring. In production we point
+ * `redirect_uri` at the Fly app host (`adhx-prod.fly.dev`) via
+ * `TWITTER_OAUTH_REDIRECT_URI`; X leaves it untouched, then the callback route
+ * bounces back to the canonical origin to set the session cookie. Staging
+ * (`adhx.fly.dev`) and local already have no "x.com", so the override is unset
+ * and this falls back to the canonical `NEXT_PUBLIC_APP_URL` callback.
+ */
+export function getOAuthRedirectUri(): string {
+  const override = process.env.TWITTER_OAUTH_REDIRECT_URI
+  if (override) return override
+  const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  return `${base}/api/auth/twitter/callback`
+}
+
 // Build authorization URL
 export function buildAuthorizationUrl(
   clientId: string,
@@ -73,30 +100,14 @@ export function buildAuthorizationUrl(
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: clientId,
+    redirect_uri: redirectUri,
     scope: SCOPES.join(' '),
     state,
     code_challenge: codeChallenge,
     code_challenge_method: 'S256',
   })
 
-  // WORKAROUND for a confirmed X platform bug: when a *logged-out* user hits the
-  // authorize endpoint, X runs a global regex that rewrites every "x.com" →
-  // "twitter.com" across the entire URL string — and it greedily catches the
-  // host inside our `redirect_uri`. Our callback lives on `adhx.com`, which ends
-  // in "x.com", so it gets mangled to "adhtwitter.com" (NXDOMAIN) and the OAuth
-  // flow dies for anyone not already signed into X (incognito, fresh device,
-  // most Android-web users). Logged-in users skip that redirect, so it "works on
-  // my machine". See:
-  // https://devcommunity.x.com/t/oauth2-bug-twitter-replaces-x-com-string-in-the-oauth-redirect-with-twitter-com/232600
-  //
-  // Fix: percent-encode the dots in `redirect_uri` so the literal substring
-  // "x.com" never appears in the URL X scans (it becomes "adhx%2Ecom"). X
-  // decodes %2E → "." when it validates the callback and performs the real
-  // redirect, so the effective redirect_uri is unchanged — verified against the
-  // live authorize endpoint: the consent screen still resolves to our app.
-  const redirectParam = encodeURIComponent(redirectUri).replace(/\./g, '%2E')
-
-  return `${TWITTER_AUTH_URL}?redirect_uri=${redirectParam}&${params.toString()}`
+  return `${TWITTER_AUTH_URL}?${params.toString()}`
 }
 
 // Save OAuth state for callback verification

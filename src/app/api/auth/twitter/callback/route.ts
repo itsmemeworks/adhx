@@ -3,6 +3,7 @@ import {
   consumeOAuthState,
   exchangeCodeForTokens,
   getCurrentUser,
+  getOAuthRedirectUri,
   saveTokens,
   hasExistingTokens,
 } from '@/lib/auth/oauth'
@@ -12,10 +13,30 @@ import { metrics, captureException } from '@/lib/sentry'
 const CLIENT_ID = process.env.TWITTER_CLIENT_ID!
 const CLIENT_SECRET = process.env.TWITTER_CLIENT_SECRET!
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-const REDIRECT_URI = `${BASE_URL}/api/auth/twitter/callback`
+const REDIRECT_URI = getOAuthRedirectUri()
 
 // GET /api/auth/twitter/callback - Handle OAuth callback
 export async function GET(request: NextRequest) {
+  // In production the OAuth redirect_uri points at the Fly app host
+  // (adhx-prod.fly.dev) so X's logged-out "x.com" → "twitter.com" rewrite can't
+  // mangle our callback (see getOAuthRedirectUri). X therefore lands the browser
+  // on that host — but the session cookie has to be set on the canonical origin
+  // (adhx.com). If we arrived on the redirect_uri host and it isn't canonical,
+  // bounce to the canonical callback first, carrying code+state untouched.
+  // Nothing is consumed yet, so this is safe and runs at most once (the bounced
+  // request arrives on the canonical host and skips this).
+  const canonicalOrigin = process.env.NEXT_PUBLIC_APP_URL
+  if (canonicalOrigin) {
+    const redirectHost = new URL(REDIRECT_URI).host
+    const canonicalHost = new URL(canonicalOrigin).host
+    const requestHost = request.headers.get('host')
+    if (requestHost === redirectHost && redirectHost !== canonicalHost) {
+      const dest = new URL('/api/auth/twitter/callback', canonicalOrigin)
+      dest.search = request.nextUrl.search
+      return NextResponse.redirect(dest, { status: 307 })
+    }
+  }
+
   const searchParams = request.nextUrl.searchParams
   const code = searchParams.get('code')
   const state = searchParams.get('state')

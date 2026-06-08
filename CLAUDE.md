@@ -923,7 +923,18 @@ SESSION_SECRET=           # For JWT signing (falls back to TWITTER_CLIENT_SECRET
 SENTRY_DSN=               # Sentry error tracking DSN
 SENTRY_RELEASE=           # Set automatically in Docker builds
 SENTRY_ENVIRONMENT=       # 'staging' or 'production' (set in fly.toml/fly.production.toml)
+TWITTER_OAUTH_REDIRECT_URI= # Overrides the OAuth callback URL (see "OAuth callback host" below). Prod only.
 ```
+
+### OAuth callback host (the `adhx.com` → `adhtwitter.com` bug)
+
+X has a confirmed platform bug: during the **logged-out** login flow it runs a regex that rewrites every `x.com`→`twitter.com` across the authorize URL — and it greedily catches the host inside our `redirect_uri`. Production runs on `adhx.com`, which _ends in_ `x.com`, so the callback gets mangled to the dead `adhtwitter.com` (NXDOMAIN) and login fails for anyone **not already signed into X** (incognito, fresh device, most Android-web users). Logged-in users skip that redirect, so it works for them. Percent-encoding the dots does **not** help — X decodes them back before rewriting. ([devcommunity report](https://devcommunity.x.com/t/oauth2-bug-twitter-replaces-x-com-string-in-the-oauth-redirect-with-twitter-com/232600))
+
+**Fix:** the OAuth `redirect_uri` must use a host with no `x.com` substring. `getOAuthRedirectUri()` (`src/lib/auth/oauth.ts`) returns `TWITTER_OAUTH_REDIRECT_URI` when set, else the `NEXT_PUBLIC_APP_URL` callback.
+
+- **Production** sets `TWITTER_OAUTH_REDIRECT_URI=https://adhx-prod.fly.dev/api/auth/twitter/callback` (in `fly.production.toml`). The Fly host has no `x.com`, so X leaves it intact. X lands the browser on `adhx-prod.fly.dev`; the callback route detects it's on the redirect_uri host (not the canonical origin) and **307-bounces to `https://adhx.com/api/auth/twitter/callback`** (carrying `code`+`state`, before consuming anything) so the session cookie is set on `adhx.com`. The token exchange uses the same `redirect_uri` X bound the code to.
+- **Staging** (`adhx.fly.dev`) and **local** have no `x.com`, so the override is unset and the bounce is a no-op.
+- **The exact `TWITTER_OAUTH_REDIRECT_URI` value must be registered as a callback URL in the X Developer Portal**, alongside the existing `adhx.com` / `adhx.fly.dev` callbacks.
 
 ## CI/CD & Deployment
 
