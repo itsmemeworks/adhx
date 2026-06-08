@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.46.3](https://github.com/itsmemeworks/adhx/compare/v1.46.2...v1.46.3) (2026-06-08)
+
+
+### Bug Fixes
+
+* play instagram video in triage + collection-hover (feed cards) ([#256](https://github.com/itsmemeworks/adhx/issues/256)) ([592fd69](https://github.com/itsmemeworks/adhx/commit/592fd690a97474a6ecb3e2e3045fb98611b68bfe))
+
 ## [1.46.2](https://github.com/itsmemeworks/adhx/compare/v1.46.1...v1.46.2) (2026-06-08)
 
 
