@@ -56,7 +56,8 @@ describe('TriageMode', () => {
       <TriageMode {...base} initialQueue={[item('1', 'first tweet'), item('2', 'second tweet')]} />,
     )
     expect(await screen.findByText('first tweet')).toBeInTheDocument()
-    expect(screen.getByText('1 / 2')).toBeInTheDocument()
+    // Counter shows the backlog remaining to clear (Done/Delete shrink it).
+    expect(screen.getByText('2 left')).toBeInTheDocument()
   })
 
   it('honors startIndex (gallery jumps to the clicked item)', async () => {
@@ -69,7 +70,8 @@ describe('TriageMode', () => {
       />,
     )
     expect(await screen.findByText('second tweet')).toBeInTheDocument()
-    expect(screen.getByText('2 / 2')).toBeInTheDocument()
+    // Nothing cleared yet, so the full backlog still shows as remaining.
+    expect(screen.getByText('2 left')).toBeInTheDocument()
   })
 
   it('archive marks read, advances, records the streak, and notifies the feed', async () => {

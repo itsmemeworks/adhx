@@ -92,6 +92,10 @@ export function TriageMode({
   // Immersive mode (full-bleed video only): tap the video to hide all chrome
   // (dock, top bar, caption) for unobstructed viewing; tap again to restore.
   const [immersive, setImmersive] = useState(false)
+  // Count of cleared items (Done + Delete) this session. Drives the shrinking
+  // "N left" counter + progress bar — the dopamine of clearing the backlog.
+  // "Later" deliberately doesn't count (the item stays unread for next time).
+  const [cleared, setCleared] = useState(0)
 
   const recordedRef = useRef(false)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
@@ -99,7 +103,8 @@ export function TriageMode({
 
   const isMobile = useIsMobile()
   const total = queue.length
-  const done = Math.min(index, total)
+  // Backlog still to clear — shrinks on Done/Delete, NOT on Later.
+  const remaining = Math.max(0, total - cleared)
   const current = index < queue.length ? queue[index] : null
   const finished = index >= queue.length
   // On phones, media posts take over the whole screen (Reels/TikTok style) and
@@ -113,6 +118,7 @@ export function TriageMode({
     setQueue(initialQueue)
     setIndex(startIndex)
     setImmersive(false)
+    setCleared(0)
     recordedRef.current = false
 
     let cancelled = false
@@ -171,6 +177,7 @@ export function TriageMode({
     onItemResolved?.(item.id, 'archive')
     clearUndoTimer()
     setUndo({ type: 'archive', item, index })
+    setCleared((c) => c + 1) // Done counts as progress
     setExiting('right')
     setTimeout(advance, 220)
   }, [current, index, recordStreak, advance, onItemResolved])
@@ -198,6 +205,7 @@ export function TriageMode({
     }, 5000)
     undoTimer.current = timer
     setUndo({ type: 'delete', item, index, timer })
+    setCleared((c) => c + 1) // Delete counts as progress
     setExiting('down')
     setTimeout(advance, 220)
   }, [current, index, recordStreak, advance, onItemResolved])
@@ -208,8 +216,10 @@ export function TriageMode({
       fetch(`/api/bookmarks/${undo.item.id}/read`, { method: 'DELETE' }).catch(() => {})
       // archive decremented the feed's unread count immediately — restore it
       onItemRestored?.(undo.item)
+      setCleared((c) => Math.max(0, c - 1)) // undid a Done → restore the count
     } else if (undo.type === 'delete') {
       clearUndoTimer() // cancel the pending delete — nothing was deleted yet
+      setCleared((c) => Math.max(0, c - 1)) // undid a Delete → restore the count
     }
     setIndex(undo.index)
     setExiting(null)
@@ -353,7 +363,8 @@ export function TriageMode({
         ? `translateY(${dragY}px)`
         : undefined
 
-  const progress = total ? (done / total) * 100 : 0
+  // Progress reflects cleared items only — Later doesn't fill the bar.
+  const progress = total ? (cleared / total) * 100 : 0
 
   return (
     // Full-screen focus surface. Media posts on mobile go full-bleed on black;
@@ -408,7 +419,7 @@ export function TriageMode({
             fullBleed ? 'text-white/90 drop-shadow' : 'text-fink-2',
           )}
         >
-          {finished ? `${total} done` : `${done + 1} / ${total}`}
+          {finished ? `${cleared} done` : `${remaining} left`}
         </span>
         <div
           className={cn(
