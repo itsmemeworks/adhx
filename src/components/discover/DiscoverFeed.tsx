@@ -223,8 +223,10 @@ export function DiscoverFeed({
 
       {/* Live status + filters */}
       <div className="mx-auto max-w-7xl px-4 pb-2 pt-4 sm:px-6">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="hidden items-center gap-2.5 rounded-full border border-clay/25 bg-clay/[0.09] px-4 py-2 sm:inline-flex">
+        {/* Status row — desktop/tablet only (kept off mobile so the filters +
+            Play get the width). */}
+        <div className="mb-3 hidden items-center gap-3 sm:flex">
+          <span className="inline-flex items-center gap-2.5 rounded-full border border-clay/25 bg-clay/[0.09] px-4 py-2">
             <LiveDot />
             {/* Real saves + previews in the last 24h (from /api/activity). It's 0
                 on the server render (client-fetched), so it legitimately differs
@@ -235,8 +237,13 @@ export function DiscoverFeed({
                 : 'Live'}
             </span>
           </span>
+          <span className="ml-auto font-mono text-[12.5px] text-ink-3">updates live</span>
+        </div>
 
-          <div className="flex flex-wrap gap-2">
+        {/* Toolbar row: filters take the remaining width (wrapping), Play stays
+            anchored to the right so it never floats onto its own line. */}
+        <div className="flex items-center gap-3">
+          <div className="flex flex-1 flex-wrap gap-2">
             {FILTERS.map((f) => {
               const active = f.id === filter
               return (
@@ -260,12 +267,11 @@ export function DiscoverFeed({
           {/* Play the trending videos as a full-bleed autoplay reel. */}
           <Link
             href="/trending/play"
-            className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-clay-grad px-4 py-2 text-[13.5px] font-semibold text-white shadow-glow transition-opacity duration-150 hover:opacity-90"
+            className="flex-none inline-flex items-center gap-1.5 self-start rounded-full bg-clay-grad px-4 py-2 text-[13.5px] font-semibold text-white shadow-glow transition-opacity duration-150 hover:opacity-90"
           >
             <Play size={14} fill="currentColor" />
             Play
           </Link>
-          <span className="hidden font-mono text-[12.5px] text-ink-3 sm:inline">updates live</span>
         </div>
       </div>
 
