@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.43.4](https://github.com/itsmemeworks/adhx/compare/v1.43.3...v1.43.4) (2026-06-08)
+
+
+### Bug Fixes
+
+* use x.com (not twitter.com) for the oauth authorize endpoint ([#239](https://github.com/itsmemeworks/adhx/issues/239)) ([3dea7cd](https://github.com/itsmemeworks/adhx/commit/3dea7cd494264c29c0e10e6b3abe3f1d90cc56f4))
+
 ## [1.43.3](https://github.com/itsmemeworks/adhx/compare/v1.43.2...v1.43.3) (2026-06-08)
 
 
