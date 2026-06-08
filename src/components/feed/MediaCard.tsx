@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Play, Pause, Volume2, VolumeX } from 'lucide-react'
+import { Play, Pause, Volume2, VolumeX, Minimize2 } from 'lucide-react'
 import type { FeedItem, ArticleContent } from './types'
 import { youtubeEmbedUrl } from '@/lib/media/youtube'
 import { normalizeEntityMap } from '@/lib/utils/article-text'
@@ -247,6 +247,17 @@ function FullBleedMedia({
     if (!v.muted) v.play().catch(() => {})
   }
 
+  // Browsers pause backgrounded videos and don't always resume on return — and a
+  // looping autoplay clip has no play button. Resume when the tab becomes visible.
+  useEffect(() => {
+    if (!isVideo) return
+    const resume = () => {
+      if (document.visibilityState === 'visible') videoRef.current?.play().catch(() => {})
+    }
+    document.addEventListener('visibilitychange', resume)
+    return () => document.removeEventListener('visibilitychange', resume)
+  }, [isVideo])
+
   let media: ReactNode = null
   if (item.platform === 'youtube') {
     media = (
@@ -271,12 +282,19 @@ function FullBleedMedia({
         muted
         loop
         playsInline
-        onClick={(e) => {
-          // Tap the video to toggle the chrome (dock, caption, mute) so you can
-          // watch unobstructed; tap again to bring it back.
-          e.stopPropagation()
-          onToggleImmersive?.()
-        }}
+        // Immersive shows the native controls (scrub / fullscreen / cast / play)
+        // and drops the tap-to-toggle so the controls work normally — the
+        // collapse button (below) returns to the framed view. Non-immersive is a
+        // clean autoplay preview; tapping it enters immersive.
+        controls={immersive}
+        onClick={
+          immersive
+            ? undefined
+            : (e) => {
+                e.stopPropagation()
+                onToggleImmersive?.()
+              }
+        }
         className="absolute inset-0 w-full h-full object-contain"
       />
     )
@@ -301,14 +319,16 @@ function FullBleedMedia({
         }}
       >
         {photos.map((p, i) => (
-          <div
-            key={p.id}
-            className="flex h-full w-full flex-shrink-0 snap-center items-center justify-center"
-          >
+          <div key={p.id} className="h-full w-full flex-shrink-0 snap-center">
             <img
               src={p.url}
               alt={`Image ${i + 1} of ${photos.length}`}
-              className="max-h-full max-w-full object-contain"
+              // Each page is full-screen; object-contain centers + letterboxes
+              // (mirrors the single-photo path, which renders reliably). loading
+              // eager + async decode so swiping to a neighbour isn't blank.
+              className="h-full w-full object-contain"
+              loading="eager"
+              decoding="async"
               referrerPolicy="no-referrer"
               onError={fallbackToOriginal(p.originalUrl)}
             />
@@ -361,6 +381,21 @@ function FullBleedMedia({
           ) : (
             <Volume2 className="w-[18px] h-[18px]" />
           )}
+        </button>
+      )}
+
+      {/* Collapse out of immersive (video) — the top bar is hidden here, so this
+          is the way back to the framed chrome. Sits above the native controls. */}
+      {isVideo && immersive && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleImmersive?.()
+          }}
+          aria-label="Exit immersive"
+          className="absolute top-[68px] left-4 z-[5] w-10 h-10 rounded-full bg-black/40 backdrop-blur text-white flex items-center justify-center"
+        >
+          <Minimize2 className="w-[18px] h-[18px]" />
         </button>
       )}
 
