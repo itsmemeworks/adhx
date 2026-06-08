@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.41.0](https://github.com/itsmemeworks/adhx/compare/v1.40.1...v1.41.0) (2026-06-08)
+
+
+### Features
+
+* triage tap+swipe, Latest lens, quick share, sync article + re-add fixes ([#221](https://github.com/itsmemeworks/adhx/issues/221)) ([0f135b4](https://github.com/itsmemeworks/adhx/commit/0f135b4f53e1b57e4dda2caadbb8a5d040fe996a))
+
+
+### Documentation
+
+* update claude.md for the trending rename + seo growth loop ([#219](https://github.com/itsmemeworks/adhx/issues/219)) ([33b31c2](https://github.com/itsmemeworks/adhx/commit/33b31c29c5747fb6613128c10457302ace80d28e))
+
 ## [1.40.1](https://github.com/itsmemeworks/adhx/compare/v1.40.0...v1.40.1) (2026-06-07)
 
 
