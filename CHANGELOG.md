@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.45.2](https://github.com/itsmemeworks/adhx/compare/v1.45.1...v1.45.2) (2026-06-08)
+
+
+### Bug Fixes
+
+* anchor trending play button to the filter row on mobile/tablet ([#248](https://github.com/itsmemeworks/adhx/issues/248)) ([907017c](https://github.com/itsmemeworks/adhx/commit/907017caa86c8fa141f2a172dabf1cba6698c94e))
+
 ## [1.45.1](https://github.com/itsmemeworks/adhx/compare/v1.45.0...v1.45.1) (2026-06-08)
 
 
