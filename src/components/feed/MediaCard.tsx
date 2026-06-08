@@ -220,6 +220,16 @@ function FullBleedMedia({ item }: { item: FeedItem }) {
   const photos = (item.media ?? []).filter((m) => m.mediaType === 'photo')
   const multiPhoto = !isVideo && item.platform !== 'youtube' && photos.length > 1
   const [photoIdx, setPhotoIdx] = useState(0)
+  const carouselRef = useRef<HTMLDivElement>(null)
+
+  // Tap the photo to advance to the next one, wrapping back to the first — the
+  // swipe gesture still works too (scroll-snap). Smooth-scrolls the carousel.
+  const cyclePhoto = () => {
+    const el = carouselRef.current
+    if (!el) return
+    const next = (Math.round(el.scrollLeft / el.clientWidth) + 1) % photos.length
+    el.scrollTo({ left: next * el.clientWidth, behavior: 'smooth' })
+  }
 
   const toggleMute = () => {
     const v = videoRef.current
@@ -262,10 +272,15 @@ function FullBleedMedia({ item }: { item: FeedItem }) {
     // triage Keep/Done swipe on the wrapper; triage those via the dock buttons.
     media = (
       <div
+        ref={carouselRef}
         className="absolute inset-0 flex snap-x snap-mandatory overflow-x-auto overflow-y-hidden"
         onTouchStart={(e) => e.stopPropagation()}
         onTouchMove={(e) => e.stopPropagation()}
         onTouchEnd={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation()
+          cyclePhoto()
+        }}
         onScroll={(e) => {
           const el = e.currentTarget
           setPhotoIdx(Math.round(el.scrollLeft / el.clientWidth))
