@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.46.2](https://github.com/itsmemeworks/adhx/compare/v1.46.1...v1.46.2) (2026-06-08)
+
+
+### Bug Fixes
+
+* share the actual video file on the instagram and tiktok overlay button ([#254](https://github.com/itsmemeworks/adhx/issues/254)) ([3e61855](https://github.com/itsmemeworks/adhx/commit/3e618550c73a6028aedfabfaa143779c39a160d2))
+
 ## [1.46.1](https://github.com/itsmemeworks/adhx/compare/v1.46.0...v1.46.1) (2026-06-08)
 
 
