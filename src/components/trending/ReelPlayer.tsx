@@ -253,12 +253,13 @@ export function ReelPlayer({ initialItems }: { initialItems: TrendingItem[] }) {
 
       {/* Top bar: close · progress · live · skip · mute · controls toggle.
           Skip + controls live here so they're reachable on every viewport
-          (mobile had swipe-only before). It sits at the TOP, clear of the
-          native control bar at the bottom — so when native controls are on we
-          keep it pinned (otherwise there's no way to skip / turn them off). */}
+          (mobile had swipe-only before). It auto-hides with the rest — even
+          when native controls are on — because iOS renders its own buttons in
+          the top corners (fullscreen / volume) that would otherwise clash with
+          a pinned bar. A tap re-reveals it (and swipe still skips videos). */}
       <div
         className={`absolute inset-x-0 top-0 flex items-center gap-2 bg-gradient-to-b from-black/60 to-transparent px-4 pb-10 pt-4 transition-opacity duration-300 ${
-          chrome || showControls ? 'opacity-100' : 'pointer-events-none opacity-0'
+          chrome ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
       >
         <Link
