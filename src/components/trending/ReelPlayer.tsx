@@ -25,9 +25,9 @@ import type { TrendingItem } from '@/lib/trending/query'
  * is pinned on every clip (the conversion hook — anyone can watch logged-out,
  * tap to save). It's the live, shareable face of /trending.
  *
- * v1 plays TikTok + X video only (clean MP4 + a native `ended` event). YouTube
- * (iframe) and Instagram (poster-only) are filtered out upstream via
- * {@link isReelPlayable} — see the Reel notes in lib/trending/filter.
+ * Plays TikTok, X, and Instagram video (clean MP4 + a native `ended` event).
+ * YouTube (iframe, no MP4) is filtered out upstream via {@link isReelPlayable} —
+ * see the Reel notes in lib/trending/filter.
  */
 
 const POLL_MS = 15_000
@@ -36,12 +36,15 @@ function postKey(item: TrendingItem): string {
   return item.bookmarkId ? `${item.platform}:${item.bookmarkId}` : item.url
 }
 
-/** Build the inline MP4 stream URL for a playable reel item (TikTok | X). */
+/** Build the inline MP4 stream URL for a playable reel item (TikTok | IG | X). */
 function reelVideoSrc(item: TrendingItem): string {
   const id = encodeURIComponent(item.bookmarkId ?? '')
   const author = encodeURIComponent(item.author ?? '')
   if (item.platform === 'tiktok') {
     return `/api/media/tiktok/video?username=${author}&id=${id}`
+  }
+  if (item.platform === 'instagram') {
+    return `/api/media/instagram/video?id=${id}`
   }
   return `/api/media/video?author=${author}&tweetId=${id}&quality=hd`
 }

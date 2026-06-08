@@ -148,9 +148,12 @@ async function addInstagramReel(userId: string, reelId: string, source: string) 
     source,
   })
 
-  // Instagram is degraded to poster + caption + link-out (no video). Store a
-  // photo media row so the gallery renders the poster; the actual image is
-  // served fresh via the thumbnail proxy (the stored CDN URL is signed/expiring).
+  // Store a 'video' media row: the Reel plays inline via the IG video proxy
+  // (resolved from the reel id through the mirror registry), with `meta.imageUrl`
+  // as the poster — served fresh via the thumbnail proxy (the stored CDN URL is
+  // signed/expiring). Falls back to the poster if the mirror is unavailable. The
+  // id keeps the historical `_photo_0` suffix so it dedupes (onConflictDoNothing)
+  // against rows the photo→video backfill (migrate.ts) already flipped.
   if (meta.imageUrl) {
     await db
       .insert(bookmarkMedia)
@@ -159,7 +162,7 @@ async function addInstagramReel(userId: string, reelId: string, source: string) 
         userId,
         platform: 'instagram',
         bookmarkId: reelId,
-        mediaType: 'photo',
+        mediaType: 'video',
         originalUrl: meta.imageUrl,
         previewUrl: meta.imageUrl,
       })

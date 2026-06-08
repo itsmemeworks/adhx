@@ -4,8 +4,8 @@ import type { TrendingItem } from '@/lib/trending/query'
 
 /**
  * isReelPlayable gates which trending items the /trending/play reel can stream.
- * v1 = TikTok + X video (clean MP4 + native `ended`); YouTube (iframe) and
- * Instagram (poster-only) are excluded, and a source id is required.
+ * TikTok + X + Instagram video (clean MP4 + native `ended`); YouTube (iframe)
+ * is excluded, and a source id is required.
  */
 
 const base: TrendingItem = {
@@ -38,9 +38,12 @@ describe('isReelPlayable', () => {
     ).toBe(true)
   })
 
-  it('excludes YouTube and Instagram (no inline MP4 auto-advance)', () => {
+  it('plays Instagram Reels (restored via the mirror registry)', () => {
+    expect(isReelPlayable(item({ platform: 'instagram', bookmarkId: 'DXVsqQ7CSXw' }))).toBe(true)
+  })
+
+  it('excludes YouTube (iframe embed — no inline MP4 auto-advance)', () => {
     expect(isReelPlayable(item({ platform: 'youtube', bookmarkId: 'Y9aytLYBajw' }))).toBe(false)
-    expect(isReelPlayable(item({ platform: 'instagram', bookmarkId: 'DXVsqQ7CSXw' }))).toBe(false)
   })
 
   it('excludes non-video types and items without a source id', () => {

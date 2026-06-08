@@ -1,7 +1,8 @@
 'use client'
 
-import { ExternalLink, Search, Sparkles, Zap } from 'lucide-react'
+import { Download, ExternalLink, Search, Sparkles, Zap } from 'lucide-react'
 import { PlatformGlyph } from '@/components/matter'
+import { VideoPlayer } from '@/components/feed/VideoPlayer'
 import { PreviewAnotherLink } from '@/components/PreviewAnotherLink'
 import {
   PreviewShell,
@@ -111,31 +112,19 @@ export function InstagramPreviewLanding({
         </div>
       )}
 
-      {/* Poster — Instagram no longer exposes a playable video, so the
-          Reel degrades to a thumbnail that links out to Instagram. */}
+      {/* Inline Reel playback — streamed through the IG video proxy (mirror
+          registry), with the poster as the loading image. Falls back to a
+          link-out on a mirror miss (VideoPlayer's own error state). */}
       {imageUrl && (
         <div className="px-4 pb-3">
-          <a
-            href={instagramUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="relative block rounded-2xl overflow-hidden bg-black group w-full"
-            style={{ aspectRatio: '9 / 16' }}
-            aria-label="View on Instagram"
-          >
-            <img
-              src={imageUrl}
-              alt={caption || 'Instagram Reel thumbnail'}
-              className="w-full h-full object-cover"
-              referrerPolicy="no-referrer"
-            />
-            <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/30 transition-colors">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/70 text-white text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                <ExternalLink className="w-4 h-4" />
-                View on Instagram
-              </span>
-            </div>
-          </a>
+          <VideoPlayer
+            author={author || 'instagram'}
+            tweetId={reelId}
+            platform="instagram"
+            poster={imageUrl}
+            tweetUrl={instagramUrl}
+            className="w-full aspect-[9/16] object-contain rounded-2xl bg-black"
+          />
         </div>
       )}
 
@@ -157,16 +146,28 @@ export function InstagramPreviewLanding({
           <PlatformGlyph platform="instagram" size={14} />
           Instagram post
         </span>
-        <a
-          href={instagramUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1.5 text-[13px] font-semibold text-clay hover:opacity-80 transition-opacity"
-          title="View on Instagram"
-        >
-          <ExternalLink className="w-3.5 h-3.5" />
-          View original
-        </a>
+        <div className="flex items-center gap-3">
+          {imageUrl && (
+            <a
+              href={`/api/media/instagram/video/download?id=${encodeURIComponent(reelId)}`}
+              className="flex items-center gap-1.5 text-[13px] font-semibold text-ink-2 hover:text-clay transition-colors"
+              title="Download video"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Download
+            </a>
+          )}
+          <a
+            href={instagramUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-[13px] font-semibold text-clay hover:opacity-80 transition-opacity"
+            title="View on Instagram"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            View original
+          </a>
+        </div>
       </footer>
     </article>
   )
@@ -184,7 +185,7 @@ const VALUE_ROWS: Array<[React.ReactNode, string, string]> = [
   [
     <Zap key="z" className="w-[17px] h-[17px]" />,
     'Save it before it vanishes',
-    'Poster, caption & a link back to the source — in one tap.',
+    'The full video, caption & poster — saved (and downloadable) in one tap.',
   ],
   [
     <Search key="f" className="w-[17px] h-[17px]" />,

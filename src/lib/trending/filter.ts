@@ -75,16 +75,18 @@ export function inferType(item: TrendingItem): ContentType {
 
 /**
  * Whether a trending item can play in the autoplay **Reel** (`/trending/play`).
- * v1 supports the platforms that expose a clean MP4 stream + a native `ended`
- * event we can chain on: **TikTok** (`/api/media/tiktok/video`) and **X video**
- * (`/api/media/video`). YouTube (iframe embed, no MP4) and Instagram
- * (poster-only — mirrors dead) are excluded until their playback paths support
- * inline auto-advance. Requires a `bookmarkId` (the source video id) to build
- * the stream URL.
+ * Supports the platforms that expose a clean MP4 stream + a native `ended` event
+ * we can chain on: **TikTok** (`/api/media/tiktok/video`), **X video**
+ * (`/api/media/video`), and **Instagram** (`/api/media/instagram/video`, via the
+ * mirror registry). YouTube (iframe embed, no MP4) is excluded until its
+ * playback path supports inline auto-advance. Requires a `bookmarkId` (the
+ * source video id) to build the stream URL.
  */
 export function isReelPlayable(item: TrendingItem): boolean {
   if (!item.bookmarkId) return false
-  if (item.platform !== 'twitter' && item.platform !== 'tiktok') return false
+  if (item.platform !== 'twitter' && item.platform !== 'tiktok' && item.platform !== 'instagram') {
+    return false
+  }
   return inferType(item) === 'video'
 }
 
