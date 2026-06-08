@@ -27,13 +27,13 @@ const POLL_MS = 12_000
 
 interface LiveState {
   items: ActivityItem[]
-  savedToday: number
+  recentActivity: number
   loaded: boolean
 }
 
 /** Poll /api/activity for the real anonymous pulse shown on the landing page. */
 function useLiveActivity(): LiveState {
-  const [state, setState] = useState<LiveState>({ items: [], savedToday: 0, loaded: false })
+  const [state, setState] = useState<LiveState>({ items: [], recentActivity: 0, loaded: false })
   useEffect(() => {
     let alive = true
     const load = async () => {
@@ -42,7 +42,11 @@ function useLiveActivity(): LiveState {
         if (!res.ok) return
         const data = await res.json()
         if (!alive || !Array.isArray(data.items)) return
-        setState({ items: data.items, savedToday: Number(data.savedToday) || 0, loaded: true })
+        setState({
+          items: data.items,
+          recentActivity: Number(data.recentActivity) || 0,
+          loaded: true,
+        })
       } catch {
         if (alive) setState((s) => ({ ...s, loaded: true }))
       }
@@ -198,8 +202,8 @@ export function LandingPage() {
           <div>
             <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold bg-surface border border-hairline text-ink-2 mb-5">
               <LiveDot />
-              {live.savedToday > 0
-                ? `${live.savedToday.toLocaleString()} ${live.savedToday === 1 ? 'post' : 'posts'} saved today`
+              {live.recentActivity > 0
+                ? `${live.recentActivity.toLocaleString()} saved & previewed today`
                 : 'Real-time community pulse'}
             </span>
 
