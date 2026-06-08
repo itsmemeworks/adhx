@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseShareUrl } from '@/lib/utils/parse-share-url'
+import { parseShareUrl, extractSharedUrl } from '@/lib/utils/parse-share-url'
 
 /**
  * Share Page URL Parsing Tests
@@ -49,6 +49,49 @@ describe('parseShareUrl — TikTok', () => {
   it('maps @user/video/{id} to /@user/video/{id}', () => {
     expect(parseShareUrl('https://www.tiktok.com/@sophieraiin/video/7619017281691045134')).toEqual({
       path: '/@sophieraiin/video/7619017281691045134',
+    })
+  })
+
+  it('routes short links (the native share format) through the resolver', () => {
+    // TikTok's share sheet gives a vm./vt. short link, not the canonical URL.
+    expect(parseShareUrl('https://vm.tiktok.com/ZMABcd123/')).toEqual({
+      path: '/api/tiktok/resolve?url=https%3A%2F%2Fvm.tiktok.com%2FZMABcd123&go=1',
+    })
+    expect(parseShareUrl('https://vt.tiktok.com/ZSxyz789')).toEqual({
+      path: '/api/tiktok/resolve?url=https%3A%2F%2Fvt.tiktok.com%2FZSxyz789&go=1',
+    })
+    expect(parseShareUrl('https://www.tiktok.com/t/ZTRkAbc/')).toEqual({
+      path: '/api/tiktok/resolve?url=https%3A%2F%2Fwww.tiktok.com%2Ft%2FZTRkAbc&go=1',
+    })
+  })
+})
+
+describe('extractSharedUrl — picks the link out of the share payload', () => {
+  it('prefers a clean url field', () => {
+    expect(extractSharedUrl('https://x.com/u/status/1', null, null)).toBe(
+      'https://x.com/u/status/1',
+    )
+  })
+
+  it('extracts a URL embedded in the text field (TikTok caption + link)', () => {
+    expect(
+      extractSharedUrl(null, 'check this out 😂 https://vm.tiktok.com/ZMABcd123/', 'TikTok'),
+    ).toBe('https://vm.tiktok.com/ZMABcd123/')
+  })
+
+  it('falls back across fields and returns null when there is no URL', () => {
+    expect(extractSharedUrl(null, null, 'https://youtu.be/Y9aytLYBajw')).toBe(
+      'https://youtu.be/Y9aytLYBajw',
+    )
+    expect(extractSharedUrl(null, 'just a caption, no link', null)).toBeNull()
+    expect(extractSharedUrl(null, null, null)).toBeNull()
+  })
+
+  it('feeds the TikTok short-link flow end to end', () => {
+    const url = extractSharedUrl(null, 'omg watch https://vm.tiktok.com/ZMABcd123/', null)
+    expect(url).not.toBeNull()
+    expect(parseShareUrl(url!)).toEqual({
+      path: '/api/tiktok/resolve?url=https%3A%2F%2Fvm.tiktok.com%2FZMABcd123&go=1',
     })
   })
 })
