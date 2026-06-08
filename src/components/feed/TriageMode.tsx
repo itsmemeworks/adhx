@@ -684,20 +684,26 @@ function DockButton({
 }) {
   const Arrow = arrow === 'left' ? ArrowLeft : arrow === 'right' ? ArrowRight : ArrowDown
   const big = tone !== 'outline'
-  const background =
+  // Translucent tint per action — kept light so the backdrop reads through as
+  // glass rather than a solid pill.
+  const tint =
     tone === 'primary'
-      ? 'color-mix(in srgb, var(--m-accent) 66%, transparent)'
+      ? 'color-mix(in srgb, var(--m-accent) 48%, transparent)'
       : tone === 'done'
-        ? 'color-mix(in srgb, var(--m-done) 66%, transparent)'
+        ? 'color-mix(in srgb, var(--m-done) 48%, transparent)'
         : onDark
-          ? 'rgba(255,255,255,.12)'
-          : 'color-mix(in srgb, var(--m-fink) 8%, transparent)'
-  const borderColor =
-    tone === 'outline'
-      ? onDark
-        ? 'rgba(255,255,255,.4)'
-        : 'var(--m-fline)'
-      : 'rgba(255,255,255,.4)'
+          ? 'rgba(255,255,255,.10)'
+          : 'color-mix(in srgb, var(--m-fink) 7%, transparent)'
+  // Liquid-glass depth: a crisp top edge highlight, a bottom inner shadow for
+  // volume, a hairline rim, and an outer drop. (The literal refraction needs
+  // backdrop SVG filters, unsupported on iOS — this layered look reads as glass
+  // everywhere.)
+  const glassShadow = [
+    'inset 0 1px 1.5px rgba(255,255,255,.6)',
+    'inset 0 -10px 18px rgba(0,0,0,.22)',
+    `inset 0 0 0 1px ${onDark || tone !== 'outline' ? 'rgba(255,255,255,.22)' : 'var(--m-fline)'}`,
+    big ? '0 12px 30px rgba(0,0,0,.28)' : '0 8px 18px rgba(0,0,0,.2)',
+  ].join(', ')
   const iconColor = tone === 'outline' && !onDark ? 'text-fink-2' : 'text-white'
   return (
     <button
@@ -707,19 +713,27 @@ function DockButton({
     >
       <span
         className={cn(
-          'rounded-full border flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95',
+          'relative overflow-hidden rounded-full flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95',
           big ? 'w-16 h-16' : 'w-[54px] h-[54px]',
           iconColor,
         )}
         style={{
-          background,
-          borderColor,
-          backdropFilter: 'blur(16px) saturate(1.4)',
-          WebkitBackdropFilter: 'blur(16px) saturate(1.4)',
-          boxShadow: big ? '0 8px 24px rgba(0,0,0,.18)' : undefined,
+          background: tint,
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          boxShadow: glassShadow,
         }}
       >
-        {children}
+        {/* Specular sheen — soft light from the top-left, clipped to the circle. */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-full"
+          style={{
+            background:
+              'radial-gradient(125% 90% at 28% 10%, rgba(255,255,255,.5), rgba(255,255,255,.05) 46%, rgba(255,255,255,0) 62%)',
+          }}
+        />
+        <span className="relative flex items-center justify-center">{children}</span>
       </span>
       <span
         className={cn(
