@@ -95,7 +95,7 @@ describe('OAuth Utilities', () => {
         'challenge-xyz',
       )
 
-      expect(url).toContain('https://twitter.com/i/oauth2/authorize')
+      expect(url).toContain('https://x.com/i/oauth2/authorize')
       expect(url).toContain('client_id=client-123')
       expect(url).toContain('redirect_uri=https%3A%2F%2Fexample.com%2Fcallback')
       expect(url).toContain('state=state-abc')

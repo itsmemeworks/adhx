@@ -38,7 +38,13 @@ async function fetchWithRetry(url: string, options: RequestInit): Promise<Respon
 }
 
 // OAuth 2.0 configuration
-const TWITTER_AUTH_URL = 'https://twitter.com/i/oauth2/authorize'
+// Use the x.com authorize host, not the legacy twitter.com one. After X's
+// rebrand, a logged-out user sent to twitter.com/i/oauth2/authorize logs in on
+// x.com and is then bounced back to the twitter.com authorize page, where the
+// consent screen never renders (X drops them on the homepage) — login is
+// impossible for anyone without an active X session. Starting on x.com keeps
+// login + consent on one host. https://devcommunity.x.com/t/oauth-2-0-authorization-endpoint-returning-page-doesnt-exist-for-all-apps/262920
+const TWITTER_AUTH_URL = 'https://x.com/i/oauth2/authorize'
 const TWITTER_TOKEN_URL = 'https://api.twitter.com/2/oauth2/token'
 const SCOPES = ['tweet.read', 'users.read', 'bookmark.read', 'offline.access']
 
