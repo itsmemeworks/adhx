@@ -215,6 +215,11 @@ function FullBleedMedia({ item }: { item: FeedItem }) {
   const text = stripMediaUrls(item.text || '', !!item.media?.[0])
   const videoRef = useRef<HTMLVideoElement>(null)
   const [muted, setMuted] = useState(true)
+  // Multi-photo posts become a swipeable, full-screen carousel (Instagram/X
+  // style). photoIdx tracks the visible page for the dot indicator.
+  const photos = (item.media ?? []).filter((m) => m.mediaType === 'photo')
+  const multiPhoto = !isVideo && item.platform !== 'youtube' && photos.length > 1
+  const [photoIdx, setPhotoIdx] = useState(0)
 
   const toggleMute = () => {
     const v = videoRef.current
@@ -250,6 +255,37 @@ function FullBleedMedia({ item }: { item: FeedItem }) {
         playsInline
         className="absolute inset-0 w-full h-full object-contain"
       />
+    )
+  } else if (multiPhoto) {
+    // Horizontal scroll-snap carousel — one full-screen photo per page. Touch
+    // events stopPropagation so swiping between photos doesn't also trigger the
+    // triage Keep/Done swipe on the wrapper; triage those via the dock buttons.
+    media = (
+      <div
+        className="absolute inset-0 flex snap-x snap-mandatory overflow-x-auto overflow-y-hidden"
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => e.stopPropagation()}
+        onScroll={(e) => {
+          const el = e.currentTarget
+          setPhotoIdx(Math.round(el.scrollLeft / el.clientWidth))
+        }}
+      >
+        {photos.map((p, i) => (
+          <div
+            key={p.id}
+            className="flex h-full w-full flex-shrink-0 snap-center items-center justify-center"
+          >
+            <img
+              src={p.url}
+              alt={`Image ${i + 1} of ${photos.length}`}
+              className="max-h-full max-w-full object-contain"
+              referrerPolicy="no-referrer"
+              onError={fallbackToOriginal(p.originalUrl)}
+            />
+          </div>
+        ))}
+      </div>
     )
   } else {
     const img = primary?.url || heroImageUrl(item)
@@ -294,6 +330,24 @@ function FullBleedMedia({ item }: { item: FeedItem }) {
             <Volume2 className="w-[18px] h-[18px]" />
           )}
         </button>
+      )}
+
+      {/* Page dots for the multi-photo carousel, just above the caption. */}
+      {multiPhoto && (
+        <div
+          className="absolute left-0 right-0 z-[4] flex justify-center gap-1.5"
+          style={{ bottom: 210 }}
+        >
+          {photos.map((_, i) => (
+            <span
+              key={i}
+              className={cn(
+                'h-1.5 rounded-full transition-all duration-200',
+                i === photoIdx ? 'w-5 bg-white' : 'w-1.5 bg-white/45',
+              )}
+            />
+          ))}
+        </div>
       )}
 
       {/* Caption — author + text, sitting just above the dock. */}
