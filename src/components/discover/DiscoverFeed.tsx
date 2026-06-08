@@ -77,9 +77,9 @@ export function DiscoverFeed({
   const [items, setItems] = useState<ActivityItem[]>(initialItems ?? [])
   const [filter, setFilter] = useState<FilterId>(initialFilter ?? 'latest')
   const [loaded, setLoaded] = useState(seeded)
-  // Real count of save events since UTC midnight (from /api/activity) — drives
-  // the "saved today" pill. 0 until the first fetch resolves.
-  const [savedToday, setSavedToday] = useState(0)
+  // Real rolling-24h engagement count (saves + previews, from /api/activity) —
+  // drives the live activity pill. 0 until the first fetch resolves.
+  const [recentActivity, setRecentActivity] = useState(0)
   const [freshKeys, setFreshKeys] = useState<Set<string>>(new Set())
   // null while unknown; once known, signed-out gets the public shell (the global
   // header is hidden when signed out) and Preview (not Save) actions.
@@ -121,7 +121,7 @@ export function DiscoverFeed({
       const data = await res.json()
       if (!Array.isArray(data.items)) return
       const next: ActivityItem[] = data.items
-      if (typeof data.savedToday === 'number') setSavedToday(data.savedToday)
+      if (typeof data.recentActivity === 'number') setRecentActivity(data.recentActivity)
 
       if (initial) {
         // Seed the known set without flashing every card as "new".
@@ -225,11 +225,13 @@ export function DiscoverFeed({
         <div className="flex flex-wrap items-center gap-3">
           <span className="inline-flex items-center gap-2.5 rounded-full border border-clay/25 bg-clay/[0.09] px-4 py-2">
             <LiveDot />
-            {/* Real count of saves since midnight (from /api/activity). It's 0 on
-                the server render (client-fetched), so it legitimately differs at
-                hydration — suppress the warning rather than regenerate the tree. */}
+            {/* Real saves + previews in the last 24h (from /api/activity). It's 0
+                on the server render (client-fetched), so it legitimately differs
+                at hydration — suppress the warning rather than regenerate the tree. */}
             <span className="text-[14px] font-bold text-ink" suppressHydrationWarning>
-              {savedToday > 0 ? `${savedToday} saved today` : 'Live'}
+              {recentActivity > 0
+                ? `${recentActivity.toLocaleString()} saved & previewed today`
+                : 'Live'}
             </span>
           </span>
 

@@ -18,12 +18,12 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   try {
     // Same defaults as before: FETCH 80 → dedup → LIMIT 30, no platform filter.
-    const { items, savedToday } = await getTrendingItems()
+    const { items, savedToday, recentActivity } = await getTrendingItems()
     return ok(
-      { items, savedToday },
+      { items, savedToday, recentActivity },
       { headers: { 'Cache-Control': 'public, max-age=5, stale-while-revalidate=15' } },
     )
   } catch {
-    return ok({ items: [], savedToday: 0 })
+    return ok({ items: [], savedToday: 0, recentActivity: 0 })
   }
 }
