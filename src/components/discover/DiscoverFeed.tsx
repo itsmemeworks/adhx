@@ -59,14 +59,6 @@ function keyOf(item: ActivityItem): string {
   return postKey(item)
 }
 
-/** A plausible "saving right now" count derived from real recent volume. */
-function savingNow(items: ActivityItem[]): number {
-  const cutoff = Date.now() - 5 * 60 * 1000
-  const recent = items.filter((it) => new Date(it.createdAt).getTime() >= cutoff).length
-  // Scale so a lively feed reads naturally; floor so it never claims "0 people".
-  return Math.max(1, recent || Math.min(items.length, 12))
-}
-
 export function DiscoverFeed({
   initialItems,
   initialFilter,
@@ -84,6 +76,9 @@ export function DiscoverFeed({
   const [items, setItems] = useState<ActivityItem[]>(initialItems ?? [])
   const [filter, setFilter] = useState<FilterId>(initialFilter ?? 'latest')
   const [loaded, setLoaded] = useState(seeded)
+  // Real count of save events since UTC midnight (from /api/activity) — drives
+  // the "saved today" pill. 0 until the first fetch resolves.
+  const [savedToday, setSavedToday] = useState(0)
   const [freshKeys, setFreshKeys] = useState<Set<string>>(new Set())
   // null while unknown; once known, signed-out gets the public shell (the global
   // header is hidden when signed out) and Preview (not Save) actions.
@@ -125,6 +120,7 @@ export function DiscoverFeed({
       const data = await res.json()
       if (!Array.isArray(data.items)) return
       const next: ActivityItem[] = data.items
+      if (typeof data.savedToday === 'number') setSavedToday(data.savedToday)
 
       if (initial) {
         // Seed the known set without flashing every card as "new".
@@ -147,12 +143,16 @@ export function DiscoverFeed({
   }, [])
 
   useEffect(() => {
-    // When seeded from the server we already have items + a primed known-set,
-    // so skip the redundant initial fetch and go straight to live polling.
-    if (!seeded) load(true)
+    // Always reconcile with /api/activity on mount — even when seeded from the
+    // server. The SSR seed is a point-in-time snapshot; if it differs from the
+    // live pulse (timing/window), reconciling here corrects it instantly rather
+    // than letting the grid sit stale until the first poll fires (~POLL_MS),
+    // which read as items "popping in" seconds after load. load(true) seeds the
+    // known-set so this reconcile doesn't flash the delta as "new".
+    load(true)
     const t = window.setInterval(() => load(false), POLL_MS)
     return () => window.clearInterval(t)
-  }, [load, seeded])
+  }, [load])
 
   // Select a lens AND reflect it in the address bar (tidy path) so the current
   // view is shareable + crawlable, without a full navigation — the grid already
@@ -171,7 +171,6 @@ export function DiscoverFeed({
   }, [])
 
   const visible = applyFilter(dedupeByPost(items), filter)
-  const count = savingNow(items)
 
   return (
     <div className="min-h-screen bg-paper">
@@ -225,11 +224,11 @@ export function DiscoverFeed({
         <div className="flex flex-wrap items-center gap-3">
           <span className="inline-flex items-center gap-2.5 rounded-full border border-clay/25 bg-clay/[0.09] px-4 py-2">
             <LiveDot />
-            {/* Time-derived (savingNow uses Date.now), so it legitimately differs
-                between the ISR-cached server HTML and the client — suppress the
-                hydration warning rather than regenerate the tree. */}
+            {/* Real count of saves since midnight (from /api/activity). It's 0 on
+                the server render (client-fetched), so it legitimately differs at
+                hydration — suppress the warning rather than regenerate the tree. */}
             <span className="text-[14px] font-bold text-ink" suppressHydrationWarning>
-              {count} {count === 1 ? 'person' : 'people'} saving right now
+              {savedToday > 0 ? `${savedToday} saved today` : 'Live'}
             </span>
           </span>
 
