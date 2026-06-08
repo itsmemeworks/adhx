@@ -689,10 +689,11 @@ function DockButton({
   // glass + glyph stay visible on either surface.
   const theme = useThemeOptional()
   const dark = onDark || theme?.resolvedTheme === 'dark'
-  // CLEAR, see-through glass (Apple style) — no colour tint. Just a faint frost
-  // so the content behind reads through, blurred; the rim + specular highlight
-  // give it shape. White-based on dark, dark-based on light.
-  const frost = dark ? 'rgba(255,255,255,.1)' : 'rgba(255,255,255,.4)'
+  // CLEAR, see-through glass (Apple style) — no colour tint. A LIGHT blur (not a
+  // heavy frost) so the content behind stays recognisable through the glass; the
+  // rim + specular highlight give it shape. Very faint frost so it never reads as
+  // a solid pill. White-based on dark, dark-based on light.
+  const frost = dark ? 'rgba(255,255,255,.06)' : 'rgba(255,255,255,.22)'
   const topHi = dark ? 'rgba(255,255,255,.65)' : 'rgba(255,255,255,.9)'
   const rim = dark ? 'rgba(255,255,255,.28)' : 'rgba(0,0,0,.1)'
   const sheen = dark ? 'rgba(255,255,255,.4)' : 'rgba(255,255,255,.55)'
@@ -720,8 +721,10 @@ function DockButton({
         )}
         style={{
           background: frost,
-          backdropFilter: 'blur(22px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(22px) saturate(180%)',
+          // Light blur (not a heavy frost) so the content behind stays visible
+          // through the glass — the see-through "liquid glass" look.
+          backdropFilter: 'blur(7px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(7px) saturate(180%)',
           boxShadow: glassShadow,
         }}
       >
@@ -731,6 +734,22 @@ function DockButton({
           className="pointer-events-none absolute inset-0 rounded-full"
           style={{
             background: `radial-gradient(125% 90% at 28% 10%, ${sheen}, rgba(255,255,255,.04) 46%, rgba(255,255,255,0) 62%)`,
+          }}
+        />
+        {/* Specular RIM light — a bright edge where the (top-left) light catches
+            the glass, fading around to the shadowed bottom-right. Conic gradient
+            masked to a thin ring (the kube.io rim-light, done in pure CSS so it
+            works on iOS too, unlike the SVG-displacement refraction). */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-full"
+          style={{
+            padding: '1.6px',
+            background:
+              'conic-gradient(from 0deg, rgba(255,255,255,.5) 0deg, rgba(255,255,255,.12) 120deg, rgba(255,255,255,.05) 158deg, rgba(255,255,255,.22) 235deg, rgba(255,255,255,.95) 315deg, rgba(255,255,255,.5) 360deg)',
+            WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
+            WebkitMaskComposite: 'xor',
+            maskComposite: 'exclude',
           }}
         />
         <span className="relative flex items-center justify-center">{children}</span>
