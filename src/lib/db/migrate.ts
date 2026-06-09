@@ -213,6 +213,41 @@ try {
   console.log('[migrate] Warning: Instagram media backfill failed', error)
 }
 
+// Knowledge Graph annotation tables. CREATE TABLE IF NOT EXISTS is idempotent,
+// so these are safe to run on every startup (the graph itself is derived at
+// request time; these only persist the user's edits).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS graph_theme_meta (
+    user_id TEXT NOT NULL,
+    theme_id TEXT NOT NULL,
+    name TEXT,
+    icon TEXT,
+    updated_at TEXT,
+    PRIMARY KEY (user_id, theme_id)
+  );
+  CREATE TABLE IF NOT EXISTS graph_item_meta (
+    user_id TEXT NOT NULL,
+    platform TEXT NOT NULL DEFAULT 'twitter',
+    bookmark_id TEXT NOT NULL,
+    title TEXT,
+    note TEXT,
+    updated_at TEXT,
+    PRIMARY KEY (user_id, platform, bookmark_id)
+  );
+  CREATE TABLE IF NOT EXISTS graph_links (
+    user_id TEXT NOT NULL,
+    a_platform TEXT NOT NULL DEFAULT 'twitter',
+    a_id TEXT NOT NULL,
+    b_platform TEXT NOT NULL DEFAULT 'twitter',
+    b_id TEXT NOT NULL,
+    created_at TEXT,
+    PRIMARY KEY (user_id, a_platform, a_id, b_platform, b_id)
+  );
+  CREATE INDEX IF NOT EXISTS graph_links_user_id_idx ON graph_links(user_id);
+`)
+
+console.log('[migrate] Knowledge Graph tables ready')
+
 console.log(`[migrate] Database ready at: ${path.resolve(DB_PATH)}`)
 
 db.close()

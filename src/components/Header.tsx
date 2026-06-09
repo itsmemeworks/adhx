@@ -15,6 +15,7 @@ import {
   Flame,
   Bookmark,
   Compass,
+  Network,
 } from 'lucide-react'
 import { useTheme } from '@/lib/theme/context'
 import { cn } from '@/lib/utils'
@@ -346,6 +347,17 @@ export function Header() {
                 >
                   Trending
                 </Link>
+                <Link
+                  href="/graph"
+                  className={cn(
+                    'rounded-full px-3 py-1.5 font-semibold transition-colors',
+                    pathname.startsWith('/graph')
+                      ? 'bg-clay/[0.12] text-clay'
+                      : 'text-ink-2 hover:text-ink',
+                  )}
+                >
+                  Graph
+                </Link>
               </nav>
             )}
           </div>
@@ -533,6 +545,19 @@ export function Header() {
                         >
                           <Compass className="w-4 h-4" />
                           Trending
+                        </Link>
+                        <Link
+                          href="/graph"
+                          onClick={() => setShowUserMenu(false)}
+                          className={cn(
+                            'flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset transition-colors',
+                            pathname.startsWith('/graph')
+                              ? 'font-semibold text-clay'
+                              : 'text-ink-2 hover:text-ink',
+                          )}
+                        >
+                          <Network className="w-4 h-4" />
+                          Graph
                         </Link>
                         <Link
                           href="/settings"

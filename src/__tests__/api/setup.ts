@@ -200,6 +200,34 @@ export const FULL_SCHEMA_SQL = `
   );
   CREATE INDEX activity_created_at_idx ON activity(created_at);
   CREATE INDEX activity_dedupe_idx ON activity(action, platform, bookmark_id, created_at);
+
+  CREATE TABLE graph_theme_meta (
+    user_id TEXT NOT NULL,
+    theme_id TEXT NOT NULL,
+    name TEXT,
+    icon TEXT,
+    updated_at TEXT,
+    PRIMARY KEY (user_id, theme_id)
+  );
+  CREATE TABLE graph_item_meta (
+    user_id TEXT NOT NULL,
+    platform TEXT NOT NULL DEFAULT 'twitter',
+    bookmark_id TEXT NOT NULL,
+    title TEXT,
+    note TEXT,
+    updated_at TEXT,
+    PRIMARY KEY (user_id, platform, bookmark_id)
+  );
+  CREATE TABLE graph_links (
+    user_id TEXT NOT NULL,
+    a_platform TEXT NOT NULL DEFAULT 'twitter',
+    a_id TEXT NOT NULL,
+    b_platform TEXT NOT NULL DEFAULT 'twitter',
+    b_id TEXT NOT NULL,
+    created_at TEXT,
+    PRIMARY KEY (user_id, a_platform, a_id, b_platform, b_id)
+  );
+  CREATE INDEX graph_links_user_id_idx ON graph_links(user_id);
 `
 
 export interface TestDbInstance {
