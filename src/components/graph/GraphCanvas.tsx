@@ -771,10 +771,12 @@ export function GraphCanvas({
         </div>
       )}
 
-      {/* zoom controls */}
+      {/* zoom controls — top-right on mobile (clear of the bottom filter bar +
+          the bottom sheet), bottom-right on desktop (shifted left of an open
+          detail panel) */}
       <div
         className="absolute flex flex-col overflow-hidden rounded-[11px] border border-hairline shadow-glow transition-[right] duration-200"
-        style={{ right: rightInset, bottom: compact ? 12 : 18 }}
+        style={compact ? { right: 12, top: 12 } : { right: rightInset, bottom: 18 }}
       >
         {(
           [
