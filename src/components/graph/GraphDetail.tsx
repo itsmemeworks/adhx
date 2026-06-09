@@ -305,7 +305,7 @@ export function GraphDetail({ selectedKey, data, meta, onClose, onNavigate }: Gr
         onChange={(v) => meta.setTitle(save.key, v)}
       />
 
-      <GraphPostCard card={save.card} />
+      <GraphPostCard key={save.key} card={save.card} />
 
       <div className="mt-3.5 flex gap-2">
         <a

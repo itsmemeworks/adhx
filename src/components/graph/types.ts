@@ -58,6 +58,10 @@ export function saveKey(platform: string, id: string): string {
 
 /** Compact post data for the detail-panel card (GraphPostCard). */
 export interface GraphCardData {
+  /** Source id + author + source URL — needed to play media via the proxies. */
+  id: string
+  author: string
+  openUrl: string
   type: ContentType
   platform: PlatformId
   authorName: string | null

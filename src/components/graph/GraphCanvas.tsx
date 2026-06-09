@@ -166,9 +166,19 @@ export function GraphCanvas({
     warmStart(s)
     kickAlpha(s, WARM_KICK)
     setReady(true)
+    fitView() // open framed to the whole graph regardless of stage size
     rafRef.current = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(rafRef.current)
   }, [])
+
+  // keep the sim's bounds/gravity in sync with the stage on resize (so Fit and
+  // future re-heats use the current dimensions rather than the mount-time ones)
+  useEffect(() => {
+    const s = stateRef.current
+    if (!s) return
+    s.width = width
+    s.height = height
+  }, [width, height])
 
   // re-spring when the user adds/removes a link
   useEffect(() => {
@@ -324,9 +334,44 @@ export function GraphCanvas({
       const cy = height / 2
       return { k, x: cx - (cx - v.x) * (k / v.k), y: cy - (cy - v.y) * (k / v.k) }
     })
-  const resetView = () => setView({ x: 0, y: 0, k: 1 })
+  // "Fit" — frame the whole graph: compute the node bounding box and set the
+  // view transform so it fits the current viewport (with padding), centered.
+  // Unlike a plain reset-to-identity this actually reframes after a resize/zoom.
+  const fitView = useCallback(() => {
+    const s = stateRef.current
+    if (!s) return
+    let minX = Infinity
+    let minY = Infinity
+    let maxX = -Infinity
+    let maxY = -Infinity
+    for (const id of s.order) {
+      const n = s.nodes.get(id)
+      if (!n) continue
+      minX = Math.min(minX, n.x - n.r)
+      minY = Math.min(minY, n.y - n.r)
+      maxX = Math.max(maxX, n.x + n.r)
+      maxY = Math.max(maxY, n.y + n.r)
+    }
+    if (!isFinite(minX)) {
+      setView({ x: 0, y: 0, k: 1 })
+      return
+    }
+    const pad = 48
+    const bw = Math.max(1, maxX - minX)
+    const bh = Math.max(1, maxY - minY)
+    const k = Math.max(0.4, Math.min(3, Math.min((width - pad * 2) / bw, (height - pad * 2) / bh)))
+    const cx = (minX + maxX) / 2
+    const cy = (minY + maxY) / 2
+    setView({ k, x: width / 2 - cx * k, y: height / 2 - cy * k })
+  }, [width, height])
 
   // ---- derived view helpers ----
+  // When the desktop detail panel (384px, right overlay) is open it covers the
+  // stage's right edge — shift the top-right/bottom-right controls left of it
+  // so Connect + zoom/Fit stay reachable.
+  const panelOpen = !compact && !!selectedKey
+  const rightInset = compact ? 12 : panelOpen ? 402 : 18
+
   const focus = selectedKey || hover
   const lit = useMemo(() => {
     if (!focus) return null
@@ -728,15 +773,13 @@ export function GraphCanvas({
 
       {/* zoom controls */}
       <div
-        className={cn(
-          'absolute flex flex-col overflow-hidden rounded-[11px] border border-hairline shadow-glow',
-          compact ? 'bottom-3 right-3' : 'bottom-[18px] right-[18px]',
-        )}
+        className="absolute flex flex-col overflow-hidden rounded-[11px] border border-hairline shadow-glow transition-[right] duration-200"
+        style={{ right: rightInset, bottom: compact ? 12 : 18 }}
       >
         {(
           [
             [<Plus key="i" className="h-4 w-4" />, () => zoomBy(1.25), 'Zoom in'],
-            [<Maximize key="f" className="h-4 w-4" />, resetView, 'Fit'],
+            [<Maximize key="f" className="h-4 w-4" />, fitView, 'Fit'],
             [<Minus key="o" className="h-4 w-4" />, () => zoomBy(0.8), 'Zoom out'],
           ] as [React.ReactNode, () => void, string][]
         ).map(([icon, fn, title], i) => (
@@ -757,7 +800,10 @@ export function GraphCanvas({
 
       {/* connect toggle (desktop, top-right) */}
       {!compact && (
-        <div className="absolute right-[18px] top-[18px] flex flex-col items-end gap-2">
+        <div
+          className="absolute top-[18px] flex flex-col items-end gap-2 transition-[right] duration-200"
+          style={{ right: rightInset }}
+        >
           <button
             onClick={() => {
               setConnect((v) => !v)

@@ -33,6 +33,9 @@ function makeSave(key: string, overrides: Partial<GraphSave> = {}): GraphSave {
     createdAt: '2026-01-01T00:00:00Z',
     degree: 0,
     card: {
+      id: id ?? key,
+      author: 'author',
+      openUrl: `https://x.com/${id}`,
       type: 'text',
       platform: (platform as GraphSave['platform']) ?? 'twitter',
       authorName: 'Author',

@@ -271,6 +271,9 @@ export const GET = withAuth(async (_req, userId) => {
         createdAt: b.createdAt,
         degree: degrees.get(key) || 0,
         card: {
+          id: b.id,
+          author: b.author,
+          openUrl: b.tweetUrl,
           type,
           platform,
           authorName: b.authorName,

@@ -26,6 +26,9 @@ import type { GraphMetaStore } from '@/components/graph/useGraphMeta'
 
 function makeCard(over: Partial<GraphCardData>): GraphCardData {
   return {
+    id: 'x',
+    author: 'x',
+    openUrl: 'https://x.com/x',
     type: 'text',
     platform: 'twitter',
     authorName: null,

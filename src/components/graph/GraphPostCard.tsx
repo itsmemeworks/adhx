@@ -7,8 +7,11 @@
  * text) using Matter tokens — the in-panel analogue of the prototype's `GCard`.
  * Built from the compact `GraphCardData` the API returns (no extra fetch).
  */
+import { useState } from 'react'
 import { Play } from 'lucide-react'
 import { PlatformGlyph } from '@/components/matter'
+import { VideoPlayer } from '@/components/feed/VideoPlayer'
+import { youtubeEmbedUrl } from '@/lib/media/youtube'
 import { cn } from '@/lib/utils'
 import { TYPE_COLORS, type GraphCardData } from './types'
 
@@ -52,9 +55,15 @@ function Avatar({ card }: { card: GraphCardData }) {
 }
 
 export function GraphPostCard({ card }: { card: GraphCardData }) {
+  const [playing, setPlaying] = useState(false)
   const dur = durationLabel(card.durationMs)
   const showHero =
     (card.type === 'video' || card.type === 'photo' || card.type === 'article') && !!card.heroUrl
+  const playableVideo =
+    card.isVideo &&
+    (card.platform === 'twitter' || card.platform === 'tiktok' || card.platform === 'instagram')
+  const isYouTube = card.isVideo && card.platform === 'youtube'
+  const durationSec = card.durationMs ? Math.round(card.durationMs / 1000) : undefined
 
   return (
     <article className="overflow-hidden rounded-card border border-hairline bg-surface">
@@ -95,29 +104,85 @@ export function GraphPostCard({ card }: { card: GraphCardData }) {
         </div>
       )}
 
-      {/* hero media */}
-      {showHero && (
+      {/* media — videos play in place (proxy MP4/HLS, or the YouTube embed);
+          photos show in full (object-contain) and link to the original. */}
+      {card.isVideo ? (
+        <div className="relative mx-4 mb-4 overflow-hidden rounded-2xl bg-black">
+          {playing && isYouTube ? (
+            <iframe
+              src={`${youtubeEmbedUrl(card.id)}?autoplay=1`}
+              title={card.articleTitle || 'YouTube video'}
+              className="aspect-[9/16] max-h-[70vh] w-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allowFullScreen
+            />
+          ) : playing && playableVideo ? (
+            <VideoPlayer
+              author={card.author}
+              tweetId={card.id}
+              platform={card.platform as 'twitter' | 'instagram' | 'tiktok'}
+              poster={card.heroUrl || undefined}
+              duration={durationSec}
+              tweetUrl={card.openUrl}
+              autoPlay
+              className="block max-h-[70vh] w-full"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setPlaying(true)}
+              aria-label="Play video"
+              className="group relative block w-full"
+            >
+              {card.heroUrl ? (
+                <img
+                  src={card.heroUrl}
+                  alt=""
+                  className="max-h-[60vh] w-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="aspect-video w-full bg-inset" />
+              )}
+              <span className="absolute inset-0 flex items-center justify-center bg-black/10 transition-colors group-hover:bg-black/25">
+                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-black/60">
+                  <Play className="ml-0.5 h-6 w-6 text-white" fill="currentColor" />
+                </span>
+              </span>
+              {dur && (
+                <span className="absolute bottom-2 right-2 rounded-md bg-black/70 px-1.5 py-0.5 font-mono text-[11px] text-white">
+                  {dur}
+                </span>
+              )}
+            </button>
+          )}
+        </div>
+      ) : card.type === 'photo' && card.heroUrl ? (
+        <a
+          href={card.openUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mx-4 mb-4 block overflow-hidden rounded-2xl bg-black"
+          title="Open original"
+        >
+          <img
+            src={card.heroUrl}
+            alt=""
+            className="max-h-[75vh] w-full object-contain"
+            referrerPolicy="no-referrer"
+          />
+        </a>
+      ) : card.type === 'article' && card.heroUrl ? (
         <div className="relative mx-4 mb-4 overflow-hidden rounded-2xl bg-black">
           <img
-            src={card.heroUrl as string}
+            src={card.heroUrl}
             alt=""
             className="max-h-[340px] w-full object-cover"
             referrerPolicy="no-referrer"
           />
-          {card.isVideo && (
-            <span className="absolute inset-0 flex items-center justify-center">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55">
-                <Play className="ml-0.5 h-5 w-5 text-white" fill="currentColor" />
-              </span>
-            </span>
-          )}
-          {dur && (
-            <span className="absolute bottom-2 right-2 rounded-md bg-black/70 px-1.5 py-0.5 font-mono text-[11px] text-white">
-              {dur}
-            </span>
-          )}
         </div>
-      )}
+      ) : null}
 
       {/* quoted tweet */}
       {card.type === 'quote' && card.quote && (
