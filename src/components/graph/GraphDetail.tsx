@@ -9,7 +9,7 @@
  * relation sections. Hub: editable name + icon picker + member list. Every
  * relation row/chip navigates; sections render only when non-empty.
  */
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Bookmark, Check, ChevronRight, ExternalLink, Link2, Plus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { GraphIcon } from './icons'
@@ -38,6 +38,47 @@ interface GraphDetailProps {
   meta: GraphMetaStore
   onClose: () => void
   onNavigate: (key: string) => void
+}
+
+/**
+ * Editable save title styled as a heading. A `<textarea>` (not an `<input>`)
+ * so long titles wrap to 2 lines instead of hard-clipping at the narrow panel
+ * edge; auto-grows to fit content. Enter commits (blurs) rather than inserting
+ * a newline. Cross-browser (manual scrollHeight resize, no `field-sizing`).
+ */
+function TitleField({
+  value,
+  placeholder,
+  onChange,
+}: {
+  value: string
+  placeholder: string
+  onChange: (v: string) => void
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [value])
+  return (
+    <textarea
+      ref={ref}
+      rows={1}
+      value={value}
+      placeholder={placeholder}
+      title="Rename this save"
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          e.currentTarget.blur()
+        }
+      }}
+      className="mb-3.5 block w-full resize-none overflow-hidden border-0 border-b-[1.5px] border-hairline bg-transparent px-0.5 pb-[7px] font-serif text-[19px] font-semibold leading-snug text-ink outline-none focus:border-clay"
+    />
+  )
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -258,12 +299,10 @@ export function GraphDetail({ selectedKey, data, meta, onClose, onNavigate }: Gr
         </button>
       </div>
 
-      <input
+      <TitleField
         value={title}
-        onChange={(e) => meta.setTitle(save.key, e.target.value)}
         placeholder={save.label}
-        title="Rename this save"
-        className="mb-3.5 w-full border-0 border-b-[1.5px] border-hairline bg-transparent px-0.5 pb-[7px] font-serif text-[19px] font-semibold text-ink outline-none focus:border-clay"
+        onChange={(v) => meta.setTitle(save.key, v)}
       />
 
       <GraphPostCard card={save.card} />

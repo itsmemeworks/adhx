@@ -168,7 +168,8 @@ describe('GraphDetail — item branch', () => {
     // With itemMeta returning {}, title falls back to save.label.
     const input = screen.getByDisplayValue('Alice on knowledge graphs')
     expect(input).toBeTruthy()
-    expect((input as HTMLInputElement).tagName).toBe('INPUT')
+    // title is an auto-growing <textarea> so long titles wrap instead of clipping
+    expect((input as HTMLTextAreaElement).tagName).toBe('TEXTAREA')
   })
 
   it('renders the post card author name and handle', () => {

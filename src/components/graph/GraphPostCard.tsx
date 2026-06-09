@@ -83,14 +83,16 @@ export function GraphPostCard({ card }: { card: GraphCardData }) {
 
       {/* body / caption */}
       {card.body && (
-        <p
-          className={cn(
-            'whitespace-pre-wrap break-words px-4 text-[14px] leading-relaxed text-ink-2 [overflow-wrap:anywhere]',
-            showHero ? 'pb-3 line-clamp-4' : 'pb-3',
-          )}
-        >
-          {card.body}
-        </p>
+        <div className="px-4 pb-3">
+          <p
+            className={cn(
+              'whitespace-pre-wrap break-words text-[14px] leading-relaxed text-ink-2 [overflow-wrap:anywhere]',
+              showHero && 'line-clamp-4',
+            )}
+          >
+            {card.body}
+          </p>
+        </div>
       )}
 
       {/* hero media */}
