@@ -319,6 +319,70 @@ export const activity = sqliteTable(
 )
 
 // ===========================================
+// Knowledge Graph — per-user annotations
+// ===========================================
+// The graph view derives themes + relations on the fly from the user's saves
+// (zero marginal cost — no AI). These tables persist only the user's *edits*:
+// theme renames/icons, per-save title overrides + notes, and hand-drawn links.
+// read/tags are intentionally NOT here — they reuse read_status + bookmark_tags
+// so a "mark read" or tag edit in the graph also shows in the feed.
+
+// Theme overrides - PK: (userId, themeId). themeId is a stable slug:
+// `tag:<slug>` (a user tag promoted to a theme) or `kw:<slug>` (an auto keyword
+// cluster). Survives recompute because the slug is deterministic.
+export const graphThemeMeta = sqliteTable(
+  'graph_theme_meta',
+  {
+    userId: text('user_id').notNull(),
+    themeId: text('theme_id').notNull(),
+    name: text('name'),
+    icon: text('icon'),
+    updatedAt: text('updated_at'),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.themeId] }),
+  }),
+)
+
+// Per-save graph annotations - PK: (userId, platform, bookmarkId).
+// title = a display-label override for the node; note = the user's private note.
+export const graphItemMeta = sqliteTable(
+  'graph_item_meta',
+  {
+    userId: text('user_id').notNull(),
+    platform: text('platform').notNull().default('twitter'),
+    bookmarkId: text('bookmark_id').notNull(),
+    title: text('title'),
+    note: text('note'),
+    updatedAt: text('updated_at'),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.platform, table.bookmarkId] }),
+  }),
+)
+
+// User-drawn links between two saves - PK: (userId, aPlatform, aId, bPlatform, bId).
+// Undirected + deduped: callers MUST store the endpoints canonicalized (the pair
+// sorted by `platform:id`) so (A,B) and (B,A) collapse to one row; no self-links.
+export const graphLinks = sqliteTable(
+  'graph_links',
+  {
+    userId: text('user_id').notNull(),
+    aPlatform: text('a_platform').notNull().default('twitter'),
+    aId: text('a_id').notNull(),
+    bPlatform: text('b_platform').notNull().default('twitter'),
+    bId: text('b_id').notNull(),
+    createdAt: text('created_at'),
+  },
+  (table) => ({
+    pk: primaryKey({
+      columns: [table.userId, table.aPlatform, table.aId, table.bPlatform, table.bId],
+    }),
+    userIdIdx: index('graph_links_user_id_idx').on(table.userId),
+  }),
+)
+
+// ===========================================
 // Relations
 // ===========================================
 
@@ -400,3 +464,9 @@ export type TagShare = typeof tagShares.$inferSelect
 export type NewTagShare = typeof tagShares.$inferInsert
 export type Activity = typeof activity.$inferSelect
 export type NewActivity = typeof activity.$inferInsert
+export type GraphThemeMeta = typeof graphThemeMeta.$inferSelect
+export type NewGraphThemeMeta = typeof graphThemeMeta.$inferInsert
+export type GraphItemMeta = typeof graphItemMeta.$inferSelect
+export type NewGraphItemMeta = typeof graphItemMeta.$inferInsert
+export type GraphLink = typeof graphLinks.$inferSelect
+export type NewGraphLink = typeof graphLinks.$inferInsert

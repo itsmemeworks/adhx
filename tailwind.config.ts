@@ -117,6 +117,13 @@ const config: Config = {
           '70%': { boxShadow: '0 0 0 7px rgba(16,185,129,0)' },
           '100%': { boxShadow: '0 0 0 0 rgba(16,185,129,0)' },
         },
+        // Knowledge Graph detail panel entrance — opacity fade only (no
+        // transform; a paused transform animation in a backgrounded tab would
+        // leave the panel visibly offset).
+        'kg-in': {
+          from: { opacity: '0' },
+          to: { opacity: '1' },
+        },
       },
       animation: {
         'bounce-in': 'bounce-in 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
@@ -126,6 +133,7 @@ const config: Config = {
         'sparkle-4': 'sparkle-4 0.6s ease-out 0.15s forwards',
         marquee: 'marquee var(--marquee-duration, 60s) linear infinite',
         'live-pulse': 'live-pulse 1.8s infinite',
+        'kg-in': 'kg-in 0.28s cubic-bezier(0.2, 0.7, 0.3, 1)',
       },
     },
   },
