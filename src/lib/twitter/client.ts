@@ -84,7 +84,11 @@ export async function fetchBookmarks(
 
   const tokens = await getStoredTokens(userId)
   if (!tokens) {
-    throw new Error('Not authenticated')
+    // Session JWT is valid but the OAuth tokens are gone (disconnected, fatal
+    // refresh cleared them, or account data wiped). Surface the same
+    // reconnect message as the 401 path so the user gets a consistent prompt
+    // and the sync route can classify it as expected auth-loss (not a bug).
+    throw new Error('Your X session has expired. Please reconnect your account in Settings.')
   }
 
   // Inline so the literal field arrays get contextually typed by the API param.
