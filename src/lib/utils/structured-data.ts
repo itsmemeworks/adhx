@@ -100,6 +100,26 @@ interface InteractionCounter {
   userInteractionCount: number
 }
 
+/**
+ * Serialize a JSON-LD object for safe embedding inside a
+ * `<script type="application/ld+json">` via `dangerouslySetInnerHTML`.
+ *
+ * `JSON.stringify` alone does NOT escape `<`, so attacker-controlled string
+ * fields (post text, author name, caption, etc.) containing `</script>` can
+ * break out of the script tag and inject executable HTML — a stored/reflected
+ * XSS vector given this app's CSP allows `'unsafe-inline'` scripts. Escaping
+ * `<` as `<` neutralizes that while remaining valid JSON. U+2028/U+2029
+ * are also escaped since they're valid in JSON strings but are line
+ * terminators in JS, which can otherwise break a `<script>` body that gets
+ * parsed as JS in some non-React contexts.
+ */
+export function jsonLdScriptContent(obj: unknown): string {
+  return JSON.stringify(obj)
+    .replace(/</g, '\\u003c')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029')
+}
+
 /** Resolve a possibly-relative URL against a base. Leaves absolute URLs intact. */
 function resolveUrl(url: string, baseUrl: string): string {
   if (/^https?:\/\//.test(url)) return url

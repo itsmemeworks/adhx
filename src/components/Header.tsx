@@ -176,27 +176,33 @@ export function Header() {
     router.replace(queryString ? `/?${queryString}` : '/', { scroll: false })
   }, [searchParams, router])
 
-  // Real-time search with debounce
+  // Real-time search with debounce. Deliberately does NOT depend on `searchParams`:
+  // this component is the sole owner of writing `search` into the URL, and page.tsx
+  // (src/app/page.tsx) issues its own router.replace calls for its own filters
+  // (filter/platform/sort/etc). If `searchParams` were a dependency here, every one
+  // of those unrelated navigations would reset this debounce timer mid-keystroke,
+  // delaying or dropping the search push. `window.location.search` is read fresh
+  // inside the timeout callback, so the comparison still reflects the current URL.
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
-      const currentSearch = searchParams.get('search') || ''
+      const currentParams = new URLSearchParams(window.location.search)
+      const currentSearch = currentParams.get('search') || ''
       const newSearch = searchValue.trim()
 
       // Only update if different from current URL
       if (newSearch !== currentSearch) {
-        const params = new URLSearchParams(window.location.search)
         if (newSearch) {
-          params.set('search', newSearch)
+          currentParams.set('search', newSearch)
         } else {
-          params.delete('search')
+          currentParams.delete('search')
         }
-        const queryString = params.toString()
+        const queryString = currentParams.toString()
         router.push(queryString ? `/?${queryString}` : '/', { scroll: false })
       }
     }, 300) // 300ms debounce
 
     return () => clearTimeout(debounceTimer)
-  }, [searchValue, searchParams, router])
+  }, [searchValue, router])
 
   async function fetchAuthStatus() {
     try {

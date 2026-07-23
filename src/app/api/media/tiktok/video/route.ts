@@ -7,6 +7,7 @@ import {
   isValidVideoId,
 } from '@/lib/media/tnktok'
 import { streamingResponse } from '@/lib/media/proxy'
+import { mediaRateLimit } from '@/lib/rate-limit'
 
 /**
  * TikTok video proxy — streams the MP4 through the server for inline playback
@@ -15,6 +16,9 @@ import { streamingResponse } from '@/lib/media/proxy'
  * GET /api/media/tiktok/video?username={handle}&id={videoId}
  */
 export async function GET(request: NextRequest) {
+  const rateLimited = mediaRateLimit(request)
+  if (rateLimited) return rateLimited
+
   const username = request.nextUrl.searchParams.get('username')
   const videoId = request.nextUrl.searchParams.get('id')
 

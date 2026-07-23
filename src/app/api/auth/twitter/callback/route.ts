@@ -8,6 +8,7 @@ import {
   hasExistingTokens,
 } from '@/lib/auth/oauth'
 import { setSessionCookie } from '@/lib/auth/session'
+import { isSafeReturnUrl } from '@/lib/auth/return-url'
 import { metrics, captureException } from '@/lib/sentry'
 
 const CLIENT_ID = process.env.TWITTER_CLIENT_ID!
@@ -102,7 +103,7 @@ export async function GET(request: NextRequest) {
 
     // Determine redirect URL
     let redirectUrl: URL
-    if (returnUrl && returnUrl.startsWith('/')) {
+    if (isSafeReturnUrl(returnUrl)) {
       // Return to the original URL (e.g., /user/status/123)
       redirectUrl = new URL(returnUrl, BASE_URL)
     } else {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { db, runInTransaction } from '@/lib/db'
 import { bookmarks, bookmarkLinks, bookmarkMedia } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { metrics, captureException } from '@/lib/sentry'
@@ -32,11 +32,19 @@ export const POST = withAuth(async (request, userId) => {
       )
     }
 
-    // Check for duplicate (composite key: userId + tweetId)
+    // Check for duplicate (composite key: userId + platform + tweetId — this
+    // endpoint is twitter-only, so filter explicitly to avoid colliding with a
+    // numerically-identical id saved from another platform)
     const existing = await db
       .select()
       .from(bookmarks)
-      .where(and(eq(bookmarks.userId, userId), eq(bookmarks.id, parsed.tweetId)))
+      .where(
+        and(
+          eq(bookmarks.userId, userId),
+          eq(bookmarks.platform, 'twitter'),
+          eq(bookmarks.id, parsed.tweetId),
+        ),
+      )
       .limit(1)
 
     if (existing.length > 0) {
@@ -49,7 +57,13 @@ export const POST = withAuth(async (request, userId) => {
       const [firstMedia] = await db
         .select({ previewUrl: bookmarkMedia.previewUrl, originalUrl: bookmarkMedia.originalUrl })
         .from(bookmarkMedia)
-        .where(and(eq(bookmarkMedia.userId, userId), eq(bookmarkMedia.bookmarkId, parsed.tweetId)))
+        .where(
+          and(
+            eq(bookmarkMedia.userId, userId),
+            eq(bookmarkMedia.platform, 'twitter'),
+            eq(bookmarkMedia.bookmarkId, parsed.tweetId),
+          ),
+        )
         .limit(1)
       recordActivity({
         action: 'save',
@@ -106,6 +120,9 @@ export const POST = withAuth(async (request, userId) => {
     let isQuote = false
     let quoteContext: string | null = null
     let quotedTweetId: string | null = null
+    let shouldInsertQuotedTweet = false
+    let quotedAuthor = 'unknown'
+    let quotedCategory = 'text'
 
     if (tweet.quote) {
       isQuote = true
@@ -136,18 +153,26 @@ export const POST = withAuth(async (request, userId) => {
         createdAt: tweet.quote.created_at,
       })
 
-      // Also save the quoted tweet as a separate bookmark if it doesn't exist
+      // Also save the quoted tweet as a separate bookmark if it doesn't exist.
+      // Filter by platform ('twitter' — quotes always reference a tweet) to
+      // avoid colliding with a numerically-identical id on another platform.
       const [existingQuotedTweet] = await db
         .select({ id: bookmarks.id })
         .from(bookmarks)
-        .where(and(eq(bookmarks.userId, userId), eq(bookmarks.id, tweet.quote.id)))
+        .where(
+          and(
+            eq(bookmarks.userId, userId),
+            eq(bookmarks.platform, 'twitter'),
+            eq(bookmarks.id, tweet.quote.id),
+          ),
+        )
         .limit(1)
 
-      if (!existingQuotedTweet) {
-        const quotedAuthor = tweet.quote.author?.screen_name || 'unknown'
+      shouldInsertQuotedTweet = !existingQuotedTweet
+      if (shouldInsertQuotedTweet) {
+        quotedAuthor = tweet.quote.author?.screen_name || 'unknown'
 
         // Determine category for quoted tweet
-        let quotedCategory = 'text'
         if (tweet.quote.article) {
           quotedCategory = 'article'
         } else if (tweet.quote.media?.videos?.length) {
@@ -155,53 +180,114 @@ export const POST = withAuth(async (request, userId) => {
         } else if (tweet.quote.media?.photos?.length) {
           quotedCategory = 'photo'
         }
+      }
+    }
 
-        await db
-          .insert(bookmarks)
+    // Pre-fetch OG metadata for facet-extracted links — an external async
+    // call, so it must happen before the synchronous transaction below.
+    const directUrls =
+      tweet.urls && Array.isArray(tweet.urls) && tweet.urls.length > 0 ? tweet.urls : null
+    const facetLinksWithOg: Array<{
+      link: ReturnType<typeof extractUrlsFromFacets>[number]
+      og: Awaited<ReturnType<typeof fetchOgMetadata>>
+    }> = []
+    if (!directUrls && !tweet.article) {
+      // Fallback: extract URLs from raw_text.facets when tweet.urls is missing
+      const facetUrls = extractUrlsFromFacets(tweet)
+      for (const link of facetUrls) {
+        // Fetch OG metadata for rich link previews in the feed
+        const og = await fetchOgMetadata(link.expanded_url)
+        facetLinksWithOg.push({ link, og })
+      }
+    }
+
+    // Build X Article contentJson ahead of the transaction — pure JSON
+    // transformation, no I/O.
+    let articleContentJson: string | null = null
+    if (tweet.article?.content) {
+      const entityMap = normalizeEntityMap(tweet.article.content.entityMap)
+
+      // Build mediaEntities mapping from media_entities array
+      const mediaEntities = tweet.article.media_entities?.reduce(
+        (
+          acc: Record<string, { url: string; width?: number; height?: number }>,
+          entity: {
+            media_id: string
+            media_info?: {
+              original_img_url?: string
+              original_img_width?: number
+              original_img_height?: number
+            }
+          },
+        ) => {
+          if (entity.media_id && entity.media_info?.original_img_url) {
+            acc[entity.media_id] = {
+              url: entity.media_info.original_img_url,
+              width: entity.media_info.original_img_width,
+              height: entity.media_info.original_img_height,
+            }
+          }
+          return acc
+        },
+        {},
+      )
+
+      articleContentJson = JSON.stringify({
+        blocks: tweet.article.content.blocks,
+        entityMap,
+        mediaEntities,
+      })
+    }
+
+    const quotedTweetData = tweet.quote
+
+    // All multi-table writes happen atomically: main bookmark + its media +
+    // links, plus (optionally) the quoted tweet + its media.
+    runInTransaction(() => {
+      if (quotedTweetData && shouldInsertQuotedTweet) {
+        db.insert(bookmarks)
           .values({
-            id: tweet.quote.id,
+            id: quotedTweetData.id,
             userId,
             author: quotedAuthor,
-            authorName: tweet.quote.author?.name || null,
-            authorProfileImageUrl: tweet.quote.author?.avatar_url || null,
-            text: tweet.quote.text || '',
-            tweetUrl: `https://x.com/${quotedAuthor}/status/${tweet.quote.id}`,
-            createdAt: tweet.quote.created_at
-              ? new Date(tweet.quote.created_at).toISOString()
+            authorName: quotedTweetData.author?.name || null,
+            authorProfileImageUrl: quotedTweetData.author?.avatar_url || null,
+            text: quotedTweetData.text || '',
+            tweetUrl: `https://x.com/${quotedAuthor}/status/${quotedTweetData.id}`,
+            createdAt: quotedTweetData.created_at
+              ? new Date(quotedTweetData.created_at).toISOString()
               : now,
             processedAt: now,
             category: quotedCategory,
             source: 'quoted', // Mark as saved via quote
           })
           .onConflictDoNothing()
+          .run()
 
         // Save media for the quoted tweet
-        if (tweet.quote.media?.photos) {
-          for (let i = 0; i < tweet.quote.media.photos.length; i++) {
-            const photo = tweet.quote.media.photos[i]
-            await db
-              .insert(bookmarkMedia)
+        if (quotedTweetData.media?.photos) {
+          quotedTweetData.media.photos.forEach((photo, i) => {
+            db.insert(bookmarkMedia)
               .values({
-                id: `${tweet.quote.id}_photo_${i}`,
+                id: `${quotedTweetData.id}_photo_${i}`,
                 userId,
-                bookmarkId: tweet.quote.id,
+                bookmarkId: quotedTweetData.id,
                 mediaType: 'photo',
                 originalUrl: photo.url,
                 width: photo.width,
                 height: photo.height,
               })
               .onConflictDoNothing()
-          }
+              .run()
+          })
         }
-        if (tweet.quote.media?.videos) {
-          for (let i = 0; i < tweet.quote.media.videos.length; i++) {
-            const video = tweet.quote.media.videos[i]
-            await db
-              .insert(bookmarkMedia)
+        if (quotedTweetData.media?.videos) {
+          quotedTweetData.media.videos.forEach((video, i) => {
+            db.insert(bookmarkMedia)
               .values({
-                id: `${tweet.quote.id}_video_${i}`,
+                id: `${quotedTweetData.id}_video_${i}`,
                 userId,
-                bookmarkId: tweet.quote.id,
+                bookmarkId: quotedTweetData.id,
                 mediaType: 'video',
                 originalUrl: video.url,
                 previewUrl: video.thumbnail_url,
@@ -209,135 +295,109 @@ export const POST = withAuth(async (request, userId) => {
                 height: video.height,
               })
               .onConflictDoNothing()
-          }
+              .run()
+          })
         }
       }
-    }
 
-    await db.insert(bookmarks).values({
-      id: parsed.tweetId,
-      userId,
-      author: tweet.author?.screen_name || parsed.author,
-      authorName: tweet.author?.name || null,
-      authorProfileImageUrl: tweet.author?.avatar_url || null,
-      text: tweet.text || '',
-      tweetUrl: `https://twitter.com/${parsed.author}/status/${parsed.tweetId}`,
-      createdAt: tweet.created_at ? new Date(tweet.created_at).toISOString() : now,
-      processedAt: now,
-      category,
-      source, // 'manual' or 'url_prefix'
-      isQuote,
-      quoteContext,
-      quotedTweetId,
-    })
+      db.insert(bookmarks)
+        .values({
+          id: parsed.tweetId,
+          userId,
+          author: tweet.author?.screen_name || parsed.author,
+          authorName: tweet.author?.name || null,
+          authorProfileImageUrl: tweet.author?.avatar_url || null,
+          text: tweet.text || '',
+          tweetUrl: `https://twitter.com/${parsed.author}/status/${parsed.tweetId}`,
+          createdAt: tweet.created_at ? new Date(tweet.created_at).toISOString() : now,
+          processedAt: now,
+          category,
+          source, // 'manual' or 'url_prefix'
+          isQuote,
+          quoteContext,
+          quotedTweetId,
+        })
+        .run()
 
-    // Process media if present
-    if (tweet.media?.all && Array.isArray(tweet.media.all)) {
-      for (let i = 0; i < tweet.media.all.length; i++) {
-        const m = tweet.media.all[i]
-        await db
-          .insert(bookmarkMedia)
+      // Process media if present
+      if (tweet.media?.all && Array.isArray(tweet.media.all)) {
+        tweet.media.all.forEach((m, i) => {
+          db.insert(bookmarkMedia)
+            .values({
+              id: `${parsed.tweetId}_${i}`,
+              userId,
+              bookmarkId: parsed.tweetId,
+              mediaType: m.type || 'photo',
+              originalUrl: m.url || '',
+              previewUrl: m.thumbnail_url || m.url || '',
+              width: m.width || null,
+              height: m.height || null,
+            })
+            .onConflictDoNothing()
+            .run()
+        })
+      }
+
+      // Process X Article link if present
+      if (tweet.article && articlePreview) {
+        db.insert(bookmarkLinks)
           .values({
-            id: `${parsed.tweetId}_${i}`,
             userId,
             bookmarkId: parsed.tweetId,
-            mediaType: m.type || 'photo',
-            originalUrl: m.url || '',
-            previewUrl: m.thumbnail_url || m.url || '',
-            width: m.width || null,
-            height: m.height || null,
+            expandedUrl: articlePreview.url,
+            domain: 'x.com',
+            linkType: 'article',
+            previewTitle: articlePreview.title,
+            previewDescription: articlePreview.description,
+            previewImageUrl: articlePreview.imageUrl,
+            contentJson: articleContentJson,
           })
-          .onConflictDoNothing()
-      }
-    }
-
-    // Process X Article link if present
-    if (tweet.article && articlePreview) {
-      // Build content JSON with mediaEntities for image URL mapping
-      let contentJson: string | null = null
-      if (tweet.article.content) {
-        const entityMap = normalizeEntityMap(tweet.article.content.entityMap)
-
-        // Build mediaEntities mapping from media_entities array
-        const mediaEntities = tweet.article.media_entities?.reduce(
-          (
-            acc: Record<string, { url: string; width?: number; height?: number }>,
-            entity: {
-              media_id: string
-              media_info?: {
-                original_img_url?: string
-                original_img_width?: number
-                original_img_height?: number
-              }
-            },
-          ) => {
-            if (entity.media_id && entity.media_info?.original_img_url) {
-              acc[entity.media_id] = {
-                url: entity.media_info.original_img_url,
-                width: entity.media_info.original_img_width,
-                height: entity.media_info.original_img_height,
-              }
-            }
-            return acc
-          },
-          {},
-        )
-
-        contentJson = JSON.stringify({
-          blocks: tweet.article.content.blocks,
-          entityMap,
-          mediaEntities,
-        })
+          .run()
       }
 
-      await db.insert(bookmarkLinks).values({
-        userId,
-        bookmarkId: parsed.tweetId,
-        expandedUrl: articlePreview.url,
-        domain: 'x.com',
-        linkType: 'article',
-        previewTitle: articlePreview.title,
-        previewDescription: articlePreview.description,
-        previewImageUrl: articlePreview.imageUrl,
-        contentJson,
-      })
-    }
-
-    // Process other links if present (external URLs from tweet)
-    if (tweet.urls && Array.isArray(tweet.urls) && tweet.urls.length > 0) {
-      for (const link of tweet.urls) {
-        await db.insert(bookmarkLinks).values({
-          userId,
-          bookmarkId: parsed.tweetId,
-          originalUrl: link.url,
-          expandedUrl: link.expanded_url || link.url,
-          domain: link.domain || null,
-        })
+      // Process other links if present (external URLs from tweet, or
+      // facet-extracted URLs with their pre-fetched OG metadata)
+      if (directUrls) {
+        for (const link of directUrls) {
+          db.insert(bookmarkLinks)
+            .values({
+              userId,
+              bookmarkId: parsed.tweetId,
+              originalUrl: link.url,
+              expandedUrl: link.expanded_url || link.url,
+              domain: link.domain || null,
+            })
+            .run()
+        }
+      } else if (!tweet.article) {
+        for (const { link, og } of facetLinksWithOg) {
+          db.insert(bookmarkLinks)
+            .values({
+              userId,
+              bookmarkId: parsed.tweetId,
+              originalUrl: link.url,
+              expandedUrl: link.expanded_url,
+              domain: link.domain || null,
+              previewTitle: og?.title || null,
+              previewDescription: og?.description || null,
+              previewImageUrl: og?.image || null,
+            })
+            .run()
+        }
       }
-    } else if (!tweet.article) {
-      // Fallback: extract URLs from raw_text.facets when tweet.urls is missing
-      const facetUrls = extractUrlsFromFacets(tweet)
-      for (const link of facetUrls) {
-        // Fetch OG metadata for rich link previews in the feed
-        const og = await fetchOgMetadata(link.expanded_url)
-        await db.insert(bookmarkLinks).values({
-          userId,
-          bookmarkId: parsed.tweetId,
-          originalUrl: link.url,
-          expandedUrl: link.expanded_url,
-          domain: link.domain || null,
-          previewTitle: og?.title || null,
-          previewDescription: og?.description || null,
-          previewImageUrl: og?.image || null,
-        })
-      }
-    }
+    })
 
     // Fetch the created bookmark
     const newBookmark = await db
       .select()
       .from(bookmarks)
-      .where(and(eq(bookmarks.userId, userId), eq(bookmarks.id, parsed.tweetId)))
+      .where(
+        and(
+          eq(bookmarks.userId, userId),
+          eq(bookmarks.platform, 'twitter'),
+          eq(bookmarks.id, parsed.tweetId),
+        ),
+      )
       .limit(1)
 
     // Track bookmark addition with source
