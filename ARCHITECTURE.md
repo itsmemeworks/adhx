@@ -110,17 +110,19 @@ Most user-owned tables key on `(userId, platform, id)`:
 | `tag_shares`        | `(userId, tag)`                                | public tag-share settings     |
 | `user_preferences`  | `(userId, key)`                                | theme, font, etc.             |
 | `oauth_tokens`      | `userId`                                       | encrypted Twitter tokens      |
-| `activity`          | autoinc `id`                                   | public Discover pulse (below) |
+| `activity`          | autoinc `id`                                   | public activity pulse (below) |
 
 **Invariant:** every query filters by `userId`, and any query touching a
 `bookmarkId` also filters by `platform`. There are no `isNull(userId)`
 fallbacks — those would leak data across users. Multi-table writes go through
 `runInTransaction()` from `@/lib/db`.
 
-## Discover & the activity pulse
+## Trending & the activity pulse
 
-`/discover` is a public, anonymous, real-time feed of what the community is
-saving and previewing right now.
+`/trending` is a public, anonymous, real-time feed of what the community is
+saving and previewing right now, with per-lens hubs at `/trending/[filter]`
+(videos / photos / text / articles / just-saved). The old `/discover` path
+308-redirects to it.
 
 - Saves, previews, and reads call `recordActivity()`
   (`src/lib/activity/record.ts`), which writes an append-only row to the
@@ -131,6 +133,10 @@ saving and previewing right now.
   list (the stored `userId` is **never** exposed — the pulse is anonymous by
   construction) and enriches each sparse row server-side by joining the saved
   bookmark for the right thumbnail, content type, author avatar, and a distinct
-  "save count" that powers the Trending badge.
+  "save count" that powers the Trending badge. `getTrendingItems()`
+  (`src/lib/trending/query.ts`) is the shared anonymity-safe read path for the
+  server-rendered hubs and the public `/api/trending` JSON endpoint.
 - The `DiscoverFeed` component polls `/api/activity`, de-dupes, and links each
-  card to the on-ADHX preview path to keep clicks on-site.
+  card to the on-ADHX preview path to keep clicks on-site. Each hub also
+  server-renders a crawlable item list + JSON-LD, so the community feed doubles
+  as indexable content (the SEO growth loop).

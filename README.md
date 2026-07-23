@@ -64,25 +64,26 @@ Once installed it launches standalone, remembers your session, and registers as 
 
 ## ✨ Features
 
-| Feature                      | Description                                                                                                                                                   |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 🐿️ **Hoard Mode**            | Sync up to 800 bookmarks from Twitter/X. No judgment here.                                                                                                    |
-| 🎬 **Reels & TikToks**       | Paste any Instagram Reel or TikTok URL → preview it inline and save it to your collection alongside your tweets.                                              |
-| ▶️ **YouTube Shorts**        | Paste a Shorts (or `youtu.be` / `watch`) link → preview + play inline via the official embed, save it to your collection.                                     |
-| 💾 **Save Across Platforms** | Add Reels, TikToks, and Shorts to your collection alongside tweets. Same feed, one search, platform badges keep things straight.                              |
-| 📲 **Install as an App**     | On mobile, tap "Add to home screen" — ADHX runs full-screen like a native app (PWA), with an Android share-target so you can share any link straight into it. |
-| 🌐 **Discover**              | A live, anonymous feed of what everyone's saving across ADHX right now — filter by type, preview any of it, save your own. Public, no account needed.         |
-| 🖼️ **Three Views**           | Browse your collection as a masonry **gallery** (hover-preview videos), a dense **list**, or a **bento** mosaic.                                              |
-| ⚡ **Triage Mode**           | Full-screen, one-card-at-a-time pass through your backlog — Keep / Delete / Done with arrow keys, plus a daily streak to keep you honest.                     |
-| 🌗 **Light & Dark**          | A warm editorial theme in both modes. Follows your device by default, one-tap toggle everywhere, remembers your choice.                                       |
-| 🔍 **Actually Find Stuff**   | Full-text search that works. Revolutionary, we know.                                                                                                          |
-| 🏷️ **Tag Everything**        | Custom tags to organize your chaos (or don't, we won't tell)                                                                                                  |
-| ✅ **Read Tracking**         | Mark bookmarks as read so you know what you've ~~actually looked at~~ scrolled past                                                                           |
-| 📖 **Article Support**       | Full rendering of X Articles with rich text and images                                                                                                        |
-| ⌨️ **Keyboard Shortcuts**    | ← → to browse, R/U for read/unread, Esc to close                                                                                                              |
-| 🔤 **ADHD-Friendly Fonts**   | Choose from 4 fonts designed for readability (Lexend, Atkinson Hyperlegible, etc.)                                                                            |
-| 📖 **Bionic Reading**        | Bold the first part of each word to help your eyes flow                                                                                                       |
-| 👥 **Multi-User Ready**      | Each user gets their own bookmarks, tags, and read status                                                                                                     |
+| Feature                      | Description                                                                                                                                                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🐿️ **Hoard Mode**            | Sync up to 800 bookmarks from Twitter/X. No judgment here.                                                                                                                                                    |
+| 🎬 **Reels & TikToks**       | Paste any Instagram Reel or TikTok URL → preview it inline and save it to your collection alongside your tweets.                                                                                              |
+| ▶️ **YouTube Shorts**        | Paste a Shorts (or `youtu.be` / `watch`) link → preview + play inline via the official embed, save it to your collection.                                                                                     |
+| 💾 **Save Across Platforms** | Add Reels, TikToks, and Shorts to your collection alongside tweets. Same feed, one search, platform badges keep things straight.                                                                              |
+| 📲 **Install as an App**     | On mobile, tap "Add to home screen" — ADHX runs full-screen like a native app (PWA), with an Android share-target so you can share any link straight into it.                                                 |
+| 📈 **Trending**              | A live, anonymous feed of what everyone's saving across ADHX right now at [/trending](https://adhx.com/trending) — per-type hubs, preview any of it, save your own. Public, no account needed.                |
+| 🤖 **AI-native**             | LLM-friendly JSON API for any post, [`llms.txt`](https://adhx.com/llms.txt), JSON-LD everywhere, and a portable [agent skill](#-agent-skill-works-with-any-agent) — built to be read by AI search and agents. |
+| 🖼️ **Three Views**           | Browse your collection as a masonry **gallery** (hover-preview videos), a dense **list**, or a **bento** mosaic.                                                                                              |
+| ⚡ **Triage Mode**           | Full-screen, one-card-at-a-time pass through your backlog — Keep / Delete / Done with arrow keys, plus a daily streak to keep you honest.                                                                     |
+| 🌗 **Light & Dark**          | A warm editorial theme in both modes. Follows your device by default, one-tap toggle everywhere, remembers your choice.                                                                                       |
+| 🔍 **Actually Find Stuff**   | Full-text search that works. Revolutionary, we know.                                                                                                                                                          |
+| 🏷️ **Tag Everything**        | Custom tags to organize your chaos (or don't, we won't tell)                                                                                                                                                  |
+| ✅ **Read Tracking**         | Mark bookmarks as read so you know what you've ~~actually looked at~~ scrolled past                                                                                                                           |
+| 📖 **Article Support**       | Full rendering of X Articles with rich text and images                                                                                                                                                        |
+| ⌨️ **Keyboard Shortcuts**    | ← → to browse, R/U for read/unread, Esc to close                                                                                                                                                              |
+| 🔤 **ADHD-Friendly Fonts**   | Choose from 4 fonts designed for readability (Lexend, Atkinson Hyperlegible, etc.)                                                                                                                            |
+| 📖 **Bionic Reading**        | Bold the first part of each word to help your eyes flow                                                                                                                                                       |
+| 👥 **Multi-User Ready**      | Each user gets their own bookmarks, tags, and read status                                                                                                                                                     |
 
 ---
 
@@ -151,7 +152,7 @@ SESSION_SECRET=your-secret-key-here
 | **Auth**       | Twitter OAuth 2.0 PKCE + JWT sessions                                                                   |
 | **Media**      | FxTwitter for X, InstaFix for Instagram Reels, fxTikTok for TikToks, YouTube oEmbed + iframe for Shorts |
 | **Deployment** | Fly.io with automated releases                                                                          |
-| **Testing**    | Vitest (800+ tests)                                                                                     |
+| **Testing**    | Vitest (940+ tests)                                                                                     |
 
 ---
 
@@ -339,12 +340,13 @@ src/
 │   │   ├── activity/      # Public anonymous Discover/pulse feed
 │   │   ├── media/         # Video/photo/thumbnail proxies (X, IG, TikTok)
 │   │   └── sync/          # Sync with Twitter
-│   ├── discover/          # Public Discover page
+│   ├── trending/          # Public Trending feed + per-type hubs (/discover redirects here)
 │   ├── settings/          # Settings page (font, theme, streak)
 │   └── page.tsx           # Collection (authed) / landing (signed-out)
 ├── components/
 │   ├── feed/              # Feed: FeedGrid, FeedCard, FeedListRow, FeedBentoTile, MediaCard (triage)
-│   ├── discover/          # DiscoverFeed + DiscoverCard
+│   ├── discover/          # DiscoverFeed + DiscoverCard (power /trending)
+│   ├── trending/          # Server-rendered crawlable lists for the hubs
 │   ├── matter/            # Matter design primitives (badges, glyphs, logo)
 │   ├── ThemeToggle.tsx    # Light/dark toggle (public + preview surfaces)
 │   └── ...
