@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.47.1](https://github.com/itsmemeworks/adhx/compare/v1.47.0...v1.47.1) (2026-07-23)
+
+
+### Bug Fixes
+
+* drop redundant brand from trending archive index title ([#282](https://github.com/itsmemeworks/adhx/issues/282)) ([9c6e4f5](https://github.com/itsmemeworks/adhx/commit/9c6e4f59e5876645d93bb3c56b9ef411d06a2c86))
+
 ## [1.47.0](https://github.com/itsmemeworks/adhx/compare/v1.46.5...v1.47.0) (2026-07-23)
 
 
