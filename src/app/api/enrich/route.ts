@@ -14,10 +14,24 @@ export const POST = withAuth(async (request: NextRequest, userId) => {
   const mode = searchParams.get('mode')
   const encoder = new TextEncoder()
 
+  // Disconnect handling: if the client goes away mid-enrichment, stop the
+  // loop instead of grinding through every remaining bookmark against a
+  // socket nobody's reading.
+  let aborted = false
+  const onAbort = () => {
+    aborted = true
+  }
+  request.signal.addEventListener('abort', onAbort)
+
   const stream = new ReadableStream({
     async start(controller) {
       const send = (event: string, data: object) => {
-        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
+        if (aborted) return
+        try {
+          controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
+        } catch {
+          // Controller already closed/errored (client disconnected) — ignore.
+        }
       }
 
       try {
@@ -69,6 +83,8 @@ export const POST = withAuth(async (request: NextRequest, userId) => {
         let failed = 0
 
         for (const bookmark of bookmarksToEnrich) {
+          if (aborted) break
+
           try {
             // Fetch data from FxTwitter API
             const fxData = await fetchTweetData(bookmark.author, bookmark.id)
@@ -181,25 +197,38 @@ export const POST = withAuth(async (request: NextRequest, userId) => {
           }
         }
 
-        // Check how many bookmarks still need enrichment (filter by userId)
-        const [remaining] = await db
-          .select({ count: sql<number>`count(*)` })
-          .from(bookmarks)
-          .where(and(eq(bookmarks.userId, userId), isNull(bookmarks.authorProfileImageUrl)))
+        if (!aborted) {
+          // Check how many bookmarks still need enrichment (filter by userId)
+          const [remaining] = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(bookmarks)
+            .where(and(eq(bookmarks.userId, userId), isNull(bookmarks.authorProfileImageUrl)))
 
-        send('complete', {
-          enriched,
-          failed,
-          remaining: remaining?.count || 0,
-        })
+          send('complete', {
+            enriched,
+            failed,
+            remaining: remaining?.count || 0,
+          })
+        }
       } catch (error) {
         console.error('Enrichment error:', error)
         send('error', {
           message: error instanceof Error ? error.message : 'Failed to enrich bookmarks',
         })
+      } finally {
+        request.signal.removeEventListener('abort', onAbort)
+        try {
+          controller.close()
+        } catch {
+          // Already closed/errored via cancel() on client disconnect — ignore.
+        }
       }
-
-      controller.close()
+    },
+    cancel() {
+      // Fires when the consumer (client) cancels the stream — the standard
+      // signal for "browser disconnected" on a Response body stream.
+      onAbort()
+      request.signal.removeEventListener('abort', onAbort)
     },
   })
 

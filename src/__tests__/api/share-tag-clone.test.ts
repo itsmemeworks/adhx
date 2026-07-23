@@ -18,6 +18,9 @@ vi.mock('@/lib/db', () => ({
   get db() {
     return testInstance.db
   },
+  runInTransaction<R>(fn: () => R): R {
+    return testInstance.sqlite.transaction(fn)()
+  },
 }))
 
 vi.mock('@/lib/auth/session', () => ({
@@ -404,5 +407,162 @@ describe('API: /api/share/tag/[code]/clone', () => {
 
       expect(userBBookmarks).toHaveLength(1)
     })
+  })
+})
+
+/**
+ * API Route Tests: /api/share/tag/by-name/[username]/[tag]/clone
+ *
+ * Regression coverage for the platform-aware clone fix: cloning a tag on a
+ * non-Twitter bookmark must tag the clone with the bookmark's real platform
+ * (not the 'twitter' default), and the clone must respect the same size cap
+ * as the legacy /clone route.
+ */
+describe('API: /api/share/tag/by-name/[username]/[tag]/clone', () => {
+  const SOURCE_USERNAME = 'sourceuser'
+
+  beforeEach(async () => {
+    testInstance = createTestDb()
+    mockUserId = USER_A
+    vi.clearAllMocks()
+
+    await testInstance.db.insert(schema.oauthTokens).values({
+      userId: USER_B,
+      username: SOURCE_USERNAME,
+      accessToken: 'token',
+      refreshToken: 'refresh',
+      expiresAt: Date.now() + 100000,
+    })
+  })
+
+  afterEach(() => {
+    testInstance.close()
+  })
+
+  function byNameRequest(): NextRequest {
+    return new NextRequest(
+      `http://localhost:3000/api/share/tag/by-name/${SOURCE_USERNAME}/ig-tag/clone`,
+      { method: 'POST' },
+    )
+  }
+
+  it('tags a cloned instagram bookmark with the instagram platform (not twitter default)', async () => {
+    await testInstance.db.insert(schema.tagShares).values({
+      userId: USER_B,
+      tag: 'ig-tag',
+      shareCode: 'ig-share',
+      isPublic: true,
+    })
+
+    await testInstance.db.insert(schema.bookmarks).values(
+      createTestBookmark(USER_B, 'reel-1', {
+        platform: 'instagram',
+        text: 'A reel',
+        author: 'iguser',
+      }),
+    )
+
+    await testInstance.db.insert(schema.bookmarkTags).values({
+      userId: USER_B,
+      platform: 'instagram',
+      bookmarkId: 'reel-1',
+      tag: 'ig-tag',
+    })
+
+    const { POST } = await import('@/app/api/share/tag/by-name/[username]/[tag]/clone/route')
+    const response = await POST(byNameRequest(), {
+      params: Promise.resolve({ username: SOURCE_USERNAME, tag: 'ig-tag' }),
+    })
+
+    expect(response.status).toBe(200)
+    const data = await response.json()
+    expect(data.clonedCount).toBe(1)
+    expect(data.taggedCount).toBe(1)
+
+    // The cloned bookmark itself carries the right platform
+    const [clonedBookmark] = await testInstance.db
+      .select()
+      .from(schema.bookmarks)
+      .where(and(eq(schema.bookmarks.userId, USER_A), eq(schema.bookmarks.id, 'reel-1')))
+    expect(clonedBookmark.platform).toBe('instagram')
+
+    // The tag row must match the bookmark's real platform, or the feed's
+    // per-platform tag lookup will never find it (cloned item appears untagged)
+    const clonedTags = await testInstance.db
+      .select()
+      .from(schema.bookmarkTags)
+      .where(eq(schema.bookmarkTags.userId, USER_A))
+
+    expect(clonedTags).toHaveLength(1)
+    expect(clonedTags[0].platform).toBe('instagram')
+    expect(clonedTags[0].bookmarkId).toBe('reel-1')
+    expect(clonedTags[0].tag).toBe('ig-tag')
+  })
+
+  it('enforces the same size cap as the legacy clone route', async () => {
+    await testInstance.db.insert(schema.tagShares).values({
+      userId: USER_B,
+      tag: 'ig-tag',
+      shareCode: 'ig-share',
+      isPublic: true,
+    })
+
+    const bookmarksToInsert = Array.from({ length: 101 }, (_, i) =>
+      createTestBookmark(USER_B, `reel-${i}`),
+    )
+    await testInstance.db.insert(schema.bookmarks).values(bookmarksToInsert)
+
+    const tagsToInsert = Array.from({ length: 101 }, (_, i) => ({
+      userId: USER_B,
+      bookmarkId: `reel-${i}`,
+      tag: 'ig-tag',
+    }))
+    await testInstance.db.insert(schema.bookmarkTags).values(tagsToInsert)
+
+    const { POST } = await import('@/app/api/share/tag/by-name/[username]/[tag]/clone/route')
+    const response = await POST(byNameRequest(), {
+      params: Promise.resolve({ username: SOURCE_USERNAME, tag: 'ig-tag' }),
+    })
+
+    expect(response.status).toBe(400)
+    const data = await response.json()
+    expect(data.error).toContain('100')
+
+    // Nothing should have been cloned since the cap check happens before any writes
+    const clonedBookmarks = await testInstance.db
+      .select()
+      .from(schema.bookmarks)
+      .where(eq(schema.bookmarks.userId, USER_A))
+    expect(clonedBookmarks).toHaveLength(0)
+  })
+
+  it('allows cloning exactly the cap size', async () => {
+    await testInstance.db.insert(schema.tagShares).values({
+      userId: USER_B,
+      tag: 'ig-tag',
+      shareCode: 'ig-share',
+      isPublic: true,
+    })
+
+    const bookmarksToInsert = Array.from({ length: 100 }, (_, i) =>
+      createTestBookmark(USER_B, `reel-${i}`),
+    )
+    await testInstance.db.insert(schema.bookmarks).values(bookmarksToInsert)
+
+    const tagsToInsert = Array.from({ length: 100 }, (_, i) => ({
+      userId: USER_B,
+      bookmarkId: `reel-${i}`,
+      tag: 'ig-tag',
+    }))
+    await testInstance.db.insert(schema.bookmarkTags).values(tagsToInsert)
+
+    const { POST } = await import('@/app/api/share/tag/by-name/[username]/[tag]/clone/route')
+    const response = await POST(byNameRequest(), {
+      params: Promise.resolve({ username: SOURCE_USERNAME, tag: 'ig-tag' }),
+    })
+
+    expect(response.status).toBe(200)
+    const data = await response.json()
+    expect(data.clonedCount).toBe(100)
   })
 })

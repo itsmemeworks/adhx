@@ -75,6 +75,10 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
     // Batch fetch all related data (fixes N+1 query problem)
     const bookmarkIds = results.map((b) => b.id)
 
+    // Composite lookup key (platform + id) prevents collisions across
+    // platforms when the same numeric id exists on two platforms.
+    const compositeKey = (platform: string, id: string) => `${platform}:${id}`
+
     // Fetch all related data in parallel batches instead of per-bookmark
     const [allLinks, allTags, allMedia, allReadStatuses] =
       bookmarkIds.length > 0
@@ -112,35 +116,41 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
           ])
         : [[], [], [], []]
 
-    // Group related data by bookmark ID for O(1) lookups
+    // Group related data by composite (platform + bookmark ID) key for O(1) lookups
     const linksByBookmark = new Map<string, typeof allLinks>()
     for (const link of allLinks) {
-      const existing = linksByBookmark.get(link.bookmarkId) || []
+      const key = compositeKey(link.platform, link.bookmarkId)
+      const existing = linksByBookmark.get(key) || []
       existing.push(link)
-      linksByBookmark.set(link.bookmarkId, existing)
+      linksByBookmark.set(key, existing)
     }
 
     const tagsByBookmark = new Map<string, string[]>()
     for (const tag of allTags) {
-      const existing = tagsByBookmark.get(tag.bookmarkId) || []
+      const key = compositeKey(tag.platform, tag.bookmarkId)
+      const existing = tagsByBookmark.get(key) || []
       existing.push(tag.tag)
-      tagsByBookmark.set(tag.bookmarkId, existing)
+      tagsByBookmark.set(key, existing)
     }
 
     const mediaByBookmark = new Map<string, typeof allMedia>()
     for (const media of allMedia) {
-      const existing = mediaByBookmark.get(media.bookmarkId) || []
+      const key = compositeKey(media.platform, media.bookmarkId)
+      const existing = mediaByBookmark.get(key) || []
       existing.push(media)
-      mediaByBookmark.set(media.bookmarkId, existing)
+      mediaByBookmark.set(key, existing)
     }
 
-    const readStatusMap = new Map(allReadStatuses.map((r) => [r.bookmarkId, r.readAt]))
+    const readStatusMap = new Map(
+      allReadStatuses.map((r) => [compositeKey(r.platform, r.bookmarkId), r.readAt]),
+    )
 
     // Transform bookmarks with related data (no additional queries)
     const bookmarksWithRelations = results.map((bookmark) => {
-      const links = linksByBookmark.get(bookmark.id) || []
-      const tags = tagsByBookmark.get(bookmark.id) || []
-      const media = mediaByBookmark.get(bookmark.id) || []
+      const key = compositeKey(bookmark.platform, bookmark.id)
+      const links = linksByBookmark.get(key) || []
+      const tags = tagsByBookmark.get(key) || []
+      const media = mediaByBookmark.get(key) || []
 
       // Add FxEmbed URLs to media
       const mediaWithUrls = media.map((m, index) => {
@@ -164,8 +174,8 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
         }
       })
 
-      const isRead = readStatusMap.has(bookmark.id)
-      const readAt = readStatusMap.get(bookmark.id) || null
+      const isRead = readStatusMap.has(key)
+      const readAt = readStatusMap.get(key) || null
 
       // Expand t.co URLs in the text
       const expandedText = expandUrls(bookmark.text, links)

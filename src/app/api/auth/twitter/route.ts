@@ -9,6 +9,7 @@ import {
   deleteTokens,
 } from '@/lib/auth/oauth'
 import { getSession, clearSessionCookie } from '@/lib/auth/session'
+import { isSafeReturnUrl } from '@/lib/auth/return-url'
 import { metrics } from '@/lib/sentry'
 
 const CLIENT_ID = process.env.TWITTER_CLIENT_ID!
@@ -40,8 +41,8 @@ export async function GET(request: NextRequest) {
   // Redirect to Twitter, storing returnUrl in a cookie if provided
   const response = NextResponse.redirect(authUrl)
 
-  if (returnUrl && returnUrl.startsWith('/')) {
-    // Only allow relative URLs for security
+  if (isSafeReturnUrl(returnUrl)) {
+    // Only allow same-origin relative URLs for security
     response.cookies.set('adhx_return_url', returnUrl, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
