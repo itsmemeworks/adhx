@@ -221,6 +221,83 @@ describe('API: /api/auth/twitter/callback', () => {
       )
     })
 
+    it('ignores an open-redirect return URL cookie (protocol-relative //evil.com)', async () => {
+      // `//evil.com` is protocol-relative: `new URL('//evil.com', BASE_URL)`
+      // resolves to `https://evil.com/` when honored unvalidated — an open
+      // redirect straight out of a successful login.
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            access_token: 'new-access-token',
+            refresh_token: 'new-refresh-token',
+            expires_in: 7200,
+            scope: 'tweet.read',
+          }),
+      })
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: { id: 'user-evil', username: 'evilredirectuser' },
+          }),
+      })
+
+      const request = createCallbackRequest({
+        code: 'valid-code',
+        state: 'valid-state',
+      })
+      request.cookies.set('adhx_return_url', '//evil.com')
+
+      const { GET } = await import('@/app/api/auth/twitter/callback/route')
+      const response = await GET(request)
+
+      expect(response.status).toBe(307)
+      const location = response.headers.get('location')
+      expect(location).not.toContain('evil.com')
+      // Falls back to the normal post-login destination instead.
+      expect(location).toContain('firstLogin=true')
+
+      // The malicious cookie is still cleared like any other return-url cookie.
+      const cookies = response.headers.getSetCookie()
+      expect(cookies.some((c) => c.includes('adhx_return_url') && c.includes('Max-Age=0'))).toBe(
+        true,
+      )
+    })
+
+    it('honors a legit same-origin return URL cookie (e.g. /feed)', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            access_token: 'new-access-token',
+            refresh_token: 'new-refresh-token',
+            expires_in: 7200,
+            scope: 'tweet.read',
+          }),
+      })
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: { id: 'user-legit', username: 'legituser' },
+          }),
+      })
+
+      const request = createCallbackRequest({
+        code: 'valid-code',
+        state: 'valid-state',
+      })
+      request.cookies.set('adhx_return_url', '/feed')
+
+      const { GET } = await import('@/app/api/auth/twitter/callback/route')
+      const response = await GET(request)
+
+      expect(response.status).toBe(307)
+      const location = response.headers.get('location')
+      expect(location).toContain('/feed')
+    })
+
     it('tracks new user in metrics', async () => {
       const { metrics } = await import('@/lib/sentry')
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useCallback, useRef } from 'react'
 import { Image, Loader2 } from 'lucide-react'
 import { FeedCard } from './FeedCard'
 import { FeedListRow } from './FeedListRow'
@@ -45,13 +45,21 @@ export function FeedGrid({
   // Infinite scroll: a sentinel below the grid triggers onLoadMore when it
   // scrolls into view. Latest loading/hasMore/onLoadMore are read through a
   // ref so the observer doesn't need re-creating on every render.
-  const sentinelRef = useRef<HTMLDivElement>(null)
   const loadStateRef = useRef({ loading, hasMore, onLoadMore })
   loadStateRef.current = { loading, hasMore, onLoadMore }
 
-  useEffect(() => {
-    const sentinel = sentinelRef.current
-    if (!sentinel) return
+  const observerRef = useRef<IntersectionObserver | null>(null)
+  // Callback ref instead of a plain ref + effect: the sentinel only exists in
+  // the DOM once items have loaded past the initial skeleton, so an effect
+  // with an empty dep array would fire once (while the ref is still null)
+  // and never run again — the observer was never created. A callback ref
+  // re-invokes whenever the sentinel node mounts/unmounts, so the observer
+  // attaches the moment it appears (and reattaches if it's removed and
+  // re-added, e.g. hasMore toggling).
+  const sentinelRef = useCallback((node: HTMLDivElement | null) => {
+    observerRef.current?.disconnect()
+    observerRef.current = null
+    if (!node) return
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -64,9 +72,8 @@ export function FeedGrid({
       // ready by the time the user reaches the bottom.
       { rootMargin: '600px 0px' },
     )
-
-    observer.observe(sentinel)
-    return () => observer.disconnect()
+    observer.observe(node)
+    observerRef.current = observer
   }, [])
 
   if (loading && items.length === 0) {

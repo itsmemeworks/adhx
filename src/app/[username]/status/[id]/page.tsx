@@ -10,7 +10,7 @@ import { fetchTweetData, extractUrlsFromFacets, type FxTwitterResponse } from '@
 import { fetchOgMetadata } from '@/lib/utils/og-fetch'
 import { truncate } from '@/lib/utils/format'
 import { getOgImages } from '@/lib/utils/og-image'
-import { buildSocialMediaPostingLd } from '@/lib/utils/structured-data'
+import { buildSocialMediaPostingLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
 
 type FxTweet = NonNullable<FxTwitterResponse['tweet']>
 
@@ -158,7 +158,7 @@ export default async function QuickAddPage({ params }: Props) {
       <>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdScriptContent(jsonLd) }}
         />
         <TweetPreviewLanding
           username={username}
