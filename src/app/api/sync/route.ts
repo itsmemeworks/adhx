@@ -14,6 +14,7 @@ import {
 import { eq, desc, and, lt } from 'drizzle-orm'
 import { nanoid } from '@/lib/utils'
 import { withAuth } from '@/lib/api/with-auth'
+import { hasExistingTokens } from '@/lib/auth/oauth'
 import { captureException, metrics } from '@/lib/sentry'
 import type { StreamedBookmark } from '@/components/feed/types'
 import { categorizeTweetByUrls, extractDomain, determineLinkType } from '@/lib/tweets/processor'
@@ -27,6 +28,17 @@ import { getSyncCooldownMs } from '@/lib/sync/config'
  */
 const SYNC_PULSE_CAP = 25
 import { normalizeEntityMap } from '@/lib/utils/article-text'
+
+/**
+ * Auth-loss during sync (valid session JWT, but the OAuth tokens are gone —
+ * disconnected, fatal refresh cleared them, or account data wiped). This is an
+ * expected, user-recoverable state ("reconnect your account"), NOT a bug, so we
+ * surface it to the user but do NOT report it to Sentry as an exception.
+ */
+function isAuthLossError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error)
+  return /not authenticated|reconnect your account/i.test(message)
+}
 
 // GET /api/sync - SSE endpoint for sync progress
 export const GET = withAuth(async (request, userId) => {
@@ -50,6 +62,17 @@ export const GET = withAuth(async (request, userId) => {
         { status: 429 },
       )
     }
+  }
+
+  // Guard: a valid session JWT doesn't guarantee live OAuth tokens (the token
+  // chain can die while the cookie lingers). Bail before opening the SSE stream
+  // so we don't write a phantom 'running' syncLog or report expected auth-loss
+  // to Sentry — just ask the user to reconnect.
+  if (!(await hasExistingTokens(userId))) {
+    return NextResponse.json(
+      { error: 'Your X session has expired. Please reconnect your account in Settings.' },
+      { status: 401 },
+    )
   }
 
   // Reap this user's stuck 'running' sync rows (e.g. process killed/deployed
@@ -288,14 +311,18 @@ export const GET = withAuth(async (request, userId) => {
         // Track sync failure
         metrics.syncFailed(message)
 
-        // Capture error in Sentry with context
-        captureException(error, {
-          syncId,
-          userId,
-          all,
-          maxPages,
-          errorMessage: message,
-        })
+        // Auth-loss (tokens vanished mid-flight, after the pre-stream guard) is
+        // expected and user-recoverable — record it on the sync log + tell the
+        // client to reconnect, but don't pollute Sentry with a non-bug.
+        if (!isAuthLossError(error)) {
+          captureException(error, {
+            syncId,
+            userId,
+            all,
+            maxPages,
+            errorMessage: message,
+          })
+        }
 
         // Update sync log with error
         await db
