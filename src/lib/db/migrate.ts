@@ -82,45 +82,20 @@ if (fs.existsSync(journalPath)) {
 
 console.log('[migrate] SQL migrations complete')
 
-// Create FTS5 virtual table (Drizzle doesn't support virtual tables)
+// bookmarks_fts (FTS5) + its ai/ad/au triggers used to mirror every bookmark
+// write into a full-text index, but nothing ever queries it — feed/search
+// uses a plain LIKE (see src/app/api/feed/route.ts) — so it was pure write
+// amplification (3 extra index writes per insert/update/delete). Drop it
+// idempotently. If full-text search is needed later, re-add FTS5 with a
+// backfill from the existing `bookmarks` table rather than reviving this.
 db.exec(`
-  CREATE VIRTUAL TABLE IF NOT EXISTS bookmarks_fts USING fts5(
-    id UNINDEXED,
-    author,
-    author_name,
-    text,
-    summary,
-    content='bookmarks',
-    content_rowid='rowid',
-    tokenize='porter unicode61'
-  );
+  DROP TRIGGER IF EXISTS bookmarks_ai;
+  DROP TRIGGER IF EXISTS bookmarks_ad;
+  DROP TRIGGER IF EXISTS bookmarks_au;
+  DROP TABLE IF EXISTS bookmarks_fts;
 `)
 
-// Create triggers to keep FTS in sync
-db.exec(`
-  CREATE TRIGGER IF NOT EXISTS bookmarks_ai AFTER INSERT ON bookmarks BEGIN
-    INSERT INTO bookmarks_fts(rowid, id, author, author_name, text, summary)
-    VALUES (NEW.rowid, NEW.id, NEW.author, NEW.author_name, NEW.text, NEW.summary);
-  END;
-`)
-
-db.exec(`
-  CREATE TRIGGER IF NOT EXISTS bookmarks_ad AFTER DELETE ON bookmarks BEGIN
-    INSERT INTO bookmarks_fts(bookmarks_fts, rowid, id, author, author_name, text, summary)
-    VALUES('delete', OLD.rowid, OLD.id, OLD.author, OLD.author_name, OLD.text, OLD.summary);
-  END;
-`)
-
-db.exec(`
-  CREATE TRIGGER IF NOT EXISTS bookmarks_au AFTER UPDATE ON bookmarks BEGIN
-    INSERT INTO bookmarks_fts(bookmarks_fts, rowid, id, author, author_name, text, summary)
-    VALUES('delete', OLD.rowid, OLD.id, OLD.author, OLD.author_name, OLD.text, OLD.summary);
-    INSERT INTO bookmarks_fts(rowid, id, author, author_name, text, summary)
-    VALUES (NEW.rowid, NEW.id, NEW.author, NEW.author_name, NEW.text, NEW.summary);
-  END;
-`)
-
-console.log('[migrate] FTS5 and triggers configured')
+console.log('[migrate] Dropped unused bookmarks_fts table and sync triggers')
 
 // Create indexes
 db.exec(`
@@ -168,27 +143,59 @@ try {
   // Column already exists — nothing to do.
 }
 
+// Tiny settle-guard table for the one-time backfills below. Both backfills
+// scan/rewrite a full table (bookmarks / bookmark_media) with no usable index
+// for their WHERE clause (a leading-wildcard NOT LIKE, and platform+type
+// equality with no covering index), so re-running the scan on every boot is
+// unbounded cost that only ever grows with the table. Once a backfill finds
+// nothing left to fix, it's marked settled here and skipped on future boots
+// (a single primary-key lookup) instead of re-scanning the whole table.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS migration_state (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+`)
+function isSettled(key: string): boolean {
+  const row = db.prepare('SELECT value FROM migration_state WHERE key = ?').get(key) as
+    | { value: string }
+    | undefined
+  return row?.value === '1'
+}
+function markSettled(key: string): void {
+  db.prepare(
+    `INSERT INTO migration_state (key, value, updated_at) VALUES (?, '1', ?)
+     ON CONFLICT(key) DO UPDATE SET value = '1', updated_at = excluded.updated_at`,
+  ).run(key, new Date().toISOString())
+}
+
 // Normalize non-ISO created_at dates (Twitter format like "Wed Jan 28 02:28:44 +0000 2026")
 // to ISO 8601 format for correct string-based sorting
 try {
-  const nonIsoRows = db
-    .prepare(
-      `SELECT rowid, created_at FROM bookmarks WHERE created_at IS NOT NULL AND created_at NOT LIKE '____-%'`,
-    )
-    .all() as { rowid: number; created_at: string }[]
+  if (isSettled('bookmarks_created_at_normalized')) {
+    console.log('[migrate] created_at already normalized, skipping scan')
+  } else {
+    const nonIsoRows = db
+      .prepare(
+        `SELECT rowid, created_at FROM bookmarks WHERE created_at IS NOT NULL AND created_at NOT LIKE '____-%'`,
+      )
+      .all() as { rowid: number; created_at: string }[]
 
-  if (nonIsoRows.length > 0) {
-    const update = db.prepare('UPDATE bookmarks SET created_at = ? WHERE rowid = ?')
-    const normalize = db.transaction(() => {
-      for (const row of nonIsoRows) {
-        const parsed = new Date(row.created_at)
-        if (!isNaN(parsed.getTime())) {
-          update.run(parsed.toISOString(), row.rowid)
+    if (nonIsoRows.length > 0) {
+      const update = db.prepare('UPDATE bookmarks SET created_at = ? WHERE rowid = ?')
+      const normalize = db.transaction(() => {
+        for (const row of nonIsoRows) {
+          const parsed = new Date(row.created_at)
+          if (!isNaN(parsed.getTime())) {
+            update.run(parsed.toISOString(), row.rowid)
+          }
         }
-      }
-    })
-    normalize()
-    console.log(`[migrate] Normalized ${nonIsoRows.length} non-ISO created_at dates`)
+      })
+      normalize()
+      console.log(`[migrate] Normalized ${nonIsoRows.length} non-ISO created_at dates`)
+    }
+    markSettled('bookmarks_created_at_normalized')
   }
 } catch (error) {
   console.log('[migrate] Warning: failed to normalize created_at dates', error)
@@ -200,17 +207,39 @@ try {
 // a rare photo post that gets flipped just falls back to its poster on a play
 // error. Idempotent (no-op once flipped) and guarded.
 try {
-  const res = db
-    .prepare(
-      `UPDATE bookmark_media SET media_type = 'video'
-       WHERE platform = 'instagram' AND media_type = 'photo'`,
-    )
-    .run()
-  if (res.changes > 0) {
-    console.log(`[migrate] Instagram media photo→video: ${res.changes} rows`)
+  if (isSettled('instagram_media_photo_to_video')) {
+    console.log('[migrate] Instagram media backfill already settled, skipping scan')
+  } else {
+    const res = db
+      .prepare(
+        `UPDATE bookmark_media SET media_type = 'video'
+         WHERE platform = 'instagram' AND media_type = 'photo'`,
+      )
+      .run()
+    if (res.changes > 0) {
+      console.log(`[migrate] Instagram media photo→video: ${res.changes} rows`)
+    }
+    markSettled('instagram_media_photo_to_video')
   }
 } catch (error) {
   console.log('[migrate] Warning: Instagram media backfill failed', error)
+}
+
+// activity is an append-only public event log (see CLAUDE.md — not
+// user-owned content, exempt from the composite-key convention) with no
+// pruning, so it grows unbounded on the 1GB volume. The trending/pulse reads
+// only ever look back 24h (recentActivity) or the last ~80 rows (FETCH in
+// src/lib/trending/query.ts), so a 30-day retention window is far more than
+// enough. Cheap (indexed on created_at via activity_created_at_idx), safe,
+// and idempotent — re-running just deletes nothing once caught up.
+try {
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+  const res = db.prepare('DELETE FROM activity WHERE created_at < ?').run(cutoff)
+  if (res.changes > 0) {
+    console.log(`[migrate] Pruned ${res.changes} activity rows older than 30 days`)
+  }
+} catch (error) {
+  console.log('[migrate] Warning: activity pruning failed', error)
 }
 
 console.log(`[migrate] Database ready at: ${path.resolve(DB_PATH)}`)

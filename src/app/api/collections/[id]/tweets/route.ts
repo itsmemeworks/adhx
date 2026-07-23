@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { db, runInTransaction } from '@/lib/db'
 import { collections, collectionTweets, bookmarks } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { withAuth } from '@/lib/api/with-auth'
+
+function parsePlatform(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined
+}
 
 // POST /api/collections/[id]/tweets - Add a tweet to a collection
 export const POST = withAuth(
@@ -11,6 +15,12 @@ export const POST = withAuth(
       const { id: collectionId } = await params
       const body = await request.json()
       const { bookmarkId, notes } = body
+      // `platform` is optional on the wire (existing clients don't send it) — when
+      // absent we resolve it from the bookmark itself below. `bookmarks`' PK is
+      // (userId, platform, id), so guessing the default 'twitter' here would
+      // silently mis-file Instagram/TikTok/YouTube bookmarks under the wrong
+      // platform and they'd vanish from platform-filtered collection reads.
+      const requestedPlatform = parsePlatform(body.platform)
 
       if (!bookmarkId || typeof bookmarkId !== 'string') {
         return NextResponse.json({ error: 'bookmarkId is required' }, { status: 400 })
@@ -27,16 +37,26 @@ export const POST = withAuth(
         return NextResponse.json({ error: 'Collection not found' }, { status: 404 })
       }
 
-      // Verify bookmark exists and belongs to user
+      // Verify bookmark exists and belongs to user, resolving its real platform.
       const [bookmark] = await db
         .select()
         .from(bookmarks)
-        .where(and(eq(bookmarks.id, bookmarkId), eq(bookmarks.userId, userId)))
+        .where(
+          requestedPlatform
+            ? and(
+                eq(bookmarks.id, bookmarkId),
+                eq(bookmarks.userId, userId),
+                eq(bookmarks.platform, requestedPlatform),
+              )
+            : and(eq(bookmarks.id, bookmarkId), eq(bookmarks.userId, userId)),
+        )
         .limit(1)
 
       if (!bookmark) {
         return NextResponse.json({ error: 'Bookmark not found' }, { status: 404 })
       }
+
+      const platform = bookmark.platform
 
       // Check if already in collection
       const [existing] = await db
@@ -46,6 +66,7 @@ export const POST = withAuth(
           and(
             eq(collectionTweets.userId, userId),
             eq(collectionTweets.collectionId, collectionId),
+            eq(collectionTweets.platform, platform),
             eq(collectionTweets.bookmarkId, bookmarkId),
           ),
         )
@@ -61,6 +82,7 @@ export const POST = withAuth(
               and(
                 eq(collectionTweets.userId, userId),
                 eq(collectionTweets.collectionId, collectionId),
+                eq(collectionTweets.platform, platform),
                 eq(collectionTweets.bookmarkId, bookmarkId),
               ),
             )
@@ -68,20 +90,26 @@ export const POST = withAuth(
         return NextResponse.json({ success: true, alreadyExists: true })
       }
 
-      // Add to collection
-      await db.insert(collectionTweets).values({
-        userId,
-        collectionId,
-        bookmarkId,
-        addedAt: new Date().toISOString(),
-        notes: notes?.trim() || null,
-      })
+      const now = new Date().toISOString()
 
-      // Update collection's updatedAt
-      await db
-        .update(collections)
-        .set({ updatedAt: new Date().toISOString() })
-        .where(and(eq(collections.id, collectionId), eq(collections.userId, userId)))
+      // Add to collection and bump the collection's updatedAt atomically.
+      runInTransaction(() => {
+        db.insert(collectionTweets)
+          .values({
+            userId,
+            collectionId,
+            platform,
+            bookmarkId,
+            addedAt: now,
+            notes: notes?.trim() || null,
+          })
+          .run()
+
+        db.update(collections)
+          .set({ updatedAt: now })
+          .where(and(eq(collections.id, collectionId), eq(collections.userId, userId)))
+          .run()
+      })
 
       return NextResponse.json({ success: true })
     } catch (error) {
@@ -98,6 +126,7 @@ export const DELETE = withAuth(
       const { id: collectionId } = await params
       const body = await request.json()
       const { bookmarkId } = body
+      const requestedPlatform = parsePlatform(body.platform)
 
       if (!bookmarkId || typeof bookmarkId !== 'string') {
         return NextResponse.json({ error: 'bookmarkId is required' }, { status: 400 })
@@ -114,22 +143,62 @@ export const DELETE = withAuth(
         return NextResponse.json({ error: 'Collection not found' }, { status: 404 })
       }
 
-      // Remove from collection
-      await db
-        .delete(collectionTweets)
-        .where(
-          and(
-            eq(collectionTweets.userId, userId),
-            eq(collectionTweets.collectionId, collectionId),
-            eq(collectionTweets.bookmarkId, bookmarkId),
-          ),
-        )
+      // Resolve the real platform for this bookmarkId, same as POST, so we remove
+      // the correct composite-key row instead of matching (and masking) whatever
+      // happens to share the numeric id on another platform.
+      let platform = requestedPlatform
 
-      // Update collection's updatedAt
-      await db
-        .update(collections)
-        .set({ updatedAt: new Date().toISOString() })
-        .where(and(eq(collections.id, collectionId), eq(collections.userId, userId)))
+      if (!platform) {
+        const [bookmark] = await db
+          .select({ platform: bookmarks.platform })
+          .from(bookmarks)
+          .where(and(eq(bookmarks.id, bookmarkId), eq(bookmarks.userId, userId)))
+          .limit(1)
+        platform = bookmark?.platform
+      }
+
+      if (!platform) {
+        // Bookmark record no longer exists — fall back to whatever platform this
+        // bookmarkId is actually stored under in the collection itself.
+        const [existing] = await db
+          .select({ platform: collectionTweets.platform })
+          .from(collectionTweets)
+          .where(
+            and(
+              eq(collectionTweets.userId, userId),
+              eq(collectionTweets.collectionId, collectionId),
+              eq(collectionTweets.bookmarkId, bookmarkId),
+            ),
+          )
+          .limit(1)
+        platform = existing?.platform
+      }
+
+      if (!platform) {
+        // Nothing matches this bookmarkId in the collection — nothing to remove.
+        return NextResponse.json({ success: true })
+      }
+
+      const now = new Date().toISOString()
+
+      // Remove from collection and bump the collection's updatedAt atomically.
+      runInTransaction(() => {
+        db.delete(collectionTweets)
+          .where(
+            and(
+              eq(collectionTweets.userId, userId),
+              eq(collectionTweets.collectionId, collectionId),
+              eq(collectionTweets.platform, platform as string),
+              eq(collectionTweets.bookmarkId, bookmarkId),
+            ),
+          )
+          .run()
+
+        db.update(collections)
+          .set({ updatedAt: now })
+          .where(and(eq(collections.id, collectionId), eq(collections.userId, userId)))
+          .run()
+      })
 
       return NextResponse.json({ success: true })
     } catch (error) {
@@ -147,6 +216,7 @@ export const GET = withAuth(
       const { id: bookmarkId } = await params
       const url = new URL(request.url)
       const mode = url.searchParams.get('mode')
+      const platform = parsePlatform(url.searchParams.get('platform'))
 
       // If mode=bookmark, return collections that contain this bookmark
       if (mode === 'bookmark') {
@@ -156,7 +226,11 @@ export const GET = withAuth(
           })
           .from(collectionTweets)
           .where(
-            and(eq(collectionTweets.userId, userId), eq(collectionTweets.bookmarkId, bookmarkId)),
+            and(
+              eq(collectionTweets.userId, userId),
+              eq(collectionTweets.bookmarkId, bookmarkId),
+              ...(platform ? [eq(collectionTweets.platform, platform)] : []),
+            ),
           )
 
         return NextResponse.json({
@@ -170,6 +244,7 @@ export const GET = withAuth(
       const tweets = await db
         .select({
           bookmarkId: collectionTweets.bookmarkId,
+          platform: collectionTweets.platform,
           addedAt: collectionTweets.addedAt,
           notes: collectionTweets.notes,
         })

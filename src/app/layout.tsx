@@ -13,6 +13,7 @@ import { ThemeProvider } from '@/lib/theme/context'
 import { PreferencesProvider } from '@/lib/preferences-context'
 import { AppShell } from '@/components/AppShell'
 import { FontProvider } from '@/components/FontProvider'
+import { jsonLdScriptContent } from '@/lib/utils/structured-data'
 
 // Body fonts - user can choose in settings
 const ibmPlex = IBM_Plex_Sans({
@@ -189,7 +190,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdScriptContent(jsonLd) }}
         />
       </head>
       <body

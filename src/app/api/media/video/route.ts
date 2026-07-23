@@ -6,6 +6,7 @@ import {
   isValidTweetId,
   streamingResponse,
 } from '@/lib/media/proxy'
+import { mediaRateLimit } from '@/lib/rate-limit'
 
 // Simple in-memory cache for video URLs (survives for 1 hour)
 // Cache key includes quality for different variants
@@ -27,6 +28,9 @@ interface VideoFormat {
 //   - hd: 720p (~2Mbps) - default, good balance
 //   - full: 1080p (~10Mbps) - highest quality
 export async function GET(request: NextRequest) {
+  const rateLimited = mediaRateLimit(request)
+  if (rateLimited) return rateLimited
+
   const searchParams = request.nextUrl.searchParams
   const author = searchParams.get('author')
   const tweetId = searchParams.get('tweetId')
