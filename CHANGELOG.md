@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.48.0](https://github.com/itsmemeworks/adhx/compare/v1.47.1...v1.48.0) (2026-07-23)
+
+
+### Features
+
+* growth w1 — crawlable tag pages, github visibility, trending cta, readme rewrite ([#284](https://github.com/itsmemeworks/adhx/issues/284)) ([cf289d7](https://github.com/itsmemeworks/adhx/commit/cf289d7734a9002097896327ab1e6bed49e5d933))
+
 ## [1.47.1](https://github.com/itsmemeworks/adhx/compare/v1.47.0...v1.47.1) (2026-07-23)
 
 
