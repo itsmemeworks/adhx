@@ -28,13 +28,22 @@ export const POST = withAuth(async (_req, userId) => {
 
     const bookmarkIdsWithLinks = bookmarksWithLinks.map((b) => b.bookmarkId)
 
-    // Get bookmarks without links (filtered by userId)
+    // Get bookmarks without links (filtered by userId).
+    // `notInArray` inlines every id as a bound parameter, which can exceed SQLite's
+    // bound-variable limit for large collections. Chunk the exclusion list — ANDing
+    // several `NOT IN (chunk)` conditions is equivalent to one `NOT IN (union of chunks)`.
+    const NOT_IN_CHUNK_SIZE = 500
     let bookmarksToProcess
     if (bookmarkIdsWithLinks.length > 0) {
+      const exclusionConditions = []
+      for (let i = 0; i < bookmarkIdsWithLinks.length; i += NOT_IN_CHUNK_SIZE) {
+        const chunk = bookmarkIdsWithLinks.slice(i, i + NOT_IN_CHUNK_SIZE)
+        exclusionConditions.push(notInArray(bookmarks.id, chunk))
+      }
       bookmarksToProcess = await db
         .select({ id: bookmarks.id, rawJson: bookmarks.rawJson })
         .from(bookmarks)
-        .where(and(eq(bookmarks.userId, userId), notInArray(bookmarks.id, bookmarkIdsWithLinks)))
+        .where(and(eq(bookmarks.userId, userId), ...exclusionConditions))
     } else {
       bookmarksToProcess = await db
         .select({ id: bookmarks.id, rawJson: bookmarks.rawJson })

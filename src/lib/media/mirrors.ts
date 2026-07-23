@@ -30,6 +30,37 @@ export interface VideoMirror {
  * - **vxinstagram** — `/offload/{id}/0.mp4` 302-redirects to a signed
  *   `d.rapidcdn.app` URL that streams the real Instagram CDN MP4 with Range
  *   support. (Add a fallback mirror here if/when this one degrades.)
+ *
+ * 2026-07-23 outage investigation (downloads reported broken again): live-probed
+ * this mirror plus every deterministic-URL alternative found. Findings, in case
+ * this recurs:
+ * - **vxinstagram** is currently the bottleneck: the site itself is up (its docs
+ *   page serves fine, and its documented route shape — `/offload/{id}/{order}.mp4`,
+ *   confirmed against the upstream source at
+ *   github.com/Lainmode/InstagramEmbed-vxinstagram — matches what we build here),
+ *   but `OffloadPost` 404s for every reel id tried (old + brand-new/viral,
+ *   several retries with backoff). Its `PostCacheService` proxies through a
+ *   bundled local SnapSave scraper sidecar (`GetOrFetchAsync` → `/igdl?url=`)
+ *   that is returning no media right now — an upstream outage on their side, not
+ *   a URL-shape problem on ours. Left configured as-is: `resolveInstagramVideo`
+ *   already retries/degrades gracefully, and this class of service is known to
+ *   flap (their own tracker has an issue titled almost exactly that).
+ * - **toinstagram.com / uuinstagram.com** (the old InstaFix-based pair, see
+ *   `src/lib/media/instafix.ts`) confirmed still dead: both 302 straight to
+ *   instagram.com, matching the documented 2026-04-02 InstaFix archival.
+ * - **ddinstagram.com** — NXDOMAIN, the domain itself is gone.
+ * - **kkinstagram.com** — resolves, but every path (including the vxinstagram
+ *   offload shape) redirects to a `kkclip.com` "Open in App" landing page, not a
+ *   streamable MP4 — no deterministic API surface.
+ * - **instagramez.com** — domain parked/repurposed to an ad-CPM redirect, unrelated
+ *   to Instagram.
+ * - **fastdl.app** — no deterministic server-side URL to build from just an id;
+ *   it's a paste-a-link UI that resolves a token per request (per their own
+ *   description: browser → extraction API → yt-dlp backend → CDN URL, cache-only,
+ *   nothing stable to construct ahead of time). Unsuitable for this registry.
+ *
+ * No replacement added — nothing found actually streams a video right now.
+ * When vxinstagram's sidecar recovers this should self-heal with no code change.
  */
 export const INSTAGRAM_MIRRORS: VideoMirror[] = [
   {

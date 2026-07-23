@@ -376,6 +376,67 @@ describe('API: /api/feed', () => {
       expect(data.items).toHaveLength(5)
       expect(data.pagination.page).toBe(2)
     })
+
+    it('non-numeric page falls back to page 1 instead of erroring', async () => {
+      const { GET } = await import('@/app/api/feed/route')
+      const response = await GET(createRequest({ page: 'abc', unreadOnly: 'false' }))
+
+      expect(response.status).toBe(200)
+      const data = await response.json()
+
+      expect(data.pagination.page).toBe(1)
+      expect(data.items.length).toBeGreaterThan(0)
+    })
+
+    it('page=0 is treated as page 1', async () => {
+      const { GET } = await import('@/app/api/feed/route')
+      const response = await GET(createRequest({ page: '0', unreadOnly: 'false' }))
+
+      expect(response.status).toBe(200)
+      const data = await response.json()
+
+      expect(data.pagination.page).toBe(1)
+    })
+
+    it('non-numeric limit falls back to the default limit instead of erroring', async () => {
+      const { GET } = await import('@/app/api/feed/route')
+      const response = await GET(createRequest({ limit: 'abc', unreadOnly: 'false' }))
+
+      expect(response.status).toBe(200)
+      const data = await response.json()
+
+      expect(data.pagination.limit).toBe(50)
+    })
+
+    it('negative limit is clamped to the default, not treated as unbounded', async () => {
+      // Push the collection past the default page size so an unbounded
+      // (unclamped) negative LIMIT would visibly return more than 50 rows.
+      const extra = Array.from({ length: 45 }, (_, i) =>
+        createTestBookmark(USER_A, `extra-${i + 1}`, {
+          processedAt: new Date(Date.now() - (i + 100) * 1000).toISOString(),
+        }),
+      )
+      await testInstance.db.insert(schema.bookmarks).values(extra)
+
+      const { GET } = await import('@/app/api/feed/route')
+      const response = await GET(createRequest({ limit: '-1', unreadOnly: 'false' }))
+
+      expect(response.status).toBe(200)
+      const data = await response.json()
+
+      expect(data.pagination.limit).toBe(50)
+      expect(data.items.length).toBe(50)
+    })
+
+    it('limit above 100 is clamped to 100', async () => {
+      const { GET } = await import('@/app/api/feed/route')
+      const response = await GET(createRequest({ limit: '99999', unreadOnly: 'false' }))
+
+      expect(response.status).toBe(200)
+      const data = await response.json()
+
+      expect(data.pagination.limit).toBe(100)
+    })
   })
 
   describe('Unread filter', () => {

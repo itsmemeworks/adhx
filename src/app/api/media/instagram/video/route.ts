@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { isValidReelId } from '@/lib/media/instafix'
 import { resolveInstagramVideo } from '@/lib/media/mirrors'
 import { streamingResponse } from '@/lib/media/proxy'
+import { mediaRateLimit } from '@/lib/rate-limit'
 
 /**
  * Instagram Reel video proxy — streams the MP4 through the server for inline
@@ -15,6 +16,9 @@ import { streamingResponse } from '@/lib/media/proxy'
  * GET /api/media/instagram/video?id={reelId}
  */
 export async function GET(request: NextRequest) {
+  const rateLimited = mediaRateLimit(request)
+  if (rateLimited) return rateLimited
+
   const id = request.nextUrl.searchParams.get('id')
   if (!id || !isValidReelId(id)) {
     return NextResponse.json({ error: 'Missing or invalid id' }, { status: 400 })
