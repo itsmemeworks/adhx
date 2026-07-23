@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { captureException } from '@/lib/sentry'
+import { isAllowedHlsUrl } from '@/lib/media/proxy'
+import { mediaRateLimit } from '@/lib/rate-limit'
 
 /**
  * HLS Proxy - Fetches m3u8 playlists from Twitter and rewrites segment URLs
@@ -13,6 +15,9 @@ import { captureException } from '@/lib/sentry'
  * GET /api/media/video/hls?url=<encoded-m3u8-url>
  */
 export async function GET(request: NextRequest) {
+  const rateLimited = mediaRateLimit(request)
+  if (rateLimited) return rateLimited
+
   const searchParams = request.nextUrl.searchParams
   const hlsUrl = searchParams.get('url')
 
@@ -21,14 +26,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Validate URL is from Twitter's video CDN (strict domain check to prevent SSRF)
-    const url = new URL(hlsUrl)
-    const isAllowed =
-      url.hostname === 'video.twimg.com' ||
-      url.hostname.endsWith('.twimg.com') ||
-      url.hostname === 'twitter.com' ||
-      url.hostname.endsWith('.twitter.com')
-    if (!isAllowed) {
+    // Validate URL is from Twitter's video CDN (strict domain check + https-only
+    // via the shared SSRF allowlist factory, to prevent SSRF)
+    if (!isAllowedHlsUrl(hlsUrl)) {
       return NextResponse.json({ error: 'Invalid HLS URL' }, { status: 400 })
     }
 
