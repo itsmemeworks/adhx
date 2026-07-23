@@ -186,7 +186,7 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
       // The OG title now matches the content-first page <title> — the old
       // "Preview @user's tweet" utility framing was dropped for CTR.
       expect(metadata.openGraph?.title).toBe(
-        'This is a test tweet with some interesting content — @testauthor | ADHX',
+        'This is a test tweet with some interesting content — @testauthor',
       )
     })
 

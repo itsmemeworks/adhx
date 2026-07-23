@@ -39,14 +39,15 @@ describe('truncateWordBoundary', () => {
 
 describe('buildContentTitle', () => {
   it('brand-suffixes the content', () => {
-    expect(buildContentTitle('A great video')).toBe('A great video | ADHX')
+    expect(buildContentTitle('A great video')).toBe('A great video')
   })
 
   it('truncates long content before suffixing', () => {
     const long = 'A '.repeat(50).trim()
     const title = buildContentTitle(long)
-    expect(title.endsWith(' | ADHX')).toBe(true)
-    expect(title.length).toBeLessThanOrEqual(60 + ' | ADHX'.length + 1)
+    // No brand suffix — the root layout's title template appends '| ADHX'.
+    expect(title.includes('| ADHX')).toBe(false)
+    expect(title.length).toBeLessThanOrEqual(60 + 1)
   })
 })
 

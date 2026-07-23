@@ -92,7 +92,7 @@ describe('Author hub route: /[username]', () => {
         params: Promise.resolve({ username: 'testauthor' }),
       })
 
-      expect(metadata.title).toBe('@testauthor — saved posts on ADHX')
+      expect(metadata.title).toBe('@testauthor — saved posts')
       expect(metadata.description).toContain('2 public posts')
       expect(metadata.alternates?.canonical).toContain('/testauthor')
     })

@@ -75,7 +75,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
   if (!archive) return {}
 
-  const title = `Best of the internet, ${archive.label} — ADHX Trending Archive`
+  const title = `Best of the internet, ${archive.label} — Trending Archive`
   const description = `What the ADHX community saved and previewed the week of ${archive.label}: ${describeCounts(archive.items)}.`
 
   return {

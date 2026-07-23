@@ -4,7 +4,6 @@ import { truncateWordBoundary, buildContentDescription } from './content-metadat
 
 type FxTweet = NonNullable<FxTwitterResponse['tweet']>
 
-const TITLE_SUFFIX = ' | ADHX'
 const TITLE_CONTENT_LEN = 60
 /** Max length for "<content> — @handle" before we drop the handle to stay tidy. */
 const TITLE_WITH_HANDLE_BUDGET = 70
@@ -22,11 +21,12 @@ function mediaFallbackLabel(tweet: FxTweet, screenName: string): string {
  * (or an X Article's headline) instead of the "Preview @user's tweet" utility
  * pitch. Falls back to a media-aware label for tweets with no text of their
  * own (photo/video/quote-only). Keeps the @handle only when it still fits a
- * sane budget, then a short " | ADHX" brand suffix.
+ * sane budget. No brand suffix — the root layout's title template
+ * (`%s | ADHX`) appends it exactly once.
  */
 export function buildTweetTitle(tweet: FxTweet, screenName: string): string {
   if (tweet.article?.title) {
-    return `${tweet.article.title}${TITLE_SUFFIX}`
+    return tweet.article.title
   }
 
   const ownText = truncateWordBoundary(tweet.text || '', TITLE_CONTENT_LEN)
@@ -34,9 +34,9 @@ export function buildTweetTitle(tweet: FxTweet, screenName: string): string {
 
   const withHandle = `${content} — @${screenName}`
   if (ownText && withHandle.length <= TITLE_WITH_HANDLE_BUDGET) {
-    return `${withHandle}${TITLE_SUFFIX}`
+    return withHandle
   }
-  return `${content}${TITLE_SUFFIX}`
+  return content
 }
 
 /**

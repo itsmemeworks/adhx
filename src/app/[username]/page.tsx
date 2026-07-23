@@ -52,7 +52,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const displayName = profile.authorName
     ? `${profile.authorName} (@${profile.handle})`
     : `@${profile.handle}`
-  const title = `@${profile.handle} — saved posts on ADHX`
+  const title = `@${profile.handle} — saved posts`
   const description = `${profile.totalCount} public post${profile.totalCount === 1 ? '' : 's'} by ${displayName}, saved and previewed on ADHX — X posts, videos, photos and articles.`
   const canonicalUrl = `${BASE_URL}/${profile.handle}`
 

@@ -184,7 +184,8 @@ describe('OG Metadata with Real Fixtures', () => {
 
       // Validate structure
       expect(metadata.title).toBeTruthy()
-      expect(metadata.title.endsWith(' | ADHX')).toBe(true)
+      // No brand suffix in the string — the layout title template adds '| ADHX'.
+      expect(metadata.title.includes('| ADHX')).toBe(false)
       expect(metadata.description.length).toBeLessThanOrEqual(160)
       expect(metadata.openGraph.images[0].url).toBeTruthy()
       expect(metadata.twitter.card).toBe('summary_large_image')
@@ -198,19 +199,19 @@ describe('OG Metadata with Real Fixtures', () => {
     it('article-with-media: keeps the X Article title as the lead', () => {
       const tweet = fixtures['article-with-media'].tweet!
       const title = buildTweetTitle(tweet, tweet.author.screen_name)
-      expect(title).toBe(`${tweet.article!.title} | ADHX`)
+      expect(title).toBe(tweet.article!.title)
     })
 
     it('article-no-header: keeps the X Article title as the lead even without a cover', () => {
       const tweet = fixtures['article-no-header'].tweet!
       const title = buildTweetTitle(tweet, tweet.author.screen_name)
-      expect(title).toBe(`${tweet.article!.title} | ADHX`)
+      expect(title).toBe(tweet.article!.title)
     })
 
     it('long-text-with-quote: truncates long tweet text at a word boundary, not mid-word', () => {
       const tweet = fixtures['long-text-with-quote'].tweet!
       const title = buildTweetTitle(tweet, tweet.author.screen_name)
-      expect(title.endsWith(' | ADHX')).toBe(true)
+      expect(title.includes('| ADHX')).toBe(false)
       // Reasonable title length, and no doubled-up whitespace from a bad cut.
       expect(title.length).toBeLessThanOrEqual(90)
       expect(title).not.toMatch(/ {2,}/)
@@ -220,21 +221,21 @@ describe('OG Metadata with Real Fixtures', () => {
       const base = fixtures['video-tweet'].tweet!
       const emptyTextVideoTweet = { ...base, text: '   https://t.co/abc123   ' }
       const title = buildTweetTitle(emptyTextVideoTweet, emptyTextVideoTweet.author.screen_name)
-      expect(title).toBe(`Video by @${emptyTextVideoTweet.author.screen_name} | ADHX`)
+      expect(title).toBe(`Video by @${emptyTextVideoTweet.author.screen_name}`)
     })
 
     it('falls back to a photo label for an empty-text photo tweet', () => {
       const base = fixtures['4-images'].tweet!
       const emptyTextPhotoTweet = { ...base, text: '' }
       const title = buildTweetTitle(emptyTextPhotoTweet, emptyTextPhotoTweet.author.screen_name)
-      expect(title).toBe(`Photo by @${emptyTextPhotoTweet.author.screen_name} | ADHX`)
+      expect(title).toBe(`Photo by @${emptyTextPhotoTweet.author.screen_name}`)
     })
 
     it('falls back to a generic label for an empty-text tweet with no media', () => {
       const base = fixtures['plain-text'].tweet!
       const emptyTextTweet = { ...base, text: '' }
       const title = buildTweetTitle(emptyTextTweet, emptyTextTweet.author.screen_name)
-      expect(title).toBe(`Post by @${emptyTextTweet.author.screen_name} | ADHX`)
+      expect(title).toBe(`Post by @${emptyTextTweet.author.screen_name}`)
     })
 
     it('adds an engagement suffix to the SEO description when counts are notable', () => {

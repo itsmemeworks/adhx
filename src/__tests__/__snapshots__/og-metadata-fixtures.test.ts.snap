@@ -17,10 +17,10 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > '4-images':
     ],
     "publishedTime": "Mon Jan 12 18:34:37 +0000 2026",
     "siteName": "ADHX",
-    "title": "Apparently, a 19 year old built Wisprflow's UGC program to… — @iamgdsa | ADHX",
+    "title": "Apparently, a 19 year old built Wisprflow's UGC program to… — @iamgdsa",
     "type": "article",
   },
-  "title": "Apparently, a 19 year old built Wisprflow's UGC program to… — @iamgdsa | ADHX",
+  "title": "Apparently, a 19 year old built Wisprflow's UGC program to… — @iamgdsa",
   "twitter": {
     "card": "summary_large_image",
     "creator": "@iamgdsa",
@@ -28,7 +28,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > '4-images':
     "images": [
       "https://pbs.twimg.com/media/G-e63eNWkAATqEB.jpg",
     ],
-    "title": "Apparently, a 19 year old built Wisprflow's UGC program to… — @iamgdsa | ADHX",
+    "title": "Apparently, a 19 year old built Wisprflow's UGC program to… — @iamgdsa",
   },
 }
 `;
@@ -50,10 +50,10 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-no
     ],
     "publishedTime": "Thu Jan 08 19:34:17 +0000 2026",
     "siteName": "ADHX",
-    "title": "human data will be a $1 trillion/year market | ADHX",
+    "title": "human data will be a $1 trillion/year market",
     "type": "article",
   },
-  "title": "human data will be a $1 trillion/year market | ADHX",
+  "title": "human data will be a $1 trillion/year market",
   "twitter": {
     "card": "summary_large_image",
     "creator": "@aliniikk",
@@ -61,7 +61,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-no
     "images": [
       "https://pbs.twimg.com/profile_images/1987673473108582402/yFQu0vw1_200x200.jpg",
     ],
-    "title": "human data will be a $1 trillion/year market | ADHX",
+    "title": "human data will be a $1 trillion/year market",
   },
 }
 `;
@@ -83,10 +83,10 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-wi
     ],
     "publishedTime": "Wed Jan 07 17:42:16 +0000 2026",
     "siteName": "ADHX",
-    "title": "How to Get Shredded (Without Even Trying) | ADHX",
+    "title": "How to Get Shredded (Without Even Trying)",
     "type": "article",
   },
-  "title": "How to Get Shredded (Without Even Trying) | ADHX",
+  "title": "How to Get Shredded (Without Even Trying)",
   "twitter": {
     "card": "summary_large_image",
     "creator": "@NoahRyanCo",
@@ -94,7 +94,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-wi
     "images": [
       "https://pbs.twimg.com/media/G-E_92mXcAALnrI.jpg",
     ],
-    "title": "How to Get Shredded (Without Even Trying) | ADHX",
+    "title": "How to Get Shredded (Without Even Trying)",
   },
 }
 `;
@@ -116,10 +116,10 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'emoji-twee
     ],
     "publishedTime": "Fri Jan 09 13:59:16 +0000 2026",
     "siteName": "ADHX",
-    "title": "BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Named… — @moonpay | ADHX",
+    "title": "BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Named… — @moonpay",
     "type": "article",
   },
-  "title": "BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Named… — @moonpay | ADHX",
+  "title": "BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Named… — @moonpay",
   "twitter": {
     "card": "summary_large_image",
     "creator": "@moonpay",
@@ -127,7 +127,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'emoji-twee
     "images": [
       "https://pbs.twimg.com/amplify_video_thumb/2009617113384706048/img/uUdl5DT48QRZSEHb.jpg",
     ],
-    "title": "BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Named… — @moonpay | ADHX",
+    "title": "BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Named… — @moonpay",
   },
 }
 `;
@@ -149,10 +149,10 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-
     ],
     "publishedTime": "Wed Jan 14 17:25:23 +0000 2026",
     "siteName": "ADHX",
-    "title": "Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory… | ADHX",
+    "title": "Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory…",
     "type": "article",
   },
-  "title": "Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory… | ADHX",
+  "title": "Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory…",
   "twitter": {
     "card": "summary_large_image",
     "creator": "@maverickecom",
@@ -160,7 +160,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-
     "images": [
       "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg",
     ],
-    "title": "Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory… | ADHX",
+    "title": "Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory…",
   },
 }
 `;
@@ -182,10 +182,10 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-
     ],
     "publishedTime": "Fri Jan 16 06:09:20 +0000 2026",
     "siteName": "ADHX",
-    "title": "🚨BREAKING: TRUMP FURIOUS WITH STARMER U.S state department… | ADHX",
+    "title": "🚨BREAKING: TRUMP FURIOUS WITH STARMER U.S state department…",
     "type": "article",
   },
-  "title": "🚨BREAKING: TRUMP FURIOUS WITH STARMER U.S state department… | ADHX",
+  "title": "🚨BREAKING: TRUMP FURIOUS WITH STARMER U.S state department…",
   "twitter": {
     "card": "summary_large_image",
     "creator": "@BasilTheGreat",
@@ -193,7 +193,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-
     "images": [
       "https://pbs.twimg.com/media/G-w2zr6aEAAt-FN.png",
     ],
-    "title": "🚨BREAKING: TRUMP FURIOUS WITH STARMER U.S state department… | ADHX",
+    "title": "🚨BREAKING: TRUMP FURIOUS WITH STARMER U.S state department…",
   },
 }
 `;
@@ -215,10 +215,10 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-
     ],
     "publishedTime": "Thu Jan 15 16:13:54 +0000 2026",
     "siteName": "ADHX",
-    "title": "⚡️This is a live containment operation. The strike was… | ADHX",
+    "title": "⚡️This is a live containment operation. The strike was…",
     "type": "article",
   },
-  "title": "⚡️This is a live containment operation. The strike was… | ADHX",
+  "title": "⚡️This is a live containment operation. The strike was…",
   "twitter": {
     "card": "summary_large_image",
     "creator": "@_The_Prophet__",
@@ -226,7 +226,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-
     "images": [
       "https://pbs.twimg.com/media/G-tNQK3akAAXwrR.jpg",
     ],
-    "title": "⚡️This is a live containment operation. The strike was… | ADHX",
+    "title": "⚡️This is a live containment operation. The strike was…",
   },
 }
 `;
@@ -248,10 +248,10 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'plain-text
     ],
     "publishedTime": "Sun Jan 11 03:00:02 +0000 2026",
     "siteName": "ADHX",
-    "title": "What movie is 10/10, yet hardly anyone has heard of it? | ADHX",
+    "title": "What movie is 10/10, yet hardly anyone has heard of it?",
     "type": "article",
   },
-  "title": "What movie is 10/10, yet hardly anyone has heard of it? | ADHX",
+  "title": "What movie is 10/10, yet hardly anyone has heard of it?",
   "twitter": {
     "card": "summary_large_image",
     "creator": "@TheCinesthetic",
@@ -259,7 +259,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'plain-text
     "images": [
       "https://pbs.twimg.com/profile_images/1385452682517745667/mfcIUnoX_200x200.jpg",
     ],
-    "title": "What movie is 10/10, yet hardly anyone has heard of it? | ADHX",
+    "title": "What movie is 10/10, yet hardly anyone has heard of it?",
   },
 }
 `;
@@ -281,10 +281,10 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-i
     ],
     "publishedTime": "Thu Jan 15 13:25:44 +0000 2026",
     "siteName": "ADHX",
-    "title": "for all of you guys that haven’t cracked organic yet you’re… | ADHX",
+    "title": "for all of you guys that haven’t cracked organic yet you’re…",
     "type": "article",
   },
-  "title": "for all of you guys that haven’t cracked organic yet you’re… | ADHX",
+  "title": "for all of you guys that haven’t cracked organic yet you’re…",
   "twitter": {
     "card": "summary_large_image",
     "creator": "@Nate_Google_",
@@ -292,7 +292,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-i
     "images": [
       "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg",
     ],
-    "title": "for all of you guys that haven’t cracked organic yet you’re… | ADHX",
+    "title": "for all of you guys that haven’t cracked organic yet you’re…",
   },
 }
 `;
@@ -314,10 +314,10 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-t
     ],
     "publishedTime": "Fri Jan 16 05:55:05 +0000 2026",
     "siteName": "ADHX",
-    "title": "True — @elonmusk | ADHX",
+    "title": "True — @elonmusk",
     "type": "article",
   },
-  "title": "True — @elonmusk | ADHX",
+  "title": "True — @elonmusk",
   "twitter": {
     "card": "summary_large_image",
     "creator": "@elonmusk",
@@ -325,7 +325,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-t
     "images": [
       "https://pbs.twimg.com/profile_images/2008546467615580160/57KcqsTA_200x200.jpg",
     ],
-    "title": "True — @elonmusk | ADHX",
+    "title": "True — @elonmusk",
   },
 }
 `;
@@ -347,10 +347,10 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'reply-twee
     ],
     "publishedTime": "Thu Jan 15 00:29:03 +0000 2026",
     "siteName": "ADHX",
-    "title": "Based on recent reports, the UK government has approved… — @grok | ADHX",
+    "title": "Based on recent reports, the UK government has approved… — @grok",
     "type": "article",
   },
-  "title": "Based on recent reports, the UK government has approved… — @grok | ADHX",
+  "title": "Based on recent reports, the UK government has approved… — @grok",
   "twitter": {
     "card": "summary_large_image",
     "creator": "@grok",
@@ -358,7 +358,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'reply-twee
     "images": [
       "https://pbs.twimg.com/profile_images/1893219113717342208/Vgg2hEPa_200x200.jpg",
     ],
-    "title": "Based on recent reports, the UK government has approved… — @grok | ADHX",
+    "title": "Based on recent reports, the UK government has approved… — @grok",
   },
 }
 `;
@@ -380,10 +380,10 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'text-quoti
     ],
     "publishedTime": "Thu Jan 15 18:00:48 +0000 2026",
     "siteName": "ADHX",
-    "title": "insane how much goalposts have shifted that bfl can just… — @swyx | ADHX",
+    "title": "insane how much goalposts have shifted that bfl can just… — @swyx",
     "type": "article",
   },
-  "title": "insane how much goalposts have shifted that bfl can just… — @swyx | ADHX",
+  "title": "insane how much goalposts have shifted that bfl can just… — @swyx",
   "twitter": {
     "card": "summary_large_image",
     "creator": "@swyx",
@@ -391,7 +391,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'text-quoti
     "images": [
       "https://pbs.twimg.com/amplify_video_thumb/2011825767634911237/img/rRqDWGszLMh8F1zp.jpg",
     ],
-    "title": "insane how much goalposts have shifted that bfl can just… — @swyx | ADHX",
+    "title": "insane how much goalposts have shifted that bfl can just… — @swyx",
   },
 }
 `;
@@ -413,10 +413,10 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'video-twee
     ],
     "publishedTime": "Thu Jan 15 18:45:00 +0000 2026",
     "siteName": "ADHX",
-    "title": "Primes look chaotic in a line, but reveal structure when… | ADHX",
+    "title": "Primes look chaotic in a line, but reveal structure when…",
     "type": "article",
   },
-  "title": "Primes look chaotic in a line, but reveal structure when… | ADHX",
+  "title": "Primes look chaotic in a line, but reveal structure when…",
   "twitter": {
     "card": "summary_large_image",
     "creator": "@Kekius_Sage",
@@ -424,7 +424,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'video-twee
     "images": [
       "https://pbs.twimg.com/amplify_video_thumb/2011857732484423680/img/wFNhWwXUnF0woRwH.jpg",
     ],
-    "title": "Primes look chaotic in a line, but reveal structure when… | ADHX",
+    "title": "Primes look chaotic in a line, but reveal structure when…",
   },
 }
 `;
@@ -446,10 +446,10 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'youtube-li
     ],
     "publishedTime": "Thu Dec 04 20:26:43 +0000 2025",
     "siteName": "ADHX",
-    "title": "link: — @skalskip92 | ADHX",
+    "title": "link: — @skalskip92",
     "type": "article",
   },
-  "title": "link: — @skalskip92 | ADHX",
+  "title": "link: — @skalskip92",
   "twitter": {
     "card": "summary_large_image",
     "creator": "@skalskip92",
@@ -457,7 +457,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'youtube-li
     "images": [
       "https://pbs.twimg.com/profile_images/1557421659925237763/RzJu2YI3_200x200.jpg",
     ],
-    "title": "link: — @skalskip92 | ADHX",
+    "title": "link: — @skalskip92",
   },
 }
 `;

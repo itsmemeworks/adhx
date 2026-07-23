@@ -7,7 +7,6 @@
  * framing converting at 0.4% CTR, well below what a content-led snippet gets.
  */
 
-const TITLE_SUFFIX = ' | ADHX'
 const TITLE_LEN = 60
 const DESC_LEN = 160
 
@@ -28,9 +27,13 @@ export function truncateWordBoundary(text: string, maxLength: number): string {
   return `${cut.trimEnd()}…`
 }
 
-/** Content-first `<title>`: the post's own content, brand-suffixed. */
+/**
+ * Content-first `<title>`: the post's own content. No brand suffix here — the
+ * root layout's title template (`%s | ADHX`) appends it exactly once; adding
+ * it in the string too rendered a double "| ADHX | ADHX".
+ */
 export function buildContentTitle(content: string, maxLength = TITLE_LEN): string {
-  return `${truncateWordBoundary(content, maxLength)}${TITLE_SUFFIX}`
+  return truncateWordBoundary(content, maxLength)
 }
 
 /**
