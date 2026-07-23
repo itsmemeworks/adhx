@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.47.0](https://github.com/itsmemeworks/adhx/compare/v1.46.5...v1.47.0) (2026-07-23)
+
+
+### Features
+
+* seo growth loop — content-first metadata, author hubs, trending archive, wider sitemap ([#280](https://github.com/itsmemeworks/adhx/issues/280)) ([72729b1](https://github.com/itsmemeworks/adhx/commit/72729b1f4641e52de1cc56b3eea28c882d41fd74))
+
+
+### Documentation
+
+* install agent context protocol and refresh readme/architecture ([#279](https://github.com/itsmemeworks/adhx/issues/279)) ([0270c40](https://github.com/itsmemeworks/adhx/commit/0270c40002eebbc26d4453610b934acd33503816))
+
 ## [1.46.5](https://github.com/itsmemeworks/adhx/compare/v1.46.4...v1.46.5) (2026-07-23)
 
 
