@@ -83,6 +83,14 @@ export default async function TrendingPage() {
       <h1 className="sr-only">What people are saving across X, TikTok, Instagram and YouTube</h1>
       <TrendingStaticList items={items} heading="Latest posts" />
       <DiscoverFeed initialItems={items} initialFilter="latest" />
+      <nav aria-label="Trending archive" className="pb-10 pt-2 text-center">
+        <a
+          href="/trending/archive"
+          className="text-sm text-ink-3 underline decoration-hairline underline-offset-4 transition-colors hover:text-ink"
+        >
+          Browse past weeks in the Trending Archive →
+        </a>
+      </nav>
     </>
   )
 }

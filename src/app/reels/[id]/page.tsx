@@ -7,6 +7,8 @@ import { getSession } from '@/lib/auth/session'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 import { isLikelyBot } from '@/lib/activity/bot'
 import { buildVideoObjectLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
+import { buildContentTitle, buildContentDescription } from '@/lib/utils/content-metadata'
+import { RelatedSaves } from '@/components/RelatedSaves'
 import { db } from '@/lib/db'
 import { bookmarks } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
@@ -119,6 +121,14 @@ export default async function ReelPreviewPage({ params }: Props) {
         authorName={authorName || undefined}
         isAuthenticated={!!session}
       />
+      {available && (
+        <RelatedSaves
+          platform="instagram"
+          bookmarkId={id}
+          authorHandle={author || 'instagram'}
+          contentType="video"
+        />
+      )}
     </>
   )
 }
@@ -137,11 +147,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const meta = await fetchReelMetadata(id)
 
   const who = meta?.authorName || meta?.author
-  // Page <title> for the browser tab; unfurl headline says "Preview" (the
-  // "ADHX" label comes from og:site_name, so don't repeat it in the title).
-  const pageTitle = who ? `${who} on Instagram` : 'Instagram Reel'
-  const headline = who ? `Preview ${who}'s reel` : 'Preview this Instagram reel'
-  const description = meta?.caption || meta?.description || 'Preview this Instagram Reel on ADHX.'
+  const caption = meta?.caption || meta?.description || ''
+
+  // Content-first `<title>` + SERP description: lead with the caption itself,
+  // falling back to an author-aware label when there's no caption to lead
+  // with — not the old "Preview @user's reel" utility pitch.
+  const pageTitle = buildContentTitle(caption || (who ? `Reel by ${who}` : 'Instagram Reel'))
+  const description = buildContentDescription(
+    caption || (who ? `${who} on Instagram.` : 'An Instagram Reel.'),
+  )
   const image = meta?.imageUrl
     ? `${baseUrl}/api/media/instagram/thumbnail?id=${encodeURIComponent(id)}`
     : `${baseUrl}/og-logo.png`
@@ -151,15 +165,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description,
     openGraph: {
       type: 'article',
-      title: headline,
+      title: pageTitle,
       description,
       siteName: 'ADHX',
       url: canonicalUrl,
-      images: [{ url: image, alt: headline }],
+      images: [{ url: image, alt: pageTitle }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: headline,
+      title: pageTitle,
       description,
       images: [image],
     },

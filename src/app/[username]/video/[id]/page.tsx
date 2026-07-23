@@ -7,6 +7,8 @@ import { getSession } from '@/lib/auth/session'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 import { isLikelyBot } from '@/lib/activity/bot'
 import { buildVideoObjectLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
+import { buildContentTitle, buildContentDescription } from '@/lib/utils/content-metadata'
+import { RelatedSaves } from '@/components/RelatedSaves'
 import { db } from '@/lib/db'
 import { bookmarks } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
@@ -118,6 +120,14 @@ export default async function TikTokPreviewPage({ params }: Props) {
         hasVideo={hasVideo}
         isAuthenticated={!!session}
       />
+      {available && (
+        <RelatedSaves
+          platform="tiktok"
+          bookmarkId={id}
+          authorHandle={author || handle}
+          contentType="video"
+        />
+      )}
     </>
   )
 }
@@ -135,11 +145,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const meta = await fetchTikTokMetadata(handle, id)
 
   const who = meta?.authorName || meta?.author || `@${handle}`
-  // Page <title> for the tab; unfurl headline says "Preview" (og:site_name
-  // already carries "ADHX", so don't repeat it in the title).
-  const pageTitle = meta?.title || `@${handle} on TikTok`
-  const headline = `Preview ${who}'s TikTok`
-  const description = meta?.description || `Watch this TikTok by @${handle} on ADHX.`
+
+  // Content-first `<title>` + SERP description: lead with the TikTok's own
+  // caption/title, not the old "Preview @user's TikTok" utility pitch.
+  const pageTitle = buildContentTitle(meta?.title || meta?.description || `${who} on TikTok`)
+  const description = buildContentDescription(
+    meta?.description || meta?.title || `A TikTok by @${handle}.`,
+  )
   // Poster via the thumbnail proxy so the card unfurls with an image.
   const image = `${baseUrl}/api/media/tiktok/thumbnail?username=${encodeURIComponent(handle)}&id=${encodeURIComponent(id)}`
 
@@ -148,15 +160,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description,
     openGraph: {
       type: 'article',
-      title: headline,
+      title: pageTitle,
       description,
       siteName: 'ADHX',
       url: canonicalUrl,
-      images: [{ url: image, alt: headline }],
+      images: [{ url: image, alt: pageTitle }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: headline,
+      title: pageTitle,
       description,
       images: [image],
     },
