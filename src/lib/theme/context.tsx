@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 type Theme = 'light' | 'dark' | 'system'
 
@@ -63,16 +63,25 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return () => mediaQuery.removeEventListener('change', handleChange)
   }, [theme])
 
-  const setTheme = (newTheme: Theme) => {
+  const setTheme = useCallback((newTheme: Theme) => {
     setThemeState(newTheme)
-    localStorage.setItem('theme', newTheme)
-  }
+    try {
+      localStorage.setItem('theme', newTheme)
+    } catch {
+      // Safari private mode (and similar) throws on localStorage writes —
+      // the in-memory state still updates, it just won't persist.
+    }
+  }, [])
 
-  return (
-    <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>
-      {children}
-    </ThemeContext.Provider>
+  // Memoize the context value so consumers only re-render when theme/
+  // resolvedTheme actually change, not on every provider render (setTheme is
+  // itself stable via useCallback, so it can't be what invalidates this).
+  const value = useMemo(
+    () => ({ theme, setTheme, resolvedTheme }),
+    [theme, setTheme, resolvedTheme],
   )
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }
 
 export function useTheme() {
