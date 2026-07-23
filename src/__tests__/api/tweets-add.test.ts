@@ -17,6 +17,9 @@ vi.mock('@/lib/db', () => ({
   get db() {
     return testInstance.db
   },
+  runInTransaction<R>(fn: () => R): R {
+    return testInstance.sqlite.transaction(fn)()
+  },
 }))
 
 vi.mock('@/lib/auth/session', () => ({
@@ -293,6 +296,105 @@ describe('API: /api/tweets/add', () => {
       const data = await response.json()
       expect(data.isDuplicate).toBe(false)
       expect(data.success).toBe(true)
+    })
+
+    it('a save as USER_A is not visible to / not a duplicate for USER_B', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockTweetData),
+      })
+
+      const { POST } = await import('@/app/api/tweets/add/route')
+
+      // USER_A saves the tweet
+      mockUserId = 'user-123'
+      const firstResponse = await POST(
+        createRequest({ url: 'https://twitter.com/testuser/status/123456789' }),
+      )
+      expect(firstResponse.status).toBe(200)
+      const firstData = await firstResponse.json()
+      expect(firstData.isDuplicate).toBe(false)
+
+      // USER_B saves the exact same tweet URL — should not see USER_A's bookmark
+      // as a duplicate, and should get their own independent row.
+      mockUserId = 'user-b-456'
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockTweetData),
+      })
+      const secondResponse = await POST(
+        createRequest({ url: 'https://twitter.com/testuser/status/123456789' }),
+      )
+      expect(secondResponse.status).toBe(200)
+      const secondData = await secondResponse.json()
+      expect(secondData.isDuplicate).toBe(false)
+      expect(secondData.success).toBe(true)
+
+      const userABookmarks = await testInstance.db
+        .select()
+        .from(schema.bookmarks)
+        .where(eq(schema.bookmarks.userId, 'user-123'))
+      const userBBookmarks = await testInstance.db
+        .select()
+        .from(schema.bookmarks)
+        .where(eq(schema.bookmarks.userId, 'user-b-456'))
+
+      expect(userABookmarks).toHaveLength(1)
+      expect(userBBookmarks).toHaveLength(1)
+    })
+
+    it('does not treat a same-id bookmark on a different platform as a duplicate', async () => {
+      // Pre-insert a TikTok bookmark with the same numeric id the incoming
+      // tweet will use — composite key is (userId, platform, id), so this
+      // must not be reported as a duplicate for the twitter-only add endpoint.
+      await testInstance.db.insert(schema.bookmarks).values({
+        id: '123456789',
+        userId: 'user-123',
+        platform: 'tiktok',
+        author: 'someone',
+        text: 'A tiktok video, not a tweet',
+        tweetUrl: 'https://tiktok.com/@someone/video/123456789',
+        processedAt: new Date().toISOString(),
+      })
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockTweetData),
+      })
+
+      const { POST } = await import('@/app/api/tweets/add/route')
+      const response = await POST(
+        createRequest({ url: 'https://twitter.com/testuser/status/123456789' }),
+      )
+
+      expect(response.status).toBe(200)
+      const data = await response.json()
+      expect(data.isDuplicate).toBe(false)
+      expect(data.success).toBe(true)
+
+      const twitterBookmark = await testInstance.db
+        .select()
+        .from(schema.bookmarks)
+        .where(
+          and(
+            eq(schema.bookmarks.userId, 'user-123'),
+            eq(schema.bookmarks.platform, 'twitter'),
+            eq(schema.bookmarks.id, '123456789'),
+          ),
+        )
+      expect(twitterBookmark).toHaveLength(1)
+
+      const tiktokBookmark = await testInstance.db
+        .select()
+        .from(schema.bookmarks)
+        .where(
+          and(
+            eq(schema.bookmarks.userId, 'user-123'),
+            eq(schema.bookmarks.platform, 'tiktok'),
+            eq(schema.bookmarks.id, '123456789'),
+          ),
+        )
+      expect(tiktokBookmark).toHaveLength(1)
     })
   })
 

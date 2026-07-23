@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { captureException } from '@/lib/sentry'
+import { isAllowedHlsUrl } from '@/lib/media/proxy'
+import { mediaRateLimit } from '@/lib/rate-limit'
 
 /**
  * HLS Segment Proxy - Fetches individual video segments from Twitter's CDN
@@ -13,6 +15,9 @@ import { captureException } from '@/lib/sentry'
  * GET /api/media/video/hls/segment?url=<encoded-segment-url>
  */
 export async function GET(request: NextRequest) {
+  const rateLimited = mediaRateLimit(request)
+  if (rateLimited) return rateLimited
+
   const searchParams = request.nextUrl.searchParams
   const segmentUrl = searchParams.get('url')
 
@@ -21,14 +26,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Validate URL is from Twitter's video CDN (strict domain check to prevent SSRF)
-    const url = new URL(segmentUrl)
-    const isAllowed =
-      url.hostname === 'video.twimg.com' ||
-      url.hostname.endsWith('.twimg.com') ||
-      url.hostname === 'twitter.com' ||
-      url.hostname.endsWith('.twitter.com')
-    if (!isAllowed) {
+    // Validate URL is from Twitter's video CDN (strict domain check + https-only
+    // via the shared SSRF allowlist factory, to prevent SSRF)
+    if (!isAllowedHlsUrl(segmentUrl)) {
       return NextResponse.json({ error: 'Invalid segment URL' }, { status: 400 })
     }
 

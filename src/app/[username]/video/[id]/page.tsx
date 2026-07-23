@@ -6,7 +6,7 @@ import { fetchTikTokMetadata, isValidUsername, isValidVideoId } from '@/lib/medi
 import { getSession } from '@/lib/auth/session'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 import { isLikelyBot } from '@/lib/activity/bot'
-import { buildVideoObjectLd } from '@/lib/utils/structured-data'
+import { buildVideoObjectLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
 import { db } from '@/lib/db'
 import { bookmarks } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
@@ -107,7 +107,7 @@ export default async function TikTokPreviewPage({ params }: Props) {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScriptContent(jsonLd) }}
       />
       <TikTokPreviewLanding
         username={handle}

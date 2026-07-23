@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { getTrendingItems, type TrendingItem } from '@/lib/trending/query'
 import { applyFilter, filterLabel, slugToFilter } from '@/lib/trending/filter'
 import { DiscoverFeed } from '@/components/discover/DiscoverFeed'
-import { buildCollectionPageLd } from '@/lib/utils/structured-data'
+import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
 import { TrendingStaticList, itemHref } from '@/components/trending/TrendingStaticList'
 
 /**
@@ -99,7 +99,7 @@ export default async function TrendingFilterPage({ params }: Props) {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScriptContent(jsonLd) }}
       />
       <h1 className="sr-only">{title}</h1>
       <TrendingStaticList items={items} heading={`${label} posts`} />
