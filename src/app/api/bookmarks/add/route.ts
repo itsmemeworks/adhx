@@ -49,6 +49,7 @@ export const POST = withAuth(async (request: NextRequest, userId: string) => {
           cookie: request.headers.get('cookie') || '',
         },
         body: JSON.stringify({ url, source }),
+        signal: AbortSignal.timeout(10_000),
       })
       const tweetData = await tweetResponse.json()
       return NextResponse.json(

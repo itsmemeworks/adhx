@@ -20,10 +20,13 @@ primary_region = 'lhr'
   processes = ['app']
 
   # Health check for application-level monitoring
+  # timeout raised from 2s: a burst of public /trending traffic can briefly
+  # saturate the single better-sqlite3 event loop, and a too-tight timeout
+  # false-positives the probe into restart-looping an otherwise-healthy machine.
   [[http_service.checks]]
     interval = '10s'
-    timeout = '2s'
-    grace_period = '10s'
+    timeout = '5s'
+    grace_period = '15s'
     method = 'get'
     path = '/api/health'
 

@@ -57,6 +57,7 @@ export async function GET(request: NextRequest) {
         // Pretend to be a social crawler to get full OG tags
         'User-Agent': 'Twitterbot/1.0',
       },
+      signal: AbortSignal.timeout(10_000),
     })
 
     if (!response.ok) {

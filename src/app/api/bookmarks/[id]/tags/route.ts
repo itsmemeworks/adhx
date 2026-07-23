@@ -113,6 +113,11 @@ export const DELETE = withAuth(
       return NextResponse.json({ error: 'Tag is required' }, { status: 400 })
     }
 
+    // POST stores tags via sanitizeTag() — match against the same sanitized
+    // value here, or deletion silently no-ops for any tag with characters
+    // sanitizeTag() would have altered.
+    const cleanTag = sanitizeTag(tag)
+
     const [bookmark] = await db
       .select({ id: bookmarks.id })
       .from(bookmarks)
@@ -132,7 +137,7 @@ export const DELETE = withAuth(
           eq(bookmarkTags.userId, userId),
           eq(bookmarkTags.platform, platform),
           eq(bookmarkTags.bookmarkId, id),
-          eq(bookmarkTags.tag, tag),
+          eq(bookmarkTags.tag, cleanTag),
         ),
       )
 

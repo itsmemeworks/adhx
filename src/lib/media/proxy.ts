@@ -53,6 +53,17 @@ export const TWITTER_MEDIA_HOSTS = [
 export const isAllowedTwitterMediaUrl = makeHostAllowlist(TWITTER_MEDIA_HOSTS)
 
 /**
+ * Hosts allowed for the HLS playlist/segment proxies. Broader than
+ * `TWITTER_MEDIA_HOSTS` (any `*.twimg.com` subdomain, plus `twitter.com` for
+ * playlist URLs that reference it) — this reproduces the hand-rolled checks
+ * the HLS routes used before they were migrated to `makeHostAllowlist`.
+ */
+export const TWITTER_HLS_HOSTS = ['video.twimg.com', '.twimg.com', 'twitter.com', '.twitter.com']
+
+/** SSRF allowlist for Twitter HLS playlist/segment URLs. HTTPS-only. */
+export const isAllowedHlsUrl = makeHostAllowlist(TWITTER_HLS_HOSTS)
+
+/**
  * Validate a Twitter handle (1–15 word chars). Used to sanitise the
  * user-provided `author` query param before it's interpolated into the
  * FxTwitter API URL, so a malicious value can't steer the server-side request.

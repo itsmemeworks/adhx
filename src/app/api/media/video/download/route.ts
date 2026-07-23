@@ -6,6 +6,7 @@ import {
   isValidTweetAuthor,
   isValidTweetId,
 } from '@/lib/media/proxy'
+import { mediaRateLimit } from '@/lib/rate-limit'
 
 /**
  * Video Download Endpoint - Streams video with Content-Disposition for instant browser download
@@ -18,6 +19,9 @@ import {
  * GET /api/media/video/download?author=xxx&tweetId=xxx&quality=full
  */
 export async function GET(request: NextRequest) {
+  const rateLimited = mediaRateLimit(request)
+  if (rateLimited) return rateLimited
+
   const searchParams = request.nextUrl.searchParams
   const author = searchParams.get('author')
   const tweetId = searchParams.get('tweetId')

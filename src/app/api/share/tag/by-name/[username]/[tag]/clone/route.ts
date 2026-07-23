@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { db, runInTransaction } from '@/lib/db'
 import {
   tagShares,
   bookmarkTags,
@@ -10,6 +10,13 @@ import {
 } from '@/lib/db/schema'
 import { eq, and, inArray } from 'drizzle-orm'
 import { withAuth } from '@/lib/api/with-auth'
+
+const MAX_CLONE_SIZE = 100
+
+/** Composite key matching the (platform, bookmarkId) tuple used across bookmark-derived tables. */
+function pairKey(platform: string, bookmarkId: string): string {
+  return `${platform}:${bookmarkId}`
+}
 
 /**
  * POST /api/share/tag/by-name/[username]/[tag]/clone
@@ -57,15 +64,15 @@ export const POST = withAuth(
 
       const sourceUserId = share.userId
 
-      // Get all bookmark IDs with this tag from source user
+      // Get all (platform, bookmarkId) pairs tagged by the source user. A bare bookmarkId
+      // isn't unique across platforms (composite key is userId+platform+bookmarkId+tag), so
+      // every lookup below must match on the pair, not just the id.
       const sourceTaggedBookmarks = await db
-        .select({ bookmarkId: bookmarkTags.bookmarkId })
+        .select({ bookmarkId: bookmarkTags.bookmarkId, platform: bookmarkTags.platform })
         .from(bookmarkTags)
         .where(and(eq(bookmarkTags.userId, sourceUserId), eq(bookmarkTags.tag, tagName)))
 
-      const sourceBookmarkIds = sourceTaggedBookmarks.map((t) => t.bookmarkId)
-
-      if (sourceBookmarkIds.length === 0) {
+      if (sourceTaggedBookmarks.length === 0) {
         return NextResponse.json({
           success: true,
           clonedCount: 0,
@@ -73,14 +80,39 @@ export const POST = withAuth(
         })
       }
 
-      // Get source bookmarks
-      const sourceBookmarks = await db
+      if (sourceTaggedBookmarks.length > MAX_CLONE_SIZE) {
+        return NextResponse.json(
+          { error: `Cannot clone more than ${MAX_CLONE_SIZE} bookmarks at once` },
+          { status: 400 },
+        )
+      }
+
+      const taggedPairKeys = new Set(
+        sourceTaggedBookmarks.map((t) => pairKey(t.platform, t.bookmarkId)),
+      )
+      // Dedup (platform, bookmarkId) pairs for the tag-insert step below.
+      const pairsToTagMap = new Map<string, { platform: string; bookmarkId: string }>()
+      for (const t of sourceTaggedBookmarks) {
+        pairsToTagMap.set(pairKey(t.platform, t.bookmarkId), {
+          platform: t.platform,
+          bookmarkId: t.bookmarkId,
+        })
+      }
+      const pairsToTag = [...pairsToTagMap.values()]
+      const sourceBookmarkIds = [...new Set(sourceTaggedBookmarks.map((t) => t.bookmarkId))]
+
+      // Get source bookmarks (filtered down to the tagged pairs — inArray on id alone can
+      // over-match across platforms since ids aren't globally unique)
+      const sourceBookmarksRaw = await db
         .select()
         .from(bookmarks)
         .where(and(eq(bookmarks.userId, sourceUserId), inArray(bookmarks.id, sourceBookmarkIds)))
+      const sourceBookmarks = sourceBookmarksRaw.filter((b) =>
+        taggedPairKeys.has(pairKey(b.platform, b.id)),
+      )
 
       // Get source media
-      const sourceMedia = await db
+      const sourceMediaRaw = await db
         .select()
         .from(bookmarkMedia)
         .where(
@@ -89,9 +121,12 @@ export const POST = withAuth(
             inArray(bookmarkMedia.bookmarkId, sourceBookmarkIds),
           ),
         )
+      const sourceMedia = sourceMediaRaw.filter((m) =>
+        taggedPairKeys.has(pairKey(m.platform, m.bookmarkId)),
+      )
 
       // Get source links
-      const sourceLinks = await db
+      const sourceLinksRaw = await db
         .select()
         .from(bookmarkLinks)
         .where(
@@ -100,79 +135,94 @@ export const POST = withAuth(
             inArray(bookmarkLinks.bookmarkId, sourceBookmarkIds),
           ),
         )
+      const sourceLinks = sourceLinksRaw.filter((l) =>
+        taggedPairKeys.has(pairKey(l.platform, l.bookmarkId)),
+      )
 
-      // Check which bookmarks the user already has
-      const existingBookmarks = await db
-        .select({ id: bookmarks.id })
+      // Check which (platform, bookmarkId) pairs the user already has
+      const existingBookmarksRaw = await db
+        .select({ id: bookmarks.id, platform: bookmarks.platform })
         .from(bookmarks)
         .where(and(eq(bookmarks.userId, currentUserId), inArray(bookmarks.id, sourceBookmarkIds)))
-
-      const existingBookmarkIds = new Set(existingBookmarks.map((b) => b.id))
+      const existingPairKeys = new Set(existingBookmarksRaw.map((b) => pairKey(b.platform, b.id)))
 
       // Clone bookmarks that don't exist
-      const newBookmarks = sourceBookmarks.filter((b) => !existingBookmarkIds.has(b.id))
+      const newBookmarks = sourceBookmarks.filter(
+        (b) => !existingPairKeys.has(pairKey(b.platform, b.id)),
+      )
+      const newBookmarkPairKeys = new Set(newBookmarks.map((b) => pairKey(b.platform, b.id)))
 
-      if (newBookmarks.length > 0) {
-        await db.insert(bookmarks).values(
-          newBookmarks.map((b) => ({
-            ...b,
-            userId: currentUserId,
-            source: 'clone' as const,
-          })),
-        )
-      }
+      // Media/links for new bookmarks only
+      const newMedia = sourceMedia.filter((m) =>
+        newBookmarkPairKeys.has(pairKey(m.platform, m.bookmarkId)),
+      )
+      const newLinks = sourceLinks.filter((l) =>
+        newBookmarkPairKeys.has(pairKey(l.platform, l.bookmarkId)),
+      )
 
-      // Clone media for new bookmarks
-      const newBookmarkIds = new Set(newBookmarks.map((b) => b.id))
-      const newMedia = sourceMedia.filter((m) => newBookmarkIds.has(m.bookmarkId))
-
-      if (newMedia.length > 0) {
-        await db.insert(bookmarkMedia).values(
-          newMedia.map((m) => ({
-            ...m,
-            userId: currentUserId,
-          })),
-        )
-      }
-
-      // Clone links for new bookmarks
-      const newLinks = sourceLinks.filter((l) => newBookmarkIds.has(l.bookmarkId))
-
-      if (newLinks.length > 0) {
-        await db.insert(bookmarkLinks).values(
-          newLinks.map((l) => ({
-            userId: currentUserId,
-            bookmarkId: l.bookmarkId,
-            originalUrl: l.originalUrl,
-            expandedUrl: l.expandedUrl,
-            linkType: l.linkType,
-            domain: l.domain,
-            contentJson: l.contentJson,
-            previewTitle: l.previewTitle,
-            previewDescription: l.previewDescription,
-            previewImageUrl: l.previewImageUrl,
-          })),
-        )
-      }
-
-      // Add tag to all cloned bookmarks (both new and existing)
-      const bookmarksToTag = sourceBookmarkIds
-      for (const bookmarkId of bookmarksToTag) {
-        try {
-          await db.insert(bookmarkTags).values({
-            userId: currentUserId,
-            bookmarkId,
-            tag: tagName,
-          })
-        } catch {
-          // Ignore duplicate tag errors
+      // All writes happen atomically — if any insert fails, none of them persist.
+      runInTransaction(() => {
+        if (newBookmarks.length > 0) {
+          db.insert(bookmarks)
+            .values(
+              newBookmarks.map((b) => ({
+                ...b,
+                userId: currentUserId,
+                source: 'clone' as const,
+              })),
+            )
+            .run()
         }
-      }
+
+        if (newMedia.length > 0) {
+          db.insert(bookmarkMedia)
+            .values(
+              newMedia.map((m) => ({
+                ...m,
+                userId: currentUserId,
+              })),
+            )
+            .run()
+        }
+
+        if (newLinks.length > 0) {
+          db.insert(bookmarkLinks)
+            .values(
+              newLinks.map((l) => ({
+                userId: currentUserId,
+                platform: l.platform,
+                bookmarkId: l.bookmarkId,
+                originalUrl: l.originalUrl,
+                expandedUrl: l.expandedUrl,
+                linkType: l.linkType,
+                domain: l.domain,
+                contentJson: l.contentJson,
+                previewTitle: l.previewTitle,
+                previewDescription: l.previewDescription,
+                previewImageUrl: l.previewImageUrl,
+              })),
+            )
+            .run()
+        }
+
+        // Add tag to all cloned bookmarks (both new and already-owned)
+        db.insert(bookmarkTags)
+          .values(
+            pairsToTag.map((pair) => ({
+              userId: currentUserId,
+              platform: pair.platform,
+              bookmarkId: pair.bookmarkId,
+              tag: tagName,
+            })),
+          )
+          .onConflictDoNothing()
+          .run()
+      })
 
       return NextResponse.json({
         success: true,
         clonedCount: newBookmarks.length,
-        taggedCount: bookmarksToTag.length,
+        taggedCount: pairsToTag.length,
       })
     } catch (error) {
       console.error('Error cloning tag:', error)
