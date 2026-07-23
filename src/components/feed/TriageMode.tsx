@@ -100,6 +100,13 @@ export function TriageMode({
   const recordedRef = useRef(false)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const celebrateTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Focus a11y: the element that had focus before the overlay opened (restored
+  // on close) and the overlay surface itself (focused on open, and used as the
+  // boundary for the Tab focus trap below).
+  const previousFocusRef = useRef<HTMLElement | null>(null)
+  const overlayRef = useRef<HTMLDivElement>(null)
 
   const isMobile = useIsMobile()
   const total = queue.length
@@ -133,6 +140,44 @@ export function TriageMode({
     }
   }, [isOpen, initialQueue, startIndex])
 
+  // --- dialog a11y: move focus into the overlay on open, restore it to the
+  // triggering element on close ---
+  useEffect(() => {
+    if (!isOpen) return
+    previousFocusRef.current = document.activeElement as HTMLElement | null
+    overlayRef.current?.focus()
+    return () => {
+      previousFocusRef.current?.focus?.()
+    }
+  }, [isOpen])
+
+  // --- basic Tab focus trap: keep focus cycling within the overlay while open ---
+  useEffect(() => {
+    if (!isOpen) return
+    const container = overlayRef.current
+    if (!container) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return
+      const focusable = Array.from(
+        container.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => !el.hasAttribute('disabled'))
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+    container.addEventListener('keydown', onKeyDown)
+    return () => container.removeEventListener('keydown', onKeyDown)
+  }, [isOpen])
+
   // --- record a triage day on the first action of the session ---
   const recordStreak = useCallback(() => {
     if (recordedRef.current) return
@@ -148,7 +193,8 @@ export function TriageMode({
         setStreak({ current: s.current, longest: s.longest })
         if (s.grew > 0) {
           setCelebrate(`🔥 ${s.current}-day streak!`)
-          setTimeout(() => setCelebrate(null), 1800)
+          if (celebrateTimer.current) clearTimeout(celebrateTimer.current)
+          celebrateTimer.current = setTimeout(() => setCelebrate(null), 1800)
         }
       })
       .catch(() => {})
@@ -158,6 +204,24 @@ export function TriageMode({
     if (undoTimer.current) clearTimeout(undoTimer.current)
     undoTimer.current = null
   }
+
+  // A pending delete is deferred behind a single 5s timer + single undo slot.
+  // If the user acts on the NEXT card within that window, we must not just
+  // clearUndoTimer() — that cancels the timer without ever firing the DELETE,
+  // silently dropping the previous delete (it flew off screen but was never
+  // removed server-side). Instead, commit it immediately: fire the DELETE now
+  // and notify the feed, exactly as if its 5s window had elapsed.
+  const commitPendingDelete = useCallback(() => {
+    if (!undoTimer.current) return
+    clearUndoTimer()
+    setUndo((u) => {
+      if (u?.type === 'delete') {
+        fetch(`/api/bookmarks/${u.item.id}`, { method: 'DELETE' }).catch(() => {})
+        onItemResolved?.(u.item.id, 'delete')
+      }
+      return null
+    })
+  }, [onItemResolved])
 
   const advance = useCallback(() => {
     setExiting(null)
@@ -175,29 +239,31 @@ export function TriageMode({
     const item = current
     fetch(`/api/bookmarks/${item.id}/read`, { method: 'POST' }).catch(() => {})
     onItemResolved?.(item.id, 'archive')
-    clearUndoTimer()
+    commitPendingDelete()
     setUndo({ type: 'archive', item, index })
     setCleared((c) => c + 1) // Done counts as progress
     setExiting('right')
     setTimeout(advance, 220)
-  }, [current, index, recordStreak, advance, onItemResolved])
+  }, [current, index, recordStreak, advance, onItemResolved, commitPendingDelete])
 
   // Later: defer — advance without changing read state.
   const keep = useCallback(() => {
     if (!current) return
     recordStreak()
-    clearUndoTimer()
+    commitPendingDelete()
     setUndo({ type: 'keep', index })
     setExiting('left')
     setTimeout(advance, 220)
-  }, [current, index, recordStreak, advance])
+  }, [current, index, recordStreak, advance, commitPendingDelete])
 
   const del = useCallback(() => {
     if (!current) return
     recordStreak()
     const item = current
     // Deferred delete: commit after the undo window so undo is a real revert.
-    clearUndoTimer()
+    // Commit any PRIOR pending delete first (see commitPendingDelete) — the
+    // new 5s timer below covers only this item.
+    commitPendingDelete()
     const timer = setTimeout(() => {
       fetch(`/api/bookmarks/${item.id}`, { method: 'DELETE' }).catch(() => {})
       onItemResolved?.(item.id, 'delete')
@@ -208,7 +274,7 @@ export function TriageMode({
     setCleared((c) => c + 1) // Delete counts as progress
     setExiting('down')
     setTimeout(advance, 220)
-  }, [current, index, recordStreak, advance, onItemResolved])
+  }, [current, index, recordStreak, advance, onItemResolved, commitPendingDelete])
 
   const doUndo = useCallback(() => {
     if (!undo) return
@@ -232,7 +298,8 @@ export function TriageMode({
     if (!current) return
     if (await copyPreviewLink(current)) {
       setFlash('copied')
-      setTimeout(() => setFlash(null), 1600)
+      if (flashTimer.current) clearTimeout(flashTimer.current)
+      flashTimer.current = setTimeout(() => setFlash(null), 1600)
     }
   }, [current])
 
@@ -242,7 +309,8 @@ export function TriageMode({
     const result = await sharePreviewLink(current)
     if (result === 'shared' || result === 'copied') {
       setFlash(result === 'shared' ? 'shared' : 'copied')
-      setTimeout(() => setFlash(null), 1600)
+      if (flashTimer.current) clearTimeout(flashTimer.current)
+      flashTimer.current = setTimeout(() => setFlash(null), 1600)
     }
   }, [current])
 
@@ -302,20 +370,21 @@ export function TriageMode({
   // flush any pending delete when the mode closes
   useEffect(() => {
     if (isOpen) return
-    if (undoTimer.current) {
-      // commit immediately on close
-      const u = undo
-      if (u && u.type === 'delete') {
-        fetch(`/api/bookmarks/${u.item.id}`, { method: 'DELETE' }).catch(() => {})
-        onItemResolved?.(u.item.id, 'delete')
-      }
-      clearUndoTimer()
-    }
+    commitPendingDelete()
     // reset transient state for next open
     setUndo(null)
     setDrag(0)
     setExiting(null)
-  }, [isOpen])
+  }, [isOpen, commitPendingDelete])
+
+  // Clear fire-and-forget toast timers (celebrate + copy/share flash) on
+  // unmount so they can't setState after the component is gone.
+  useEffect(() => {
+    return () => {
+      if (celebrateTimer.current) clearTimeout(celebrateTimer.current)
+      if (flashTimer.current) clearTimeout(flashTimer.current)
+    }
+  }, [])
 
   if (!isOpen) return null
 
@@ -373,8 +442,13 @@ export function TriageMode({
     // Full-screen focus surface. Media posts on mobile go full-bleed on black;
     // everything else uses the light Matter focus surface. Click backdrop to close.
     <div
+      ref={overlayRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Triage"
+      tabIndex={-1}
       className={cn(
-        'fixed inset-0 z-50 flex flex-col overflow-hidden',
+        'fixed inset-0 z-50 flex flex-col overflow-hidden outline-none',
         fullBleed ? 'bg-black' : 'bg-focus-bg',
       )}
       onClick={onClose}

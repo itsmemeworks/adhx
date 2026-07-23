@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { db, runInTransaction } from '@/lib/db'
 import { collections, collectionTweets } from '@/lib/db/schema'
 import { eq, and, sql } from 'drizzle-orm'
 import { nanoid } from '@/lib/utils'
@@ -125,15 +125,18 @@ export const DELETE = withAuth(
         return NextResponse.json({ error: 'Collection not found' }, { status: 404 })
       }
 
-      // Delete collection tweets first (foreign key constraint)
-      await db
-        .delete(collectionTweets)
-        .where(and(eq(collectionTweets.collectionId, id), eq(collectionTweets.userId, userId)))
+      // Delete collection tweets and the collection itself atomically — a crash
+      // between the two would otherwise leave an orphaned collection with no
+      // tweets, or a collection row gone while its tweets linger.
+      runInTransaction(() => {
+        db.delete(collectionTweets)
+          .where(and(eq(collectionTweets.collectionId, id), eq(collectionTweets.userId, userId)))
+          .run()
 
-      // Delete collection
-      await db
-        .delete(collections)
-        .where(and(eq(collections.id, id), eq(collections.userId, userId)))
+        db.delete(collections)
+          .where(and(eq(collections.id, id), eq(collections.userId, userId)))
+          .run()
+      })
 
       return NextResponse.json({ success: true })
     } catch (error) {
