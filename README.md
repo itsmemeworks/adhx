@@ -4,28 +4,38 @@
 [![Release](https://github.com/itsmemeworks/adhx/actions/workflows/release-please.yml/badge.svg)](https://github.com/itsmemeworks/adhx/actions/workflows/release-please.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![GitHub stars](https://img.shields.io/github/stars/itsmemeworks/adhx?style=flat)](https://github.com/itsmemeworks/adhx/stargazers)
 
 > **Save now. Read never. Find always.**
 
-ADHX is the only open-source, self-hostable bookmark manager for X/Twitter — and the only bookmark manager, period, that also saves and previews Instagram Reels, TikToks, and YouTube Shorts in one place. Sync your X bookmarks, drop in links from anywhere, and actually find the thing you saved six months ago.
+For people who bookmark everything and read nothing. ADHX is the only open-source, self-hostable bookmark manager for X/Twitter — and, as far as we've been able to tell, the only bookmark manager on the internet that also saves and previews Instagram Reels, TikToks, and YouTube Shorts in one place. Sync your X bookmarks, drop in links from anywhere, and — should the moment ever come — actually find the thing you saved six months ago.
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Bookmarks_Saved-∞-8B5CF6?style=for-the-badge" alt="Bookmarks Saved: Infinite" />
+  <img src="https://img.shields.io/badge/Bookmarks_Read-Maybe_3-gray?style=for-the-badge" alt="Bookmarks Read: Maybe 3" />
+</p>
 
 <!-- TODO: hero GIF — capture the Matter UI: save flow + triage mode -->
 <p align="center">
   <img src="public/og-logo.png" alt="ADHX — save now, read never, find always" width="640" />
 </p>
 
+<p align="center">
+  <i>Built for people who save tweets about productivity while procrastinating.</i>
+</p>
+
 ---
 
 ## Why ADHX
 
-Every other X/Twitter bookmark tool — Dewey, Tweetsmash, Twillot, and the rest — is closed-source SaaS: you pay a monthly fee, your bookmarks live on someone else's server, and search or export is usually the feature they paywall. Commercial tools in this space commonly charge $10–20/mo for exactly that.
+Every other X/Twitter bookmark tool — Dewey, Tweetsmash, Twillot, take your pick — is closed-source SaaS: $10–20/mo, your bookmarks living on someone else's server, and search or export usually locked behind the tier above yours. That's a strange price to pay for a pile of stuff you were never going to read anyway.
 
 ADHX takes the opposite approach:
 
-- **Open source (MIT).** Read the code, audit it, fork it. Nothing is hidden behind a subscription tier.
-- **Self-hostable.** Run it on your own Fly.io app, your own Docker host, or your laptop. Your data lives in a SQLite file you own, not a vendor's database.
-- **No per-seat cost.** There's no pricing page because there's no seat to charge for — you pay for your own compute, if any.
-- **Four platforms, one collection.** X/Twitter bookmarks, Instagram Reels, TikToks, and YouTube Shorts land in the same searchable feed. No other tool in this space covers all four.
+- **Actually open source (MIT).** Read the code, audit it, fork it, argue with us in the issues. There's no subscription tier to hide anything behind.
+- **Self-hostable, obviously.** Run it on your own Fly.io app, your own Docker host, or a laptop that's seen better days. Your data lives in a SQLite file you own, not a vendor's database.
+- **No per-seat cost, because there's no seat.** You pay for your own compute, if any. There is no invoice, and there never will be.
+- **Four platforms, one collection you'll still ignore.** X/Twitter bookmarks, Instagram Reels, TikToks, and YouTube Shorts land in the same searchable, mostly-unread feed. No other tool in this space covers all four.
 
 ---
 
@@ -33,7 +43,15 @@ ADHX takes the opposite approach:
 
 ### Quick add: URL prefix
 
-The fastest way in: replace the host in any link with `adhx.com`.
+The fastest way in: replace the host in any link with `adhx.com`. That's the whole trick.
+
+```mermaid
+flowchart LR
+    A["Link from X, Instagram,<br/>TikTok, or YouTube"] --> B["Swap the host<br/>to adhx.com"]
+    B --> C["ADHX preview page<br/>(inline playback, no login needed)"]
+    C -->|Save| D["Lands in your collection,<br/>unread, forever"]
+    C -->|Not now| E["Still just a link"]
+```
 
 ```
 x.com/user/status/123        instagram.com/reels/abc      tiktok.com/@user/video/123     youtube.com/shorts/abc
@@ -50,9 +68,11 @@ adhx.com/https://www.tiktok.com/@user/video/123     → /@user/video/123
 adhx.com/https://youtube.com/shorts/abc             → /shorts/abc   (also youtu.be/abc, watch?v=abc)
 ```
 
-Tweets land in your collection and open in the lightbox. Reels and TikToks render a public preview with inline playback that you can save alongside your tweets. YouTube Shorts play inline via the official embed.
+Tweets land in your collection and open in the lightbox. Reels and TikToks render a public preview with inline playback that you can save alongside your tweets. YouTube Shorts play inline via the official embed. None of it requires you to have actually watched anything.
 
 ### Save it from anywhere
+
+Pick whatever's least friction for your device — every route ends up at the same `adhx.com` preview:
 
 | Method                  | Best for          | How                                                                                                    |
 | ----------------------- | ----------------- | ------------------------------------------------------------------------------------------------------ |
@@ -62,23 +82,23 @@ Tweets land in your collection and open in the lightbox. Reels and TikToks rende
 | **Android share sheet** | Android           | Install ADHX as a PWA, then Share → ADHX from any app.                                                 |
 | **iOS Shortcut**        | iOS               | One-tap Share Sheet shortcut (currently X-only; use the URL-prefix trick for the other platforms).     |
 
-Install ADHX as a Progressive Web App and it runs full-screen from your home screen, remembers your session, and (on Android) registers as a share target.
+Install ADHX as a Progressive Web App and it runs full-screen from your home screen, remembers your session, and (on Android) registers as a share target — so the bookmark can find you, since you clearly weren't going back for it.
 
 ### Triage mode
 
-A full-screen, one-card-at-a-time pass through your backlog: Keep / Delete / Done with arrow keys, plus a daily streak so the backlog actually shrinks.
+A full-screen, one-card-at-a-time pass through your backlog: Keep / Delete / Done with arrow keys, plus a daily streak so the backlog actually shrinks instead of just growing a matching counter of shame.
 
 ### Public trending
 
-[`/trending`](https://adhx.com/trending) is a live, anonymous feed of what the ADHX community is saving and previewing right now, with per-type hubs (videos, photos, text, articles) and a weekly archive. No account needed to browse it.
+[`/trending`](https://adhx.com/trending) is a live, anonymous feed of what the ADHX community is saving and previewing right now, with per-type hubs (videos, photos, text, articles) and a weekly archive. No account needed to browse it — everyone's business but nobody's name.
 
 ### Tag sharing
 
-Tag your collection, then publish any tag as a friendly public URL (`/t/{username}/{tag}`) that anyone can browse — and that other ADHX users can clone straight into their own collection.
+Tag your collection, then publish any tag as a friendly public URL (`/t/{username}/{tag}`) that anyone can browse — and that other ADHX users can clone straight into their own, equally unread collection.
 
 ### LLM-friendly by design
 
-ADHX exposes structured data for agents and AI search, not just humans:
+Turns out AI agents want to read your saved posts as badly as you don't. ADHX exposes structured data for them too, not just humans:
 
 - A public [JSON API](#api) for any saved post (author, engagement stats, media, article content as markdown).
 - [`llms.txt`](https://adhx.com/llms.txt) declaring every public API and page for AI crawlers.
@@ -94,6 +114,7 @@ ADHX exposes structured data for agents and AI search, not just humans:
 - Node.js 20+
 - pnpm
 - An X/Twitter Developer account (for OAuth credentials)
+- A concerning number of unread bookmarks (optional, but you already qualify)
 
 ### Setup
 
@@ -136,6 +157,7 @@ See `.env.example` for the full list, including `DATABASE_PATH` and the optional
 2. Enable OAuth 2.0 with PKCE.
 3. Set the callback URL to `http://localhost:3000/api/auth/twitter/callback`.
 4. Copy the Client ID and Client Secret into `.env`.
+5. Try not to get distracted by your timeline while you're in there.
 
 ---
 
@@ -216,11 +238,13 @@ A pre-commit hook (Husky + lint-staged) auto-formats staged files and runs typec
 
 ## Star history
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=itsmemeworks/adhx&type=Date&theme=dark" />
-  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=itsmemeworks/adhx&type=Date" />
-  <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=itsmemeworks/adhx&type=Date" />
-</picture>
+<a href="https://star-history.com/#itsmemeworks/adhx&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=itsmemeworks/adhx&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=itsmemeworks/adhx&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=itsmemeworks/adhx&type=Date" />
+  </picture>
+</a>
 
 ---
 
@@ -288,7 +312,7 @@ No auth required. Works with `x.com`, `twitter.com`, and `adhx.com` URLs.
 
 ## Contributing
 
-We welcome contributions — bug fixes, features, or docs.
+We welcome contributions — bug fixes, features, or docs. Bonus points if the PR description admits how many unread bookmarks you have.
 
 1. Fork the repo
 2. Create a branch (`git checkout -b feat/amazing-feature`)
