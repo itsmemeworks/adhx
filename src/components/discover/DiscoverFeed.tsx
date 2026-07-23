@@ -7,8 +7,10 @@ import { cn } from '@/lib/utils'
 import { LiveDot } from '@/components/matter'
 import { PublicNav } from '@/components/PublicNav'
 import { DiscoverCard } from './DiscoverCard'
+import { DiscoverCtaCard } from './DiscoverCtaCard'
 import type { TrendingItem } from '@/lib/trending/query'
 import { type FilterId, FILTERS, applyFilter, filterToPath } from '@/lib/trending/filter'
+import { shouldInsertCtaAfter } from '@/lib/discover/interleave-cta'
 
 /**
  * The Discover/Trending item shape — the canonical, anonymity-safe public item
@@ -92,6 +94,9 @@ function mergeIncoming(
 /** Remembers the user's last-used lens so the bare /trending hub restores it. */
 const FILTER_STORAGE_KEY = 'adhx-trending-filter'
 
+/** Persists dismissal of the in-grid "Connect with X" CTA (all instances, for the session/future visits). */
+const CTA_DISMISS_KEY = 'adhx-trending-cta-dismissed'
+
 /** Stable React key / identity for an activity item. */
 function keyOf(item: ActivityItem): string {
   return postKey(item)
@@ -122,6 +127,12 @@ export function DiscoverFeed({
   // null while unknown; once known, signed-out gets the public shell (the global
   // header is hidden when signed out) and Preview (not Save) actions.
   const [authed, setAuthed] = useState<boolean | null>(null)
+  // Whether the in-grid CTA card has been dismissed. Starts `false` to match
+  // the server render (localStorage isn't available there); the real value is
+  // read in an effect below, after hydration, so server/client HTML always
+  // agree on the first paint. The CTA itself is also gated on `signedOut`,
+  // which resolves later (async auth check), so in practice this never flashes.
+  const [ctaDismissed, setCtaDismissed] = useState(false)
   // Seed the known set from the server items so the first poll doesn't flash
   // every pre-rendered card as "new".
   const knownKeys = useRef<Set<string>>(new Set((initialItems ?? []).map(keyOf)))
@@ -154,6 +165,27 @@ export function DiscoverFeed({
     }
   }, [])
   const signedOut = authed === false
+
+  useEffect(() => {
+    try {
+      setCtaDismissed(localStorage.getItem(CTA_DISMISS_KEY) === '1')
+    } catch {
+      /* localStorage unavailable — keep showing the CTA */
+    }
+  }, [])
+
+  const dismissCta = useCallback(() => {
+    setCtaDismissed(true)
+    try {
+      localStorage.setItem(CTA_DISMISS_KEY, '1')
+    } catch {
+      /* ignore — dismissal just won't persist */
+    }
+  }, [])
+
+  const connectWithX = useCallback(() => {
+    window.location.href = '/api/auth/twitter'
+  }, [])
 
   // Restore the last-used lens on the bare /trending hub (where the URL didn't
   // pin a specific filter — i.e. initialFilter is the default 'latest'). A
@@ -305,12 +337,7 @@ export function DiscoverFeed({
           Discover nav, so we go straight to the live banner. */}
       {signedOut && (
         <>
-          <PublicNav
-            active="trending"
-            onConnect={() => {
-              window.location.href = '/api/auth/twitter'
-            }}
-          />
+          <PublicNav active="trending" onConnect={connectWithX} />
           <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-6">
             <div className="flex items-center gap-2 mb-2">
               <LiveDot />
@@ -401,14 +428,29 @@ export function DiscoverFeed({
           </div>
         ) : (
           <div className="grid grid-cols-1 items-stretch gap-[18px] sm:grid-cols-2 lg:grid-cols-4">
-            {visible.map((item) => (
-              <DiscoverCard
-                key={keyOf(item)}
-                item={item}
-                fresh={freshKeys.has(keyOf(item))}
-                pub={signedOut}
-              />
-            ))}
+            {/* The CTA is interleaved here, at render time, from `visible` — it
+                never touches `items` state, so polling/dedupe/pagination above
+                are entirely unaware of it. Signed-in visitors never see it. */}
+            {visible.flatMap((item, i) => {
+              const nodes = [
+                <DiscoverCard
+                  key={keyOf(item)}
+                  item={item}
+                  fresh={freshKeys.has(keyOf(item))}
+                  pub={signedOut}
+                />,
+              ]
+              if (signedOut && !ctaDismissed && shouldInsertCtaAfter(i + 1)) {
+                nodes.push(
+                  <DiscoverCtaCard
+                    key={`cta-${i}`}
+                    onConnect={connectWithX}
+                    onDismiss={dismissCta}
+                  />,
+                )
+              }
+              return nodes
+            })}
           </div>
         )}
 
