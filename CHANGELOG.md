@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.48.1](https://github.com/itsmemeworks/adhx/compare/v1.48.0...v1.48.1) (2026-07-23)
+
+
+### Documentation
+
+* restore the adhx voice in the readme, add mermaid flow + resilient star badges ([#287](https://github.com/itsmemeworks/adhx/issues/287)) ([81178af](https://github.com/itsmemeworks/adhx/commit/81178afc515e33163d6c8e91646a62ff6536d049))
+
 ## [1.48.0](https://github.com/itsmemeworks/adhx/compare/v1.47.1...v1.48.0) (2026-07-23)
 
 
