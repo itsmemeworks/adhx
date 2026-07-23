@@ -356,7 +356,7 @@ All work with or without protocol, browser path normalization (`//` → `/`), tr
 
 **Tweet preview** (`src/components/TweetPreviewLanding.tsx`):
 
-- Authenticated: Adds tweet, redirects to `/?open={id}` (opens lightbox)
+- Authenticated: Shows the preview with a **"Save to collection"** button (no auto-add — verified against `TweetPreviewLanding.tsx:696-708` in the 2026-07-23 smoke test; an older version of this doc claimed auto-add + redirect to `/?open={id}`, which is stale)
 - Unauthenticated: Shows rich preview with engagement stats, expand/collapse, and **Share** button
 - "Preview another tweet" URL input — accepts X, Instagram, and TikTok URLs
 
