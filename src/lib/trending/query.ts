@@ -71,20 +71,98 @@ export interface GetTrendingOptions {
   limit?: number
   /** Drop items with `trendCount` below this. Defaults to none. */
   minTrend?: number
+  /**
+   * How many deduped posts to skip before taking `limit` (offset pagination
+   * over the deduped, newest-first sequence — NOT a raw-row offset). Defaults
+   * to 0. Used by `/api/activity` to fetch older pages for infinite scroll.
+   */
+  offset?: number
+}
+
+export interface TrendingResult {
+  items: TrendingItem[]
+  savedToday: number
+  recentActivity: number
+  /**
+   * Whether another page exists past this one (more deduped posts beyond
+   * `offset + items.length`). Best-effort: pagination reads a bounded window
+   * of raw events (see `rawFetchSize` below), so an extremely deep offset on a
+   * high-volume pulse could under-report — acceptable for a public, anonymous
+   * "keep scrolling" feed with no hard pagination guarantee.
+   */
+  hasMore: boolean
 }
 
 /**
- * Fetch + enrich the most recent community actions into display-ready items.
+ * Short-lived in-memory cache around `fetchTrendingItems`. This module is the
+ * single choke point for the PUBLIC, anonymous, force-dynamic `/trending`
+ * pages + `/api/activity` + `/api/trending` — each request runs ~5 aggregate
+ * scans against the single synchronous better-sqlite3 connection, so a burst
+ * of public traffic can starve the Fly health probe. A short TTL absorbs
+ * bursts without meaningfully staling the "live" feel (the client already
+ * polls every 12s).
+ *
+ * Cached by the same args callers already pass (`platform`/`limit`/`minTrend`)
+ * — the cached value is exactly `fetchTrendingItems`'s return shape, so the
+ * anonymity invariant (no `userId`, ever) holds automatically: we never touch
+ * or re-shape the value, just store and replay it.
+ *
+ * Keyed per-`db`-instance via a WeakMap (not a single flat Map): in production
+ * there's only ever one `db`, so this behaves like a normal module-level
+ * cache. In tests, each test swaps in a fresh in-memory database (see
+ * `src/__tests__/api/setup.ts`'s `createTestDb()`), and without this indirection
+ * a same-millisecond call with identical default args would return a stale hit
+ * from a *previous* test's database — this keeps every db instance's cache
+ * isolated instead.
+ */
+const CACHE_TTL_MS = 12_000
+type TrendingCache = Map<string, { value: TrendingResult; expiresAt: number }>
+const cachesByDb = new WeakMap<object, TrendingCache>()
+
+function getCache(): TrendingCache {
+  let c = cachesByDb.get(db as object)
+  if (!c) {
+    c = new Map()
+    cachesByDb.set(db as object, c)
+  }
+  return c
+}
+
+function cacheKey(opts: GetTrendingOptions): string {
+  return `${opts.platform ?? '*'}:${opts.limit ?? LIMIT}:${opts.minTrend ?? '*'}:${opts.offset ?? 0}`
+}
+
+/**
+ * Fetch + enrich the most recent community actions into display-ready items,
+ * cached for `CACHE_TTL_MS` per distinct `(platform, limit, minTrend)` combo.
  *
  * Defaults reproduce today's `/api/activity` behaviour exactly: FETCH 80 recent
  * events → dedup by `action:platform:url` → LIMIT 30, no platform filter, no
  * minTrend threshold.
  */
-export async function getTrendingItems(
-  opts: GetTrendingOptions = {},
-): Promise<{ items: TrendingItem[]; savedToday: number; recentActivity: number }> {
+export async function getTrendingItems(opts: GetTrendingOptions = {}): Promise<TrendingResult> {
+  const cache = getCache()
+  const key = cacheKey(opts)
+  const now = Date.now()
+  const hit = cache.get(key)
+  if (hit && hit.expiresAt > now) return hit.value
+
+  const value = await fetchTrendingItems(opts)
+  cache.set(key, { value, expiresAt: now + CACHE_TTL_MS })
+  return value
+}
+
+async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<TrendingResult> {
   const limit = opts.limit ?? LIMIT
   const platformFilter = opts.platform
+  const offset = Math.max(0, opts.offset ?? 0)
+
+  // Raw-row fetch window: must be deep enough that, after collapsing to one
+  // row per post, we still have `offset + limit` deduped posts to slice from.
+  // The dedup ratio isn't known up front, so over-fetch by 3x and cap it — a
+  // few hundred rows is a cheap local scan. See `hasMore`'s caveat above for
+  // what happens if a very deep offset outruns this window.
+  const rawFetchSize = Math.min(600, Math.max(FETCH, (offset + limit) * 3))
 
   // ANONYMITY CHOKE POINT: this select lists ONLY public columns. `userId` is
   // intentionally absent and must stay that way.
@@ -105,7 +183,7 @@ export async function getTrendingItems(
     .from(activity)
     .where(platformFilter ? eq(activity.platform, platformFilter) : undefined)
     .orderBy(desc(activity.createdAt))
-    .limit(FETCH)
+    .limit(rawFetchSize)
     .all()
 
   // Collapse to ONE row per post (platform + source id), keeping the newest
@@ -114,14 +192,18 @@ export async function getTrendingItems(
   // surface as two cards with the same React key. Matches DiscoverFeed's
   // dedupeByPost so the server list and the hydrated grid agree.
   const seen = new Set<string>()
-  const items: typeof rows = []
+  const deduped: typeof rows = []
   for (const row of rows) {
     const key = `${row.platform}:${row.bookmarkId || row.url}`
     if (seen.has(key)) continue
     seen.add(key)
-    items.push(row)
-    if (items.length >= limit) break
+    deduped.push(row)
   }
+
+  // Page over the deduped, newest-first sequence (not the raw rows — an
+  // offset there would slice mid-post-group and reintroduce duplicates).
+  const items = deduped.slice(offset, offset + limit)
+  const hasMore = deduped.length > offset + items.length
 
   const ids = [...new Set(items.map((i) => i.bookmarkId).filter(Boolean))]
 
@@ -292,5 +374,5 @@ export async function getTrendingItems(
     .get()
   const recentActivity = Number(recentActivityRow?.c) || 0
 
-  return { items: enriched, savedToday, recentActivity }
+  return { items: enriched, savedToday, recentActivity, hasMore }
 }
