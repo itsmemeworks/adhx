@@ -12,6 +12,8 @@ import { getSession } from '@/lib/auth/session'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 import { isLikelyBot } from '@/lib/activity/bot'
 import { buildVideoObjectLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
+import { buildContentTitle, buildContentDescription } from '@/lib/utils/content-metadata'
+import { RelatedSaves } from '@/components/RelatedSaves'
 import { db } from '@/lib/db'
 import { bookmarks } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
@@ -70,9 +72,9 @@ export default async function ShortPreviewPage({ params }: Props) {
   const authorName = saved?.authorName || meta?.authorName || null
   const title = saved?.title || meta?.title || null
   const available = saved ? true : !!meta
+  const previewAuthor = author?.replace(/^@/, '') || authorName || 'youtube'
 
   if (available && !isLikelyBot((await headers()).get('user-agent'))) {
-    const previewAuthor = author?.replace(/^@/, '') || authorName || 'youtube'
     recordActivity({
       action: 'preview',
       platform: 'youtube',
@@ -107,6 +109,14 @@ export default async function ShortPreviewPage({ params }: Props) {
         hasVideo={available}
         isAuthenticated={!!session}
       />
+      {available && (
+        <RelatedSaves
+          platform="youtube"
+          bookmarkId={id}
+          authorHandle={previewAuthor}
+          contentType="video"
+        />
+      )}
     </>
   )
 }
@@ -123,14 +133,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const meta = await fetchYouTubeMetadata(id)
 
   const who = meta?.authorName || meta?.author
-  const pageTitle = meta?.title || (who ? `${who} on YouTube` : 'YouTube Short')
-  const headline = meta?.title
-    ? meta.title
-    : who
-      ? `Preview ${who}'s Short`
-      : 'Preview this YouTube Short'
-  const description =
-    (who ? `${who} on YouTube. ` : '') + 'Preview and save this YouTube Short to ADHX.'
+
+  // Content-first `<title>`: the Short's own title (already content-led via
+  // oEmbed) gets the brand suffix instead of the old "Preview @user's Short"
+  // pitch; falls back to an author-aware label when oEmbed has no title.
+  const pageTitle = buildContentTitle(
+    meta?.title || (who ? `${who}'s Short on YouTube` : 'YouTube Short'),
+  )
+  const description = buildContentDescription(
+    meta?.title
+      ? `${meta.title}${who ? ` by ${who}` : ''} on YouTube.`
+      : who
+        ? `${who} on YouTube.`
+        : 'A YouTube Short.',
+  )
   const image = meta ? youtubeThumbnail(id) : `${baseUrl}/og-logo.png`
 
   return {
@@ -138,15 +154,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description,
     openGraph: {
       type: 'video.other',
-      title: headline,
+      title: pageTitle,
       description,
       siteName: 'ADHX',
       url: canonicalUrl,
-      images: [{ url: image, alt: headline }],
+      images: [{ url: image, alt: pageTitle }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: headline,
+      title: pageTitle,
       description,
       images: [image],
     },

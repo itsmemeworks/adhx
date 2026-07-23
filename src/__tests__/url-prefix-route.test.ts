@@ -183,7 +183,11 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
       expect(metadata.title).toContain('@testauthor')
       expect(metadata.title).toContain('This is a test tweet')
       expect(metadata.description).toBe('This is a test tweet with some interesting content')
-      expect(metadata.openGraph?.title).toBe("Preview @testauthor's tweet")
+      // The OG title now matches the content-first page <title> — the old
+      // "Preview @user's tweet" utility framing was dropped for CTR.
+      expect(metadata.openGraph?.title).toBe(
+        'This is a test tweet with some interesting content — @testauthor',
+      )
     })
 
     it('truncates long tweet text in metadata', async () => {

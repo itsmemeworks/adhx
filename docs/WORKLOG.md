@@ -4,13 +4,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
-## 2026-07-23 — SEO growth-loop expansion (in flight) + agent context system installed
+## 2026-07-23 — SEO growth-loop expansion (implemented) + agent context system installed
 
 - **Why**: GSC (3 months) showed 1.56K impressions / 6 clicks (0.4% CTR, avg pos 7.6) on ~2,020 sitemap URLs. Ranking queries are the _content of saved posts_ and _author names_ — each save is a long-tail landing page. Moat: x.com is uncrawlable; ADHX previews are the indexable mirror.
-- **In flight** (4 parallel workstreams, disjoint file ownership): (1) content-first titles/descriptions + server-rendered RelatedSaves footer on all 5 preview routes; (2) author hub pages at `/{username}` (ProfilePage JSON-LD); (3) permanent weekly trending archives at `/trending/archive/{yyyy}-w{ww}` (ISO week, lowercase); (4) sitemap widened to all public `activity` inventory behind a thin-content gate + `llms.txt` refresh.
-- **Contracts**: author hub URL `/{username}`; archive slug like `2026-w30`; all new public queries mirror `getTrendingItems()` anonymity rules (never select `userId`); new DB-reading pages are `force-dynamic`; single dynamic sitemap (sharding was tried and reverted).
-- **Also this session**: installed this context system (`AGENTS.md`, this file, CLAUDE.md protocol section); README/ARCHITECTURE refreshed (Discover → Trending).
-- **Follow-ups**: link from live `/trending` to the archive; consider theme-clustered digests later; keep preview pages excerpt+attribution (don't render full X Article bodies — duplicate-content/ownership exposure).
+- **Shipped** (4 parallel workstreams, disjoint file ownership): (1) content-first titles/descriptions (`src/lib/utils/tweet-metadata.ts` / `content-metadata.ts`; OG title now matches; the richer 500-char unfurl description is separate from the ~160-char SERP one) + server-rendered `RelatedSaves` footer on all 5 preview routes (`/reel` covered via its re-export from `/reels`); (2) author hubs at `/{username}` (`src/lib/authors/query.ts`, ProfilePage JSON-LD, 404 on empty/invalid handle); (3) weekly trending archives at `/trending/archive/{yyyy}-w{ww}` (ISO week, lowercase; current week excluded; linked from live `/trending`); (4) sitemap widened to gated `activity` inventory (gate: saved OR media OR article OR text ≥ 80 chars) + author hubs + archive weeks, `llms.txt` refreshed. Net ~+104 URLs on the dev dataset.
+- **Contracts/invariants held**: all new public queries mirror `getTrendingItems()` anonymity rules (never select `userId`, regression-tested); new DB-reading pages are `force-dynamic`; single dynamic sitemap. `src/__tests__/iso-week-consistency.test.ts` pins the seam between the two independent ISO-week implementations (sitemap emitter vs archive parser) — don't consolidate them without keeping that test green.
+- **Also this session**: installed this context system (`AGENTS.md`, this file, CLAUDE.md protocol section); README/ARCHITECTURE refreshed (Discover → Trending); GitHub repo description + topics widened. Full suite after integration: 1,120 tests passing (up from 943).
+- **Follow-ups**: consider theme-clustered digests later; keep preview pages excerpt+attribution (don't render full X Article bodies — duplicate-content/ownership exposure); 17 Dependabot alerts (9 high) on main need a cleanup pass.
 
 ## 2026-07 (v1.43–v1.46) — OAuth fix, video source SSOT, client-direct video reverted
 

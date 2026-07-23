@@ -10,7 +10,9 @@ import { fetchTweetData, extractUrlsFromFacets, type FxTwitterResponse } from '@
 import { fetchOgMetadata } from '@/lib/utils/og-fetch'
 import { truncate } from '@/lib/utils/format'
 import { getOgImages } from '@/lib/utils/og-image'
+import { buildTweetTitle, buildTweetSeoDescription } from '@/lib/utils/tweet-metadata'
 import { buildSocialMediaPostingLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
+import { RelatedSaves } from '@/components/RelatedSaves'
 
 type FxTweet = NonNullable<FxTwitterResponse['tweet']>
 
@@ -116,21 +118,22 @@ export default async function QuickAddPage({ params }: Props) {
 
   // Show rich preview if we have tweet data
   if (tweet) {
+    const previewAuthor = tweet.author?.screen_name || username
+    // An X Article keeps its headline + cover in `tweet.article` (not
+    // tweet.text/media), so resolve those explicitly — otherwise a
+    // preview-only article would land in the pulse as a bare "Saved post".
+    const articleCover = tweet.article?.cover_media?.media_info?.original_img_url || null
+    const previewType = tweet.article?.title
+      ? 'article'
+      : tweet.media?.videos?.length
+        ? 'video'
+        : tweet.media?.photos?.length
+          ? 'photo'
+          : 'text'
+
     // Record a human preview for the public pulse (skip OG-unfurl crawlers).
     const ua = (await headers()).get('user-agent')
     if (!isLikelyBot(ua)) {
-      const previewAuthor = tweet.author?.screen_name || username
-      // An X Article keeps its headline + cover in `tweet.article` (not
-      // tweet.text/media), so resolve those explicitly — otherwise a
-      // preview-only article would land in the pulse as a bare "Saved post".
-      const articleCover = tweet.article?.cover_media?.media_info?.original_img_url || null
-      const previewType = tweet.article?.title
-        ? 'article'
-        : tweet.media?.videos?.length
-          ? 'video'
-          : tweet.media?.photos?.length
-            ? 'photo'
-            : 'text'
       recordActivity({
         action: 'preview',
         platform: 'twitter',
@@ -165,6 +168,12 @@ export default async function QuickAddPage({ params }: Props) {
           tweetId={id}
           tweet={JSON.parse(JSON.stringify(tweet))}
           isAuthenticated={!!session}
+        />
+        <RelatedSaves
+          platform="twitter"
+          bookmarkId={id}
+          authorHandle={previewAuthor}
+          contentType={previewType}
         />
       </>
     )
@@ -224,26 +233,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
   const canonicalUrl = `${baseUrl}/${username}/status/${id}`
 
-  // Build dynamic metadata with tweet content
-  const isArticle = !!tweet.article?.title
-  const tweetText = tweet.text || ''
-  const articleTitle = tweet.article?.title || ''
+  // Content-first `<title>` + SERP snippet description — lead with what the
+  // post actually says, not a "Preview @user's tweet" utility pitch (GSC
+  // showed the old framing converting at 0.4% CTR).
+  const title = buildTweetTitle(tweet, tweet.author.screen_name)
+  const description = buildTweetSeoDescription(tweet)
 
-  const description = buildDescription(tweet)
-
-  // Page <title>: article title or the tweet text (the site name "ADHX" is
-  // carried by og:site_name / the app, so don't repeat it here).
-  const title = isArticle
-    ? `${articleTitle} - @${tweet.author.screen_name}`
-    : `@${tweet.author.screen_name}: "${truncate(tweetText, 50)}"`
+  // The OG/Twitter card description stays the richer, longer version (quote +
+  // external-link context) — that's what social apps render in the unfurl,
+  // not the Google SERP snippet, so it can afford the extra length.
+  const ogDescription = buildDescription(tweet)
 
   // Select best OG images with real dimensions
   const ogImages = getOgImages(tweet, baseUrl)
 
-  // Unfurl headline (og + twitter). "Preview", not "Save", and no "ADHX"
-  // suffix — apps already render og:site_name="ADHX" as a separate label,
-  // so appending it duplicated the word in the card (e.g. on Telegram).
-  const ogTitle = isArticle ? articleTitle : `Preview @${tweet.author.screen_name}'s tweet`
+  // Unfurl headline (og + twitter): same content-first title as the page
+  // <title> — dropping the old "Preview @user's tweet" framing here too.
+  const ogTitle = title
 
   // Build OG video tags for video tweets
   const ogVideos = tweet.media?.videos?.length
@@ -271,7 +277,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       type: 'article',
       title: ogTitle,
-      description,
+      description: ogDescription,
       siteName: 'ADHX',
       url: canonicalUrl,
       authors: [`https://x.com/${tweet.author.screen_name}`],
@@ -286,7 +292,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     twitter: {
       card: hasRichMedia ? 'summary_large_image' : 'summary',
       title: ogTitle,
-      description,
+      description: ogDescription,
       images: [ogImages[0].url],
       creator: `@${tweet.author.screen_name}`,
     },

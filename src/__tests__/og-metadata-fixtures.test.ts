@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest'
 import { getOgImage } from '@/lib/utils/og-image'
-import { truncate, formatCount } from '@/lib/utils/format'
+import { buildTweetTitle, buildTweetSeoDescription } from '@/lib/utils/tweet-metadata'
 import { fixtures, fixtureMetadata, type FixtureSlug } from './fixtures/tweets'
 
 const BASE_URL = 'https://adhx.com'
@@ -150,45 +150,23 @@ describe('OG Metadata with Real Fixtures', () => {
   })
 
   describe('Full metadata generation', () => {
-    // Test the complete metadata object that would be generated
-    it.each(fixtureMetadata)('$slug: generates valid metadata structure', ({ slug }) => {
+    // Test the complete metadata object that would be generated, using the
+    // real extracted helpers (src/lib/utils/tweet-metadata.ts) rather than a
+    // hand-rolled re-implementation, so this test can't drift from production.
+    it.each(fixtureMetadata)('$slug: generates valid content-first metadata', ({ slug }) => {
       const fixture = fixtures[slug as FixtureSlug]
       const tweet = fixture.tweet!
 
-      // Simulate metadata generation (matching generateMetadata in page.tsx)
-      // For article tweets, use article title/preview since tweet.text is often empty
-      const isArticle = !!tweet.article?.title
-      const tweetText = tweet.text || ''
-      const articleTitle = tweet.article?.title || ''
-      const articlePreview = tweet.article?.preview_text || ''
-
-      // Choose best text source: tweet text > article preview > article title
-      const displayText = tweetText || articlePreview || articleTitle
-
-      // Build engagement suffix for social proof
-      const engagementParts: string[] = []
-      if (tweet.likes >= 100) engagementParts.push(`${formatCount(tweet.likes)} likes`)
-      if (tweet.retweets >= 50) engagementParts.push(`${formatCount(tweet.retweets)} reposts`)
-      const engagementSuffix = engagementParts.length > 0 ? ` (${engagementParts.join(', ')})` : ''
-
-      const maxDescLen = 280 - engagementSuffix.length
-      const description = truncate(displayText, maxDescLen) + engagementSuffix
-
-      // Title: cleaner for articles, informative for regular tweets
-      const title = isArticle
-        ? `${articleTitle} - @${tweet.author.screen_name}`
-        : `@${tweet.author.screen_name}: "${truncate(tweetText, 50)}"`
+      const title = buildTweetTitle(tweet, tweet.author.screen_name)
+      const description = buildTweetSeoDescription(tweet)
       const ogImage = getOgImage(tweet, BASE_URL)
-
-      // Unfurl headline (og + twitter): "Preview", no duplicated "ADHX".
-      const ogTitle = isArticle ? articleTitle : `Preview @${tweet.author.screen_name}'s tweet`
 
       const metadata = {
         title,
         description,
         openGraph: {
           type: 'article',
-          title: ogTitle,
+          title,
           description,
           siteName: 'ADHX',
           authors: [`https://x.com/${tweet.author.screen_name}`],
@@ -197,7 +175,7 @@ describe('OG Metadata with Real Fixtures', () => {
         },
         twitter: {
           card: 'summary_large_image',
-          title: ogTitle,
+          title,
           description,
           images: [ogImage],
           creator: `@${tweet.author.screen_name}`,
@@ -206,12 +184,75 @@ describe('OG Metadata with Real Fixtures', () => {
 
       // Validate structure
       expect(metadata.title).toBeTruthy()
-      expect(metadata.description.length).toBeLessThanOrEqual(280)
+      // No brand suffix in the string — the layout title template adds '| ADHX'.
+      expect(metadata.title.includes('| ADHX')).toBe(false)
+      expect(metadata.description.length).toBeLessThanOrEqual(160)
       expect(metadata.openGraph.images[0].url).toBeTruthy()
       expect(metadata.twitter.card).toBe('summary_large_image')
 
       // Snapshot full metadata for regression detection
       expect(metadata).toMatchSnapshot()
+    })
+  })
+
+  describe('Content-first title/description helpers', () => {
+    it('article-with-media: keeps the X Article title as the lead', () => {
+      const tweet = fixtures['article-with-media'].tweet!
+      const title = buildTweetTitle(tweet, tweet.author.screen_name)
+      expect(title).toBe(tweet.article!.title)
+    })
+
+    it('article-no-header: keeps the X Article title as the lead even without a cover', () => {
+      const tweet = fixtures['article-no-header'].tweet!
+      const title = buildTweetTitle(tweet, tweet.author.screen_name)
+      expect(title).toBe(tweet.article!.title)
+    })
+
+    it('long-text-with-quote: truncates long tweet text at a word boundary, not mid-word', () => {
+      const tweet = fixtures['long-text-with-quote'].tweet!
+      const title = buildTweetTitle(tweet, tweet.author.screen_name)
+      expect(title.includes('| ADHX')).toBe(false)
+      // Reasonable title length, and no doubled-up whitespace from a bad cut.
+      expect(title.length).toBeLessThanOrEqual(90)
+      expect(title).not.toMatch(/ {2,}/)
+    })
+
+    it('falls back to a media-aware label for an empty-text video tweet', () => {
+      const base = fixtures['video-tweet'].tweet!
+      const emptyTextVideoTweet = { ...base, text: '   https://t.co/abc123   ' }
+      const title = buildTweetTitle(emptyTextVideoTweet, emptyTextVideoTweet.author.screen_name)
+      expect(title).toBe(`Video by @${emptyTextVideoTweet.author.screen_name}`)
+    })
+
+    it('falls back to a photo label for an empty-text photo tweet', () => {
+      const base = fixtures['4-images'].tweet!
+      const emptyTextPhotoTweet = { ...base, text: '' }
+      const title = buildTweetTitle(emptyTextPhotoTweet, emptyTextPhotoTweet.author.screen_name)
+      expect(title).toBe(`Photo by @${emptyTextPhotoTweet.author.screen_name}`)
+    })
+
+    it('falls back to a generic label for an empty-text tweet with no media', () => {
+      const base = fixtures['plain-text'].tweet!
+      const emptyTextTweet = { ...base, text: '' }
+      const title = buildTweetTitle(emptyTextTweet, emptyTextTweet.author.screen_name)
+      expect(title).toBe(`Post by @${emptyTextTweet.author.screen_name}`)
+    })
+
+    it('adds an engagement suffix to the SEO description when counts are notable', () => {
+      const base = fixtures['plain-text'].tweet!
+      const tweet = { ...base, likes: 1400, retweets: 84 }
+      const description = buildTweetSeoDescription(tweet)
+      expect(description).toContain('1.4K likes')
+      expect(description).toContain('84 reposts')
+      expect(description.length).toBeLessThanOrEqual(160)
+    })
+
+    it('omits the engagement suffix below the notability thresholds', () => {
+      const base = fixtures['plain-text'].tweet!
+      const tweet = { ...base, likes: 10, retweets: 2 }
+      const description = buildTweetSeoDescription(tweet)
+      expect(description).not.toContain('likes')
+      expect(description).not.toContain('reposts')
     })
   })
 
