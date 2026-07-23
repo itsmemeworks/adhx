@@ -7,18 +7,33 @@
 
 > **Save now. Read never. Find always.**
 
-For people who bookmark everything and read nothing. A Twitter/X bookmark manager that syncs your bookmarks, surfaces what's trending, and actually helps you find that tweet you saved 6 months ago — and previews Instagram Reels, TikToks, and YouTube Shorts too.
+ADHX is the only open-source, self-hostable bookmark manager for X/Twitter — and the only bookmark manager, period, that also saves and previews Instagram Reels, TikToks, and YouTube Shorts in one place. Sync your X bookmarks, drop in links from anywhere, and actually find the thing you saved six months ago.
 
+<!-- TODO: hero GIF — capture the Matter UI: save flow + triage mode -->
 <p align="center">
-  <img src="https://img.shields.io/badge/Bookmarks_Saved-∞-8B5CF6?style=for-the-badge" alt="Bookmarks Saved: Infinite" />
-  <img src="https://img.shields.io/badge/Bookmarks_Read-Maybe_3-gray?style=for-the-badge" alt="Bookmarks Read: Maybe 3" />
+  <img src="public/og-logo.png" alt="ADHX — save now, read never, find always" width="640" />
 </p>
 
 ---
 
-## ⚡ Quick Add: URL Prefix
+## Why ADHX
 
-Save tweets, or preview Instagram Reels, TikToks and YouTube Shorts instantly by replacing the host in any link with `adhx.com`:
+Every other X/Twitter bookmark tool — Dewey, Tweetsmash, Twillot, and the rest — is closed-source SaaS: you pay a monthly fee, your bookmarks live on someone else's server, and search or export is usually the feature they paywall. Commercial tools in this space commonly charge $10–20/mo for exactly that.
+
+ADHX takes the opposite approach:
+
+- **Open source (MIT).** Read the code, audit it, fork it. Nothing is hidden behind a subscription tier.
+- **Self-hostable.** Run it on your own Fly.io app, your own Docker host, or your laptop. Your data lives in a SQLite file you own, not a vendor's database.
+- **No per-seat cost.** There's no pricing page because there's no seat to charge for — you pay for your own compute, if any.
+- **Four platforms, one collection.** X/Twitter bookmarks, Instagram Reels, TikToks, and YouTube Shorts land in the same searchable feed. No other tool in this space covers all four.
+
+---
+
+## Feature tour
+
+### Quick add: URL prefix
+
+The fastest way in: replace the host in any link with `adhx.com`.
 
 ```
 x.com/user/status/123        instagram.com/reels/abc      tiktok.com/@user/video/123     youtube.com/shorts/abc
@@ -35,66 +50,50 @@ adhx.com/https://www.tiktok.com/@user/video/123     → /@user/video/123
 adhx.com/https://youtube.com/shorts/abc             → /shorts/abc   (also youtu.be/abc, watch?v=abc)
 ```
 
-Tweets land in your collection and open in the lightbox. Reels and TikToks render a public preview with inline playback, and you can save them to your collection alongside your tweets. YouTube Shorts play inline via the official embed.
+Tweets land in your collection and open in the lightbox. Reels and TikToks render a public preview with inline playback that you can save alongside your tweets. YouTube Shorts play inline via the official embed.
+
+### Save it from anywhere
+
+| Method                  | Best for          | How                                                                                                    |
+| ----------------------- | ----------------- | ------------------------------------------------------------------------------------------------------ |
+| **URL-prefix trick**    | Everyone          | Replace the link's host with `adhx.com`. Works on any device, no setup.                                |
+| **Bookmarklet**         | Desktop + Android | Drag the one-click bookmarklet to your toolbar; click it on any X / Instagram / TikTok / YouTube page. |
+| **Add to ADHX**         | Logged-in users   | Paste any link into the in-app "Add" box — platform auto-detected.                                     |
+| **Android share sheet** | Android           | Install ADHX as a PWA, then Share → ADHX from any app.                                                 |
+| **iOS Shortcut**        | iOS               | One-tap Share Sheet shortcut (currently X-only; use the URL-prefix trick for the other platforms).     |
+
+Install ADHX as a Progressive Web App and it runs full-screen from your home screen, remembers your session, and (on Android) registers as a share target.
+
+### Triage mode
+
+A full-screen, one-card-at-a-time pass through your backlog: Keep / Delete / Done with arrow keys, plus a daily streak so the backlog actually shrinks.
+
+### Public trending
+
+[`/trending`](https://adhx.com/trending) is a live, anonymous feed of what the ADHX community is saving and previewing right now, with per-type hubs (videos, photos, text, articles) and a weekly archive. No account needed to browse it.
+
+### Tag sharing
+
+Tag your collection, then publish any tag as a friendly public URL (`/t/{username}/{tag}`) that anyone can browse — and that other ADHX users can clone straight into their own collection.
+
+### LLM-friendly by design
+
+ADHX exposes structured data for agents and AI search, not just humans:
+
+- A public [JSON API](#api) for any saved post (author, engagement stats, media, article content as markdown).
+- [`llms.txt`](https://adhx.com/llms.txt) declaring every public API and page for AI crawlers.
+- JSON-LD structured data on every public preview page.
+- A portable [agent skill](#agent-skill-works-with-any-agent) so any skills-compatible AI agent can fetch a tweet as clean JSON — no scraping.
 
 ---
 
-## 📱 Save it from anywhere
-
-Pick whatever's least friction for your device — every route ends up at the same `adhx.com` preview:
-
-| Method                  | Best for          | How                                                                                                                            |
-| ----------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| **URL-prefix trick**    | Everyone          | Replace the link's host with `adhx.com` (see above). Works on any device, no setup.                                            |
-| **Bookmarklet**         | Desktop + Android | Drag the one-click bookmarklet to your toolbar; click it on any X / Instagram / TikTok / YouTube page.                         |
-| **Add to ADHX**         | Logged-in users   | Paste any link into the in-app "Add" box (X, Instagram, TikTok, YouTube — auto-detected).                                      |
-| **Android share sheet** | Android           | Install the app (below), then **Share → ADHX** from any app — it's a PWA share target.                                         |
-| **iOS Shortcut**        | iOS               | One-tap Share Sheet shortcut. _Currently rewrites `x.com` only; for Reels / TikToks / Shorts on iOS use the URL-prefix trick._ |
-
-### Install as an app (PWA)
-
-ADHX is a Progressive Web App, so you can add it to your home screen and run it full-screen like a native app — no app store:
-
-- **Android (Chrome):** a one-tap **"Add to home screen"** banner appears at the bottom on mobile; tap **Add**.
-- **iOS (Safari):** tap the **Share** button, then **"Add to Home Screen"** (the in-app banner reminds you how).
-
-Once installed it launches standalone, remembers your session, and registers as an **Android share target** so you can share links straight into it. (The prompt is handled by `src/components/PWAInstallPrompt.tsx`; a cache-free service worker in `public/sw.js` makes the app installable without ever serving stale content.)
-
----
-
-## ✨ Features
-
-| Feature                      | Description                                                                                                                                                                                                   |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 🐿️ **Hoard Mode**            | Sync up to 800 bookmarks from Twitter/X. No judgment here.                                                                                                                                                    |
-| 🎬 **Reels & TikToks**       | Paste any Instagram Reel or TikTok URL → preview it inline and save it to your collection alongside your tweets.                                                                                              |
-| ▶️ **YouTube Shorts**        | Paste a Shorts (or `youtu.be` / `watch`) link → preview + play inline via the official embed, save it to your collection.                                                                                     |
-| 💾 **Save Across Platforms** | Add Reels, TikToks, and Shorts to your collection alongside tweets. Same feed, one search, platform badges keep things straight.                                                                              |
-| 📲 **Install as an App**     | On mobile, tap "Add to home screen" — ADHX runs full-screen like a native app (PWA), with an Android share-target so you can share any link straight into it.                                                 |
-| 📈 **Trending**              | A live, anonymous feed of what everyone's saving across ADHX right now at [/trending](https://adhx.com/trending) — per-type hubs, preview any of it, save your own. Public, no account needed.                |
-| 🤖 **AI-native**             | LLM-friendly JSON API for any post, [`llms.txt`](https://adhx.com/llms.txt), JSON-LD everywhere, and a portable [agent skill](#-agent-skill-works-with-any-agent) — built to be read by AI search and agents. |
-| 🖼️ **Three Views**           | Browse your collection as a masonry **gallery** (hover-preview videos), a dense **list**, or a **bento** mosaic.                                                                                              |
-| ⚡ **Triage Mode**           | Full-screen, one-card-at-a-time pass through your backlog — Keep / Delete / Done with arrow keys, plus a daily streak to keep you honest.                                                                     |
-| 🌗 **Light & Dark**          | A warm editorial theme in both modes. Follows your device by default, one-tap toggle everywhere, remembers your choice.                                                                                       |
-| 🔍 **Actually Find Stuff**   | Full-text search that works. Revolutionary, we know.                                                                                                                                                          |
-| 🏷️ **Tag Everything**        | Custom tags to organize your chaos (or don't, we won't tell)                                                                                                                                                  |
-| ✅ **Read Tracking**         | Mark bookmarks as read so you know what you've ~~actually looked at~~ scrolled past                                                                                                                           |
-| 📖 **Article Support**       | Full rendering of X Articles with rich text and images                                                                                                                                                        |
-| ⌨️ **Keyboard Shortcuts**    | ← → to browse, R/U for read/unread, Esc to close                                                                                                                                                              |
-| 🔤 **ADHD-Friendly Fonts**   | Choose from 4 fonts designed for readability (Lexend, Atkinson Hyperlegible, etc.)                                                                                                                            |
-| 📖 **Bionic Reading**        | Bold the first part of each word to help your eyes flow                                                                                                                                                       |
-| 👥 **Multi-User Ready**      | Each user gets their own bookmarks, tags, and read status                                                                                                                                                     |
-
----
-
-## 🚀 Quick Start
+## Quick start
 
 ### Prerequisites
 
 - Node.js 20+
 - pnpm
-- Twitter/X Developer Account (for OAuth credentials)
-- A concerning number of unread bookmarks
+- An X/Twitter Developer account (for OAuth credentials)
 
 ### Setup
 
@@ -113,50 +112,91 @@ cp .env.example .env
 pnpm dev
 ```
 
-Open [http://localhost:3001](http://localhost:3001) and connect your Twitter/X account.
+Open [http://localhost:3001](http://localhost:3001) and connect your X account.
 
-### Environment Variables
-
-Create a `.env` file:
+### Environment variables
 
 ```env
-# Twitter OAuth 2.0 credentials (from developer.twitter.com)
+# X/Twitter OAuth 2.0 credentials (from developer.twitter.com)
 TWITTER_CLIENT_ID=your_client_id
 TWITTER_CLIENT_SECRET=your_client_secret
 
 # App URL (for OAuth callback)
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 
-# Session security (generate a random string)
+# Session security (generate a random string, e.g. `openssl rand -base64 32`)
 SESSION_SECRET=your-secret-key-here
 ```
 
-### Getting Twitter API Credentials
+See `.env.example` for the full list, including `DATABASE_PATH` and the optional `SENTRY_DSN` / `SYNC_COOLDOWN_MINUTES`.
 
-1. Go to [developer.twitter.com](https://developer.twitter.com)
-2. Create a new project and app
-3. Enable OAuth 2.0 with PKCE
-4. Set callback URL to `http://localhost:3000/api/auth/twitter/callback`
-5. Copy the Client ID and Client Secret
-6. Try not to get distracted by your timeline
+### Getting X API credentials
 
----
-
-## 🛠️ Tech Stack
-
-| Layer          | Technology                                                                                              |
-| -------------- | ------------------------------------------------------------------------------------------------------- |
-| **Framework**  | Next.js 16 (App Router) + React 19                                                                      |
-| **Database**   | SQLite + Drizzle ORM (multi-user ready)                                                                 |
-| **Styling**    | Tailwind CSS                                                                                            |
-| **Auth**       | Twitter OAuth 2.0 PKCE + JWT sessions                                                                   |
-| **Media**      | FxTwitter for X, InstaFix for Instagram Reels, fxTikTok for TikToks, YouTube oEmbed + iframe for Shorts |
-| **Deployment** | Fly.io with automated releases                                                                          |
-| **Testing**    | Vitest (940+ tests)                                                                                     |
+1. Go to [developer.twitter.com](https://developer.twitter.com) and create a project + app.
+2. Enable OAuth 2.0 with PKCE.
+3. Set the callback URL to `http://localhost:3000/api/auth/twitter/callback`.
+4. Copy the Client ID and Client Secret into `.env`.
 
 ---
 
-## 🧪 Development
+## Self-hosting (Docker)
+
+The included `Dockerfile` builds a standalone Next.js image and runs database migrations on startup — no separate migration step required:
+
+```bash
+# Build the image
+docker build -t adhx .
+
+# Run it, mounting a volume for the SQLite database
+docker run -d \
+  -p 3000:3000 \
+  -v adhx_data:/data \
+  -e DATABASE_PATH=/data/adhx.db \
+  -e TWITTER_CLIENT_ID=your_client_id \
+  -e TWITTER_CLIENT_SECRET=your_client_secret \
+  -e SESSION_SECRET=$(openssl rand -base64 32) \
+  -e NEXT_PUBLIC_APP_URL=http://localhost:3000 \
+  adhx
+```
+
+Update your X app's OAuth callback URL to match wherever you expose the container (`http://localhost:3000/api/auth/twitter/callback` for the example above).
+
+### Deploying to Fly.io
+
+ADHX also ships with a ready-to-use Fly.io config for persistent SQLite storage:
+
+```bash
+curl -L https://fly.io/install.sh | sh
+fly auth login
+
+fly apps create your-app-name
+fly volumes create adhx_data --region lhr --size 1
+
+fly secrets set TWITTER_CLIENT_ID=your_client_id
+fly secrets set TWITTER_CLIENT_SECRET=your_client_secret
+fly secrets set SESSION_SECRET=$(openssl rand -base64 32)
+fly secrets set NEXT_PUBLIC_APP_URL=https://your-app-name.fly.dev
+
+fly deploy
+```
+
+Update your X app's callback URL to `https://your-app-name.fly.dev/api/auth/twitter/callback`, then visit your app and connect your account. Releases are automated via [Release Please](https://github.com/googleapis/release-please) — merge conventional-commit PRs to `main` and it opens a changelog PR that deploys on merge (or trigger manually: `gh workflow run deploy.yml -f environment=staging`).
+
+---
+
+## Tech stack
+
+| Layer      | Technology                                                                                    |
+| ---------- | --------------------------------------------------------------------------------------------- |
+| Framework  | Next.js 16 (App Router) + React 19                                                            |
+| Database   | SQLite + Drizzle ORM (multi-user schema)                                                      |
+| Styling    | Tailwind CSS                                                                                  |
+| Auth       | X OAuth 2.0 PKCE + JWT sessions                                                               |
+| Media      | FxTwitter for X, InstaFix for Reels, fxTikTok for TikToks, YouTube oEmbed + iframe for Shorts |
+| Deployment | Docker (self-host) or Fly.io with automated releases                                          |
+| Testing    | Vitest (940+ tests)                                                                           |
+
+## Development
 
 ```bash
 pnpm dev          # Start dev server
@@ -170,73 +210,27 @@ pnpm format:check # Check formatting (CI gate)
 pnpm db:migrate   # Run database migrations
 ```
 
-A pre-commit hook (Husky + lint-staged) auto-formats staged files and runs
-typecheck + tests. On pull requests, CI runs lint, format check, typecheck,
-tests, and a production build, plus CodeQL security analysis — the `build` and
-`format` checks are required to merge. See [ARCHITECTURE.md](ARCHITECTURE.md)
-for how the codebase is organized.
+A pre-commit hook (Husky + lint-staged) auto-formats staged files and runs typecheck + tests. On pull requests, CI runs lint, format check, typecheck, tests, and a production build, plus CodeQL security analysis — the `build` and `format` checks are required to merge. See [ARCHITECTURE.md](ARCHITECTURE.md) for how the codebase is organized.
 
 ---
 
-## 🚀 Deployment (Fly.io)
+## Star history
 
-ADHX is configured for deployment on [Fly.io](https://fly.io) with persistent SQLite storage.
-
-### Prerequisites
-
-```bash
-# Install Fly CLI
-curl -L https://fly.io/install.sh | sh
-
-# Login to Fly
-fly auth login
-```
-
-### Deploy
-
-```bash
-# Create the app (first time only)
-fly apps create your-app-name
-
-# Create persistent volume for SQLite database
-fly volumes create adhx_data --region lhr --size 1
-
-# Set secrets (replace with your domain)
-fly secrets set TWITTER_CLIENT_ID=your_client_id
-fly secrets set TWITTER_CLIENT_SECRET=your_client_secret
-fly secrets set SESSION_SECRET=$(openssl rand -base64 32)
-fly secrets set NEXT_PUBLIC_APP_URL=https://your-app-name.fly.dev
-
-# Deploy
-fly deploy
-```
-
-### Post-deployment
-
-1. Update your Twitter app's callback URL to match your domain:
-   - Local: `http://localhost:3000/api/auth/twitter/callback`
-   - Fly.io: `https://your-app-name.fly.dev/api/auth/twitter/callback`
-2. Visit your app URL and connect your Twitter account
-
-### Automated Releases
-
-Releases are automated via [Release Please](https://github.com/googleapis/release-please):
-
-1. Merge PRs with [conventional commits](https://www.conventionalcommits.org/) to `main`
-2. Release Please creates/updates a release PR with changelog
-3. Merge the release PR → automatically deploys to Fly.io
-
-Manual deploy: `gh workflow run deploy.yml`
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=itsmemeworks/adhx&type=Date&theme=dark" />
+  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=itsmemeworks/adhx&type=Date" />
+  <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=itsmemeworks/adhx&type=Date" />
+</picture>
 
 ---
 
-## 🤖 Agent Skill (works with any agent)
+## Agent skill (works with any agent)
 
 ADHX ships as an [Agent Skill](https://agentskills.io) — an open, portable format for giving AI agents new capabilities. Paste any X/Twitter link into your agent of choice and it can fetch the post as clean JSON, no browser or scraping needed.
 
-The `adhx` skill follows the [agentskills.io specification](https://agentskills.io/specification), so it works across **any skills-compatible agent**, including: Claude Code, Claude, Cursor, Gemini CLI, OpenCode, OpenAI Codex, GitHub Copilot, Goose, Kiro, VS Code (Copilot), Letta, Factory, Roo Code, Amp, and more.
+The `adhx` skill follows the [agentskills.io specification](https://agentskills.io/specification), so it works across any skills-compatible agent, including: Claude Code, Claude, Cursor, Gemini CLI, OpenCode, OpenAI Codex, GitHub Copilot, Goose, Kiro, VS Code (Copilot), Letta, Factory, Roo Code, Amp, and more.
 
-📂 Skill source: [`skills/adhx/SKILL.md`](skills/adhx/SKILL.md)
+Skill source: [`skills/adhx/SKILL.md`](skills/adhx/SKILL.md)
 
 ### Install
 
@@ -253,7 +247,7 @@ The skill is a single folder you drop into your agent's skills directory. Locati
 | GitHub Copilot / VS Code | `.github/skills/` (workspace)                               |
 | Goose                    | `~/.config/goose/skills/`                                   |
 
-> Check your agent's docs if your client isn't listed — the install path may differ, but the skill file itself is identical everywhere.
+Check your agent's docs if your client isn't listed — the install path may differ, but the skill file itself is identical everywhere.
 
 **One-line install** (replace `<SKILLS_DIR>` with the path from the table above):
 
@@ -270,15 +264,7 @@ mkdir -p <SKILLS_DIR>/adhx && \
 /plugin install adhx
 ```
 
-### Update
-
-Re-run the same install command — it overwrites the existing `SKILL.md` with the latest version. For the Claude Code marketplace install, use `/plugin update adhx`.
-
-```bash
-# Example for Claude Code
-curl -sL https://raw.githubusercontent.com/itsmemeworks/adhx/main/skills/adhx/SKILL.md \
-  -o ~/.claude/skills/adhx/SKILL.md
-```
+Re-run the same install command to update — it overwrites the existing `SKILL.md` with the latest version (`/plugin update adhx` for the marketplace install).
 
 ### Usage
 
@@ -288,7 +274,7 @@ Once installed, paste any X link into your agent and ask it to read/summarize/an
 > Read this and give me the key takeaways https://x.com/dgt10011/status/2020167690560647464
 ```
 
-The agent will automatically call the ADHX public API and return structured JSON with the full post content, author info, and engagement metrics — including long-form X Articles.
+The agent calls the ADHX public API and returns structured JSON with the full post content, author info, and engagement metrics — including long-form X Articles.
 
 ### API
 
@@ -300,11 +286,9 @@ No auth required. Works with `x.com`, `twitter.com`, and `adhx.com` URLs.
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
-We welcome contributions! Whether you're fixing bugs, adding features, or just improving docs.
-
-**Quick start:**
+We welcome contributions — bug fixes, features, or docs.
 
 1. Fork the repo
 2. Create a branch (`git checkout -b feat/amazing-feature`)
@@ -314,19 +298,9 @@ We welcome contributions! Whether you're fixing bugs, adding features, or just i
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
-### Commit Format
-
-We use conventional commits for automatic versioning:
-
-```bash
-feat: add new feature      # → Minor version bump
-fix: resolve bug           # → Patch version bump
-feat!: breaking change     # → Major version bump
-```
-
 ---
 
-## 📁 Project Structure
+## Project structure
 
 For a narrative walkthrough of the data flow, auth, preview model, and database design, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -334,12 +308,12 @@ For a narrative walkthrough of the data flow, auth, preview model, and database 
 src/
 ├── app/                    # Next.js App Router
 │   ├── api/               # API routes
-│   │   ├── auth/          # Twitter OAuth flow
+│   │   ├── auth/          # X OAuth flow
 │   │   ├── bookmarks/     # Bookmark CRUD
 │   │   ├── feed/          # Main feed endpoint
 │   │   ├── activity/      # Public anonymous Discover/pulse feed
 │   │   ├── media/         # Video/photo/thumbnail proxies (X, IG, TikTok)
-│   │   └── sync/          # Sync with Twitter
+│   │   └── sync/          # Sync with X
 │   ├── trending/          # Public Trending feed + per-type hubs (/discover redirects here)
 │   ├── settings/          # Settings page (font, theme, streak)
 │   └── page.tsx           # Collection (authed) / landing (signed-out)
@@ -360,13 +334,11 @@ src/
 
 ---
 
-## 🔒 Security
+## Security
 
 Found a security issue? Please report it privately. See [SECURITY.md](SECURITY.md) for details.
 
----
-
-## 📜 License
+## License
 
 MIT © [ADHX](LICENSE)
 
