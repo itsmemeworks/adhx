@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { isValidTweetAuthor, isValidTweetId } from '@/lib/media/proxy'
+import { mediaRateLimit } from '@/lib/rate-limit'
 
 // GET /api/media/image?author=xxx&tweetId=xxx&index=1
 // Proxies images through the server to avoid CORS issues when downloading/sharing
 // Uses FxTwitter's image CDN which provides reliable access to Twitter media
 export async function GET(request: NextRequest) {
+  const rateLimited = mediaRateLimit(request)
+  if (rateLimited) return rateLimited
+
   const searchParams = request.nextUrl.searchParams
   const author = searchParams.get('author')
   const tweetId = searchParams.get('tweetId')
@@ -11,6 +16,12 @@ export async function GET(request: NextRequest) {
 
   if (!author || !tweetId) {
     return NextResponse.json({ error: 'Missing author or tweetId' }, { status: 400 })
+  }
+
+  // Sanitise the user-provided params before interpolating them into the
+  // FxTwitter image CDN URL (prevents request-forgery via a crafted author/tweetId).
+  if (!isValidTweetAuthor(author) || !isValidTweetId(tweetId)) {
+    return NextResponse.json({ error: 'Invalid author or tweetId' }, { status: 400 })
   }
 
   // Validate index is a number
@@ -27,6 +38,10 @@ export async function GET(request: NextRequest) {
       headers: {
         'User-Agent': 'ADHX/1.0',
       },
+      // author/tweetId are validated above, so the only variable in this URL
+      // is a trusted, fixed FxTwitter host — but external fetches must always
+      // have a timeout per CLAUDE.md's Resilience Patterns.
+      signal: AbortSignal.timeout(10_000),
     })
 
     if (!imageResponse.ok) {

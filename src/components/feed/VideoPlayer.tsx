@@ -219,6 +219,18 @@ export function VideoPlayer({
   // Don't render video until we've determined the strategy
   // For HLS: src is set by the useEffect after HLS.js attaches
   // For MP4: src is set directly on the element
+  //
+  // TODO(video-src SSOT): this duplicates the per-platform MP4 URL logic in
+  // src/components/feed/video-src.ts (twitterProxy / feedVideoSrc). Not
+  // reconciled here because that module's exports take a full `FeedItem`
+  // (item.author/item.id/item.media[0].url), while this component only has
+  // discrete author/tweetId/platform props from its callers
+  // (TweetPreviewLanding.tsx, InstagramPreviewLanding.tsx) — there's no
+  // FeedItem to pass. Safely de-duplicating would mean either exporting a
+  // raw (author, id, platform) => url builder from video-src.ts (out of
+  // this change's file scope) or reshaping this component's public props
+  // (risks the preview-page call sites and the /info→HLS flow above, which
+  // video-src.ts doesn't model at all). Left as-is pending that decision.
   const videoSrc =
     ready && !useHls
       ? platform === 'instagram'
