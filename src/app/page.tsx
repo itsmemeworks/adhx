@@ -449,17 +449,29 @@ function FeedPageContent(): React.ReactElement {
     }
   }, [pendingNavigation, items, loading])
 
+  // Rebuild the URL from the CURRENT URL (searchParams), not from scratch. `search`
+  // is written to the URL by Header's own debounced push (Header.tsx), and this
+  // component's `search` state only catches up to it a render later (via the sync
+  // effect above). Reconstructing the whole query string from local state here —
+  // including `search` — raced with Header's write: this effect could fire with a
+  // stale (pre-sync) `search` and strip a freshly-typed term back out of the URL.
+  // Only the filters this component owns are written here; `search` is left
+  // exactly as found in the URL.
   useEffect(() => {
-    const params = new URLSearchParams()
+    const params = new URLSearchParams(searchParams.toString())
     if (filter !== 'all') params.set('filter', filter)
+    else params.delete('filter')
     if (platformFilter !== 'all') params.set('platform', platformFilter)
+    else params.delete('platform')
     if (sort !== 'added') params.set('sort', sort)
+    else params.delete('sort')
     if (sortDirection !== 'desc') params.set('sortDir', sortDirection)
+    else params.delete('sortDir')
     if (!unreadOnly) params.set('unreadOnly', 'false')
-    if (search) params.set('search', search)
+    else params.delete('unreadOnly')
     const queryString = params.toString()
     router.replace(queryString ? `?${queryString}` : '/', { scroll: false })
-  }, [filter, platformFilter, sort, sortDirection, unreadOnly, search, router])
+  }, [filter, platformFilter, sort, sortDirection, unreadOnly, router, searchParams])
 
   // Handle ?open=tweetId URL parameter to open a specific tweet in lightbox
   useEffect(() => {
@@ -513,20 +525,15 @@ function FeedPageContent(): React.ReactElement {
     const queryString = params.toString()
     router.replace(queryString ? `?${queryString}` : '/', { scroll: false })
 
-    // Refresh the feed to include the newly added tweet
-    fetchFeed(true).then(() => {
-      // After feed loads, find and open the new tweet
-      // Use a small delay to ensure items state is updated
-      setTimeout(() => {
-        const newIndex = items.findIndex((i) => i.id === tweetId)
-        if (newIndex !== -1) {
-          openTriage(items, newIndex)
-        } else {
-          // If not found in current view, use pending navigation
-          setPendingNavigation({ id: tweetId })
-        }
-      }, 100)
-    })
+    // Refresh the feed to include the newly added tweet. Rather than reading
+    // `items` from this closure after the refresh resolves (which is always a
+    // stale pre-fetch snapshot — this effect only depends on [searchParams],
+    // so `items` here never reflects the fetchFeed below), set the pending
+    // navigation up front and let the dedicated reconciliation effect (which
+    // depends on [pendingNavigation, items, loading]) open it deterministically
+    // once loading actually transitions back to false with the refreshed items.
+    setPendingNavigation({ id: tweetId })
+    fetchFeed(true)
   }, [searchParams]) // Only run when searchParams changes
 
   // The Matter top-bar Triage pill dispatches `open-triage`; open the focus

@@ -14,6 +14,7 @@ import {
   oauthTokens,
 } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+import { runInTransaction } from '@/lib/db'
 import { withAuth } from '@/lib/api/with-auth'
 import { handleRouteError } from '@/lib/api/response'
 
@@ -27,43 +28,43 @@ import { handleRouteError } from '@/lib/api/response'
  */
 export const DELETE = withAuth(async (_req, userId) => {
   try {
-    // Delete everything in order to respect foreign key constraints
-    // Note: SQLite with WAL mode serializes writes. better-sqlite3's synchronous
-    // driver doesn't support async transactions, but SQLite's single-writer lock
-    // prevents interleaving. All deletes filtered by userId for multi-user isolation.
+    // Delete everything atomically, in order to respect foreign key constraints.
+    // If any delete fails, all are rolled back (avoids a half-deleted account).
+    // Uses synchronous .run() inside transaction (required by better-sqlite3).
+    runInTransaction(() => {
+      // 1. Delete collection tweets (junction table)
+      db.delete(collectionTweets).where(eq(collectionTweets.userId, userId)).run()
 
-    // 1. Delete collection tweets (junction table)
-    await db.delete(collectionTweets).where(eq(collectionTweets.userId, userId))
+      // 2. Delete collections
+      db.delete(collections).where(eq(collections.userId, userId)).run()
 
-    // 2. Delete collections
-    await db.delete(collections).where(eq(collections.userId, userId))
+      // 3. Delete read status
+      db.delete(readStatus).where(eq(readStatus.userId, userId)).run()
 
-    // 3. Delete read status
-    await db.delete(readStatus).where(eq(readStatus.userId, userId))
+      // 4. Delete bookmark media
+      db.delete(bookmarkMedia).where(eq(bookmarkMedia.userId, userId)).run()
 
-    // 4. Delete bookmark media
-    await db.delete(bookmarkMedia).where(eq(bookmarkMedia.userId, userId))
+      // 5. Delete bookmark tags
+      db.delete(bookmarkTags).where(eq(bookmarkTags.userId, userId)).run()
 
-    // 5. Delete bookmark tags
-    await db.delete(bookmarkTags).where(eq(bookmarkTags.userId, userId))
+      // 6. Delete bookmark links
+      db.delete(bookmarkLinks).where(eq(bookmarkLinks.userId, userId)).run()
 
-    // 6. Delete bookmark links
-    await db.delete(bookmarkLinks).where(eq(bookmarkLinks.userId, userId))
+      // 7. Delete bookmarks (main table)
+      db.delete(bookmarks).where(eq(bookmarks.userId, userId)).run()
 
-    // 7. Delete bookmarks (main table)
-    await db.delete(bookmarks).where(eq(bookmarks.userId, userId))
+      // 8. Delete sync logs
+      db.delete(syncLogs).where(eq(syncLogs.userId, userId)).run()
 
-    // 8. Delete sync logs
-    await db.delete(syncLogs).where(eq(syncLogs.userId, userId))
+      // 9. Delete sync state
+      db.delete(syncState).where(eq(syncState.userId, userId)).run()
 
-    // 9. Delete sync state
-    await db.delete(syncState).where(eq(syncState.userId, userId))
+      // 10. Delete user preferences
+      db.delete(userPreferences).where(eq(userPreferences.userId, userId)).run()
 
-    // 10. Delete user preferences
-    await db.delete(userPreferences).where(eq(userPreferences.userId, userId))
-
-    // 11. Delete OAuth tokens (this logs the user out)
-    await db.delete(oauthTokens).where(eq(oauthTokens.userId, userId))
+      // 11. Delete OAuth tokens (this logs the user out)
+      db.delete(oauthTokens).where(eq(oauthTokens.userId, userId)).run()
+    })
 
     return NextResponse.json({
       success: true,

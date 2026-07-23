@@ -17,6 +17,10 @@ if (!fs.existsSync(dbDir)) {
 const sqlite = new Database(DB_PATH)
 sqlite.pragma('journal_mode = WAL')
 sqlite.pragma('foreign_keys = ON')
+// Defensive: if a second connection (e.g. a future worker/CLI script) ever
+// touches this file concurrently, wait up to 5s for a lock instead of
+// throwing SQLITE_BUSY immediately.
+sqlite.pragma('busy_timeout = 5000')
 
 // Create Drizzle instance
 export const db = drizzle(sqlite, { schema })
