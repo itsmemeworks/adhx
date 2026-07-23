@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.46.5](https://github.com/itsmemeworks/adhx/compare/v1.46.4...v1.46.5) (2026-07-23)
+
+
+### Bug Fixes
+
+* full-review remediation — security, correctness, infra + reported bugs ([#275](https://github.com/itsmemeworks/adhx/issues/275)) ([ae9a1fa](https://github.com/itsmemeworks/adhx/commit/ae9a1fab440e51d4053eec42e717edc01d9fe5f2))
+* stop reporting expected sync auth-loss to sentry ([#260](https://github.com/itsmemeworks/adhx/issues/260)) ([05207ed](https://github.com/itsmemeworks/adhx/commit/05207ed588a424f7f4ef5f28c7fae10dafd867b3))
+
 ## [1.46.4](https://github.com/itsmemeworks/adhx/compare/v1.46.3...v1.46.4) (2026-06-08)
 
 
