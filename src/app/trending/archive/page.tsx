@@ -23,7 +23,9 @@ export const dynamic = 'force-dynamic'
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://adhx.com'
 
 export const metadata: Metadata = {
-  title: 'Trending Archive — ADHX',
+  // No brand in the string — the layout title template appends '| ADHX'.
+  // (The OG/Twitter titles below keep it: unfurls don't get the template.)
+  title: 'Trending Archive',
   description:
     'A permanent, week-by-week archive of what people saved and previewed across X, TikTok, Instagram and YouTube on ADHX.',
   alternates: { canonical: '/trending/archive' },
