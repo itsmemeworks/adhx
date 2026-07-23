@@ -50,3 +50,7 @@ todos/
 
 # Claude Code workspace (local-only)
 .claude/
+
+# Design handoff prototype bundles (reference only, not production code)
+design_handoff_adhx_matter/
+design_handoff_knowledge_graph/

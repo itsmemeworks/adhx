@@ -36,9 +36,16 @@ function escapeLikePattern(input: string): string {
 export const GET = withAuth(async (request: NextRequest, userId) => {
   const searchParams = request.nextUrl.searchParams
 
-  // Parse query parameters
-  const page = parseInt(searchParams.get('page') || '1')
-  const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100)
+  // Parse query parameters. `page`/`limit` are user-controlled and must be
+  // clamped to safe integer ranges — an unvalidated NaN reaches
+  // better-sqlite3's `.limit()`/`.offset()` and throws (500), and a raw
+  // negative `limit` is treated by SQLite as "unbounded" (returns the whole
+  // collection in one page).
+  const rawPage = parseInt(searchParams.get('page') || '1', 10)
+  const page = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1
+
+  const rawLimit = parseInt(searchParams.get('limit') || '50', 10)
+  const limit = Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.min(rawLimit, 100) : 50
   const filter = (searchParams.get('filter') || 'all') as FilterType
   const unreadOnly = searchParams.get('unreadOnly') !== 'false' // Default to true
   const search = searchParams.get('search')
