@@ -7,7 +7,11 @@ import { getSession } from '@/lib/auth/session'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 import { isLikelyBot } from '@/lib/activity/bot'
 import { buildVideoObjectLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
-import { buildContentTitle, buildContentDescription } from '@/lib/utils/content-metadata'
+import {
+  buildContentTitle,
+  buildSnippetDescription,
+  attributionFact,
+} from '@/lib/utils/content-metadata'
 import { RelatedSaves } from '@/components/RelatedSaves'
 import { db } from '@/lib/db'
 import { bookmarks } from '@/lib/db/schema'
@@ -95,8 +99,12 @@ export default async function ReelPreviewPage({ params }: Props) {
     name: caption || description || (authorName ? `${authorName} on Instagram` : 'Instagram Reel'),
     description: caption || description || undefined,
     thumbnailUrl: imageUrl ? `${baseUrl}${imageUrl}` : undefined,
-    // No contentUrl: Instagram playback is degraded (mirrors dead — poster +
-    // caption only), so we don't advertise a non-working media URL.
+    // Playback works again as of 2026-07-27 (the mirror's cold-cache 404 is now
+    // retried rather than treated as fatal — see `@/lib/media/mirrors`), so the
+    // stream URL is advertised again, matching what the TikTok page does.
+    contentUrl: available
+      ? `${baseUrl}/api/media/instagram/video?id=${encodeURIComponent(id)}`
+      : undefined,
     author: ldAuthorName
       ? {
           name: ldAuthorName,
@@ -153,9 +161,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // falling back to an author-aware label when there's no caption to lead
   // with — not the old "Preview @user's reel" utility pitch.
   const pageTitle = buildContentTitle(caption || (who ? `Reel by ${who}` : 'Instagram Reel'))
-  const description = buildContentDescription(
-    caption || (who ? `${who} on Instagram.` : 'An Instagram Reel.'),
-  )
+  // The description continues the caption past the title rather than re-cutting
+  // the same opening text, then says what the page holds and why to open it.
+  const description = buildSnippetDescription({
+    title: pageTitle,
+    content: caption,
+    facts: [attributionFact(pageTitle, who, 'Instagram'), 'Reel'].filter((fact): fact is string =>
+      Boolean(fact),
+    ),
+    closer: 'Watch it here — no Instagram login.',
+  })
   const image = meta?.imageUrl
     ? `${baseUrl}/api/media/instagram/thumbnail?id=${encodeURIComponent(id)}`
     : `${baseUrl}/og-logo.png`

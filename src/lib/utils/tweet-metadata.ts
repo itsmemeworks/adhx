@@ -1,6 +1,6 @@
 import type { FxTwitterResponse } from '@/lib/media/fxembed'
 import { formatCount } from './format'
-import { truncateWordBoundary, buildContentDescription } from './content-metadata'
+import { truncateWordBoundary, buildSnippetDescription, attributionFact } from './content-metadata'
 
 type FxTweet = NonNullable<FxTwitterResponse['tweet']>
 
@@ -39,21 +39,55 @@ export function buildTweetTitle(tweet: FxTweet, screenName: string): string {
   return content
 }
 
+/** What this page actually holds, for the description's metadata trail. */
+function mediaFact(tweet: FxTweet): string | undefined {
+  if (tweet.article?.title) return 'Article'
+  const videos = tweet.media?.videos?.length ?? 0
+  const photos = tweet.media?.photos?.length ?? 0
+  if (videos > 1) return `${videos} videos`
+  if (videos === 1) return 'Video'
+  if (photos > 1) return `${photos} photos`
+  if (photos === 1) return 'Photo'
+  if (tweet.quote) return 'Quote post'
+  return undefined
+}
+
+/** "7.3K likes, 652 reposts" — omitted below the thresholds where it's noise. */
+function engagementFact(tweet: FxTweet): string | undefined {
+  const parts: string[] = []
+  if (tweet.likes >= 100) parts.push(`${formatCount(tweet.likes)} likes`)
+  if (tweet.retweets >= 50) parts.push(`${formatCount(tweet.retweets)} reposts`)
+  return parts.length > 0 ? parts.join(', ') : undefined
+}
+
 /**
- * Content-first meta description (~160 chars) for the SERP snippet: the
- * tweet's own text (or article excerpt) up front, with an engagement suffix
- * ("1.4K likes, 84 reposts") appended when the counts are notable enough to
- * help CTR. Kept deliberately separate from the richer OG/Twitter card
- * description (`buildDescription` in the page component), which carries
- * quote/external-link context for social unfurls instead.
+ * Meta description (~160 chars) for the SERP snippet. Continues the post text
+ * where `title` stopped rather than restating it, then appends what the page
+ * holds and the reason to open ours: x.com isn't crawlable and needs a login,
+ * so "readable without an X account" is the actual differentiator for the
+ * exact-phrase tweet searches this corpus ranks for.
+ *
+ * Kept deliberately separate from the richer OG/Twitter card description
+ * (`buildDescription` in the page component), which carries quote/external-link
+ * context for social unfurls instead.
  */
-export function buildTweetSeoDescription(tweet: FxTweet): string {
-  const base = tweet.text || tweet.article?.preview_text || tweet.article?.title || ''
+export function buildTweetSeoDescription(
+  tweet: FxTweet,
+  screenName: string,
+  title: string,
+): string {
+  const content = tweet.text || tweet.article?.preview_text || tweet.article?.title || ''
 
-  const engagementParts: string[] = []
-  if (tweet.likes >= 100) engagementParts.push(`${formatCount(tweet.likes)} likes`)
-  if (tweet.retweets >= 50) engagementParts.push(`${formatCount(tweet.retweets)} reposts`)
-  const suffix = engagementParts.length > 0 ? ` (${engagementParts.join(', ')})` : ''
+  const facts = [
+    attributionFact(title, `@${screenName}`, 'X'),
+    mediaFact(tweet),
+    engagementFact(tweet),
+  ].filter((fact): fact is string => Boolean(fact))
 
-  return buildContentDescription(base, suffix)
+  return buildSnippetDescription({
+    title,
+    content,
+    facts,
+    closer: 'Read the full post — no X account needed.',
+  })
 }

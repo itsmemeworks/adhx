@@ -235,9 +235,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   // Content-first `<title>` + SERP snippet description — lead with what the
   // post actually says, not a "Preview @user's tweet" utility pitch (GSC
-  // showed the old framing converting at 0.4% CTR).
+  // showed the old framing converting at 0.4% CTR). The description takes the
+  // title so it can continue past it instead of restating it.
   const title = buildTweetTitle(tweet, tweet.author.screen_name)
-  const description = buildTweetSeoDescription(tweet)
+  const description = buildTweetSeoDescription(tweet, tweet.author.screen_name, title)
 
   // The OG/Twitter card description stays the richer, longer version (quote +
   // external-link context) — that's what social apps render in the unfurl,

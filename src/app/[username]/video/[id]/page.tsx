@@ -7,7 +7,11 @@ import { getSession } from '@/lib/auth/session'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 import { isLikelyBot } from '@/lib/activity/bot'
 import { buildVideoObjectLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
-import { buildContentTitle, buildContentDescription } from '@/lib/utils/content-metadata'
+import {
+  buildContentTitle,
+  buildSnippetDescription,
+  attributionFact,
+} from '@/lib/utils/content-metadata'
 import { RelatedSaves } from '@/components/RelatedSaves'
 import { db } from '@/lib/db'
 import { bookmarks } from '@/lib/db/schema'
@@ -149,9 +153,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // Content-first `<title>` + SERP description: lead with the TikTok's own
   // caption/title, not the old "Preview @user's TikTok" utility pitch.
   const pageTitle = buildContentTitle(meta?.title || meta?.description || `${who} on TikTok`)
-  const description = buildContentDescription(
-    meta?.description || meta?.title || `A TikTok by @${handle}.`,
-  )
+  // The description continues the caption past the title rather than re-cutting
+  // the same opening text, then says what the page holds and why to open it.
+  const description = buildSnippetDescription({
+    title: pageTitle,
+    content: meta?.description || meta?.title || '',
+    facts: [attributionFact(pageTitle, who, 'TikTok'), 'Video'].filter((fact): fact is string =>
+      Boolean(fact),
+    ),
+    closer: 'Watch it here — no TikTok app needed.',
+  })
   // Poster via the thumbnail proxy so the card unfurls with an image.
   const image = `${baseUrl}/api/media/tiktok/thumbnail?username=${encodeURIComponent(handle)}&id=${encodeURIComponent(id)}`
 

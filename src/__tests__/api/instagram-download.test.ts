@@ -57,10 +57,37 @@ describe('Instagram video endpoints', () => {
   })
 
   it('502s when every mirror fails (client falls back to the poster)', async () => {
-    mockFetch.mockResolvedValue(upstream(404))
+    // A fatal status, not 404: for vxinstagram a 404 means "cold cache, still
+    // fetching" and is deliberately retried across a ~22s budget, which would
+    // just time this test out. The retry policy itself is covered in
+    // media-mirrors.test.ts; this asserts the route's give-up path.
+    mockFetch.mockResolvedValue(upstream(403))
     const { GET } = await import('@/app/api/media/instagram/video/route')
     const response = await GET(createRequest('/api/media/instagram/video', 'DYP6_iUlDzp'))
     expect(response.status).toBe(502)
+  })
+
+  it('retries a cold-cache 404 and streams the MP4 once the mirror warms up', async () => {
+    // The regression that made downloads look broken: the first request for any
+    // Reel 404s while the mirror's backend fetches it. Giving up there failed
+    // every first-ever request.
+    vi.useFakeTimers()
+    try {
+      mockFetch
+        .mockResolvedValueOnce(upstream(404))
+        .mockResolvedValueOnce(upstream(404))
+        .mockResolvedValueOnce(upstream(200, { 'content-type': 'video/mp4' }))
+
+      const { GET } = await import('@/app/api/media/instagram/video/route')
+      const pending = GET(createRequest('/api/media/instagram/video', 'DYP6_iUlDzp'))
+      await vi.runAllTimersAsync()
+      const response = await pending
+
+      expect(response.status).toBe(200)
+      expect(mockFetch).toHaveBeenCalledTimes(3)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('download route returns the stream as an attachment', async () => {

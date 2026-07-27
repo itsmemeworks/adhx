@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
+  AlertCircle,
   Bookmark,
   Check,
   Download,
@@ -14,6 +15,7 @@ import {
   Zap,
 } from 'lucide-react'
 import Link from 'next/link'
+import { isMediaAvailable } from '@/components/feed/utils'
 import { AnimatedBackground, LandingAnimations } from '@/components/landing'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { MatterLogo, ConnectWithX } from '@/components/matter'
@@ -232,6 +234,7 @@ function SecondaryActions({
 }) {
   const [copied, setCopied] = useState(false)
   const [shared, setShared] = useState(false)
+  const [downloadState, setDownloadState] = useState<'idle' | 'checking' | 'unavailable'>('idle')
 
   const copyLink = async () => {
     try {
@@ -259,8 +262,17 @@ function SecondaryActions({
     }
   }
 
-  const download = () => {
+  const download = async () => {
     if (!downloadUrl) return
+    // Ask before saving: on an unresolvable video the proxy answers with a JSON
+    // error, and `<a download>` writes that out as the .mp4 with no complaint.
+    setDownloadState('checking')
+    if (!(await isMediaAvailable(downloadUrl))) {
+      setDownloadState('unavailable')
+      setTimeout(() => setDownloadState('idle'), 4000)
+      return
+    }
+    setDownloadState('idle')
     const link = document.createElement('a')
     link.href = downloadUrl
     link.download = ''
@@ -291,8 +303,22 @@ function SecondaryActions({
       />
       {showDownload && (
         <ActBtn
-          icon={<Download className="w-[19px] h-[19px]" />}
-          label="Download"
+          icon={
+            downloadState === 'checking' ? (
+              <Loader2 className="w-[19px] h-[19px] animate-spin" />
+            ) : downloadState === 'unavailable' ? (
+              <AlertCircle className="w-[19px] h-[19px]" />
+            ) : (
+              <Download className="w-[19px] h-[19px]" />
+            )
+          }
+          label={
+            downloadState === 'checking'
+              ? 'Checking…'
+              : downloadState === 'unavailable'
+                ? 'Blocked by source'
+                : 'Download'
+          }
           onClick={download}
         />
       )}
