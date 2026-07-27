@@ -12,7 +12,11 @@ import { getSession } from '@/lib/auth/session'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 import { isLikelyBot } from '@/lib/activity/bot'
 import { buildVideoObjectLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
-import { buildContentTitle, buildContentDescription } from '@/lib/utils/content-metadata'
+import {
+  buildContentTitle,
+  buildSnippetDescription,
+  attributionFact,
+} from '@/lib/utils/content-metadata'
 import { RelatedSaves } from '@/components/RelatedSaves'
 import { db } from '@/lib/db'
 import { bookmarks } from '@/lib/db/schema'
@@ -140,13 +144,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const pageTitle = buildContentTitle(
     meta?.title || (who ? `${who}'s Short on YouTube` : 'YouTube Short'),
   )
-  const description = buildContentDescription(
-    meta?.title
-      ? `${meta.title}${who ? ` by ${who}` : ''} on YouTube.`
-      : who
-        ? `${who} on YouTube.`
-        : 'A YouTube Short.',
-  )
+  // oEmbed gives a title and no body, so there's usually no content left to
+  // continue past the title — the trail carries the description on its own.
+  const description = buildSnippetDescription({
+    title: pageTitle,
+    content: meta?.title || '',
+    facts: [attributionFact(pageTitle, who, 'YouTube'), 'Short'].filter((fact): fact is string =>
+      Boolean(fact),
+    ),
+    closer: 'Watch it here and save it to your collection.',
+  })
   const image = meta ? youtubeThumbnail(id) : `${baseUrl}/og-logo.png`
 
   return {

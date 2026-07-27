@@ -75,16 +75,45 @@ export function fallbackToOriginal(
  * Download media helper - fetches image as blob and triggers download
  * This is necessary because the download attribute doesn't work for cross-origin URLs
  */
+/**
+ * Whether a media proxy URL will actually deliver a file.
+ *
+ * The media proxies answer with a **JSON error body** (502) when the upstream
+ * mirror can't resolve the video — and an `<a download>` click, or a `.blob()`
+ * with no status check, happily saves that JSON *as the .mp4*. So every download
+ * path has to ask first. Instagram currently fails this for every reel (its
+ * video surfaces are all closed — see the outage log in `@/lib/media/mirrors`),
+ * which is exactly the "downloads are broken" symptom: a garbage file and, worse,
+ * a success checkmark.
+ *
+ * HEAD is cheap here: Next auto-handles it for a GET route handler, and the
+ * mirror resolver gives up immediately on a non-retryable upstream 404.
+ */
+export async function isMediaAvailable(url: string): Promise<boolean> {
+  try {
+    const response = await fetch(url, { method: 'HEAD' })
+    return response.ok
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Download a media URL as `filename`. Returns whether a file was actually
+ * saved, so callers can show an honest failure instead of a silent no-op.
+ */
 export async function handleDownloadMedia(
   e: React.MouseEvent,
   url: string,
   filename: string,
-): Promise<void> {
+): Promise<boolean> {
   e.stopPropagation()
   e.preventDefault()
 
   try {
     const response = await fetch(url)
+    // Without this the error JSON gets saved as the video file.
+    if (!response.ok) return false
     const blob = await response.blob()
     const blobUrl = URL.createObjectURL(blob)
 
@@ -97,9 +126,11 @@ export async function handleDownloadMedia(
 
     // Clean up the blob URL after a short delay
     setTimeout(() => URL.revokeObjectURL(blobUrl), 100)
+    return true
   } catch (error) {
     // Log error but don't open in new tab - download should just fail silently
     console.error('Download failed:', error)
+    return false
   }
 }
 

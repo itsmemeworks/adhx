@@ -182,7 +182,13 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
 
       expect(metadata.title).toContain('@testauthor')
       expect(metadata.title).toContain('This is a test tweet')
-      expect(metadata.description).toBe('This is a test tweet with some interesting content')
+      // The title already shows this whole (short, media-less, no-engagement)
+      // post, so the SERP description doesn't restate it — repeating the
+      // headline is what made the snippet read like a scraper mirror. With no
+      // content left to continue and no facts worth listing, the closer stands
+      // alone. Longer posts get "…<continuation> · <facts> · <closer>".
+      expect(metadata.description).toBe('Read the full post — no X account needed.')
+      expect(metadata.description).not.toContain('This is a test tweet')
       // The OG title now matches the content-first page <title> — the old
       // "Preview @user's tweet" utility framing was dropped for CTR.
       expect(metadata.openGraph?.title).toBe(

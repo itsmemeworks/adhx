@@ -3,6 +3,8 @@ import {
   INSTAGRAM_MIRRORS,
   instagramVideoUrls,
   isAllowedInstagramMirrorUrl,
+  isRetryableStatus,
+  type VideoMirror,
 } from '@/lib/media/mirrors'
 
 /**
@@ -32,5 +34,49 @@ describe('Instagram mirror registry', () => {
     expect(isAllowedInstagramMirrorUrl('https://evil.com/x')).toBe(false)
     expect(isAllowedInstagramMirrorUrl('https://vxinstagram.com.evil.com/x')).toBe(false)
     expect(isAllowedInstagramMirrorUrl('not a url')).toBe(false)
+  })
+})
+
+/**
+ * Retry policy. vxinstagram's cache is lazily populated, so the first request
+ * for a Reel 404s for ~10-20s while its backend fetches the post and only then
+ * starts serving the MP4. Treating that 404 as fatal (which this resolver did
+ * until 2026-07-27) failed every first-ever request for a given Reel — these
+ * tests pin the behaviour so it can't regress back.
+ */
+describe('mirror retry policy', () => {
+  const mirror = INSTAGRAM_MIRRORS[0]
+
+  it('retries the cold-cache 404 for a mirror that declares it', () => {
+    expect(mirror.retryStatuses).toContain(404)
+    expect(isRetryableStatus(404, mirror)).toBe(true)
+  })
+
+  it('always retries rate-limits and upstream 5xx', () => {
+    expect(isRetryableStatus(429, mirror)).toBe(true)
+    expect(isRetryableStatus(500, mirror)).toBe(true)
+    expect(isRetryableStatus(503, mirror)).toBe(true)
+  })
+
+  it('does not retry statuses that will never improve', () => {
+    for (const status of [400, 401, 403, 410, 451]) {
+      expect(isRetryableStatus(status, mirror)).toBe(false)
+    }
+  })
+
+  it('does not retry a 404 for a mirror that has not declared it retryable', () => {
+    const strict: VideoMirror = { name: 'strict', videoUrl: () => 'https://x/y', hosts: ['x'] }
+    expect(isRetryableStatus(404, strict)).toBe(false)
+    expect(isRetryableStatus(500, strict)).toBe(true)
+  })
+
+  it('budgets enough backoff to outlast the measured cold fetch', () => {
+    const attempts = mirror.attempts ?? 3
+    const base = mirror.backoffMs ?? 400
+    // Backoff is base * attemptNumber between attempts.
+    let total = 0
+    for (let i = 0; i < attempts - 1; i++) total += base * (i + 1)
+    // The cold fetch was measured resolving at ~10-20s.
+    expect(total).toBeGreaterThanOrEqual(20_000)
   })
 })

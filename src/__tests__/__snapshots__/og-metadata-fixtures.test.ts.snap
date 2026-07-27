@@ -2,12 +2,12 @@
 
 exports[`OG Metadata with Real Fixtures > Full metadata generation > '4-images': generates valid content-first metadata 1`] = `
 {
-  "description": "Apparently, a 19 year old built Wisprflow's UGC program to 500M views in 60 days. Dude spills some sauce on LinkedIn. Open this to see… (2.4K likes, 98 reposts)",
+  "description": "…500M views in 60 days. Dude spills some sauce on LinkedIn. Open this to… · 4 photos · 2.4K likes, 98 reposts · Read the full post — no X account needed.",
   "openGraph": {
     "authors": [
       "https://x.com/iamgdsa",
     ],
-    "description": "Apparently, a 19 year old built Wisprflow's UGC program to 500M views in 60 days. Dude spills some sauce on LinkedIn. Open this to see… (2.4K likes, 98 reposts)",
+    "description": "…500M views in 60 days. Dude spills some sauce on LinkedIn. Open this to… · 4 photos · 2.4K likes, 98 reposts · Read the full post — no X account needed.",
     "images": [
       {
         "height": 630,
@@ -24,7 +24,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > '4-images':
   "twitter": {
     "card": "summary_large_image",
     "creator": "@iamgdsa",
-    "description": "Apparently, a 19 year old built Wisprflow's UGC program to 500M views in 60 days. Dude spills some sauce on LinkedIn. Open this to see… (2.4K likes, 98 reposts)",
+    "description": "…500M views in 60 days. Dude spills some sauce on LinkedIn. Open this to… · 4 photos · 2.4K likes, 98 reposts · Read the full post — no X account needed.",
     "images": [
       "https://pbs.twimg.com/media/G-e63eNWkAATqEB.jpg",
     ],
@@ -35,12 +35,12 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > '4-images':
 
 exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-no-header': generates valid content-first metadata 1`] = `
 {
-  "description": "human data will be a $1 trillion/year market This is not a short-term prediction. It is a structural claim about where the economy… (4.8K likes, 629 reposts)",
+  "description": "…This is not a short-term prediction. It is a structural… · @aliniikk on X · Article · 4.8K likes, 629 reposts · Read the full post — no X account needed.",
   "openGraph": {
     "authors": [
       "https://x.com/aliniikk",
     ],
-    "description": "human data will be a $1 trillion/year market This is not a short-term prediction. It is a structural claim about where the economy… (4.8K likes, 629 reposts)",
+    "description": "…This is not a short-term prediction. It is a structural… · @aliniikk on X · Article · 4.8K likes, 629 reposts · Read the full post — no X account needed.",
     "images": [
       {
         "height": 630,
@@ -57,7 +57,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-no
   "twitter": {
     "card": "summary_large_image",
     "creator": "@aliniikk",
-    "description": "human data will be a $1 trillion/year market This is not a short-term prediction. It is a structural claim about where the economy… (4.8K likes, 629 reposts)",
+    "description": "…This is not a short-term prediction. It is a structural… · @aliniikk on X · Article · 4.8K likes, 629 reposts · Read the full post — no X account needed.",
     "images": [
       "https://pbs.twimg.com/profile_images/1987673473108582402/yFQu0vw1_200x200.jpg",
     ],
@@ -68,12 +68,12 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-no
 
 exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-with-media': generates valid content-first metadata 1`] = `
 {
-  "description": "Guys. I finally did it. After years of fidgeting with macros, intermittent fasting, and diet “hacks”, I finally got hyperlean. My… (4.4K likes, 220 reposts)",
+  "description": "Guys. I finally did it. After years of fidgeting with… · @NoahRyanCo on X · Article · 4.4K likes, 220 reposts · Read the full post — no X account needed.",
   "openGraph": {
     "authors": [
       "https://x.com/NoahRyanCo",
     ],
-    "description": "Guys. I finally did it. After years of fidgeting with macros, intermittent fasting, and diet “hacks”, I finally got hyperlean. My… (4.4K likes, 220 reposts)",
+    "description": "Guys. I finally did it. After years of fidgeting with… · @NoahRyanCo on X · Article · 4.4K likes, 220 reposts · Read the full post — no X account needed.",
     "images": [
       {
         "height": 630,
@@ -90,7 +90,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-wi
   "twitter": {
     "card": "summary_large_image",
     "creator": "@NoahRyanCo",
-    "description": "Guys. I finally did it. After years of fidgeting with macros, intermittent fasting, and diet “hacks”, I finally got hyperlean. My… (4.4K likes, 220 reposts)",
+    "description": "Guys. I finally did it. After years of fidgeting with… · @NoahRyanCo on X · Article · 4.4K likes, 220 reposts · Read the full post — no X account needed.",
     "images": [
       "https://pbs.twimg.com/media/G-E_92mXcAALnrI.jpg",
     ],
@@ -101,12 +101,12 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-wi
 
 exports[`OG Metadata with Real Fixtures > Full metadata generation > 'emoji-tweet': generates valid content-first metadata 1`] = `
 {
-  "description": "BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Named Virtual Accounts powered by @moonpay & @iron 1️⃣ Claim your own named account in… (2.2K likes, 821 reposts)",
+  "description": "…Virtual Accounts powered by @moonpay & @iron 1️⃣ Claim your own named… · Video · 2.2K likes, 821 reposts · Read the full post — no X account needed.",
   "openGraph": {
     "authors": [
       "https://x.com/moonpay",
     ],
-    "description": "BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Named Virtual Accounts powered by @moonpay & @iron 1️⃣ Claim your own named account in… (2.2K likes, 821 reposts)",
+    "description": "…Virtual Accounts powered by @moonpay & @iron 1️⃣ Claim your own named… · Video · 2.2K likes, 821 reposts · Read the full post — no X account needed.",
     "images": [
       {
         "height": 630,
@@ -123,7 +123,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'emoji-twee
   "twitter": {
     "card": "summary_large_image",
     "creator": "@moonpay",
-    "description": "BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Named Virtual Accounts powered by @moonpay & @iron 1️⃣ Claim your own named account in… (2.2K likes, 821 reposts)",
+    "description": "…Virtual Accounts powered by @moonpay & @iron 1️⃣ Claim your own named… · Video · 2.2K likes, 821 reposts · Read the full post — no X account needed.",
     "images": [
       "https://pbs.twimg.com/amplify_video_thumb/2009617113384706048/img/uUdl5DT48QRZSEHb.jpg",
     ],
@@ -134,12 +134,12 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'emoji-twee
 
 exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-1-image': generates valid content-first metadata 1`] = `
 {
-  "description": "Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory We built a fully automated system that repurposes, localizes, and launches… (4.5K likes, 491 reposts)",
+  "description": "…We built a fully automated system that repurposes,… · @maverickecom on X · Photo · 4.5K likes, 491 reposts · Read the full post — no X account needed.",
   "openGraph": {
     "authors": [
       "https://x.com/maverickecom",
     ],
-    "description": "Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory We built a fully automated system that repurposes, localizes, and launches… (4.5K likes, 491 reposts)",
+    "description": "…We built a fully automated system that repurposes,… · @maverickecom on X · Photo · 4.5K likes, 491 reposts · Read the full post — no X account needed.",
     "images": [
       {
         "height": 630,
@@ -156,7 +156,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-
   "twitter": {
     "card": "summary_large_image",
     "creator": "@maverickecom",
-    "description": "Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory We built a fully automated system that repurposes, localizes, and launches… (4.5K likes, 491 reposts)",
+    "description": "…We built a fully automated system that repurposes,… · @maverickecom on X · Photo · 4.5K likes, 491 reposts · Read the full post — no X account needed.",
     "images": [
       "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg",
     ],
@@ -167,12 +167,12 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-
 
 exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-2-images': generates valid content-first metadata 1`] = `
 {
-  "description": "🚨BREAKING: TRUMP FURIOUS WITH STARMER U.S state department made clear last night speaking on the UK and Keir Starmer ⬇️ "The… (3.0K likes, 538 reposts)",
+  "description": "…made clear last night speaking on the UK and Keir… · @BasilTheGreat on X · 2 photos · 3.0K likes, 538 reposts · Read the full post — no X account needed.",
   "openGraph": {
     "authors": [
       "https://x.com/BasilTheGreat",
     ],
-    "description": "🚨BREAKING: TRUMP FURIOUS WITH STARMER U.S state department made clear last night speaking on the UK and Keir Starmer ⬇️ "The… (3.0K likes, 538 reposts)",
+    "description": "…made clear last night speaking on the UK and Keir… · @BasilTheGreat on X · 2 photos · 3.0K likes, 538 reposts · Read the full post — no X account needed.",
     "images": [
       {
         "height": 630,
@@ -189,7 +189,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-
   "twitter": {
     "card": "summary_large_image",
     "creator": "@BasilTheGreat",
-    "description": "🚨BREAKING: TRUMP FURIOUS WITH STARMER U.S state department made clear last night speaking on the UK and Keir Starmer ⬇️ "The… (3.0K likes, 538 reposts)",
+    "description": "…made clear last night speaking on the UK and Keir… · @BasilTheGreat on X · 2 photos · 3.0K likes, 538 reposts · Read the full post — no X account needed.",
     "images": [
       "https://pbs.twimg.com/media/G-w2zr6aEAAt-FN.png",
     ],
@@ -200,12 +200,12 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-
 
 exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-with-quote': generates valid content-first metadata 1`] = `
 {
-  "description": "⚡️This is a live containment operation. The strike was real. The reversal was real. This is state-level controlled ignition. There… (5.9K likes, 916 reposts)",
+  "description": "…real. The reversal was real. This is… · @_The_Prophet__ on X · Quote post · 5.9K likes, 916 reposts · Read the full post — no X account needed.",
   "openGraph": {
     "authors": [
       "https://x.com/_The_Prophet__",
     ],
-    "description": "⚡️This is a live containment operation. The strike was real. The reversal was real. This is state-level controlled ignition. There… (5.9K likes, 916 reposts)",
+    "description": "…real. The reversal was real. This is… · @_The_Prophet__ on X · Quote post · 5.9K likes, 916 reposts · Read the full post — no X account needed.",
     "images": [
       {
         "height": 630,
@@ -222,7 +222,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-
   "twitter": {
     "card": "summary_large_image",
     "creator": "@_The_Prophet__",
-    "description": "⚡️This is a live containment operation. The strike was real. The reversal was real. This is state-level controlled ignition. There… (5.9K likes, 916 reposts)",
+    "description": "…real. The reversal was real. This is… · @_The_Prophet__ on X · Quote post · 5.9K likes, 916 reposts · Read the full post — no X account needed.",
     "images": [
       "https://pbs.twimg.com/media/G-tNQK3akAAXwrR.jpg",
     ],
@@ -233,12 +233,12 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-
 
 exports[`OG Metadata with Real Fixtures > Full metadata generation > 'plain-text': generates valid content-first metadata 1`] = `
 {
-  "description": "What movie is 10/10, yet hardly anyone has heard of it? (4.9K likes, 401 reposts)",
+  "description": "@TheCinesthetic on X · 4.9K likes, 401 reposts · Read the full post — no X account needed.",
   "openGraph": {
     "authors": [
       "https://x.com/TheCinesthetic",
     ],
-    "description": "What movie is 10/10, yet hardly anyone has heard of it? (4.9K likes, 401 reposts)",
+    "description": "@TheCinesthetic on X · 4.9K likes, 401 reposts · Read the full post — no X account needed.",
     "images": [
       {
         "height": 630,
@@ -255,7 +255,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'plain-text
   "twitter": {
     "card": "summary_large_image",
     "creator": "@TheCinesthetic",
-    "description": "What movie is 10/10, yet hardly anyone has heard of it? (4.9K likes, 401 reposts)",
+    "description": "@TheCinesthetic on X · 4.9K likes, 401 reposts · Read the full post — no X account needed.",
     "images": [
       "https://pbs.twimg.com/profile_images/1385452682517745667/mfcIUnoX_200x200.jpg",
     ],
@@ -266,12 +266,12 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'plain-text
 
 exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-image-tweet': generates valid content-first metadata 1`] = `
 {
-  "description": "for all of you guys that haven’t cracked organic yet you’re welcome (1.1K likes)",
+  "description": "@Nate_Google_ on X · Quote post · 1.1K likes · Read the full post — no X account needed.",
   "openGraph": {
     "authors": [
       "https://x.com/Nate_Google_",
     ],
-    "description": "for all of you guys that haven’t cracked organic yet you’re welcome (1.1K likes)",
+    "description": "@Nate_Google_ on X · Quote post · 1.1K likes · Read the full post — no X account needed.",
     "images": [
       {
         "height": 630,
@@ -288,7 +288,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-i
   "twitter": {
     "card": "summary_large_image",
     "creator": "@Nate_Google_",
-    "description": "for all of you guys that haven’t cracked organic yet you’re welcome (1.1K likes)",
+    "description": "@Nate_Google_ on X · Quote post · 1.1K likes · Read the full post — no X account needed.",
     "images": [
       "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg",
     ],
@@ -299,12 +299,12 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-i
 
 exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-text-tweet': generates valid content-first metadata 1`] = `
 {
-  "description": "True (3.2K likes, 423 reposts)",
+  "description": "Quote post · 3.2K likes, 423 reposts · Read the full post — no X account needed.",
   "openGraph": {
     "authors": [
       "https://x.com/elonmusk",
     ],
-    "description": "True (3.2K likes, 423 reposts)",
+    "description": "Quote post · 3.2K likes, 423 reposts · Read the full post — no X account needed.",
     "images": [
       {
         "height": 630,
@@ -321,7 +321,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-t
   "twitter": {
     "card": "summary_large_image",
     "creator": "@elonmusk",
-    "description": "True (3.2K likes, 423 reposts)",
+    "description": "Quote post · 3.2K likes, 423 reposts · Read the full post — no X account needed.",
     "images": [
       "https://pbs.twimg.com/profile_images/2008546467615580160/57KcqsTA_200x200.jpg",
     ],
@@ -332,12 +332,12 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-t
 
 exports[`OG Metadata with Real Fixtures > Full metadata generation > 'reply-tweet': generates valid content-first metadata 1`] = `
 {
-  "description": "Based on recent reports, the UK government has approved postponements (not permanent cancellations) for some May 2026 local elections in areas… (114 likes)",
+  "description": "…postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing… · 114 likes · Read the full post — no X account needed.",
   "openGraph": {
     "authors": [
       "https://x.com/grok",
     ],
-    "description": "Based on recent reports, the UK government has approved postponements (not permanent cancellations) for some May 2026 local elections in areas… (114 likes)",
+    "description": "…postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing… · 114 likes · Read the full post — no X account needed.",
     "images": [
       {
         "height": 630,
@@ -354,7 +354,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'reply-twee
   "twitter": {
     "card": "summary_large_image",
     "creator": "@grok",
-    "description": "Based on recent reports, the UK government has approved postponements (not permanent cancellations) for some May 2026 local elections in areas… (114 likes)",
+    "description": "…postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing… · 114 likes · Read the full post — no X account needed.",
     "images": [
       "https://pbs.twimg.com/profile_images/1893219113717342208/Vgg2hEPa_200x200.jpg",
     ],
@@ -365,12 +365,12 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'reply-twee
 
 exports[`OG Metadata with Real Fixtures > Full metadata generation > 'text-quoting-video': generates valid content-first metadata 1`] = `
 {
-  "description": "insane how much goalposts have shifted that bfl can just drop a model that is ~10x better than Stable Diffusion while being ~as small and basically… (636 likes)",
+  "description": "…drop a model that is ~10x better than Stable Diffusion while being ~as small and… · Quote post · 636 likes · Read the full post — no X account needed.",
   "openGraph": {
     "authors": [
       "https://x.com/swyx",
     ],
-    "description": "insane how much goalposts have shifted that bfl can just drop a model that is ~10x better than Stable Diffusion while being ~as small and basically… (636 likes)",
+    "description": "…drop a model that is ~10x better than Stable Diffusion while being ~as small and… · Quote post · 636 likes · Read the full post — no X account needed.",
     "images": [
       {
         "height": 630,
@@ -387,7 +387,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'text-quoti
   "twitter": {
     "card": "summary_large_image",
     "creator": "@swyx",
-    "description": "insane how much goalposts have shifted that bfl can just drop a model that is ~10x better than Stable Diffusion while being ~as small and basically… (636 likes)",
+    "description": "…drop a model that is ~10x better than Stable Diffusion while being ~as small and… · Quote post · 636 likes · Read the full post — no X account needed.",
     "images": [
       "https://pbs.twimg.com/amplify_video_thumb/2011825767634911237/img/rRqDWGszLMh8F1zp.jpg",
     ],
@@ -398,12 +398,12 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'text-quoti
 
 exports[`OG Metadata with Real Fixtures > Full metadata generation > 'video-tweet': generates valid content-first metadata 1`] = `
 {
-  "description": "Primes look chaotic in a line, but reveal structure when space curves. Same numbers. Different geometry. Hidden order. (3.6K likes, 592 reposts)",
+  "description": "…space curves. Same numbers. Different geometry. Hidden… · @Kekius_Sage on X · Video · 3.6K likes, 592 reposts · Read the full post — no X account needed.",
   "openGraph": {
     "authors": [
       "https://x.com/Kekius_Sage",
     ],
-    "description": "Primes look chaotic in a line, but reveal structure when space curves. Same numbers. Different geometry. Hidden order. (3.6K likes, 592 reposts)",
+    "description": "…space curves. Same numbers. Different geometry. Hidden… · @Kekius_Sage on X · Video · 3.6K likes, 592 reposts · Read the full post — no X account needed.",
     "images": [
       {
         "height": 630,
@@ -420,7 +420,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'video-twee
   "twitter": {
     "card": "summary_large_image",
     "creator": "@Kekius_Sage",
-    "description": "Primes look chaotic in a line, but reveal structure when space curves. Same numbers. Different geometry. Hidden order. (3.6K likes, 592 reposts)",
+    "description": "…space curves. Same numbers. Different geometry. Hidden… · @Kekius_Sage on X · Video · 3.6K likes, 592 reposts · Read the full post — no X account needed.",
     "images": [
       "https://pbs.twimg.com/amplify_video_thumb/2011857732484423680/img/wFNhWwXUnF0woRwH.jpg",
     ],
@@ -431,12 +431,12 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'video-twee
 
 exports[`OG Metadata with Real Fixtures > Full metadata generation > 'youtube-link': generates valid content-first metadata 1`] = `
 {
-  "description": "link: (381 likes)",
+  "description": "381 likes · Read the full post — no X account needed.",
   "openGraph": {
     "authors": [
       "https://x.com/skalskip92",
     ],
-    "description": "link: (381 likes)",
+    "description": "381 likes · Read the full post — no X account needed.",
     "images": [
       {
         "height": 630,
@@ -453,7 +453,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'youtube-li
   "twitter": {
     "card": "summary_large_image",
     "creator": "@skalskip92",
-    "description": "link: (381 likes)",
+    "description": "381 likes · Read the full post — no X account needed.",
     "images": [
       "https://pbs.twimg.com/profile_images/1557421659925237763/RzJu2YI3_200x200.jpg",
     ],

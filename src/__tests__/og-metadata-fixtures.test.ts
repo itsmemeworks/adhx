@@ -158,7 +158,7 @@ describe('OG Metadata with Real Fixtures', () => {
       const tweet = fixture.tweet!
 
       const title = buildTweetTitle(tweet, tweet.author.screen_name)
-      const description = buildTweetSeoDescription(tweet)
+      const description = buildTweetSeoDescription(tweet, tweet.author.screen_name, title)
       const ogImage = getOgImage(tweet, BASE_URL)
 
       const metadata = {
@@ -241,7 +241,8 @@ describe('OG Metadata with Real Fixtures', () => {
     it('adds an engagement suffix to the SEO description when counts are notable', () => {
       const base = fixtures['plain-text'].tweet!
       const tweet = { ...base, likes: 1400, retweets: 84 }
-      const description = buildTweetSeoDescription(tweet)
+      const title = buildTweetTitle(tweet, tweet.author.screen_name)
+      const description = buildTweetSeoDescription(tweet, tweet.author.screen_name, title)
       expect(description).toContain('1.4K likes')
       expect(description).toContain('84 reposts')
       expect(description.length).toBeLessThanOrEqual(160)
@@ -250,7 +251,8 @@ describe('OG Metadata with Real Fixtures', () => {
     it('omits the engagement suffix below the notability thresholds', () => {
       const base = fixtures['plain-text'].tweet!
       const tweet = { ...base, likes: 10, retweets: 2 }
-      const description = buildTweetSeoDescription(tweet)
+      const title = buildTweetTitle(tweet, tweet.author.screen_name)
+      const description = buildTweetSeoDescription(tweet, tweet.author.screen_name, title)
       expect(description).not.toContain('likes')
       expect(description).not.toContain('reposts')
     })
