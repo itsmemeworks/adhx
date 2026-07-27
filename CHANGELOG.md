@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.48.2](https://github.com/itsmemeworks/adhx/compare/v1.48.1...v1.48.2) (2026-07-27)
+
+
+### Bug Fixes
+
+* stop serp descriptions restating titles, repair instagram video resolution ([#289](https://github.com/itsmemeworks/adhx/issues/289)) ([799e110](https://github.com/itsmemeworks/adhx/commit/799e110a5fcdc2a7b24a54b7aa9f5bace5e4d2a7))
+
 ## [1.48.1](https://github.com/itsmemeworks/adhx/compare/v1.48.0...v1.48.1) (2026-07-23)
 
 
