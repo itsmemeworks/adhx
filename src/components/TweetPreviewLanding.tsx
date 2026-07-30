@@ -34,6 +34,7 @@ import { PreviewAnotherLink } from '@/components/PreviewAnotherLink'
 import { PreviewShell } from '@/components/previews/PreviewShell'
 import { formatCount, formatRelativeTime } from '@/lib/utils/format'
 import { cn } from '@/lib/utils'
+import { ClampedCaption } from '@/components/previews/ClampedCaption'
 
 /** Tweet type extracted from FxTwitterResponse */
 type Tweet = NonNullable<FxTwitterResponse['tweet']>
@@ -201,8 +202,8 @@ export function TweetPreviewLanding({
   const [bionicReading, setBionicReading] = useState(false)
   const [selectedFont, setSelectedFont] = useState<BodyFont>('ibm-plex')
   const [isExpanded, setIsExpanded] = useState(true)
-  // For tweets WITH media, long text auto-collapses to 3 lines (expandable).
-  const [mediaTextExpanded, setMediaTextExpanded] = useState(false)
+  // (Tweets WITH media collapse their text to 3 lines inside ClampedCaption,
+  // which owns that state and only offers the toggle when text is truly clipped.)
   const [shareStatus, setShareStatus] = useState<'idle' | 'shared' | 'copied'>('idle')
   const [contentOverflows, setContentOverflows] = useState(false)
   const articleRef = useRef<HTMLElement>(null)
@@ -461,25 +462,15 @@ export function TweetPreviewLanding({
               </div>
             </div>
           ) : (
-            // Regular tweet text. With media, long text collapses to 3 lines.
-            <>
-              <p
-                className={cn(
-                  'text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere]',
-                  hasMedia && !mediaTextExpanded ? 'line-clamp-3' : 'whitespace-pre-wrap',
-                )}
-              >
-                {renderTextWithLinks(tweet.text)}
-              </p>
-              {hasMedia && (tweet.text?.length ?? 0) > 180 && (
-                <button
-                  onClick={() => setMediaTextExpanded((v) => !v)}
-                  className="mt-1.5 text-[13px] font-semibold text-clay hover:opacity-80"
-                >
-                  {mediaTextExpanded ? 'Show less' : 'Show more'}
-                </button>
-              )}
-            </>
+            // Regular tweet text. With media, long text collapses to 3 lines —
+            // the toggle appears whenever it's genuinely clipped (measured, not
+            // guessed from length; a 179-char post with a blank line clips too).
+            <ClampedCaption
+              clamp={hasMedia}
+              className="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere]"
+            >
+              {renderTextWithLinks(tweet.text)}
+            </ClampedCaption>
           )}
         </div>
 

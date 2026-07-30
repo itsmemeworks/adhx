@@ -4,6 +4,17 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-07-30 — Preview captions: clipped text with no way to expand (all 4 surfaces)
+
+- **Why**: reported on `adhx.com/AMAZlNGNATURE/status/2082734821009490153` — text cut off with no "Show more". Nothing was missing from the data (FxTwitter returns the whole 179-char post, `is_note_tweet: false`); the loss was purely in rendering.
+- **Root cause — two conditions that disagreed.** In `TweetPreviewLanding`, the clamp was gated on `hasMedia` but the toggle on `text.length > 180`. At 179 chars the post got clamped with **no** affordance. No character threshold can work here: wrapping depends on viewport width, font metrics, newlines and long URLs. Worse, **TikTok / Instagram / YouTube previews clamped with no toggle at all** — every caption over 3 lines was permanently unreadable on those surfaces.
+- **Fix**: new `src/components/previews/ClampedCaption.tsx` **measures** `scrollHeight > clientHeight` (re-checked on `ResizeObserver` + after `document.fonts.ready`, since a font swap re-wraps) and renders Show more/less only when genuinely clipped. Wired into all four preview components; `hasMedia`/`imageUrl`/`hasVideo` now just feed its `clamp` prop.
+- **Second bug found while verifying in-browser**: `renderTextWithLinks` emits real `<br>`s, so a paragraph break burned one of the 3 preview lines and the post previewed as a **lone "…"**. Collapsed state now suppresses the empty line (`[&_span:empty]:hidden [&_span:empty+br]:hidden`); expanding restores spacing via `whitespace-pre-wrap`.
+- **Verified in a real browser** (jsdom can't test this — no layout): tweet 176px→88px box, toggle present, expands to full text; IG 253-char caption 118px→71px, now expandable. 24 snapshots updated (class change + button no longer rendering under jsdom, which has no layout to measure).
+- **State**: 1,181 tests passing (7 new), typecheck + format clean. **Uncommitted** — no PR opened yet.
+- **Gotcha worth knowing**: `author-hub-route`, `tag-collection-route` and `url-prefix-route` metadata tests **fail if `pnpm dev` is running** during `pnpm test` (shared `./data/adhdone.db`). Pre-existing, not caused by this change — stop the dev server before trusting a full-suite run.
+- **Follow-ups**: the in-app `FeedCard`/`MediaCard`/`DiscoverCard` still clamp captions with no expand (acceptable there — the card links onward), but `MediaCard` in triage is a full-focus surface and may deserve the same treatment.
+
 ## 2026-07-27 — SERP descriptions stop restating the title; Instagram video fixed (cold-cache 404)
 
 - **Why**: GSC (3 months) at 1.89K impressions / 9 clicks — 0.5% CTR at avg position 7.7. Impressions are compounding (+330 in the 4 days since W1) but the corpus is being _seen and not chosen_. Every top query has 0 clicks, and they're exact-phrase tweet searches — max intent, and we're the only crawlable mirror.

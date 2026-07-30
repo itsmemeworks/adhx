@@ -224,7 +224,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 class="px-4 pb-3 w-full min-w-0"
               >
                 <p
-                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3"
+                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3 [&_span:empty]:hidden [&_span:empty+br]:hidden"
                 >
                   <span>
                     <span>
@@ -6312,7 +6312,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 class="px-4 pb-3 w-full min-w-0"
               >
                 <p
-                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3"
+                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3 [&_span:empty]:hidden [&_span:empty+br]:hidden"
                 >
                   <span>
                     <span>
@@ -6344,11 +6344,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                     </span>
                   </span>
                 </p>
-                <button
-                  class="mt-1.5 text-[13px] font-semibold text-clay hover:opacity-80"
-                >
-                  Show more
-                </button>
               </div>
               <div
                 class="px-4 pb-3"
@@ -7446,7 +7441,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 class="px-4 pb-3 w-full min-w-0"
               >
                 <p
-                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3"
+                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3 [&_span:empty]:hidden [&_span:empty+br]:hidden"
                 >
                   <span>
                     <span>
@@ -7580,11 +7575,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                     </span>
                   </span>
                 </p>
-                <button
-                  class="mt-1.5 text-[13px] font-semibold text-clay hover:opacity-80"
-                >
-                  Show more
-                </button>
               </div>
               <div
                 class="px-4 pb-3"
@@ -8585,7 +8575,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 class="px-4 pb-3 w-full min-w-0"
               >
                 <p
-                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3"
+                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3 [&_span:empty]:hidden [&_span:empty+br]:hidden"
                 >
                   <span>
                     <span>
@@ -8627,11 +8617,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                     </span>
                   </span>
                 </p>
-                <button
-                  class="mt-1.5 text-[13px] font-semibold text-clay hover:opacity-80"
-                >
-                  Show more
-                </button>
               </div>
               <div
                 class="px-4 pb-3"
@@ -9680,7 +9665,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 class="px-4 pb-3 w-full min-w-0"
               >
                 <p
-                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3"
+                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3 [&_span:empty]:hidden [&_span:empty+br]:hidden"
                 >
                   <span>
                     <span>
@@ -9932,11 +9917,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                     </span>
                   </span>
                 </p>
-                <button
-                  class="mt-1.5 text-[13px] font-semibold text-clay hover:opacity-80"
-                >
-                  Show more
-                </button>
               </div>
               <div
                 class="px-4 pb-3"
@@ -11949,7 +11929,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 class="px-4 pb-3 w-full min-w-0"
               >
                 <p
-                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3"
+                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3 [&_span:empty]:hidden [&_span:empty+br]:hidden"
                 >
                   <span>
                     <span>
@@ -15023,7 +15003,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 class="px-4 pb-3 w-full min-w-0"
               >
                 <p
-                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3"
+                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3 [&_span:empty]:hidden [&_span:empty+br]:hidden"
                 >
                   <span>
                     <span>
@@ -16116,7 +16096,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 class="px-4 pb-3 w-full min-w-0"
               >
                 <p
-                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3"
+                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3 [&_span:empty]:hidden [&_span:empty+br]:hidden"
                 >
                   <span>
                     <span>
@@ -18204,7 +18184,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 class="px-4 pb-3 w-full min-w-0"
               >
                 <p
-                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3"
+                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3 [&_span:empty]:hidden [&_span:empty+br]:hidden"
                 >
                   <span>
                     <span>
@@ -24340,7 +24320,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 class="px-4 pb-3 w-full min-w-0"
               >
                 <p
-                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3"
+                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3 [&_span:empty]:hidden [&_span:empty+br]:hidden"
                 >
                   <span>
                     <span>
@@ -24372,11 +24352,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                     </span>
                   </span>
                 </p>
-                <button
-                  class="mt-1.5 text-[13px] font-semibold text-clay hover:opacity-80"
-                >
-                  Show more
-                </button>
               </div>
               <div
                 class="px-4 pb-3"
@@ -25490,7 +25465,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 class="px-4 pb-3 w-full min-w-0"
               >
                 <p
-                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3"
+                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3 [&_span:empty]:hidden [&_span:empty+br]:hidden"
                 >
                   <span>
                     <span>
@@ -25624,11 +25599,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                     </span>
                   </span>
                 </p>
-                <button
-                  class="mt-1.5 text-[13px] font-semibold text-clay hover:opacity-80"
-                >
-                  Show more
-                </button>
               </div>
               <div
                 class="px-4 pb-3"
@@ -26645,7 +26615,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 class="px-4 pb-3 w-full min-w-0"
               >
                 <p
-                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3"
+                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3 [&_span:empty]:hidden [&_span:empty+br]:hidden"
                 >
                   <span>
                     <span>
@@ -26687,11 +26657,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                     </span>
                   </span>
                 </p>
-                <button
-                  class="mt-1.5 text-[13px] font-semibold text-clay hover:opacity-80"
-                >
-                  Show more
-                </button>
               </div>
               <div
                 class="px-4 pb-3"
@@ -27756,7 +27721,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 class="px-4 pb-3 w-full min-w-0"
               >
                 <p
-                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3"
+                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3 [&_span:empty]:hidden [&_span:empty+br]:hidden"
                 >
                   <span>
                     <span>
@@ -28008,11 +27973,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                     </span>
                   </span>
                 </p>
-                <button
-                  class="mt-1.5 text-[13px] font-semibold text-clay hover:opacity-80"
-                >
-                  Show more
-                </button>
               </div>
               <div
                 class="px-4 pb-3"
@@ -30057,7 +30017,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 class="px-4 pb-3 w-full min-w-0"
               >
                 <p
-                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3"
+                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3 [&_span:empty]:hidden [&_span:empty+br]:hidden"
                 >
                   <span>
                     <span>
@@ -33179,7 +33139,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 class="px-4 pb-3 w-full min-w-0"
               >
                 <p
-                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3"
+                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3 [&_span:empty]:hidden [&_span:empty+br]:hidden"
                 >
                   <span>
                     <span>
@@ -34288,7 +34248,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 class="px-4 pb-3 w-full min-w-0"
               >
                 <p
-                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3"
+                  class="text-[18px] text-ink break-words leading-relaxed [overflow-wrap:anywhere] line-clamp-3 [&_span:empty]:hidden [&_span:empty+br]:hidden"
                 >
                   <span>
                     <span>

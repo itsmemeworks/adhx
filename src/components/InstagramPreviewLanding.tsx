@@ -12,7 +12,7 @@ import {
   useAddToCollection,
   useConnect,
 } from '@/components/previews/PreviewShell'
-import { cn } from '@/lib/utils'
+import { ClampedCaption } from '@/components/previews/ClampedCaption'
 
 interface InstagramPreviewLandingProps {
   reelId: string
@@ -104,14 +104,12 @@ export function InstagramPreviewLanding({
           Auto-collapses to 3 lines when a poster is present. */}
       {(caption || description) && (
         <div className="px-4 pb-3">
-          <p
-            className={cn(
-              'text-[14.5px] text-ink-2 break-words leading-relaxed [overflow-wrap:anywhere]',
-              imageUrl ? 'line-clamp-3' : 'whitespace-pre-wrap',
-            )}
+          <ClampedCaption
+            clamp={Boolean(imageUrl)}
+            className="text-[14.5px] text-ink-2 break-words leading-relaxed [overflow-wrap:anywhere]"
           >
             {caption || description}
-          </p>
+          </ClampedCaption>
         </div>
       )}
 
