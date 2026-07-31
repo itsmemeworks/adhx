@@ -13,7 +13,7 @@ import {
   useAddToCollection,
   useConnect,
 } from '@/components/previews/PreviewShell'
-import { cn } from '@/lib/utils'
+import { ClampedCaption } from '@/components/previews/ClampedCaption'
 
 /**
  * TikTok video IDs are Snowflake-style: the high 32 bits are the Unix creation
@@ -121,14 +121,12 @@ export function TikTokPreviewLanding({
 
       {description && (
         <div className="px-4 pb-3">
-          <p
-            className={cn(
-              'text-[14.5px] text-ink-2 break-words leading-relaxed [overflow-wrap:anywhere]',
-              hasVideo ? 'line-clamp-3' : 'whitespace-pre-wrap',
-            )}
+          <ClampedCaption
+            clamp={hasVideo}
+            className="text-[14.5px] text-ink-2 break-words leading-relaxed [overflow-wrap:anywhere]"
           >
             {description}
-          </p>
+          </ClampedCaption>
         </div>
       )}
 

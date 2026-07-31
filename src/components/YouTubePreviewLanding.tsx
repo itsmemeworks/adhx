@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { ExternalLink, Play, Search, Sparkles, Zap } from 'lucide-react'
 import { PlatformGlyph } from '@/components/matter'
-import { cn } from '@/lib/utils'
 import { youtubeEmbedUrl, youtubeShortUrl, youtubeThumbnail } from '@/lib/media/youtube'
 import { PreviewAnotherLink } from '@/components/PreviewAnotherLink'
 import {
@@ -13,6 +12,7 @@ import {
   useAddToCollection,
   useConnect,
 } from '@/components/previews/PreviewShell'
+import { ClampedCaption } from '@/components/previews/ClampedCaption'
 
 interface YouTubePreviewLandingProps {
   videoId: string
@@ -95,14 +95,12 @@ export function YouTubePreviewLanding({
 
       {title && (
         <div className="px-4 pb-3">
-          <p
-            className={cn(
-              'text-[14.5px] text-ink-2 font-medium break-words leading-relaxed [overflow-wrap:anywhere]',
-              hasVideo ? 'line-clamp-3' : '',
-            )}
+          <ClampedCaption
+            clamp={hasVideo}
+            className="text-[14.5px] text-ink-2 font-medium break-words leading-relaxed [overflow-wrap:anywhere]"
           >
             {title}
-          </p>
+          </ClampedCaption>
         </div>
       )}
 
