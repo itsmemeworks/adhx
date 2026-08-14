@@ -363,8 +363,9 @@ All work with or without protocol, browser path normalization (`//` → `/`), tr
 
 **Reel preview** (`src/components/InstagramPreviewLanding.tsx`):
 
-- Resolves metadata via InstaFix mirrors (`toinstagram.com` → `uuinstagram.com`).
-- Direct Instagram CDN URLs 403 to non-Instagram clients, so we proxy through the mirror's `/videos/{id}/1` endpoint (`src/lib/media/instafix.ts`).
+- Metadata (poster, caption, author) from Instagram's own OG tags (`src/lib/media/instafix.ts`). There is no `og:video`.
+- MP4 via vxinstagram (`src/lib/media/mirrors.ts`) proxied at `/api/media/instagram/video`. Cold cache 404s for ~10–20s — the resolver retries; **do not attach `<video src>` until a Range probe 200/206s** (`probeInstagramVideo` in `src/lib/media/instagram-playback.ts`). The preview page also warms the cache (Range 0-1, fire-and-forget) so the probe is usually already hot.
+- If the mirror never comes back: official Instagram iframe (`/reel/{id}/embed/`). Needs `https://www.instagram.com` in CSP `frame-src`.
 
 **TikTok preview** (`src/components/TikTokPreviewLanding.tsx`):
 
@@ -379,7 +380,7 @@ All work with or without protocol, browser path normalization (`//` → `/`), tr
   - Thumbnail: `https://i.ytimg.com/vi/{id}/hqdefault.jpg`. Embed: `https://www.youtube-nocookie.com/embed/{id}` (privacy-enhanced).
   - **No download** (that was a deliberate product decision — there's no compliant zero-cost MP4 source).
 - `extractYouTubeId()` handles `/shorts/{id}`, `youtu.be/{id}`, `/watch?v={id}`, `/embed/{id}` (11-char id), with/without protocol and `?si=` tracking params.
-- **CSP**: the iframe needs `frame-src https://www.youtube-nocookie.com https://www.youtube.com` and the poster needs `https://i.ytimg.com` in `img-src` — both in `next.config.js`.
+- **CSP**: YouTube iframe needs `frame-src https://www.youtube-nocookie.com https://www.youtube.com`; Instagram Reel fallback embed needs `https://www.instagram.com`. Poster: `https://i.ytimg.com` in `img-src`. All in `next.config.js`.
 - The gallery `FeedCard` shows the poster + a play overlay (no hover-autoplay; there's no MP4). The unified `MediaCard` (focus/triage view) renders the iframe directly for `platform === 'youtube'` — **give the iframe container a concrete height** (e.g. `h-[60vh] lg:h-[82vh] aspect-[9/16]`); an `aspect-[9/16]` box around an `absolute` iframe collapses to zero otherwise.
 - Saved Shorts store a poster as a `mediaType: 'video'` row (the embed is resolved from platform+id, so there's no MP4 to store).
 

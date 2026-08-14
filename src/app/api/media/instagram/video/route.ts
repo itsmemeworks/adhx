@@ -14,6 +14,10 @@ import { mediaRateLimit } from '@/lib/rate-limit'
  * independent and still works).
  *
  * GET /api/media/instagram/video?id={reelId}
+ *
+ * On a total miss we 502. The client Range-probes this route before attaching
+ * `<video src>` (media elements time out during the cold-cache wait) and falls
+ * back to Instagram's official embed if 502 persists.
  */
 export async function GET(request: NextRequest) {
   const rateLimited = mediaRateLimit(request)

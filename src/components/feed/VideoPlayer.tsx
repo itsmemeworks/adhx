@@ -3,6 +3,11 @@
 import { useEffect, useRef, useState } from 'react'
 import Hls from 'hls.js'
 import { Loader2, AlertCircle, ExternalLink } from 'lucide-react'
+import {
+  instagramEmbedUrl,
+  instagramVideoSrc,
+  probeInstagramVideo,
+} from '@/lib/media/instagram-playback'
 
 interface VideoPlayerProps {
   author: string
@@ -59,15 +64,21 @@ export function VideoPlayer({
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const hlsRef = useRef<Hls | null>(null)
-  // Non-Twitter platforms always skip the preflight (no HLS, no /info endpoint).
+  // Non-Twitter platforms always skip the /info preflight (no HLS).
   const nonTwitter = platform !== 'twitter'
   // Known-short videos can skip the /info preflight and start streaming immediately.
   const canSkipPreflight =
     nonTwitter ||
     (typeof duration === 'number' && duration > 0 && duration <= MP4_FAST_PATH_MAX_DURATION)
-  const [loading, setLoading] = useState(!canSkipPreflight)
+  // Instagram still skips /info, but must NOT attach <video src> until the MP4
+  // proxy is confirmed ready — the media element times out during a cold-cache wait.
+  const waitForInstagram = platform === 'instagram'
+  const [igPlayback, setIgPlayback] = useState<'probing' | 'mp4' | 'embed'>(
+    waitForInstagram ? 'probing' : 'mp4',
+  )
+  const [loading, setLoading] = useState(!canSkipPreflight || waitForInstagram)
   const [error, setError] = useState<string | null>(null)
-  const [ready, setReady] = useState(canSkipPreflight) // Tracks if we've determined the playback strategy
+  const [ready, setReady] = useState(canSkipPreflight && !waitForInstagram)
   const [useHls, setUseHls] = useState(false)
   const [hlsUrl, setHlsUrl] = useState<string | null>(null)
 
@@ -123,6 +134,26 @@ export function VideoPlayer({
       mounted = false
     }
   }, [author, tweetId, canSkipPreflight])
+
+  // Instagram: probe the MP4 proxy with a long timeout *before* setting <video src>.
+  // Safari/Chrome media elements abort during vxinstagram's 10–20s cold-cache wait.
+  useEffect(() => {
+    if (!waitForInstagram) return
+    const ac = new AbortController()
+    ;(async () => {
+      const ok = await probeInstagramVideo(tweetId, { signal: ac.signal })
+      if (ac.signal.aborted) return
+      if (ok) {
+        setIgPlayback('mp4')
+        setReady(true)
+        setLoading(false)
+      } else {
+        setIgPlayback('embed')
+        setLoading(false)
+      }
+    })()
+    return () => ac.abort()
+  }, [waitForInstagram, tweetId])
 
   // Second effect: Initialize HLS.js when needed
   useEffect(() => {
@@ -216,6 +247,36 @@ export function VideoPlayer({
     )
   }
 
+  if (waitForInstagram && igPlayback === 'probing') {
+    return (
+      <div
+        className={`relative overflow-hidden bg-black bg-cover bg-center ${className}`}
+        style={poster ? { backgroundImage: `url(${poster})` } : undefined}
+      >
+        <div
+          role="status"
+          aria-label="Loading video"
+          className="absolute inset-0 flex items-center justify-center bg-black/40"
+        >
+          <Loader2 className="w-8 h-8 text-white/80 animate-spin" />
+        </div>
+      </div>
+    )
+  }
+
+  if (waitForInstagram && igPlayback === 'embed') {
+    return (
+      <div className={`relative overflow-hidden bg-black min-h-[360px] ${className}`}>
+        <iframe
+          src={instagramEmbedUrl(tweetId)}
+          title="Instagram Reel"
+          className="absolute inset-0 h-full w-full"
+          allow="encrypted-media; picture-in-picture"
+        />
+      </div>
+    )
+  }
+
   // Don't render video until we've determined the strategy
   // For HLS: src is set by the useEffect after HLS.js attaches
   // For MP4: src is set directly on the element
@@ -234,7 +295,7 @@ export function VideoPlayer({
   const videoSrc =
     ready && !useHls
       ? platform === 'instagram'
-        ? `/api/media/instagram/video?id=${encodeURIComponent(tweetId)}`
+        ? instagramVideoSrc(tweetId)
         : platform === 'tiktok'
           ? `/api/media/tiktok/video?username=${encodeURIComponent(author)}&id=${encodeURIComponent(tweetId)}`
           : `/api/media/video?author=${author}&tweetId=${tweetId}&quality=hd`
@@ -259,6 +320,10 @@ export function VideoPlayer({
         className={className}
         onLoadedData={() => setLoading(false)}
         onError={() => {
+          if (platform === 'instagram') {
+            setIgPlayback('embed')
+            return
+          }
           if (!useHls) {
             setError('Failed to load video')
           }

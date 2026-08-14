@@ -4,6 +4,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-14 — Instagram Reels: probe then play, embed if the mirror never warms
+
+- **Why**: `<video src=/api/media/instagram/video>` starts immediately; vxinstagram cold-cache can take 10–20s. Safari/Chrome media elements abort sooner → "Failed to load video" even when the proxy would 200. Gating the player on a poster hid playback when OG scrape missed.
+- **What**: Client Range-probes the proxy (35s) before attaching `<video src>`. Preview RSC warms with Range 0-1. Persistent miss → official Instagram iframe (`frame-src` updated). Player always mounts for a reel id.
+- **State**: in-flight on `feat/push-ios-shortcut`.
+- **Follow-ups**: Feed/lightbox gallery hover still sets `<video src>` immediately — same cold-cache trap if that surface looks dead too.
+
 ## 2026-08-14 — Preview: Send the file vs Share link
 
 - **Why**: Three share icons on preview pages (stats footer, Send this video, Share) plus a void under More to Discover (`min-h-screen` shell, related as a sibling).

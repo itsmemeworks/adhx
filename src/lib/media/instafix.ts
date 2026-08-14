@@ -10,8 +10,8 @@
  * What still works: Instagram's own pages serve OpenGraph tags to bots
  * (Twitterbot UA) — `og:image` (thumbnail), `og:title`/`og:description`
  * (caption + engagement), and `twitter:title` (author). It does NOT expose
- * `og:video`. So we degrade gracefully: poster + caption + author + a
- * link out to Instagram. No inline playback, no MP4 download.
+ * `og:video`. Playback/download go through the vxinstagram MP4 registry
+ * (`src/lib/media/mirrors.ts`), not this scrape.
  *
  * The `og:image` URL is a signed `*.cdninstagram.com` link that expires, so
  * callers that need a durable thumbnail should go through the thumbnail proxy
