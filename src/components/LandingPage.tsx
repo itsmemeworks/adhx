@@ -5,17 +5,19 @@ import {
   Bookmark,
   Search,
   Zap,
-  Volume2,
   ArrowRight,
-  Plus,
   Smartphone,
   Monitor,
   Copy,
   Check,
+  Share,
+  Play,
+  Send,
+  Link2,
 } from 'lucide-react'
 import { extractYouTubeId } from '@/lib/media/youtube'
 import { getPlatformType, type PlatformType } from '@/lib/platform'
-import { PlatformGlyph, LiveDot, ConnectWithX } from '@/components/matter'
+import { LiveDot, ConnectWithX } from '@/components/matter'
 import { PublicNav } from '@/components/PublicNav'
 import { DiscoverCard } from '@/components/discover/DiscoverCard'
 import type { ActivityItem } from '@/components/discover/DiscoverFeed'
@@ -312,6 +314,11 @@ export function LandingPage() {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[18px]">
             <ValueProp
+              icon={<Send className="w-5 h-5" />}
+              title="Send the file"
+              body="Watch, then send the MP4. Friends don't need Instagram, TikTok, or an ADHX account."
+            />
+            <ValueProp
               icon={<Bookmark className="w-5 h-5" />}
               title="Hoard freely"
               body="Sync your X bookmarks or paste any link. Hoard responsibly — or don't."
@@ -319,12 +326,7 @@ export function LandingPage() {
             <ValueProp
               icon={<Zap className="w-5 h-5" />}
               title="Triage, don't doomscroll"
-              body="Swipe through your backlog one card at a time. Keep, read, or clear."
-            />
-            <ValueProp
-              icon={<Volume2 className="w-5 h-5" />}
-              title="Listen, don't read"
-              body="Text-to-speech reads any article or thread aloud while you do other things."
+              body="Swipe through the pile one card at a time. Keep, clear, or admit you'll never watch it."
             />
             <ValueProp
               icon={<Search className="w-5 h-5" />}
@@ -389,31 +391,31 @@ function HowItWorks() {
   }, [])
 
   const steps: { icon: React.ReactNode; h: string; b: string }[] = [
-    {
-      icon: <PlatformGlyph platform="twitter" size={17} />,
-      h: 'Connect X',
-      b: 'Your saved bookmarks sync in automatically — nothing to copy-paste.',
-    },
     platform === 'ios'
       ? {
-          icon: <Smartphone className="w-[17px] h-[17px]" />,
+          icon: <Share className="w-[17px] h-[17px]" />,
           h: 'Share → ADHX',
-          b: 'Add the shortcut once. Then any X post in the share sheet opens here — watch and send the file.',
+          b: "Add the shortcut once. Next time you're in X, tap Share → ADHX. No rewriting URLs like an animal.",
         }
       : {
-          icon: <Plus className="w-[17px] h-[17px]" />,
-          h: 'Save from anywhere',
-          b: 'Drop a TikTok, Reel, YouTube Short or tweet and it lands in your feed.',
+          icon: <Link2 className="w-[17px] h-[17px]" />,
+          h: 'Swap the host',
+          b: "x.com → adhx.com. Same trick for Reels, TikToks, Shorts. That's the whole magic trick.",
         },
     {
-      icon: <Zap className="w-[17px] h-[17px]" />,
-      h: 'Triage daily',
-      b: 'Swipe through your backlog one card at a time — keep, read, or clear.',
+      icon: <Play className="w-[17px] h-[17px]" />,
+      h: 'Watch it here',
+      b: 'Plays inline. No app, no login, no "open in Instagram" hostage situation.',
     },
     {
-      icon: <Volume2 className="w-[17px] h-[17px]" />,
-      h: 'Read or listen later',
-      b: 'Full-text search across everything, plus text-to-speech for any post.',
+      icon: <Send className="w-[17px] h-[17px]" />,
+      h: 'Send the file',
+      b: "The MP4 goes to WhatsApp (or wherever). Friends don't need the original app. Or this one.",
+    },
+    {
+      icon: <Bookmark className="w-[17px] h-[17px]" />,
+      h: 'Keep a pile, later',
+      b: 'Sign in if you want a private collection of things you will never rewatch. Optional. Honored.',
     },
   ]
   return (

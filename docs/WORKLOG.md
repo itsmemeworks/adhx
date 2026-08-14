@@ -4,6 +4,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-14 — Landing "How ADHX works" is the send loop
+
+- **Why**: The hero still led with Connect X → triage → TTS. That's not how the product works now.
+- **What**: Steps are get-it-in (Share → ADHX / swap the host) → watch → send the file → keep a pile later. Feature grid leads with send; TTS dropped from the four.
+- **State**: in-flight on `feat/push-ios-shortcut`.
+- **Follow-ups**: none.
+
 ## 2026-08-14 — Push the iOS Share Sheet shortcut
 
 - **Why**: The shortcut is the easiest send path on iPhone, but it was buried behind a DIY recipe and labelled "X-only". People never installed it.
