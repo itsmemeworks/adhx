@@ -322,15 +322,16 @@ export const GET = withAuth(async (request, userId) => {
         // Track sync failure
         metrics.syncFailed(classified.code)
 
-        // Auth-loss (tokens vanished mid-flight, or X 401/402/403'd the user
-        // token) is expected and user-recoverable — record it on the sync log
-        // + tell the client to reconnect. 402 is also tagged as a warning so
-        // an app-level X API plan lapse is still visible in Sentry.
+        // Auth-loss is expected and user-recoverable — record it on the sync
+        // log + tell the client to reconnect. 402 is the developer app being
+        // out of X API credits: warn in Sentry (with X's body) but do *not*
+        // send the user back through OAuth — that loops.
         if (classified.httpStatus === 402) {
-          captureMessage('X bookmarks returned 402', 'warning', {
+          captureMessage('X bookmarks returned 402 (no API credits)', 'warning', {
             syncId,
             userId,
             twitterStatus: 402,
+            twitterBody: classified.twitterBody,
           })
         } else if (!isReauthError(classified)) {
           captureException(error, {

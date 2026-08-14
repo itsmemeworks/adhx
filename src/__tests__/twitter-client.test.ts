@@ -291,8 +291,8 @@ describe('Twitter Client', () => {
       expect(result.resultCount).toBe(0)
     })
 
-    it('retries a 402 with a force-refresh, then asks to reconnect', async () => {
-      const fail = Object.assign(new Error('Request failed with code 402'), { code: 402 })
+    it('retries a 401 with a force-refresh, then asks to reconnect', async () => {
+      const fail = Object.assign(new Error('Request failed with code 401'), { code: 401 })
       mockTwitterApi.v2.bookmarks.mockRejectedValueOnce(fail).mockRejectedValueOnce(fail)
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -308,15 +308,29 @@ describe('Twitter Client', () => {
       await expect(fetchBookmarks('user-123')).rejects.toMatchObject({
         name: 'TwitterCallError',
         code: 'reauth',
-        message: expect.stringMatching(/fresh login/i),
       })
       expect(mockTwitterApi.v2.bookmarks).toHaveBeenCalledTimes(2)
     })
 
-    it('recovers from 402 when the force-refresh succeeds', async () => {
+    it('does not retry a 402 — that is X API credits, not a stale login', async () => {
+      mockTwitterApi.v2.bookmarks.mockRejectedValueOnce(
+        Object.assign(new Error('Request failed with code 402'), { code: 402 }),
+      )
+
+      const { fetchBookmarks } = await import('@/lib/twitter/client')
+      await expect(fetchBookmarks('user-123')).rejects.toMatchObject({
+        name: 'TwitterCallError',
+        code: 'unavailable',
+        message: expect.stringMatching(/login is fine/i),
+      })
+      expect(mockTwitterApi.v2.bookmarks).toHaveBeenCalledTimes(1)
+      expect(mockFetch).not.toHaveBeenCalled()
+    })
+
+    it('recovers from 401 when the force-refresh succeeds', async () => {
       mockTwitterApi.v2.bookmarks
         .mockRejectedValueOnce(
-          Object.assign(new Error('Request failed with code 402'), { code: 402 }),
+          Object.assign(new Error('Request failed with code 401'), { code: 401 }),
         )
         .mockResolvedValueOnce({
           data: {

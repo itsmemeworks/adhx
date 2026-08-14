@@ -3,7 +3,7 @@ import {
   GENERIC_SYNC_MESSAGE,
   RATE_LIMIT_MESSAGE,
   REAUTH_MESSAGE,
-  X_DENIED_MESSAGE,
+  X_UNAVAILABLE_MESSAGE,
 } from '@/lib/sync/messages'
 import {
   httpStatusOf,
@@ -22,9 +22,9 @@ function tokenRefreshError(message: string, status: number, fatal: boolean) {
 }
 
 describe('twitter error classification', () => {
-  it('treats 401, 402, and 403 as refreshable auth failures', () => {
+  it('treats 401 and 403 as refreshable auth failures, but not 402', () => {
     expect(isRefreshableAuthStatus(401)).toBe(true)
-    expect(isRefreshableAuthStatus(402)).toBe(true)
+    expect(isRefreshableAuthStatus(402)).toBe(false)
     expect(isRefreshableAuthStatus(403)).toBe(true)
     expect(isRefreshableAuthStatus(429)).toBe(false)
     expect(isRefreshableAuthStatus(500)).toBe(false)
@@ -35,15 +35,15 @@ describe('twitter error classification', () => {
     expect(httpStatusOf(new Error('nope'))).toBeUndefined()
   })
 
-  it('maps 402 to a reconnect prompt, never the raw status code', () => {
+  it('maps 402 to unavailable, never a reconnect prompt', () => {
     const err = toTwitterCallError(
       Object.assign(new Error('Request failed with code 402'), { code: 402 }),
     )
     expect(err).toBeInstanceOf(TwitterCallError)
-    expect(err.code).toBe('reauth')
-    expect(err.message).toBe(X_DENIED_MESSAGE)
+    expect(err.code).toBe('unavailable')
+    expect(err.message).toBe(X_UNAVAILABLE_MESSAGE)
     expect(err.message).not.toMatch(/402/)
-    expect(isReauthError(err)).toBe(true)
+    expect(isReauthError(err)).toBe(false)
   })
 
   it('maps 401/403 to the expired-connection copy', () => {

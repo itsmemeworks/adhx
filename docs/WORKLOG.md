@@ -4,6 +4,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-14 — 402 is X API credits, not a stale login (reconnect loop)
+
+- **Why**: Staging after #304: even a fresh OAuth still showed "Reconnect your X account". 402 survived login because it is **Payment Required** — the developer app has no pay-per-use credits (`Your enrolled account does not have any credits to fulfill this request`). Sending users back through Connect with X loops.
+- **What**: 402 is now `code: 'unavailable'` ("Your login is fine — try again later") with Retry, not Connect with X. No force-refresh on 402. `?firstLogin=` is stripped on sync error so refresh doesn't re-fire. Sentry warning includes X's response body. 401/403 still reconnect.
+- **State**: in-flight on `fix/sync-reauth-and-video-robots`. Sync itself will keep failing until credits are topped up at console.x.com.
+- **Follow-ups**: Top up X API credits; then Retry should sync.
+
 ## 2026-08-14 — GSC "Thumbnail blocked by robots.txt" (video indexing)
 
 - **Why**: Search Console: video pages aren't indexed because the poster is blocked. Reel/TikTok `VideoObject` JSON-LD (and OG images) point at `/api/media/instagram/thumbnail` and `/api/media/tiktok/thumbnail`; `Disallow: /api/` won over those URLs.
