@@ -57,7 +57,7 @@ describe('Twitter Client', () => {
       const { getTwitterClient } = await import('@/lib/twitter/client')
 
       await expect(getTwitterClient('nonexistent-user')).rejects.toThrow(
-        'Not authenticated. Please connect your Twitter account.',
+        'Your X connection expired. Reconnect to keep syncing bookmarks.',
       )
     })
 
@@ -289,6 +289,56 @@ describe('Twitter Client', () => {
 
       expect(result.bookmarks).toHaveLength(0)
       expect(result.resultCount).toBe(0)
+    })
+
+    it('retries a 402 with a force-refresh, then asks to reconnect', async () => {
+      const fail = Object.assign(new Error('Request failed with code 402'), { code: 402 })
+      mockTwitterApi.v2.bookmarks.mockRejectedValueOnce(fail).mockRejectedValueOnce(fail)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            access_token: 'new-access-token',
+            refresh_token: 'new-refresh-token',
+            expires_in: 7200,
+          }),
+      })
+
+      const { fetchBookmarks } = await import('@/lib/twitter/client')
+      await expect(fetchBookmarks('user-123')).rejects.toMatchObject({
+        name: 'TwitterCallError',
+        code: 'reauth',
+        message: expect.stringMatching(/fresh login/i),
+      })
+      expect(mockTwitterApi.v2.bookmarks).toHaveBeenCalledTimes(2)
+    })
+
+    it('recovers from 402 when the force-refresh succeeds', async () => {
+      mockTwitterApi.v2.bookmarks
+        .mockRejectedValueOnce(
+          Object.assign(new Error('Request failed with code 402'), { code: 402 }),
+        )
+        .mockResolvedValueOnce({
+          data: {
+            data: [{ id: 'tweet-ok', text: 'Recovered', author_id: 'a1' }],
+            meta: { result_count: 1 },
+          },
+          includes: { users: [], media: [] },
+        })
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            access_token: 'new-access-token',
+            refresh_token: 'new-refresh-token',
+            expires_in: 7200,
+          }),
+      })
+
+      const { fetchBookmarks } = await import('@/lib/twitter/client')
+      const result = await fetchBookmarks('user-123')
+      expect(result.bookmarks[0].id).toBe('tweet-ok')
+      expect(mockTwitterApi.v2.bookmarks).toHaveBeenCalledTimes(2)
     })
   })
 

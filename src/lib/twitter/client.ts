@@ -1,5 +1,12 @@
 import { TwitterApi, UserV2 } from 'twitter-api-v2'
 import { getStoredTokens, getValidTokens } from '@/lib/auth/oauth'
+import { REAUTH_MESSAGE } from '@/lib/sync/messages'
+import {
+  isRefreshableAuthStatus,
+  httpStatusOf,
+  toTwitterCallError,
+  TwitterCallError,
+} from '@/lib/twitter/errors'
 
 export interface TwitterMedia {
   mediaKey: string
@@ -51,12 +58,6 @@ export interface FetchBookmarksResult {
   resultCount: number
 }
 
-/** A 401 from the Twitter API (twitter-api-v2 surfaces the HTTP status as `code`). */
-function isAuthError(err: unknown): boolean {
-  const code = (err as { code?: number })?.code
-  return code === 401 || code === 403
-}
-
 // Get authenticated Twitter client for a specific user. Pass forceRefresh to
 // refresh the access token even if it looks valid — used to recover from a 401
 // when a token died before its nominal expiry (revoked / rotated / clock skew).
@@ -66,7 +67,7 @@ export async function getTwitterClient(userId: string, forceRefresh = false): Pr
   const tokens = await getValidTokens(userId, { forceRefresh })
 
   if (!tokens) {
-    throw new Error('Not authenticated. Please connect your Twitter account.')
+    throw new TwitterCallError(REAUTH_MESSAGE, 'reauth')
   }
 
   return new TwitterApi(tokens.accessToken)
@@ -88,7 +89,7 @@ export async function fetchBookmarks(
     // refresh cleared them, or account data wiped). Surface the same
     // reconnect message as the 401 path so the user gets a consistent prompt
     // and the sync route can classify it as expected auth-loss (not a bug).
-    throw new Error('Your X session has expired. Please reconnect your account in Settings.')
+    throw new TwitterCallError(REAUTH_MESSAGE, 'reauth')
   }
 
   // Inline so the literal field arrays get contextually typed by the API param.
@@ -112,17 +113,19 @@ export async function fetchBookmarks(
 
   // Fetch bookmarks. If the access token died before its nominal expiry (so the
   // proactive refresh in getTwitterClient missed it), Twitter 401s — force a
-  // refresh and retry once. If that still fails on auth, surface a clear
-  // reconnect message instead of a raw "code 401".
+  // refresh and retry once. X also 402s on bookmarks for a rejected user token
+  // (and 403s for missing bookmark.read); those get the same retry-then-reauth
+  // path so the UI never shows a raw "Request failed with code 402".
   let response
   try {
     response = await fetchPage(await getTwitterClient(userId))
   } catch (err) {
-    if (!isAuthError(err)) throw err
+    const status = httpStatusOf(err)
+    if (!status || !isRefreshableAuthStatus(status)) throw toTwitterCallError(err)
     try {
       response = await fetchPage(await getTwitterClient(userId, true))
-    } catch {
-      throw new Error('Your X session has expired. Please reconnect your account in Settings.')
+    } catch (retryErr) {
+      throw toTwitterCallError(retryErr)
     }
   }
 

@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { streamedBookmarkToFeedItem } from '@/components/feed'
 import type { FeedItem, StreamedBookmark } from '@/components/feed'
+import { parseSyncErrorEvent } from '@/lib/sync/messages'
 
 interface SyncProgress {
   current: number
@@ -141,13 +142,13 @@ export function useSyncFlow({
         })
 
         eventSource.addEventListener('error', (e) => {
-          console.error('Sync error:', e)
-          setSyncProgress({ current: 0, total: 0, message: 'Sync failed' })
+          const parsed = parseSyncErrorEvent(e)
+          setSyncProgress({ current: 0, total: 0, message: parsed.message })
           eventSource.close()
           eventSourceRef.current = null
           setIsSyncing(false)
           setShowSyncModal(false)
-          setTimeout(() => setSyncProgress(null), 3000)
+          setTimeout(() => setSyncProgress(null), 8000)
         })
 
         eventSource.onerror = () => {

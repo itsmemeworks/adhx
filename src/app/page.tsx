@@ -20,6 +20,8 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Loader2, CheckCircle2 } from 'lucide-react'
 import { TriageMode } from '@/components/feed/TriageMode'
 import { useTheme } from '@/lib/theme/context'
+import { ConnectWithX } from '@/components/matter'
+import { parseSyncErrorEvent, type SyncErrorCode } from '@/lib/sync/messages'
 
 export default function FeedPage(): React.ReactElement {
   return (
@@ -72,8 +74,10 @@ function FeedPageContent(): React.ReactElement {
     message?: string
   } | null>(null)
   const [showSyncModal, setShowSyncModal] = useState(false)
+  const [syncErrorCode, setSyncErrorCode] = useState<SyncErrorCode | null>(null)
   const [streamedItems, setStreamedItems] = useState<FeedItem[]>([])
   const syncTriggeredRef = useRef(false)
+  const syncTerminalRef = useRef(false)
   const [pendingNavigation, setPendingNavigation] = useState<{
     id: string
     fallbackUrl?: string
@@ -180,6 +184,8 @@ function FeedPageContent(): React.ReactElement {
 
         // Cooldown passed - now start sync
         setIsSyncing(true)
+        setSyncErrorCode(null)
+        syncTerminalRef.current = false
         setSyncProgress({ current: 0, total: 0, message: 'Starting sync...' })
         // Allow gallery to render streamed items immediately (fixes skeleton showing forever)
         setLoading(false)
@@ -231,6 +237,7 @@ function FeedPageContent(): React.ReactElement {
         })
 
         eventSource.addEventListener('complete', (e) => {
+          syncTerminalRef.current = true
           const data = JSON.parse(e.data)
           setSyncProgress({
             current: data.stats.total,
@@ -255,20 +262,36 @@ function FeedPageContent(): React.ReactElement {
         })
 
         eventSource.addEventListener('error', (e) => {
-          console.error('Sync error:', e)
-          setSyncProgress({ current: 0, total: 0, message: 'Sync failed' })
+          syncTerminalRef.current = true
+          const parsed = parseSyncErrorEvent(e)
+          setSyncProgress({ current: 0, total: 0, message: parsed.message })
+          setSyncErrorCode(parsed.code)
           eventSource.close()
           eventSourceRef.current = null
           setIsSyncing(false)
-          setShowSyncModal(false)
-          setTimeout(() => setSyncProgress(null), 3000)
+          if (firstLogin) {
+            setShowSyncModal(true)
+          } else {
+            setTimeout(() => {
+              setSyncProgress(null)
+              setSyncErrorCode(null)
+            }, 8000)
+          }
         })
 
         eventSource.onerror = () => {
+          if (!syncTerminalRef.current) {
+            setSyncProgress({
+              current: 0,
+              total: 0,
+              message: 'Connection lost. Check your network and try again.',
+            })
+            setSyncErrorCode('generic')
+            setIsSyncing(false)
+          }
           eventSource.close()
           eventSourceRef.current = null
-          setIsSyncing(false)
-          setShowSyncModal(false)
+          if (!firstLogin) setShowSyncModal(false)
         }
       } catch (error) {
         console.error('Failed to start sync:', error)
@@ -774,103 +797,146 @@ function FeedPageContent(): React.ReactElement {
             {/* Modal Header */}
             <div className="px-6 py-5 border-b border-hairline">
               <h2 className="text-xl font-semibold text-ink">
-                {isSyncing ? 'Syncing Your Bookmarks' : 'Sync Complete!'}
+                {isSyncing
+                  ? 'Syncing Your Bookmarks'
+                  : syncErrorCode
+                    ? syncErrorCode === 'reauth'
+                      ? 'Reconnect your X account'
+                      : "Couldn't sync bookmarks"
+                    : 'Sync Complete!'}
               </h2>
               <p className="text-sm text-ink-3 mt-1">
                 {isSyncing
                   ? 'Your bookmarks are being imported. Watch them appear in real-time!'
-                  : `Successfully imported ${syncProgress?.current || 0} bookmarks.`}
+                  : syncErrorCode
+                    ? syncProgress?.message
+                    : `Successfully imported ${syncProgress?.current || 0} bookmarks.`}
               </p>
             </div>
 
             {/* Progress Section */}
-            <div className="px-6 py-4 bg-inset">
-              <div className="flex items-center gap-3">
-                {isSyncing ? (
-                  <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
-                ) : (
-                  <CheckCircle2 className="w-5 h-5 text-green-500" />
-                )}
-                <span className="text-sm font-medium text-ink-2">{syncProgress?.message}</span>
+            {!syncErrorCode && (
+              <div className="px-6 py-4 bg-inset">
+                <div className="flex items-center gap-3">
+                  {isSyncing ? (
+                    <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                  ) : syncErrorCode ? null : (
+                    <CheckCircle2 className="w-5 h-5 text-green-500" />
+                  )}
+                  <span className="text-sm font-medium text-ink-2">{syncProgress?.message}</span>
+                  {syncProgress && syncProgress.total > 0 && (
+                    <span className="ml-auto text-xs font-medium bg-inset px-2 py-1 rounded">
+                      {syncProgress.current}/{syncProgress.total}
+                    </span>
+                  )}
+                </div>
                 {syncProgress && syncProgress.total > 0 && (
-                  <span className="ml-auto text-xs font-medium bg-inset px-2 py-1 rounded">
-                    {syncProgress.current}/{syncProgress.total}
-                  </span>
+                  <div className="mt-3 h-2 bg-inset rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-500 transition-all duration-300 ease-out"
+                      style={{ width: `${(syncProgress.current / syncProgress.total) * 100}%` }}
+                    />
+                  </div>
                 )}
               </div>
-              {syncProgress && syncProgress.total > 0 && (
-                <div className="mt-3 h-2 bg-inset rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-blue-500 transition-all duration-300 ease-out"
-                    style={{ width: `${(syncProgress.current / syncProgress.total) * 100}%` }}
-                  />
-                </div>
-              )}
-            </div>
+            )}
 
             {/* Streaming Preview */}
-            <div className="px-6 py-4 max-h-80 overflow-y-auto">
-              <div className="space-y-3">
-                {streamedItems.slice(0, 10).map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/30 rounded-lg animate-in fade-in slide-in-from-top-2 duration-300"
-                  >
-                    {/* Thumbnail */}
-                    {item.media?.[0] ? (
-                      <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-inset">
-                        <img
-                          src={item.media[0].thumbnailUrl || item.media[0].url}
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    ) : item.articlePreview?.imageUrl ? (
-                      <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-inset">
-                        <img
-                          src={item.articlePreview.imageUrl}
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-16 h-16 rounded-lg flex-shrink-0 bg-inset flex items-center justify-center">
-                        <span className="text-2xl">💬</span>
-                      </div>
-                    )}
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        {item.authorProfileImageUrl && (
+            {!(syncErrorCode && streamedItems.length === 0) && (
+              <div className="px-6 py-4 max-h-80 overflow-y-auto">
+                <div className="space-y-3">
+                  {streamedItems.slice(0, 10).map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/30 rounded-lg animate-in fade-in slide-in-from-top-2 duration-300"
+                    >
+                      {/* Thumbnail */}
+                      {item.media?.[0] ? (
+                        <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-inset">
                           <img
-                            src={item.authorProfileImageUrl}
+                            src={item.media[0].thumbnailUrl || item.media[0].url}
                             alt=""
-                            className="w-4 h-4 rounded-full"
+                            className="w-full h-full object-cover"
                           />
-                        )}
-                        <span className="text-sm font-medium text-ink truncate">
-                          @{item.author}
-                        </span>
-                        {item.category && item.category !== 'tweet' && (
-                          <span className="text-xs px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded">
-                            {item.category}
+                        </div>
+                      ) : item.articlePreview?.imageUrl ? (
+                        <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-inset">
+                          <img
+                            src={item.articlePreview.imageUrl}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-16 h-16 rounded-lg flex-shrink-0 bg-inset flex items-center justify-center">
+                          <span className="text-2xl">💬</span>
+                        </div>
+                      )}
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          {item.authorProfileImageUrl && (
+                            <img
+                              src={item.authorProfileImageUrl}
+                              alt=""
+                              className="w-4 h-4 rounded-full"
+                            />
+                          )}
+                          <span className="text-sm font-medium text-ink truncate">
+                            @{item.author}
                           </span>
-                        )}
+                          {item.category && item.category !== 'tweet' && (
+                            <span className="text-xs px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded">
+                              {item.category}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-ink-2 line-clamp-2">{item.text}</p>
                       </div>
-                      <p className="text-sm text-ink-2 line-clamp-2">{item.text}</p>
                     </div>
-                  </div>
-                ))}
-                {streamedItems.length > 10 && (
-                  <p className="text-center text-sm text-ink-3">
-                    +{streamedItems.length - 10} more bookmarks...
-                  </p>
-                )}
-                {streamedItems.length === 0 && isSyncing && (
-                  <p className="text-center text-sm text-ink-3 py-8">Waiting for bookmarks...</p>
+                  ))}
+                  {streamedItems.length > 10 && (
+                    <p className="text-center text-sm text-ink-3">
+                      +{streamedItems.length - 10} more bookmarks...
+                    </p>
+                  )}
+                  {streamedItems.length === 0 && isSyncing && (
+                    <p className="text-center text-sm text-ink-3 py-8">Waiting for bookmarks...</p>
+                  )}
+                </div>
+              </div>
+            )}
+            {syncErrorCode && !isSyncing && (
+              <div className="px-6 py-4 border-t border-hairline flex gap-2">
+                <button
+                  onClick={() => {
+                    setShowSyncModal(false)
+                    setSyncProgress(null)
+                    setSyncErrorCode(null)
+                  }}
+                  className="flex-1 px-4 py-2 rounded-md bg-inset text-ink-2 hover:bg-hairline transition-colors"
+                >
+                  Close
+                </button>
+                {syncErrorCode === 'reauth' ? (
+                  <button
+                    onClick={() => {
+                      window.location.href = '/api/auth/twitter'
+                    }}
+                    className="flex-1 inline-flex items-center justify-center px-4 py-2 rounded-md bg-ink text-surface font-semibold hover:opacity-90"
+                  >
+                    <ConnectWithX size={14} />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => startSync(true)}
+                    className="flex-1 px-4 py-2 rounded-md bg-clay-grad text-white font-semibold"
+                  >
+                    Retry
+                  </button>
                 )}
               </div>
-            </div>
+            )}
           </div>
         </div>
       )}
@@ -886,6 +952,16 @@ function FeedPageContent(): React.ReactElement {
             <span className="text-xs bg-white/20 px-2 py-0.5 rounded">
               {syncProgress.current}/{syncProgress.total}
             </span>
+          )}
+          {syncErrorCode === 'reauth' && !isSyncing && (
+            <button
+              onClick={() => {
+                window.location.href = '/api/auth/twitter'
+              }}
+              className="text-xs font-semibold underline underline-offset-2"
+            >
+              Reconnect
+            </button>
           )}
         </div>
       )}

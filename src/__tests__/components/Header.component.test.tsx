@@ -49,6 +49,8 @@ function mockFetch(authenticated: boolean) {
 describe('Header', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.clear()
+    sessionStorage.clear()
   })
 
   it('renders nothing (no GitHub link) when signed out', async () => {

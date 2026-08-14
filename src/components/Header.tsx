@@ -21,6 +21,12 @@ import { cn } from '@/lib/utils'
 import { MatterLogo } from '@/components/matter'
 import { AddTweetModal, AddTweetResult } from './AddTweetModal'
 import { SyncProgress } from './sync/SyncProgress'
+import {
+  readLastVisibleAt,
+  shouldResumeSync,
+  stampLastVisibleAt,
+  claimResumeSync,
+} from '@/lib/sync/resume'
 
 interface AuthStatus {
   authenticated: boolean
@@ -52,6 +58,9 @@ export function Header() {
   const [showAddTweet, setShowAddTweet] = useState(false)
   const [addTweetResult, setAddTweetResult] = useState<AddTweetResult | null>(null)
   const [showSync, setShowSync] = useState(false)
+  const [silentSync, setSilentSync] = useState(false)
+  const [cooldownReady, setCooldownReady] = useState(false)
+  const resumeAttemptedRef = useRef(false)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null)
@@ -131,6 +140,61 @@ export function Header() {
       return () => clearInterval(cooldownInterval)
     }
   }, [authStatus?.authenticated])
+
+  // After a day away, pull new bookmarks in the background. First-login sync
+  // (the OAuth callback) owns that path, so skip it here.
+  useEffect(() => {
+    if (!authStatus?.authenticated || !cooldownReady) return
+    if (resumeAttemptedRef.current) return
+    if (searchParams.get('firstLogin') === 'true') {
+      resumeAttemptedRef.current = true
+      stampLastVisibleAt()
+      return
+    }
+
+    const lastVisibleAt = readLastVisibleAt()
+    const lastSyncAt = cooldown.lastSyncAt ? Date.parse(cooldown.lastSyncAt) : null
+    const should = shouldResumeSync({
+      lastVisibleAt,
+      lastSyncAt,
+      now: Date.now(),
+    })
+    stampLastVisibleAt()
+    resumeAttemptedRef.current = true
+    if (should && cooldown.canSync && claimResumeSync()) setSilentSync(true)
+  }, [
+    authStatus?.authenticated,
+    cooldownReady,
+    cooldown.canSync,
+    cooldown.lastSyncAt,
+    searchParams,
+  ])
+
+  useEffect(() => {
+    if (!authStatus?.authenticated) return
+
+    const onVis = () => {
+      if (document.visibilityState !== 'visible') return
+      const lastVisibleAt = readLastVisibleAt()
+      stampLastVisibleAt()
+      if (searchParams.get('firstLogin') === 'true') return
+      if (!cooldown.canSync) return
+      if (showSync || silentSync) return
+      if (
+        shouldResumeSync({
+          lastVisibleAt,
+          lastSyncAt: null,
+          now: Date.now(),
+        }) &&
+        claimResumeSync()
+      ) {
+        setSilentSync(true)
+      }
+    }
+
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [authStatus?.authenticated, cooldown.canSync, searchParams, showSync, silentSync])
 
   // Update search from URL params
   useEffect(() => {
@@ -239,6 +303,7 @@ export function Header() {
       const response = await fetch('/api/sync/cooldown')
       const data = await response.json()
       setCooldown({ ...data, fetchedAt: Date.now() })
+      setCooldownReady(true)
     } catch (error) {
       console.error('Failed to fetch cooldown:', error)
     }
@@ -618,8 +683,12 @@ export function Header() {
 
       {/* Sync Progress Modal */}
       <SyncProgress
-        isOpen={showSync}
-        onClose={() => setShowSync(false)}
+        isOpen={showSync || silentSync}
+        silent={silentSync && !showSync}
+        onClose={() => {
+          setShowSync(false)
+          setSilentSync(false)
+        }}
         onComplete={handleSyncComplete}
       />
     </>
