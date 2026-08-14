@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.48.3](https://github.com/itsmemeworks/adhx/compare/v1.48.2...v1.48.3) (2026-07-31)
+
+
+### Bug Fixes
+
+* show more on clipped preview captions across all four surfaces ([#302](https://github.com/itsmemeworks/adhx/issues/302)) ([2941185](https://github.com/itsmemeworks/adhx/commit/29411856388059c26971b76d5b7d56750b69560b))
+
 ## [1.48.2](https://github.com/itsmemeworks/adhx/compare/v1.48.1...v1.48.2) (2026-07-27)
 
 
