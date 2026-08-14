@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.49.1](https://github.com/itsmemeworks/adhx/compare/v1.49.0...v1.49.1) (2026-08-14)
+
+
+### Bug Fixes
+
+* stop duplicating the via-link on ios whatsapp shares ([#310](https://github.com/itsmemeworks/adhx/issues/310)) ([918a335](https://github.com/itsmemeworks/adhx/commit/918a335580f8204305ed22a0bad7e99fb908e5d6))
+
 ## [1.49.0](https://github.com/itsmemeworks/adhx/compare/v1.48.4...v1.49.0) (2026-08-14)
 
 
