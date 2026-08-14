@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import { Metadata } from 'next'
 import { InstagramPreviewLanding } from '@/components/InstagramPreviewLanding'
 import { fetchReelMetadata, isValidReelId } from '@/lib/media/instafix'
+import { resolveInstagramVideo } from '@/lib/media/mirrors'
 import { getSession } from '@/lib/auth/session'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 import { isLikelyBot } from '@/lib/activity/bot'
@@ -80,7 +81,17 @@ export default async function ReelPreviewPage({ params }: Props) {
     : undefined
   const available = saved ? true : !!meta
 
-  if (available && !isLikelyBot((await headers()).get('user-agent'))) {
+  const ua = (await headers()).get('user-agent')
+  const human = !isLikelyBot(ua)
+  // Warm vxinstagram's lazy cache (Range only — don't pull the whole MP4 into
+  // this RSC). The client probe then attaches <video src> once the proxy 206s.
+  if (human) {
+    void resolveInstagramVideo(id, { range: 'bytes=0-1' })
+      .then((res) => res?.body?.cancel())
+      .catch(() => {})
+  }
+
+  if (available && human) {
     recordActivity({
       action: 'preview',
       platform: 'instagram',
@@ -128,15 +139,17 @@ export default async function ReelPreviewPage({ params }: Props) {
         author={author || undefined}
         authorName={authorName || undefined}
         isAuthenticated={!!session}
+        below={
+          available ? (
+            <RelatedSaves
+              platform="instagram"
+              bookmarkId={id}
+              authorHandle={author || 'instagram'}
+              contentType="video"
+            />
+          ) : undefined
+        }
       />
-      {available && (
-        <RelatedSaves
-          platform="instagram"
-          bookmarkId={id}
-          authorHandle={author || 'instagram'}
-          contentType="video"
-        />
-      )}
     </>
   )
 }

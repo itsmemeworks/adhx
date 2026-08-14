@@ -22,6 +22,7 @@ interface InstagramPreviewLandingProps {
   author?: string
   authorName?: string
   isAuthenticated?: boolean
+  below?: React.ReactNode
 }
 
 export function InstagramPreviewLanding({
@@ -32,6 +33,7 @@ export function InstagramPreviewLanding({
   author,
   authorName,
   isAuthenticated = false,
+  below,
 }: InstagramPreviewLandingProps) {
   const instagramUrl = `https://www.instagram.com/reel/${reelId}/`
 
@@ -54,7 +56,8 @@ export function InstagramPreviewLanding({
         downloadUrl={`/api/media/instagram/video/download?id=${encodeURIComponent(reelId)}`}
         streamUrl={`/api/media/instagram/video?id=${encodeURIComponent(reelId)}`}
         filename={`instagram-${reelId}.mp4`}
-        showDownload={!!imageUrl}
+        sendKind="video"
+        showDownload
         pulse={{ platform: 'instagram', id: reelId }}
       />
       <PreviewAnotherLink className="mt-4" />
@@ -116,45 +119,30 @@ export function InstagramPreviewLanding({
         </div>
       )}
 
-      {/* Inline Reel playback — streamed through the IG video proxy (mirror
-          registry), with the poster as the loading image. Falls back to a
-          link-out on a mirror miss (VideoPlayer's own error state). */}
-      {imageUrl && (
-        <div className="px-4 pb-3">
-          <div className="group relative">
-            <VideoPlayer
-              author={author || 'instagram'}
-              tweetId={reelId}
-              platform="instagram"
-              poster={imageUrl}
-              tweetUrl={instagramUrl}
-              className="w-full aspect-[9/16] object-contain rounded-2xl bg-black"
+      {/* Inline Reel playback — probe the MP4 proxy first (cold cache can take
+          ~20s), then play; Instagram's official embed if the mirror never warms. */}
+      <div className="px-4 pb-3">
+        <div className="group relative">
+          <VideoPlayer
+            author={author || 'instagram'}
+            tweetId={reelId}
+            platform="instagram"
+            poster={imageUrl}
+            tweetUrl={instagramUrl}
+            className="w-full aspect-[9/16] object-contain rounded-2xl bg-black"
+          />
+          {/* Touch: share the video to another app; desktop: hover → download. */}
+          <div className="pointer-events-auto absolute right-3 top-3 z-10">
+            <MediaShareOverlayButton
+              streamUrl={`/api/media/instagram/video?id=${encodeURIComponent(reelId)}`}
+              downloadUrl={`/api/media/instagram/video/download?id=${encodeURIComponent(reelId)}`}
+              filename={`instagram-${reelId}.mp4`}
+              title={`Instagram Reel ${reelId}`}
+              pulse={{ platform: 'instagram', id: reelId }}
             />
-            {/* Touch: share the video to another app; desktop: hover → download. */}
-            <div className="pointer-events-auto absolute right-3 top-3 z-10">
-              <MediaShareOverlayButton
-                streamUrl={`/api/media/instagram/video?id=${encodeURIComponent(reelId)}`}
-                downloadUrl={`/api/media/instagram/video/download?id=${encodeURIComponent(reelId)}`}
-                filename={`instagram-${reelId}.mp4`}
-                title={`Instagram Reel ${reelId}`}
-                pulse={{ platform: 'instagram', id: reelId }}
-              />
-            </div>
           </div>
         </div>
-      )}
-
-      {!imageUrl && !caption && !description && (
-        <div className="px-4 pb-4 text-center text-ink-3 text-sm">
-          <p className="mb-1">
-            Reel ID: <code className="font-mono">{reelId}</code>
-          </p>
-          <p className="text-xs">
-            We couldn&apos;t pull a preview for this Reel — open it on Instagram below. You can
-            still save it to your collection.
-          </p>
-        </div>
-      )}
+      </div>
 
       {/* Footer */}
       <footer className="px-4 py-3 flex items-center justify-between gap-3 min-w-0">
@@ -176,7 +164,14 @@ export function InstagramPreviewLanding({
     </article>
   )
 
-  return <PreviewShell hero={hero} sidebar={sidebar} valueCard={<ValueCard rows={VALUE_ROWS} />} />
+  return (
+    <PreviewShell
+      hero={hero}
+      sidebar={sidebar}
+      valueCard={<ValueCard rows={VALUE_ROWS} />}
+      below={below}
+    />
+  )
 }
 
 /** Instagram-specific value card copy. */

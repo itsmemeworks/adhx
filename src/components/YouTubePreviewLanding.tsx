@@ -21,6 +21,7 @@ interface YouTubePreviewLandingProps {
   author?: string
   hasVideo: boolean
   isAuthenticated?: boolean
+  below?: React.ReactNode
 }
 
 export function YouTubePreviewLanding({
@@ -30,6 +31,7 @@ export function YouTubePreviewLanding({
   author,
   hasVideo,
   isAuthenticated = false,
+  below,
 }: YouTubePreviewLandingProps) {
   const [isPlaying, setIsPlaying] = useState(false)
 
@@ -173,7 +175,14 @@ export function YouTubePreviewLanding({
     </article>
   )
 
-  return <PreviewShell hero={hero} sidebar={sidebar} valueCard={<ValueCard rows={VALUE_ROWS} />} />
+  return (
+    <PreviewShell
+      hero={hero}
+      sidebar={sidebar}
+      valueCard={<ValueCard rows={VALUE_ROWS} />}
+      below={below}
+    />
+  )
 }
 
 /** YouTube-specific value card copy. YouTube has no download. */

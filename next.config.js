@@ -74,8 +74,8 @@ const nextConfig = {
             "media-src 'self' https://video.twimg.com https://*.twimg.com blob:",
             "font-src 'self' data:",
             "connect-src 'self' https://api.fxtwitter.com https://*.sentry.io",
-            // YouTube Shorts play via the official privacy-enhanced iframe embed.
-            'frame-src https://www.youtube-nocookie.com https://www.youtube.com',
+            // YouTube Shorts + Instagram Reel fallback (official embeds).
+            'frame-src https://www.youtube-nocookie.com https://www.youtube.com https://www.instagram.com',
             "frame-ancestors 'none'",
           ].join('; '),
         },

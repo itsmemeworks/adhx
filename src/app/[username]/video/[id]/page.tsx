@@ -123,15 +123,17 @@ export default async function TikTokPreviewPage({ params }: Props) {
         description={description || undefined}
         hasVideo={hasVideo}
         isAuthenticated={!!session}
+        below={
+          available ? (
+            <RelatedSaves
+              platform="tiktok"
+              bookmarkId={id}
+              authorHandle={author || handle}
+              contentType="video"
+            />
+          ) : undefined
+        }
       />
-      {available && (
-        <RelatedSaves
-          platform="tiktok"
-          bookmarkId={id}
-          authorHandle={author || handle}
-          contentType="video"
-        />
-      )}
     </>
   )
 }

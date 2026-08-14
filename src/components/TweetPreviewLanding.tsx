@@ -11,7 +11,6 @@ import {
   Maximize2,
   Minimize2,
   Bookmark,
-  Link2,
   Loader2,
   Download,
   Share2,
@@ -31,9 +30,13 @@ import type { ArticleEntityMap } from '@/components/feed/types'
 import { FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
 import { PlatformGlyph, ConnectWithX } from '@/components/matter'
 import { PreviewAnotherLink } from '@/components/PreviewAnotherLink'
-import { PreviewShell, UnauthPrimarySend } from '@/components/previews/PreviewShell'
+import { IosShortcutNudge } from '@/components/IosShortcutInstall'
+import {
+  PreviewShell,
+  UnauthPrimarySend,
+  ShareLinkButton,
+} from '@/components/previews/PreviewShell'
 import { pingSharePulse } from '@/lib/activity/ping-share'
-import { sharePageLink } from '@/lib/share/web-share'
 import { formatCount, formatRelativeTime } from '@/lib/utils/format'
 import { cn } from '@/lib/utils'
 import { ClampedCaption } from '@/components/previews/ClampedCaption'
@@ -46,6 +49,7 @@ interface TweetPreviewLandingProps {
   tweetId: string
   tweet: Tweet
   isAuthenticated?: boolean
+  below?: React.ReactNode
 }
 
 /** Reading tools panel for ADHD-friendly font and bionic reading controls */
@@ -178,7 +182,7 @@ function MediaShareButton({
       onClick={handleClick}
       disabled={isLoading}
       className={cn(
-        'p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80',
+        'hidden md:block p-2 bg-black/60 hover:bg-black/80 rounded-full transition-all disabled:opacity-80',
         visibilityClass,
       )}
       title={isMobile ? 'Share' : 'Download'}
@@ -202,6 +206,7 @@ export function TweetPreviewLanding({
   tweetId,
   tweet,
   isAuthenticated = false,
+  below,
 }: TweetPreviewLandingProps): React.ReactElement {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
@@ -211,7 +216,6 @@ export function TweetPreviewLanding({
   const [isExpanded, setIsExpanded] = useState(true)
   // (Tweets WITH media collapse their text to 3 lines inside ClampedCaption,
   // which owns that state and only offers the toggle when text is truly clipped.)
-  const [shareStatus, setShareStatus] = useState<'idle' | 'shared' | 'copied'>('idle')
   const [contentOverflows, setContentOverflows] = useState(false)
   const articleRef = useRef<HTMLElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -302,24 +306,21 @@ export function TweetPreviewLanding({
     router.push('/')
   }
 
-  const handleSharePreview = async () => {
-    const href = window.location.href
-    const title = `${tweet.author?.name || username} on X — ADHX Preview`
-    try {
-      await sharePageLink({ title, href })
-      setShareStatus(typeof navigator.share === 'function' ? 'shared' : 'copied')
-      pingSharePulse('twitter', tweetId)
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') return
-      try {
-        await navigator.clipboard.writeText(href)
-        setShareStatus('copied')
-      } catch {
-        return
-      }
-    }
-    setTimeout(() => setShareStatus('idle'), 2000)
-  }
+  const sendKind = videos.length > 0 ? 'video' : photos.length > 0 ? 'photo' : undefined
+  const sendStreamUrl = videos.length
+    ? `/api/media/video?author=${encodeURIComponent(username)}&tweetId=${encodeURIComponent(tweetId)}&quality=hd`
+    : photos.length
+      ? `/api/media/image?author=${encodeURIComponent(username)}&tweetId=${encodeURIComponent(tweetId)}&index=1`
+      : undefined
+  const sendDownloadUrl = videos.length
+    ? `/api/media/video/download?author=${encodeURIComponent(username)}&tweetId=${encodeURIComponent(tweetId)}&quality=hd`
+    : sendStreamUrl
+  const sendFilename =
+    videos.length > 0
+      ? `tweet-${tweetId}.mp4`
+      : photos.length > 0
+        ? `tweet-${tweetId}.jpg`
+        : undefined
 
   const sidebar = (
     <>
@@ -338,12 +339,12 @@ export function TweetPreviewLanding({
         onAdd={handleAddToCollection}
         onContinue={handleContinueToGallery}
         onLogin={handleLogin}
-        onShare={handleSharePreview}
-        shareStatus={shareStatus}
-        showDownload={videos.length > 0}
-        downloadUrl={`/api/media/video/download?author=${encodeURIComponent(username)}&tweetId=${encodeURIComponent(tweetId)}&quality=hd`}
-        streamUrl={`/api/media/video?author=${encodeURIComponent(username)}&tweetId=${encodeURIComponent(tweetId)}&quality=hd`}
-        filename={`tweet-${tweetId}.mp4`}
+        showDownload={!!sendKind}
+        sendKind={sendKind}
+        downloadUrl={sendDownloadUrl}
+        streamUrl={sendStreamUrl}
+        filename={sendFilename}
+        mimeType={videos.length > 0 ? 'video/mp4' : 'image/jpeg'}
         tweetId={tweetId}
       />
       <PreviewAnotherLink />
@@ -602,42 +603,22 @@ export function TweetPreviewLanding({
             <span className="text-xs hidden lg:inline">{isExpanded ? 'Collapse' : 'Expand'}</span>
           </button>
         )}
-        {/* Share Preview Button */}
-        <button
-          onClick={handleSharePreview}
-          className={cn(
-            'flex-shrink-0 flex items-center gap-0.5 sm:gap-1 md:gap-0.5 lg:gap-1.5 px-1.5 sm:px-2 md:px-1.5 lg:px-2 py-1 rounded-lg transition-colors',
-            !hasMedia && contentOverflows ? '' : 'ml-auto',
-            shareStatus !== 'idle'
-              ? 'text-[#3E7D5F]'
-              : 'text-ink-3 hover:text-clay hover:bg-clay/10',
-          )}
-          title="Share this preview"
-          aria-label="Share this preview"
-        >
-          {shareStatus !== 'idle' ? (
-            <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4" />
-          ) : (
-            <Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4" />
-          )}
-          <span className="text-xs hidden lg:inline">
-            {shareStatus === 'shared'
-              ? 'Shared!'
-              : shareStatus === 'copied'
-                ? 'Link copied!'
-                : 'Share'}
-          </span>
-        </button>
       </footer>
     </article>
   )
 
   return (
-    <PreviewShell hero={hero} sidebar={sidebar} valueCard={<ValueCard />} headerSpacing="header" />
+    <PreviewShell
+      hero={hero}
+      sidebar={sidebar}
+      valueCard={<ValueCard />}
+      headerSpacing="header"
+      below={below}
+    />
   )
 }
 
-/** Right-column actions panel: primary CTA + Copy link / Share + Keep-it-forever. */
+/** Right-column actions: Send the file (sticky on mobile) + Share link. */
 function SidebarActions({
   isAuthenticated,
   isAdding,
@@ -645,11 +626,11 @@ function SidebarActions({
   onAdd,
   onContinue,
   onLogin,
-  onShare,
-  shareStatus,
   downloadUrl,
   streamUrl,
   filename,
+  mimeType,
+  sendKind,
   showDownload = false,
   tweetId,
 }: {
@@ -659,25 +640,15 @@ function SidebarActions({
   onAdd: () => void
   onContinue: () => void
   onLogin: () => void
-  onShare: () => void
-  shareStatus: 'idle' | 'shared' | 'copied'
   downloadUrl?: string
   streamUrl?: string
   filename?: string
+  mimeType?: string
+  sendKind?: 'video' | 'photo'
   showDownload?: boolean
   tweetId: string
 }): React.ReactElement {
-  const [copied, setCopied] = useState(false)
-
-  const copyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    } catch {
-      /* clipboard unavailable */
-    }
-  }
+  const canSendFile = showDownload && !!(streamUrl || downloadUrl)
 
   const download = () => {
     if (!downloadUrl) return
@@ -715,51 +686,38 @@ function SidebarActions({
           </button>
         </>
       ) : (
-        <UnauthPrimarySend
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-hairline bg-paper/95 px-3 pt-2.5 backdrop-blur-md pb-[max(0.65rem,env(safe-area-inset-bottom))] md:static md:z-auto md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+          <UnauthPrimarySend
+            shareTitle="X — ADHX Preview"
+            downloadUrl={downloadUrl}
+            streamUrl={streamUrl}
+            filename={filename}
+            mimeType={mimeType}
+            sendKind={sendKind}
+            showDownload={showDownload}
+            pulse={{ platform: 'twitter', id: tweetId }}
+          />
+        </div>
+      )}
+
+      {(canSendFile || isAuthenticated) && (
+        <ShareLinkButton
           shareTitle="X — ADHX Preview"
-          downloadUrl={downloadUrl}
-          streamUrl={streamUrl}
-          filename={filename}
-          showDownload={showDownload}
           pulse={{ platform: 'twitter', id: tweetId }}
         />
       )}
 
-      <div className="flex gap-2.5">
+      {showDownload && isAuthenticated && downloadUrl && (
         <button
-          onClick={copyLink}
-          className="flex-1 flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl border border-hairline bg-surface text-ink-2 hover:text-clay hover:border-clay/30 transition-colors"
+          onClick={download}
+          className="w-full flex items-center justify-center gap-2 px-3 py-3 rounded-xl border border-hairline bg-surface text-ink-2 hover:text-clay hover:border-clay/30 transition-colors"
         >
-          {copied ? (
-            <Check className="w-[19px] h-[19px]" />
-          ) : (
-            <Link2 className="w-[19px] h-[19px]" />
-          )}
-          <span className="text-[12.5px] font-semibold">{copied ? 'Copied' : 'Copy link'}</span>
+          <Download className="w-[18px] h-[18px]" />
+          <span className="text-sm font-semibold">Download</span>
         </button>
-        <button
-          onClick={onShare}
-          className="flex-1 flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl border border-hairline bg-surface text-ink-2 hover:text-clay hover:border-clay/30 transition-colors"
-        >
-          {shareStatus !== 'idle' ? (
-            <Check className="w-[19px] h-[19px]" />
-          ) : (
-            <Share2 className="w-[19px] h-[19px]" />
-          )}
-          <span className="text-[12.5px] font-semibold">
-            {shareStatus === 'shared' ? 'Shared' : shareStatus === 'copied' ? 'Copied' : 'Share'}
-          </span>
-        </button>
-        {showDownload && isAuthenticated && (
-          <button
-            onClick={download}
-            className="flex-1 flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl border border-hairline bg-surface text-ink-2 hover:text-clay hover:border-clay/30 transition-colors"
-          >
-            <Download className="w-[19px] h-[19px]" />
-            <span className="text-[12.5px] font-semibold">Download</span>
-          </button>
-        )}
-      </div>
+      )}
+
+      <IosShortcutNudge />
 
       {!isAuthenticated && (
         <div className="rounded-2xl px-4 py-4 bg-clay/10 border border-clay/20">

@@ -363,8 +363,9 @@ All work with or without protocol, browser path normalization (`//` → `/`), tr
 
 **Reel preview** (`src/components/InstagramPreviewLanding.tsx`):
 
-- Resolves metadata via InstaFix mirrors (`toinstagram.com` → `uuinstagram.com`).
-- Direct Instagram CDN URLs 403 to non-Instagram clients, so we proxy through the mirror's `/videos/{id}/1` endpoint (`src/lib/media/instafix.ts`).
+- Metadata (poster, caption, author) from Instagram's own OG tags (`src/lib/media/instafix.ts`). There is no `og:video`.
+- MP4 via vxinstagram (`src/lib/media/mirrors.ts`) proxied at `/api/media/instagram/video`. Cold cache 404s for ~10–20s — the resolver retries; **do not attach `<video src>` until a Range probe 200/206s** (`probeInstagramVideo` in `src/lib/media/instagram-playback.ts`). The preview page also warms the cache (Range 0-1, fire-and-forget) so the probe is usually already hot.
+- If the mirror never comes back: official Instagram iframe (`/reel/{id}/embed/`). Needs `https://www.instagram.com` in CSP `frame-src`.
 
 **TikTok preview** (`src/components/TikTokPreviewLanding.tsx`):
 
@@ -379,11 +380,11 @@ All work with or without protocol, browser path normalization (`//` → `/`), tr
   - Thumbnail: `https://i.ytimg.com/vi/{id}/hqdefault.jpg`. Embed: `https://www.youtube-nocookie.com/embed/{id}` (privacy-enhanced).
   - **No download** (that was a deliberate product decision — there's no compliant zero-cost MP4 source).
 - `extractYouTubeId()` handles `/shorts/{id}`, `youtu.be/{id}`, `/watch?v={id}`, `/embed/{id}` (11-char id), with/without protocol and `?si=` tracking params.
-- **CSP**: the iframe needs `frame-src https://www.youtube-nocookie.com https://www.youtube.com` and the poster needs `https://i.ytimg.com` in `img-src` — both in `next.config.js`.
+- **CSP**: YouTube iframe needs `frame-src https://www.youtube-nocookie.com https://www.youtube.com`; Instagram Reel fallback embed needs `https://www.instagram.com`. Poster: `https://i.ytimg.com` in `img-src`. All in `next.config.js`.
 - The gallery `FeedCard` shows the poster + a play overlay (no hover-autoplay; there's no MP4). The unified `MediaCard` (focus/triage view) renders the iframe directly for `platform === 'youtube'` — **give the iframe container a concrete height** (e.g. `h-[60vh] lg:h-[82vh] aspect-[9/16]`); an `aspect-[9/16]` box around an `absolute` iframe collapses to zero otherwise.
 - Saved Shorts store a poster as a `mediaType: 'video'` row (the embed is resolved from platform+id, so there's no MP4 to store).
 
-All three preview components share the same shell (hero + two-column grid + sidebar + footer) and the floating share/download button pattern (hover-reveal desktop, always-visible mobile). The card content is source-specific because data shapes diverge. Touch **Send** prefetches the MP4 and shares `files` + `text: "via <canonical url>"` — never `url` alongside `files` (WhatsApp concatenates them into `via URL URL`). iOS needs the file ready before the tap so `navigator.share` stays a user gesture.
+All three preview components share the same shell (hero + two-column grid + sidebar + footer). **Send** is the file (video or photo) — sticky on mobile so portrait videos don't bury it. **Share link** is this preview URL. The unlabeled overlay send is desktop-only (hover download). Touch **Send** prefetches the MP4 and shares `files` + `text: "via <canonical url>"` — never `url` alongside `files` (WhatsApp concatenates them into `via URL URL`). iOS needs the file ready before the tap so `navigator.share` stays a user gesture.
 
 **Save-to-collection**: when the visiting user is authenticated, all three preview pages show an "Add to Collection" button that POSTs to `/api/bookmarks/add` and redirects to `/?added=success&platform=...&id=...`. Saved Reels and TikToks land in the same feed as tweets, distinguished by the platform badge on the FeedCard.
 
@@ -526,11 +527,11 @@ Key files:
 
 The app offers multiple ways to save tweets, shown contextually based on the user's platform:
 
-| Platform | Primary Method                                                                         | Fallback                                |
-| -------- | -------------------------------------------------------------------------------------- | --------------------------------------- |
-| iOS      | URL prefix (all 4 platforms) + hand-built Share Sheet shortcut targeting `/share?url=` | Published iCloud shortcut is **X-only** |
-| Desktop  | Bookmarklet (drag to toolbar)                                                          | URL prefix trick                        |
-| Android  | Bookmarklet + PWA Share Target                                                         | URL prefix trick                        |
+| Platform | Primary Method                                   | Fallback                                                             |
+| -------- | ------------------------------------------------ | -------------------------------------------------------------------- |
+| iOS      | One-tap iCloud shortcut (Share → ADHX) — X today | URL prefix + hand-built `/share?url=` shortcut for IG/TikTok/YouTube |
+| Desktop  | Bookmarklet (drag to toolbar)                    | URL prefix trick                                                     |
+| Android  | Bookmarklet + PWA Share Target                   | URL prefix trick                                                     |
 
 **Platform detection** (`src/lib/platform.ts`):
 
@@ -540,9 +541,9 @@ The app offers multiple ways to save tweets, shown contextually based on the use
 
 **iOS Shortcut:**
 
-- Published iCloud shortcut ID: `0d187480099b4d34a745ec8750a4587b` — **X-only** (rewrites `x.com` → `adhx.com`). Not in this repo.
-- **All four platforms:** URL-prefix (`instagram.com` / `tiktok.com` / `youtube.com` / `x.com` → `adhx.com`) or a Share Sheet shortcut that opens `https://adhx.com/share?url=` + the shared URL. `/share` already maps X / IG / TikTok / YouTube (and TikTok short links). In-app recipe: `IosShareRecipe` on the landing page and Settings.
-- Rebuilding the iCloud shortcut itself is a manual Shortcuts.app change, then a new iCloud link. Until then, don't advertise the published shortcut as multi-platform.
+- Published iCloud shortcut ID: `0d187480099b4d34a745ec8750a4587b` — **X-only** (rewrites `x.com` → `adhx.com`). Not in this repo. We still **push this as the install**: one tap, then Share → ADHX from X. Surfaces: iOS bottom banner (`PWAInstallPrompt`), landing hero + promo, Settings, preview CTA nudge (`IosShortcutNudge`). Dismiss key `adhx-shortcut-dismissed`.
+- **All four platforms:** URL-prefix or a Share Sheet shortcut that opens `https://adhx.com/share?url=` (`IosShareRecipe`, behind “Instagram, TikTok, YouTube too”). `/share` already maps X / IG / TikTok / YouTube (and TikTok short links).
+- Rebuilding the iCloud shortcut to `/share?url=` is a manual Shortcuts.app change, then a new iCloud link. Until then, don't claim the published shortcut works on IG/TikTok/YouTube.
 
 **Bookmarklet** (desktop + Android):
 
@@ -564,9 +565,9 @@ javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tikt
 
 **Add to Home Screen (PWA install)**:
 
-- `src/components/PWAInstallPrompt.tsx` — mobile-only bottom banner, mounted app-wide in `AppShell` (shows on preview pages too — a conversion moment for visitors arriving from a shared link). Hidden on desktop, when already `display-mode: standalone`, and after dismissal (`localStorage` key `adhx-a2hs-dismissed`).
-  - **Android/Chrome**: captures `beforeinstallprompt` → one-tap **Add** button that fires the native install dialog.
-  - **iOS/Safari**: no programmatic API, so it shows the manual "tap Share → Add to Home Screen" instructions.
+- `src/components/PWAInstallPrompt.tsx` — mobile-only bottom banner, mounted app-wide in `AppShell` (preview pages too). Hidden on desktop.
+  - **Android/Chrome**: captures `beforeinstallprompt` → one-tap **Add** (`adhx-a2hs-dismissed`; hidden in standalone).
+  - **iOS/Safari**: Share Sheet shortcut install (iCloud link), not Add to Home Screen. Still shown in standalone. Dismiss key `adhx-shortcut-dismissed`.
 - `public/sw.js` — a deliberately **cache-free** service worker (no-op `fetch` handler, no `respondWith`). It exists only to satisfy Chrome's installability criteria so `beforeinstallprompt` fires; it never serves stale content. Registered from `PWAInstallPrompt` on mount.
 
 **Implementation files:**

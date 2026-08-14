@@ -4,6 +4,41 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-14 — iOS promo: style the 4-platform disclosure as helper text
+
+- **Why**: "Instagram, TikTok, YouTube too" was a left-aligned orange label (`flex` ignored the card's `text-center`). Looked like a broken heading, not a disclosure.
+- **What**: `inline-flex` so it follows parent alignment; `text-ink-3` + chevron, matching "Works with X…".
+- **State**: in-flight on `feat/push-ios-shortcut`.
+- **Follow-ups**: none.
+
+## 2026-08-14 — Instagram Reels: probe then play, embed if the mirror never warms
+
+- **Why**: `<video src=/api/media/instagram/video>` starts immediately; vxinstagram cold-cache can take 10–20s. Safari/Chrome media elements abort sooner → "Failed to load video" even when the proxy would 200. Gating the player on a poster hid playback when OG scrape missed.
+- **What**: Client Range-probes the proxy (35s) before attaching `<video src>`. Preview RSC warms with Range 0-1. Persistent miss → official Instagram iframe (`frame-src` updated). Player always mounts for a reel id.
+- **State**: in-flight on `feat/push-ios-shortcut`.
+- **Follow-ups**: Feed/lightbox gallery hover still sets `<video src>` immediately — same cold-cache trap if that surface looks dead too.
+
+## 2026-08-14 — Preview: Send the file vs Share link
+
+- **Why**: Three share icons on preview pages (stats footer, Send this video, Share) plus a void under More to Discover (`min-h-screen` shell, related as a sibling).
+- **What**: Send = the video/photo file (sticky on mobile). Share link = this preview URL. Stats-footer share and mobile media overlay removed. Related saves slot into the shell before the tagline.
+- **State**: in-flight on `feat/push-ios-shortcut`.
+- **Follow-ups**: none.
+
+## 2026-08-14 — Landing "How ADHX works" is the send loop
+
+- **Why**: The hero still led with Connect X → triage → TTS. That's not how the product works now.
+- **What**: Steps are get-it-in (Share → ADHX / swap the host) → watch → send the file → keep a pile later. Feature grid leads with send; TTS dropped from the four.
+- **State**: in-flight on `feat/push-ios-shortcut`.
+- **Follow-ups**: none.
+
+## 2026-08-14 — Push the iOS Share Sheet shortcut
+
+- **Why**: The shortcut is the easiest send path on iPhone, but it was buried behind a DIY recipe and labelled "X-only". People never installed it.
+- **What**: One-tap **Add to Share Sheet** (iCloud) is now the iOS install: bottom banner (replaces Add to Home Screen), landing hero + promo, Settings, preview CTA nudge. 4-platform recipe is behind "Instagram, TikTok, YouTube too". Dismiss key `adhx-shortcut-dismissed`.
+- **State**: in-flight on `feat/push-ios-shortcut`.
+- **Follow-ups**: Rebuild the iCloud shortcut to `/share?url=` so the one-tap install works for Reels/TikToks/Shorts too.
+
 ## 2026-08-14 — iOS WhatsApp share: duplicate via-link + first-tap fail
 
 - **Why**: Staging reel share to WhatsApp sent `via URL URL` (text + url both set). First tap showed our AlertCircle; second tap worked — iOS drops user-activation across `await fetch(mp4)`.

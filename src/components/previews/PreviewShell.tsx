@@ -7,9 +7,9 @@ import {
   Bookmark,
   Check,
   Download,
-  Link2,
   Loader2,
   Search,
+  Send,
   Share2,
   Sparkles,
   Zap,
@@ -23,6 +23,7 @@ import {
   sharePageLink,
 } from '@/lib/share/web-share'
 import { pingSharePulse } from '@/lib/activity/ping-share'
+import { IosShortcutNudge } from '@/components/IosShortcutInstall'
 import { AnimatedBackground, LandingAnimations } from '@/components/landing'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { MatterLogo, ConnectWithX } from '@/components/matter'
@@ -40,6 +41,7 @@ export function PreviewShell({
   hero,
   sidebar,
   valueCard,
+  below,
   /**
    * Spacing variant. The X tweet preview historically put the header/grid gap
    * on the header (`mb-8 md:mb-10`) and gave the grid no top margin; the other
@@ -51,11 +53,13 @@ export function PreviewShell({
   hero: React.ReactNode
   sidebar: React.ReactNode
   valueCard?: React.ReactNode
+  /** Server-rendered related saves — slotted here so it isn't stranded after a min-h-screen shell. */
+  below?: React.ReactNode
   headerSpacing?: 'grid' | 'header'
 }) {
   const card = valueCard ?? <ValueCard />
   return (
-    <div className="min-h-screen flex flex-col bg-paper relative overflow-x-hidden">
+    <div className="bg-paper relative overflow-x-hidden">
       <LandingAnimations />
       <AnimatedBackground />
       <div className="fixed right-3 top-3 z-50 flex items-center gap-2">
@@ -82,7 +86,7 @@ export function PreviewShell({
         }}
       />
 
-      <main className="relative z-10 px-4 sm:px-6 lg:px-12 pb-14 md:flex-1 pt-8 sm:pt-12">
+      <main className="relative z-10 px-4 sm:px-6 lg:px-12 pb-8 pt-8 sm:pt-12">
         <div className="max-w-[1040px] mx-auto">
           <PreviewHeader spacing={headerSpacing} />
 
@@ -116,7 +120,9 @@ export function PreviewShell({
         </div>
       </main>
 
-      <footer className="relative z-10 py-4 text-center flex-shrink-0">
+      {below}
+
+      <footer className="relative z-10 py-4 text-center pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-8">
         <p className="text-ink-3 font-indie-flower text-sm">Save now. Read never. Find always.</p>
       </footer>
     </div>
@@ -158,8 +164,9 @@ function PreviewHeader({ spacing }: { spacing: 'grid' | 'header' }) {
  * CTA cluster shared by the Instagram / TikTok / YouTube preview pages.
  *
  * Authenticated: primary "Save to collection". Unauthenticated: primary
- * Send/Download (the useful loop — no account needed), then Copy/Share,
- * then a quieter "Keep it forever" Connect-with-X card.
+ * Send-the-file (or Share link when there's no MP4), sticky on mobile so
+ * portrait videos don't bury it. Secondary is Share link only — the page URL,
+ * not the file.
  */
 export function PreviewCta({
   isAuthenticated,
@@ -172,6 +179,8 @@ export function PreviewCta({
   downloadUrl,
   streamUrl,
   filename,
+  mimeType,
+  sendKind = 'video',
   showDownload = false,
   pulse,
 }: {
@@ -187,9 +196,13 @@ export function PreviewCta({
   /** Inline stream URL — fetched to a Blob for the native send sheet. */
   streamUrl?: string
   filename?: string
+  mimeType?: string
+  sendKind?: 'video' | 'photo'
   showDownload?: boolean
   pulse?: { platform: string; id: string }
 }) {
+  const canSendFile = showDownload && !!(streamUrl || downloadUrl)
+
   return (
     <div className="flex flex-col gap-3.5">
       {isAuthenticated ? (
@@ -206,22 +219,29 @@ export function PreviewCta({
           {adding ? 'Saving…' : 'Save to collection'}
         </button>
       ) : (
-        <UnauthPrimarySend
-          shareTitle={shareTitle}
-          downloadUrl={downloadUrl}
-          streamUrl={streamUrl}
-          filename={filename}
-          showDownload={showDownload}
-          pulse={pulse}
-        />
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-hairline bg-paper/95 px-3 pt-2.5 backdrop-blur-md pb-[max(0.65rem,env(safe-area-inset-bottom))] md:static md:z-auto md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+          <UnauthPrimarySend
+            shareTitle={shareTitle}
+            downloadUrl={downloadUrl}
+            streamUrl={streamUrl}
+            filename={filename}
+            mimeType={mimeType}
+            sendKind={sendKind}
+            showDownload={showDownload}
+            pulse={pulse}
+          />
+        </div>
       )}
 
-      <SecondaryActions
-        shareTitle={shareTitle}
-        downloadUrl={downloadUrl}
-        showDownload={showDownload && isAuthenticated}
-        pulse={pulse}
-      />
+      {(canSendFile || isAuthenticated) && (
+        <ShareLinkButton shareTitle={shareTitle} pulse={pulse} />
+      )}
+
+      {showDownload && isAuthenticated && downloadUrl && (
+        <DownloadButton downloadUrl={downloadUrl} pulse={pulse} />
+      )}
+
+      <IosShortcutNudge />
 
       {/* Keep it forever — Connect with X is secondary to send/download. */}
       {!isAuthenticated && (
@@ -243,12 +263,14 @@ export function PreviewCta({
   )
 }
 
-/** Unauth primary: send the video file+link on touch, download on desktop, share the page URL when there's no MP4. */
+/** Unauth primary: send the file on touch, download on desktop, share the page URL when there's no file. */
 export function UnauthPrimarySend({
   shareTitle,
   downloadUrl,
   streamUrl,
   filename,
+  mimeType = 'video/mp4',
+  sendKind = 'video',
   showDownload,
   pulse,
 }: {
@@ -256,6 +278,8 @@ export function UnauthPrimarySend({
   downloadUrl?: string
   streamUrl?: string
   filename?: string
+  mimeType?: string
+  sendKind?: 'video' | 'photo'
   showDownload: boolean
   pulse?: { platform: string; id: string }
 }) {
@@ -269,11 +293,12 @@ export function UnauthPrimarySend({
 
   const fileUrl = streamUrl || downloadUrl
   const canSendFile = showDownload && !!fileUrl
+  const noun = sendKind === 'photo' ? 'photo' : 'video'
 
   useEffect(() => {
     if (!fileUrl || !filename || !isTouchDevice()) return
-    void prefetchShareFile(fileUrl, filename)
-  }, [fileUrl, filename])
+    void prefetchShareFile(fileUrl, filename, mimeType)
+  }, [fileUrl, filename, mimeType])
 
   const finish = (next: 'ok' | 'unavailable') => {
     setStatus(next)
@@ -285,14 +310,14 @@ export function UnauthPrimarySend({
     try {
       if (canSendFile && fileUrl) {
         if (isMobile) {
-          const file = await prefetchShareFile(fileUrl, filename || 'video.mp4')
+          const file = await prefetchShareFile(fileUrl, filename || `file.${noun}`, mimeType)
           if (navigator.canShare && navigator.canShare({ files: [file] })) {
             await shareFileWithLink(file, { pageUrl: window.location.href })
           } else {
             const blobUrl = URL.createObjectURL(file)
             const link = document.createElement('a')
             link.href = blobUrl
-            link.download = filename || 'video.mp4'
+            link.download = filename || `file.${noun}`
             document.body.appendChild(link)
             link.click()
             document.body.removeChild(link)
@@ -341,9 +366,23 @@ export function UnauthPrimarySend({
           : 'Shared'
         : canSendFile
           ? isMobile
-            ? 'Send this video'
-            : 'Download video'
-          : 'Share this preview'
+            ? `Send this ${noun}`
+            : `Download ${noun}`
+          : 'Share link'
+
+  const icon = busy ? (
+    <Loader2 className="w-[18px] h-[18px] animate-spin" />
+  ) : status === 'unavailable' ? (
+    <AlertCircle className="w-[18px] h-[18px]" />
+  ) : status === 'ok' ? (
+    <Check className="w-[18px] h-[18px]" />
+  ) : canSendFile && !isMobile ? (
+    <Download className="w-[18px] h-[18px]" />
+  ) : canSendFile ? (
+    <Send className="w-[18px] h-[18px]" />
+  ) : (
+    <Share2 className="w-[18px] h-[18px]" />
+  )
 
   return (
     <button
@@ -351,72 +390,75 @@ export function UnauthPrimarySend({
       disabled={busy}
       className="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
     >
-      {busy ? (
-        <Loader2 className="w-[18px] h-[18px] animate-spin" />
-      ) : status === 'unavailable' ? (
-        <AlertCircle className="w-[18px] h-[18px]" />
-      ) : status === 'ok' ? (
-        <Check className="w-[18px] h-[18px]" />
-      ) : canSendFile && !isMobile ? (
-        <Download className="w-[18px] h-[18px]" />
-      ) : (
-        <Share2 className="w-[18px] h-[18px]" />
-      )}
+      {icon}
       {busy ? 'Working…' : label}
     </button>
   )
 }
 
-/** Copy link / Share / (optional Download) secondary action row. */
-function SecondaryActions({
+/** Share the preview page URL — native sheet on mobile, clipboard on desktop. */
+export function ShareLinkButton({
   shareTitle,
-  downloadUrl,
-  showDownload,
   pulse,
 }: {
   shareTitle: string
-  downloadUrl?: string
-  showDownload?: boolean
   pulse?: { platform: string; id: string }
 }) {
-  const [copied, setCopied] = useState(false)
-  const [shared, setShared] = useState(false)
-  const [downloadState, setDownloadState] = useState<'idle' | 'checking' | 'unavailable'>('idle')
-
-  const copyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(
-        canonicalShareUrl(window.location.href) || window.location.href,
-      )
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    } catch {
-      /* clipboard unavailable */
-    }
-  }
+  const [status, setStatus] = useState<'idle' | 'shared' | 'copied'>('idle')
 
   const share = async () => {
     try {
       await sharePageLink({ title: shareTitle, href: window.location.href })
-      setShared(true)
+      setStatus(typeof navigator.share === 'function' ? 'shared' : 'copied')
       if (pulse) pingSharePulse(pulse.platform, pulse.id)
-      setTimeout(() => setShared(false), 1500)
-    } catch {
-      /* cancelled */
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') return
+      try {
+        await navigator.clipboard.writeText(
+          canonicalShareUrl(window.location.href) || window.location.href,
+        )
+        setStatus('copied')
+      } catch {
+        return
+      }
     }
+    setTimeout(() => setStatus('idle'), 1500)
   }
 
+  return (
+    <button
+      onClick={share}
+      className="w-full flex items-center justify-center gap-2 px-3 py-3 rounded-xl border border-hairline bg-surface text-ink-2 hover:text-clay hover:border-clay/30 transition-colors"
+    >
+      {status !== 'idle' ? (
+        <Check className="w-[18px] h-[18px]" />
+      ) : (
+        <Share2 className="w-[18px] h-[18px]" />
+      )}
+      <span className="text-sm font-semibold">
+        {status === 'shared' ? 'Shared' : status === 'copied' ? 'Copied' : 'Share link'}
+      </span>
+    </button>
+  )
+}
+
+function DownloadButton({
+  downloadUrl,
+  pulse,
+}: {
+  downloadUrl: string
+  pulse?: { platform: string; id: string }
+}) {
+  const [state, setState] = useState<'idle' | 'checking' | 'unavailable'>('idle')
+
   const download = async () => {
-    if (!downloadUrl) return
-    // Ask before saving: on an unresolvable video the proxy answers with a JSON
-    // error, and `<a download>` writes that out as the .mp4 with no complaint.
-    setDownloadState('checking')
+    setState('checking')
     if (!(await isMediaAvailable(downloadUrl))) {
-      setDownloadState('unavailable')
-      setTimeout(() => setDownloadState('idle'), 4000)
+      setState('unavailable')
+      setTimeout(() => setState('idle'), 4000)
       return
     }
-    setDownloadState('idle')
+    setState('idle')
     const link = document.createElement('a')
     link.href = downloadUrl
     link.download = ''
@@ -427,66 +469,24 @@ function SecondaryActions({
   }
 
   return (
-    <div className="flex gap-2.5">
-      <ActBtn
-        icon={
-          copied ? <Check className="w-[19px] h-[19px]" /> : <Link2 className="w-[19px] h-[19px]" />
-        }
-        label={copied ? 'Copied' : 'Copy link'}
-        onClick={copyLink}
-      />
-      <ActBtn
-        icon={
-          shared ? (
-            <Check className="w-[19px] h-[19px]" />
-          ) : (
-            <Share2 className="w-[19px] h-[19px]" />
-          )
-        }
-        label={shared ? 'Shared' : 'Share'}
-        onClick={share}
-      />
-      {showDownload && (
-        <ActBtn
-          icon={
-            downloadState === 'checking' ? (
-              <Loader2 className="w-[19px] h-[19px] animate-spin" />
-            ) : downloadState === 'unavailable' ? (
-              <AlertCircle className="w-[19px] h-[19px]" />
-            ) : (
-              <Download className="w-[19px] h-[19px]" />
-            )
-          }
-          label={
-            downloadState === 'checking'
-              ? 'Checking…'
-              : downloadState === 'unavailable'
-                ? 'Blocked by source'
-                : 'Download'
-          }
-          onClick={download}
-        />
-      )}
-    </div>
-  )
-}
-
-function ActBtn({
-  icon,
-  label,
-  onClick,
-}: {
-  icon: React.ReactNode
-  label: string
-  onClick: () => void
-}) {
-  return (
     <button
-      onClick={onClick}
-      className="flex-1 flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl border border-hairline bg-surface text-ink-2 hover:text-clay hover:border-clay/30 transition-colors"
+      onClick={download}
+      className="w-full flex items-center justify-center gap-2 px-3 py-3 rounded-xl border border-hairline bg-surface text-ink-2 hover:text-clay hover:border-clay/30 transition-colors"
     >
-      {icon}
-      <span className="text-[12.5px] font-semibold">{label}</span>
+      {state === 'checking' ? (
+        <Loader2 className="w-[18px] h-[18px] animate-spin" />
+      ) : state === 'unavailable' ? (
+        <AlertCircle className="w-[18px] h-[18px]" />
+      ) : (
+        <Download className="w-[18px] h-[18px]" />
+      )}
+      <span className="text-sm font-semibold">
+        {state === 'checking'
+          ? 'Checking…'
+          : state === 'unavailable'
+            ? 'Blocked by source'
+            : 'Download'}
+      </span>
     </button>
   )
 }
