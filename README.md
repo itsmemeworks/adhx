@@ -208,15 +208,15 @@ Update your X app's callback URL to `https://your-app-name.fly.dev/api/auth/twit
 
 ## Tech stack
 
-| Layer      | Technology                                                                                    |
-| ---------- | --------------------------------------------------------------------------------------------- |
-| Framework  | Next.js 16 (App Router) + React 19                                                            |
-| Database   | SQLite + Drizzle ORM (multi-user schema)                                                      |
-| Styling    | Tailwind CSS                                                                                  |
-| Auth       | X OAuth 2.0 PKCE + JWT sessions                                                               |
+| Layer      | Technology                                                                                                                        |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Framework  | Next.js 16 (App Router) + React 19                                                                                                |
+| Database   | SQLite + Drizzle ORM (multi-user schema)                                                                                          |
+| Styling    | Tailwind CSS                                                                                                                      |
+| Auth       | X OAuth 2.0 PKCE + JWT sessions                                                                                                   |
 | Media      | FxTwitter for X, vxinstagram MP4 (+ Instagram embed fallback) for Reels, fxTikTok for TikToks, YouTube oEmbed + iframe for Shorts |
-| Deployment | Docker (self-host) or Fly.io with automated releases                                          |
-| Testing    | Vitest (940+ tests)                                                                           |
+| Deployment | Docker (self-host) or Fly.io with automated releases                                                                              |
+| Testing    | Vitest (940+ tests)                                                                                                               |
 
 ## Development
 
