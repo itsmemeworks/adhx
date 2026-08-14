@@ -101,12 +101,12 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-wi
 
 exports[`OG Metadata with Real Fixtures > Full metadata generation > 'emoji-tweet': generates valid content-first metadata 1`] = `
 {
-  "description": "…Virtual Accounts powered by @moonpay & @iron 1️⃣ Claim your own named… · Video · 2.2K likes, 821 reposts · Read the full post — no X account needed.",
+  "description": "…Virtual Accounts powered by @moonpay & @iron 1️⃣ Claim your own named account in… · Video · 2.2K likes, 821 reposts · Watch and send it — no X app needed.",
   "openGraph": {
     "authors": [
       "https://x.com/moonpay",
     ],
-    "description": "…Virtual Accounts powered by @moonpay & @iron 1️⃣ Claim your own named… · Video · 2.2K likes, 821 reposts · Read the full post — no X account needed.",
+    "description": "…Virtual Accounts powered by @moonpay & @iron 1️⃣ Claim your own named account in… · Video · 2.2K likes, 821 reposts · Watch and send it — no X app needed.",
     "images": [
       {
         "height": 630,
@@ -123,7 +123,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'emoji-twee
   "twitter": {
     "card": "summary_large_image",
     "creator": "@moonpay",
-    "description": "…Virtual Accounts powered by @moonpay & @iron 1️⃣ Claim your own named… · Video · 2.2K likes, 821 reposts · Read the full post — no X account needed.",
+    "description": "…Virtual Accounts powered by @moonpay & @iron 1️⃣ Claim your own named account in… · Video · 2.2K likes, 821 reposts · Watch and send it — no X app needed.",
     "images": [
       "https://pbs.twimg.com/amplify_video_thumb/2009617113384706048/img/uUdl5DT48QRZSEHb.jpg",
     ],
@@ -398,12 +398,12 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'text-quoti
 
 exports[`OG Metadata with Real Fixtures > Full metadata generation > 'video-tweet': generates valid content-first metadata 1`] = `
 {
-  "description": "…space curves. Same numbers. Different geometry. Hidden… · @Kekius_Sage on X · Video · 3.6K likes, 592 reposts · Read the full post — no X account needed.",
+  "description": "…space curves. Same numbers. Different geometry. Hidden order. · @Kekius_Sage on X · Video · 3.6K likes, 592 reposts · Watch and send it — no X app needed.",
   "openGraph": {
     "authors": [
       "https://x.com/Kekius_Sage",
     ],
-    "description": "…space curves. Same numbers. Different geometry. Hidden… · @Kekius_Sage on X · Video · 3.6K likes, 592 reposts · Read the full post — no X account needed.",
+    "description": "…space curves. Same numbers. Different geometry. Hidden order. · @Kekius_Sage on X · Video · 3.6K likes, 592 reposts · Watch and send it — no X app needed.",
     "images": [
       {
         "height": 630,
@@ -420,7 +420,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'video-twee
   "twitter": {
     "card": "summary_large_image",
     "creator": "@Kekius_Sage",
-    "description": "…space curves. Same numbers. Different geometry. Hidden… · @Kekius_Sage on X · Video · 3.6K likes, 592 reposts · Read the full post — no X account needed.",
+    "description": "…space curves. Same numbers. Different geometry. Hidden order. · @Kekius_Sage on X · Video · 3.6K likes, 592 reposts · Watch and send it — no X app needed.",
     "images": [
       "https://pbs.twimg.com/amplify_video_thumb/2011857732484423680/img/wFNhWwXUnF0woRwH.jpg",
     ],

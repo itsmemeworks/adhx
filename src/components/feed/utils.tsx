@@ -5,6 +5,7 @@ import React from 'react'
 import { Download, Monitor } from 'lucide-react'
 import type { ArticleContentBlock, ArticleEntityMap, MediaEntitiesMap, FeedItem } from './types'
 import { previewPath } from '@/lib/activity/preview-path'
+import { shareFileWithLink } from '@/lib/share/web-share'
 
 /** The on-ADHX preview URL for a saved item (absolute). */
 export function previewUrlForItem(item: Pick<FeedItem, 'platform' | 'author' | 'id'>): string {
@@ -224,6 +225,7 @@ export async function handleShareMedia(
   url: string,
   filename: string,
   mimeType: string = 'image/jpeg',
+  options?: { pageUrl?: string },
 ): Promise<ShareMediaResult> {
   e.stopPropagation()
   e.preventDefault()
@@ -324,7 +326,7 @@ export async function handleShareMedia(
 
     // Check if file sharing is supported (mobile browsers)
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file] })
+      await shareFileWithLink(file, { pageUrl: options?.pageUrl })
       return { success: true, method: 'share' }
     }
 

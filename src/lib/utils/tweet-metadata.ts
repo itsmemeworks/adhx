@@ -63,9 +63,8 @@ function engagementFact(tweet: FxTweet): string | undefined {
 /**
  * Meta description (~160 chars) for the SERP snippet. Continues the post text
  * where `title` stopped rather than restating it, then appends what the page
- * holds and the reason to open ours: x.com isn't crawlable and needs a login,
- * so "readable without an X account" is the actual differentiator for the
- * exact-phrase tweet searches this corpus ranks for.
+ * Holds and the reason to open ours: watch/send without the source app
+ * (video) or readable without an X account (text/article).
  *
  * Kept deliberately separate from the richer OG/Twitter card description
  * (`buildDescription` in the page component), which carries quote/external-link
@@ -88,6 +87,8 @@ export function buildTweetSeoDescription(
     title,
     content,
     facts,
-    closer: 'Read the full post — no X account needed.',
+    closer: tweet.media?.videos?.length
+      ? 'Watch and send it — no X app needed.'
+      : 'Read the full post — no X account needed.',
   })
 }

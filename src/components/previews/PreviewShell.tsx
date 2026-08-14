@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   AlertCircle,
@@ -15,7 +15,9 @@ import {
   Zap,
 } from 'lucide-react'
 import Link from 'next/link'
-import { isMediaAvailable } from '@/components/feed/utils'
+import { isMediaAvailable, isTouchDevice } from '@/components/feed/utils'
+import { shareFileWithLink } from '@/lib/share/web-share'
+import { pingSharePulse } from '@/lib/activity/ping-share'
 import { AnimatedBackground, LandingAnimations } from '@/components/landing'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { MatterLogo, ConnectWithX } from '@/components/matter'
@@ -141,17 +143,18 @@ function PreviewHeader({ spacing }: { spacing: 'grid' | 'header' }) {
         Found something good?
       </h1>
       <p className="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto">
-        Save it before you <b className="text-clay font-semibold">doomscroll</b> past it.
+        Send it before you <b className="text-clay font-semibold">doomscroll</b> past it.
       </p>
     </div>
   )
 }
 
 /**
- * Auth-gated CTA cluster shared by the Instagram / TikTok / YouTube preview
- * pages: a primary "Save to collection" button when authenticated, the
- * secondary Copy / Share / (optional Download) row, and the "Keep it forever"
- * Connect-with-X card when signed out.
+ * CTA cluster shared by the Instagram / TikTok / YouTube preview pages.
+ *
+ * Authenticated: primary "Save to collection". Unauthenticated: primary
+ * Send/Download (the useful loop — no account needed), then Copy/Share,
+ * then a quieter "Keep it forever" Connect-with-X card.
  */
 export function PreviewCta({
   isAuthenticated,
@@ -162,7 +165,10 @@ export function PreviewCta({
   canSave = true,
   shareTitle,
   downloadUrl,
+  streamUrl,
+  filename,
   showDownload = false,
+  pulse,
 }: {
   isAuthenticated: boolean
   adding: boolean
@@ -173,14 +179,15 @@ export function PreviewCta({
   canSave?: boolean
   shareTitle: string
   downloadUrl?: string
+  /** Inline stream URL — fetched to a Blob for the native send sheet. */
+  streamUrl?: string
+  filename?: string
   showDownload?: boolean
+  pulse?: { platform: string; id: string }
 }) {
   return (
     <div className="flex flex-col gap-3.5">
-      {/* Authenticated users get the primary "Save" CTA up top. Unauthenticated
-          users lead with the actions below — the single Connect CTA lives in the
-          benefit-backed "Keep it forever" card, so we don't double up on it. */}
-      {isAuthenticated && (
+      {isAuthenticated ? (
         <button
           onClick={onAdd}
           disabled={adding || !canSave}
@@ -193,21 +200,30 @@ export function PreviewCta({
           )}
           {adding ? 'Saving…' : 'Save to collection'}
         </button>
+      ) : (
+        <UnauthPrimarySend
+          shareTitle={shareTitle}
+          downloadUrl={downloadUrl}
+          streamUrl={streamUrl}
+          filename={filename}
+          showDownload={showDownload}
+          pulse={pulse}
+        />
       )}
 
-      {/* Secondary action row */}
       <SecondaryActions
         shareTitle={shareTitle}
         downloadUrl={downloadUrl}
-        showDownload={showDownload}
+        showDownload={showDownload && isAuthenticated}
+        pulse={pulse}
       />
 
-      {/* Keep it forever — accent-tinted card → Connect with X (only when unauthenticated) */}
+      {/* Keep it forever — Connect with X is secondary to send/download. */}
       {!isAuthenticated && (
         <div className="rounded-2xl px-4 py-4 bg-clay/10 border border-clay/20">
-          <div className="font-bold text-sm text-ink mb-0.5">Keep it forever</div>
+          <div className="font-bold text-sm text-ink mb-0.5">Keep a pile, later</div>
           <p className="text-[13px] text-ink-2 leading-snug mb-3">
-            Create a free account to save everything you preview — private to you.
+            Sending doesn&apos;t need an account. Sign in if you want a private collection.
           </p>
           <button
             onClick={onConnect}
@@ -222,15 +238,145 @@ export function PreviewCta({
   )
 }
 
+/** Unauth primary: send the video file+link on touch, download on desktop, share the page URL when there's no MP4. */
+export function UnauthPrimarySend({
+  shareTitle,
+  downloadUrl,
+  streamUrl,
+  filename,
+  showDownload,
+  pulse,
+}: {
+  shareTitle: string
+  downloadUrl?: string
+  streamUrl?: string
+  filename?: string
+  showDownload: boolean
+  pulse?: { platform: string; id: string }
+}) {
+  const [busy, setBusy] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'ok' | 'unavailable'>('idle')
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    setIsMobile(isTouchDevice())
+  }, [])
+
+  const canSendFile = showDownload && !!(streamUrl || downloadUrl)
+
+  const finish = (next: 'ok' | 'unavailable') => {
+    setStatus(next)
+    setTimeout(() => setStatus('idle'), 2000)
+  }
+
+  const send = async () => {
+    setBusy(true)
+    try {
+      if (canSendFile) {
+        const fileUrl = streamUrl || downloadUrl!
+        if (!(await isMediaAvailable(fileUrl))) {
+          finish('unavailable')
+          return
+        }
+        if (isMobile) {
+          const streamed = await fetch(fileUrl)
+          if (!streamed.ok) {
+            finish('unavailable')
+            return
+          }
+          const blob = await streamed.blob()
+          const file = new File([blob], filename || 'video.mp4', { type: 'video/mp4' })
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await shareFileWithLink(file, { title: shareTitle, pageUrl: window.location.href })
+          } else {
+            const blobUrl = URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href = blobUrl
+            link.download = filename || 'video.mp4'
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 100)
+          }
+        } else {
+          const link = document.createElement('a')
+          link.href = downloadUrl || fileUrl
+          link.download = ''
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+        }
+        if (pulse) pingSharePulse(pulse.platform, pulse.id)
+        finish('ok')
+        return
+      }
+
+      const url = window.location.href
+      if (navigator.share) {
+        await navigator.share({ url, title: shareTitle })
+      } else {
+        await navigator.clipboard.writeText(url)
+      }
+      if (pulse) pingSharePulse(pulse.platform, pulse.id)
+      finish('ok')
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        if (pulse) pingSharePulse(pulse.platform, pulse.id)
+        finish('ok')
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const label =
+    status === 'unavailable'
+      ? 'Blocked by source'
+      : status === 'ok'
+        ? canSendFile
+          ? isMobile
+            ? 'Sent'
+            : 'Downloading'
+          : 'Shared'
+        : canSendFile
+          ? isMobile
+            ? 'Send this video'
+            : 'Download video'
+          : 'Share this preview'
+
+  return (
+    <button
+      onClick={send}
+      disabled={busy}
+      className="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      {busy ? (
+        <Loader2 className="w-[18px] h-[18px] animate-spin" />
+      ) : status === 'unavailable' ? (
+        <AlertCircle className="w-[18px] h-[18px]" />
+      ) : status === 'ok' ? (
+        <Check className="w-[18px] h-[18px]" />
+      ) : canSendFile && !isMobile ? (
+        <Download className="w-[18px] h-[18px]" />
+      ) : (
+        <Share2 className="w-[18px] h-[18px]" />
+      )}
+      {busy ? 'Working…' : label}
+    </button>
+  )
+}
+
 /** Copy link / Share / (optional Download) secondary action row. */
 function SecondaryActions({
   shareTitle,
   downloadUrl,
   showDownload,
+  pulse,
 }: {
   shareTitle: string
   downloadUrl?: string
   showDownload?: boolean
+  pulse?: { platform: string; id: string }
 }) {
   const [copied, setCopied] = useState(false)
   const [shared, setShared] = useState(false)
@@ -256,6 +402,7 @@ function SecondaryActions({
         await navigator.clipboard.writeText(url)
         setShared(true)
       }
+      if (pulse) pingSharePulse(pulse.platform, pulse.id)
       setTimeout(() => setShared(false), 1500)
     } catch {
       /* cancelled */
@@ -279,6 +426,7 @@ function SecondaryActions({
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    if (pulse) pingSharePulse(pulse.platform, pulse.id)
   }
 
   return (

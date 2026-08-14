@@ -148,6 +148,36 @@ describe('Feed Utils', () => {
       expect(result).toEqual({ success: true, method: 'share' })
     })
 
+    it('attaches the preview URL when pageUrl is passed', async () => {
+      const mockBlob = new Blob(['test'], { type: 'video/mp4' })
+      global.fetch = vi.fn().mockResolvedValue({
+        blob: () => Promise.resolve(mockBlob),
+      })
+
+      const mockShare = vi.fn().mockResolvedValue(undefined)
+      Object.defineProperty(navigator, 'canShare', {
+        value: () => true,
+        writable: true,
+        configurable: true,
+      })
+      Object.defineProperty(navigator, 'share', {
+        value: mockShare,
+        writable: true,
+        configurable: true,
+      })
+
+      await handleShareMedia(mockEvent, 'https://example.com/video.mp4', 'test.mp4', 'video/mp4', {
+        pageUrl: 'https://adhx.com/reels/abc',
+      })
+
+      expect(mockShare).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text: 'via https://adhx.com/reels/abc',
+          url: 'https://adhx.com/reels/abc',
+        }),
+      )
+    })
+
     it('falls back to download when file sharing is not supported', async () => {
       const mockBlob = new Blob(['test'], { type: 'image/jpeg' })
       global.fetch = vi.fn().mockResolvedValue({

@@ -52,7 +52,10 @@ export function InstagramPreviewLanding({
         onConnect={connect}
         shareTitle="Instagram — ADHX Preview"
         downloadUrl={`/api/media/instagram/video/download?id=${encodeURIComponent(reelId)}`}
+        streamUrl={`/api/media/instagram/video?id=${encodeURIComponent(reelId)}`}
+        filename={`instagram-${reelId}.mp4`}
         showDownload={!!imageUrl}
+        pulse={{ platform: 'instagram', id: reelId }}
       />
       <PreviewAnotherLink className="mt-4" />
     </>
@@ -134,6 +137,7 @@ export function InstagramPreviewLanding({
                 downloadUrl={`/api/media/instagram/video/download?id=${encodeURIComponent(reelId)}`}
                 filename={`instagram-${reelId}.mp4`}
                 title={`Instagram Reel ${reelId}`}
+                pulse={{ platform: 'instagram', id: reelId }}
               />
             </div>
           </div>

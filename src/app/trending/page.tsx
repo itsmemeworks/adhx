@@ -28,23 +28,23 @@ export const dynamic = 'force-dynamic'
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://adhx.com'
 
 export const metadata: Metadata = {
-  title: 'Trending now — what people are saving',
+  title: 'Trending now — what people are sending',
   description:
-    'What people are saving across X, TikTok, Instagram and YouTube right now. A live, anonymous feed of trending posts — preview any of them and save your own to ADHX.',
+    'What people are watching and sending across X, TikTok, Instagram and YouTube right now. A live, anonymous feed — preview any post and send it on, no app needed.',
   alternates: { canonical: '/trending' },
   openGraph: {
     type: 'website',
     url: `${BASE_URL}/trending`,
-    title: 'Trending now — what people are saving',
+    title: 'Trending now — what people are sending',
     description:
-      'A live, anonymous feed of what people are saving across X, TikTok, Instagram and YouTube right now.',
+      'A live, anonymous feed of what people are watching and sending across X, TikTok, Instagram and YouTube right now.',
     // OG image inherited from the app's default opengraph-image.tsx.
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Trending now — what people are saving',
+    title: 'Trending now — what people are sending',
     description:
-      'A live, anonymous feed of what people are saving across X, TikTok, Instagram and YouTube right now.',
+      'A live, anonymous feed of what people are watching and sending across X, TikTok, Instagram and YouTube right now.',
   },
 }
 
@@ -65,7 +65,8 @@ export default async function TrendingPage() {
 
   const jsonLd = buildCollectionPageLd({
     name: 'Trending now on ADHX',
-    description: 'What people are saving across X, TikTok, Instagram and YouTube right now.',
+    description:
+      'What people are watching and sending across X, TikTok, Instagram and YouTube right now.',
     url: `${BASE_URL}/trending`,
     baseUrl: BASE_URL,
     items: items.map((item) => ({
@@ -80,7 +81,7 @@ export default async function TrendingPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScriptContent(jsonLd) }}
       />
-      <h1 className="sr-only">What people are saving across X, TikTok, Instagram and YouTube</h1>
+      <h1 className="sr-only">What people are sending across X, TikTok, Instagram and YouTube</h1>
       <TrendingStaticList items={items} heading="Latest posts" />
       <DiscoverFeed initialItems={items} initialFilter="latest" />
       <nav aria-label="Trending archive" className="pb-10 pt-2 text-center">

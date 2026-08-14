@@ -11,7 +11,7 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 
-import { recordActivity, previewPath } from '@/lib/activity/record'
+import { recordActivity, recordSharePulse, previewPath } from '@/lib/activity/record'
 
 const rows = () => testInstance.db.select().from(activity).orderBy(desc(activity.id)).all()
 
@@ -144,5 +144,57 @@ describe('activity — previewPath', () => {
     expect(previewPath('twitter', 'naval', '123')).toBe('/naval/status/123')
     expect(previewPath('instagram', 'someone', 'Cwnj8')).toBe('/reels/Cwnj8')
     expect(previewPath('tiktok', 'user', '999')).toBe('/@user/video/999')
+  })
+})
+
+describe('activity — recordSharePulse', () => {
+  beforeEach(() => {
+    testInstance = createTestDb()
+  })
+  afterEach(() => testInstance.close())
+
+  it('copies display fields from an existing pulse row and ignores unknown posts', () => {
+    recordActivity({
+      action: 'preview',
+      platform: 'instagram',
+      bookmarkId: 'reel1',
+      author: 'nature',
+      authorName: 'Nature',
+      text: 'funny cat',
+      thumbnailUrl: '/api/media/instagram/thumbnail?id=reel1',
+      contentType: 'video',
+      url: '/reels/reel1',
+    })
+
+    recordSharePulse({ platform: 'instagram', bookmarkId: 'reel1', userId: 'user-a' })
+    recordSharePulse({ platform: 'instagram', bookmarkId: 'never-seen' })
+
+    const all = rows()
+    const shares = all.filter((r) => r.action === 'share')
+    expect(shares).toHaveLength(1)
+    expect(shares[0]).toMatchObject({
+      action: 'share',
+      platform: 'instagram',
+      bookmarkId: 'reel1',
+      author: 'nature',
+      authorName: 'Nature',
+      text: 'funny cat',
+      thumbnailUrl: '/api/media/instagram/thumbnail?id=reel1',
+      url: '/reels/reel1',
+      userId: 'user-a',
+    })
+  })
+
+  it('de-dupes share of the same post inside the window', () => {
+    recordActivity({
+      action: 'preview',
+      platform: 'tiktok',
+      bookmarkId: '1',
+      author: 'a',
+      url: '/@a/video/1',
+    })
+    recordSharePulse({ platform: 'tiktok', bookmarkId: '1' })
+    recordSharePulse({ platform: 'tiktok', bookmarkId: '1' })
+    expect(rows().filter((r) => r.action === 'share')).toHaveLength(1)
   })
 })

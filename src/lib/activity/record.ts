@@ -1,12 +1,13 @@
 import { db } from '@/lib/db'
-import { activity, type NewActivity } from '@/lib/db/schema'
-import { and, eq, gt } from 'drizzle-orm'
+import { activity, bookmarks, type NewActivity } from '@/lib/db/schema'
+import { and, desc, eq, gt } from 'drizzle-orm'
+import { previewPath } from './preview-path'
 
 /**
  * The public activity "pulse".
  *
- * Records community actions (preview / save / read) so the landing page can
- * show a live, anonymous ticker of what people are finding interesting.
+ * Records community actions (preview / save / read / share) so the landing
+ * page can show a live, anonymous ticker of what people are finding interesting.
  *
  * Two hard rules, enforced here so callers can't get them wrong:
  *  1. Content is ALWAYS resolved server-side by the caller. We never accept
@@ -16,7 +17,9 @@ import { and, eq, gt } from 'drizzle-orm'
  *     back by the public endpoint. The pulse is anonymous ("Someone saved …").
  */
 
-export type ActivityAction = 'preview' | 'save' | 'read'
+export type ActivityAction = 'preview' | 'save' | 'read' | 'share'
+
+const PULSE_PLATFORMS = new Set(['twitter', 'instagram', 'tiktok', 'youtube'])
 
 /** Post types the pulse understands. Used to type preview-only cards. */
 export type ActivityContentType = 'video' | 'photo' | 'text' | 'quote' | 'article'
@@ -31,7 +34,7 @@ const CONTENT_TYPES = new Set<string>(['video', 'photo', 'text', 'quote', 'artic
  * re-exported here so client components can import the path helper without
  * pulling in better-sqlite3 through this server-only module.
  */
-export { previewPath } from './preview-path'
+export { previewPath }
 
 export interface ActivityInput {
   action: ActivityAction
@@ -114,5 +117,87 @@ export function recordActivity(input: ActivityInput): void {
     db.insert(activity).values(row).run()
   } catch {
     // Best-effort: a pulse write must never break the user's action.
+  }
+}
+
+/**
+ * Record a `share` (send/download) using display fields already stored for
+ * this post. Looks up the newest activity row, then any saved bookmark.
+ * Unknown posts are a no-op — callers must not invent captions/thumbs.
+ *
+ * Fire-and-forget: never throws.
+ */
+export function recordSharePulse(opts: {
+  platform: string
+  bookmarkId: string
+  userId?: string | null
+}): void {
+  try {
+    const platform = opts.platform
+    const bookmarkId = opts.bookmarkId
+    if (!PULSE_PLATFORMS.has(platform) || !bookmarkId) return
+
+    const existing = db
+      .select({
+        platform: activity.platform,
+        bookmarkId: activity.bookmarkId,
+        author: activity.author,
+        authorName: activity.authorName,
+        authorAvatarUrl: activity.authorAvatarUrl,
+        text: activity.text,
+        thumbnailUrl: activity.thumbnailUrl,
+        contentType: activity.contentType,
+        url: activity.url,
+      })
+      .from(activity)
+      .where(and(eq(activity.platform, platform), eq(activity.bookmarkId, bookmarkId)))
+      .orderBy(desc(activity.createdAt))
+      .limit(1)
+      .get()
+
+    if (existing) {
+      recordActivity({
+        action: 'share',
+        platform: existing.platform,
+        bookmarkId: existing.bookmarkId,
+        author: existing.author,
+        authorName: existing.authorName,
+        authorAvatarUrl: existing.authorAvatarUrl,
+        text: existing.text,
+        thumbnailUrl: existing.thumbnailUrl,
+        contentType: existing.contentType,
+        url: existing.url,
+        userId: opts.userId,
+      })
+      return
+    }
+
+    const saved = db
+      .select({
+        author: bookmarks.author,
+        authorName: bookmarks.authorName,
+        text: bookmarks.text,
+        authorProfileImageUrl: bookmarks.authorProfileImageUrl,
+      })
+      .from(bookmarks)
+      .where(and(eq(bookmarks.platform, platform), eq(bookmarks.id, bookmarkId)))
+      .limit(1)
+      .get()
+
+    if (!saved?.author) return
+
+    recordActivity({
+      action: 'share',
+      platform,
+      bookmarkId,
+      author: saved.author,
+      authorName: saved.authorName,
+      authorAvatarUrl: saved.authorProfileImageUrl,
+      text: saved.text,
+      url: previewPath(platform, saved.author, bookmarkId),
+      userId: opts.userId,
+    })
+  } catch {
+    // Best-effort: a pulse write must never break send/download.
   }
 }

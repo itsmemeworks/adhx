@@ -252,14 +252,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // <title> — dropping the old "Preview @user's tweet" framing here too.
   const ogTitle = title
 
-  // Build OG video tags for video tweets
-  const ogVideos = tweet.media?.videos?.length
-    ? tweet.media.videos.slice(0, 1).map((video) => ({
-        url: video.url,
-        width: video.width,
-        height: video.height,
-        type: 'video/mp4' as const,
-      }))
+  // Build OG video tags for video tweets — proxy URL so crawlers/messengers
+  // aren't 403'd by video.twimg.com (robots.txt allows /api/media/).
+  const firstVideo = tweet.media?.videos?.[0]
+  const ogVideos = firstVideo
+    ? [
+        {
+          url: `${baseUrl}/api/media/video?author=${encodeURIComponent(username)}&tweetId=${encodeURIComponent(id)}&quality=hd`,
+          width: firstVideo.width,
+          height: firstVideo.height,
+          type: 'video/mp4' as const,
+        },
+      ]
     : undefined
 
   // Use small square card for avatar OG images (text-only tweets), large banner for everything else
@@ -276,7 +280,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title,
     description,
     openGraph: {
-      type: 'article',
+      type: ogVideos ? 'video.other' : 'article',
       title: ogTitle,
       description: ogDescription,
       siteName: 'ADHX',

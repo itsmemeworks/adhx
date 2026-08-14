@@ -152,7 +152,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     facts: [attributionFact(pageTitle, who, 'YouTube'), 'Short'].filter((fact): fact is string =>
       Boolean(fact),
     ),
-    closer: 'Watch it here and save it to your collection.',
+    closer: 'Watch it here — no YouTube app needed.',
   })
   const image = meta ? youtubeThumbnail(id) : `${baseUrl}/og-logo.png`
 

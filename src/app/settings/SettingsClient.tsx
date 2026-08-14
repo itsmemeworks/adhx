@@ -32,9 +32,8 @@ import { getPlatformType, type PlatformType } from '@/lib/platform'
 import { useTheme } from '@/lib/theme/context'
 import { PlatformGlyph } from '@/components/matter'
 import { cn } from '@/lib/utils'
-
-const SHORTCUT_URL = 'https://www.icloud.com/shortcuts/0d187480099b4d34a745ec8750a4587b'
-const BOOKMARKLET_CODE = `javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tiktok|youtube)\\.com/,'adhx.com'))`
+import { IosShareRecipe } from '@/components/IosShareRecipe'
+import { BOOKMARKLET_CODE, X_ONLY_SHORTCUT_URL } from '@/lib/share/ios'
 
 interface AuthStatus {
   authenticated: boolean
@@ -187,30 +186,21 @@ function ShortcutCard() {
 
   if (platform === 'ios') {
     return (
-      <SCard icon={Smartphone} title="iOS Shortcut" sub="Save posts from the share sheet">
+      <SCard icon={Smartphone} title="iOS Shortcut" sub="Send any post from the share sheet">
         <p className="text-[13.5px] text-ink-2 leading-relaxed mb-3">
-          Hit share on any post and it opens in ADHX — a clean preview with full media, ready to
-          save to your collection or send to a friend.
+          URL-prefix works for X, Instagram, TikTok, and YouTube. The one-tap iCloud shortcut is
+          still X-only — for all four platforms, add a Share Sheet shortcut that opens ADHX.
         </p>
+        <IosShareRecipe />
         <a
-          href={SHORTCUT_URL}
+          href={X_ONLY_SHORTCUT_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-[18px] py-[11px] min-h-[44px] rounded-[11px] bg-clay-grad text-white shadow-glow font-semibold text-sm transition-all hover:opacity-90"
+          className="inline-flex items-center gap-2 mt-3 px-[18px] py-[11px] min-h-[44px] rounded-[11px] border border-hairline bg-surface text-ink font-semibold text-sm transition-all hover:opacity-90"
         >
           <ExternalLink className="w-4 h-4" />
-          Get the Shortcut
+          X-only shortcut (one-tap install)
         </a>
-        <div className="mt-4">
-          <p className="text-[12.5px] font-bold tracking-wide uppercase text-ink-3 mb-2">
-            How it works
-          </p>
-          <ol className="list-decimal list-inside text-[13px] text-ink-3 space-y-1.5 ml-1">
-            <li>See a post you want to share? Tap the share button</li>
-            <li>Select &quot;ADHX Preview&quot; from your shortcuts</li>
-            <li>Get a clean link with the full post + media. Send it anywhere!</li>
-          </ol>
-        </div>
       </SCard>
     )
   }
