@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.48.4](https://github.com/itsmemeworks/adhx/compare/v1.48.3...v1.48.4) (2026-08-14)
+
+
+### Bug Fixes
+
+* reconnect on x 402 sync failures and unblock video thumbnails ([#304](https://github.com/itsmemeworks/adhx/issues/304)) ([e3678d2](https://github.com/itsmemeworks/adhx/commit/e3678d2bbe916d525dfc8d66e97d11e151fb8bb3))
+
 ## [1.48.3](https://github.com/itsmemeworks/adhx/compare/v1.48.2...v1.48.3) (2026-07-31)
 
 
