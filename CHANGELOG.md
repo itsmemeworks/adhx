@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.50.0](https://github.com/itsmemeworks/adhx/compare/v1.49.1...v1.50.0) (2026-08-14)
+
+
+### Features
+
+* push the iOS Share Sheet shortcut as the install ([#312](https://github.com/itsmemeworks/adhx/issues/312)) ([d5e4660](https://github.com/itsmemeworks/adhx/commit/d5e4660ea1bbafc1c46f435ee8e3c87be2ecd1e5))
+
 ## [1.49.1](https://github.com/itsmemeworks/adhx/compare/v1.49.0...v1.49.1) (2026-08-14)
 
 
