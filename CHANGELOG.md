@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.50.1](https://github.com/itsmemeworks/adhx/compare/v1.50.0...v1.50.1) (2026-08-14)
+
+
+### Bug Fixes
+
+* portal the send bar to the viewport so it sticks on mobile ([#314](https://github.com/itsmemeworks/adhx/issues/314)) ([a5d1ac9](https://github.com/itsmemeworks/adhx/commit/a5d1ac91755255739a59a37dc9178d0d7b0dc9cb))
+
 ## [1.50.0](https://github.com/itsmemeworks/adhx/compare/v1.49.1...v1.50.0) (2026-08-14)
 
 
