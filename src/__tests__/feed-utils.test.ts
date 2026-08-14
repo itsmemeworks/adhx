@@ -92,6 +92,8 @@ describe('Feed Utils', () => {
 
     it('stops event propagation and prevents default', async () => {
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        headers: { get: () => 'image/jpeg' },
         blob: () => Promise.resolve(new Blob(['test'], { type: 'image/jpeg' })),
       })
 
@@ -119,6 +121,8 @@ describe('Feed Utils', () => {
     it('uses Web Share API when file sharing is supported', async () => {
       const mockBlob = new Blob(['test'], { type: 'image/jpeg' })
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        headers: { get: () => mockBlob.type },
         blob: () => Promise.resolve(mockBlob),
       })
 
@@ -151,6 +155,8 @@ describe('Feed Utils', () => {
     it('attaches the preview URL when pageUrl is passed', async () => {
       const mockBlob = new Blob(['test'], { type: 'video/mp4' })
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        headers: { get: () => mockBlob.type },
         blob: () => Promise.resolve(mockBlob),
       })
 
@@ -173,14 +179,16 @@ describe('Feed Utils', () => {
       expect(mockShare).toHaveBeenCalledWith(
         expect.objectContaining({
           text: 'via https://adhx.com/reels/abc',
-          url: 'https://adhx.com/reels/abc',
         }),
       )
+      expect(mockShare.mock.calls[0][0]).not.toHaveProperty('url')
     })
 
     it('falls back to download when file sharing is not supported', async () => {
       const mockBlob = new Blob(['test'], { type: 'image/jpeg' })
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        headers: { get: () => mockBlob.type },
         blob: () => Promise.resolve(mockBlob),
       })
 
@@ -216,6 +224,8 @@ describe('Feed Utils', () => {
     it('handles user cancellation (AbortError) gracefully', async () => {
       const mockBlob = new Blob(['test'], { type: 'image/jpeg' })
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        headers: { get: () => mockBlob.type },
         blob: () => Promise.resolve(mockBlob),
       })
 
@@ -270,6 +280,8 @@ describe('Feed Utils', () => {
 
       const mockBlob = new Blob(['test'], { type: 'image/jpeg' })
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        headers: { get: () => mockBlob.type },
         blob: () => Promise.resolve(mockBlob),
       })
 
@@ -299,6 +311,8 @@ describe('Feed Utils', () => {
     it('uses correct mime type for videos', async () => {
       const mockBlob = new Blob(['test'], { type: 'video/mp4' })
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        headers: { get: () => mockBlob.type },
         blob: () => Promise.resolve(mockBlob),
       })
 
