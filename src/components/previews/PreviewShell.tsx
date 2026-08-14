@@ -16,7 +16,12 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { isMediaAvailable, isTouchDevice } from '@/components/feed/utils'
-import { shareFileWithLink } from '@/lib/share/web-share'
+import {
+  canonicalShareUrl,
+  prefetchShareFile,
+  shareFileWithLink,
+  sharePageLink,
+} from '@/lib/share/web-share'
 import { pingSharePulse } from '@/lib/activity/ping-share'
 import { AnimatedBackground, LandingAnimations } from '@/components/landing'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -262,7 +267,13 @@ export function UnauthPrimarySend({
     setIsMobile(isTouchDevice())
   }, [])
 
-  const canSendFile = showDownload && !!(streamUrl || downloadUrl)
+  const fileUrl = streamUrl || downloadUrl
+  const canSendFile = showDownload && !!fileUrl
+
+  useEffect(() => {
+    if (!fileUrl || !filename || !isTouchDevice()) return
+    void prefetchShareFile(fileUrl, filename)
+  }, [fileUrl, filename])
 
   const finish = (next: 'ok' | 'unavailable') => {
     setStatus(next)
@@ -272,24 +283,13 @@ export function UnauthPrimarySend({
   const send = async () => {
     setBusy(true)
     try {
-      if (canSendFile) {
-        const fileUrl = streamUrl || downloadUrl!
-        if (!(await isMediaAvailable(fileUrl))) {
-          finish('unavailable')
-          return
-        }
+      if (canSendFile && fileUrl) {
         if (isMobile) {
-          const streamed = await fetch(fileUrl)
-          if (!streamed.ok) {
-            finish('unavailable')
-            return
-          }
-          const blob = await streamed.blob()
-          const file = new File([blob], filename || 'video.mp4', { type: 'video/mp4' })
+          const file = await prefetchShareFile(fileUrl, filename || 'video.mp4')
           if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await shareFileWithLink(file, { title: shareTitle, pageUrl: window.location.href })
+            await shareFileWithLink(file, { pageUrl: window.location.href })
           } else {
-            const blobUrl = URL.createObjectURL(blob)
+            const blobUrl = URL.createObjectURL(file)
             const link = document.createElement('a')
             link.href = blobUrl
             link.download = filename || 'video.mp4'
@@ -299,6 +299,10 @@ export function UnauthPrimarySend({
             setTimeout(() => URL.revokeObjectURL(blobUrl), 100)
           }
         } else {
+          if (!(await isMediaAvailable(fileUrl))) {
+            finish('unavailable')
+            return
+          }
           const link = document.createElement('a')
           link.href = downloadUrl || fileUrl
           link.download = ''
@@ -311,18 +315,15 @@ export function UnauthPrimarySend({
         return
       }
 
-      const url = window.location.href
-      if (navigator.share) {
-        await navigator.share({ url, title: shareTitle })
-      } else {
-        await navigator.clipboard.writeText(url)
-      }
+      await sharePageLink({ title: shareTitle, href: window.location.href })
       if (pulse) pingSharePulse(pulse.platform, pulse.id)
       finish('ok')
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         if (pulse) pingSharePulse(pulse.platform, pulse.id)
         finish('ok')
+      } else if (canSendFile) {
+        finish('unavailable')
       }
     } finally {
       setBusy(false)
@@ -384,7 +385,9 @@ function SecondaryActions({
 
   const copyLink = async () => {
     try {
-      await navigator.clipboard.writeText(window.location.href)
+      await navigator.clipboard.writeText(
+        canonicalShareUrl(window.location.href) || window.location.href,
+      )
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch {
@@ -393,15 +396,9 @@ function SecondaryActions({
   }
 
   const share = async () => {
-    const url = window.location.href
     try {
-      if (navigator.share) {
-        await navigator.share({ url, title: shareTitle })
-        setShared(true)
-      } else {
-        await navigator.clipboard.writeText(url)
-        setShared(true)
-      }
+      await sharePageLink({ title: shareTitle, href: window.location.href })
+      setShared(true)
       if (pulse) pingSharePulse(pulse.platform, pulse.id)
       setTimeout(() => setShared(false), 1500)
     } catch {

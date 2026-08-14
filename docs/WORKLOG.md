@@ -4,6 +4,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-14 — iOS WhatsApp share: duplicate via-link + first-tap fail
+
+- **Why**: Staging reel share to WhatsApp sent `via URL URL` (text + url both set). First tap showed our AlertCircle; second tap worked — iOS drops user-activation across `await fetch(mp4)`.
+- **What**: File shares send `files` + `via <canonical url>` only (no `url` field). Prefetch the MP4 on mount so `navigator.share` runs in the tap. Reject JSON error bodies. Link-only share uses canonical URL once.
+- **State**: in-flight on `fix/ios-whatsapp-share`.
+- **Follow-ups**: Re-test Send on iOS WhatsApp for a Reel after staging deploy.
+
 ## 2026-08-14 — Send the video as the product (file + ADHX link)
 
 - **Why**: The real loop is preview → download → WhatsApp. File-only share leaked growth (no adhx.com URL); Connect-with-X was the front door; trending scored saves/previews not sends; iOS shortcut is still X-only.

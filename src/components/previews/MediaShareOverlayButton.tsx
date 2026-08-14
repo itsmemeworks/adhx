@@ -3,23 +3,23 @@
 import { useEffect, useState } from 'react'
 import { AlertCircle, Check, Download, Loader2, Share2 } from 'lucide-react'
 import { isTouchDevice, isMediaAvailable } from '@/components/feed/utils'
-import { shareFileWithLink } from '@/lib/share/web-share'
+import { prefetchShareFile, shareFileWithLink } from '@/lib/share/web-share'
 import { pingSharePulse } from '@/lib/activity/ping-share'
 import { cn } from '@/lib/utils'
 
 /**
  * Floating share/download button pinned over preview-page media (top-right).
  *
- * On **touch devices** it fetches the video and opens the native share sheet
- * with the FILE plus the ADHX preview link (`via https://adhx.com/…`) so
- * WhatsApp gets both. On desktop it downloads the file and reveals on hover
+ * On **touch devices** it opens the native share sheet with the FILE plus
+ * `via https://adhx.com/…` so WhatsApp gets both. The MP4 is prefetched on
+ * mount so the tap can call `navigator.share` while iOS still counts it as
+ * a user gesture. On desktop it downloads the file and reveals on hover
  * (`group-hover` — the parent media wrapper must be `group`).
  */
 export function MediaShareOverlayButton({
   streamUrl,
   downloadUrl,
   filename,
-  title,
   mimeType = 'video/mp4',
   pulse,
 }: {
@@ -42,6 +42,11 @@ export function MediaShareOverlayButton({
   useEffect(() => {
     setIsMobile(isTouchDevice())
   }, [])
+
+  useEffect(() => {
+    if (!isTouchDevice()) return
+    void prefetchShareFile(streamUrl, filename, mimeType)
+  }, [streamUrl, filename, mimeType])
 
   const handleClick = async (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -68,27 +73,17 @@ export function MediaShareOverlayButton({
         return
       }
 
-      // Touch: share the actual video FILE via the native sheet, with the
-      // preview URL as the caption so the recipient can open it on ADHX.
-      const streamed = await fetch(streamUrl)
-      // fetch() doesn't throw on 502, so without this the error JSON gets
-      // wrapped in a File and shared as if it were the video.
-      if (!streamed.ok) {
-        setFailed(true)
-        return
-      }
-      const blob = await streamed.blob()
-      const file = new File([blob], filename, { type: mimeType })
+      const file = await prefetchShareFile(streamUrl, filename, mimeType)
 
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await shareFileWithLink(file, { title, pageUrl: window.location.href })
+        await shareFileWithLink(file, { pageUrl: window.location.href })
         if (pulse) pingSharePulse(pulse.platform, pulse.id)
         setShowSuccess(true)
         return
       }
 
       // No file-share support → download the blob instead.
-      const blobUrl = URL.createObjectURL(blob)
+      const blobUrl = URL.createObjectURL(file)
       const link = document.createElement('a')
       link.href = blobUrl
       link.download = filename

@@ -5,7 +5,7 @@ import React from 'react'
 import { Download, Monitor } from 'lucide-react'
 import type { ArticleContentBlock, ArticleEntityMap, MediaEntitiesMap, FeedItem } from './types'
 import { previewPath } from '@/lib/activity/preview-path'
-import { shareFileWithLink } from '@/lib/share/web-share'
+import { fileFromMediaUrl, shareFileWithLink } from '@/lib/share/web-share'
 
 /** The on-ADHX preview URL for a saved item (absolute). */
 export function previewUrlForItem(item: Pick<FeedItem, 'platform' | 'author' | 'id'>): string {
@@ -320,9 +320,7 @@ export async function handleShareMedia(
 
   // Mobile: try Web Share API, fall back to download
   try {
-    const response = await fetch(url)
-    const blob = await response.blob()
-    const file = new File([blob], filename, { type: mimeType })
+    const file = await fileFromMediaUrl(url, filename, mimeType)
 
     // Check if file sharing is supported (mobile browsers)
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -331,7 +329,7 @@ export async function handleShareMedia(
     }
 
     // Fallback to download for mobile browsers without share support
-    const blobUrl = URL.createObjectURL(blob)
+    const blobUrl = URL.createObjectURL(file)
     const link = document.createElement('a')
     link.href = blobUrl
     link.download = filename

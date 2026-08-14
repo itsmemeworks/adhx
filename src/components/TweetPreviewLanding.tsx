@@ -33,6 +33,7 @@ import { PlatformGlyph, ConnectWithX } from '@/components/matter'
 import { PreviewAnotherLink } from '@/components/PreviewAnotherLink'
 import { PreviewShell, UnauthPrimarySend } from '@/components/previews/PreviewShell'
 import { pingSharePulse } from '@/lib/activity/ping-share'
+import { sharePageLink } from '@/lib/share/web-share'
 import { formatCount, formatRelativeTime } from '@/lib/utils/format'
 import { cn } from '@/lib/utils'
 import { ClampedCaption } from '@/components/previews/ClampedCaption'
@@ -302,25 +303,18 @@ export function TweetPreviewLanding({
   }
 
   const handleSharePreview = async () => {
-    const url = window.location.href
+    const href = window.location.href
     const title = `${tweet.author?.name || username} on X — ADHX Preview`
     try {
-      if (navigator.share) {
-        await navigator.share({ url, title })
-        setShareStatus('shared')
-        pingSharePulse('twitter', tweetId)
-      } else {
-        await navigator.clipboard.writeText(url)
-        setShareStatus('copied')
-        pingSharePulse('twitter', tweetId)
-      }
-    } catch {
-      // User cancelled share or clipboard failed — try clipboard as fallback
+      await sharePageLink({ title, href })
+      setShareStatus(typeof navigator.share === 'function' ? 'shared' : 'copied')
+      pingSharePulse('twitter', tweetId)
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') return
       try {
-        await navigator.clipboard.writeText(url)
+        await navigator.clipboard.writeText(href)
         setShareStatus('copied')
       } catch {
-        // Both failed, do nothing
         return
       }
     }
