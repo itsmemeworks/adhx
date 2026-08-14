@@ -964,7 +964,7 @@ X has a confirmed platform bug: during the **logged-out** login flow it runs a r
 
 - Production deploys should be explicit, intentional actions
 - Always verify on staging first (adhx.fly.dev)
-- Use Fly CLI for production: `fly deploy --config fly.production.toml --app adhx-prod`
+- Production: `gh workflow run deploy.yml -f environment=production` (uses `FLY_API_TOKEN_PROD`) or Fly CLI
 
 **When debugging browser features:**
 
@@ -984,13 +984,15 @@ X has a confirmed platform bug: during the **logged-out** login flow it runs a r
 
 1. Code merged to main → Release-please creates version bump PR
 2. Version PR merged → **Auto-deploys to staging only**
-3. Verify staging works → Manual deploy to production via Fly CLI
+3. Verify staging works → Manual production deploy (`gh workflow run deploy.yml -f environment=production`, or Fly CLI)
 
 ```bash
 # Deploy to staging (default, also triggered by release-please)
 gh workflow run deploy.yml
 
-# Deploy to production (via Fly CLI - GitHub Actions token doesn't have prod access)
+# Deploy to production (uses FLY_API_TOKEN_PROD — staging token cannot deploy adhx-prod)
+gh workflow run deploy.yml -f environment=production
+# or locally:
 fly deploy --config fly.production.toml --app adhx-prod
 
 # Check deployed versions
@@ -1024,6 +1026,11 @@ Required secrets on **both** Fly.io apps (set via `fly secrets set --app <app-na
 - `NEXT_PUBLIC_APP_URL` - `https://adhx.fly.dev` (staging) or `https://adhx.com` (production)
 - `SENTRY_DSN` - Error tracking (same DSN for both, separated by `SENTRY_ENVIRONMENT`)
 - `SESSION_SECRET` - JWT signing (generate unique per environment)
+
+GitHub Actions deploy tokens (app-scoped; staging cannot deploy prod):
+
+- `FLY_API_TOKEN` — `fly tokens create deploy -a adhx`
+- `FLY_API_TOKEN_PROD` — `fly tokens create deploy -a adhx-prod`
 
 **Twitter OAuth**: Both callback URLs must be registered in Twitter Developer Portal:
 

@@ -11,6 +11,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - **State**: in-flight on `chore/always-push-pr`.
 - **Follow-ups**: None.
 
+## 2026-08-14 — GHA production deploy was unauthorized
+
+- **Why**: `workflow_dispatch` production failed immediately (`unauthorized`). `FLY_API_TOKEN` is an app-scoped deploy token for staging `adhx` and cannot touch `adhx-prod`.
+- **What**: New GitHub secret `FLY_API_TOKEN_PROD` (Fly deploy token for `adhx-prod`). `deploy.yml` selects it when environment=production, passes `--app` explicitly, and fails with a setup hint if the secret is missing. Staging still uses `FLY_API_TOKEN`.
+- **State**: shipped in #307.
+- **Follow-ups**: `gh workflow run deploy.yml -f environment=production` (or Fly CLI).
+
 ## 2026-08-14 — GSC "Thumbnail blocked by robots.txt" (video indexing)
 
 - **Why**: Search Console: video pages aren't indexed because the poster is blocked. Reel/TikTok `VideoObject` JSON-LD (and OG images) point at `/api/media/instagram/thumbnail` and `/api/media/tiktok/thumbnail`; `Disallow: /api/` won over those URLs.
