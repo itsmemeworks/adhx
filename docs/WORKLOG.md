@@ -4,6 +4,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-14 — iOS promo: style the 4-platform disclosure as helper text
+
+- **Why**: "Instagram, TikTok, YouTube too" was a left-aligned orange label (`flex` ignored the card's `text-center`). Looked like a broken heading, not a disclosure.
+- **What**: `inline-flex` so it follows parent alignment; `text-ink-3` + chevron, matching "Works with X…".
+- **State**: in-flight on `feat/push-ios-shortcut`.
+- **Follow-ups**: none.
+
 ## 2026-08-14 — Instagram Reels: probe then play, embed if the mirror never warms
 
 - **Why**: `<video src=/api/media/instagram/video>` starts immediately; vxinstagram cold-cache can take 10–20s. Safari/Chrome media elements abort sooner → "Failed to load video" even when the proxy would 200. Gating the player on a poster hid playback when OG scrape missed.

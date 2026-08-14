@@ -33,7 +33,11 @@ describe('IosShortcutInstallButton', () => {
 describe('IosShortcutHow', () => {
   it('keeps the 4-platform recipe behind a disclosure', () => {
     render(<IosShortcutHow />)
-    expect(screen.getByText(/instagram, tiktok, youtube too/i)).toBeInTheDocument()
+    const summary = screen.getByText(/instagram, tiktok, youtube too/i)
+    expect(summary.tagName).toBe('SUMMARY')
+    expect(summary.className).toMatch(/text-ink-3/)
+    expect(summary.className).toMatch(/inline-flex/)
+    expect(summary.className).not.toMatch(/text-clay/)
     expect(screen.getByText(/https:\/\/adhx.com\/share\?url=/)).toBeInTheDocument()
   })
 })

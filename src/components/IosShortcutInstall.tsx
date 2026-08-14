@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Share, X } from 'lucide-react'
+import { ChevronDown, Share, X } from 'lucide-react'
 import { IosShareRecipe } from '@/components/IosShareRecipe'
 import { isIOSDevice } from '@/lib/platform'
 import { X_ONLY_SHORTCUT_URL } from '@/lib/share/ios'
@@ -40,8 +40,14 @@ export function IosShortcutInstallButton({
 export function IosShortcutHow() {
   return (
     <details className="mt-3 group">
-      <summary className="cursor-pointer list-none text-[13.5px] font-semibold text-clay min-h-[44px] flex items-center [&::-webkit-details-marker]:hidden">
+      {/* inline-flex so parent text-center/text-left still places the control;
+          block flex ignored the landing card's centering. */}
+      <summary className="cursor-pointer list-none inline-flex items-center gap-1 min-h-[44px] font-sans text-[12.5px] text-ink-3 hover:text-ink-2 [&::-webkit-details-marker]:hidden">
         Instagram, TikTok, YouTube too
+        <ChevronDown
+          className="w-3.5 h-3.5 opacity-70 transition-transform group-open:rotate-180"
+          aria-hidden
+        />
       </summary>
       <p className="text-[13px] text-ink-2 leading-relaxed mb-2">
         The one-tap shortcut currently rewrites X links. For the other apps, swap the host to{' '}
