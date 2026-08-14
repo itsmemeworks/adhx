@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.49.0](https://github.com/itsmemeworks/adhx/compare/v1.48.4...v1.49.0) (2026-08-14)
+
+
+### Features
+
+* send videos with an adhx link, and stop looping on x 402 ([#306](https://github.com/itsmemeworks/adhx/issues/306)) ([118de70](https://github.com/itsmemeworks/adhx/commit/118de703367a4f5c959d34be25c709360d1848ea))
+
+
+### Bug Fixes
+
+* use a dedicated fly token for github production deploys ([#307](https://github.com/itsmemeworks/adhx/issues/307)) ([cb1c4ac](https://github.com/itsmemeworks/adhx/commit/cb1c4ac49648558c0e7b684cf1ddb3930563a4b4))
+
 ## [1.48.4](https://github.com/itsmemeworks/adhx/compare/v1.48.3...v1.48.4) (2026-08-14)
 
 
