@@ -4,6 +4,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-14 — Send bar: portal to body so it actually sticks to the viewport
+
+- **Why**: Staging iPhone showed "Send this video" mid-page over "Preview another link". `position:fixed` was inside the fadeInUp column (`transform` + `forwards`), so it behaved like `absolute` at the bottom of that column.
+- **What**: `MobileSendDock` portals the bar to `document.body` below the `md` breakpoint.
+- **State**: in-flight on `feat/push-ios-shortcut`.
+- **Follow-ups**: none.
+
 ## 2026-08-14 — iOS promo: style the 4-platform disclosure as helper text
 
 - **Why**: "Instagram, TikTok, YouTube too" was a left-aligned orange label (`flex` ignored the card's `text-center`). Looked like a broken heading, not a disclosure.

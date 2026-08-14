@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import {
   AlertCircle,
@@ -219,7 +220,7 @@ export function PreviewCta({
           {adding ? 'Saving…' : 'Save to collection'}
         </button>
       ) : (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-hairline bg-paper/95 px-3 pt-2.5 backdrop-blur-md pb-[max(0.65rem,env(safe-area-inset-bottom))] md:static md:z-auto md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+        <MobileSendDock>
           <UnauthPrimarySend
             shareTitle={shareTitle}
             downloadUrl={downloadUrl}
@@ -230,7 +231,7 @@ export function PreviewCta({
             showDownload={showDownload}
             pulse={pulse}
           />
-        </div>
+        </MobileSendDock>
       )}
 
       {(canSendFile || isAuthenticated) && (
@@ -261,6 +262,38 @@ export function PreviewCta({
       )}
     </div>
   )
+}
+
+/**
+ * Sticky Send bar chrome. Duplicated on the portal vs in-flow branches so
+ * Tailwind's scanner still sees every class (it won't follow a concatenated const).
+ *
+ * Must portal to document.body on mobile: the preview column uses fadeInUp
+ * (`transform` + `forwards`), which makes `position:fixed` act like `absolute`
+ * relative to that column — the bar sat mid-page over "Preview another link".
+ */
+const SEND_DOCK_FIXED =
+  'fixed inset-x-0 bottom-0 z-40 border-t border-hairline bg-paper/95 px-3 pt-2.5 backdrop-blur-md pb-[max(0.65rem,env(safe-area-inset-bottom))]'
+const SEND_DOCK_INFLOW =
+  'fixed inset-x-0 bottom-0 z-40 border-t border-hairline bg-paper/95 px-3 pt-2.5 backdrop-blur-md pb-[max(0.65rem,env(safe-area-inset-bottom))] md:static md:z-auto md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none'
+
+export function MobileSendDock({ children }: { children: React.ReactNode }) {
+  const [mobile, setMobile] = useState(false)
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return
+    const mq = window.matchMedia('(max-width: 767px)')
+    const apply = () => setMobile(mq.matches)
+    apply()
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
+  }, [])
+
+  if (mobile) {
+    return createPortal(<div className={SEND_DOCK_FIXED}>{children}</div>, document.body)
+  }
+
+  return <div className={SEND_DOCK_INFLOW}>{children}</div>
 }
 
 /** Unauth primary: send the file on touch, download on desktop, share the page URL when there's no file. */
