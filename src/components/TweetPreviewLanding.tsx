@@ -34,6 +34,7 @@ import { IosShortcutNudge } from '@/components/IosShortcutInstall'
 import {
   PreviewShell,
   UnauthPrimarySend,
+  MobileSendDock,
   ShareLinkButton,
 } from '@/components/previews/PreviewShell'
 import { pingSharePulse } from '@/lib/activity/ping-share'
@@ -686,7 +687,7 @@ function SidebarActions({
           </button>
         </>
       ) : (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-hairline bg-paper/95 px-3 pt-2.5 backdrop-blur-md pb-[max(0.65rem,env(safe-area-inset-bottom))] md:static md:z-auto md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+        <MobileSendDock>
           <UnauthPrimarySend
             shareTitle="X — ADHX Preview"
             downloadUrl={downloadUrl}
@@ -697,7 +698,7 @@ function SidebarActions({
             showDownload={showDownload}
             pulse={{ platform: 'twitter', id: tweetId }}
           />
-        </div>
+        </MobileSendDock>
       )}
 
       {(canSendFile || isAuthenticated) && (
