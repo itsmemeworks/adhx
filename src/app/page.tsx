@@ -271,6 +271,8 @@ function FeedPageContent(): React.ReactElement {
           setIsSyncing(false)
           if (firstLogin) {
             setShowSyncModal(true)
+            // Drop ?firstLogin= so a refresh doesn't re-fire sync into a loop.
+            router.replace('/', { scroll: false })
           } else {
             setTimeout(() => {
               setSyncProgress(null)

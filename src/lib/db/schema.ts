@@ -291,7 +291,7 @@ export const activity = sqliteTable(
   'activity',
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
-    action: text('action').notNull(), // 'preview' | 'save' | 'read'
+    action: text('action').notNull(), // 'preview' | 'save' | 'read' | 'share'
     platform: text('platform').notNull().default('twitter'),
     bookmarkId: text('bookmark_id').notNull(),
     author: text('author').notNull(),

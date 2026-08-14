@@ -161,21 +161,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     facts: [attributionFact(pageTitle, who, 'TikTok'), 'Video'].filter((fact): fact is string =>
       Boolean(fact),
     ),
-    closer: 'Watch it here — no TikTok app needed.',
+    closer: 'Watch and send it — no TikTok app.',
   })
   // Poster via the thumbnail proxy so the card unfurls with an image.
   const image = `${baseUrl}/api/media/tiktok/thumbnail?username=${encodeURIComponent(handle)}&id=${encodeURIComponent(id)}`
+  const videoUrl = meta?.videoUrl
+    ? `${baseUrl}/api/media/tiktok/video?username=${encodeURIComponent(handle)}&id=${encodeURIComponent(id)}`
+    : undefined
 
   return {
     title: pageTitle,
     description,
     openGraph: {
-      type: 'article',
+      type: videoUrl ? 'video.other' : 'article',
       title: pageTitle,
       description,
       siteName: 'ADHX',
       url: canonicalUrl,
       images: [{ url: image, alt: pageTitle }],
+      ...(videoUrl
+        ? { videos: [{ url: videoUrl, type: 'video/mp4' as const, width: 1080, height: 1920 }] }
+        : {}),
     },
     twitter: {
       card: 'summary_large_image',

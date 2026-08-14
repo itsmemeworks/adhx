@@ -17,21 +17,21 @@ export const dynamic = 'force-dynamic'
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://adhx.com'
 
 export const metadata: Metadata = {
-  title: 'Trending reel — watch what people are saving',
+  title: 'Trending reel — watch what people are sending',
   description:
-    'A full-screen, autoplaying reel of the videos people are saving across X and TikTok right now. Tap to save your own to ADHX.',
+    'A full-screen, autoplaying reel of the videos people are watching and sending across X and TikTok right now. Tap to preview and send it on.',
   alternates: { canonical: '/trending/play' },
   openGraph: {
     type: 'website',
     url: `${BASE_URL}/trending/play`,
-    title: 'Trending reel — watch what people are saving',
+    title: 'Trending reel — watch what people are sending',
     description:
-      'A full-screen, autoplaying reel of the videos people are saving across X and TikTok right now.',
+      'A full-screen, autoplaying reel of the videos people are watching and sending across X and TikTok right now.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Trending reel — watch what people are saving',
-    description: 'Watch the videos people are saving across X and TikTok right now.',
+    title: 'Trending reel — watch what people are sending',
+    description: 'Watch the videos people are sending across X and TikTok right now.',
   },
 }
 

@@ -20,6 +20,8 @@ import { PlatformGlyph, LiveDot, ConnectWithX } from '@/components/matter'
 import { PublicNav } from '@/components/PublicNav'
 import { DiscoverCard } from '@/components/discover/DiscoverCard'
 import type { ActivityItem } from '@/components/discover/DiscoverFeed'
+import { IosShareRecipe } from '@/components/IosShareRecipe'
+import { BOOKMARKLET_CODE, X_ONLY_SHORTCUT_URL } from '@/lib/share/ios'
 
 /* ---------- Live activity (the real, anonymous community pulse) ---------- */
 
@@ -173,7 +175,7 @@ export function LandingPage() {
             <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold bg-surface border border-hairline text-ink-2 mb-5">
               <LiveDot />
               {live.recentActivity > 0
-                ? `${live.recentActivity.toLocaleString()} saved & previewed today`
+                ? `${live.recentActivity.toLocaleString()} watched & sent today`
                 : 'Real-time community pulse'}
             </span>
 
@@ -189,16 +191,22 @@ export function LandingPage() {
             </h1>
 
             <p className="text-[15px] min-[860px]:text-[17px] text-ink-2 leading-[1.55] mb-7 max-w-[440px]">
-              Sync your X bookmarks, discover what&apos;s trending, and actually get through your
-              backlog — every tweet, thread, Reel, TikTok &amp; Short in one searchable home.
+              Watch a Reel, TikTok, Short or tweet and send the file — friends don&apos;t need the
+              app. Login is for keeping a pile, not for the useful loop.
             </p>
 
-            <div className="flex items-center gap-3.5">
+            <div className="flex flex-wrap items-center gap-3.5">
+              <a
+                href="#try-it"
+                className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-card bg-clay-grad text-white font-semibold text-base shadow-glow transition-transform hover:scale-[1.02]"
+              >
+                Preview a link
+                <ArrowRight className="w-[17px] h-[17px]" />
+              </a>
               <button
                 onClick={handleLogin}
                 disabled={isLoading}
-                className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-card bg-ink text-surface font-semibold text-base transition-opacity hover:opacity-90 disabled:opacity-50"
-                style={{ boxShadow: '0 8px 24px rgba(44,38,32,.25)' }}
+                className="inline-flex items-center gap-2.5 px-5 py-3.5 rounded-card bg-ink text-surface font-semibold text-sm transition-opacity hover:opacity-90 disabled:opacity-50"
               >
                 {isLoading ? (
                   <>
@@ -206,13 +214,9 @@ export function LandingPage() {
                     Connecting…
                   </>
                 ) : (
-                  <>
-                    <ConnectWithX size={17} />
-                    <ArrowRight className="w-[17px] h-[17px]" />
-                  </>
+                  <ConnectWithX size={15} />
                 )}
               </button>
-              <span className="text-[13.5px] text-ink-3">Free forever</span>
             </div>
           </div>
 
@@ -241,8 +245,8 @@ export function LandingPage() {
                 Find your next rabbit hole
               </h2>
               <p className="text-[14.5px] text-ink-2 mt-1.5">
-                Anonymous, real-time. Every save anyone makes streams here — tap to add it to your
-                own collection.
+                Anonymous, real-time. Every send and save streams here — tap to watch, then send it
+                on.
               </p>
             </div>
             <a
@@ -417,9 +421,6 @@ function ValueProp({ icon, title, body }: { icon: React.ReactNode; title: string
 
 /* ───────── Save method promo (iOS Shortcut / bookmarklet) ───────── */
 
-const SHORTCUT_URL = 'https://www.icloud.com/shortcuts/0d187480099b4d34a745ec8750a4587b'
-const BOOKMARKLET_CODE = `javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tiktok|youtube)\\.com/,'adhx.com'))`
-
 function ShortcutPromo() {
   const [platform, setPlatform] = useState<PlatformType>('desktop')
   const [copied, setCopied] = useState(false)
@@ -448,25 +449,24 @@ function ShortcutPromo() {
 
           <div className="flex-1 text-center sm:text-left">
             <h2 className="font-serif font-semibold text-ink text-[18px] mb-2">
-              {platform === 'ios'
-                ? 'Save straight from the share sheet'
-                : 'Save posts with one click'}
+              {platform === 'ios' ? 'Send any post from iPhone' : 'Save posts with one click'}
             </h2>
 
             {platform === 'ios' ? (
               <>
                 <p className="text-[14px] text-ink-2 leading-[1.5] mb-4">
-                  Hit share on any post and it opens in ADHX — full content and media, ready to save
-                  to your collection or send to a friend.
+                  Send any X, Instagram, TikTok, or YouTube post through ADHX — watch it, then share
+                  the file so friends don&apos;t need the app. No login required.
                 </p>
+                <IosShareRecipe />
                 <a
-                  href={SHORTCUT_URL}
+                  href={X_ONLY_SHORTCUT_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-clay-grad text-white shadow-glow font-semibold text-sm transition-transform hover:scale-[1.02]"
+                  className="inline-flex items-center gap-2 mt-4 px-5 py-2.5 rounded-full border border-hairline bg-surface text-ink font-semibold text-sm transition-opacity hover:opacity-80"
                 >
                   <ExternalLink className="w-4 h-4" />
-                  Get the Shortcut
+                  X-only shortcut (one-tap install)
                 </a>
               </>
             ) : (

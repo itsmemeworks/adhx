@@ -15,8 +15,8 @@ import type { PlatformId } from '@/lib/platform/url'
  *
  * Each item is enriched with:
  *   - `saveCount` — DISTINCT users who saved the post (anonymous count).
- *   - `trendCount` — savers + preview events → powers the "Trending" ranking +
- *     flame badge, so a heavily-previewed post trends before anyone saves it.
+ *   - `trendCount` — savers + preview events + send events → powers the "Trending" ranking +
+ *     flame badge, so a heavily-previewed or widely-sent post trends before anyone saves it.
  *   - `contentType` — the post's real type (video/photo/text/quote/article),
  *     derived from the saved bookmark's media so the badge is accurate (a text
  *     tweet isn't mislabelled "photo", a video tweet isn't "photo", etc.). Left
@@ -55,7 +55,7 @@ export interface TrendingItem {
   createdAt: string
   /** Distinct ADHX users who've saved this post (anonymous count). */
   saveCount?: number
-  /** Trending score = savers + preview events. Drives the flame + Trending sort. */
+  /** Trending score = savers + preview events + send events. Drives the flame + Trending sort. */
   trendCount?: number
   /** Real post type from the saved bookmark, when known (else client infers it). */
   contentType?: ContentType
@@ -216,6 +216,7 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
   const articleTitles = new Map<string, string>()
   const avatars = new Map<string, string>()
   const previewCounts = new Map<string, number>()
+  const shareCounts = new Map<string, number>()
   if (ids.length > 0) {
     const aggRows = db
       .select({
@@ -252,6 +253,20 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
       .all()
     for (const r of previewRows) {
       previewCounts.set(`${r.platform}:${r.bookmarkId}`, Number(r.n) || 0)
+    }
+
+    const shareRows = db
+      .select({
+        platform: activity.platform,
+        bookmarkId: activity.bookmarkId,
+        n: sql<number>`count(*)`,
+      })
+      .from(activity)
+      .where(and(eq(activity.action, 'share'), inArray(activity.bookmarkId, ids)))
+      .groupBy(activity.platform, activity.bookmarkId)
+      .all()
+    for (const r of shareRows) {
+      shareCounts.set(`${r.platform}:${r.bookmarkId}`, Number(r.n) || 0)
     }
 
     const mediaRows = db
@@ -337,9 +352,9 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
       // usually just the wrapper tweet's t.co link), matching the collection.
       text: contentType === 'article' ? (articleTitles.get(key) ?? i.text) : i.text,
       saveCount: counts.get(key) ?? 0,
-      // Trending score = distinct savers + preview events. Previews count, so
-      // a heavily-previewed post trends even with zero saves.
-      trendCount: (counts.get(key) ?? 0) + (previewCounts.get(key) ?? 0),
+      // Trending score = distinct savers + preview events + send events.
+      trendCount:
+        (counts.get(key) ?? 0) + (previewCounts.get(key) ?? 0) + (shareCounts.get(key) ?? 0),
       contentType,
       thumbnailUrl: thumbOf(i, key, contentType),
       // The post author's avatar for tweet-style cards — the recorded value
@@ -370,7 +385,9 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
   const recentActivityRow = db
     .select({ c: sql<number>`count(*)` })
     .from(activity)
-    .where(and(inArray(activity.action, ['save', 'preview']), gte(activity.createdAt, dayAgo)))
+    .where(
+      and(inArray(activity.action, ['save', 'preview', 'share']), gte(activity.createdAt, dayAgo)),
+    )
     .get()
   const recentActivity = Number(recentActivityRow?.c) || 0
 

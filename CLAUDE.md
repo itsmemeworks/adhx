@@ -203,7 +203,7 @@ X OAuth 2.0 tokens: the **access token lasts ~2 hours**; the **refresh token is 
 - `fatal` (HTTP 400/401) → the refresh token itself is dead; only a fresh re-auth recovers it. The status route clears the session here; throw it to the user as "reconnect your account".
 - non-fatal (network / 5xx / lost race) → **keep the stored tokens** and let a later request retry. Never tear down the session on a transient failure (that turns a blip into a forced re-auth).
 
-**Reactive 401/402/403 recovery**: `fetchBookmarks` (`src/lib/twitter/client.ts`) force-refreshes once and retries on 401, 402, or 403. X returns 402 on bookmarks for a rejected user token (not only a developer-plan lapse). If the retry still fails, throw a `TwitterCallError` with `code: 'reauth'` and human copy — never a raw `"Request failed with code 402"`. The sync SSE sends `{ message, code }`; `SyncProgress` shows a **Connect with X** CTA for `reauth`. Classification lives in `src/lib/twitter/errors.ts` / `src/lib/sync/messages.ts`.
+**Reactive 401/403 recovery**: `fetchBookmarks` (`src/lib/twitter/client.ts`) force-refreshes once and retries on 401 or 403. If the retry still fails, throw a `TwitterCallError` with `code: 'reauth'` and human copy. **Do not treat 402 as reauth** — X uses 402 for "developer account has no pay-per-use credits"; reconnecting the user loops. 402 is `code: 'unavailable'` ("Your login is fine — try again later") plus a Sentry warning. Classification lives in `src/lib/twitter/errors.ts` / `src/lib/sync/messages.ts`. The sync SSE sends `{ message, code }`; `SyncProgress` shows **Connect with X** only for `reauth`.
 
 Tests: `src/__tests__/token-refresh.test.ts` (coalescing, fatal/transient, rotation persistence) and the refresh cases in `src/__tests__/api/auth-status.test.ts`.
 
@@ -418,7 +418,7 @@ When generating Open Graph metadata for social unfurling, images are selected in
 
 ### Trending & Activity Pulse (the SEO growth loop)
 
-`/trending` (`src/app/trending/page.tsx`) and the per-lens hubs `/trending/[filter]` (`videos` / `photos` / `text` / `articles` / `just-saved`) are public, **anonymous**, crawlable feeds of what the community is saving/previewing right now — the SEO growth loop that turns user activity into indexable content. **`/discover` 308-redirects to `/trending`** (the old `/discover` page and the `LivePulse` marquee are gone). Each hub server-renders a real, crawlable `sr-only` item list (`src/components/trending/TrendingStaticList.tsx`) + `CollectionPage`/`ItemList` JSON-LD, then mounts the live `DiscoverFeed` grid (12s polling) seeded with the same items so there's no skeleton flash. The selected filter pill is reflected in the URL (tidy path, via `history.replaceState`) so a filtered view is shareable; loading `/trending/<filter>` seeds that filter server-side.
+`/trending` (`src/app/trending/page.tsx`) and the per-lens hubs `/trending/[filter]` (`videos` / `photos` / `text` / `articles` / `just-saved`) are public, **anonymous**, crawlable feeds of what the community is watching and sending right now — the SEO growth loop that turns user activity into indexable content. **`/discover` 308-redirects to `/trending`** (the old `/discover` page and the `LivePulse` marquee are gone). Each hub server-renders a real, crawlable `sr-only` item list (`src/components/trending/TrendingStaticList.tsx`) + `CollectionPage`/`ItemList` JSON-LD, then mounts the live `DiscoverFeed` grid (12s polling) seeded with the same items so there's no skeleton flash. The selected filter pill is reflected in the URL (tidy path, via `history.replaceState`) so a filtered view is shareable; loading `/trending/<filter>` seeds that filter server-side.
 
 **Runtime-render gotcha — do NOT make these static.** `/trending`, `/trending/[filter]`, the `/sitemap.xml` route, and the preview pages are `export const dynamic = 'force-dynamic'` (and the trending hubs deliberately have **no** `generateStaticParams`). They read the SQLite DB, which is **only migrated at container startup** — pre-rendering them at build queries a table-less DB (`no such table: activity`) and bakes empty HTML. Keep them dynamic. (The trending DB query is a cheap local read, so per-request rendering is fine.)
 
@@ -430,10 +430,11 @@ When generating Open Graph metadata for social unfurling, images are selected in
 | `preview` | the 4 preview page server components | Skipped for bots/OG-unfurl crawlers via `isLikelyBot()` (`src/lib/activity/bot.ts`) so the pulse stays human |
 | `save` | `/api/tweets/add` (twitter, covers the `/api/bookmarks/add` delegation) + the IG/TikTok branches of `/api/bookmarks/add`, **and `/api/sync`** (each newly-synced bookmark — capped per sync via `SYNC_PULSE_CAP`, freshest first, so a big backfill can't flood the shared feed) | |
 | `read` | `/api/bookmarks/[id]/read` POST (new reads only) | |
+| `share` | `POST /api/activity/share` `{ platform, id }` only — native send/download on preview pages pings this. Display fields are copied from an existing pulse/bookmark row; unknown posts are a no-op. Client-supplied captions/thumbs are ignored. | |
 
 **Two invariants enforced in `recordActivity()` — do not break these:**
 
-1. **Content is always resolved server-side** by the caller (tweet/reel/tiktok metadata already fetched in the route/page). We **never** accept display text/thumbnails/avatars from the client — a public "anyone can POST what shows on the front page" endpoint would be a stored-XSS / spam-injection hole. There is intentionally no write endpoint.
+1. **Content is always resolved server-side** by the caller (tweet/reel/tiktok metadata already fetched in the route/page). We **never** accept display text/thumbnails/avatars from the client — a public "anyone can POST what shows on the front page" endpoint would be a stored-XSS / spam-injection hole. `POST /api/activity/share` is the only write endpoint and it takes identifiers only, then copies server-stored fields via `recordSharePulse()`.
 2. **`userId` is stored but never exposed.** It exists only for future moderation/rate-limiting. `GET /api/activity` selects an explicit public column list that omits it — the pulse is anonymous by construction. Don't `select()` the whole row there.
 
 **`GET /api/activity` enriches each item server-side** — the recorded `activity` row is intentionally sparse, so the API joins the saved bookmark to fill in display data (this is why Discover cards look right even though the raw row doesn't carry the media):
@@ -442,7 +443,8 @@ When generating Open Graph metadata for social unfurling, images are selected in
 - `thumbnailUrl` — **TikTok** posters are derived as the `/api/media/tiktok/thumbnail?username=&id=` proxy URL (the CDN needs signing the proxy adds), built from handle+id so they work even for preview-only items; **article** covers come from `bookmark_links.preview_image_url`; everything else keeps the recorded thumbnail. Mirrors how `/api/feed` builds thumbnails for the collection.
 - article `text` is overridden with `bookmark_links.preview_title` (the recorded text is usually just the wrapper tweet's `t.co` link) so the card shows the real headline.
 - `authorAvatarUrl` — the post author's avatar for tweet-style text/quote cards: the saved bookmark's `author_profile_image_url`, else the recorded `activity.author_avatar_url` (populated for preview-only items, server-resolved like `thumbnailUrl`).
-- `saveCount` — distinct savers (anonymous count) → powers Trending + the flame badge.
+- `saveCount` — distinct savers (anonymous count).
+- `trendCount` — savers + preview events + send events → powers Trending + the flame badge.
 
 Other details:
 
@@ -524,11 +526,11 @@ Key files:
 
 The app offers multiple ways to save tweets, shown contextually based on the user's platform:
 
-| Platform | Primary Method                 | Fallback         |
-| -------- | ------------------------------ | ---------------- |
-| iOS      | iOS Shortcut (Share Sheet)     | URL prefix trick |
-| Desktop  | Bookmarklet (drag to toolbar)  | URL prefix trick |
-| Android  | Bookmarklet + PWA Share Target | URL prefix trick |
+| Platform | Primary Method                                                                         | Fallback                                |
+| -------- | -------------------------------------------------------------------------------------- | --------------------------------------- |
+| iOS      | URL prefix (all 4 platforms) + hand-built Share Sheet shortcut targeting `/share?url=` | Published iCloud shortcut is **X-only** |
+| Desktop  | Bookmarklet (drag to toolbar)                                                          | URL prefix trick                        |
+| Android  | Bookmarklet + PWA Share Target                                                         | URL prefix trick                        |
 
 **Platform detection** (`src/lib/platform.ts`):
 
@@ -538,10 +540,9 @@ The app offers multiple ways to save tweets, shown contextually based on the use
 
 **iOS Shortcut:**
 
-- Shortcut ID: `0d187480099b4d34a745ec8750a4587b`
-- iCloud URL: `https://www.icloud.com/shortcuts/0d187480099b4d34a745ec8750a4587b`
-- Transforms `x.com/user/status/123` → `adhx.com/user/status/123`
-- **Limitation: X-only.** The shortcut only rewrites `x.com`, so the iOS share sheet won't pick up Instagram / TikTok / YouTube links. Those still work on iOS via the URL-prefix trick or the bookmarklet. Adding multi-platform support means editing the iCloud shortcut itself in the Shortcuts app (a manual change — it's not in this repo), then re-sharing the iCloud link. Until then the table above lists "URL prefix trick" as the iOS fallback for non-X platforms.
+- Published iCloud shortcut ID: `0d187480099b4d34a745ec8750a4587b` — **X-only** (rewrites `x.com` → `adhx.com`). Not in this repo.
+- **All four platforms:** URL-prefix (`instagram.com` / `tiktok.com` / `youtube.com` / `x.com` → `adhx.com`) or a Share Sheet shortcut that opens `https://adhx.com/share?url=` + the shared URL. `/share` already maps X / IG / TikTok / YouTube (and TikTok short links). In-app recipe: `IosShareRecipe` on the landing page and Settings.
+- Rebuilding the iCloud shortcut itself is a manual Shortcuts.app change, then a new iCloud link. Until then, don't advertise the published shortcut as multi-platform.
 
 **Bookmarklet** (desktop + Android):
 
@@ -896,7 +897,8 @@ export async function GET() {
 | Route                                           | Method      | Auth | Description                                                                                                            |
 | ----------------------------------------------- | ----------- | ---- | ---------------------------------------------------------------------------------------------------------------------- |
 | `/api/health`                                   | GET         | No   | Health check for monitoring                                                                                            |
-| `/api/activity`                                 | GET         | No   | Public anonymous activity pulse (recent previews/saves/reads, no userId, 5s cache)                                     |
+| `/api/activity`                                 | GET         | No   | Public anonymous activity pulse (recent previews/saves/reads/shares, no userId, 5s cache)                              |
+| `/api/activity/share`                           | POST        | No   | Record a send/download. Body `{ platform, id }` only — display fields copied server-side. 204.                         |
 | `/api/trending`                                 | GET         | No   | Public anonymous trending JSON (wraps `getTrendingItems`, optional `?platform=`, no userId) — for GEO/AI search        |
 | `/api/feed`                                     | GET         | Yes  | Main feed with filtering (`?id=` returns one bookmark regardless of read state — used to open a saved tweet in triage) |
 | `/api/bookmarks/[id]/read`                      | POST/DELETE | Yes  | Toggle read status                                                                                                     |

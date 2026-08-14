@@ -3,16 +3,17 @@
 import { useEffect, useState } from 'react'
 import { AlertCircle, Check, Download, Loader2, Share2 } from 'lucide-react'
 import { isTouchDevice, isMediaAvailable } from '@/components/feed/utils'
+import { shareFileWithLink } from '@/lib/share/web-share'
+import { pingSharePulse } from '@/lib/activity/ping-share'
 import { cn } from '@/lib/utils'
 
 /**
  * Floating share/download button pinned over preview-page media (top-right).
  *
  * On **touch devices** it fetches the video and opens the native share sheet
- * with the actual FILE (`navigator.share({ files })`) — so it shares the video
- * to another app, not just a link. On desktop it downloads the file and reveals
- * on hover (`group-hover` — the parent media wrapper must be `group`). Matches
- * the X preview's `handleShareMedia` behaviour; used by Instagram + TikTok.
+ * with the FILE plus the ADHX preview link (`via https://adhx.com/…`) so
+ * WhatsApp gets both. On desktop it downloads the file and reveals on hover
+ * (`group-hover` — the parent media wrapper must be `group`).
  */
 export function MediaShareOverlayButton({
   streamUrl,
@@ -20,6 +21,7 @@ export function MediaShareOverlayButton({
   filename,
   title,
   mimeType = 'video/mp4',
+  pulse,
 }: {
   /** Inline stream URL — fetched to a Blob to share the file on touch devices. */
   streamUrl: string
@@ -29,6 +31,8 @@ export function MediaShareOverlayButton({
   filename: string
   title?: string
   mimeType?: string
+  /** Identifiers for the anonymous send pulse (platform + source id). */
+  pulse?: { platform: string; id: string }
 }) {
   const [isLoading, setIsLoading] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -59,11 +63,13 @@ export function MediaShareOverlayButton({
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
+        if (pulse) pingSharePulse(pulse.platform, pulse.id)
         setShowSuccess(true)
         return
       }
 
-      // Touch: share the actual video FILE via the native sheet.
+      // Touch: share the actual video FILE via the native sheet, with the
+      // preview URL as the caption so the recipient can open it on ADHX.
       const streamed = await fetch(streamUrl)
       // fetch() doesn't throw on 502, so without this the error JSON gets
       // wrapped in a File and shared as if it were the video.
@@ -75,7 +81,8 @@ export function MediaShareOverlayButton({
       const file = new File([blob], filename, { type: mimeType })
 
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title })
+        await shareFileWithLink(file, { title, pageUrl: window.location.href })
+        if (pulse) pingSharePulse(pulse.platform, pulse.id)
         setShowSuccess(true)
         return
       }
@@ -89,11 +96,14 @@ export function MediaShareOverlayButton({
       link.click()
       document.body.removeChild(link)
       setTimeout(() => URL.revokeObjectURL(blobUrl), 100)
+      if (pulse) pingSharePulse(pulse.platform, pulse.id)
       setShowSuccess(true)
     } catch (error) {
       // AbortError = user dismissed the share sheet; anything else is a failure.
-      if (error instanceof Error && error.name === 'AbortError') setShowSuccess(true)
-      else setFailed(true)
+      if (error instanceof Error && error.name === 'AbortError') {
+        if (pulse) pingSharePulse(pulse.platform, pulse.id)
+        setShowSuccess(true)
+      } else setFailed(true)
     } finally {
       setIsLoading(false)
       setTimeout(() => {
@@ -116,11 +126,11 @@ export function MediaShareOverlayButton({
         failed
           ? "This video isn't downloadable — the source blocks it. Open the original instead."
           : isMobile
-            ? 'Share'
+            ? 'Send video'
             : 'Download'
       }
       aria-label={
-        failed ? 'Video unavailable to download' : isMobile ? 'Share video' : 'Download video'
+        failed ? 'Video unavailable to download' : isMobile ? 'Send video' : 'Download video'
       }
     >
       {isLoading ? (

@@ -169,22 +169,28 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     facts: [attributionFact(pageTitle, who, 'Instagram'), 'Reel'].filter((fact): fact is string =>
       Boolean(fact),
     ),
-    closer: 'Watch it here — no Instagram login.',
+    closer: 'Watch and send it — no Instagram app.',
   })
   const image = meta?.imageUrl
     ? `${baseUrl}/api/media/instagram/thumbnail?id=${encodeURIComponent(id)}`
     : `${baseUrl}/og-logo.png`
+  const videoUrl = meta
+    ? `${baseUrl}/api/media/instagram/video?id=${encodeURIComponent(id)}`
+    : undefined
 
   return {
     title: pageTitle,
     description,
     openGraph: {
-      type: 'article',
+      type: videoUrl ? 'video.other' : 'article',
       title: pageTitle,
       description,
       siteName: 'ADHX',
       url: canonicalUrl,
       images: [{ url: image, alt: pageTitle }],
+      ...(videoUrl
+        ? { videos: [{ url: videoUrl, type: 'video/mp4' as const, width: 1080, height: 1920 }] }
+        : {}),
     },
     twitter: {
       card: 'summary_large_image',

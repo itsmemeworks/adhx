@@ -4,11 +4,25 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-14 — Send the video as the product (file + ADHX link)
+
+- **Why**: The real loop is preview → download → WhatsApp. File-only share leaked growth (no adhx.com URL); Connect-with-X was the front door; trending scored saves/previews not sends; iOS shortcut is still X-only.
+- **What**: Native share sends the MP4 plus `via https://adhx.com/…`. Unauth preview CTAs lead with Send/Download; login is "keep a pile, later". `og:video` on Reel/TikTok/X video pages (proxy URLs). SERP closers: "Watch and send it — no [app]". Anonymous `share` pulse via `POST /api/activity/share` `{platform,id}` only (`recordSharePulse` copies server-stored fields). Trending score includes sends. iOS copy: URL-prefix + `/share?url=` recipe; published iCloud shortcut stays X-only.
+- **State**: in-flight on `feat/send-video-as-product` (this PR also carries the leftover 402-is-credits follow-up from #304). YouTube stays link-only (no MP4).
+- **Follow-ups**: Rebuild the iCloud shortcut to open `/share?url=` (manual, not in repo); GSC video indexing after `og:video` ships.
+
+## 2026-08-14 — 402 is X API credits, not a stale login (reconnect loop)
+
+- **Why**: Staging after #304: even a fresh OAuth still showed "Reconnect your X account". 402 survived login because it is **Payment Required** — the developer app has no pay-per-use credits (`Your enrolled account does not have any credits to fulfill this request`). Sending users back through Connect with X loops.
+- **What**: 402 is now `code: 'unavailable'` ("Your login is fine — try again later") with Retry, not Connect with X. No force-refresh on 402. `?firstLogin=` is stripped on sync error so refresh doesn't re-fire. Sentry warning includes X's response body. 401/403 still reconnect.
+- **State**: in-flight on `feat/send-video-as-product`.
+- **Follow-ups**: Top up X API credits; then Retry should sync.
+
 ## 2026-08-14 — Agents always push and keep a PR
 
 - **Why**: Owner does not want to commit/push/open PRs by hand in this repo; they only merge.
 - **What**: Always-on Cursor rule `.cursor/rules/always-push-pr.mdc`, plus the same instruction in `AGENTS.md` / `CLAUDE.md`. Commit on a feature branch, push, `gh pr create` (or push to update an existing PR). Never merge. Never force-push unless asked.
-- **State**: in-flight on `chore/always-push-pr`.
+- **State**: shipped in #309.
 - **Follow-ups**: None.
 
 ## 2026-08-14 — GHA production deploy was unauthorized

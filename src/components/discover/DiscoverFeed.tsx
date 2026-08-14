@@ -346,12 +346,12 @@ export function DiscoverFeed({
               </span>
             </div>
             <h1 className="font-serif font-semibold text-[27px] sm:text-[34px] leading-tight tracking-[-0.01em] text-ink mb-2">
-              What the internet is saving, right now
+              What the internet is sending, right now
             </h1>
             <p className="text-[15px] sm:text-[15.5px] text-ink-2 max-w-[640px] mb-2">
               See what&apos;s trending across X, TikTok, Instagram and YouTube — a live, anonymous
-              feed of what people are saving on ADHX. Tap any post to preview it, then save your
-              own.
+              feed of what people are watching and sending on ADHX. Tap any post to preview it, then
+              send it on.
             </p>
           </div>
         </>
@@ -369,7 +369,7 @@ export function DiscoverFeed({
                 at hydration — suppress the warning rather than regenerate the tree. */}
             <span className="text-[14px] font-bold text-ink" suppressHydrationWarning>
               {recentActivity > 0
-                ? `${recentActivity.toLocaleString()} saved & previewed today`
+                ? `${recentActivity.toLocaleString()} watched & sent today`
                 : 'Live'}
             </span>
           </span>

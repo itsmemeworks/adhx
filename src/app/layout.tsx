@@ -79,6 +79,7 @@ export const metadata: Metadata = {
     'read tweets later',
     'trending on X',
     'what people are saving',
+    'what people are sending',
     'ADHD productivity',
     'tweet manager',
     'social media organizer',
@@ -158,7 +159,7 @@ const jsonLd = {
   },
   featureList: [
     'Sync hundreds of X/Twitter bookmarks',
-    'Discover what people are saving in real time',
+    'Discover what people are watching and sending in real time',
     'Full-text search across everything you save',
     'One-card-at-a-time triage with streaks',
     'Text-to-speech for any post or article',

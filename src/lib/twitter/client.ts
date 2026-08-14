@@ -113,9 +113,9 @@ export async function fetchBookmarks(
 
   // Fetch bookmarks. If the access token died before its nominal expiry (so the
   // proactive refresh in getTwitterClient missed it), Twitter 401s — force a
-  // refresh and retry once. X also 402s on bookmarks for a rejected user token
-  // (and 403s for missing bookmark.read); those get the same retry-then-reauth
-  // path so the UI never shows a raw "Request failed with code 402".
+  // refresh and retry once. 403 (missing bookmark.read) gets the same path.
+  // 402 is *not* retried: X means "developer app has no API credits", and a
+  // reconnect loop is worse than a clear unavailable error.
   let response
   try {
     response = await fetchPage(await getTwitterClient(userId))

@@ -75,7 +75,10 @@ export function TikTokPreviewLanding({
         canSave={hasVideo}
         shareTitle={`TikTok @${handle} ${videoId}`}
         downloadUrl={downloadUrl}
+        streamUrl={streamUrl}
+        filename={`tiktok-${handle}-${videoId}.mp4`}
         showDownload={hasVideo}
+        pulse={{ platform: 'tiktok', id: videoId }}
       />
       <PreviewAnotherLink className="mt-4" />
     </>
@@ -176,6 +179,7 @@ export function TikTokPreviewLanding({
                 downloadUrl={downloadUrl}
                 filename={`tiktok-${handle}-${videoId}.mp4`}
                 title={`TikTok @${handle} ${videoId}`}
+                pulse={{ platform: 'tiktok', id: videoId }}
               />
             </div>
           </div>

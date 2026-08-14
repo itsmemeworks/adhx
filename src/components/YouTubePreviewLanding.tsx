@@ -53,6 +53,7 @@ export function YouTubePreviewLanding({
         onConnect={connect}
         canSave={hasVideo}
         shareTitle="YouTube Short — ADHX Preview"
+        pulse={{ platform: 'youtube', id: videoId }}
       />
       <PreviewAnotherLink className="mt-4" />
     </>

@@ -31,7 +31,8 @@ import type { ArticleEntityMap } from '@/components/feed/types'
 import { FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
 import { PlatformGlyph, ConnectWithX } from '@/components/matter'
 import { PreviewAnotherLink } from '@/components/PreviewAnotherLink'
-import { PreviewShell } from '@/components/previews/PreviewShell'
+import { PreviewShell, UnauthPrimarySend } from '@/components/previews/PreviewShell'
+import { pingSharePulse } from '@/lib/activity/ping-share'
 import { formatCount, formatRelativeTime } from '@/lib/utils/format'
 import { cn } from '@/lib/utils'
 import { ClampedCaption } from '@/components/previews/ClampedCaption'
@@ -126,6 +127,7 @@ interface MediaShareButtonProps {
   useImageGroupHover?: boolean
   /** Called when video is too large for mobile download */
   onTooLargeForMobile?: (estimatedSize: number) => void
+  tweetId: string
 }
 
 function MediaShareButton({
@@ -134,6 +136,7 @@ function MediaShareButton({
   mimeType = 'image/jpeg',
   useImageGroupHover = false,
   onTooLargeForMobile,
+  tweetId,
 }: MediaShareButtonProps): React.ReactElement {
   const [isLoading, setIsLoading] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -145,7 +148,9 @@ function MediaShareButton({
 
   const handleClick = async (e: React.MouseEvent): Promise<void> => {
     setIsLoading(true)
-    const result = await handleShareMedia(e, url, filename, mimeType)
+    const result = await handleShareMedia(e, url, filename, mimeType, {
+      pageUrl: window.location.href,
+    })
     setIsLoading(false)
 
     if (result.tooLargeForMobile) {
@@ -154,6 +159,7 @@ function MediaShareButton({
     }
 
     if (result.success) {
+      pingSharePulse('twitter', tweetId)
       setShowSuccess(true)
       setTimeout(() => setShowSuccess(false), 1500)
     }
@@ -302,9 +308,11 @@ export function TweetPreviewLanding({
       if (navigator.share) {
         await navigator.share({ url, title })
         setShareStatus('shared')
+        pingSharePulse('twitter', tweetId)
       } else {
         await navigator.clipboard.writeText(url)
         setShareStatus('copied')
+        pingSharePulse('twitter', tweetId)
       }
     } catch {
       // User cancelled share or clipboard failed — try clipboard as fallback
@@ -340,6 +348,9 @@ export function TweetPreviewLanding({
         shareStatus={shareStatus}
         showDownload={videos.length > 0}
         downloadUrl={`/api/media/video/download?author=${encodeURIComponent(username)}&tweetId=${encodeURIComponent(tweetId)}&quality=hd`}
+        streamUrl={`/api/media/video?author=${encodeURIComponent(username)}&tweetId=${encodeURIComponent(tweetId)}&quality=hd`}
+        filename={`tweet-${tweetId}.mp4`}
+        tweetId={tweetId}
       />
       <PreviewAnotherLink />
     </>
@@ -643,7 +654,10 @@ function SidebarActions({
   onShare,
   shareStatus,
   downloadUrl,
+  streamUrl,
+  filename,
   showDownload = false,
+  tweetId,
 }: {
   isAuthenticated: boolean
   isAdding: boolean
@@ -653,9 +667,11 @@ function SidebarActions({
   onLogin: () => void
   onShare: () => void
   shareStatus: 'idle' | 'shared' | 'copied'
-  /** Tweet video download URL — shown next to Share when the tweet has video. */
   downloadUrl?: string
+  streamUrl?: string
+  filename?: string
   showDownload?: boolean
+  tweetId: string
 }): React.ReactElement {
   const [copied, setCopied] = useState(false)
 
@@ -677,14 +693,12 @@ function SidebarActions({
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    pingSharePulse('twitter', tweetId)
   }
 
   return (
     <div className="flex flex-col gap-3.5">
-      {/* Authenticated users get the primary "Save" CTA up top. Unauthenticated
-          users lead with the actions below — the single Connect CTA lives in the
-          benefit-backed "Keep it forever" card, so we don't double up on it. */}
-      {isAuthenticated && (
+      {isAuthenticated ? (
         <>
           <button
             onClick={onAdd}
@@ -706,9 +720,17 @@ function SidebarActions({
             Continue to gallery
           </button>
         </>
+      ) : (
+        <UnauthPrimarySend
+          shareTitle="X — ADHX Preview"
+          downloadUrl={downloadUrl}
+          streamUrl={streamUrl}
+          filename={filename}
+          showDownload={showDownload}
+          pulse={{ platform: 'twitter', id: tweetId }}
+        />
       )}
 
-      {/* Secondary action row — Copy link / Share, plus Download for video tweets. */}
       <div className="flex gap-2.5">
         <button
           onClick={copyLink}
@@ -734,7 +756,7 @@ function SidebarActions({
             {shareStatus === 'shared' ? 'Shared' : shareStatus === 'copied' ? 'Copied' : 'Share'}
           </span>
         </button>
-        {showDownload && (
+        {showDownload && isAuthenticated && (
           <button
             onClick={download}
             className="flex-1 flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl border border-hairline bg-surface text-ink-2 hover:text-clay hover:border-clay/30 transition-colors"
@@ -745,12 +767,11 @@ function SidebarActions({
         )}
       </div>
 
-      {/* Keep it forever — only when unauthenticated */}
       {!isAuthenticated && (
         <div className="rounded-2xl px-4 py-4 bg-clay/10 border border-clay/20">
-          <div className="font-bold text-sm text-ink mb-0.5">Keep it forever</div>
+          <div className="font-bold text-sm text-ink mb-0.5">Keep a pile, later</div>
           <p className="text-[13px] text-ink-2 leading-snug mb-3">
-            Create a free account to save everything you preview — private to you.
+            Sending doesn&apos;t need an account. Sign in if you want a private collection.
           </p>
           <button
             onClick={onLogin}
@@ -843,6 +864,7 @@ function MediaGrid({ photos, videos, author, tweetId }: MediaGridProps): React.R
             url={`/api/media/image?author=${encodeURIComponent(author)}&tweetId=${encodeURIComponent(tweetId)}&index=1`}
             filename={`tweet-${tweetId}.jpg`}
             mimeType="image/jpeg"
+            tweetId={tweetId}
           />
         </div>
       </div>
@@ -876,6 +898,7 @@ function MediaGrid({ photos, videos, author, tweetId }: MediaGridProps): React.R
                 url={`/api/media/image?author=${encodeURIComponent(author)}&tweetId=${encodeURIComponent(tweetId)}&index=${i + 1}`}
                 filename={`tweet-${tweetId}-${i + 1}.jpg`}
                 mimeType="image/jpeg"
+                tweetId={tweetId}
                 useImageGroupHover
               />
             </div>
@@ -910,6 +933,7 @@ function MediaGrid({ photos, videos, author, tweetId }: MediaGridProps): React.R
               url={`/api/media/image?author=${encodeURIComponent(author)}&tweetId=${encodeURIComponent(tweetId)}&index=${i + 1}`}
               filename={`tweet-${tweetId}-${i + 1}.jpg`}
               mimeType="image/jpeg"
+              tweetId={tweetId}
               useImageGroupHover
             />
           </div>
@@ -977,6 +1001,7 @@ function VideoPlayer({
             url={proxyUrl}
             filename={`tweet-${tweetId}.mp4`}
             mimeType="video/mp4"
+            tweetId={tweetId}
             onTooLargeForMobile={setDownloadBlockedSize}
           />
         </div>
@@ -1001,6 +1026,7 @@ function VideoPlayer({
           url={proxyUrl}
           filename={`tweet-${tweetId}.mp4`}
           mimeType="video/mp4"
+          tweetId={tweetId}
           onTooLargeForMobile={setDownloadBlockedSize}
         />
       </div>

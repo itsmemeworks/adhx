@@ -138,7 +138,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -1294,7 +1294,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -2981,7 +2981,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -6226,7 +6226,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -7355,7 +7355,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -8489,7 +8489,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -9579,7 +9579,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -10883,7 +10883,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -11843,7 +11843,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -12943,7 +12943,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -13948,7 +13948,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -14917,7 +14917,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -16010,7 +16010,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -17129,7 +17129,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -18098,7 +18098,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -18534,6 +18534,51 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             <div
               class="flex flex-col gap-3.5"
             >
+              <button
+                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg
+                  class="lucide lucide-share2 w-[18px] h-[18px]"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    cx="18"
+                    cy="5"
+                    r="3"
+                  />
+                  <circle
+                    cx="6"
+                    cy="12"
+                    r="3"
+                  />
+                  <circle
+                    cx="18"
+                    cy="19"
+                    r="3"
+                  />
+                  <line
+                    x1="8.59"
+                    x2="15.42"
+                    y1="13.51"
+                    y2="17.49"
+                  />
+                  <line
+                    x1="15.41"
+                    x2="8.59"
+                    y1="6.51"
+                    y2="10.49"
+                  />
+                </svg>
+                Share this preview
+              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -18627,12 +18672,12 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <div
                   class="font-bold text-sm text-ink mb-0.5"
                 >
-                  Keep it forever
+                  Keep a pile, later
                 </div>
                 <p
                   class="text-[13px] text-ink-2 leading-snug mb-3"
                 >
-                  Create a free account to save everything you preview — private to you.
+                  Sending doesn't need an account. Sign in if you want a private collection.
                 </p>
                 <button
                   class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -18699,6 +18744,51 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           <div
             class="flex flex-col gap-3.5"
           >
+            <button
+              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg
+                class="lucide lucide-share2 w-[18px] h-[18px]"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="18"
+                  cy="5"
+                  r="3"
+                />
+                <circle
+                  cx="6"
+                  cy="12"
+                  r="3"
+                />
+                <circle
+                  cx="18"
+                  cy="19"
+                  r="3"
+                />
+                <line
+                  x1="8.59"
+                  x2="15.42"
+                  y1="13.51"
+                  y2="17.49"
+                />
+                <line
+                  x1="15.41"
+                  x2="8.59"
+                  y1="6.51"
+                  y2="10.49"
+                />
+              </svg>
+              Share this preview
+            </button>
             <div
               class="flex gap-2.5"
             >
@@ -18792,12 +18882,12 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               <div
                 class="font-bold text-sm text-ink mb-0.5"
               >
-                Keep it forever
+                Keep a pile, later
               </div>
               <p
                 class="text-[13px] text-ink-2 leading-snug mb-3"
               >
-                Create a free account to save everything you preview — private to you.
+                Sending doesn't need an account. Sign in if you want a private collection.
               </p>
               <button
                 class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -19270,7 +19360,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -20154,6 +20244,51 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             <div
               class="flex flex-col gap-3.5"
             >
+              <button
+                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg
+                  class="lucide lucide-share2 w-[18px] h-[18px]"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    cx="18"
+                    cy="5"
+                    r="3"
+                  />
+                  <circle
+                    cx="6"
+                    cy="12"
+                    r="3"
+                  />
+                  <circle
+                    cx="18"
+                    cy="19"
+                    r="3"
+                  />
+                  <line
+                    x1="8.59"
+                    x2="15.42"
+                    y1="13.51"
+                    y2="17.49"
+                  />
+                  <line
+                    x1="15.41"
+                    x2="8.59"
+                    y1="6.51"
+                    y2="10.49"
+                  />
+                </svg>
+                Share this preview
+              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -20247,12 +20382,12 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <div
                   class="font-bold text-sm text-ink mb-0.5"
                 >
-                  Keep it forever
+                  Keep a pile, later
                 </div>
                 <p
                   class="text-[13px] text-ink-2 leading-snug mb-3"
                 >
-                  Create a free account to save everything you preview — private to you.
+                  Sending doesn't need an account. Sign in if you want a private collection.
                 </p>
                 <button
                   class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -20402,6 +20537,51 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           <div
             class="flex flex-col gap-3.5"
           >
+            <button
+              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg
+                class="lucide lucide-share2 w-[18px] h-[18px]"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="18"
+                  cy="5"
+                  r="3"
+                />
+                <circle
+                  cx="6"
+                  cy="12"
+                  r="3"
+                />
+                <circle
+                  cx="18"
+                  cy="19"
+                  r="3"
+                />
+                <line
+                  x1="8.59"
+                  x2="15.42"
+                  y1="13.51"
+                  y2="17.49"
+                />
+                <line
+                  x1="15.41"
+                  x2="8.59"
+                  y1="6.51"
+                  y2="10.49"
+                />
+              </svg>
+              Share this preview
+            </button>
             <div
               class="flex gap-2.5"
             >
@@ -20495,12 +20675,12 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               <div
                 class="font-bold text-sm text-ink mb-0.5"
               >
-                Keep it forever
+                Keep a pile, later
               </div>
               <p
                 class="text-[13px] text-ink-2 leading-snug mb-3"
               >
-                Create a free account to save everything you preview — private to you.
+                Sending doesn't need an account. Sign in if you want a private collection.
               </p>
               <button
                 class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -20973,7 +21153,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -23415,6 +23595,51 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             <div
               class="flex flex-col gap-3.5"
             >
+              <button
+                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg
+                  class="lucide lucide-share2 w-[18px] h-[18px]"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    cx="18"
+                    cy="5"
+                    r="3"
+                  />
+                  <circle
+                    cx="6"
+                    cy="12"
+                    r="3"
+                  />
+                  <circle
+                    cx="18"
+                    cy="19"
+                    r="3"
+                  />
+                  <line
+                    x1="8.59"
+                    x2="15.42"
+                    y1="13.51"
+                    y2="17.49"
+                  />
+                  <line
+                    x1="15.41"
+                    x2="8.59"
+                    y1="6.51"
+                    y2="10.49"
+                  />
+                </svg>
+                Share this preview
+              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -23508,12 +23733,12 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <div
                   class="font-bold text-sm text-ink mb-0.5"
                 >
-                  Keep it forever
+                  Keep a pile, later
                 </div>
                 <p
                   class="text-[13px] text-ink-2 leading-snug mb-3"
                 >
-                  Create a free account to save everything you preview — private to you.
+                  Sending doesn't need an account. Sign in if you want a private collection.
                 </p>
                 <button
                   class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -23663,6 +23888,51 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           <div
             class="flex flex-col gap-3.5"
           >
+            <button
+              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg
+                class="lucide lucide-share2 w-[18px] h-[18px]"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="18"
+                  cy="5"
+                  r="3"
+                />
+                <circle
+                  cx="6"
+                  cy="12"
+                  r="3"
+                />
+                <circle
+                  cx="18"
+                  cy="19"
+                  r="3"
+                />
+                <line
+                  x1="8.59"
+                  x2="15.42"
+                  y1="13.51"
+                  y2="17.49"
+                />
+                <line
+                  x1="15.41"
+                  x2="8.59"
+                  y1="6.51"
+                  y2="10.49"
+                />
+              </svg>
+              Share this preview
+            </button>
             <div
               class="flex gap-2.5"
             >
@@ -23756,12 +24026,12 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               <div
                 class="font-bold text-sm text-ink mb-0.5"
               >
-                Keep it forever
+                Keep a pile, later
               </div>
               <p
                 class="text-[13px] text-ink-2 leading-snug mb-3"
               >
-                Create a free account to save everything you preview — private to you.
+                Sending doesn't need an account. Sign in if you want a private collection.
               </p>
               <button
                 class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -24234,7 +24504,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -24575,6 +24845,36 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             <div
               class="flex flex-col gap-3.5"
             >
+              <button
+                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg
+                  class="lucide lucide-download w-[18px] h-[18px]"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                  />
+                  <polyline
+                    points="7 10 12 15 17 10"
+                  />
+                  <line
+                    x1="12"
+                    x2="12"
+                    y1="15"
+                    y2="3"
+                  />
+                </svg>
+                Download video
+              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -24661,40 +24961,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                     Share
                   </span>
                 </button>
-                <button
-                  class="flex-1 flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl border border-hairline bg-surface text-ink-2 hover:text-clay hover:border-clay/30 transition-colors"
-                >
-                  <svg
-                    class="lucide lucide-download w-[19px] h-[19px]"
-                    fill="none"
-                    height="24"
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    viewBox="0 0 24 24"
-                    width="24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
-                    />
-                    <polyline
-                      points="7 10 12 15 17 10"
-                    />
-                    <line
-                      x1="12"
-                      x2="12"
-                      y1="15"
-                      y2="3"
-                    />
-                  </svg>
-                  <span
-                    class="text-[12.5px] font-semibold"
-                  >
-                    Download
-                  </span>
-                </button>
               </div>
               <div
                 class="rounded-2xl px-4 py-4 bg-clay/10 border border-clay/20"
@@ -24702,12 +24968,12 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <div
                   class="font-bold text-sm text-ink mb-0.5"
                 >
-                  Keep it forever
+                  Keep a pile, later
                 </div>
                 <p
                   class="text-[13px] text-ink-2 leading-snug mb-3"
                 >
-                  Create a free account to save everything you preview — private to you.
+                  Sending doesn't need an account. Sign in if you want a private collection.
                 </p>
                 <button
                   class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -24774,6 +25040,36 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           <div
             class="flex flex-col gap-3.5"
           >
+            <button
+              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg
+                class="lucide lucide-download w-[18px] h-[18px]"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                />
+                <polyline
+                  points="7 10 12 15 17 10"
+                />
+                <line
+                  x1="12"
+                  x2="12"
+                  y1="15"
+                  y2="3"
+                />
+              </svg>
+              Download video
+            </button>
             <div
               class="flex gap-2.5"
             >
@@ -24860,40 +25156,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   Share
                 </span>
               </button>
-              <button
-                class="flex-1 flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl border border-hairline bg-surface text-ink-2 hover:text-clay hover:border-clay/30 transition-colors"
-              >
-                <svg
-                  class="lucide lucide-download w-[19px] h-[19px]"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
-                  />
-                  <polyline
-                    points="7 10 12 15 17 10"
-                  />
-                  <line
-                    x1="12"
-                    x2="12"
-                    y1="15"
-                    y2="3"
-                  />
-                </svg>
-                <span
-                  class="text-[12.5px] font-semibold"
-                >
-                  Download
-                </span>
-              </button>
             </div>
             <div
               class="rounded-2xl px-4 py-4 bg-clay/10 border border-clay/20"
@@ -24901,12 +25163,12 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               <div
                 class="font-bold text-sm text-ink mb-0.5"
               >
-                Keep it forever
+                Keep a pile, later
               </div>
               <p
                 class="text-[13px] text-ink-2 leading-snug mb-3"
               >
-                Create a free account to save everything you preview — private to you.
+                Sending doesn't need an account. Sign in if you want a private collection.
               </p>
               <button
                 class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -25379,7 +25641,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -25793,6 +26055,51 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             <div
               class="flex flex-col gap-3.5"
             >
+              <button
+                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg
+                  class="lucide lucide-share2 w-[18px] h-[18px]"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    cx="18"
+                    cy="5"
+                    r="3"
+                  />
+                  <circle
+                    cx="6"
+                    cy="12"
+                    r="3"
+                  />
+                  <circle
+                    cx="18"
+                    cy="19"
+                    r="3"
+                  />
+                  <line
+                    x1="8.59"
+                    x2="15.42"
+                    y1="13.51"
+                    y2="17.49"
+                  />
+                  <line
+                    x1="15.41"
+                    x2="8.59"
+                    y1="6.51"
+                    y2="10.49"
+                  />
+                </svg>
+                Share this preview
+              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -25886,12 +26193,12 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <div
                   class="font-bold text-sm text-ink mb-0.5"
                 >
-                  Keep it forever
+                  Keep a pile, later
                 </div>
                 <p
                   class="text-[13px] text-ink-2 leading-snug mb-3"
                 >
-                  Create a free account to save everything you preview — private to you.
+                  Sending doesn't need an account. Sign in if you want a private collection.
                 </p>
                 <button
                   class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -25958,6 +26265,51 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           <div
             class="flex flex-col gap-3.5"
           >
+            <button
+              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg
+                class="lucide lucide-share2 w-[18px] h-[18px]"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="18"
+                  cy="5"
+                  r="3"
+                />
+                <circle
+                  cx="6"
+                  cy="12"
+                  r="3"
+                />
+                <circle
+                  cx="18"
+                  cy="19"
+                  r="3"
+                />
+                <line
+                  x1="8.59"
+                  x2="15.42"
+                  y1="13.51"
+                  y2="17.49"
+                />
+                <line
+                  x1="15.41"
+                  x2="8.59"
+                  y1="6.51"
+                  y2="10.49"
+                />
+              </svg>
+              Share this preview
+            </button>
             <div
               class="flex gap-2.5"
             >
@@ -26051,12 +26403,12 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               <div
                 class="font-bold text-sm text-ink mb-0.5"
               >
-                Keep it forever
+                Keep a pile, later
               </div>
               <p
                 class="text-[13px] text-ink-2 leading-snug mb-3"
               >
-                Create a free account to save everything you preview — private to you.
+                Sending doesn't need an account. Sign in if you want a private collection.
               </p>
               <button
                 class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -26529,7 +26881,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -26899,6 +27251,51 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             <div
               class="flex flex-col gap-3.5"
             >
+              <button
+                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg
+                  class="lucide lucide-share2 w-[18px] h-[18px]"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    cx="18"
+                    cy="5"
+                    r="3"
+                  />
+                  <circle
+                    cx="6"
+                    cy="12"
+                    r="3"
+                  />
+                  <circle
+                    cx="18"
+                    cy="19"
+                    r="3"
+                  />
+                  <line
+                    x1="8.59"
+                    x2="15.42"
+                    y1="13.51"
+                    y2="17.49"
+                  />
+                  <line
+                    x1="15.41"
+                    x2="8.59"
+                    y1="6.51"
+                    y2="10.49"
+                  />
+                </svg>
+                Share this preview
+              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -26992,12 +27389,12 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <div
                   class="font-bold text-sm text-ink mb-0.5"
                 >
-                  Keep it forever
+                  Keep a pile, later
                 </div>
                 <p
                   class="text-[13px] text-ink-2 leading-snug mb-3"
                 >
-                  Create a free account to save everything you preview — private to you.
+                  Sending doesn't need an account. Sign in if you want a private collection.
                 </p>
                 <button
                   class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -27064,6 +27461,51 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           <div
             class="flex flex-col gap-3.5"
           >
+            <button
+              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg
+                class="lucide lucide-share2 w-[18px] h-[18px]"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="18"
+                  cy="5"
+                  r="3"
+                />
+                <circle
+                  cx="6"
+                  cy="12"
+                  r="3"
+                />
+                <circle
+                  cx="18"
+                  cy="19"
+                  r="3"
+                />
+                <line
+                  x1="8.59"
+                  x2="15.42"
+                  y1="13.51"
+                  y2="17.49"
+                />
+                <line
+                  x1="15.41"
+                  x2="8.59"
+                  y1="6.51"
+                  y2="10.49"
+                />
+              </svg>
+              Share this preview
+            </button>
             <div
               class="flex gap-2.5"
             >
@@ -27157,12 +27599,12 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               <div
                 class="font-bold text-sm text-ink mb-0.5"
               >
-                Keep it forever
+                Keep a pile, later
               </div>
               <p
                 class="text-[13px] text-ink-2 leading-snug mb-3"
               >
-                Create a free account to save everything you preview — private to you.
+                Sending doesn't need an account. Sign in if you want a private collection.
               </p>
               <button
                 class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -27635,7 +28077,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -28219,6 +28661,51 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
             <div
               class="flex flex-col gap-3.5"
             >
+              <button
+                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg
+                  class="lucide lucide-share2 w-[18px] h-[18px]"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    cx="18"
+                    cy="5"
+                    r="3"
+                  />
+                  <circle
+                    cx="6"
+                    cy="12"
+                    r="3"
+                  />
+                  <circle
+                    cx="18"
+                    cy="19"
+                    r="3"
+                  />
+                  <line
+                    x1="8.59"
+                    x2="15.42"
+                    y1="13.51"
+                    y2="17.49"
+                  />
+                  <line
+                    x1="15.41"
+                    x2="8.59"
+                    y1="6.51"
+                    y2="10.49"
+                  />
+                </svg>
+                Share this preview
+              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -28312,12 +28799,12 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
                 <div
                   class="font-bold text-sm text-ink mb-0.5"
                 >
-                  Keep it forever
+                  Keep a pile, later
                 </div>
                 <p
                   class="text-[13px] text-ink-2 leading-snug mb-3"
                 >
-                  Create a free account to save everything you preview — private to you.
+                  Sending doesn't need an account. Sign in if you want a private collection.
                 </p>
                 <button
                   class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -28384,6 +28871,51 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
           <div
             class="flex flex-col gap-3.5"
           >
+            <button
+              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg
+                class="lucide lucide-share2 w-[18px] h-[18px]"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="18"
+                  cy="5"
+                  r="3"
+                />
+                <circle
+                  cx="6"
+                  cy="12"
+                  r="3"
+                />
+                <circle
+                  cx="18"
+                  cy="19"
+                  r="3"
+                />
+                <line
+                  x1="8.59"
+                  x2="15.42"
+                  y1="13.51"
+                  y2="17.49"
+                />
+                <line
+                  x1="15.41"
+                  x2="8.59"
+                  y1="6.51"
+                  y2="10.49"
+                />
+              </svg>
+              Share this preview
+            </button>
             <div
               class="flex gap-2.5"
             >
@@ -28477,12 +29009,12 @@ https://www.ft.com/content/df0c0833-59f6-45d6-a74f-008b46756e72
               <div
                 class="font-bold text-sm text-ink mb-0.5"
               >
-                Keep it forever
+                Keep a pile, later
               </div>
               <p
                 class="text-[13px] text-ink-2 leading-snug mb-3"
               >
-                Create a free account to save everything you preview — private to you.
+                Sending doesn't need an account. Sign in if you want a private collection.
               </p>
               <button
                 class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -28955,7 +29487,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -29195,6 +29727,51 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             <div
               class="flex flex-col gap-3.5"
             >
+              <button
+                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg
+                  class="lucide lucide-share2 w-[18px] h-[18px]"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    cx="18"
+                    cy="5"
+                    r="3"
+                  />
+                  <circle
+                    cx="6"
+                    cy="12"
+                    r="3"
+                  />
+                  <circle
+                    cx="18"
+                    cy="19"
+                    r="3"
+                  />
+                  <line
+                    x1="8.59"
+                    x2="15.42"
+                    y1="13.51"
+                    y2="17.49"
+                  />
+                  <line
+                    x1="15.41"
+                    x2="8.59"
+                    y1="6.51"
+                    y2="10.49"
+                  />
+                </svg>
+                Share this preview
+              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -29288,12 +29865,12 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <div
                   class="font-bold text-sm text-ink mb-0.5"
                 >
-                  Keep it forever
+                  Keep a pile, later
                 </div>
                 <p
                   class="text-[13px] text-ink-2 leading-snug mb-3"
                 >
-                  Create a free account to save everything you preview — private to you.
+                  Sending doesn't need an account. Sign in if you want a private collection.
                 </p>
                 <button
                   class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -29360,6 +29937,51 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           <div
             class="flex flex-col gap-3.5"
           >
+            <button
+              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg
+                class="lucide lucide-share2 w-[18px] h-[18px]"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="18"
+                  cy="5"
+                  r="3"
+                />
+                <circle
+                  cx="6"
+                  cy="12"
+                  r="3"
+                />
+                <circle
+                  cx="18"
+                  cy="19"
+                  r="3"
+                />
+                <line
+                  x1="8.59"
+                  x2="15.42"
+                  y1="13.51"
+                  y2="17.49"
+                />
+                <line
+                  x1="15.41"
+                  x2="8.59"
+                  y1="6.51"
+                  y2="10.49"
+                />
+              </svg>
+              Share this preview
+            </button>
             <div
               class="flex gap-2.5"
             >
@@ -29453,12 +30075,12 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               <div
                 class="font-bold text-sm text-ink mb-0.5"
               >
-                Keep it forever
+                Keep a pile, later
               </div>
               <p
                 class="text-[13px] text-ink-2 leading-snug mb-3"
               >
-                Create a free account to save everything you preview — private to you.
+                Sending doesn't need an account. Sign in if you want a private collection.
               </p>
               <button
                 class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -29931,7 +30553,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -30311,6 +30933,51 @@ PS – Repost for early access to the full TikTok Shop content factory system.
             <div
               class="flex flex-col gap-3.5"
             >
+              <button
+                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg
+                  class="lucide lucide-share2 w-[18px] h-[18px]"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    cx="18"
+                    cy="5"
+                    r="3"
+                  />
+                  <circle
+                    cx="6"
+                    cy="12"
+                    r="3"
+                  />
+                  <circle
+                    cx="18"
+                    cy="19"
+                    r="3"
+                  />
+                  <line
+                    x1="8.59"
+                    x2="15.42"
+                    y1="13.51"
+                    y2="17.49"
+                  />
+                  <line
+                    x1="15.41"
+                    x2="8.59"
+                    y1="6.51"
+                    y2="10.49"
+                  />
+                </svg>
+                Share this preview
+              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -30404,12 +31071,12 @@ PS – Repost for early access to the full TikTok Shop content factory system.
                 <div
                   class="font-bold text-sm text-ink mb-0.5"
                 >
-                  Keep it forever
+                  Keep a pile, later
                 </div>
                 <p
                   class="text-[13px] text-ink-2 leading-snug mb-3"
                 >
-                  Create a free account to save everything you preview — private to you.
+                  Sending doesn't need an account. Sign in if you want a private collection.
                 </p>
                 <button
                   class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -30476,6 +31143,51 @@ PS – Repost for early access to the full TikTok Shop content factory system.
           <div
             class="flex flex-col gap-3.5"
           >
+            <button
+              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg
+                class="lucide lucide-share2 w-[18px] h-[18px]"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="18"
+                  cy="5"
+                  r="3"
+                />
+                <circle
+                  cx="6"
+                  cy="12"
+                  r="3"
+                />
+                <circle
+                  cx="18"
+                  cy="19"
+                  r="3"
+                />
+                <line
+                  x1="8.59"
+                  x2="15.42"
+                  y1="13.51"
+                  y2="17.49"
+                />
+                <line
+                  x1="15.41"
+                  x2="8.59"
+                  y1="6.51"
+                  y2="10.49"
+                />
+              </svg>
+              Share this preview
+            </button>
             <div
               class="flex gap-2.5"
             >
@@ -30569,12 +31281,12 @@ PS – Repost for early access to the full TikTok Shop content factory system.
               <div
                 class="font-bold text-sm text-ink mb-0.5"
               >
-                Keep it forever
+                Keep a pile, later
               </div>
               <p
                 class="text-[13px] text-ink-2 leading-snug mb-3"
               >
-                Create a free account to save everything you preview — private to you.
+                Sending doesn't need an account. Sign in if you want a private collection.
               </p>
               <button
                 class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -31047,7 +31759,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -31332,6 +32044,51 @@ This is not a coincidence.
             <div
               class="flex flex-col gap-3.5"
             >
+              <button
+                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg
+                  class="lucide lucide-share2 w-[18px] h-[18px]"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    cx="18"
+                    cy="5"
+                    r="3"
+                  />
+                  <circle
+                    cx="6"
+                    cy="12"
+                    r="3"
+                  />
+                  <circle
+                    cx="18"
+                    cy="19"
+                    r="3"
+                  />
+                  <line
+                    x1="8.59"
+                    x2="15.42"
+                    y1="13.51"
+                    y2="17.49"
+                  />
+                  <line
+                    x1="15.41"
+                    x2="8.59"
+                    y1="6.51"
+                    y2="10.49"
+                  />
+                </svg>
+                Share this preview
+              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -31425,12 +32182,12 @@ This is not a coincidence.
                 <div
                   class="font-bold text-sm text-ink mb-0.5"
                 >
-                  Keep it forever
+                  Keep a pile, later
                 </div>
                 <p
                   class="text-[13px] text-ink-2 leading-snug mb-3"
                 >
-                  Create a free account to save everything you preview — private to you.
+                  Sending doesn't need an account. Sign in if you want a private collection.
                 </p>
                 <button
                   class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -31497,6 +32254,51 @@ This is not a coincidence.
           <div
             class="flex flex-col gap-3.5"
           >
+            <button
+              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg
+                class="lucide lucide-share2 w-[18px] h-[18px]"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="18"
+                  cy="5"
+                  r="3"
+                />
+                <circle
+                  cx="6"
+                  cy="12"
+                  r="3"
+                />
+                <circle
+                  cx="18"
+                  cy="19"
+                  r="3"
+                />
+                <line
+                  x1="8.59"
+                  x2="15.42"
+                  y1="13.51"
+                  y2="17.49"
+                />
+                <line
+                  x1="15.41"
+                  x2="8.59"
+                  y1="6.51"
+                  y2="10.49"
+                />
+              </svg>
+              Share this preview
+            </button>
             <div
               class="flex gap-2.5"
             >
@@ -31590,12 +32392,12 @@ This is not a coincidence.
               <div
                 class="font-bold text-sm text-ink mb-0.5"
               >
-                Keep it forever
+                Keep a pile, later
               </div>
               <p
                 class="text-[13px] text-ink-2 leading-snug mb-3"
               >
-                Create a free account to save everything you preview — private to you.
+                Sending doesn't need an account. Sign in if you want a private collection.
               </p>
               <button
                 class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -32068,7 +32870,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -32317,6 +33119,51 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             <div
               class="flex flex-col gap-3.5"
             >
+              <button
+                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg
+                  class="lucide lucide-share2 w-[18px] h-[18px]"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    cx="18"
+                    cy="5"
+                    r="3"
+                  />
+                  <circle
+                    cx="6"
+                    cy="12"
+                    r="3"
+                  />
+                  <circle
+                    cx="18"
+                    cy="19"
+                    r="3"
+                  />
+                  <line
+                    x1="8.59"
+                    x2="15.42"
+                    y1="13.51"
+                    y2="17.49"
+                  />
+                  <line
+                    x1="15.41"
+                    x2="8.59"
+                    y1="6.51"
+                    y2="10.49"
+                  />
+                </svg>
+                Share this preview
+              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -32410,12 +33257,12 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <div
                   class="font-bold text-sm text-ink mb-0.5"
                 >
-                  Keep it forever
+                  Keep a pile, later
                 </div>
                 <p
                   class="text-[13px] text-ink-2 leading-snug mb-3"
                 >
-                  Create a free account to save everything you preview — private to you.
+                  Sending doesn't need an account. Sign in if you want a private collection.
                 </p>
                 <button
                   class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -32482,6 +33329,51 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           <div
             class="flex flex-col gap-3.5"
           >
+            <button
+              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg
+                class="lucide lucide-share2 w-[18px] h-[18px]"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="18"
+                  cy="5"
+                  r="3"
+                />
+                <circle
+                  cx="6"
+                  cy="12"
+                  r="3"
+                />
+                <circle
+                  cx="18"
+                  cy="19"
+                  r="3"
+                />
+                <line
+                  x1="8.59"
+                  x2="15.42"
+                  y1="13.51"
+                  y2="17.49"
+                />
+                <line
+                  x1="15.41"
+                  x2="8.59"
+                  y1="6.51"
+                  y2="10.49"
+                />
+              </svg>
+              Share this preview
+            </button>
             <div
               class="flex gap-2.5"
             >
@@ -32575,12 +33467,12 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               <div
                 class="font-bold text-sm text-ink mb-0.5"
               >
-                Keep it forever
+                Keep a pile, later
               </div>
               <p
                 class="text-[13px] text-ink-2 leading-snug mb-3"
               >
-                Create a free account to save everything you preview — private to you.
+                Sending doesn't need an account. Sign in if you want a private collection.
               </p>
               <button
                 class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -33053,7 +33945,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -33426,6 +34318,51 @@ Try it for free in our demo app (link in the thread).
             <div
               class="flex flex-col gap-3.5"
             >
+              <button
+                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg
+                  class="lucide lucide-share2 w-[18px] h-[18px]"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    cx="18"
+                    cy="5"
+                    r="3"
+                  />
+                  <circle
+                    cx="6"
+                    cy="12"
+                    r="3"
+                  />
+                  <circle
+                    cx="18"
+                    cy="19"
+                    r="3"
+                  />
+                  <line
+                    x1="8.59"
+                    x2="15.42"
+                    y1="13.51"
+                    y2="17.49"
+                  />
+                  <line
+                    x1="15.41"
+                    x2="8.59"
+                    y1="6.51"
+                    y2="10.49"
+                  />
+                </svg>
+                Share this preview
+              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -33519,12 +34456,12 @@ Try it for free in our demo app (link in the thread).
                 <div
                   class="font-bold text-sm text-ink mb-0.5"
                 >
-                  Keep it forever
+                  Keep a pile, later
                 </div>
                 <p
                   class="text-[13px] text-ink-2 leading-snug mb-3"
                 >
-                  Create a free account to save everything you preview — private to you.
+                  Sending doesn't need an account. Sign in if you want a private collection.
                 </p>
                 <button
                   class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -33591,6 +34528,51 @@ Try it for free in our demo app (link in the thread).
           <div
             class="flex flex-col gap-3.5"
           >
+            <button
+              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg
+                class="lucide lucide-share2 w-[18px] h-[18px]"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="18"
+                  cy="5"
+                  r="3"
+                />
+                <circle
+                  cx="6"
+                  cy="12"
+                  r="3"
+                />
+                <circle
+                  cx="18"
+                  cy="19"
+                  r="3"
+                />
+                <line
+                  x1="8.59"
+                  x2="15.42"
+                  y1="13.51"
+                  y2="17.49"
+                />
+                <line
+                  x1="15.41"
+                  x2="8.59"
+                  y1="6.51"
+                  y2="10.49"
+                />
+              </svg>
+              Share this preview
+            </button>
             <div
               class="flex gap-2.5"
             >
@@ -33684,12 +34666,12 @@ Try it for free in our demo app (link in the thread).
               <div
                 class="font-bold text-sm text-ink mb-0.5"
               >
-                Keep it forever
+                Keep a pile, later
               </div>
               <p
                 class="text-[13px] text-ink-2 leading-snug mb-3"
               >
-                Create a free account to save everything you preview — private to you.
+                Sending doesn't need an account. Sign in if you want a private collection.
               </p>
               <button
                 class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -34162,7 +35144,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -34493,6 +35475,36 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             <div
               class="flex flex-col gap-3.5"
             >
+              <button
+                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg
+                  class="lucide lucide-download w-[18px] h-[18px]"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                  />
+                  <polyline
+                    points="7 10 12 15 17 10"
+                  />
+                  <line
+                    x1="12"
+                    x2="12"
+                    y1="15"
+                    y2="3"
+                  />
+                </svg>
+                Download video
+              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -34579,40 +35591,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                     Share
                   </span>
                 </button>
-                <button
-                  class="flex-1 flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl border border-hairline bg-surface text-ink-2 hover:text-clay hover:border-clay/30 transition-colors"
-                >
-                  <svg
-                    class="lucide lucide-download w-[19px] h-[19px]"
-                    fill="none"
-                    height="24"
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    viewBox="0 0 24 24"
-                    width="24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
-                    />
-                    <polyline
-                      points="7 10 12 15 17 10"
-                    />
-                    <line
-                      x1="12"
-                      x2="12"
-                      y1="15"
-                      y2="3"
-                    />
-                  </svg>
-                  <span
-                    class="text-[12.5px] font-semibold"
-                  >
-                    Download
-                  </span>
-                </button>
               </div>
               <div
                 class="rounded-2xl px-4 py-4 bg-clay/10 border border-clay/20"
@@ -34620,12 +35598,12 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <div
                   class="font-bold text-sm text-ink mb-0.5"
                 >
-                  Keep it forever
+                  Keep a pile, later
                 </div>
                 <p
                   class="text-[13px] text-ink-2 leading-snug mb-3"
                 >
-                  Create a free account to save everything you preview — private to you.
+                  Sending doesn't need an account. Sign in if you want a private collection.
                 </p>
                 <button
                   class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -34692,6 +35670,36 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           <div
             class="flex flex-col gap-3.5"
           >
+            <button
+              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg
+                class="lucide lucide-download w-[18px] h-[18px]"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                />
+                <polyline
+                  points="7 10 12 15 17 10"
+                />
+                <line
+                  x1="12"
+                  x2="12"
+                  y1="15"
+                  y2="3"
+                />
+              </svg>
+              Download video
+            </button>
             <div
               class="flex gap-2.5"
             >
@@ -34778,40 +35786,6 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                   Share
                 </span>
               </button>
-              <button
-                class="flex-1 flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl border border-hairline bg-surface text-ink-2 hover:text-clay hover:border-clay/30 transition-colors"
-              >
-                <svg
-                  class="lucide lucide-download w-[19px] h-[19px]"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
-                  />
-                  <polyline
-                    points="7 10 12 15 17 10"
-                  />
-                  <line
-                    x1="12"
-                    x2="12"
-                    y1="15"
-                    y2="3"
-                  />
-                </svg>
-                <span
-                  class="text-[12.5px] font-semibold"
-                >
-                  Download
-                </span>
-              </button>
             </div>
             <div
               class="rounded-2xl px-4 py-4 bg-clay/10 border border-clay/20"
@@ -34819,12 +35793,12 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               <div
                 class="font-bold text-sm text-ink mb-0.5"
               >
-                Keep it forever
+                Keep a pile, later
               </div>
               <p
                 class="text-[13px] text-ink-2 leading-snug mb-3"
               >
-                Create a free account to save everything you preview — private to you.
+                Sending doesn't need an account. Sign in if you want a private collection.
               </p>
               <button
                 class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -35297,7 +36271,7 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
         <p
           class="text-ink-2 text-[13.5px] sm:text-[17px] whitespace-nowrap sm:whitespace-normal max-w-2xl mx-auto"
         >
-          Save it before you 
+          Send it before you 
           <b
             class="text-clay font-semibold"
           >
@@ -35546,6 +36520,51 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
             <div
               class="flex flex-col gap-3.5"
             >
+              <button
+                class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg
+                  class="lucide lucide-share2 w-[18px] h-[18px]"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    cx="18"
+                    cy="5"
+                    r="3"
+                  />
+                  <circle
+                    cx="6"
+                    cy="12"
+                    r="3"
+                  />
+                  <circle
+                    cx="18"
+                    cy="19"
+                    r="3"
+                  />
+                  <line
+                    x1="8.59"
+                    x2="15.42"
+                    y1="13.51"
+                    y2="17.49"
+                  />
+                  <line
+                    x1="15.41"
+                    x2="8.59"
+                    y1="6.51"
+                    y2="10.49"
+                  />
+                </svg>
+                Share this preview
+              </button>
               <div
                 class="flex gap-2.5"
               >
@@ -35639,12 +36658,12 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
                 <div
                   class="font-bold text-sm text-ink mb-0.5"
                 >
-                  Keep it forever
+                  Keep a pile, later
                 </div>
                 <p
                   class="text-[13px] text-ink-2 leading-snug mb-3"
                 >
-                  Create a free account to save everything you preview — private to you.
+                  Sending doesn't need an account. Sign in if you want a private collection.
                 </p>
                 <button
                   class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
@@ -35711,6 +36730,51 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
           <div
             class="flex flex-col gap-3.5"
           >
+            <button
+              class="w-full inline-flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-clay-grad text-white font-bold text-base shadow-glow transition-all hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg
+                class="lucide lucide-share2 w-[18px] h-[18px]"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="18"
+                  cy="5"
+                  r="3"
+                />
+                <circle
+                  cx="6"
+                  cy="12"
+                  r="3"
+                />
+                <circle
+                  cx="18"
+                  cy="19"
+                  r="3"
+                />
+                <line
+                  x1="8.59"
+                  x2="15.42"
+                  y1="13.51"
+                  y2="17.49"
+                />
+                <line
+                  x1="15.41"
+                  x2="8.59"
+                  y1="6.51"
+                  y2="10.49"
+                />
+              </svg>
+              Share this preview
+            </button>
             <div
               class="flex gap-2.5"
             >
@@ -35804,12 +36868,12 @@ exports[`TweetPreviewLanding Component Snapshots > Renders all fixture types cor
               <div
                 class="font-bold text-sm text-ink mb-0.5"
               >
-                Keep it forever
+                Keep a pile, later
               </div>
               <p
                 class="text-[13px] text-ink-2 leading-snug mb-3"
               >
-                Create a free account to save everything you preview — private to you.
+                Sending doesn't need an account. Sign in if you want a private collection.
               </p>
               <button
                 class="w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-ink text-surface font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"

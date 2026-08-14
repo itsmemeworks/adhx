@@ -2,17 +2,24 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect } from 'vitest'
-import { GENERIC_SYNC_MESSAGE, X_DENIED_MESSAGE, parseSyncErrorEvent } from '@/lib/sync/messages'
+import { GENERIC_SYNC_MESSAGE, REAUTH_MESSAGE, parseSyncErrorEvent } from '@/lib/sync/messages'
 
 describe('parseSyncErrorEvent', () => {
   it('reads a classified SSE error payload', () => {
     const event = new MessageEvent('error', {
-      data: JSON.stringify({ message: X_DENIED_MESSAGE, code: 'reauth' }),
+      data: JSON.stringify({ message: REAUTH_MESSAGE, code: 'reauth' }),
     })
     expect(parseSyncErrorEvent(event)).toEqual({
-      message: X_DENIED_MESSAGE,
+      message: REAUTH_MESSAGE,
       code: 'reauth',
     })
+  })
+
+  it('keeps unavailable distinct from reauth', () => {
+    const event = new MessageEvent('error', {
+      data: JSON.stringify({ message: 'X blocked bookmarks', code: 'unavailable' }),
+    })
+    expect(parseSyncErrorEvent(event).code).toBe('unavailable')
   })
 
   it('falls back to generic for a bare EventSource onerror', () => {
