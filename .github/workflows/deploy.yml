@@ -60,9 +60,11 @@ jobs:
 
           if [ "$ENV" = "production" ]; then
             echo "config_file=fly.production.toml" >> $GITHUB_OUTPUT
+            echo "app_name=adhx-prod" >> $GITHUB_OUTPUT
             echo "app_url=https://adhx.com" >> $GITHUB_OUTPUT
           else
             echo "config_file=fly.toml" >> $GITHUB_OUTPUT
+            echo "app_name=adhx" >> $GITHUB_OUTPUT
             echo "app_url=https://adhx.fly.dev" >> $GITHUB_OUTPUT
           fi
 
@@ -77,8 +79,25 @@ jobs:
         uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Deploy to Fly.io
+        env:
+          # Do not ternary-select secrets: an empty FLY_API_TOKEN_PROD is falsy
+          # and would silently fall back to the staging token (unauthorized on prod).
+          FLY_API_TOKEN_STAGING: ${{ secrets.FLY_API_TOKEN }}
+          FLY_API_TOKEN_PRODUCTION: ${{ secrets.FLY_API_TOKEN_PROD }}
         run: |
+          if [ "${{ steps.env.outputs.environment }}" = "production" ]; then
+            if [ -z "$FLY_API_TOKEN_PRODUCTION" ]; then
+              echo "::error::FLY_API_TOKEN_PROD is not set. Create a deploy token and store it:"
+              echo "  fly tokens create deploy -a adhx-prod -n gha-adhx-prod"
+              echo "  gh secret set FLY_API_TOKEN_PROD"
+              exit 1
+            fi
+            export FLY_API_TOKEN="$FLY_API_TOKEN_PRODUCTION"
+          else
+            export FLY_API_TOKEN="$FLY_API_TOKEN_STAGING"
+          fi
           flyctl deploy --remote-only \
+            --app ${{ steps.env.outputs.app_name }} \
             --config ${{ steps.env.outputs.config_file }} \
             --build-arg SENTRY_RELEASE=${{ steps.version.outputs.version }}
 
