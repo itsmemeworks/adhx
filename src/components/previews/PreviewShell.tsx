@@ -23,6 +23,7 @@ import {
   sharePageLink,
 } from '@/lib/share/web-share'
 import { pingSharePulse } from '@/lib/activity/ping-share'
+import { IosShortcutNudge } from '@/components/IosShortcutInstall'
 import { AnimatedBackground, LandingAnimations } from '@/components/landing'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { MatterLogo, ConnectWithX } from '@/components/matter'
@@ -222,6 +223,8 @@ export function PreviewCta({
         showDownload={showDownload && isAuthenticated}
         pulse={pulse}
       />
+
+      <IosShortcutNudge />
 
       {/* Keep it forever — Connect with X is secondary to send/download. */}
       {!isAuthenticated && (

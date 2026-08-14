@@ -526,11 +526,11 @@ Key files:
 
 The app offers multiple ways to save tweets, shown contextually based on the user's platform:
 
-| Platform | Primary Method                                                                         | Fallback                                |
-| -------- | -------------------------------------------------------------------------------------- | --------------------------------------- |
-| iOS      | URL prefix (all 4 platforms) + hand-built Share Sheet shortcut targeting `/share?url=` | Published iCloud shortcut is **X-only** |
-| Desktop  | Bookmarklet (drag to toolbar)                                                          | URL prefix trick                        |
-| Android  | Bookmarklet + PWA Share Target                                                         | URL prefix trick                        |
+| Platform | Primary Method                                   | Fallback                                                             |
+| -------- | ------------------------------------------------ | -------------------------------------------------------------------- |
+| iOS      | One-tap iCloud shortcut (Share → ADHX) — X today | URL prefix + hand-built `/share?url=` shortcut for IG/TikTok/YouTube |
+| Desktop  | Bookmarklet (drag to toolbar)                    | URL prefix trick                                                     |
+| Android  | Bookmarklet + PWA Share Target                   | URL prefix trick                                                     |
 
 **Platform detection** (`src/lib/platform.ts`):
 
@@ -540,9 +540,9 @@ The app offers multiple ways to save tweets, shown contextually based on the use
 
 **iOS Shortcut:**
 
-- Published iCloud shortcut ID: `0d187480099b4d34a745ec8750a4587b` — **X-only** (rewrites `x.com` → `adhx.com`). Not in this repo.
-- **All four platforms:** URL-prefix (`instagram.com` / `tiktok.com` / `youtube.com` / `x.com` → `adhx.com`) or a Share Sheet shortcut that opens `https://adhx.com/share?url=` + the shared URL. `/share` already maps X / IG / TikTok / YouTube (and TikTok short links). In-app recipe: `IosShareRecipe` on the landing page and Settings.
-- Rebuilding the iCloud shortcut itself is a manual Shortcuts.app change, then a new iCloud link. Until then, don't advertise the published shortcut as multi-platform.
+- Published iCloud shortcut ID: `0d187480099b4d34a745ec8750a4587b` — **X-only** (rewrites `x.com` → `adhx.com`). Not in this repo. We still **push this as the install**: one tap, then Share → ADHX from X. Surfaces: iOS bottom banner (`PWAInstallPrompt`), landing hero + promo, Settings, preview CTA nudge (`IosShortcutNudge`). Dismiss key `adhx-shortcut-dismissed`.
+- **All four platforms:** URL-prefix or a Share Sheet shortcut that opens `https://adhx.com/share?url=` (`IosShareRecipe`, behind “Instagram, TikTok, YouTube too”). `/share` already maps X / IG / TikTok / YouTube (and TikTok short links).
+- Rebuilding the iCloud shortcut to `/share?url=` is a manual Shortcuts.app change, then a new iCloud link. Until then, don't claim the published shortcut works on IG/TikTok/YouTube.
 
 **Bookmarklet** (desktop + Android):
 
@@ -564,9 +564,9 @@ javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tikt
 
 **Add to Home Screen (PWA install)**:
 
-- `src/components/PWAInstallPrompt.tsx` — mobile-only bottom banner, mounted app-wide in `AppShell` (shows on preview pages too — a conversion moment for visitors arriving from a shared link). Hidden on desktop, when already `display-mode: standalone`, and after dismissal (`localStorage` key `adhx-a2hs-dismissed`).
-  - **Android/Chrome**: captures `beforeinstallprompt` → one-tap **Add** button that fires the native install dialog.
-  - **iOS/Safari**: no programmatic API, so it shows the manual "tap Share → Add to Home Screen" instructions.
+- `src/components/PWAInstallPrompt.tsx` — mobile-only bottom banner, mounted app-wide in `AppShell` (preview pages too). Hidden on desktop.
+  - **Android/Chrome**: captures `beforeinstallprompt` → one-tap **Add** (`adhx-a2hs-dismissed`; hidden in standalone).
+  - **iOS/Safari**: Share Sheet shortcut install (iCloud link), not Add to Home Screen. Still shown in standalone. Dismiss key `adhx-shortcut-dismissed`.
 - `public/sw.js` — a deliberately **cache-free** service worker (no-op `fetch` handler, no `respondWith`). It exists only to satisfy Chrome's installability criteria so `beforeinstallprompt` fires; it never serves stale content. Registered from `PWAInstallPrompt` on mount.
 
 **Implementation files:**

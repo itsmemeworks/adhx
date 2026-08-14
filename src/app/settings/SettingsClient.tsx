@@ -20,7 +20,6 @@ import {
   Monitor,
   Moon,
   Sun,
-  ExternalLink,
   Copy,
   Check,
   Flame,
@@ -32,8 +31,8 @@ import { getPlatformType, type PlatformType } from '@/lib/platform'
 import { useTheme } from '@/lib/theme/context'
 import { PlatformGlyph } from '@/components/matter'
 import { cn } from '@/lib/utils'
-import { IosShareRecipe } from '@/components/IosShareRecipe'
-import { BOOKMARKLET_CODE, X_ONLY_SHORTCUT_URL } from '@/lib/share/ios'
+import { IosShortcutHow, IosShortcutInstallButton } from '@/components/IosShortcutInstall'
+import { BOOKMARKLET_CODE } from '@/lib/share/ios'
 
 interface AuthStatus {
   authenticated: boolean
@@ -186,21 +185,13 @@ function ShortcutCard() {
 
   if (platform === 'ios') {
     return (
-      <SCard icon={Smartphone} title="iOS Shortcut" sub="Send any post from the share sheet">
+      <SCard icon={Smartphone} title="iOS Share Sheet" sub="Share any X post straight into ADHX">
         <p className="text-[13.5px] text-ink-2 leading-relaxed mb-3">
-          URL-prefix works for X, Instagram, TikTok, and YouTube. The one-tap iCloud shortcut is
-          still X-only — for all four platforms, add a Share Sheet shortcut that opens ADHX.
+          Add the shortcut once. In X, tap Share → ADHX — the preview opens so you can watch and
+          send the file. No rewriting the URL.
         </p>
-        <IosShareRecipe />
-        <a
-          href={X_ONLY_SHORTCUT_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 mt-3 px-[18px] py-[11px] min-h-[44px] rounded-[11px] border border-hairline bg-surface text-ink font-semibold text-sm transition-all hover:opacity-90"
-        >
-          <ExternalLink className="w-4 h-4" />
-          X-only shortcut (one-tap install)
-        </a>
+        <IosShortcutInstallButton />
+        <IosShortcutHow />
       </SCard>
     )
   }

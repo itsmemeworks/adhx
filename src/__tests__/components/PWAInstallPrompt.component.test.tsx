@@ -4,6 +4,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { PWAInstallPrompt } from '@/components/PWAInstallPrompt'
+import { SHORTCUT_DISMISS_KEY } from '@/components/IosShortcutInstall'
+import { X_ONLY_SHORTCUT_URL } from '@/lib/share/ios'
 
 let mockPlatform: 'ios' | 'android' | 'desktop' = 'desktop'
 vi.mock('@/lib/platform', () => ({
@@ -52,18 +54,24 @@ describe('PWAInstallPrompt', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('shows manual Add-to-Home-Screen instructions on iOS (no native button)', () => {
+  it('offers a one-tap Share Sheet install on iOS', () => {
     mockPlatform = 'ios'
     render(<PWAInstallPrompt />)
-    expect(screen.getByText('Add ADHX to your home screen')).toBeInTheDocument()
-    expect(screen.getByText(/Add to Home Screen/)).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Add/ })).not.toBeInTheDocument()
+    expect(screen.getByText('Add ADHX to Share')).toBeInTheDocument()
+    const add = screen.getByRole('link', { name: /add/i })
+    expect(add).toHaveAttribute('href', X_ONLY_SHORTCUT_URL)
+  })
+
+  it('still shows the iOS shortcut prompt in standalone (home screen ≠ share sheet)', () => {
+    mockPlatform = 'ios'
+    setStandalone(true)
+    render(<PWAInstallPrompt />)
+    expect(screen.getByText('Add ADHX to Share')).toBeInTheDocument()
   })
 
   it('offers a one-tap Add button on Android once beforeinstallprompt fires', async () => {
     mockPlatform = 'android'
     render(<PWAInstallPrompt />)
-    // Nothing until the browser offers the prompt
     expect(screen.queryByText('Add ADHX to your home screen')).not.toBeInTheDocument()
 
     const evt = fireBeforeInstallPrompt()
@@ -74,28 +82,26 @@ describe('PWAInstallPrompt', () => {
     expect(evt.prompt).toHaveBeenCalled()
   })
 
-  it('stays hidden when already installed (standalone)', () => {
-    mockPlatform = 'ios'
+  it('stays hidden on Android when already installed (standalone)', () => {
+    mockPlatform = 'android'
     setStandalone(true)
     const { container } = render(<PWAInstallPrompt />)
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('stays hidden once dismissed (persisted)', () => {
+  it('stays hidden on iOS once the shortcut nudge is dismissed', () => {
     mockPlatform = 'ios'
-    localStorage.setItem('adhx-a2hs-dismissed', '1')
+    localStorage.setItem(SHORTCUT_DISMISS_KEY, '1')
     const { container } = render(<PWAInstallPrompt />)
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('dismiss hides the banner and remembers it', async () => {
+  it('dismiss hides the iOS banner and remembers it', async () => {
     mockPlatform = 'ios'
     render(<PWAInstallPrompt />)
     fireEvent.click(screen.getByLabelText('Dismiss'))
-    await waitFor(() =>
-      expect(screen.queryByText('Add ADHX to your home screen')).not.toBeInTheDocument(),
-    )
-    expect(localStorage.getItem('adhx-a2hs-dismissed')).toBe('1')
+    await waitFor(() => expect(screen.queryByText('Add ADHX to Share')).not.toBeInTheDocument())
+    expect(localStorage.getItem(SHORTCUT_DISMISS_KEY)).toBe('1')
   })
 
   it('registers the service worker', () => {

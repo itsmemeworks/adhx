@@ -10,7 +10,6 @@ import {
   Plus,
   Smartphone,
   Monitor,
-  ExternalLink,
   Copy,
   Check,
 } from 'lucide-react'
@@ -20,8 +19,8 @@ import { PlatformGlyph, LiveDot, ConnectWithX } from '@/components/matter'
 import { PublicNav } from '@/components/PublicNav'
 import { DiscoverCard } from '@/components/discover/DiscoverCard'
 import type { ActivityItem } from '@/components/discover/DiscoverFeed'
-import { IosShareRecipe } from '@/components/IosShareRecipe'
-import { BOOKMARKLET_CODE, X_ONLY_SHORTCUT_URL } from '@/lib/share/ios'
+import { IosShortcutHow, IosShortcutInstallButton } from '@/components/IosShortcutInstall'
+import { BOOKMARKLET_CODE } from '@/lib/share/ios'
 
 /* ---------- Live activity (the real, anonymous community pulse) ---------- */
 
@@ -203,20 +202,7 @@ export function LandingPage() {
                 Preview a link
                 <ArrowRight className="w-[17px] h-[17px]" />
               </a>
-              <button
-                onClick={handleLogin}
-                disabled={isLoading}
-                className="inline-flex items-center gap-2.5 px-5 py-3.5 rounded-card bg-ink text-surface font-semibold text-sm transition-opacity hover:opacity-90 disabled:opacity-50"
-              >
-                {isLoading ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-surface border-t-transparent rounded-full animate-spin" />
-                    Connecting…
-                  </>
-                ) : (
-                  <ConnectWithX size={15} />
-                )}
-              </button>
+              <HeroSecondary onConnect={handleLogin} connecting={isLoading} />
             </div>
           </div>
 
@@ -359,20 +345,66 @@ export function LandingPage() {
   )
 }
 
+/* ───────── Hero secondary: Share Sheet on iOS, Connect with X otherwise ───────── */
+
+function HeroSecondary({ onConnect, connecting }: { onConnect: () => void; connecting: boolean }) {
+  const [platform, setPlatform] = useState<PlatformType>('desktop')
+  useEffect(() => {
+    setPlatform(getPlatformType())
+  }, [])
+
+  if (platform === 'ios') {
+    return (
+      <IosShortcutInstallButton
+        variant="ink"
+        className="rounded-card px-5 py-3.5 !min-h-[52px] text-sm"
+      />
+    )
+  }
+
+  return (
+    <button
+      onClick={onConnect}
+      disabled={connecting}
+      className="inline-flex items-center gap-2.5 px-5 py-3.5 rounded-card bg-ink text-surface font-semibold text-sm transition-opacity hover:opacity-90 disabled:opacity-50"
+    >
+      {connecting ? (
+        <>
+          <span className="w-4 h-4 border-2 border-surface border-t-transparent rounded-full animate-spin" />
+          Connecting…
+        </>
+      ) : (
+        <ConnectWithX size={15} />
+      )}
+    </button>
+  )
+}
+
 /* ───────── How ADHX works (hero right column) ───────── */
 
 function HowItWorks() {
+  const [platform, setPlatform] = useState<PlatformType>('desktop')
+  useEffect(() => {
+    setPlatform(getPlatformType())
+  }, [])
+
   const steps: { icon: React.ReactNode; h: string; b: string }[] = [
     {
       icon: <PlatformGlyph platform="twitter" size={17} />,
       h: 'Connect X',
       b: 'Your saved bookmarks sync in automatically — nothing to copy-paste.',
     },
-    {
-      icon: <Plus className="w-[17px] h-[17px]" />,
-      h: 'Save from anywhere',
-      b: 'Drop a TikTok, Reel, YouTube Short or tweet and it lands in your feed.',
-    },
+    platform === 'ios'
+      ? {
+          icon: <Smartphone className="w-[17px] h-[17px]" />,
+          h: 'Share → ADHX',
+          b: 'Add the shortcut once. Then any X post in the share sheet opens here — watch and send the file.',
+        }
+      : {
+          icon: <Plus className="w-[17px] h-[17px]" />,
+          h: 'Save from anywhere',
+          b: 'Drop a TikTok, Reel, YouTube Short or tweet and it lands in your feed.',
+        },
     {
       icon: <Zap className="w-[17px] h-[17px]" />,
       h: 'Triage daily',
@@ -455,19 +487,12 @@ function ShortcutPromo() {
             {platform === 'ios' ? (
               <>
                 <p className="text-[14px] text-ink-2 leading-[1.5] mb-4">
-                  Send any X, Instagram, TikTok, or YouTube post through ADHX — watch it, then share
-                  the file so friends don&apos;t need the app. No login required.
+                  Add ADHX to the iPhone share sheet once. Next time you&apos;re in X, tap Share →
+                  ADHX — the preview opens so you can watch and send the file. No login, no
+                  rewriting the URL.
                 </p>
-                <IosShareRecipe />
-                <a
-                  href={X_ONLY_SHORTCUT_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 mt-4 px-5 py-2.5 rounded-full border border-hairline bg-surface text-ink font-semibold text-sm transition-opacity hover:opacity-80"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  X-only shortcut (one-tap install)
-                </a>
+                <IosShortcutInstallButton />
+                <IosShortcutHow />
               </>
             ) : (
               <>

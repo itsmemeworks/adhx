@@ -4,6 +4,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-14 — Push the iOS Share Sheet shortcut
+
+- **Why**: The shortcut is the easiest send path on iPhone, but it was buried behind a DIY recipe and labelled "X-only". People never installed it.
+- **What**: One-tap **Add to Share Sheet** (iCloud) is now the iOS install: bottom banner (replaces Add to Home Screen), landing hero + promo, Settings, preview CTA nudge. 4-platform recipe is behind "Instagram, TikTok, YouTube too". Dismiss key `adhx-shortcut-dismissed`.
+- **State**: in-flight on `feat/push-ios-shortcut`.
+- **Follow-ups**: Rebuild the iCloud shortcut to `/share?url=` so the one-tap install works for Reels/TikToks/Shorts too.
+
 ## 2026-08-14 — iOS WhatsApp share: duplicate via-link + first-tap fail
 
 - **Why**: Staging reel share to WhatsApp sent `via URL URL` (text + url both set). First tap showed our AlertCircle; second tap worked — iOS drops user-activation across `await fetch(mp4)`.

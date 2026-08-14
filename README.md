@@ -74,13 +74,13 @@ Tweets land in your collection and open in the lightbox. Reels and TikToks rende
 
 Pick whatever's least friction for your device — every route ends up at the same `adhx.com` preview:
 
-| Method                  | Best for          | How                                                                                                    |
-| ----------------------- | ----------------- | ------------------------------------------------------------------------------------------------------ |
-| **URL-prefix trick**    | Everyone          | Replace the link's host with `adhx.com`. Works on any device, no setup.                                |
-| **Bookmarklet**         | Desktop + Android | Drag the one-click bookmarklet to your toolbar; click it on any X / Instagram / TikTok / YouTube page. |
-| **Add to ADHX**         | Logged-in users   | Paste any link into the in-app "Add" box — platform auto-detected.                                     |
-| **Android share sheet** | Android           | Install ADHX as a PWA, then Share → ADHX from any app.                                                 |
-| **iOS Shortcut**        | iOS               | One-tap Share Sheet shortcut (currently X-only; use the URL-prefix trick for the other platforms).     |
+| Method                  | Best for          | How                                                                                                                             |
+| ----------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| **URL-prefix trick**    | Everyone          | Replace the link's host with `adhx.com`. Works on any device, no setup.                                                         |
+| **Bookmarklet**         | Desktop + Android | Drag the one-click bookmarklet to your toolbar; click it on any X / Instagram / TikTok / YouTube page.                          |
+| **Add to ADHX**         | Logged-in users   | Paste any link into the in-app "Add" box — platform auto-detected.                                                              |
+| **Android share sheet** | Android           | Install ADHX as a PWA, then Share → ADHX from any app.                                                                          |
+| **iOS Shortcut**        | iOS               | Add ADHX to the Share Sheet (one tap). Then in X: Share → ADHX. URL-prefix for IG/TikTok/YouTube until the shortcut is rebuilt. |
 
 Install ADHX as a Progressive Web App and it runs full-screen from your home screen, remembers your session, and (on Android) registers as a share target — so the bookmark can find you, since you clearly weren't going back for it.
 

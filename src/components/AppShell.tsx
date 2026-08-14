@@ -28,19 +28,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   // Full-width pages without header (public share pages, URL prefix quick-add pages,
   // the full-screen trending reel)
-  const isFullWidth =
-    pathname === '/trending/play' ||
-    pathname.startsWith('/share/') ||
+  const isPreviewPage =
     /^\/\w+\/status\/\d+$/.test(pathname) ||
     /^\/reels?\/[A-Za-z0-9_-]+$/.test(pathname) ||
     /^\/shorts\/[A-Za-z0-9_-]{11}$/.test(pathname) ||
     /^\/@?[A-Za-z0-9._]+\/video\/\d+$/.test(pathname)
+  const isFullWidth =
+    pathname === '/trending/play' || pathname.startsWith('/share/') || isPreviewPage
 
   if (isFullWidth) {
     return (
       <>
         {children}
-        <PWAInstallPrompt />
+        {/* Preview pages already have IosShortcutNudge in the CTA column. */}
+        {!isPreviewPage && <PWAInstallPrompt />}
       </>
     )
   }
