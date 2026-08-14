@@ -202,7 +202,7 @@ X OAuth 2.0 tokens: the **access token lasts ~2 hours**; the **refresh token is 
 - `fatal` (HTTP 400/401) → the refresh token itself is dead; only a fresh re-auth recovers it. The status route clears the session here; throw it to the user as "reconnect your account".
 - non-fatal (network / 5xx / lost race) → **keep the stored tokens** and let a later request retry. Never tear down the session on a transient failure (that turns a blip into a forced re-auth).
 
-**Reactive 401 recovery**: `fetchBookmarks` (`src/lib/twitter/client.ts`) force-refreshes once and retries on a 401/403, recovering tokens that died before their nominal expiry; if that still fails it surfaces a clear reconnect message.
+**Reactive 401/402/403 recovery**: `fetchBookmarks` (`src/lib/twitter/client.ts`) force-refreshes once and retries on 401, 402, or 403. X returns 402 on bookmarks for a rejected user token (not only a developer-plan lapse). If the retry still fails, throw a `TwitterCallError` with `code: 'reauth'` and human copy — never a raw `"Request failed with code 402"`. The sync SSE sends `{ message, code }`; `SyncProgress` shows a **Connect with X** CTA for `reauth`. Classification lives in `src/lib/twitter/errors.ts` / `src/lib/sync/messages.ts`.
 
 Tests: `src/__tests__/token-refresh.test.ts` (coalescing, fatal/transient, rotation persistence) and the refresh cases in `src/__tests__/api/auth-status.test.ts`.
 
@@ -517,7 +517,7 @@ Key files:
 - Private tags and their tweets are never included
 - Falls back to homepage-only if database queries fail (e.g., during static build)
 
-`public/robots.txt` includes `Allow: /t/` and `Allow: /api/share/` to explicitly permit crawling of public content routes while keeping `/api/` disallowed for authenticated endpoints.
+`public/robots.txt` includes `Allow: /t/`, `Allow: /api/share/`, and `Allow: /api/media/` (VideoObject thumbnails + MP4 streams — without this GSC reports "Thumbnail blocked by robots.txt") while keeping `/api/` disallowed for authenticated endpoints. Longer Allow prefixes beat `Disallow: /api/` under Google's longest-match rule.
 
 ### Save Methods (Platform-Aware)
 

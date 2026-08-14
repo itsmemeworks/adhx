@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { X, CheckCircle, AlertCircle, RefreshCw, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ConnectWithX } from '@/components/matter'
+import { parseSyncErrorEvent, type SyncErrorCode } from '@/lib/sync/messages'
 
 interface SyncStats {
   total: number
@@ -22,11 +24,19 @@ interface SyncProgressProps {
   onClose: () => void
   fetchAll?: boolean
   onComplete?: (stats: SyncStats) => void
+  /** Run the sync without showing the modal unless it fails. */
+  silent?: boolean
 }
 
 type SyncState = 'idle' | 'connecting' | 'fetching' | 'processing' | 'complete' | 'error'
 
-export function SyncProgress({ isOpen, onClose, fetchAll = false, onComplete }: SyncProgressProps) {
+export function SyncProgress({
+  isOpen,
+  onClose,
+  fetchAll = false,
+  onComplete,
+  silent = false,
+}: SyncProgressProps) {
   const [state, setState] = useState<SyncState>('idle')
   const [progress, setProgress] = useState(0)
   const [totalTweets, setTotalTweets] = useState(0)
@@ -35,6 +45,7 @@ export function SyncProgress({ isOpen, onClose, fetchAll = false, onComplete }: 
   const [newBookmarks, setNewBookmarks] = useState(0)
   const [currentTweet, setCurrentTweet] = useState<CurrentTweet | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [errorCode, setErrorCode] = useState<SyncErrorCode | null>(null)
   const [pageNumber, setPageNumber] = useState(0)
   const [stats, setStats] = useState<SyncStats | null>(null)
   // Set once a terminal event (complete/error) is handled, so the built-in
@@ -43,6 +54,10 @@ export function SyncProgress({ isOpen, onClose, fetchAll = false, onComplete }: 
   // error message with a generic "Connection lost". A ref avoids the stale
   // closure that made the old `state`-based guard unreliable.
   const terminalRef = useRef(false)
+  const silentRef = useRef(silent)
+  silentRef.current = silent
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
   const startSync = useCallback(async () => {
     terminalRef.current = false
@@ -54,6 +69,7 @@ export function SyncProgress({ isOpen, onClose, fetchAll = false, onComplete }: 
     setNewBookmarks(0)
     setCurrentTweet(null)
     setError(null)
+    setErrorCode(null)
     setPageNumber(0)
     setStats(null)
 
@@ -103,20 +119,14 @@ export function SyncProgress({ isOpen, onClose, fetchAll = false, onComplete }: 
         // Notify gallery and header to refresh
         window.dispatchEvent(new CustomEvent('sync-complete'))
         window.dispatchEvent(new CustomEvent('stats-updated'))
+        if (silentRef.current) onCloseRef.current()
       })
 
       eventSource.addEventListener('error', (e) => {
         terminalRef.current = true
-        if (e instanceof MessageEvent && e.data) {
-          try {
-            const data = JSON.parse(e.data)
-            setError(data.message || 'Sync failed')
-          } catch {
-            setError('Sync failed')
-          }
-        } else {
-          setError('Connection lost')
-        }
+        const parsed = parseSyncErrorEvent(e)
+        setError(parsed.message)
+        setErrorCode(parsed.code)
         setState('error')
         eventSource.close()
       })
@@ -125,13 +135,15 @@ export function SyncProgress({ isOpen, onClose, fetchAll = false, onComplete }: 
         // Only a real connection drop — a terminal `error`/`complete` already
         // set a meaningful message, so don't overwrite it with "Connection lost".
         if (!terminalRef.current) {
-          setError('Connection lost')
+          setError('Connection lost. Check your network and try again.')
+          setErrorCode('generic')
           setState('error')
         }
         eventSource.close()
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start sync')
+      setErrorCode('generic')
       setState('error')
     }
   }, [fetchAll, onComplete])
@@ -151,6 +163,14 @@ export function SyncProgress({ isOpen, onClose, fetchAll = false, onComplete }: 
   }, [isOpen])
 
   if (!isOpen) return null
+  // Background/resume sync: stay invisible unless we need the user (reconnect).
+  if (silent && state !== 'error') return null
+
+  const failedBeforeAnyWork = state === 'error' && totalTweets === 0 && processedTweets === 0
+  const needsReconnect = errorCode === 'reauth'
+  const reconnect = () => {
+    window.location.href = '/api/auth/twitter'
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
@@ -161,7 +181,9 @@ export function SyncProgress({ isOpen, onClose, fetchAll = false, onComplete }: 
             {state === 'complete'
               ? 'Sync Complete!'
               : state === 'error'
-                ? 'Sync Failed'
+                ? needsReconnect
+                  ? 'Reconnect your X account'
+                  : "Couldn't sync bookmarks"
                 : 'Syncing Bookmarks'}
           </h2>
           {(state === 'complete' || state === 'error') && (
@@ -173,48 +195,52 @@ export function SyncProgress({ isOpen, onClose, fetchAll = false, onComplete }: 
 
         {/* Content */}
         <div className="p-6">
-          {/* Progress Bar */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-muted-foreground">
-                {state === 'connecting' && 'Connecting...'}
-                {state === 'fetching' && `Fetching page ${pageNumber}...`}
-                {state === 'processing' && `Processing ${processedTweets} of ${totalTweets}`}
-                {state === 'complete' && 'Complete!'}
-                {state === 'error' && 'Error'}
-              </span>
-              <span className="text-sm font-medium">{progress}%</span>
-            </div>
-            <div className="h-2 bg-secondary rounded-full overflow-hidden">
-              <div
-                className={cn(
-                  'h-full transition-all duration-300',
-                  state === 'error'
-                    ? 'bg-red-500'
-                    : state === 'complete'
-                      ? 'bg-green-500'
-                      : 'bg-primary',
-                )}
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
+          {!failedBeforeAnyWork && (
+            <>
+              {/* Progress Bar */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-muted-foreground">
+                    {state === 'connecting' && 'Connecting...'}
+                    {state === 'fetching' && `Fetching page ${pageNumber}...`}
+                    {state === 'processing' && `Processing ${processedTweets} of ${totalTweets}`}
+                    {state === 'complete' && 'Complete!'}
+                    {state === 'error' && 'Stopped'}
+                  </span>
+                  <span className="text-sm font-medium">{progress}%</span>
+                </div>
+                <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                  <div
+                    className={cn(
+                      'h-full transition-all duration-300',
+                      state === 'error'
+                        ? 'bg-red-500'
+                        : state === 'complete'
+                          ? 'bg-green-500'
+                          : 'bg-primary',
+                    )}
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </div>
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-3 gap-4 mb-6">
-            <div className="text-center p-3 bg-secondary/50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">{newBookmarks}</div>
-              <div className="text-xs text-muted-foreground">New</div>
-            </div>
-            <div className="text-center p-3 bg-secondary/50 rounded-lg">
-              <div className="text-2xl font-bold text-muted-foreground">{duplicates}</div>
-              <div className="text-xs text-muted-foreground">Duplicates</div>
-            </div>
-            <div className="text-center p-3 bg-secondary/50 rounded-lg">
-              <div className="text-2xl font-bold">{totalTweets}</div>
-              <div className="text-xs text-muted-foreground">Total</div>
-            </div>
-          </div>
+              {/* Stats Grid */}
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="text-center p-3 bg-secondary/50 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">{newBookmarks}</div>
+                  <div className="text-xs text-muted-foreground">New</div>
+                </div>
+                <div className="text-center p-3 bg-secondary/50 rounded-lg">
+                  <div className="text-2xl font-bold text-muted-foreground">{duplicates}</div>
+                  <div className="text-xs text-muted-foreground">Duplicates</div>
+                </div>
+                <div className="text-center p-3 bg-secondary/50 rounded-lg">
+                  <div className="text-2xl font-bold">{totalTweets}</div>
+                  <div className="text-xs text-muted-foreground">Total</div>
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Current Tweet Preview */}
           {currentTweet && state === 'processing' && (
@@ -236,9 +262,9 @@ export function SyncProgress({ isOpen, onClose, fetchAll = false, onComplete }: 
           )}
 
           {state === 'error' && (
-            <div className="flex items-center justify-center gap-2 text-red-600 mb-4">
-              <AlertCircle className="w-8 h-8" />
-              <span className="font-medium">{error}</span>
+            <div className="flex flex-col items-center text-center gap-3 mb-2">
+              <AlertCircle className="w-8 h-8 text-red-600" />
+              <p className="text-[15px] leading-relaxed text-ink">{error}</p>
             </div>
           )}
 
@@ -268,15 +294,24 @@ export function SyncProgress({ isOpen, onClose, fetchAll = false, onComplete }: 
               >
                 Close
               </button>
-              <button
-                onClick={() => {
-                  setState('idle')
-                  startSync()
-                }}
-                className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-              >
-                Retry
-              </button>
+              {needsReconnect ? (
+                <button
+                  onClick={reconnect}
+                  className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-ink text-surface rounded-md hover:opacity-90 transition-opacity font-semibold"
+                >
+                  <ConnectWithX size={14} />
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setState('idle')
+                    startSync()
+                  }}
+                  className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                >
+                  Retry
+                </button>
+              )}
             </div>
           ) : (
             <p className="text-center text-sm text-muted-foreground">

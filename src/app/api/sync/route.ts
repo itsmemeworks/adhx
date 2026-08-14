@@ -15,7 +15,9 @@ import { eq, desc, and, lt } from 'drizzle-orm'
 import { nanoid } from '@/lib/utils'
 import { withAuth } from '@/lib/api/with-auth'
 import { hasExistingTokens } from '@/lib/auth/oauth'
-import { captureException, metrics } from '@/lib/sentry'
+import { captureException, captureMessage, metrics } from '@/lib/sentry'
+import { REAUTH_MESSAGE } from '@/lib/sync/messages'
+import { isReauthError, toTwitterCallError } from '@/lib/twitter/errors'
 import type { StreamedBookmark } from '@/components/feed/types'
 import { categorizeTweetByUrls, extractDomain, determineLinkType } from '@/lib/tweets/processor'
 import { recordActivity, previewPath } from '@/lib/activity/record'
@@ -31,14 +33,12 @@ import { normalizeEntityMap } from '@/lib/utils/article-text'
 
 /**
  * Auth-loss during sync (valid session JWT, but the OAuth tokens are gone —
- * disconnected, fatal refresh cleared them, or account data wiped). This is an
- * expected, user-recoverable state ("reconnect your account"), NOT a bug, so we
- * surface it to the user but do NOT report it to Sentry as an exception.
+ * disconnected, fatal refresh cleared them, or X rejected the user token with
+ * 401/402/403). This is an expected, user-recoverable state ("reconnect"),
+ * NOT a bug, so we surface it to the user but do NOT report it to Sentry
+ * as an exception — except 402, which we record as a warning so a developer
+ * plan lapse is still visible.
  */
-function isAuthLossError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error)
-  return /not authenticated|reconnect your account/i.test(message)
-}
 
 // GET /api/sync - SSE endpoint for sync progress
 export const GET = withAuth(async (request, userId) => {
@@ -65,14 +65,24 @@ export const GET = withAuth(async (request, userId) => {
   }
 
   // Guard: a valid session JWT doesn't guarantee live OAuth tokens (the token
-  // chain can die while the cookie lingers). Bail before opening the SSE stream
-  // so we don't write a phantom 'running' syncLog or report expected auth-loss
-  // to Sentry — just ask the user to reconnect.
+  // chain can die while the cookie lingers). Send an SSE error event (not a
+  // JSON 401) so EventSource delivers the classified message instead of the
+  // client showing a generic "Connection lost".
   if (!(await hasExistingTokens(userId))) {
-    return NextResponse.json(
-      { error: 'Your X session has expired. Please reconnect your account in Settings.' },
-      { status: 401 },
-    )
+    const encoder = new TextEncoder()
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(
+            `event: error\ndata: ${JSON.stringify({ message: REAUTH_MESSAGE, code: 'reauth' })}\n\n`,
+          ),
+        )
+        controller.close()
+      },
+    })
+    return new Response(stream, {
+      headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
+    })
   }
 
   // Reap this user's stuck 'running' sync rows (e.g. process killed/deployed
@@ -306,15 +316,23 @@ export const GET = withAuth(async (request, userId) => {
           },
         })
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error'
+        const classified = toTwitterCallError(error)
+        const message = classified.message
 
         // Track sync failure
-        metrics.syncFailed(message)
+        metrics.syncFailed(classified.code)
 
-        // Auth-loss (tokens vanished mid-flight, after the pre-stream guard) is
-        // expected and user-recoverable — record it on the sync log + tell the
-        // client to reconnect, but don't pollute Sentry with a non-bug.
-        if (!isAuthLossError(error)) {
+        // Auth-loss (tokens vanished mid-flight, or X 401/402/403'd the user
+        // token) is expected and user-recoverable — record it on the sync log
+        // + tell the client to reconnect. 402 is also tagged as a warning so
+        // an app-level X API plan lapse is still visible in Sentry.
+        if (classified.httpStatus === 402) {
+          captureMessage('X bookmarks returned 402', 'warning', {
+            syncId,
+            userId,
+            twitterStatus: 402,
+          })
+        } else if (!isReauthError(classified)) {
           captureException(error, {
             syncId,
             userId,
@@ -334,7 +352,7 @@ export const GET = withAuth(async (request, userId) => {
           })
           .where(eq(syncLogs.id, syncId))
 
-        send('error', { message })
+        send('error', { message, code: classified.code })
       } finally {
         clearInterval(keepAliveInterval)
         request.signal.removeEventListener('abort', onAbort)

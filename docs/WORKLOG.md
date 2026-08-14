@@ -4,6 +4,20 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-14 — GSC "Thumbnail blocked by robots.txt" (video indexing)
+
+- **Why**: Search Console: video pages aren't indexed because the poster is blocked. Reel/TikTok `VideoObject` JSON-LD (and OG images) point at `/api/media/instagram/thumbnail` and `/api/media/tiktok/thumbnail`; `Disallow: /api/` won over those URLs.
+- **What**: `Allow: /api/media/` in `public/robots.txt` (longest-match beats `Disallow: /api/`). Also unblocks the MP4 `contentUrl` streams so the next GSC complaint isn't "video file blocked". Session routes (`/api/feed`, `/api/sync`, auth, bookmarks) stay disallowed. Covered by `src/__tests__/robots-txt.test.ts`.
+- **State**: in-flight, uncommitted. Google needs to recrawl `robots.txt` then the preview pages — not instant.
+- **Follow-ups**: After deploy, GSC → Video indexing → validate the fix; thumbnails can take days to clear.
+
+## 2026-08-14 — Sync 402 is a reconnect prompt; auto-sync after a day away
+
+- **Why**: Manual sync showed "Request failed with code 402" with Retry — nobody knows what 402 is, and Retry can't fix a rejected X user token. Also, coming back after a long gap required remembering to hit Sync.
+- **What**: Classify Twitter bookmarks failures (`src/lib/twitter/errors.ts`) — 401/402/403 force-refresh once, then `code: 'reauth'` with human copy (402 → "X needs a fresh login…"). SSE sends `{ message, code }`. `SyncProgress` hides the empty 0% stats, swaps Retry for **Connect with X**. Missing tokens now emit that SSE error instead of a JSON 401 (EventSource was showing "Connection lost"). Background resume sync when last focus (fallback: last successful sync) is ≥24h (`src/lib/sync/resume.ts`); silent unless it needs reconnect. 402 volume is a Sentry warning (plan-lapse signal) but not a user-facing status code.
+- **State**: in-flight, uncommitted.
+- **Follow-ups**: If reconnect still 402s for everyone, the X API app plan/credits are the real cause — check Sentry `X bookmarks returned 402`.
+
 ## 2026-07-30 — Preview captions: clipped text with no way to expand (all 4 surfaces)
 
 - **Why**: reported on `adhx.com/AMAZlNGNATURE/status/2082734821009490153` — text cut off with no "Show more". Nothing was missing from the data (FxTwitter returns the whole 179-char post, `is_note_tweet: false`); the loss was purely in rendering.
