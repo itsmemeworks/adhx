@@ -46,6 +46,7 @@ This repo carries its own cumulative context so any fresh session — new branch
 1. **At session start**, read the most recent entries of **`docs/WORKLOG.md`** (append-only, newest first). It records what was done recently, why, what's in flight, and open follow-ups — context that postdates the docs.
 2. **After completing substantive work** (feature, fix with a lesson, architectural decision, reverted experiment), **append a dated entry** to `docs/WORKLOG.md`: what/why/current state/follow-ups, ≤10 lines, newest first. Never rewrite or delete old entries.
 3. If your change makes this file, `README.md`, or `ARCHITECTURE.md` inaccurate, update them in the same PR.
+4. **Always commit, push, and open/update a PR** after substantive work. Do not wait to be asked. Use `gh` as `conspirafi`. Never merge — the user merges manually. This overrides any global “don't push unless asked” preference.
 
 `AGENTS.md` at the repo root is the cross-tool entry point (for agents that don't read CLAUDE.md) and points here.
 

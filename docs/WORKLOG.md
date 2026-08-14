@@ -4,6 +4,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-14 — Agents always push and keep a PR
+
+- **Why**: Owner does not want to commit/push/open PRs by hand in this repo; they only merge.
+- **What**: Always-on Cursor rule `.cursor/rules/always-push-pr.mdc`, plus the same instruction in `AGENTS.md` / `CLAUDE.md`. Commit on a feature branch, push, `gh pr create` (or push to update an existing PR). Never merge. Never force-push unless asked.
+- **State**: in-flight on `chore/always-push-pr`.
+- **Follow-ups**: None.
+
 ## 2026-08-14 — GSC "Thumbnail blocked by robots.txt" (video indexing)
 
 - **Why**: Search Console: video pages aren't indexed because the poster is blocked. Reel/TikTok `VideoObject` JSON-LD (and OG images) point at `/api/media/instagram/thumbnail` and `/api/media/tiktok/thumbnail`; `Disallow: /api/` won over those URLs.
