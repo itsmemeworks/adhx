@@ -15,8 +15,22 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 - **Why**: Staging after #304: even a fresh OAuth still showed "Reconnect your X account". 402 survived login because it is **Payment Required** — the developer app has no pay-per-use credits (`Your enrolled account does not have any credits to fulfill this request`). Sending users back through Connect with X loops.
 - **What**: 402 is now `code: 'unavailable'` ("Your login is fine — try again later") with Retry, not Connect with X. No force-refresh on 402. `?firstLogin=` is stripped on sync error so refresh doesn't re-fire. Sentry warning includes X's response body. 401/403 still reconnect.
-- **State**: in-flight on `fix/sync-reauth-and-video-robots`. Sync itself will keep failing until credits are topped up at console.x.com.
+- **State**: in-flight on `feat/send-video-as-product`.
 - **Follow-ups**: Top up X API credits; then Retry should sync.
+
+## 2026-08-14 — Agents always push and keep a PR
+
+- **Why**: Owner does not want to commit/push/open PRs by hand in this repo; they only merge.
+- **What**: Always-on Cursor rule `.cursor/rules/always-push-pr.mdc`, plus the same instruction in `AGENTS.md` / `CLAUDE.md`. Commit on a feature branch, push, `gh pr create` (or push to update an existing PR). Never merge. Never force-push unless asked.
+- **State**: shipped in #309.
+- **Follow-ups**: None.
+
+## 2026-08-14 — GHA production deploy was unauthorized
+
+- **Why**: `workflow_dispatch` production failed immediately (`unauthorized`). `FLY_API_TOKEN` is an app-scoped deploy token for staging `adhx` and cannot touch `adhx-prod`.
+- **What**: New GitHub secret `FLY_API_TOKEN_PROD` (Fly deploy token for `adhx-prod`). `deploy.yml` selects it when environment=production, passes `--app` explicitly, and fails with a setup hint if the secret is missing. Staging still uses `FLY_API_TOKEN`.
+- **State**: shipped in #307.
+- **Follow-ups**: `gh workflow run deploy.yml -f environment=production` (or Fly CLI).
 
 ## 2026-08-14 — GSC "Thumbnail blocked by robots.txt" (video indexing)
 

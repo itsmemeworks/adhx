@@ -38,3 +38,7 @@ pnpm lint && pnpm format:check
 ```
 
 Conventional commits (lowercase subject) — CI requires `build` + `format` checks to merge.
+
+## Git / PRs (this repo)
+
+Agents **always** commit, push, and open or update a PR after substantive work. Do not wait to be asked. Use `gh` as `conspirafi`. If a PR already exists for the branch, push to update it — do not open a duplicate. **Never merge** — the user merges manually. This overrides any global “don't push unless asked” preference.

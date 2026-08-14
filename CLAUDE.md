@@ -46,6 +46,7 @@ This repo carries its own cumulative context so any fresh session — new branch
 1. **At session start**, read the most recent entries of **`docs/WORKLOG.md`** (append-only, newest first). It records what was done recently, why, what's in flight, and open follow-ups — context that postdates the docs.
 2. **After completing substantive work** (feature, fix with a lesson, architectural decision, reverted experiment), **append a dated entry** to `docs/WORKLOG.md`: what/why/current state/follow-ups, ≤10 lines, newest first. Never rewrite or delete old entries.
 3. If your change makes this file, `README.md`, or `ARCHITECTURE.md` inaccurate, update them in the same PR.
+4. **Always commit, push, and open/update a PR** after substantive work. Do not wait to be asked. Use `gh` as `conspirafi`. Never merge — the user merges manually. This overrides any global “don't push unless asked” preference.
 
 `AGENTS.md` at the repo root is the cross-tool entry point (for agents that don't read CLAUDE.md) and points here.
 
@@ -965,7 +966,7 @@ X has a confirmed platform bug: during the **logged-out** login flow it runs a r
 
 - Production deploys should be explicit, intentional actions
 - Always verify on staging first (adhx.fly.dev)
-- Use Fly CLI for production: `fly deploy --config fly.production.toml --app adhx-prod`
+- Production: `gh workflow run deploy.yml -f environment=production` (uses `FLY_API_TOKEN_PROD`) or Fly CLI
 
 **When debugging browser features:**
 
@@ -985,13 +986,15 @@ X has a confirmed platform bug: during the **logged-out** login flow it runs a r
 
 1. Code merged to main → Release-please creates version bump PR
 2. Version PR merged → **Auto-deploys to staging only**
-3. Verify staging works → Manual deploy to production via Fly CLI
+3. Verify staging works → Manual production deploy (`gh workflow run deploy.yml -f environment=production`, or Fly CLI)
 
 ```bash
 # Deploy to staging (default, also triggered by release-please)
 gh workflow run deploy.yml
 
-# Deploy to production (via Fly CLI - GitHub Actions token doesn't have prod access)
+# Deploy to production (uses FLY_API_TOKEN_PROD — staging token cannot deploy adhx-prod)
+gh workflow run deploy.yml -f environment=production
+# or locally:
 fly deploy --config fly.production.toml --app adhx-prod
 
 # Check deployed versions
@@ -1025,6 +1028,11 @@ Required secrets on **both** Fly.io apps (set via `fly secrets set --app <app-na
 - `NEXT_PUBLIC_APP_URL` - `https://adhx.fly.dev` (staging) or `https://adhx.com` (production)
 - `SENTRY_DSN` - Error tracking (same DSN for both, separated by `SENTRY_ENVIRONMENT`)
 - `SESSION_SECRET` - JWT signing (generate unique per environment)
+
+GitHub Actions deploy tokens (app-scoped; staging cannot deploy prod):
+
+- `FLY_API_TOKEN` — `fly tokens create deploy -a adhx`
+- `FLY_API_TOKEN_PROD` — `fly tokens create deploy -a adhx-prod`
 
 **Twitter OAuth**: Both callback URLs must be registered in Twitter Developer Portal:
 
