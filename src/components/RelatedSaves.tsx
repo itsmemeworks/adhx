@@ -30,7 +30,7 @@ export async function RelatedSaves({
 
   return (
     <section className="relative z-10 bg-paper">
-      <div className="max-w-[1040px] mx-auto px-4 sm:px-6 lg:px-12 pb-14">
+      <div className="max-w-[1040px] mx-auto px-4 sm:px-6 lg:px-12 pb-8">
         <div className="flex items-center justify-between gap-3 mb-4">
           <h2 className="font-serif font-semibold text-ink text-xl">More to discover</h2>
           {handle && (

@@ -128,15 +128,17 @@ export default async function ReelPreviewPage({ params }: Props) {
         author={author || undefined}
         authorName={authorName || undefined}
         isAuthenticated={!!session}
+        below={
+          available ? (
+            <RelatedSaves
+              platform="instagram"
+              bookmarkId={id}
+              authorHandle={author || 'instagram'}
+              contentType="video"
+            />
+          ) : undefined
+        }
       />
-      {available && (
-        <RelatedSaves
-          platform="instagram"
-          bookmarkId={id}
-          authorHandle={author || 'instagram'}
-          contentType="video"
-        />
-      )}
     </>
   )
 }

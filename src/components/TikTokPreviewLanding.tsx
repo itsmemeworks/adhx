@@ -37,6 +37,7 @@ interface TikTokPreviewLandingProps {
   description?: string
   hasVideo: boolean
   isAuthenticated?: boolean
+  below?: React.ReactNode
 }
 
 export function TikTokPreviewLanding({
@@ -47,6 +48,7 @@ export function TikTokPreviewLanding({
   description,
   hasVideo,
   isAuthenticated = false,
+  below,
 }: TikTokPreviewLandingProps) {
   const [isPlaying, setIsPlaying] = useState(false)
 
@@ -77,6 +79,7 @@ export function TikTokPreviewLanding({
         downloadUrl={downloadUrl}
         streamUrl={streamUrl}
         filename={`tiktok-${handle}-${videoId}.mp4`}
+        sendKind="video"
         showDownload={hasVideo}
         pulse={{ platform: 'tiktok', id: videoId }}
       />
@@ -217,7 +220,14 @@ export function TikTokPreviewLanding({
     </article>
   )
 
-  return <PreviewShell hero={hero} sidebar={sidebar} valueCard={<ValueCard rows={VALUE_ROWS} />} />
+  return (
+    <PreviewShell
+      hero={hero}
+      sidebar={sidebar}
+      valueCard={<ValueCard rows={VALUE_ROWS} />}
+      below={below}
+    />
+  )
 }
 
 /** TikTok-specific value card copy. */

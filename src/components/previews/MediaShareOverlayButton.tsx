@@ -113,7 +113,7 @@ export function MediaShareOverlayButton({
       onClick={handleClick}
       disabled={isLoading}
       className={cn(
-        'rounded-full p-2 transition-all disabled:opacity-80',
+        'hidden md:block rounded-full p-2 transition-all disabled:opacity-80',
         failed ? 'bg-black/75' : 'bg-black/60 hover:bg-black/80',
         isMobile || failed ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
       )}

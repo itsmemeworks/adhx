@@ -112,15 +112,17 @@ export default async function ShortPreviewPage({ params }: Props) {
         author={author || undefined}
         hasVideo={available}
         isAuthenticated={!!session}
+        below={
+          available ? (
+            <RelatedSaves
+              platform="youtube"
+              bookmarkId={id}
+              authorHandle={previewAuthor}
+              contentType="video"
+            />
+          ) : undefined
+        }
       />
-      {available && (
-        <RelatedSaves
-          platform="youtube"
-          bookmarkId={id}
-          authorHandle={previewAuthor}
-          contentType="video"
-        />
-      )}
     </>
   )
 }

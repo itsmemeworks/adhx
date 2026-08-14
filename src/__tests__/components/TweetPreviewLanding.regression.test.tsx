@@ -6,8 +6,7 @@
  * TweetPreviewLanding Regression Tests
  *
  * Tests for bugs found in production:
- * 1. Expand/share button layout: ml-auto on both buttons causes expand icon
- *    to float in the center instead of adjacent to the share button
+ * 1. Footer actions: at most one ml-auto so stats don't split around a spacer
  * 2. RSC serialization crash: tweet prop must be a plain object to avoid
  *    infinite recursion in React Flight serializer when Sentry instruments fetch
  */
@@ -42,17 +41,8 @@ function getFooter(container: HTMLElement) {
   return container.querySelector('article[data-content="tweet"] footer')
 }
 
-describe('Regression: Expand/Share button layout', () => {
-  // ═══════════════════════════════════════════════════════════════════
-  // BUG: When both expand and share buttons have ml-auto, flexbox
-  // distributes space between them, pushing the expand icon to the
-  // center of the footer instead of grouping it next to the share icon.
-  //
-  // FIX: Share button only gets ml-auto when expand button is NOT shown.
-  // When expand IS shown, it takes ml-auto and share follows naturally.
-  // ═══════════════════════════════════════════════════════════════════
-
-  it('share button has ml-auto when no expand button (media tweet)', () => {
+describe('Regression: tweet card footer layout', () => {
+  it('does not put a share control in the stats footer', () => {
     const fixture = fixtures['video-tweet']
 
     const { container } = render(
@@ -65,41 +55,10 @@ describe('Regression: Expand/Share button layout', () => {
 
     const footer = getFooter(container)
     expect(footer).toBeTruthy()
-
-    // Media tweets never show expand button
-    const expandButton = footer!.querySelector(
-      'button[title="Collapse tweet"],button[title="Expand tweet"]',
-    )
-    expect(expandButton).toBeNull()
-
-    const shareButton = footer!.querySelector('button[aria-label="Share this preview"]')
-    expect(shareButton).toBeTruthy()
-    expect(shareButton!.className).toContain('ml-auto')
+    expect(footer!.querySelector('button[aria-label="Share this preview"]')).toBeNull()
   })
 
-  it('share button has ml-auto when no expand button (4-image tweet)', () => {
-    const fixture = fixtures['4-images']
-
-    const { container } = render(
-      <TweetPreviewLanding
-        username="iamgdsa"
-        tweetId="2010782484728873387"
-        tweet={fixture.tweet!}
-      />,
-    )
-
-    const footer = getFooter(container)
-    const expandButton = footer!.querySelector(
-      'button[title="Collapse tweet"],button[title="Expand tweet"]',
-    )
-    expect(expandButton).toBeNull()
-
-    const shareButton = footer!.querySelector('button[aria-label="Share this preview"]')
-    expect(shareButton!.className).toContain('ml-auto')
-  })
-
-  it('share button does NOT have ml-auto when expand button is visible', () => {
-    // Text-only tweets default to expanded, showing the collapse button
+  it('expand button has ml-auto when shown (text-only tweet)', () => {
     const fixture = fixtures['long-text-with-quote']
 
     const { container } = render(
@@ -111,22 +70,15 @@ describe('Regression: Expand/Share button layout', () => {
     )
 
     const footer = getFooter(container)
-    expect(footer).toBeTruthy()
-
     const expandButton = footer!.querySelector(
       'button[title="Collapse tweet"],button[title="Expand tweet"]',
     )
-    const shareButton = footer!.querySelector('button[aria-label="Share this preview"]')
-    expect(shareButton).toBeTruthy()
-
-    // When expand button is visible, share must NOT have ml-auto
     if (expandButton) {
-      expect(shareButton!.className).not.toContain('ml-auto')
+      expect(expandButton.className).toContain('ml-auto')
     }
   })
 
   it('at most one footer button has ml-auto (prevents split-center layout)', () => {
-    // Key invariant: only one element pushes right with ml-auto
     const fixture = fixtures['plain-text']
 
     const { container } = render(
@@ -144,53 +96,9 @@ describe('Regression: Expand/Share button layout', () => {
     const buttonsWithMlAuto = buttons.filter((btn) => btn.className.includes('ml-auto'))
     expect(buttonsWithMlAuto.length).toBeLessThanOrEqual(1)
   })
+})
 
-  it('share button is always the last child in footer', () => {
-    const fixture = fixtures['plain-text']
-
-    const { container } = render(
-      <TweetPreviewLanding
-        username="TheCinesthetic"
-        tweetId="2010184900599583070"
-        tweet={fixture.tweet!}
-      />,
-    )
-
-    const footer = getFooter(container)
-    const shareButton = footer!.querySelector('button[aria-label="Share this preview"]')
-    expect(shareButton).toBeTruthy()
-
-    const allChildren = Array.from(footer!.children)
-    const shareIndex = allChildren.indexOf(shareButton as Element)
-    expect(shareIndex).toBe(allChildren.length - 1)
-  })
-
-  it.each(
-    fixtureMetadata.filter((f) =>
-      ['video-tweet', '4-images', 'quote-of-image-tweet'].includes(f.slug),
-    ),
-  )('media fixture $slug: share has ml-auto (no expand button)', ({ slug, author, tweetId }) => {
-    const fixture = fixtures[slug as FixtureSlug]
-
-    const { container } = render(
-      <TweetPreviewLanding username={author} tweetId={tweetId} tweet={fixture.tweet!} />,
-    )
-
-    const footer = getFooter(container)
-    const shareButton = footer!.querySelector('button[aria-label="Share this preview"]')
-    expect(shareButton!.className).toContain('ml-auto')
-  })
-
-  // ═══════════════════════════════════════════════════════════════════
-  // BUG: When collapsed (via localStorage), the article's scrollHeight
-  // is capped by max-h, so the check `scrollHeight > 400` passes even
-  // when the content div inside is scrolling. The expand button vanishes
-  // and users have no way to expand the internally-scrolling content.
-  //
-  // FIX: Also check contentRef.scrollHeight > contentRef.clientHeight
-  // to detect actual content overflow inside the flex layout.
-  // ═══════════════════════════════════════════════════════════════════
-
+describe('Regression: expand/collapse overflow detection', () => {
   it('text-only tweets have a scrollable content div inside the article', () => {
     // Structural requirement: the content div must exist for overflow detection
     const fixture = fixtures['long-text-with-quote']

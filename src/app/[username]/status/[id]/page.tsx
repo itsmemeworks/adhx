@@ -168,12 +168,14 @@ export default async function QuickAddPage({ params }: Props) {
           tweetId={id}
           tweet={JSON.parse(JSON.stringify(tweet))}
           isAuthenticated={!!session}
-        />
-        <RelatedSaves
-          platform="twitter"
-          bookmarkId={id}
-          authorHandle={previewAuthor}
-          contentType={previewType}
+          below={
+            <RelatedSaves
+              platform="twitter"
+              bookmarkId={id}
+              authorHandle={previewAuthor}
+              contentType={previewType}
+            />
+          }
         />
       </>
     )

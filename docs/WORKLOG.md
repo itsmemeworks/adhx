@@ -4,6 +4,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-14 — Preview: Send the file vs Share link
+
+- **Why**: Three share icons on preview pages (stats footer, Send this video, Share) plus a void under More to Discover (`min-h-screen` shell, related as a sibling).
+- **What**: Send = the video/photo file (sticky on mobile). Share link = this preview URL. Stats-footer share and mobile media overlay removed. Related saves slot into the shell before the tagline.
+- **State**: in-flight on `feat/push-ios-shortcut`.
+- **Follow-ups**: none.
+
 ## 2026-08-14 — Landing "How ADHX works" is the send loop
 
 - **Why**: The hero still led with Connect X → triage → TTS. That's not how the product works now.

@@ -22,6 +22,7 @@ interface InstagramPreviewLandingProps {
   author?: string
   authorName?: string
   isAuthenticated?: boolean
+  below?: React.ReactNode
 }
 
 export function InstagramPreviewLanding({
@@ -32,6 +33,7 @@ export function InstagramPreviewLanding({
   author,
   authorName,
   isAuthenticated = false,
+  below,
 }: InstagramPreviewLandingProps) {
   const instagramUrl = `https://www.instagram.com/reel/${reelId}/`
 
@@ -54,6 +56,7 @@ export function InstagramPreviewLanding({
         downloadUrl={`/api/media/instagram/video/download?id=${encodeURIComponent(reelId)}`}
         streamUrl={`/api/media/instagram/video?id=${encodeURIComponent(reelId)}`}
         filename={`instagram-${reelId}.mp4`}
+        sendKind="video"
         showDownload={!!imageUrl}
         pulse={{ platform: 'instagram', id: reelId }}
       />
@@ -176,7 +179,14 @@ export function InstagramPreviewLanding({
     </article>
   )
 
-  return <PreviewShell hero={hero} sidebar={sidebar} valueCard={<ValueCard rows={VALUE_ROWS} />} />
+  return (
+    <PreviewShell
+      hero={hero}
+      sidebar={sidebar}
+      valueCard={<ValueCard rows={VALUE_ROWS} />}
+      below={below}
+    />
+  )
 }
 
 /** Instagram-specific value card copy. */

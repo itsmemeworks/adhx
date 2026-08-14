@@ -14,7 +14,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { TweetPreviewLanding } from '@/components/TweetPreviewLanding'
 import { fixtures, fixtureMetadata, type FixtureSlug } from '../fixtures/tweets'
 
@@ -299,23 +299,8 @@ describe('TweetPreviewLanding Component Snapshots', () => {
     })
   })
 
-  describe('Share preview button', () => {
-    it('renders share button in tweet card footer', () => {
-      const fixture = fixtures['plain-text']
-
-      const { container } = render(
-        <TweetPreviewLanding
-          username="TheCinesthetic"
-          tweetId="2010184900599583070"
-          tweet={fixture.tweet!}
-        />,
-      )
-
-      const shareButton = container.querySelector('button[aria-label="Share this preview"]')
-      expect(shareButton).toBeTruthy()
-    })
-
-    it('share button is inside the tweet card footer', () => {
+  describe('Share actions', () => {
+    it('keeps share out of the tweet card footer', () => {
       const fixture = fixtures['plain-text']
 
       const { container } = render(
@@ -328,8 +313,24 @@ describe('TweetPreviewLanding Component Snapshots', () => {
 
       const footer = container.querySelector('article[data-content="tweet"] footer')
       expect(footer).toBeTruthy()
-      const shareButton = footer!.querySelector('button[aria-label="Share this preview"]')
-      expect(shareButton).toBeTruthy()
+      expect(footer!.querySelector('button[aria-label="Share this preview"]')).toBeNull()
+    })
+
+    it('offers Share link in the CTA column for video tweets', () => {
+      const fixture = fixtures['video-tweet']
+
+      render(
+        <TweetPreviewLanding
+          username="Kekius_Sage"
+          tweetId="2011872260118716688"
+          tweet={fixture.tweet!}
+        />,
+      )
+
+      expect(screen.getAllByRole('button', { name: /share link/i }).length).toBeGreaterThan(0)
+      expect(
+        screen.getAllByRole('button', { name: /send this video|download video/i }).length,
+      ).toBeGreaterThan(0)
     })
   })
 
