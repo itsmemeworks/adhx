@@ -5,8 +5,21 @@ import { cn } from '@/lib/utils'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
 import { PlatformGlyph, type ContentType } from '@/components/matter'
 import { inferType } from '@/lib/trending/filter'
+import { instagramWarmSrc, prefetchPlayback } from './usePlaybackSource'
 import type { TheaterItem } from './types'
 import { theaterItemKey } from './types'
+
+/** Instagram rows warmed this session (by key) — hover-warm fires at most once per row. */
+const warmedRows = new Set<string>()
+
+/** Warm an Instagram row's mirror on hover, at most once per session per item. */
+function warmOnHover(item: TheaterItem) {
+  if (!instagramWarmSrc(item)) return
+  const key = theaterItemKey(item)
+  if (warmedRows.has(key)) return
+  warmedRows.add(key)
+  prefetchPlayback(item)
+}
 
 /**
  * Rail feed rows + the seen spine (spec §5). Ordering is whatever `items`
@@ -88,6 +101,7 @@ function Row({
     <button
       type="button"
       onClick={() => onSelect(key)}
+      onMouseEnter={() => warmOnHover(item)}
       aria-current={isCurrent ? 'true' : undefined}
       className={cn(
         'group flex w-full items-start gap-2.5 rounded-lg border-l-2 px-2.5 py-2.5 text-left transition-colors',

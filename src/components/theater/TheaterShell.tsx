@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Stage } from './Stage'
 import { Rail } from './Rail'
+import { TheaterMobileChrome, swipeDirection } from './TheaterMobileChrome'
 import { useTheaterFeed } from './useTheaterFeed'
 import { useSeenSet } from './useSeenSet'
 import { prefetchPlayback } from './usePlaybackSource'
@@ -98,6 +99,27 @@ export function TheaterShell({ seed, mode = 'home' }: TheaterShellProps) {
 
   const onRequestUnmute = useCallback(() => setMuted(false), [])
 
+  // Mobile swipe nav (spec §8): vertical swipe on the stage only — the
+  // mobile chrome's sheet/backdrop are separate DOM siblings positioned on
+  // top of the stage, so a drag inside the sheet never reaches this handler.
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
+  const onStageTouchStart = useCallback((e: React.TouchEvent) => {
+    const t = e.touches[0]
+    touchStartRef.current = { x: t.clientX, y: t.clientY }
+  }, [])
+  const onStageTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      const start = touchStartRef.current
+      touchStartRef.current = null
+      if (!start) return
+      const t = e.changedTouches[0]
+      const direction = swipeDirection(t.clientX - start.x, t.clientY - start.y)
+      if (direction === 'next') goNext()
+      else if (direction === 'prev') goPrev()
+    },
+    [goNext, goPrev],
+  )
+
   // Keyboard nav: ↓/j next, ↑/k prev, space toggles play/pause (delegated to
   // Stage via a custom event, matching the repo's cross-component keyboard
   // pattern), m toggles mute. Ignored while typing in an input/textarea/
@@ -179,10 +201,30 @@ export function TheaterShell({ seed, mode = 'home' }: TheaterShellProps) {
 
   return (
     <div className="fixed inset-0 z-[60] flex flex-col overflow-hidden bg-[#08070a] lg:flex-row">
-      <div className="relative h-[62dvh] w-full flex-shrink-0 overflow-hidden lg:h-full lg:min-w-0 lg:flex-1">
-        <Stage item={current} muted={muted} onRequestUnmute={onRequestUnmute} />
+      {/* Full-viewport stage below lg (spec §8) — the desktop 62dvh-stage +
+          stacked-rail layout only applies at lg+, where <Rail/> takes its
+          own column instead of overlaying the stage. */}
+      <div className="relative h-full w-full flex-1 overflow-hidden lg:min-w-0">
+        <div
+          className="absolute inset-0"
+          onTouchStart={onStageTouchStart}
+          onTouchEnd={onStageTouchEnd}
+        >
+          <Stage item={current} muted={muted} onRequestUnmute={onRequestUnmute} />
+        </div>
+        <TheaterMobileChrome
+          mode={mode}
+          current={current}
+          items={items}
+          currentKey={currentKey}
+          isSeen={seenSet.isSeen}
+          seenReady={seenSet.ready}
+          freshKeys={feed.freshKeys}
+          newCount={newCount}
+          onSelect={onSelect}
+        />
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto lg:h-full lg:flex-none">
+      <div className="hidden min-h-0 flex-1 overflow-y-auto lg:flex lg:h-full lg:flex-none">
         <Rail
           mode={mode}
           items={items}
