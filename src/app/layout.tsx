@@ -180,8 +180,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 try {
                   var theme = localStorage.getItem('theme');
                   var resolved = theme;
-                  if (theme === 'system' || !theme) {
+                  if (theme === 'system') {
                     resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                  } else if (!theme) {
+                    // No stored preference: theater route ('/') defaults to dark
+                    // (theater-first.md §7); everywhere else follows the device.
+                    // Mirrors resolveInitialTheme() in src/lib/theme/context.tsx —
+                    // keep the two in lockstep.
+                    resolved = (location.pathname === '/')
+                      ? 'dark'
+                      : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
                   }
                   document.documentElement.classList.add(resolved);
                 } catch (e) {}

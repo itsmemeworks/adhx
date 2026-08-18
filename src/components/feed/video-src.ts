@@ -1,4 +1,5 @@
 import type { FeedItem } from './types'
+import type { TrendingItem } from '@/lib/trending/query'
 
 /**
  * Per-platform video source resolution for the in-app feed surfaces — the
@@ -35,4 +36,22 @@ export function feedHoverSrc(item: FeedItem): string | null {
     return item.media?.[0]?.url ?? null
   }
   return null
+}
+
+/**
+ * Full-quality inline MP4 stream for a `TrendingItem` (the trending Reel and
+ * the theater's video stage). Twitter/TikTok/Instagram only — YouTube has no
+ * MP4 (see the module note above); resolved from `bookmarkId`+`author`
+ * because trending items don't carry a pre-built media row like `FeedItem`.
+ */
+export function reelVideoSrc(item: TrendingItem): string {
+  const id = encodeURIComponent(item.bookmarkId ?? '')
+  const author = encodeURIComponent(item.author ?? '')
+  if (item.platform === 'tiktok') {
+    return `/api/media/tiktok/video?username=${author}&id=${id}`
+  }
+  if (item.platform === 'instagram') {
+    return `/api/media/instagram/video?id=${id}`
+  }
+  return `/api/media/video?author=${author}&tweetId=${id}&quality=hd`
 }

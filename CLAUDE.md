@@ -654,9 +654,19 @@ useEffect(() => {
 
 This avoids prop drilling and keeps keyboard logic centralized while allowing distributed UI responses.
 
-### Main Feed (`src/app/page.tsx`)
+### Home routing & the Theater (signed-out `/`)
 
-The authed Collection. Client component with:
+`src/app/page.tsx` is a **server component** (`force-dynamic` — reads cookies + SQLite): authed → `src/app/AuthedHome.tsx` (the client Collection, below); signed-out → the **theater** (spec: `docs/specs/theater-first.md`, Phase 1 shipped). The theater is a full-bleed near-black stage (`#08070a`, both themes) + right rail, built from `src/components/theater/`:
+
+- `TheaterShell` (`fixed inset-0 z-[60]` — deliberately overlays the global Header since AppShell can't see auth; revisit in Phase 3) owns current-item state, keyboard (↓↑/jk, space via `theater-toggle-play` custom event, m), the 2s-dwell seen-marking + `POST /api/activity/preview` pulse, and prefetch-next.
+- Feed = `getTheaterFeed()` (`src/lib/theater/feed.ts`): `getTrendingItems()` + public-tag backfill when < 12 items. **Seed limit must match `/api/activity`'s LIMIT (30)** or the first poll surfaces old items as "fresh". Crawlable SEO content is server-rendered by `TheaterStaticList` (sr-only list + CollectionPage/ItemList JSON-LD + hero copy).
+- Seen model: localStorage `adhx-seen-v1` (cap 500) + `adhx-last-visit` (written on pagehide/hide only) → "N new since your last visit" divider in `UpNextList`. Zero per-user server cost.
+- Playback: `usePlaybackSource` → `reelVideoSrc` (video-src SSOT). PR-1 plays twitter/tiktok; instagram/youtube/article render a poster fallback with "Open preview" (real stages = Phase 2). Muted autoplay + "Tap for sound"; playback state driven by media events (`onPlaying`/`onCanPlay`), never by racing `play()` promises against `autoPlay`.
+- Theme: unset `localStorage.theme` on `/` resolves **dark** (`resolveInitialTheme` in `src/lib/theme/context.tsx`, mirrored by the layout FOUC script). Explicit choices (incl. 'system') win everywhere.
+
+### Main Feed (`src/app/AuthedHome.tsx`)
+
+The authed Collection (moved verbatim from the old client `page.tsx`). Client component with:
 
 - **FeedGrid** (`src/components/feed/FeedGrid.tsx`): three view modes toggled in the FilterBar — **grid** (masonry via CSS columns, `FeedCard`), **list** (dense rows, `FeedListRow`), **bento** (mixed-size mosaic, `FeedBentoTile`). Infinite scroll via an `IntersectionObserver` sentinel.
 - **Lightbox / Triage**: `MediaCard`-based full-screen focus mode with keyboard navigation (←→, R/U for read/unread, Esc) and an "Apple-glass" Keep/Delete/Done dock; "Triage" starts a full-collection unread pass.
@@ -733,13 +743,13 @@ sanitizeTag('AI/ML') // → 'ai-ml'
 
 ### Landing Page Optimization
 
-When unauthenticated, the app shows a landing page without making authenticated API calls:
+Signed-out `/` now renders the theater (see "Home routing & the Theater" above); `LandingPage` remains as `AuthedHome`'s client-side fallback when a session turns out to be invalid. Unauthenticated visitors still trigger no authenticated API calls:
 
-- `page.tsx` checks `isAuthenticated` before fetching feed
+- `page.tsx` branches on `getCurrentUserId()` server-side, so the feed fetch never runs signed-out
 - `Header.tsx` only fetches stats/cooldown after auth is confirmed
 - `preferences-context.tsx` checks auth status before fetching preferences
 
-This prevents 401 errors in server logs when visitors view the landing page.
+This prevents 401 errors in server logs when visitors view the public homepage.
 
 ### Shared Types (`src/components/feed/types.ts`)
 

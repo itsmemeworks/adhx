@@ -201,3 +201,88 @@ export function recordSharePulse(opts: {
     // Best-effort: a pulse write must never break send/download.
   }
 }
+
+/**
+ * Record a `preview` (theater stage view) using display fields already stored
+ * for this post. Same shape as `recordSharePulse` — looks up the newest
+ * activity row, then any saved bookmark. Unknown posts are a no-op — callers
+ * must not invent captions/thumbs. `recordActivity`'s 60s de-dupe (same
+ * action+platform+bookmarkId) means a visitor idling on one post in the
+ * theater doesn't flood the pulse with repeated preview events.
+ *
+ * Fire-and-forget: never throws.
+ */
+export function recordPreviewPulse(opts: {
+  platform: string
+  bookmarkId: string
+  userId?: string | null
+}): void {
+  try {
+    const platform = opts.platform
+    const bookmarkId = opts.bookmarkId
+    if (!PULSE_PLATFORMS.has(platform) || !bookmarkId) return
+
+    const existing = db
+      .select({
+        platform: activity.platform,
+        bookmarkId: activity.bookmarkId,
+        author: activity.author,
+        authorName: activity.authorName,
+        authorAvatarUrl: activity.authorAvatarUrl,
+        text: activity.text,
+        thumbnailUrl: activity.thumbnailUrl,
+        contentType: activity.contentType,
+        url: activity.url,
+      })
+      .from(activity)
+      .where(and(eq(activity.platform, platform), eq(activity.bookmarkId, bookmarkId)))
+      .orderBy(desc(activity.createdAt))
+      .limit(1)
+      .get()
+
+    if (existing) {
+      recordActivity({
+        action: 'preview',
+        platform: existing.platform,
+        bookmarkId: existing.bookmarkId,
+        author: existing.author,
+        authorName: existing.authorName,
+        authorAvatarUrl: existing.authorAvatarUrl,
+        text: existing.text,
+        thumbnailUrl: existing.thumbnailUrl,
+        contentType: existing.contentType,
+        url: existing.url,
+        userId: opts.userId,
+      })
+      return
+    }
+
+    const saved = db
+      .select({
+        author: bookmarks.author,
+        authorName: bookmarks.authorName,
+        text: bookmarks.text,
+        authorProfileImageUrl: bookmarks.authorProfileImageUrl,
+      })
+      .from(bookmarks)
+      .where(and(eq(bookmarks.platform, platform), eq(bookmarks.id, bookmarkId)))
+      .limit(1)
+      .get()
+
+    if (!saved?.author) return
+
+    recordActivity({
+      action: 'preview',
+      platform,
+      bookmarkId,
+      author: saved.author,
+      authorName: saved.authorName,
+      authorAvatarUrl: saved.authorProfileImageUrl,
+      text: saved.text,
+      url: previewPath(platform, saved.author, bookmarkId),
+      userId: opts.userId,
+    })
+  } catch {
+    // Best-effort: a pulse write must never break the theater's playback.
+  }
+}

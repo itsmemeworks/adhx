@@ -31,7 +31,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useState, useEffect } from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { Header } from '@/components/Header'
-import FeedPage from '@/app/page'
+import FeedPage from '@/app/AuthedHome'
 
 // ─────────────────────────────────────────────────────────────────────────
 // Fake router: a single shared "URL" that both Header and the feed page

@@ -179,6 +179,15 @@ export const metrics = {
       status: statusCode,
     }),
 
+  // Theater (theater-first home/shared/collection surfaces)
+  theaterOpened: (surface: 'home' | 'shared' | 'collection') =>
+    metricCount('theater.opened', 1, { surface }),
+  theaterAdvanced: (direction: 'next' | 'prev', input: 'key' | 'swipe' | 'click') =>
+    metricCount('theater.advanced', 1, { direction, input }),
+  theaterSoundEnabled: () => metricCount('theater.sound_enabled'),
+  theaterCaughtUpReached: () => metricCount('theater.caught_up_reached'),
+  theaterPreviewPulse: (platform: string) => metricCount('theater.preview_pulse', 1, { platform }),
+
   // Daily active users (hashed for privacy - no raw PII sent to third parties)
   trackUser: (userId: string) => {
     const hash = userId
