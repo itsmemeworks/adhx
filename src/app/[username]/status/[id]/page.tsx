@@ -1,11 +1,10 @@
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { Metadata } from 'next'
-import { getSession } from '@/lib/auth/session'
+import { getCurrentUserId } from '@/lib/auth/session'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 import { isLikelyBot } from '@/lib/activity/bot'
 import { QuickAddLanding } from '@/components/QuickAddLanding'
-import { TweetPreviewLanding } from '@/components/TweetPreviewLanding'
 import { fetchTweetData, extractUrlsFromFacets, type FxTwitterResponse } from '@/lib/media/fxembed'
 import { fetchOgMetadata } from '@/lib/utils/og-fetch'
 import { truncate } from '@/lib/utils/format'
@@ -13,6 +12,10 @@ import { getOgImages } from '@/lib/utils/og-image'
 import { buildTweetTitle, buildTweetSeoDescription } from '@/lib/utils/tweet-metadata'
 import { buildSocialMediaPostingLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
 import { RelatedSaves } from '@/components/RelatedSaves'
+import { SharedPostStatic } from '@/components/theater/SharedPostStatic'
+import { TheaterShell } from '@/components/theater/TheaterShell'
+import { buildSharedSeed, tweetToTheaterItem } from '@/lib/theater/shared-seed'
+import { metrics } from '@/lib/sentry'
 
 type FxTweet = NonNullable<FxTwitterResponse['tweet']>
 
@@ -92,7 +95,7 @@ export default async function QuickAddPage({ params }: Props) {
   const tweet = await getTweetData(username, id)
 
   // Check authentication
-  const session = await getSession()
+  const userId = await getCurrentUserId()
 
   // Enrich tweet with OG metadata from facet URLs when external is null, so a
   // tweet with a bare t.co link still renders a rich link preview. Runs the same
@@ -131,6 +134,11 @@ export default async function QuickAddPage({ params }: Props) {
           ? 'photo'
           : 'text'
 
+    // Real media (or the article cover) only — no avatar fallback, so text
+    // tweets stay "text" rather than being mistaken for photos.
+    const previewThumbnailUrl =
+      articleCover || tweet.media?.all?.[0]?.thumbnail_url || tweet.media?.all?.[0]?.url || null
+
     // Record a human preview for the public pulse (skip OG-unfurl crawlers).
     const ua = (await headers()).get('user-agent')
     if (!isLikelyBot(ua)) {
@@ -142,20 +150,27 @@ export default async function QuickAddPage({ params }: Props) {
         authorName: tweet.author?.name || null,
         authorAvatarUrl: tweet.author?.avatar_url || null,
         text: tweet.article?.title || tweet.text || null,
-        // Real media (or the article cover) only — no avatar fallback, so text
-        // tweets stay "text" rather than being mistaken for photos.
-        thumbnailUrl:
-          articleCover ||
-          tweet.media?.all?.[0]?.thumbnail_url ||
-          tweet.media?.all?.[0]?.url ||
-          null,
+        thumbnailUrl: previewThumbnailUrl,
         contentType: previewType,
         url: previewPath('twitter', previewAuthor, id),
       })
+      metrics.theaterOpened('shared')
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     const jsonLd = buildJsonLd(tweet, baseUrl, username, id)
+
+    const sharedItem = tweetToTheaterItem({
+      id,
+      author: previewAuthor,
+      authorName: tweet.author?.name || null,
+      authorAvatarUrl: tweet.author?.avatar_url || null,
+      text: tweet.article?.title || tweet.text || null,
+      thumbnailUrl: previewThumbnailUrl,
+      contentType: previewType,
+      createdAt: tweet.created_at,
+    })
+    const { seed } = await buildSharedSeed(sharedItem)
 
     return (
       <>
@@ -163,11 +178,20 @@ export default async function QuickAddPage({ params }: Props) {
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: jsonLdScriptContent(jsonLd) }}
         />
-        <TweetPreviewLanding
-          username={username}
+        <SharedPostStatic
+          kind="tweet"
+          username={previewAuthor}
           tweetId={id}
-          tweet={JSON.parse(JSON.stringify(tweet))}
-          isAuthenticated={!!session}
+          authorName={tweet.author?.name}
+          authorAvatarUrl={tweet.author?.avatar_url}
+          createdAt={tweet.created_at}
+          articleTitle={tweet.article?.title}
+          text={tweet.text}
+          replies={tweet.replies}
+          retweets={tweet.retweets}
+          likes={tweet.likes}
+          views={tweet.views}
+          sourceUrl={tweet.url || `https://x.com/${previewAuthor}/status/${id}`}
           below={
             <RelatedSaves
               platform="twitter"
@@ -177,6 +201,7 @@ export default async function QuickAddPage({ params }: Props) {
             />
           }
         />
+        <TheaterShell seed={seed} mode="shared" sharedItem={sharedItem} authed={!!userId} />
       </>
     )
   }

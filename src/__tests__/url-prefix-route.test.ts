@@ -11,6 +11,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // Mock dependencies before importing the module
 vi.mock('@/lib/auth/session', () => ({
   getSession: vi.fn(() => Promise.resolve(null)),
+  getCurrentUserId: vi.fn(() => Promise.resolve(null)),
 }))
 
 vi.mock('@/lib/media/fxembed', async (importOriginal) => {
@@ -34,6 +35,7 @@ vi.mock('next/headers', () => ({
 vi.mock('@/lib/sentry', () => ({
   metrics: {
     shareTweetPreviewViewed: vi.fn(),
+    theaterOpened: vi.fn(),
   },
 }))
 
@@ -46,8 +48,14 @@ vi.mock('@/components/QuickAddLanding', () => ({
   QuickAddLanding: () => null,
 }))
 
-vi.mock('@/components/TweetPreviewLanding', () => ({
-  TweetPreviewLanding: () => null,
+// The page now renders the theater instead of TweetPreviewLanding (Phase 3,
+// docs/specs/theater-first.md §3) — mock its replacements instead.
+vi.mock('@/components/theater/SharedPostStatic', () => ({
+  SharedPostStatic: () => null,
+}))
+
+vi.mock('@/components/theater/TheaterShell', () => ({
+  TheaterShell: () => null,
 }))
 
 describe('URL Prefix Route: /[username]/status/[id]', () => {
@@ -267,12 +275,17 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
       expect(result).not.toBeNull()
     })
 
-    // Regression: RSC serialization crash prevention
-    // Sentry SDK wraps fetch responses with Proxy. When Turbopack serializes
-    // Proxy-wrapped objects across the RSC boundary, it recurses infinitely.
-    // Fix: deep-clone tweet with JSON.parse(JSON.stringify()) before passing
-    // to the client component.
-    it('deep-clones tweet before passing to TweetPreviewLanding (prevents RSC crash)', async () => {
+    // Regression coverage carried over from the pre-theater version of this
+    // page: that version passed the raw FxTwitter tweet object straight into
+    // a client component (`TweetPreviewLanding`), which crashed on RSC
+    // serialization because Sentry wraps fetch responses in a Proxy that
+    // recurses infinitely when Turbopack tries to serialize it — fixed there
+    // with a JSON.parse(JSON.stringify()) deep clone. The theater (Phase 3,
+    // docs/specs/theater-first.md §3) sidesteps the whole class of bug: the
+    // page never forwards the raw tweet object to a client component at all —
+    // `tweetToTheaterItem()` extracts plain primitive fields into a brand new
+    // `TheaterItem`, which is what actually crosses the boundary.
+    it('passes a plain derived TheaterItem to TheaterShell, never the raw tweet reference', async () => {
       const { fetchTweetData } = await import('@/lib/media/fxembed')
 
       const originalTweet = {
@@ -304,28 +317,32 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
         params: Promise.resolve({ username: 'testuser', id: '999888777' }),
       })
 
-      // Walk the React element tree to find TweetPreviewLanding's tweet prop
+      // Walk the React element tree to find TheaterShell's sharedItem prop
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const fragment = result as React.ReactElement<any>
       const children = React.Children.toArray(fragment.props.children)
-      const previewElement = children.find(
+      const shellElement = children.find(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (child): child is React.ReactElement<any> =>
-          React.isValidElement(child) &&
-          (child.type as { name?: string })?.name === 'TweetPreviewLanding',
+          React.isValidElement(child) && (child.type as { name?: string })?.name === 'TheaterShell',
       )
 
-      expect(previewElement).toBeTruthy()
-      const receivedTweet = previewElement!.props.tweet
+      expect(shellElement).toBeTruthy()
+      const sharedItem = shellElement!.props.sharedItem
 
-      // Must NOT be the same object reference (deep clone required)
-      expect(receivedTweet).not.toBe(originalTweet)
-
-      // But must have the same content
-      expect(receivedTweet).toEqual(originalTweet)
+      // Never the raw tweet object (nor its nested author object) — a plain
+      // derived shape built field-by-field in tweetToTheaterItem().
+      expect(sharedItem).not.toBe(originalTweet)
+      expect(sharedItem.text).toBe(originalTweet.text)
+      expect(sharedItem.author).toBe(originalTweet.author.screen_name)
+      expect(sharedItem.authorName).toBe(originalTweet.author.name)
+      expect(sharedItem.authorAvatarUrl).toBe(originalTweet.author.avatar_url)
+      expect(sharedItem.createdAt).toBe(originalTweet.created_at)
+      expect(sharedItem.platform).toBe('twitter')
+      expect(sharedItem.bookmarkId).toBe('999888777')
     })
 
-    it('deep-clone survives enrichment with OG metadata from facets', async () => {
+    it('OG-facet enrichment does not break the shared theater item', async () => {
       const { fetchTweetData } = await import('@/lib/media/fxembed')
       const { fetchOgMetadata } = await import('@/lib/utils/og-fetch')
 
@@ -376,26 +393,24 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
         params: Promise.resolve({ username: 'testuser', id: '111222333' }),
       })
 
-      // Walk the React element tree to find TweetPreviewLanding's tweet prop
+      // Walk the React element tree to find TheaterShell's sharedItem prop.
+      // The facet enrichment mutates `tweet.external` in place before this
+      // point (see getTweetData's caller) — this just confirms that mutation
+      // never breaks the (unrelated) mapping into a TheaterItem downstream.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const fragment = result as React.ReactElement<any>
       const children = React.Children.toArray(fragment.props.children)
-      const previewElement = children.find(
+      const shellElement = children.find(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (child): child is React.ReactElement<any> =>
-          React.isValidElement(child) &&
-          (child.type as { name?: string })?.name === 'TweetPreviewLanding',
+          React.isValidElement(child) && (child.type as { name?: string })?.name === 'TheaterShell',
       )
 
-      expect(previewElement).toBeTruthy()
-      const receivedTweet = previewElement!.props.tweet
-
-      // Must NOT be the same reference (deep clone)
-      expect(receivedTweet).not.toBe(tweetWithFacets)
-
-      // Should have the enriched external property from OG metadata
-      expect(receivedTweet.external).toBeDefined()
-      expect(receivedTweet.external.title).toBe('Example Article')
+      expect(shellElement).toBeTruthy()
+      const sharedItem = shellElement!.props.sharedItem
+      expect(sharedItem).not.toBe(tweetWithFacets)
+      expect(sharedItem.text).toBe(tweetWithFacets.text)
+      expect(sharedItem.bookmarkId).toBe('111222333')
     })
   })
 })

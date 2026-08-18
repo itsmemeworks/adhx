@@ -19,12 +19,21 @@ import type { TheaterFeedSeed, TheaterItem, TheaterMode } from './types'
 export interface TheaterShellProps {
   seed: TheaterFeedSeed
   mode?: TheaterMode
+  /** Shared mode (PR 3): the post the visitor landed on — always the initial current item. */
+  sharedItem?: TheaterItem
+  /** Whether the visiting user is signed in (shared mode: swaps Connect for a direct Save). */
+  authed?: boolean
 }
 
 /** How long a post must stay staged before it counts as "seen" (spec §4/§5). */
 const SEEN_DWELL_MS = 2_000
 
-export function TheaterShell({ seed, mode = 'home' }: TheaterShellProps) {
+export function TheaterShell({
+  seed,
+  mode = 'home',
+  sharedItem,
+  authed = false,
+}: TheaterShellProps) {
   const feed = useTheaterFeed(seed)
   const seenSet = useSeenSet()
   const { items } = feed
@@ -49,6 +58,8 @@ export function TheaterShell({ seed, mode = 'home' }: TheaterShellProps) {
   // Land on the first item immediately (no flash of an empty stage); a
   // moment later, once localStorage seen-state has hydrated, jump to the
   // best unseen lead — but only if the user hasn't already moved on their own.
+  // In shared mode the seed's first item IS the shared post (buildSharedSeed
+  // puts it first), so this already lands on it with no extra branching.
   useEffect(() => {
     if (currentKey === null && items.length > 0) {
       setCurrentKey(theaterItemKey(items[0]))
@@ -56,6 +67,9 @@ export function TheaterShell({ seed, mode = 'home' }: TheaterShellProps) {
   }, [items, currentKey])
 
   useEffect(() => {
+    // Shared mode never re-picks a "best" lead — the shared post is ALWAYS
+    // the initial current item, regardless of trendCount or seen-state.
+    if (sharedItem) return
     if (!seenSet.ready || leadAppliedRef.current || hasNavigatedRef.current) return
     leadAppliedRef.current = true
     if (items.length === 0) return
@@ -236,6 +250,8 @@ export function TheaterShell({ seed, mode = 'home' }: TheaterShellProps) {
           newCount={newCount}
           savedToday={feed.savedToday}
           onSelect={onSelect}
+          sharedItem={sharedItem}
+          authed={authed}
         />
       </div>
     </div>

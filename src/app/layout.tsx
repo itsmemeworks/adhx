@@ -183,11 +183,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   if (theme === 'system') {
                     resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                   } else if (!theme) {
-                    // No stored preference: theater route ('/') defaults to dark
-                    // (theater-first.md §7); everywhere else follows the device.
-                    // Mirrors resolveInitialTheme() in src/lib/theme/context.tsx —
-                    // keep the two in lockstep.
-                    resolved = (location.pathname === '/')
+                    // No stored preference: theater-dark routes default to dark
+                    // (theater-first.md §7) — the home theater ('/') and the dark
+                    // ranked-list Browse view ('/trending', '/trending/<filter>');
+                    // everywhere else follows the device. Mirrors
+                    // isTheaterDarkRoute()/resolveInitialTheme() in
+                    // src/lib/theme/context.tsx — keep the two in lockstep.
+                    var isTheaterDark = location.pathname === '/'
+                      || location.pathname === '/trending'
+                      || location.pathname.indexOf('/trending/') === 0;
+                    resolved = isTheaterDark
                       ? 'dark'
                       : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
                   }

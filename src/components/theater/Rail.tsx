@@ -1,13 +1,24 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Check, Copy, ExternalLink, Flame, ChevronRight, LogIn, Loader2, Send } from 'lucide-react'
+import {
+  Bookmark,
+  Check,
+  Copy,
+  ExternalLink,
+  Flame,
+  ChevronRight,
+  LogIn,
+  Loader2,
+  Send,
+} from 'lucide-react'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
 import { MatterLogo, LiveDot, PlatformChip, ConnectWithX } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
-import { previewPath } from '@/lib/activity/preview-path'
+import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { UpNextList } from './UpNextList'
 import { useSendFile } from './useSendFile'
+import { theaterItemKey } from './types'
 import type { TheaterItem, TheaterMode } from './types'
 
 /**
@@ -36,6 +47,10 @@ export interface RailProps {
   newCount: number
   savedToday: number
   onSelect: (key: string) => void
+  /** Shared mode (PR 3): the post the visitor landed on — drives the "Shared post" chip. */
+  sharedItem?: TheaterItem
+  /** Whether the visiting user is signed in (shared mode: swaps Connect for a direct Save). */
+  authed?: boolean
 }
 
 function BrandRow({ mode }: { mode: TheaterMode }) {
@@ -66,7 +81,13 @@ function BrandRow({ mode }: { mode: TheaterMode }) {
   )
 }
 
-function NowPlaying({ current }: { current: TheaterItem | null }) {
+function NowPlaying({
+  current,
+  sharedItem,
+}: {
+  current: TheaterItem | null
+  sharedItem?: TheaterItem
+}) {
   if (!current) {
     return (
       <div className="flex-none border-b border-hairline px-5 py-5">
@@ -80,11 +101,17 @@ function NowPlaying({ current }: { current: TheaterItem | null }) {
 
   const trendCount = current.trendCount ?? current.saveCount ?? 0
   const handle = current.author ? current.author.replace(/^@+/, '') : ''
+  const isSharedCurrent = !!sharedItem && theaterItemKey(current) === theaterItemKey(sharedItem)
 
   return (
     <div className="flex-none border-b border-hairline px-5 py-4">
       <div className="flex items-center gap-2">
         <PlatformChip platform={current.platform} />
+        {isSharedCurrent && (
+          <span className="inline-flex items-center rounded-full bg-clay/15 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-clay">
+            Shared post
+          </span>
+        )}
         <span className="font-mono text-[12px] text-ink-3" suppressHydrationWarning>
           {formatCompactRelativeTime(current.createdAt)}
         </span>
@@ -117,7 +144,91 @@ function NowPlaying({ current }: { current: TheaterItem | null }) {
   )
 }
 
-function Actions({ mode, current }: { mode: TheaterMode; current: TheaterItem | null }) {
+const BUTTON_BASE =
+  'inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-hairline bg-inset px-3 text-[12.5px] font-semibold text-ink transition-colors hover:bg-surface disabled:opacity-60'
+// The emphasized (clay-grad) treatment: Save normally wears this on the home
+// rail, but Send takes it over as the first, primary action whenever the
+// current item has a sendable file — Save then drops to the outline style.
+const PRIMARY_BASE =
+  'inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full bg-clay-grad px-3 text-[12.5px] font-semibold text-white shadow-glow transition-opacity hover:opacity-90 disabled:opacity-60'
+
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+
+/**
+ * Shared-mode, signed-in Save: POSTs the CURRENT item's canonical source URL
+ * (never the on-ADHX preview path stored in `current.url`'s pulse-item
+ * convention) to the same platform-agnostic endpoint the preview pages' own
+ * "Save to collection" CTAs use. Computed via `sourceUrl()` rather than
+ * trusting `current.url` — that field is the pulse's on-ADHX link target for
+ * live items, not necessarily the external URL `/api/bookmarks/add` expects.
+ */
+function SavePostButton({ current, primary }: { current: TheaterItem; primary: boolean }) {
+  const [status, setStatus] = useState<SaveStatus>('idle')
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const key = theaterItemKey(current)
+
+  useEffect(() => {
+    setStatus('idle')
+  }, [key])
+
+  useEffect(
+    () => () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    },
+    [],
+  )
+
+  const handleSave = async () => {
+    if (status === 'saving' || status === 'saved' || !current.bookmarkId) return
+    setStatus('saving')
+    try {
+      const url = sourceUrl(current.platform, current.author, current.bookmarkId)
+      if (!url) throw new Error('No source URL for this post')
+      const res = await fetch('/api/bookmarks/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok || data?.error) throw new Error(data?.error || 'Save failed')
+      setStatus('saved')
+    } catch {
+      // Quiet failure — never crash the rail over a save hiccup. Reset after
+      // a beat so the button is tappable again.
+      setStatus('error')
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      timeoutRef.current = setTimeout(() => setStatus('idle'), 2000)
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => void handleSave()}
+      disabled={status === 'saving' || status === 'saved'}
+      className={primary ? PRIMARY_BASE : BUTTON_BASE}
+    >
+      {status === 'saving' ? (
+        <Loader2 size={14} className="animate-spin" />
+      ) : status === 'saved' ? (
+        <Check size={14} />
+      ) : (
+        <Bookmark size={14} />
+      )}
+      {status === 'saved' ? 'Saved' : status === 'error' ? 'Try again' : 'Save'}
+    </button>
+  )
+}
+
+function Actions({
+  mode,
+  current,
+  authed = false,
+}: {
+  mode: TheaterMode
+  current: TheaterItem | null
+  authed?: boolean
+}) {
   const [copied, setCopied] = useState(false)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const { supported: sendSupported, sending, send } = useSendFile(current)
@@ -132,6 +243,7 @@ function Actions({ mode, current }: { mode: TheaterMode; current: TheaterItem | 
   if (!current) return null
 
   const platformLabel = PLATFORM_LABEL[current.platform] ?? current.platform
+  const showAuthedSave = mode === 'shared' && authed
 
   const handleCopy = async () => {
     const path = previewPath(current.platform, current.author, current.bookmarkId || '')
@@ -147,13 +259,8 @@ function Actions({ mode, current }: { mode: TheaterMode; current: TheaterItem | 
     }
   }
 
-  const buttonBase =
-    'inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-hairline bg-inset px-3 text-[12.5px] font-semibold text-ink transition-colors hover:bg-surface'
-  // The emphasized (clay-grad) treatment: Save normally wears this on the home
-  // rail, but Send takes it over as the first, primary action whenever the
-  // current item has a sendable file — Save then drops to the outline style.
-  const primaryBase =
-    'inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full bg-clay-grad px-3 text-[12.5px] font-semibold text-white shadow-glow transition-opacity hover:opacity-90'
+  const buttonBase = BUTTON_BASE
+  const primaryBase = PRIMARY_BASE
 
   return (
     <div className="flex-none border-b border-hairline px-5 py-3">
@@ -175,7 +282,9 @@ function Actions({ mode, current }: { mode: TheaterMode; current: TheaterItem | 
           {copied ? 'Copied' : 'Copy link'}
         </button>
 
-        {mode === 'home' && !sendSupported ? (
+        {showAuthedSave ? (
+          <SavePostButton current={current} primary={!sendSupported} />
+        ) : mode === 'home' && !sendSupported ? (
           <a href="/api/auth/twitter" className={primaryBase}>
             <LogIn size={14} />
             Save
@@ -213,16 +322,18 @@ export function Rail({
   newCount,
   savedToday,
   onSelect,
+  sharedItem,
+  authed = false,
 }: RailProps) {
   return (
     <div className="flex h-full w-full flex-col bg-surface text-ink lg:h-full lg:w-[360px] lg:border-l lg:border-hairline xl:w-[400px]">
       <BrandRow mode={mode} />
-      <NowPlaying current={current} />
-      <Actions mode={mode} current={current} />
+      <NowPlaying current={current} sharedItem={sharedItem} />
+      <Actions mode={mode} current={current} authed={authed} />
 
       <div className="flex min-h-0 flex-1 flex-col">
         <h2 className="flex-none px-5 pb-1 pt-3 text-[11px] font-bold uppercase tracking-wide text-ink-3">
-          Up next
+          {mode === 'shared' ? 'More being sent right now' : 'Up next'}
         </h2>
         <UpNextList
           items={items}

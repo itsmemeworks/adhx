@@ -18,7 +18,7 @@ import {
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Loader2, CheckCircle2 } from 'lucide-react'
-import { TriageMode } from '@/components/feed/TriageMode'
+import { CollectionTheater } from '@/components/theater/CollectionTheater'
 import { useTheme } from '@/lib/theme/context'
 import { ConnectWithX } from '@/components/matter'
 import { parseSyncErrorEvent, type SyncErrorCode } from '@/lib/sync/messages'
@@ -613,45 +613,6 @@ function FeedPageContent(): React.ReactElement {
     setStats((prev) => ({ ...prev, unread: prev.unread + 1 }))
   }, [])
 
-  const handleAddTag = useCallback(
-    async (itemId: string, tag: string) => {
-      const response = await fetch(`/api/bookmarks/${itemId}/tags`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tag }),
-      })
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Failed to add tag')
-      }
-      setItems((prev) =>
-        prev.map((i) =>
-          i.id === itemId && !i.tags.includes(tag) ? { ...i, tags: [...i.tags, tag] } : i,
-        ),
-      )
-      fetchTags()
-    },
-    [fetchTags],
-  )
-
-  const handleRemoveTag = useCallback(
-    async (itemId: string, tag: string) => {
-      const response = await fetch(`/api/bookmarks/${itemId}/tags`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tag }),
-      })
-      if (!response.ok) {
-        throw new Error('Failed to remove tag')
-      }
-      setItems((prev) =>
-        prev.map((i) => (i.id === itemId ? { ...i, tags: i.tags.filter((t) => t !== tag) } : i)),
-      )
-      fetchTags()
-    },
-    [fetchTags],
-  )
-
   // Global keyboard shortcuts (when lightbox is NOT open)
   useEffect(() => {
     // Skip if lightbox is open (those shortcuts are handled above) or shortcuts modal is open
@@ -1015,8 +976,8 @@ function FeedPageContent(): React.ReactElement {
         </ErrorBoundary>
       </div>
 
-      <ErrorBoundary componentName="TriageMode">
-        <TriageMode
+      <ErrorBoundary componentName="CollectionTheater">
+        <CollectionTheater
           isOpen={triageOpen}
           onClose={() => {
             setTriageOpen(false)
@@ -1025,11 +986,8 @@ function FeedPageContent(): React.ReactElement {
           }}
           initialQueue={triageQueue}
           startIndex={triageStart}
-          availableTags={availableTags}
           onItemResolved={handleTriageResolved}
           onItemRestored={handleTriageRestored}
-          onTagAdd={(id, tag) => handleAddTag(id, tag)}
-          onTagRemove={(id, tag) => handleRemoveTag(id, tag)}
         />
       </ErrorBoundary>
 

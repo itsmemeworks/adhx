@@ -664,6 +664,9 @@ This avoids prop drilling and keeps keyboard logic centralized while allowing di
 - Playback: `usePlaybackSource` → `reelVideoSrc` (video-src SSOT). Twitter/TikTok play via `StageVideo`; **Instagram** via `StageInstagram` (Range-probe the mirror before attaching `<video src>` — cold cache; IG-embed fallback); **YouTube** via `StageYouTube` (nocookie iframe, concrete-height box); **articles** via `StageArticle` (body = `article.content` from `/api/share/tweet/{author}/{id}`, rendered by the dependency-free parser in `src/lib/theater/article-markdown.ts`). Muted autoplay + "Tap for sound"; playback state driven by media events (`onPlaying`/`onCanPlay`), never by racing `play()` promises against `autoPlay`.
 - Mobile (<lg) is the reel: full-viewport stage, swipe up/down (`swipeDirection` in `TheaterMobileChrome.tsx`), top/bottom scrims, 70dvh Up-next bottom sheet. `/trending/play` 307s into the theater.
 - Send-the-file: `useSendFile` (2s-delayed MP4 blob prefetch so `navigator.share` opens in-tap on iOS; `files` + `text: "via <url>"`, never a `url` key with `files`; desktop falls back to download). **It's mounted twice** (desktop Rail + mobile chrome, each CSS-hidden at the other breakpoint) — the module-level in-flight dedupe in `useSendFile.ts` is what stops every MP4 downloading twice; keep it.
+- **Preview pages ARE the theater** (Phase 3): the five preview page routes keep all their server-side SEO (generateMetadata, JSON-LD, `recordActivity('preview')`, bot filter) and render `SharedPostStatic` (the semantic `<article>` + engagement stats, now `sr-only`, with RelatedSaves) + `<TheaterShell mode="shared" sharedItem authed>`. `buildSharedSeed()` (`src/lib/theater/shared-seed.ts`) pins the shared post as the lead item. Shared-mode rail: "Shared post" chip, "More being sent right now" header, authed Save POSTs `/api/bookmarks/add` with a `sourceUrl()`-reconstructed canonical URL (NOT `item.url`, which for pulse items is the on-ADHX preview path). The `*PreviewLanding` components are no longer mounted (still in tree).
+- **/trending is the dark ranked list** (`src/components/trending/TrendingRankedList.tsx`): rank by `trendCount` desc, recency tiebreak — deliberately different from the theater rail's recency order. Hubs keep their sr-only list + JSON-LD untouched; `DiscoverFeed` is unmounted from the hubs but still in tree. Never import from `TrendingStaticList.tsx` into a client component — it transitively pulls better-sqlite3 into the client bundle.
+- Theater-dark theme default (unset `localStorage.theme`) now covers `/`, `/trending`, and `/trending/*` — `resolveInitialTheme` + the layout FOUC script stay in lockstep.
 - Theme: unset `localStorage.theme` on `/` resolves **dark** (`resolveInitialTheme` in `src/lib/theme/context.tsx`, mirrored by the layout FOUC script). Explicit choices (incl. 'system') win everywhere.
 
 ### Main Feed (`src/app/AuthedHome.tsx`)
@@ -671,7 +674,7 @@ This avoids prop drilling and keeps keyboard logic centralized while allowing di
 The authed Collection (moved verbatim from the old client `page.tsx`). Client component with:
 
 - **FeedGrid** (`src/components/feed/FeedGrid.tsx`): three view modes toggled in the FilterBar — **grid** (masonry via CSS columns, `FeedCard`), **list** (dense rows, `FeedListRow`), **bento** (mixed-size mosaic, `FeedBentoTile`). Infinite scroll via an `IntersectionObserver` sentinel.
-- **Lightbox / Triage**: `MediaCard`-based full-screen focus mode with keyboard navigation (←→, R/U for read/unread, Esc) and an "Apple-glass" Keep/Delete/Done dock; "Triage" starts a full-collection unread pass.
+- **Focus / Triage**: `CollectionTheater` (`src/components/theater/CollectionTheater.tsx`) — the theater as the authed focus mode: dark stage (twitter video via the HLS-aware `VideoPlayer`, everything else via the theater Stage variants) + `CollectionRail` with **Collection ↔ Live** tabs. Keyboard map preserved from the old TriageMode: `→` Done (mark read + advance), `←` Later, `↓`/Backspace/Delete = Delete (5s undo window), `U` undo, Esc close. Marking Done posts the existing `/api/bookmarks/[id]/read` (now with `?platform=`). The **Live** tab shows the community pulse in-place (Save → `/api/bookmarks/add`, then a `tweet-added` event refreshes the feed). The old `TriageMode.tsx` remains in the tree but is no longer mounted.
 - **FilterBar**: category filters + **platform filter** (All / X / Instagram / TikTok) + view toggles + tags + search.
 - **Nav**: the top bar carries **Collection / Trending** tabs (replacing the old saved/unread counts) so users can reach `/trending` from anywhere; mobile collapses search to an icon.
 - **FeedCard**: tweet-style per-type cards with a `PlatformChip` + `TimePill`; non-Twitter items show their platform glyph.
@@ -684,20 +687,11 @@ Quote tweets display embedded content showing the quoted tweet. Two data sources
 - `quotedTweet`: Full `FeedItem` when the quoted tweet exists in user's collection
 - `quoteContext`: Fallback JSON blob with basic info (author, text, thumbnail) when not in collection
 
-**Lightbox rendering:**
-
-- `TextLightboxContent`: Shows `TextQuoteContent` for text-only quote tweets
-- `MediaLightboxContent`: Shows `QuoteCard` (compact) alongside media content
-- `QuoteCard` component handles both data sources with `compact` prop for sizing
-
-**Keyboard navigation:**
-
-- `Q` key: Navigate to quoted tweet (if in collection, otherwise opens on X)
-- `P` key: Navigate to parent tweet (tweets that quote the current one)
+**Rendering:** the collection theater's stage shows `StageText` plus a compact `StageQuoteCard` (`src/components/theater/CollectionTheater.tsx`); the gallery cards render quote context inline. Historical note: an older `Lightbox.tsx` with `Q`/`P` quoted/parent keyboard navigation and `R`/`U` read keys no longer exists — the focus surface was `TriageMode` (card stack) and is now `CollectionTheater`; neither ever carried those bindings, so don't "restore" them from stale docs.
 
 Files:
 
-- `src/components/feed/Lightbox.tsx` - QuoteCard, TextQuoteContent components
+- `src/components/theater/CollectionTheater.tsx` - StageQuoteCard, quote rendering in the focus mode
 - `src/components/feed/types.ts` - FeedItem.quotedTweet, FeedItem.quoteContext types
 
 ### Tag Sharing with Friendly URLs
