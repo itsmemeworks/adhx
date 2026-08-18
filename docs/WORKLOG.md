@@ -4,6 +4,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-18 — Theater-first frontpage: direction selected + implementation spec
+
+- **Why**: Early-user feedback — the live community stream is the most compelling feature; mosaics overwhelm; seen/unseen must be explicit; x.com's video-theater full-bleed pattern is the look. Three design rounds (mosaic → Digg list → theater) on a Claude Design canvas with real /api/trending data.
+- **What**: `docs/specs/theater-first.md` — adhx.com becomes a full-bleed theater (stage + rail with the live Up-next feed), dark default, localStorage seen-set with a caught-up divider, per-platform stage variants (video/article/text/YouTube-iframe), preview pages = same theater seeded (SEO markup unchanged), mobile = reel + bottom sheet, signed-in Collection runs in the same theater (Phase 3). Three-PR plan with acceptance criteria.
+- **State**: spec only — nothing built. Design canvas link + decision record inside the spec.
+- **Follow-ups**: PR 1 (shell + signed-out home), then PR 2 (full stage matrix + mobile), then PR 3 (preview/browse/signed-in).
+
 ## 2026-08-14 — Send bar: portal to body so it actually sticks to the viewport
 
 - **Why**: Staging iPhone showed "Send this video" mid-page over "Preview another link". `position:fixed` was inside the fadeInUp column (`transform` + `forwards`), so it behaved like `absolute` at the bottom of that column.
