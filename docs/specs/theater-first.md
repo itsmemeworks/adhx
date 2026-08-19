@@ -10,13 +10,13 @@ adhx.com becomes a **theater**: you land with the hottest community post already
 
 One mental model runs everything:
 
-| Surface | Same theater, different rail |
-|---|---|
-| `/` signed-out | Rail = brand + Connect + live Up-next feed |
+| Surface                                                                                     | Same theater, different rail                                                                                                                                      |
+| ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/` signed-out                                                                              | Rail = brand + Connect + live Up-next feed                                                                                                                        |
 | Preview pages (`/{user}/status/{id}`, `/reels/{id}`, `/@{user}/video/{id}`, `/shorts/{id}`) | Same theater seeded at the shared post; "Shared post" chip + canonical URL + copy; rail feed labeled "More being sent right now"; SEO markup unchanged underneath |
-| Mobile | Full-bleed reel (evolution of `/trending/play`): brand on the top scrim, Send primary, Up-next bottom sheet, swipe up/down |
-| Signed-in Collection | Same theater; rail = your unread queue, actions = Keep / Done / Delete / Send, tabs Collection ↔ Live |
-| Browse (escape hatch) | The Digg-style ranked list (round-2 design), dark, one click from the rail footer |
+| Mobile                                                                                      | Full-bleed reel (evolution of `/trending/play`): brand on the top scrim, Send primary, Up-next bottom sheet, swipe up/down                                        |
+| Signed-in Collection                                                                        | Same theater; rail = your unread queue, actions = Keep / Done / Delete / Send, tabs Collection ↔ Live                                                             |
+| Browse (escape hatch)                                                                       | The Digg-style ranked list (round-2 design), dark, one click from the rail footer                                                                                 |
 
 ## 2. Non-negotiable constraints (existing invariants)
 
@@ -76,13 +76,13 @@ Route wiring:
 
 ## 6. Playback (per platform)
 
-| Platform | Source | Notes |
-|---|---|---|
-| twitter | `feedVideoSrc()` → `/api/media/video?quality=hd` | instant |
-| tiktok | `feedVideoSrc()` → `/api/media/tiktok/video` | instant |
-| instagram | `reelVideoSrc()` mirror | **never attach `<video src>` until `probeInstagramVideo` Range-probe returns 200/206**; warm on rail-row visibility/hover (same trick as preview pages); show poster + spinner ≤ 3s, then poster + "starting…" |
-| youtube | official `youtube-nocookie` iframe | no MP4 exists; appears instantly, plays on its own tap; CSP already allows it |
-| photo / text / quote / article | Stage variants (no media pipeline) | article body via `articleBlocksToMarkdown` |
+| Platform                       | Source                                           | Notes                                                                                                                                                                                                          |
+| ------------------------------ | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| twitter                        | `feedVideoSrc()` → `/api/media/video?quality=hd` | instant                                                                                                                                                                                                        |
+| tiktok                         | `feedVideoSrc()` → `/api/media/tiktok/video`     | instant                                                                                                                                                                                                        |
+| instagram                      | `reelVideoSrc()` mirror                          | **never attach `<video src>` until `probeInstagramVideo` Range-probe returns 200/206**; warm on rail-row visibility/hover (same trick as preview pages); show poster + spinner ≤ 3s, then poster + "starting…" |
+| youtube                        | official `youtube-nocookie` iframe               | no MP4 exists; appears instantly, plays on its own tap; CSP already allows it                                                                                                                                  |
+| photo / text / quote / article | Stage variants (no media pipeline)               | article body via `articleBlocksToMarkdown`                                                                                                                                                                     |
 
 - **Autoplay**: first landing has no gesture → autoplay **muted** with a persistent "Tap for sound" chip; after the first user interaction, all subsequent posts play with sound. Focus-mode convention (click-to-play-with-sound) applies once a gesture exists.
 - **Prefetch**: current post plays; next post's source resolves in the background (IG warms, MP4s get a Range 0-1 request). Prefetch at most 1 ahead — bandwidth restraint, no cost explosion.
@@ -108,15 +108,15 @@ Sentry metrics (existing `metrics.*` patterns): `theater.opened` (surface: home/
 
 **PR 1 — Theater shell + home (signed-out `/`)**
 Shell, Stage (video: twitter + tiktok; text; photo), Rail with Up-next + seen model + divider, muted-autoplay + unmute chip, keyboard nav, 12s poll, server-rendered crawlable list + JSON-LD, dark default on theater routes, `theater.*` metrics, `/api/activity/preview`. Browse link points at existing `/trending` (light, unchanged for now).
-*Acceptance*: signed-out `/` lands in the theater with a real post playing muted; ↓/↑ chains; refresh shows the divider correctly; `curl` of `/` contains the crawlable list + JSON-LD; Lighthouse SEO unchanged on preview pages; 943 existing tests green.
+_Acceptance_: signed-out `/` lands in the theater with a real post playing muted; ↓/↑ chains; refresh shows the divider correctly; `curl` of `/` contains the crawlable list + JSON-LD; Lighthouse SEO unchanged on preview pages; 943 existing tests green.
 
 **PR 2 — Full stage matrix + mobile**
 Instagram probe/warm path, YouTube iframe stage, article reader stage, mobile reel + bottom sheet + swipe, Send file-prefetch flow, `/trending/play` redirect, prefetch-next.
-*Acceptance*: each platform plays (IG within its warm window, YT via iframe), article renders its real body, mobile swipe marks seen, Send opens the share sheet with the file on iOS.
+_Acceptance_: each platform plays (IG within its warm window, YT via iframe), article renders its real body, mobile swipe marks seen, Send opens the share sheet with the file on iOS.
 
 **PR 3 — Preview pages + Browse + signed-in**
 Preview pages swap to `TheaterShell mode="shared"` (SEO markup verified byte-comparable for bots), `/trending` restyled to the dark ranked list, Collection focus mode replaced by the theater (Keep/Done/Delete + `read_status` merge), Live tab.
-*Acceptance*: preview URLs keep JSON-LD/OG (diff against production snapshots), GSC-critical routes still 200 + crawlable, authed triage keyboard map preserved, no regression in `/api/feed` tests.
+_Acceptance_: preview URLs keep JSON-LD/OG (diff against production snapshots), GSC-critical routes still 200 + crawlable, authed triage keyboard map preserved, no regression in `/api/feed` tests.
 
 ## 11. Risks & mitigations
 
