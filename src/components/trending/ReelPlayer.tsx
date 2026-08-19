@@ -16,7 +16,13 @@ import {
 import { PlatformGlyph } from '@/components/matter'
 import { isReelPlayable } from '@/lib/trending/filter'
 import { sourceUrl } from '@/lib/activity/preview-path'
+import { reelVideoSrc } from '@/components/feed/video-src'
 import type { TrendingItem } from '@/lib/trending/query'
+
+// Re-exported for back-compat — `reelVideoSrc` now lives in the video-src SSOT
+// (src/components/feed/video-src.ts) alongside `feedVideoSrc`/`feedHoverSrc`,
+// but existing imports from this module (and its test) still resolve here.
+export { reelVideoSrc }
 
 /**
  * Trending Reel — a full-bleed, TikTok-style autoplay player for the trending
@@ -34,19 +40,6 @@ const POLL_MS = 15_000
 
 function postKey(item: TrendingItem): string {
   return item.bookmarkId ? `${item.platform}:${item.bookmarkId}` : item.url
-}
-
-/** Build the inline MP4 stream URL for a playable reel item (TikTok | IG | X). */
-export function reelVideoSrc(item: TrendingItem): string {
-  const id = encodeURIComponent(item.bookmarkId ?? '')
-  const author = encodeURIComponent(item.author ?? '')
-  if (item.platform === 'tiktok') {
-    return `/api/media/tiktok/video?username=${author}&id=${id}`
-  }
-  if (item.platform === 'instagram') {
-    return `/api/media/instagram/video?id=${id}`
-  }
-  return `/api/media/video?author=${author}&tweetId=${id}&quality=hd`
 }
 
 export function ReelPlayer({ initialItems }: { initialItems: TrendingItem[] }) {

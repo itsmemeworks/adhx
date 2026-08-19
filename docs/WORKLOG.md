@@ -4,6 +4,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-18 — Theater-first Phase 1: signed-out `/` is the theater
+
+- **Why**: Implementing PR #316's spec (`docs/specs/theater-first.md`) — users said the live community stream is the product; theater-first won three design rounds.
+- **What**: `page.tsx` → server component (authed → `AuthedHome.tsx` verbatim move; signed-out → `TheaterShell` in `src/components/theater/` + sr-only crawlable list/JSON-LD). Seen model (`adhx-seen-v1`/`adhx-last-visit`), 12s poll, muted autoplay (media-event-driven, no play()/autoPlay race), ↓↑ nav, `POST /api/activity/preview` pulse (identifiers-only, bot-filtered), `theater.*` Sentry metrics, dark default on `/` when theme unset, public-tag backfill (<12 items).
+- **Gotchas hit**: seed limit must equal `/api/activity` LIMIT (30) or the first poll surfaces old items as "fresh" (merge now appends unknown-but-older quietly); a manual `play()` racing the `autoPlay` attr flags a spurious needs-gesture overlay over a playing video.
+- **State**: in-flight on `feat/theater-shell`. Smoke-tested locally (SSR JSON-LD via curl, playback, seen divider across reloads, pulse increments trendCount). Full suite green.
+- **Follow-ups**: Phase 2 (IG probe/warm stage, YouTube iframe, article reader, mobile reel + swipe, Send prefetch, `/trending/play` redirect); Phase 3 (preview pages, dark /trending list, authed focus mode); AppShell still mounts the Header under the theater overlay (z-60) — fold into Phase 3; client-gesture metrics (`theater.advanced`/`sound_enabled`) have no server path yet.
+
 ## 2026-08-14 — Send bar: portal to body so it actually sticks to the viewport
 
 - **Why**: Staging iPhone showed "Send this video" mid-page over "Preview another link". `position:fixed` was inside the fadeInUp column (`transform` + `forwards`), so it behaved like `absolute` at the bottom of that column.
