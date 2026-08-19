@@ -3,8 +3,8 @@
 /**
  * Mobile theater chrome (spec §8): the full-bleed reel evolution of
  * `/trending/play`. Overlays the full-viewport <Stage/> with a top scrim
- * (brand only — the Save CTA below covers sign-in), a bottom scrim
- * (author/caption + Download/Save/Share), and an
+ * (brand + post meta — the Save CTA below covers sign-in), a bottom scrim
+ * (author/caption + Download/Save/Share/Open), and an
  * Up-next bottom sheet — all `pointer-events-auto` islands inside an
  * otherwise `pointer-events-none` layer. Navigation is buttons + keyboard +
  * video-ended auto-advance only — there is no swipe gesture on the stage.
@@ -18,6 +18,7 @@ import {
   Download as DownloadIcon,
   Loader2,
   Share2,
+  ExternalLink,
   Check,
   LogIn,
   Flame,
@@ -33,10 +34,11 @@ import {
 import { cn } from '@/lib/utils'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
 import { MatterLogo, PlatformGlyph } from '@/components/matter'
+import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { inferType } from '@/lib/trending/filter'
 import { useSendFile } from './useSendFile'
-import { useClampExpand } from './Rail'
+import { useClampExpand, PLATFORM_LABEL } from './Rail'
 import { TheaterLinkedText } from './TheaterText'
 import { TheaterProgressLine, progressKindFor } from './TheaterProgressLine'
 import { UpNextList } from './UpNextList'
@@ -154,6 +156,11 @@ export function TheaterMobileChrome({
 
   const paused = kind === 'video' ? !videoPlaying : timedPaused
   const displayMuted = liveMuted ?? muted
+  // Sound affordance moved onto the peek-bar audio button on mobile
+  // (StageVideo's centered "Tap for sound" pill is desktop-only now): pulse
+  // while the current video is effectively muted AND actually playing, so a
+  // paused or already-unmuted video never pulses.
+  const soundPulse = kind === 'video' && displayMuted && videoPlaying
 
   const handleTogglePause = () => {
     if (kind === 'video') {
@@ -230,9 +237,11 @@ export function TheaterMobileChrome({
     <div className="pointer-events-none absolute inset-0 z-10 lg:hidden">
       <TheaterProgressLine itemKey={currentKey} kind={kind} />
 
-      {/* Top scrim: brand only. No close button — it's home. The Save CTA in
-          the bottom scrim covers sign-in, so there's no separate Connect
-          button up here. */}
+      {/* Top scrim: brand (left) + post meta (right) — the flame/trend badge
+          and the platform+time link-out chip live HERE now, one fixed
+          location on every content type, instead of repeating per-row in the
+          bottom scrim. De-clutter hides this whole scrim (meta included) —
+          expected: immersion hides meta too. */}
       <div
         className={cn(
           'pointer-events-auto absolute inset-x-0 top-0 flex items-center justify-between gap-3 px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
@@ -243,10 +252,41 @@ export function TheaterMobileChrome({
         <a href="/" className="flex items-center" aria-label="ADHX home">
           <MatterLogo size={16} className="[&>span]:text-white" />
         </a>
+        {current && (
+          <div className="flex flex-none items-center gap-2">
+            {trendCount >= 2 && (
+              <span className="inline-flex flex-none items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-[11px] font-bold text-orange-300">
+                <Flame size={11} className="text-orange-400" fill="currentColor" />
+                {trendCount}
+              </span>
+            )}
+            {(() => {
+              const src = sourceUrl(current.platform, current.author, current.bookmarkId ?? '')
+              const inner = (
+                <>
+                  <PlatformGlyph platform={current.platform} size={12} />
+                  <span className="font-mono text-[11px]" suppressHydrationWarning>
+                    {formatCompactRelativeTime(current.createdAt)}
+                  </span>
+                </>
+              )
+              const cls =
+                'inline-flex min-h-[32px] flex-none items-center gap-1.5 rounded-full bg-black/40 px-2.5 text-white/80 backdrop-blur-sm'
+              return src ? (
+                <a href={src} target="_blank" rel="noopener noreferrer" className={cls}>
+                  {inner}
+                </a>
+              ) : (
+                <span className={cls}>{inner}</span>
+              )
+            })()}
+          </div>
+        )}
       </div>
 
-      {/* Bottom scrim: author/caption + Send / Save / Copy. Padded above the
-          sheet's peek bar (opaque, themed) so the gradient tucks under it. */}
+      {/* Bottom scrim: author/caption + Send / Save / Share / Open. Padded
+          above the sheet's peek bar (opaque, themed) so the gradient tucks
+          under it. */}
       {current && (
         <div
           className={cn(
@@ -260,48 +300,22 @@ export function TheaterMobileChrome({
           }}
         >
           <div>
-            <div className="flex items-center gap-2">
-              {!textLike && (
+            {/* The poster's avatar + name — only for media posts. Text-like
+                posts (text/quote/article) show the author on the stage
+                itself, so this row stays hidden for them to avoid doubling
+                up. */}
+            {!textLike && (
+              <div className="flex items-center gap-2">
+                <AuthorAvatar
+                  src={current.authorAvatarUrl ?? current.thumbnailUrl}
+                  author={current.author}
+                  size="sm"
+                />
                 <span className="min-w-0 truncate text-[13px] font-semibold text-white">
                   {current.authorName || (handle ? `@${handle}` : 'Saved post')}
                 </span>
-              )}
-              {trendCount >= 2 && (
-                <span className="inline-flex flex-none items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-[11px] font-bold text-orange-300">
-                  <Flame size={11} className="text-orange-400" fill="currentColor" />
-                  {trendCount}
-                </span>
-              )}
-              {/* Link-out to the original post: platform glyph + human time,
-                  top-right of the preview (mirrors the desktop rail's chip). */}
-              {(() => {
-                const src = sourceUrl(current.platform, current.author, current.bookmarkId ?? '')
-                const inner = (
-                  <>
-                    <PlatformGlyph platform={current.platform} size={12} />
-                    <span className="font-mono text-[11px]" suppressHydrationWarning>
-                      {formatCompactRelativeTime(current.createdAt)}
-                    </span>
-                  </>
-                )
-                const cls =
-                  'ml-auto inline-flex min-h-[32px] flex-none items-center gap-1.5 rounded-full bg-black/40 px-2.5 text-white/80 backdrop-blur-sm'
-                return src ? (
-                  <a
-                    href={src}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    onTouchEnd={(e) => e.stopPropagation()}
-                    className={cls}
-                  >
-                    {inner}
-                  </a>
-                ) : (
-                  <span className={cls}>{inner}</span>
-                )
-              })()}
-            </div>
+              </div>
+            )}
             {caption && (
               <div
                 className={cn(
@@ -317,6 +331,7 @@ export function TheaterMobileChrome({
                   )}
                 >
                   <TheaterLinkedText
+                    platform={current.platform}
                     text={caption}
                     hasMedia
                     links={current?.textLinks}
@@ -380,6 +395,22 @@ export function TheaterMobileChrome({
             >
               {copied ? <Check size={16} className="text-done" /> : <Share2 size={16} />}
             </button>
+            {(() => {
+              const openUrl = sourceUrl(current.platform, current.author, current.bookmarkId ?? '')
+              if (!openUrl) return null
+              const platformLabel = PLATFORM_LABEL[current.platform] ?? current.platform
+              return (
+                <a
+                  href={openUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Open on ${platformLabel}`}
+                  className="inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md"
+                >
+                  <ExternalLink size={16} />
+                </a>
+              )
+            })()}
           </div>
         </div>
       )}
@@ -397,24 +428,29 @@ export function TheaterMobileChrome({
 
       {/* Up-next sheet: a peek bar pinned to the bottom, dragged/tapped open
           to ~70dvh. Transform-only (no layout thrash), theme-following
-          surface (unlike the hardcoded-dark scrims above it). Unlike the
-          scrims, de-clutter does NOT fade this out — the reviewer wants the
-          nav/pause/audio controls and the sheet available at all times, even
-          while immersed, so only the top/bottom scrims above hide. */}
+          surface — translucent so the stage reads through while collapsed,
+          more opaque once open so the list stays comfortably readable.
+          Unlike the scrims, de-clutter does NOT fade this out — the
+          reviewer wants the nav/pause/audio controls and the sheet available
+          at all times, even while immersed, so only the top/bottom scrims
+          above hide. */}
       <div
         className={cn(
-          'pointer-events-auto absolute inset-x-0 bottom-0 z-20 flex h-[70dvh] flex-col overscroll-contain rounded-t-2xl bg-surface shadow-[0_-8px_24px_rgba(0,0,0,.35)] transition-transform duration-300 ease-out',
-          sheetOpen ? 'translate-y-0' : 'translate-y-[calc(100%-4.25rem)]',
+          'pointer-events-auto absolute inset-x-0 bottom-0 z-20 flex h-[70dvh] flex-col overscroll-contain rounded-t-2xl shadow-[0_-8px_24px_rgba(0,0,0,.35)] backdrop-blur-md transition-[transform,background-color] duration-300 ease-out',
+          sheetOpen
+            ? 'translate-y-0 bg-surface/95'
+            : 'translate-y-[calc(100%-4.25rem)] bg-surface/70',
         )}
       >
         {/* Peek bar: drag handle on top (tap/drag toggles the sheet, as
-            before), then a control row mirrored for right-handed reach —
-            audio/de-clutter on the left, the up-next label screen-centered
-            (absolutely positioned over the bar so it lands at the true
-            midpoint regardless of the side groups' unequal widths), and
-            prev/pause/next on the right. All non-drag-handle buttons stop
-            propagation on click AND touchend so pressing them never also
-            toggles the sheet open/closed. */}
+            before), then a control row — de-clutter fixed at the far left
+            (never moves), the audio button to its right (video posts only,
+            so its presence never shifts de-clutter), the up-next label
+            screen-centered (absolutely positioned over the bar so it lands
+            at the true midpoint regardless of the side groups' unequal
+            widths), and prev/pause/next on the right. All non-drag-handle
+            buttons stop propagation on click AND touchend so pressing them
+            never also toggles the sheet open/closed. */}
         <button
           type="button"
           onClick={() => setSheetOpen((v) => !v)}
@@ -428,21 +464,10 @@ export function TheaterMobileChrome({
         </button>
 
         <div className="relative flex flex-none items-center px-2 pb-2">
+          {/* De-clutter is always first (far left, fixed position); the audio
+              button sits to its right and only exists for video posts — it
+              hides, but de-clutter never moves. */}
           <div className="flex items-center gap-0.5">
-            {kind === 'video' && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onToggleMute()
-                }}
-                onTouchEnd={(e) => e.stopPropagation()}
-                aria-label={displayMuted ? 'Unmute' : 'Mute'}
-                className={PEEK_ICON_BTN}
-              >
-                {displayMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-              </button>
-            )}
             <button
               type="button"
               onClick={(e) => {
@@ -455,6 +480,23 @@ export function TheaterMobileChrome({
             >
               {declutter ? <Maximize2 size={16} /> : <Minimize2 size={16} />}
             </button>
+            {kind === 'video' && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onToggleMute()
+                }}
+                onTouchEnd={(e) => e.stopPropagation()}
+                aria-label={displayMuted ? 'Unmute' : 'Mute'}
+                className={cn(
+                  'inline-flex h-10 w-10 flex-none items-center justify-center rounded-full transition-colors hover:bg-inset hover:text-ink active:bg-inset active:text-ink',
+                  soundPulse ? 'animate-sound-pulse text-ink' : 'text-ink-3',
+                )}
+              >
+                {displayMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+              </button>
+            )}
           </div>
 
           <div className="pointer-events-none absolute inset-x-0 flex justify-center">

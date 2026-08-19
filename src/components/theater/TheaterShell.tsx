@@ -8,6 +8,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Stage } from './Stage'
+import { StageWaiting } from './StageWaiting'
 import { Rail } from './Rail'
 import { TheaterMobileChrome } from './TheaterMobileChrome'
 import { useTheaterFeed } from './useTheaterFeed'
@@ -64,6 +65,50 @@ export function theaterUrlSyncPath(
   return previewPath(item.platform, item.author, item.bookmarkId)
 }
 
+/**
+ * Pure: does `index` sit at the tail of a `length`-long list? `-1` (key not
+ * found) is never "the end" — that's a distinct no-op case, matching the
+ * pre-waiting clamp behavior for a current item that's dropped out of the
+ * list entirely.
+ */
+export function isFeedEnd(length: number, index: number): boolean {
+  return index !== -1 && index === length - 1
+}
+
+/**
+ * Pure: the peek bar's prev-chevron state, folding in the end-of-feed waiting
+ * stage — while waiting there's always a "back to the last post" move.
+ */
+export function computeCanPrev(currentIndex: number, waiting: boolean): boolean {
+  return waiting || currentIndex > 0
+}
+
+/**
+ * Pure: the peek bar's next-chevron state. Advancing from the last real item
+ * is exactly what leads INTO the waiting stage, so it stays enabled there;
+ * once waiting, there's nowhere further to go until something new arrives.
+ */
+export function computeCanNext(currentIndex: number, waiting: boolean): boolean {
+  return !waiting && currentIndex !== -1
+}
+
+/**
+ * Pure: the first key in `freshKeys` that wasn't already there when the
+ * waiting stage was entered (`baseline`) — the item the waiting stage
+ * auto-plays into. Iteration follows `freshKeys`' insertion order, so if
+ * several arrive between polls the earliest arrival stages first. `null`
+ * when nothing genuinely new has shown up yet.
+ */
+export function findFreshArrival(
+  freshKeys: ReadonlySet<string>,
+  baseline: ReadonlySet<string>,
+): string | null {
+  for (const key of freshKeys) {
+    if (!baseline.has(key)) return key
+  }
+  return null
+}
+
 export function TheaterShell({
   seed,
   mode = 'home',
@@ -76,6 +121,13 @@ export function TheaterShell({
 
   const [muted, setMuted] = useState(true)
   const [currentKey, setCurrentKey] = useState<string | null>(null)
+  // Virtual "end of feed" stage entered by advancing past the last item (spec
+  // addendum: end-of-feed waiting stage). `currentKey` is deliberately left
+  // pointing at the last real item while waiting — that's what makes goPrev
+  // ("back to the last post") a no-op besides clearing the flag, and keeps
+  // the address-bar sync and seen-dwell effects (both keyed on `currentKey`)
+  // inert without any extra guarding.
+  const [waiting, setWaiting] = useState(false)
   // The item pinned to the front of the display order: the shared post in
   // shared mode (set once, on mount), else the home lead-pick once it's
   // chosen below. Pinning — rather than leaving the pick wherever it sits in
@@ -104,6 +156,16 @@ export function TheaterShell({
   itemsRef.current = displayItems
   const seenSetRef = useRef(seenSet)
   seenSetRef.current = seenSet
+  // Read fresh inside goNext/goPrev (empty-deps callbacks) without
+  // re-registering them on every waiting/feed change.
+  const waitingRef = useRef(waiting)
+  waitingRef.current = waiting
+  const freshKeysRef = useRef(feed.freshKeys)
+  freshKeysRef.current = feed.freshKeys
+  // Snapshot of `freshKeys` taken the moment waiting begins — anything
+  // added to freshKeys AFTER this point is a genuinely new arrival the
+  // waiting stage should auto-play into (see the effect near the bottom).
+  const waitingBaselineFreshKeysRef = useRef<ReadonlySet<string>>(new Set())
 
   // Land on the first item immediately (no flash of an empty stage); a
   // moment later, once localStorage seen-state has hydrated, jump to the
@@ -144,8 +206,9 @@ export function TheaterShell({
   // End-states for the peek bar's prev/next chevrons (tester feedback: at the
   // first post, pressing "back" silently did nothing). `currentIndex === -1`
   // (nothing current, e.g. an empty list) always reads as "can't navigate".
-  const canPrev = currentIndex > 0
-  const canNext = currentIndex !== -1 && currentIndex < displayItems.length - 1
+  // Both fold in the waiting stage — see computeCanPrev/computeCanNext.
+  const canPrev = computeCanPrev(currentIndex, waiting)
+  const canNext = computeCanNext(currentIndex, waiting)
 
   // Read fresh inside the `theater-advance` listener below without
   // re-registering that listener on every navigation (mirrors itemsRef).
@@ -155,13 +218,31 @@ export function TheaterShell({
   const goNext = useCallback(() => {
     setCurrentKey((key) => {
       const idx = itemsRef.current.findIndex((it) => theaterItemKey(it) === key)
-      if (idx === -1 || idx + 1 >= itemsRef.current.length) return key
+      if (idx === -1) return key
+      if (isFeedEnd(itemsRef.current.length, idx)) {
+        // Advancing past the last post enters the waiting stage instead of
+        // clamping silently. Idempotent: a repeat advance (e.g. another
+        // keypress) while already waiting must not reset the baseline —
+        // that would make an item that arrived a moment ago look "not new"
+        // and get missed by the fresh-arrival effect below.
+        if (!waitingRef.current) {
+          waitingBaselineFreshKeysRef.current = new Set(freshKeysRef.current)
+          setWaiting(true)
+        }
+        return key
+      }
       hasNavigatedRef.current = true
       return theaterItemKey(itemsRef.current[idx + 1])
     })
   }, [])
 
   const goPrev = useCallback(() => {
+    // While waiting, "back" just returns to the last post it's already
+    // parked on (currentKey never moved) — never step further back too.
+    if (waitingRef.current) {
+      setWaiting(false)
+      return
+    }
     setCurrentKey((key) => {
       const idx = itemsRef.current.findIndex((it) => theaterItemKey(it) === key)
       if (idx <= 0) return key
@@ -172,6 +253,7 @@ export function TheaterShell({
 
   const onSelect = useCallback((key: string) => {
     hasNavigatedRef.current = true
+    setWaiting(false)
     setCurrentKey(key)
   }, [])
 
@@ -308,6 +390,19 @@ export function TheaterShell({
     if (next) prefetchPlayback(next)
   }, [currentIndex, displayItems])
 
+  // Auto-play into the waiting stage: the moment a genuinely fresh item shows
+  // up (present in `freshKeys` but not in the baseline snapshotted when
+  // waiting began), stage it and clear waiting. Mid-feed arrivals never hit
+  // this branch — it's gated on `waiting` — so today's "prepend quietly,
+  // don't interrupt" behavior for a viewer mid-scroll is untouched.
+  useEffect(() => {
+    if (!waiting) return
+    const arrived = findFreshArrival(feed.freshKeys, waitingBaselineFreshKeysRef.current)
+    if (!arrived) return
+    setCurrentKey(arrived)
+    setWaiting(false)
+  }, [waiting, feed.freshKeys])
+
   // Items newer than the last visit and not yet seen. Zero on a first-ever
   // visit (no `lastVisitAt` to compare against) — the caught-up state is the
   // honest read for a brand new visitor, not "everything is new".
@@ -327,17 +422,21 @@ export function TheaterShell({
           own column instead of overlaying the stage. */}
       <div className="relative h-full w-full flex-1 overflow-hidden lg:min-w-0">
         <div className="absolute inset-0">
-          <Stage
-            item={current}
-            muted={muted}
-            onRequestUnmute={onRequestUnmute}
-            onEnded={goNext}
-            photoCaption={false}
-          />
+          {waiting ? (
+            <StageWaiting savedToday={feed.savedToday} />
+          ) : (
+            <Stage
+              item={current}
+              muted={muted}
+              onRequestUnmute={onRequestUnmute}
+              onEnded={goNext}
+              photoCaption={false}
+            />
+          )}
         </div>
         <TheaterMobileChrome
           mode={mode}
-          current={current}
+          current={waiting ? null : current}
           items={displayItems}
           currentKey={currentKey}
           isSeen={seenSet.isSeen}
@@ -357,7 +456,7 @@ export function TheaterShell({
         <Rail
           mode={mode}
           items={displayItems}
-          current={current}
+          current={waiting ? null : current}
           currentKey={currentKey}
           isSeen={seenSet.isSeen}
           seenReady={seenSet.ready}
@@ -367,6 +466,7 @@ export function TheaterShell({
           onSelect={onSelect}
           sharedItem={sharedItem}
           authed={authed}
+          waiting={waiting}
         />
       </div>
     </div>

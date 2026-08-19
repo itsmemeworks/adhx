@@ -4,6 +4,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-19 — Waiting stage, tappable mentions, chrome polish
+
+- **Why**: Live review continued — the theater dead-ended at the last post while fresh pulse items prepended unseen; @mentions were plain text; the reviewer wanted stable control positions, an open-original button, fixed post meta, avatars, the sound affordance on the audio button, and a see-through peek bar.
+- **What**: `StageWaiting` — advancing past the last post enters a calm "waiting for new sends…" stage; a fresh pulse arrival auto-stages and plays (baseline-snapshotted freshKeys; prev/Up-next selection exits; mid-feed prepend behavior untouched). @mentions linkify platform-aware (`splitMentionParts`/`mentionHref` — email-safe, trailing-dot-safe; all call sites pass `platform`, quote cards pinned to twitter). Chrome: [de-clutter · audio] left (de-clutter never shifts), post meta (flame + platform/time link-out) pinned to the TOP scrim right on every content type, avatar in the media author row, ExternalLink open-original button right of Share, "Tap for sound" pill desktop-only with the peek-bar audio button pulsing while muted+playing, peek bar translucent (surface/70 blur collapsed, /95 open).
+- **State**: on `feat/theater-phase3` (PR #319), deploying to staging.
+- **Follow-ups**: agents reported one git-stash near-miss + staleness churn on TheaterMobileChrome — diff-audited intact (sheet drag, all six changes present).
+
 ## 2026-08-19 — Peek bar mirrored, swipe removed, end-state chevrons
 
 - **Why**: Live review — nav belongs under the right thumb; de-clutter hid the controls people still wanted; the label was off-center; swiping to the next video re-muted it (our preventDefault voided user activation, so unmuted play() was denied); testers hit the first post and couldn't tell why "back" did nothing.

@@ -62,7 +62,7 @@ function StageQuoteCard({ quote }: { quote: NonNullable<TheaterItem['quote']> })
       </div>
       {text && (
         <p className="line-clamp-4 text-[13.5px] leading-snug text-white/80">
-          <TheaterLinkedText text={text} />
+          <TheaterLinkedText text={text} platform="twitter" />
         </p>
       )}
     </div>
@@ -168,6 +168,7 @@ export function StageText({
                   )}
                 >
                   <TheaterLinkedText
+                    platform={item.platform}
                     text={text}
                     hasMedia
                     links={item.textLinks}
@@ -221,6 +222,7 @@ export function StageText({
           <p className={cn('font-serif leading-tight text-white', textSizeClass(text || ''))}>
             {text ? (
               <TheaterLinkedText
+                platform={item.platform}
                 text={text}
                 hasMedia={false}
                 links={item.textLinks}

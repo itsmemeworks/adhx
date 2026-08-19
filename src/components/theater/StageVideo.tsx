@@ -277,9 +277,13 @@ export function StageVideo({
       {/* Prominent, hard-to-miss sound affordance: centered in the lower
           third, large tap target, gentle pulse. Shown any time the current
           video is muted-but-playing — the first video, or a later item that
-          fell back to muted after an unmuted-continuation rejection. */}
+          fell back to muted after an unmuted-continuation rejection.
+          Desktop only — on mobile the affordance lives on the peek bar's
+          audio button instead (TheaterMobileChrome pulses it under the same
+          condition); the whole-stage tap-to-unmute here still works on
+          mobile unchanged, this is just the visual nudge. */}
       {effectiveMuted && playing && !needsGesture && !ended && !errored && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-[18%] flex justify-center px-4">
+        <div className="pointer-events-none absolute inset-x-0 bottom-[18%] hidden justify-center px-4 lg:flex">
           <button
             type="button"
             onClick={(e) => {

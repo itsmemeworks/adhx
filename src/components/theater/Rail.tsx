@@ -98,6 +98,12 @@ export interface RailProps {
   sharedItem?: TheaterItem
   /** Whether the visiting user is signed in (shared mode: swaps Connect for a direct Save). */
   authed?: boolean
+  /**
+   * End-of-feed waiting stage (`current` is null for this reason, not the
+   * pre-hydration "nothing picked yet" reason) — swaps NowPlaying's loading
+   * skeleton for a one-line "waiting" message so it doesn't pulse forever.
+   */
+  waiting?: boolean
 }
 
 function BrandRow({ mode }: { mode: TheaterMode }) {
@@ -175,14 +181,27 @@ function LinkOutChip({
 function NowPlaying({
   current,
   sharedItem,
+  waiting = false,
 }: {
   current: TheaterItem | null
   sharedItem?: TheaterItem
+  waiting?: boolean
 }) {
   const key = current ? theaterItemKey(current) : null
   const { ref, expanded, setExpanded, overflowing } = useClampExpand(key)
 
   if (!current) {
+    // Two distinct reasons for a null `current`: pre-hydration (nothing
+    // picked yet — a real loading skeleton is honest) vs. the end-of-feed
+    // waiting stage, where there's nothing to load and the skeleton would
+    // just pulse forever.
+    if (waiting) {
+      return (
+        <div className="flex-none border-b border-hairline px-5 py-5">
+          <p className="text-[13px] text-ink-3">Waiting for new sends&hellip;</p>
+        </div>
+      )
+    }
     return (
       <div className="flex-none border-b border-hairline px-5 py-5">
         <div className="h-3 w-24 animate-pulse rounded bg-inset" />
@@ -245,6 +264,7 @@ function NowPlaying({
         )}
       >
         <TheaterLinkedText
+          platform={current.platform}
           text={text}
           hasMedia={hasMedia}
           links={current.textLinks}
@@ -452,11 +472,12 @@ export function Rail({
   onSelect,
   sharedItem,
   authed = false,
+  waiting = false,
 }: RailProps) {
   return (
     <div className="flex h-full w-full flex-col bg-surface text-ink lg:h-full lg:w-[360px] lg:border-l lg:border-hairline xl:w-[400px]">
       <BrandRow mode={mode} />
-      <NowPlaying current={current} sharedItem={sharedItem} />
+      <NowPlaying current={current} sharedItem={sharedItem} waiting={waiting} />
       <Actions mode={mode} current={current} authed={authed} />
 
       <div className="flex min-h-0 flex-1 flex-col">

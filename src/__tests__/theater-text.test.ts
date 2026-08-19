@@ -7,6 +7,8 @@ import {
   isTrailingLink,
   buildRenderSegments,
   stripShortLinksForPreview,
+  splitMentionParts,
+  mentionHref,
 } from '@/components/theater/TheaterText'
 import type { TextLinkRef } from '@/components/theater/types'
 
@@ -322,5 +324,155 @@ describe('buildRenderSegments', () => {
         label: cleanDisplayUrl(tweetLink.expandedUrl),
       },
     ])
+  })
+
+  describe('mentions', () => {
+    it('linkifies a twitter mention with a default platform of twitter', () => {
+      const segs = buildRenderSegments('hey @alice check this out', undefined, undefined)
+      expect(segs).toEqual([
+        { type: 'text', value: 'hey ' },
+        { type: 'mention', handle: 'alice', href: 'https://x.com/alice' },
+        { type: 'text', value: ' check this out' },
+      ])
+    })
+
+    it('linkifies a mention at the very start of the text', () => {
+      const segs = buildRenderSegments('@alice hello', undefined, undefined, 'twitter')
+      expect(segs).toEqual([
+        { type: 'mention', handle: 'alice', href: 'https://x.com/alice' },
+        { type: 'text', value: ' hello' },
+      ])
+    })
+
+    it('linkifies a mention at the very end of the text', () => {
+      const segs = buildRenderSegments('shoutout to @alice', undefined, undefined, 'twitter')
+      expect(segs).toEqual([
+        { type: 'text', value: 'shoutout to ' },
+        { type: 'mention', handle: 'alice', href: 'https://x.com/alice' },
+      ])
+    })
+
+    it('does not linkify an email address', () => {
+      const segs = buildRenderSegments('contact test@example.com for info', undefined, undefined)
+      expect(segs).toEqual([{ type: 'text', value: 'contact test@example.com for info' }])
+    })
+
+    it('linkifies a mention immediately followed by punctuation', () => {
+      const segs = buildRenderSegments('great point (@alice)!', undefined, undefined, 'twitter')
+      expect(segs).toEqual([
+        { type: 'text', value: 'great point (' },
+        { type: 'mention', handle: 'alice', href: 'https://x.com/alice' },
+        { type: 'text', value: ')!' },
+      ])
+    })
+
+    it('resolves platform-specific hrefs', () => {
+      expect(buildRenderSegments('@bob.smith', undefined, undefined, 'instagram')[0]).toEqual({
+        type: 'mention',
+        handle: 'bob.smith',
+        href: 'https://www.instagram.com/bob.smith/',
+      })
+      expect(buildRenderSegments('@bob', undefined, undefined, 'tiktok')[0]).toEqual({
+        type: 'mention',
+        handle: 'bob',
+        href: 'https://www.tiktok.com/@bob',
+      })
+      expect(buildRenderSegments('@bob', undefined, undefined, 'youtube')[0]).toEqual({
+        type: 'mention',
+        handle: 'bob',
+        href: 'https://www.youtube.com/@bob',
+      })
+    })
+
+    it('excludes trailing dots from an instagram/tiktok handle', () => {
+      const segs = buildRenderSegments('cc @bob.smith... nice', undefined, undefined, 'instagram')
+      expect(segs).toEqual([
+        { type: 'text', value: 'cc ' },
+        { type: 'mention', handle: 'bob.smith', href: 'https://www.instagram.com/bob.smith/' },
+        { type: 'text', value: '... nice' },
+      ])
+    })
+
+    it('renders a mention as plain text for an unknown platform (no link)', () => {
+      const segs = buildRenderSegments('hey @alice', undefined, undefined, 'unknown-platform')
+      expect(segs).toEqual([
+        { type: 'text', value: 'hey ' },
+        { type: 'mention', handle: 'alice', href: null },
+      ])
+    })
+
+    it('does not re-parse a mention-shaped substring inside a URL', () => {
+      const segs = buildRenderSegments(
+        'see https://example.com/@alice/profile',
+        undefined,
+        undefined,
+        'twitter',
+      )
+      expect(segs).toEqual([
+        { type: 'text', value: 'see ' },
+        {
+          type: 'anchor',
+          href: 'https://example.com/@alice/profile',
+          label: displayUrl('https://example.com/@alice/profile'),
+        },
+      ])
+    })
+
+    it('interacts correctly with a stripped trailing t.co link', () => {
+      const segs = buildRenderSegments(
+        'great thread by @alice https://t.co/tw1',
+        [tweetLink],
+        true,
+        'twitter',
+      )
+      expect(segs).toEqual([
+        { type: 'text', value: 'great thread by ' },
+        { type: 'mention', handle: 'alice', href: 'https://x.com/alice' },
+      ])
+    })
+  })
+})
+
+describe('splitMentionParts', () => {
+  it('splits a mention out from surrounding text', () => {
+    expect(splitMentionParts('hi @alice bye', 'twitter')).toEqual([
+      { type: 'text', value: 'hi ' },
+      { type: 'mention', handle: 'alice' },
+      { type: 'text', value: ' bye' },
+    ])
+  })
+
+  it('caps a twitter handle at 15 chars, leaving the rest as text', () => {
+    // 16 chars — only the first 15 are consumed as the handle.
+    const segs = splitMentionParts('@abcdefghijklmnopq', 'twitter')
+    expect(segs).toEqual([
+      { type: 'mention', handle: 'abcdefghijklmno' },
+      { type: 'text', value: 'pq' },
+    ])
+  })
+
+  it('does not treat an all-dots run after @ as a handle', () => {
+    expect(splitMentionParts('email me @...', 'instagram')).toEqual([
+      { type: 'text', value: 'email me @...' },
+    ])
+  })
+
+  it('returns plain text when there are no mentions', () => {
+    expect(splitMentionParts('just some words', 'twitter')).toEqual([
+      { type: 'text', value: 'just some words' },
+    ])
+  })
+})
+
+describe('mentionHref', () => {
+  it('maps each known platform to its profile URL shape', () => {
+    expect(mentionHref('twitter', 'alice')).toBe('https://x.com/alice')
+    expect(mentionHref('tiktok', 'alice')).toBe('https://www.tiktok.com/@alice')
+    expect(mentionHref('instagram', 'alice')).toBe('https://www.instagram.com/alice/')
+    expect(mentionHref('youtube', 'alice')).toBe('https://www.youtube.com/@alice')
+  })
+
+  it('returns null for an unrecognized platform', () => {
+    expect(mentionHref('mastodon', 'alice')).toBeNull()
   })
 })

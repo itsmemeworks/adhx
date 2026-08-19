@@ -150,7 +150,7 @@ function StageQuoteCard({ item }: { item: FeedItem }) {
       </div>
       {qText && (
         <p className="line-clamp-4 text-[13.5px] leading-snug text-white/80">
-          <TheaterLinkedText text={qText} hasMedia={qHasMedia} />
+          <TheaterLinkedText text={qText} hasMedia={qHasMedia} platform="twitter" />
         </p>
       )}
     </div>

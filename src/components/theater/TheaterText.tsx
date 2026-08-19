@@ -31,6 +31,73 @@ const TWEET_STATUS_RE = /^https?:\/\/(?:www\.)?(?:x\.com|twitter\.com)\/[^/]+\/s
 export type TextPart = { type: 'text'; value: string } | { type: 'link'; href: string }
 
 /**
+ * Pure: `@mention` detection, run only over the `text` parts `splitTextParts`
+ * already carved out (never over `link` parts — a mention-shaped substring
+ * inside a URL is never re-parsed). Handle grammar is platform-specific:
+ * twitter has no dots (`[A-Za-z0-9_]{1,15}`), instagram/tiktok/others allow
+ * dots (`[A-Za-z0-9._]{1,30}`) but a run of trailing dots is sentence
+ * punctuation, not part of the handle, so it's excluded from the match (same
+ * spirit as the URL trailing-punctuation split above).
+ *
+ * The char immediately before `@` must be absent (start of string) or a
+ * non-word character — this is what keeps `a@b.com` from linkifying: the `a`
+ * is a word character, so the `@` there never starts a mention.
+ */
+export type MentionTextPart = { type: 'text'; value: string } | { type: 'mention'; handle: string }
+
+function mentionRegexFor(platform: string): RegExp {
+  const isDotless = platform === 'twitter'
+  const charClass = isDotless ? 'A-Za-z0-9_' : 'A-Za-z0-9._'
+  const max = isDotless ? 15 : 30
+  // Group 1: the char before `@` (captured so it's preserved as text), or
+  // empty at start-of-string. Group 2: the raw handle (may have trailing dots
+  // that get trimmed after the match).
+  return new RegExp(`(^|[^A-Za-z0-9_])@([${charClass}]{1,${max}})`, 'g')
+}
+
+export function splitMentionParts(text: string, platform: string): MentionTextPart[] {
+  const regex = mentionRegexFor(platform)
+  const parts: MentionTextPart[] = []
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+  while ((match = regex.exec(text))) {
+    const prefix = match[1]
+    const rawHandle = match[2]
+    const mentionStart = match.index + prefix.length
+    const rawEnd = mentionStart + 1 + rawHandle.length // +1 for '@'
+    const handle = rawHandle.replace(/\.+$/, '')
+    if (!handle) continue // all-dots after '@' — not a real handle, leave as text
+    const mentionEnd = rawEnd - (rawHandle.length - handle.length)
+
+    if (mentionStart > lastIndex) {
+      parts.push({ type: 'text', value: text.slice(lastIndex, mentionStart) })
+    }
+    parts.push({ type: 'mention', handle })
+    lastIndex = mentionEnd
+  }
+  if (lastIndex < text.length) {
+    parts.push({ type: 'text', value: text.slice(lastIndex) })
+  }
+  return parts
+}
+
+/** Pure: the profile URL a mention links to. `null` for a platform with no known profile URL shape (rendered as plain text, not an anchor). */
+export function mentionHref(platform: string, handle: string): string | null {
+  switch (platform) {
+    case 'twitter':
+      return `https://x.com/${handle}`
+    case 'tiktok':
+      return `https://www.tiktok.com/@${handle}`
+    case 'instagram':
+      return `https://www.instagram.com/${handle}/`
+    case 'youtube':
+      return `https://www.youtube.com/@${handle}`
+    default:
+      return null
+  }
+}
+
+/**
  * Preview-text cleanup for LIST ROWS (Up next, collection queue): rows render
  * plain clamped text with no anchors, so a bare `https://t.co/xxx` is pure
  * noise there — remove ALL t.co URLs and collapse the whitespace they leave.
@@ -172,17 +239,23 @@ export function resolveLink(
 export type RenderSegment =
   | { type: 'text'; value: string }
   | { type: 'anchor'; href: string; label: string }
+  | { type: 'mention'; handle: string; href: string | null }
 
 /**
  * Pure: text → renderable segments, applying the full link-resolution policy
  * and collapsing whitespace left behind by any stripped link. This is the
  * whole §6b pipeline in one node-testable function; the component below just
  * maps it to JSX.
+ *
+ * `platform` (default `'twitter'`) governs mention grammar (`splitMentionParts`)
+ * and the resulting profile href (`mentionHref`) — it never affects URL/t.co
+ * handling, which is platform-agnostic.
  */
 export function buildRenderSegments(
   text: string,
   links: TextLinkRef[] | undefined,
   hideTweetLinks: boolean | undefined,
+  platform: string = 'twitter',
 ): RenderSegment[] {
   const parts = splitTextParts(text)
   const raw: RenderSegment[] = []
@@ -190,7 +263,13 @@ export function buildRenderSegments(
 
   parts.forEach((part, i) => {
     if (part.type === 'text') {
-      raw.push({ type: 'text', value: part.value })
+      for (const sub of splitMentionParts(part.value, platform)) {
+        if (sub.type === 'text') {
+          raw.push({ type: 'text', value: sub.value })
+        } else {
+          raw.push({ type: 'mention', handle: sub.handle, href: mentionHref(platform, sub.handle) })
+        }
+      }
       return
     }
     const trailing = isTrailingLink(parts, i)
@@ -262,6 +341,13 @@ export interface TheaterLinkedTextProps {
    * unresolved t.co, as X clients do (spec §6b).
    */
   hideTweetLinks?: boolean
+  /**
+   * Source platform of the post, for `@mention` grammar + profile hrefs
+   * (`splitMentionParts` / `mentionHref`). Defaults to `'twitter'`, which is
+   * already correct for the dominant case — callers rendering non-twitter
+   * posts should pass `platform={item.platform}`.
+   */
+  platform?: string
 }
 
 /**
@@ -276,18 +362,21 @@ export function TheaterLinkedText({
   linkClassName,
   links,
   hideTweetLinks,
+  platform = 'twitter',
 }: TheaterLinkedTextProps) {
   const cleaned = stripMediaUrls(decodeHtmlEntities(text), hasMedia)
-  const segments = buildRenderSegments(cleaned, links, hideTweetLinks)
+  const segments = buildRenderSegments(cleaned, links, hideTweetLinks, platform)
 
   return (
     <span className={className}>
       {segments.map((segment, segIndex) => {
-        if (segment.type === 'anchor') {
+        if (segment.type === 'anchor' || (segment.type === 'mention' && segment.href)) {
+          const href = segment.type === 'anchor' ? segment.href : (segment.href as string)
+          const label = segment.type === 'anchor' ? segment.label : `@${segment.handle}`
           return (
             <a
               key={segIndex}
-              href={segment.href}
+              href={href}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
@@ -297,9 +386,13 @@ export function TheaterLinkedText({
                 linkClassName ?? 'text-clay',
               )}
             >
-              {segment.label}
+              {label}
             </a>
           )
+        }
+        if (segment.type === 'mention') {
+          // Unknown platform — no profile URL shape to link to; render plain.
+          return <React.Fragment key={segIndex}>{`@${segment.handle}`}</React.Fragment>
         }
         const lines = segment.value.split('\n')
         return (
