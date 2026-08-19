@@ -1,9 +1,8 @@
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { Metadata } from 'next'
-import { TikTokPreviewLanding } from '@/components/TikTokPreviewLanding'
 import { fetchTikTokMetadata, isValidUsername, isValidVideoId } from '@/lib/media/tnktok'
-import { getSession } from '@/lib/auth/session'
+import { getCurrentUserId } from '@/lib/auth/session'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 import { isLikelyBot } from '@/lib/activity/bot'
 import { buildVideoObjectLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
@@ -13,6 +12,10 @@ import {
   attributionFact,
 } from '@/lib/utils/content-metadata'
 import { RelatedSaves } from '@/components/RelatedSaves'
+import { SharedPostStatic } from '@/components/theater/SharedPostStatic'
+import { TheaterShell } from '@/components/theater/TheaterShell'
+import { buildSharedSeed, tiktokToTheaterItem } from '@/lib/theater/shared-seed'
+import { metrics } from '@/lib/sentry'
 import { db } from '@/lib/db'
 import { bookmarks } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
@@ -73,7 +76,7 @@ export default async function TikTokPreviewPage({ params }: Props) {
   // /api/media/tiktok proxy (resolved from handle+id), so the saved row's
   // author/name/description is all the UI needs.
   const saved = getSavedTikTok(id)
-  const session = await getSession()
+  const userId = await getCurrentUserId()
   const meta = saved ? null : await fetchTikTokMetadata(handle, id)
 
   const author = saved?.author || meta?.author || null
@@ -93,7 +96,17 @@ export default async function TikTokPreviewPage({ params }: Props) {
       thumbnailUrl: null, // tnktok exposes no poster; card falls back to the glyph
       url: previewPath('tiktok', author || handle, id),
     })
+    metrics.theaterOpened('shared')
   }
+
+  const sharedItem = tiktokToTheaterItem({
+    id,
+    handle,
+    author,
+    authorName,
+    text: description || meta?.title || null,
+  })
+  const { seed } = await buildSharedSeed(sharedItem)
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
   const jsonLd = buildVideoObjectLd({
@@ -115,14 +128,13 @@ export default async function TikTokPreviewPage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScriptContent(jsonLd) }}
       />
-      <TikTokPreviewLanding
-        username={handle}
-        videoId={id}
-        authorName={authorName || undefined}
-        author={author || undefined}
-        description={description || undefined}
-        hasVideo={hasVideo}
-        isAuthenticated={!!session}
+      <SharedPostStatic
+        kind="tiktok-video"
+        authorName={authorName}
+        handle={`@${handle}`}
+        text={description}
+        sourceUrl={`https://www.tiktok.com/@${handle}/video/${id}`}
+        label="TikTok video"
         below={
           available ? (
             <RelatedSaves
@@ -134,6 +146,7 @@ export default async function TikTokPreviewPage({ params }: Props) {
           ) : undefined
         }
       />
+      <TheaterShell seed={seed} mode="shared" sharedItem={sharedItem} authed={!!userId} />
     </>
   )
 }

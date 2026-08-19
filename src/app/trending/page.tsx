@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
 import { getTrendingItems, type TrendingItem } from '@/lib/trending/query'
-import { DiscoverFeed } from '@/components/discover/DiscoverFeed'
+import { TrendingRankedList } from '@/components/trending/TrendingRankedList'
 import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
 import { TrendingStaticList, itemHref } from '@/components/trending/TrendingStaticList'
+import type { TheaterFeedSeed } from '@/components/theater/types'
 
 /**
  * /trending — the crawlable, ISR-rendered public discovery hub.
@@ -56,9 +57,11 @@ export default async function TrendingPage() {
   // Resilience: a DB failure during build/ISR degrades to an empty hub (zero
   // items) instead of throwing a 500 — matching sitemap.ts's graceful fallback.
   let items: TrendingItem[] = []
+  let seed: TheaterFeedSeed = { items: [], savedToday: 0, recentActivity: 0 }
   try {
-    const { items: recent } = await getTrendingItems({ limit: 30 })
+    const { items: recent, savedToday, recentActivity } = await getTrendingItems({ limit: 30 })
     items = recent
+    seed = { items: recent, savedToday, recentActivity }
   } catch (error) {
     console.error('Trending: failed to query trending items:', error)
   }
@@ -83,11 +86,11 @@ export default async function TrendingPage() {
       />
       <h1 className="sr-only">What people are sending across X, TikTok, Instagram and YouTube</h1>
       <TrendingStaticList items={items} heading="Latest posts" />
-      <DiscoverFeed initialItems={items} initialFilter="latest" />
-      <nav aria-label="Trending archive" className="pb-10 pt-2 text-center">
+      <TrendingRankedList seed={seed} initialFilter="latest" />
+      <nav aria-label="Trending archive" className="bg-[#08070a] pb-10 pt-2 text-center">
         <a
           href="/trending/archive"
-          className="text-sm text-ink-3 underline decoration-hairline underline-offset-4 transition-colors hover:text-ink"
+          className="text-sm text-white/40 underline decoration-white/15 underline-offset-4 transition-colors hover:text-white/70"
         >
           Browse past weeks in the Trending Archive →
         </a>

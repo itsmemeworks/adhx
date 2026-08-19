@@ -96,7 +96,7 @@ describe('activity — recordActivity', () => {
       url: '/a/status/9',
     })
     const [row] = rows()
-    expect(row.text!.length).toBeLessThanOrEqual(240)
+    expect(row.text!.length).toBeLessThanOrEqual(500)
     expect(row.text!.endsWith('…')).toBe(true)
   })
 
@@ -136,6 +136,83 @@ describe('activity — recordActivity', () => {
     recordActivity({ action: 'save', platform: 'twitter', bookmarkId: '1', author: '', url: '/a' })
     recordActivity({ action: 'save', platform: 'twitter', bookmarkId: '1', author: 'a', url: '' })
     expect(rows()).toHaveLength(0)
+  })
+
+  it('stores sanitized textLinks and quote as JSON, capped at 8 links', () => {
+    const links = Array.from({ length: 12 }, (_, i) => ({
+      shortUrl: `https://t.co/${i}`,
+      expandedUrl: `https://example.com/${i}`,
+      linkType: 'link',
+    }))
+    recordActivity({
+      action: 'preview',
+      platform: 'twitter',
+      bookmarkId: 'links1',
+      author: 'a',
+      url: '/a/status/links1',
+      textLinks: links,
+      quote: {
+        author: 'quoter',
+        authorName: 'Quoter Name',
+        text: 'the quoted text',
+        authorAvatarUrl: 'https://pbs.twimg.com/q.jpg',
+      },
+    })
+    const [row] = rows()
+    const storedLinks = JSON.parse(row.textLinks!)
+    expect(storedLinks).toHaveLength(8)
+    expect(storedLinks[0]).toEqual({
+      shortUrl: 'https://t.co/0',
+      expandedUrl: 'https://example.com/0',
+      linkType: 'link',
+    })
+    const storedQuote = JSON.parse(row.quoteJson!)
+    expect(storedQuote).toEqual({
+      author: 'quoter',
+      authorName: 'Quoter Name',
+      text: 'the quoted text',
+      authorAvatarUrl: 'https://pbs.twimg.com/q.jpg',
+    })
+  })
+
+  it('drops textLinks entries without a valid http(s) expandedUrl', () => {
+    recordActivity({
+      action: 'preview',
+      platform: 'twitter',
+      bookmarkId: 'links2',
+      author: 'a',
+      url: '/a/status/links2',
+      textLinks: [
+        { expandedUrl: 'javascript:alert(1)' },
+        { expandedUrl: 'https://good.example/x' },
+      ],
+    })
+    const [row] = rows()
+    expect(JSON.parse(row.textLinks!)).toEqual([
+      { shortUrl: null, expandedUrl: 'https://good.example/x', linkType: null },
+    ])
+  })
+
+  it('stores null for textLinks/quote when absent, and drops a quote with no author or text', () => {
+    recordActivity({
+      action: 'preview',
+      platform: 'twitter',
+      bookmarkId: 'none1',
+      author: 'a',
+      url: '/a/status/none1',
+    })
+    recordActivity({
+      action: 'preview',
+      platform: 'twitter',
+      bookmarkId: 'none2',
+      author: 'a',
+      url: '/a/status/none2',
+      quote: { author: '', text: null },
+    })
+    const byId = Object.fromEntries(rows().map((r) => [r.bookmarkId, r]))
+    expect(byId['none1'].textLinks).toBeNull()
+    expect(byId['none1'].quoteJson).toBeNull()
+    expect(byId['none2'].quoteJson).toBeNull()
   })
 })
 
@@ -196,5 +273,29 @@ describe('activity — recordSharePulse', () => {
     recordSharePulse({ platform: 'tiktok', bookmarkId: '1' })
     recordSharePulse({ platform: 'tiktok', bookmarkId: '1' })
     expect(rows().filter((r) => r.action === 'share')).toHaveLength(1)
+  })
+
+  it('copies textLinks and quote forward from the source pulse row', () => {
+    recordActivity({
+      action: 'preview',
+      platform: 'twitter',
+      bookmarkId: 'qt1',
+      author: 'a',
+      url: '/a/status/qt1',
+      textLinks: [{ expandedUrl: 'https://example.com/article' }],
+      quote: { author: 'someone', text: 'quoted content' },
+    })
+    recordSharePulse({ platform: 'twitter', bookmarkId: 'qt1' })
+
+    const share = rows().find((r) => r.action === 'share')!
+    expect(JSON.parse(share.textLinks!)).toEqual([
+      { shortUrl: null, expandedUrl: 'https://example.com/article', linkType: null },
+    ])
+    expect(JSON.parse(share.quoteJson!)).toEqual({
+      author: 'someone',
+      authorName: null,
+      text: 'quoted content',
+      authorAvatarUrl: null,
+    })
   })
 })

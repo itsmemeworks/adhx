@@ -13,12 +13,35 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 /**
+ * Theater-dark routes: the home theater ('/'), the dark ranked-list Browse
+ * view ('/trending', '/trending/[filter]'), and the four preview-page shapes
+ * (theater-first.md §7 — preview paths join the theater-dark default). The
+ * preview patterns mirror `isPreviewPage` in `src/components/AppShell.tsx` —
+ * keep the two in lockstep when either changes. Kept as one helper so
+ * resolveInitialTheme() and the inline FOUC script in src/app/layout.tsx
+ * can't drift on which routes qualify — extend this (not the other call
+ * sites) when a new theater surface needs the dark default.
+ */
+function isTheaterDarkRoute(pathname: string): boolean {
+  if (pathname === '/' || pathname === '/trending' || pathname.startsWith('/trending/')) {
+    return true
+  }
+  return (
+    /^\/\w+\/status\/\d+$/.test(pathname) ||
+    /^\/reels?\/[A-Za-z0-9_-]+$/.test(pathname) ||
+    /^\/shorts\/[A-Za-z0-9_-]{11}$/.test(pathname) ||
+    /^\/@?[A-Za-z0-9._]+\/video\/\d+$/.test(pathname)
+  )
+}
+
+/**
  * Resolves the theme for the very first paint, before any user toggle.
  * Mirrors the inline FOUC script in src/app/layout.tsx exactly — keep the
  * two in lockstep; that script points back here.
  *
  * - An explicit stored value ('light' | 'dark') always wins, everywhere.
- * - No stored value: the theater route ('/') defaults to dark
+ * - No stored value: theater-dark routes (`isTheaterDarkRoute` — home and
+ *   the /trending ranked list + its filter hubs) default to dark
  *   (theater-first.md §7); everywhere else follows the device.
  * - An explicit stored 'system' always follows the device, regardless of
  *   route — only an *unset* preference gets the theater-dark override.
@@ -29,7 +52,7 @@ export function resolveInitialTheme(
   prefersDark: boolean,
 ): 'light' | 'dark' {
   if (stored === 'light' || stored === 'dark') return stored
-  if (!stored && pathname === '/') return 'dark'
+  if (!stored && isTheaterDarkRoute(pathname)) return 'dark'
   return prefersDark ? 'dark' : 'light'
 }
 

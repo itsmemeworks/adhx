@@ -303,6 +303,14 @@ export const activity = sqliteTable(
     // preview-only items (no saved bookmark to derive it from) still render the
     // right card. Saved items prefer the bookmark-derived type.
     contentType: text('content_type'),
+    // Server-resolved short-link expansions for URLs in `text` (JSON array of
+    // TextLinkRef, see src/lib/trending/query.ts) — so a preview-only post can
+    // still avoid showing a raw t.co in the theater. Null when none/unresolved.
+    textLinks: text('text_links'),
+    // Server-resolved quoted-post reference (JSON TheaterQuoteRef, see
+    // src/lib/trending/query.ts) for preview-only quote tweets. Null when the
+    // post isn't a quote or the quote couldn't be resolved.
+    quoteJson: text('quote_json'),
     url: text('url').notNull(),
     userId: text('user_id'), // private — never exposed publicly
     createdAt: text('created_at').notNull(),
