@@ -131,12 +131,18 @@ export function StageVideo({
   const handleTimeUpdate = () => {
     const video = videoRef.current
     if (!video || !video.duration) return
-    setProgress(video.currentTime / video.duration)
+    const progress = video.currentTime / video.duration
+    setProgress(progress)
+    // Mirrors the internal bottom bar's value — the mobile top progress line
+    // (TheaterProgressLine, kind 'video') has no access to this element, so
+    // it subscribes to this event instead of reading the DOM directly.
+    window.dispatchEvent(new CustomEvent('theater-video-progress', { detail: { progress } }))
   }
 
   const handleEnded = () => {
     setEnded(true)
     setPlaying(false)
+    window.dispatchEvent(new CustomEvent('theater-video-progress', { detail: { progress: 1 } }))
     onEnded?.()
   }
 
@@ -301,8 +307,10 @@ export function StageVideo({
         </div>
       )}
 
-      {/* Thin progress bar along the bottom. */}
-      <div className="absolute inset-x-0 bottom-0 h-[3px] bg-white/15">
+      {/* Thin progress bar along the bottom — desktop only. Mobile shows the
+          shared top-of-screen TheaterProgressLine instead (fed by the
+          `theater-video-progress` event dispatched above). */}
+      <div className="absolute inset-x-0 bottom-0 hidden h-[3px] bg-white/15 lg:block">
         <div
           className="h-full bg-clay transition-[width] duration-150 ease-linear"
           style={{ width: `${Math.min(100, Math.max(0, progress * 100))}%` }}

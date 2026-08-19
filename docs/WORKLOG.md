@@ -4,6 +4,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-19 — Stories-style auto-advance + mobile button pass
+
+- **Why**: Live review — finished videos should flow to the next post; non-video posts need a visible dwell; Connect in the top scrim was redundant; "Send" undersold the file; copy should be a native share on phones.
+- **What**: Video ended → auto-advance (all viewports; last item keeps the replay overlay). Non-video posts: 10s Instagram-style orange top line (`TheaterProgressLine`, mobile-only via the chrome mount) with hold-to-pause accumulating elapsed; completion dispatches `theater-advance`, shell advances with a stale-timer guard. YouTube excluded (iframe gives no signal — manual). StageVideo's bottom bar is desktop-only now. Buttons: orange CTA = "Download" + Download icon in both modes (behavior unchanged); mobile copy → Share2 icon opening `navigator.share({url})` with clipboard fallback; Connect removed from the mobile top scrim.
+- **Perf note**: all progress ticks mutate style via refs/events — nothing re-renders per frame.
+- **State**: on `feat/theater-phase3` (PR #319), deploying to staging.
+- **Follow-ups**: 10s dwell may want tuning per content type (articles vs photos); consider hold-to-pause visual feedback.
+
 ## 2026-08-19 — Mobile playback: persistent video element, gesture arbitration
 
 - **Why**: Phone testing — the next video after a swipe didn't autoplay (fresh <video> elements lack the sound permission the user's tap granted), the tap-for-sound chip was easy to miss, and swipe-down fought the browser's pull-to-refresh.

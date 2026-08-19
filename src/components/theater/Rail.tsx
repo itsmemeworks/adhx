@@ -11,7 +11,6 @@ import {
   ChevronRight,
   LogIn,
   Loader2,
-  Send,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
@@ -392,17 +391,15 @@ function Actions({
             type="button"
             onClick={() => void send()}
             disabled={sending}
-            title={sendMode === 'share' ? 'Share the video file' : 'Download the video file'}
+            title={
+              sendMode === 'share'
+                ? 'Opens your share sheet with the video file'
+                : 'Download the video file'
+            }
             className={`${primaryBase} disabled:opacity-60`}
           >
-            {sending ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : sendMode === 'share' ? (
-              <Send size={14} />
-            ) : (
-              <Download size={14} />
-            )}
-            {sendMode === 'share' ? 'Send video' : 'Download'}
+            {sending ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+            Download
           </button>
         )}
 

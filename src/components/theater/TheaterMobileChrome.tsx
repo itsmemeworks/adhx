@@ -3,7 +3,8 @@
 /**
  * Mobile theater chrome (spec §8): the full-bleed reel evolution of
  * `/trending/play`. Overlays the full-viewport <Stage/> with a top scrim
- * (brand + Connect), a bottom scrim (author/caption + Send/Save/Copy), and an
+ * (brand only — the Save CTA below covers sign-in), a bottom scrim
+ * (author/caption + Download/Save/Share), and an
  * Up-next bottom sheet — all `pointer-events-auto` islands inside an
  * otherwise `pointer-events-none` layer so taps/swipes on the bare stage fall
  * through to `TheaterShell`'s swipe handler untouched.
@@ -14,10 +15,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 import {
-  Send as SendIcon,
   Download as DownloadIcon,
   Loader2,
-  Copy,
+  Share2,
   Check,
   LogIn,
   Flame,
@@ -26,12 +26,13 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
-import { MatterLogo, ConnectWithX, PlatformGlyph } from '@/components/matter'
+import { MatterLogo, PlatformGlyph } from '@/components/matter'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { inferType } from '@/lib/trending/filter'
 import { useSendFile } from './useSendFile'
 import { useClampExpand } from './Rail'
 import { TheaterLinkedText } from './TheaterText'
+import { TheaterProgressLine, progressKindFor } from './TheaterProgressLine'
 import { UpNextList } from './UpNextList'
 import type { TheaterItem, TheaterMode } from './types'
 
@@ -68,7 +69,6 @@ export function swipeDirection(dx: number, dy: number): 'next' | 'prev' | null {
 }
 
 export function TheaterMobileChrome({
-  mode,
   current,
   items,
   currentKey,
@@ -104,10 +104,22 @@ export function TheaterMobileChrome({
     onSelect(key)
   }
 
-  const handleCopy = async () => {
+  const handleShare = async () => {
     if (!current) return
     const path = previewPath(current.platform, current.author, current.bookmarkId || '')
     const shareUrl = new URL(path, window.location.origin).toString()
+
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ url: shareUrl })
+        return
+      } catch (err) {
+        // User dismissed the sheet — a cancel, not a failure.
+        if (err instanceof DOMException && err.name === 'AbortError') return
+        // Any other error: fall through to the clipboard fallback below.
+      }
+    }
+
     try {
       await navigator.clipboard.writeText(shareUrl)
       setCopied(true)
@@ -147,7 +159,11 @@ export function TheaterMobileChrome({
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10 lg:hidden">
-      {/* Top scrim: brand + Connect. No close button — it's home. */}
+      <TheaterProgressLine itemKey={currentKey} kind={progressKindFor(current)} />
+
+      {/* Top scrim: brand only. No close button — it's home. The Save CTA in
+          the bottom scrim covers sign-in, so there's no separate Connect
+          button up here. */}
       <div
         className="pointer-events-auto absolute inset-x-0 top-0 flex items-center justify-between gap-3 px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))]"
         style={{ background: 'linear-gradient(to bottom, rgba(11,11,17,.75), transparent)' }}
@@ -155,14 +171,6 @@ export function TheaterMobileChrome({
         <a href="/" className="flex items-center" aria-label="ADHX home">
           <MatterLogo size={16} className="[&>span]:text-white" />
         </a>
-        {mode === 'home' && (
-          <a
-            href="/api/auth/twitter"
-            className="inline-flex min-h-[38px] items-center gap-1.5 rounded-full bg-white/15 px-3.5 text-[12px] font-semibold text-white backdrop-blur-md"
-          >
-            <ConnectWithX size={12} />
-          </a>
-        )}
       </div>
 
       {/* Prev/next chevrons on the right edge — always-available navigation
@@ -292,16 +300,19 @@ export function TheaterMobileChrome({
                   void sendFile.send()
                 }}
                 disabled={sendFile.sending}
+                title={
+                  sendFile.mode === 'share'
+                    ? 'Opens your share sheet with the video file'
+                    : 'Download the video file'
+                }
                 className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full bg-clay-grad px-3 text-[13px] font-semibold text-white shadow-glow transition-opacity disabled:opacity-70"
               >
                 {sendFile.sending ? (
                   <Loader2 size={15} className="animate-spin" />
-                ) : sendFile.mode === 'share' ? (
-                  <SendIcon size={15} />
                 ) : (
                   <DownloadIcon size={15} />
                 )}
-                {sendFile.mode === 'share' ? 'Send' : 'Download'}
+                Download
               </button>
             )}
             <a
@@ -313,11 +324,11 @@ export function TheaterMobileChrome({
             </a>
             <button
               type="button"
-              onClick={handleCopy}
-              aria-label="Link"
+              onClick={() => void handleShare()}
+              aria-label="Share link"
               className="inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md"
             >
-              {copied ? <Check size={16} className="text-done" /> : <Copy size={16} />}
+              {copied ? <Check size={16} className="text-done" /> : <Share2 size={16} />}
             </button>
           </div>
         </div>

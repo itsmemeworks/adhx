@@ -13,6 +13,7 @@ import { TheaterMobileChrome, swipeDirection } from './TheaterMobileChrome'
 import { useTheaterFeed } from './useTheaterFeed'
 import { useSeenSet } from './useSeenSet'
 import { prefetchPlayback } from './usePlaybackSource'
+import { progressKindFor } from './TheaterProgressLine'
 import { theaterItemKey } from './types'
 import { previewPath } from '@/lib/activity/preview-path'
 import type { TheaterFeedSeed, TheaterItem, TheaterMode } from './types'
@@ -169,6 +170,11 @@ export function TheaterShell({
   )
   const current: TheaterItem | null = currentIndex === -1 ? null : displayItems[currentIndex]
 
+  // Read fresh inside the `theater-advance` listener below without
+  // re-registering that listener on every navigation (mirrors itemsRef).
+  const currentRef = useRef(current)
+  currentRef.current = current
+
   const goNext = useCallback(() => {
     setCurrentKey((key) => {
       const idx = itemsRef.current.findIndex((it) => theaterItemKey(it) === key)
@@ -209,11 +215,16 @@ export function TheaterShell({
     // link taps, and long-press text selection/copying behave natively.
     const ignore = isScrollableTarget(e.target as Element, stageRef.current)
     touchStartRef.current = { x: t.clientX, y: t.clientY, ignore }
+    // Hold-to-pause (TheaterProgressLine, kind 'timed'): dispatched for every
+    // touch, including ones on text/scrollable regions — holding to read
+    // should pause the auto-advance timer too, not just a swipe attempt.
+    window.dispatchEvent(new CustomEvent('theater-hold'))
   }, [])
   const onStageTouchEnd = useCallback(
     (e: React.TouchEvent) => {
       const start = touchStartRef.current
       touchStartRef.current = null
+      window.dispatchEvent(new CustomEvent('theater-release'))
       if (!start || start.ignore) return
       const t = e.changedTouches[0]
       const direction = swipeDirection(t.clientX - start.x, t.clientY - start.y)
@@ -222,6 +233,12 @@ export function TheaterShell({
     },
     [goNext, goPrev],
   )
+  // A cancelled touch (e.g. the OS intercepts it for a system gesture) still
+  // needs to release the hold — otherwise the timer stays paused forever.
+  const onStageTouchCancel = useCallback(() => {
+    touchStartRef.current = null
+    window.dispatchEvent(new CustomEvent('theater-release'))
+  }, [])
 
   // Suppress the browser's native pull-to-refresh / overscroll chaining while
   // the theater is mounted — it's a fixed full-viewport overlay, not a normal
@@ -347,6 +364,24 @@ export function TheaterShell({
     }
   }, [currentKey])
 
+  // Stories-style auto-advance: a finished video advances via <Stage>'s
+  // `onEnded` prop directly (all viewports — see below); a non-video item's
+  // 10s dwell timer lives entirely in TheaterProgressLine (mobile-only,
+  // mounted by TheaterMobileChrome below `lg`) and signals completion here
+  // via this window event instead of a prop, since the timer component has
+  // no direct handle on the shell. `progressKindFor` re-checks the item
+  // that's actually current at the moment the event arrives (not whatever
+  // was current when the listener was registered) so a timer left running
+  // from a since-navigated-away item can never advance past the wrong post.
+  useEffect(() => {
+    function handleAdvance() {
+      if (progressKindFor(currentRef.current) !== 'timed') return
+      goNext()
+    }
+    window.addEventListener('theater-advance', handleAdvance)
+    return () => window.removeEventListener('theater-advance', handleAdvance)
+  }, [goNext])
+
   // Prefetch at most one item ahead.
   useEffect(() => {
     if (currentIndex === -1) return
@@ -382,11 +417,13 @@ export function TheaterShell({
           className="absolute inset-0"
           onTouchStart={onStageTouchStart}
           onTouchEnd={onStageTouchEnd}
+          onTouchCancel={onStageTouchCancel}
         >
           <Stage
             item={current}
             muted={muted}
             onRequestUnmute={onRequestUnmute}
+            onEnded={goNext}
             photoCaption={false}
           />
         </div>
