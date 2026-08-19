@@ -8,20 +8,21 @@
  * entries), then shares `{ files, text: "via <canonical url>" }` — NEVER
  * `url` alongside `files` (WhatsApp concatenates them into "via URL URL").
  *
- * Desktop-fallback behavior (deliberately chosen, see `send()`): `supported`
- * is driven purely by whether the item HAS a sendable file
- * (`resolveSendSource`), not by `navigator.share` availability. Desktop
- * Chrome/Firefox have no Web Share API at all, but the button still shows and
- * still works — `send()` downloads the prefetched blob directly, mirroring
- * `handleShareMedia`'s desktop behavior (`src/components/feed/utils.tsx`).
- * This keeps one button with one coherent promise ("this always does
- * something useful") instead of hiding Send on desktop or shipping a second
- * download-only affordance.
+ * Desktop behavior (deliberately chosen, see `send()`): `supported` is driven
+ * purely by whether the item HAS a sendable file (`resolveSendSource`), and on
+ * a desktop PLATFORM (`getPlatformType()`, UA-based) `send()` ALWAYS downloads
+ * — never `navigator.share`, even where desktop Safari/Chrome expose it. The
+ * button says "Download" there, and a macOS share sheet on click reads as a
+ * bug (user review 2026-08-19). Mirrors `handleShareMedia`'s desktop behavior
+ * (`src/components/feed/utils.tsx`). This keeps one button with one coherent
+ * promise ("this always does something useful") instead of hiding Send on
+ * desktop or shipping a second download-only affordance.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { reelVideoSrc } from '@/components/feed/video-src'
 import { previewPath } from '@/lib/activity/preview-path'
+import { getPlatformType } from '@/lib/platform'
 import type { TheaterItem } from './types'
 
 export interface SendFile {
@@ -32,11 +33,12 @@ export interface SendFile {
   /** True while a send is in flight. */
   sending: boolean
   /**
-   * The verb `send()` will actually perform: `'share'` when the Web Share API
-   * is available (mobile — opens the native share sheet), `'download'`
-   * otherwise (desktop reality — `send()` saves the file directly). Computed
-   * client-side from `typeof navigator.share === 'function'`; SSR-safe
-   * default `'share'` since it only affects a label/icon, never `supported`.
+   * The verb `send()` will actually perform: `'share'` only on a touch
+   * platform (iOS/Android) whose browser can put a FILE on the share sheet;
+   * `'download'` everywhere else — including desktop browsers that DO expose
+   * `navigator.share` (the desktop button says Download, so it downloads).
+   * Settled client-side in an effect; SSR-safe default `'share'` since it
+   * only affects a label/icon, never `supported`.
    */
   mode: 'share' | 'download'
   /** Open the native share sheet (or fall back to the link). Call from a tap. */
@@ -181,10 +183,17 @@ export function useSendFile(item: TheaterItem | null): SendFile {
   const blobRef = useRef<Blob | null>(null)
 
   useEffect(() => {
+    // Desktop platform is ALWAYS 'download' — desktop Safari/Chrome expose
+    // navigator.share these days, but the desktop button is labeled Download
+    // and a macOS share sheet on click reads as a bug. On touch platforms,
     // 'share' only when the browser can put a FILE on the share sheet —
-    // navigator.share existing alone isn't enough (some desktops expose it
+    // navigator.share existing alone isn't enough (some browsers expose it
     // for links only, and send() would fall through to the download path
     // while the button still said "Send").
+    if (getPlatformType() === 'desktop') {
+      setMode('download')
+      return
+    }
     let canShareFiles = false
     try {
       canShareFiles =
@@ -245,8 +254,11 @@ export function useSendFile(item: TheaterItem | null): SendFile {
       const canonicalUrl = canonicalUrlFor(item)
       const blob = blobRef.current
       const hasShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
+      // The settled mode gates the share paths — desktop (mode 'download')
+      // never opens a share sheet even though its browser may have one.
+      const wantsShare = mode === 'share' && hasShare
 
-      if (blob && hasShare) {
+      if (blob && wantsShare) {
         const file = new File([blob], source.filename, { type: blob.type || 'video/mp4' })
         const payload = buildSharePayload(file, canonicalUrl)
         if (!navigator.canShare || navigator.canShare(payload)) {
@@ -266,7 +278,7 @@ export function useSendFile(item: TheaterItem | null): SendFile {
 
       // Blob not ready yet (early tap) or file-sharing unsupported — never
       // leave the tap dead. Link-only share is valid without `files`.
-      if (hasShare) {
+      if (wantsShare) {
         try {
           await navigator.share({ url: canonicalUrl })
           pingSharePulse(item.platform, item.bookmarkId || '')
@@ -291,15 +303,29 @@ export function useSendFile(item: TheaterItem | null): SendFile {
         return
       }
 
-      // Last resort: no share API, no blob yet — copy the link so the tap
-      // still does something.
+      // Download mode with no blob yet (early click): stream the same-origin
+      // proxy URL through an anchor download instead of leaving the click
+      // dead — the browser saves the file as it streams.
+      if (!wantsShare) {
+        const link = document.createElement('a')
+        link.href = source.mp4
+        link.download = source.filename
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        pingSharePulse(item.platform, item.bookmarkId || '')
+        return
+      }
+
+      // Last resort (share mode, share failed, no blob): copy the link so
+      // the tap still does something.
       if (typeof navigator !== 'undefined' && navigator.clipboard) {
         await navigator.clipboard.writeText(canonicalUrl)
       }
     } finally {
       setSending(false)
     }
-  }, [item, source])
+  }, [item, source, mode])
 
   return { supported, ready, sending, mode, send }
 }

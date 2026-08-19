@@ -149,6 +149,29 @@ export function TheaterShell({
   const { items } = feed
 
   const [muted, setMuted] = useState(true)
+
+  // Sound preference survives full-page navigations within the theater —
+  // paste-to-preview navigates with `window.location.assign`, which used to
+  // silently reset a viewer's sound to muted. Read on mount (not in the
+  // useState initializer — SSR renders muted, and a differing first client
+  // render would be a hydration mismatch on the audio buttons), write on
+  // every change. Best-effort only: on a fresh document the browser may
+  // still veto audible autoplay (no gesture yet); StageVideo's
+  // rejected-play fallback then re-mutes gracefully, exactly as before.
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem('adhx-theater-sound') === 'on') setMuted(false)
+    } catch {
+      // Storage can be unavailable (private mode) — keep the muted default.
+    }
+  }, [])
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('adhx-theater-sound', muted ? 'off' : 'on')
+    } catch {
+      // Same — never let a storage failure break playback.
+    }
+  }, [muted])
   const isDesktop = useIsDesktopViewport()
   // Desktop de-clutter: collapses the rail column for a full-bleed stage.
   // Desktop-only concept — mobile has its own independent de-clutter state
