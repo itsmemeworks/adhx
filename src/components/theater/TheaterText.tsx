@@ -31,6 +31,20 @@ const TWEET_STATUS_RE = /^https?:\/\/(?:www\.)?(?:x\.com|twitter\.com)\/[^/]+\/s
 export type TextPart = { type: 'text'; value: string } | { type: 'link'; href: string }
 
 /**
+ * Preview-text cleanup for LIST ROWS (Up next, collection queue): rows render
+ * plain clamped text with no anchors, so a bare `https://t.co/xxx` is pure
+ * noise there — remove ALL t.co URLs and collapse the whitespace they leave.
+ * Only for row previews; full surfaces render through TheaterLinkedText.
+ */
+export function stripShortLinksForPreview(text: string): string {
+  return text
+    .replace(/https?:\/\/t\.co\/[A-Za-z0-9]+/g, ' ')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/ ([.,!?)])/g, '$1')
+    .trim()
+}
+
+/**
  * Pure: split text into text/link parts. Runs over the whole (possibly
  * multi-line) string — the URL regex already stops at whitespace/newlines,
  * so line breaks land inside surrounding text parts unchanged. Exported for
