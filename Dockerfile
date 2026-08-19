@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Build stage - compile native modules and build Next.js
-FROM node:20-slim AS builder
+FROM node:24-slim AS builder
 
 # Build argument for Sentry release tracking
 ARG SENTRY_RELEASE
@@ -28,7 +28,7 @@ COPY . .
 RUN npm run build
 
 # Production stage - minimal runtime image
-FROM node:20-slim AS runner
+FROM node:24-slim AS runner
 
 # Install sqlite3 CLI and runtime dependencies
 RUN apt-get update && apt-get install -y \
