@@ -9,8 +9,16 @@ import {
   ExternalLink,
   Flame,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   LogIn,
   Loader2,
+  Pause,
+  Play,
+  Volume2,
+  VolumeX,
+  Minimize2,
+  Maximize2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
@@ -21,6 +29,7 @@ import { inferType } from '@/lib/trending/filter'
 import { UpNextList } from './UpNextList'
 import { useSendFile } from './useSendFile'
 import { TheaterLinkedText } from './TheaterText'
+import { progressKindFor } from './TheaterProgressLine'
 import { theaterItemKey } from './types'
 import type { TheaterItem, TheaterMode } from './types'
 
@@ -104,6 +113,18 @@ export interface RailProps {
    * skeleton for a one-line "waiting" message so it doesn't pulse forever.
    */
   waiting?: boolean
+  /** Current sound state (owned by TheaterShell) — mirrors the mobile chrome's audio button. */
+  muted: boolean
+  /** Flips TheaterShell's `muted` state. */
+  onToggleMute: () => void
+  /** Whether there's a previous/next post to navigate to — disables the corresponding chevron in place. */
+  canPrev: boolean
+  canNext: boolean
+  onPrev: () => void
+  onNext: () => void
+  /** Desktop de-clutter (owned by TheaterShell — collapses the rail column when true). */
+  declutter: boolean
+  onToggleDeclutter: () => void
 }
 
 function BrandRow({ mode }: { mode: TheaterMode }) {
@@ -280,6 +301,149 @@ function NowPlaying({
           {expanded ? 'Show less' : 'Show more'}
         </button>
       )}
+    </div>
+  )
+}
+
+/** Shared style for the transport row's icon-only controls — mirrors the mobile peek bar's `PEEK_ICON_BTN`/`PEEK_ICON_BTN_DISABLED`. */
+const TRANSPORT_ICON_BTN =
+  'inline-flex h-10 w-10 flex-none items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-inset hover:text-ink active:bg-inset active:text-ink disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-ink-3'
+
+/**
+ * Desktop transport row: prev/pause/next + audio (video kind only) + de-clutter.
+ * Mirrors `TheaterMobileChrome`'s peek-bar semantics exactly — same events,
+ * same kind-awareness — but rendered inline in the rail rather than an
+ * overlay, since the desktop rail has no scrim to hide behind. Rendered
+ * regardless of `current` (prev/next/de-clutter stay usable through the
+ * waiting stage); pause/audio hide via `kind === 'none'`.
+ */
+function TransportRow({
+  current,
+  currentKey,
+  canPrev,
+  canNext,
+  onPrev,
+  onNext,
+  muted,
+  onToggleMute,
+  declutter,
+  onToggleDeclutter,
+}: {
+  current: TheaterItem | null
+  currentKey: string | null
+  canPrev: boolean
+  canNext: boolean
+  onPrev: () => void
+  onNext: () => void
+  muted: boolean
+  onToggleMute: () => void
+  declutter: boolean
+  onToggleDeclutter: () => void
+}) {
+  const kind = progressKindFor(current)
+
+  // Mirrors TheaterMobileChrome's pause/play + mute bookkeeping: 'video'-kind
+  // items reflect StageVideo's real playing state via the same window events;
+  // 'timed'-kind items own their own paused flag (StageVideo doesn't exist for
+  // them), reset whenever the current post changes.
+  const [videoPlaying, setVideoPlaying] = useState(true)
+  const [timedPaused, setTimedPaused] = useState(false)
+  const [liveMuted, setLiveMuted] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    const handlePlaying = (e: Event) => {
+      const detail = (e as CustomEvent<{ playing: boolean }>).detail
+      if (detail) setVideoPlaying(detail.playing)
+    }
+    const handleMuted = (e: Event) => {
+      const detail = (e as CustomEvent<{ muted: boolean }>).detail
+      if (detail) setLiveMuted(detail.muted)
+    }
+    window.addEventListener('theater-playing-state', handlePlaying)
+    window.addEventListener('theater-muted-state', handleMuted)
+    return () => {
+      window.removeEventListener('theater-playing-state', handlePlaying)
+      window.removeEventListener('theater-muted-state', handleMuted)
+    }
+  }, [])
+
+  // Never let a paused 'timed' item leak its pause into the next one — 'video'
+  // items don't need this, StageVideo always (re)plays a fresh src.
+  useEffect(() => {
+    setTimedPaused(false)
+  }, [currentKey])
+
+  const paused = kind === 'video' ? !videoPlaying : timedPaused
+  const displayMuted = liveMuted ?? muted
+  const soundPulse = kind === 'video' && displayMuted && videoPlaying
+
+  const handleTogglePause = () => {
+    if (kind === 'video') {
+      window.dispatchEvent(new CustomEvent(videoPlaying ? 'theater-pause' : 'theater-resume'))
+      return
+    }
+    if (kind === 'timed') {
+      setTimedPaused((was) => {
+        window.dispatchEvent(new CustomEvent(was ? 'theater-resume' : 'theater-pause'))
+        return !was
+      })
+    }
+  }
+
+  return (
+    <div className="flex flex-none items-center gap-1 border-b border-hairline px-5 py-2">
+      <button
+        type="button"
+        disabled={!canPrev}
+        onClick={onPrev}
+        aria-label="Previous post"
+        aria-disabled={!canPrev}
+        className={TRANSPORT_ICON_BTN}
+      >
+        <ChevronUp size={18} />
+      </button>
+      {kind !== 'none' && (
+        <button
+          type="button"
+          onClick={handleTogglePause}
+          aria-label={paused ? 'Play' : 'Pause'}
+          className={TRANSPORT_ICON_BTN}
+        >
+          {paused ? (
+            <Play size={16} fill="currentColor" />
+          ) : (
+            <Pause size={16} fill="currentColor" />
+          )}
+        </button>
+      )}
+      <button
+        type="button"
+        disabled={!canNext}
+        onClick={onNext}
+        aria-label="Next post"
+        aria-disabled={!canNext}
+        className={TRANSPORT_ICON_BTN}
+      >
+        <ChevronDown size={18} />
+      </button>
+      {kind === 'video' && (
+        <button
+          type="button"
+          onClick={onToggleMute}
+          aria-label={displayMuted ? 'Unmute' : 'Mute'}
+          className={cn(TRANSPORT_ICON_BTN, soundPulse && 'animate-sound-pulse text-ink')}
+        >
+          {displayMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={onToggleDeclutter}
+        aria-label={declutter ? 'Show controls' : 'Hide controls'}
+        className={cn(TRANSPORT_ICON_BTN, 'ml-auto')}
+      >
+        {declutter ? <Maximize2 size={16} /> : <Minimize2 size={16} />}
+      </button>
     </div>
   )
 }
@@ -473,11 +637,31 @@ export function Rail({
   sharedItem,
   authed = false,
   waiting = false,
+  muted,
+  onToggleMute,
+  canPrev,
+  canNext,
+  onPrev,
+  onNext,
+  declutter,
+  onToggleDeclutter,
 }: RailProps) {
   return (
-    <div className="flex h-full w-full flex-col bg-surface text-ink lg:h-full lg:w-[360px] lg:border-l lg:border-hairline xl:w-[400px]">
+    <div className="flex h-full w-full flex-col bg-surface text-ink lg:h-full lg:border-l lg:border-hairline">
       <BrandRow mode={mode} />
       <NowPlaying current={current} sharedItem={sharedItem} waiting={waiting} />
+      <TransportRow
+        current={current}
+        currentKey={currentKey}
+        canPrev={canPrev}
+        canNext={canNext}
+        onPrev={onPrev}
+        onNext={onNext}
+        muted={muted}
+        onToggleMute={onToggleMute}
+        declutter={declutter}
+        onToggleDeclutter={onToggleDeclutter}
+      />
       <Actions mode={mode} current={current} authed={authed} />
 
       <div className="flex min-h-0 flex-1 flex-col">

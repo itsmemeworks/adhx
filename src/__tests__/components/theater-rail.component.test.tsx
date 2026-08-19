@@ -41,6 +41,14 @@ const railProps = {
   newCount: 0,
   savedToday: 0,
   onSelect: () => {},
+  muted: true,
+  onToggleMute: () => {},
+  canPrev: false,
+  canNext: false,
+  onPrev: () => {},
+  onNext: () => {},
+  declutter: false,
+  onToggleDeclutter: () => {},
 }
 
 afterEach(() => {

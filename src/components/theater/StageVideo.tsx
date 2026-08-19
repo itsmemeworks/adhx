@@ -2,7 +2,7 @@
 
 /**
  * <video> stage for twitter/tiktok MP4s (spec §6): poster-first, muted
- * autoplay, thin progress bar, "Tap for sound" affordance, replay + next
+ * autoplay, "Tap for sound" affordance, replay + next
  * nudge on end. Falls back to a big centered play button when autoplay is
  * rejected even muted (iOS low-power mode blocks even muted autoplay — spec
  * §11).
@@ -45,7 +45,6 @@ export function StageVideo({
   onEnded,
 }: StageVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const [progress, setProgress] = useState(0)
   const [ended, setEnded] = useState(false)
   const [needsGesture, setNeedsGesture] = useState(false)
   const [errored, setErrored] = useState(false)
@@ -75,7 +74,6 @@ export function StageVideo({
   // gesture" signal — there's no second caller (like the old `autoPlay`
   // attribute) it could be racing against.
   useEffect(() => {
-    setProgress(0)
     setEnded(false)
     setNeedsGesture(false)
     setErrored(false)
@@ -175,8 +173,7 @@ export function StageVideo({
     const video = videoRef.current
     if (!video || !video.duration) return
     const progress = video.currentTime / video.duration
-    setProgress(progress)
-    // Mirrors the internal bottom bar's value — the mobile top progress line
+    // The shared top-of-screen progress line
     // (TheaterProgressLine, kind 'video') has no access to this element, so
     // it subscribes to this event instead of reading the DOM directly.
     window.dispatchEvent(new CustomEvent('theater-video-progress', { detail: { progress } }))
@@ -354,16 +351,9 @@ export function StageVideo({
         </div>
       )}
 
-      {/* Thin progress bar along the bottom — desktop only. Mobile shows the
-          shared top-of-screen TheaterProgressLine instead (fed by the
-          `theater-video-progress` event dispatched above). */}
-      <div className="absolute inset-x-0 bottom-0 hidden h-[3px] bg-white/15 lg:block">
-        <div
-          className="h-full bg-clay transition-[width] duration-150 ease-linear"
-          style={{ width: `${Math.min(100, Math.max(0, progress * 100))}%` }}
-        />
-      </div>
-
+      {/* No internal progress bar: BOTH viewports now show the shared
+          top-of-screen TheaterProgressLine, fed by the
+          `theater-video-progress` events dispatched above. */}
       <span className="sr-only">{item.text || `${item.platform} video`}</span>
     </div>
   )

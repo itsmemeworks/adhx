@@ -4,6 +4,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-19 — Desktop theater controls (port of the mobile round)
+
+- **Why**: Bring the mobile features to desktop: visible transport controls, audio toggle, de-clutter, the progress line, and the 10s timed auto-advance.
+- **What**: Rail gains a TransportRow ([prev · pause/play · next · audio] + de-clutter right) mirroring the mobile event semantics exactly. The progress line mounts per-viewport via `useIsDesktopViewport()` (matchMedia) — exactly ONE live 'timed'/'video' kind at a time. De-clutter collapses the rail column (w-0 transition) into a full-bleed stage with a fixed restore button. StageVideo's internal bottom bar removed — the top line is the single progress indicator on both viewports.
+- **Latent bug fixed en route**: the mobile chrome is CSS-hidden (not unmounted) at desktop widths, so its 10s timer was ALREADY running invisibly on desktop and auto-advancing text posts — display:none doesn't stop rAF. The viewport gating (`current=null` to the chrome at lg+) kills it properly.
+- **State**: on `feat/theater-desktop-controls`, deploying to staging.
+- **Follow-ups**: none noted.
+
 ## 2026-08-19 — Waiting stage, tappable mentions, chrome polish
 
 - **Why**: Live review continued — the theater dead-ended at the last post while fresh pulse items prepended unseen; @mentions were plain text; the reviewer wanted stable control positions, an open-original button, fixed post meta, avatars, the sound affordance on the audio button, and a see-through peek bar.
