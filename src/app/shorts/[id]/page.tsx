@@ -1,14 +1,13 @@
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { Metadata } from 'next'
-import { YouTubePreviewLanding } from '@/components/YouTubePreviewLanding'
 import {
   fetchYouTubeMetadata,
   isValidVideoId,
   youtubeThumbnail,
   youtubeEmbedUrl,
 } from '@/lib/media/youtube'
-import { getSession } from '@/lib/auth/session'
+import { getCurrentUserId } from '@/lib/auth/session'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 import { isLikelyBot } from '@/lib/activity/bot'
 import { buildVideoObjectLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
@@ -18,6 +17,10 @@ import {
   attributionFact,
 } from '@/lib/utils/content-metadata'
 import { RelatedSaves } from '@/components/RelatedSaves'
+import { SharedPostStatic } from '@/components/theater/SharedPostStatic'
+import { TheaterShell } from '@/components/theater/TheaterShell'
+import { buildSharedSeed, youtubeToTheaterItem } from '@/lib/theater/shared-seed'
+import { metrics } from '@/lib/sentry'
 import { db } from '@/lib/db'
 import { bookmarks } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
@@ -69,7 +72,7 @@ export default async function ShortPreviewPage({ params }: Props) {
   // skip the YouTube oEmbed fetch. The player is the official iframe embed
   // (resolved from the id), so the saved row's title/author is all the UI needs.
   const saved = getSavedShort(id)
-  const session = await getSession()
+  const userId = await getCurrentUserId()
   const meta = saved ? null : await fetchYouTubeMetadata(id)
 
   const author = saved?.author || meta?.author || null
@@ -89,7 +92,16 @@ export default async function ShortPreviewPage({ params }: Props) {
       thumbnailUrl: youtubeThumbnail(id),
       url: previewPath('youtube', previewAuthor, id),
     })
+    metrics.theaterOpened('shared')
   }
+
+  const sharedItem = youtubeToTheaterItem({
+    id,
+    author: previewAuthor,
+    authorName,
+    text: title,
+  })
+  const { seed } = await buildSharedSeed(sharedItem)
 
   const ldAuthorName = authorName || author
   const jsonLd = buildVideoObjectLd({
@@ -105,13 +117,13 @@ export default async function ShortPreviewPage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScriptContent(jsonLd) }}
       />
-      <YouTubePreviewLanding
-        videoId={id}
-        title={title || undefined}
-        authorName={authorName || undefined}
-        author={author || undefined}
-        hasVideo={available}
-        isAuthenticated={!!session}
+      <SharedPostStatic
+        kind="youtube-short"
+        authorName={authorName}
+        handle={author}
+        text={title}
+        sourceUrl={`https://www.youtube.com/shorts/${id}`}
+        label="YouTube Short"
         below={
           available ? (
             <RelatedSaves
@@ -123,6 +135,7 @@ export default async function ShortPreviewPage({ params }: Props) {
           ) : undefined
         }
       />
+      <TheaterShell seed={seed} mode="shared" sharedItem={sharedItem} authed={!!userId} />
     </>
   )
 }

@@ -143,6 +143,24 @@ try {
   // Column already exists — nothing to do.
 }
 
+// activity.text_links / activity.quote_json — server-resolved short-link
+// expansions and quoted-post reference, recorded at preview time so a
+// preview-only pulse item never shows a raw t.co or drops its quote card
+// (previously only saved posts had these, derived from bookmark_links /
+// bookmarks.quoteContext). Guarded for re-runs (no IF NOT EXISTS).
+try {
+  db.exec('ALTER TABLE activity ADD COLUMN text_links text')
+  console.log('[migrate] Added activity.text_links')
+} catch {
+  // Column already exists — nothing to do.
+}
+try {
+  db.exec('ALTER TABLE activity ADD COLUMN quote_json text')
+  console.log('[migrate] Added activity.quote_json')
+} catch {
+  // Column already exists — nothing to do.
+}
+
 // Tiny settle-guard table for the one-time backfills below. Both backfills
 // scan/rewrite a full table (bookmarks / bookmark_media) with no usable index
 // for their WHERE clause (a leading-wildcard NOT LIKE, and platform+type

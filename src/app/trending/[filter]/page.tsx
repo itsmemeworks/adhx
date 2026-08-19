@@ -2,9 +2,10 @@ import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import { getTrendingItems, type TrendingItem } from '@/lib/trending/query'
 import { applyFilter, filterLabel, slugToFilter } from '@/lib/trending/filter'
-import { DiscoverFeed } from '@/components/discover/DiscoverFeed'
+import { TrendingRankedList } from '@/components/trending/TrendingRankedList'
 import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
 import { TrendingStaticList, itemHref } from '@/components/trending/TrendingStaticList'
+import type { TheaterFeedSeed } from '@/components/theater/types'
 
 /**
  * /trending/[filter] — a crawlable hub for a single lens (videos / photos /
@@ -76,9 +77,14 @@ export default async function TrendingFilterPage({ params }: Props) {
   // Resilience: a DB failure during build/ISR degrades to an empty hub (zero
   // items) instead of throwing a 500 — matching /trending + sitemap.ts.
   let items: TrendingItem[] = []
+  let seed: TheaterFeedSeed = { items: [], savedToday: 0, recentActivity: 0 }
   try {
-    const { items: recent } = await getTrendingItems({ limit: 60 })
+    const { items: recent, savedToday, recentActivity } = await getTrendingItems({ limit: 60 })
     items = applyFilter(recent, filter).slice(0, 30)
+    // Seed the ranked list with the FULL recent window (unfiltered) — the
+    // filter pills apply client-side, same as the crawlable list vs. the
+    // hydrated grid on /trending's bare hub.
+    seed = { items: recent, savedToday, recentActivity }
   } catch (error) {
     console.error(`Trending[${slug}]: failed to query trending items:`, error)
   }
@@ -103,7 +109,7 @@ export default async function TrendingFilterPage({ params }: Props) {
       />
       <h1 className="sr-only">{title}</h1>
       <TrendingStaticList items={items} heading={`${label} posts`} />
-      <DiscoverFeed initialItems={items} initialFilter={filter} />
+      <TrendingRankedList seed={seed} initialFilter={filter} />
     </>
   )
 }

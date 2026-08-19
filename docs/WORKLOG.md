@@ -4,6 +4,120 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-19 — Desktop theater "Filmstrip dock" redesign (direction C shipped)
+
+- **Why**: User live review judged the rail-based desktop layout weaker than mobile's "stage owns the post" model and selected direction C.
+- **What**: Rail.tsx deleted. Desktop = full-width stage (flex-1) + bottom filmstrip dock (`DesktopDock`: transport buttons + horizontal queue cards auto-scrolled to keep current visible + "Show all" panel with full `UpNextList` + savedToday line). `DesktopStageChrome`: top bar (brand + LIVE + paste-to-preview input ⌘V + de-clutter); stage overlays (meta/flame/platform pinned top-right for text/quote/article; merged avatar·name·@handle·platform·flame overlay + 2-line clamped caption with show-more for video/photo); bottom actions (Download when sendable / Link / Save / Open). New `useClampExpand.ts` module extracted, `lib/theater/paste-preview.ts` for `resolvePastedLink()`, ←/→ keyboard prev/next. Mobile chrome untouched.
+- **State**: on `feat/theater-desktop-controls`, PR #322. Earlier same-day rail de-clutter entry (#322) is superseded.
+- **Follow-ups**: none.
+
+## 2026-08-19 — Desktop theater rail de-clutter per user review
+
+- **Why**: Streamline the desktop theater rail controls and layout based on user feedback.
+- **What**: Removed rail Connect CTA block; signed-out saving via Save action button → `/api/auth/twitter`. Removed desktop "Tap for sound" pill; sound affordance now the rail transport row's pulsing audio button or tapping stage. Removed "Browse as list" footer link (page `/trending` remains for SEO). Rail layout redesigned: fixed top block = brand → transport → actions, then ONE scroll container for now-playing post + collapsed Up next (Show all · N more toggle; mobile sheet unchanged).
+- **State**: on `feat/theater-desktop-controls`, PR #322.
+- **Follow-ups**: none noted.
+
+## 2026-08-19 — Desktop theater controls (port of the mobile round)
+
+- **Why**: Bring the mobile features to desktop: visible transport controls, audio toggle, de-clutter, the progress line, and the 10s timed auto-advance.
+- **What**: Rail gains a TransportRow ([prev · pause/play · next · audio] + de-clutter right) mirroring the mobile event semantics exactly. The progress line mounts per-viewport via `useIsDesktopViewport()` (matchMedia) — exactly ONE live 'timed'/'video' kind at a time. De-clutter collapses the rail column (w-0 transition) into a full-bleed stage with a fixed restore button. StageVideo's internal bottom bar removed — the top line is the single progress indicator on both viewports.
+- **Latent bug fixed en route**: the mobile chrome is CSS-hidden (not unmounted) at desktop widths, so its 10s timer was ALREADY running invisibly on desktop and auto-advancing text posts — display:none doesn't stop rAF. The viewport gating (`current=null` to the chrome at lg+) kills it properly.
+- **State**: on `feat/theater-desktop-controls`, deploying to staging.
+- **Follow-ups**: none noted.
+
+## 2026-08-19 — Waiting stage, tappable mentions, chrome polish
+
+- **Why**: Live review continued — the theater dead-ended at the last post while fresh pulse items prepended unseen; @mentions were plain text; the reviewer wanted stable control positions, an open-original button, fixed post meta, avatars, the sound affordance on the audio button, and a see-through peek bar.
+- **What**: `StageWaiting` — advancing past the last post enters a calm "waiting for new sends…" stage; a fresh pulse arrival auto-stages and plays (baseline-snapshotted freshKeys; prev/Up-next selection exits; mid-feed prepend behavior untouched). @mentions linkify platform-aware (`splitMentionParts`/`mentionHref` — email-safe, trailing-dot-safe; all call sites pass `platform`, quote cards pinned to twitter). Chrome: [de-clutter · audio] left (de-clutter never shifts), post meta (flame + platform/time link-out) pinned to the TOP scrim right on every content type, avatar in the media author row, ExternalLink open-original button right of Share, "Tap for sound" pill desktop-only with the peek-bar audio button pulsing while muted+playing, peek bar translucent (surface/70 blur collapsed, /95 open).
+- **State**: on `feat/theater-phase3` (PR #319), deploying to staging.
+- **Follow-ups**: agents reported one git-stash near-miss + staleness churn on TheaterMobileChrome — diff-audited intact (sheet drag, all six changes present).
+
+## 2026-08-19 — Peek bar mirrored, swipe removed, end-state chevrons
+
+- **Why**: Live review — nav belongs under the right thumb; de-clutter hid the controls people still wanted; the label was off-center; swiping to the next video re-muted it (our preventDefault voided user activation, so unmuted play() was denied); testers hit the first post and couldn't tell why "back" did nothing.
+- **What**: Peek bar mirrored — [audio · de-clutter] left, absolutely-centered "{N} new"/"Up next" label, [prev · pause · next] right. De-clutter hides only the scrims; the peek bar stays (button toggles in place; corner restore deleted). Swipe navigation REMOVED entirely (touch handlers, native preventDefault listener, isScrollableTarget, swipeDirection, data-theater-scroll attrs, dead tests) — buttons + auto-advance navigate, fixing the audio drop by construction; overscroll-behavior none stays for pull-to-refresh. Prev/next chevrons render disabled (opacity-35, native disabled) at the ends via canPrev/canNext.
+- **State**: on `feat/theater-phase3` (PR #319), deploying to staging.
+- **Follow-ups**: iOS may rubber-band slightly on aggressive drags now that preventDefault is gone (noted in code); acceptable.
+
+## 2026-08-19 — Peek-bar controls: pause, audio, de-clutter; hold-to-pause removed
+
+- **Why**: Live review — hold-to-pause fought text selection and felt unreliable; videos needed an explicit audio toggle; the reviewer wanted an immersive full-screen mode and suggested the sheet peek bar as the control surface.
+- **What**: The mobile peek bar is now the control strip (drag handle row + a 40px button row): [prev · pause/play · next] left, "Up next · N new" center (still opens the sheet), [audio (video only) · de-clutter] right. Pause = one meaning (10s timer on timed posts, the video itself on videos; hidden on YouTube), icon synced to reality via `theater-playing-state`/`theater-muted-state` events from StageVideo. Hold-to-pause (`theater-hold`/`release`) deleted. De-clutter hides all chrome except the progress line + one restore button; persists across items; swipe/auto-advance still navigate. Floating right-edge cluster removed. PEEK_H 3.75→4.25rem (kept in hand-sync with the literal Tailwind transform class — JIT needs static text).
+- **State**: on `feat/theater-phase3` (PR #319), deploying to staging.
+- **Follow-ups**: none noted.
+
+## 2026-08-19 — Stories-style auto-advance + mobile button pass
+
+- **Why**: Live review — finished videos should flow to the next post; non-video posts need a visible dwell; Connect in the top scrim was redundant; "Send" undersold the file; copy should be a native share on phones.
+- **What**: Video ended → auto-advance (all viewports; last item keeps the replay overlay). Non-video posts: 10s Instagram-style orange top line (`TheaterProgressLine`, mobile-only via the chrome mount) with hold-to-pause accumulating elapsed; completion dispatches `theater-advance`, shell advances with a stale-timer guard. YouTube excluded (iframe gives no signal — manual). StageVideo's bottom bar is desktop-only now. Buttons: orange CTA = "Download" + Download icon in both modes (behavior unchanged); mobile copy → Share2 icon opening `navigator.share({url})` with clipboard fallback; Connect removed from the mobile top scrim.
+- **Perf note**: all progress ticks mutate style via refs/events — nothing re-renders per frame.
+- **State**: on `feat/theater-phase3` (PR #319), deploying to staging.
+- **Follow-ups**: 10s dwell may want tuning per content type (articles vs photos); consider hold-to-pause visual feedback.
+
+## 2026-08-19 — Mobile playback: persistent video element, gesture arbitration
+
+- **Why**: Phone testing — the next video after a swipe didn't autoplay (fresh <video> elements lack the sound permission the user's tap granted), the tap-for-sound chip was easy to miss, and swipe-down fought the browser's pull-to-refresh.
+- **What**: StageVideo keeps ONE persistent <video> (no key={src}; src swapped imperatively, one play() caller, event-driven state) so the unmute carries across video→video swipes, with an in-effect fall-back-to-muted when a browser still denies. Centered pulsing "Tap for sound" pill until first unmute. TheaterShell: overscroll-behavior none while mounted + touch-action none + non-passive preventDefault on the stage kills pull-to-refresh; gestures starting in `[data-theater-scroll]`, links, buttons, or any overflow-y:auto ancestor are ignored entirely so scrolling long posts and long-press copy stay native (JS ignore-flag is authoritative; CSS touch-action is a hint).
+- **State**: on `feat/theater-phase3` (PR #319), deployed to staging. Needs a real-device pass: sound continuity across swipes, pull-to-refresh gone, text copy inside posts.
+- **Follow-ups**: unlock is lost crossing non-video items (text/article/YouTube) — retries unmuted and degrades to the pill; IG reels only keep the element when the mirror is pre-warmed.
+
+## 2026-08-19 — Staging round 2: pulse carries links+quote, link-out, URL sync
+
+- **Why**: Round-1 fixes only covered SAVED posts and the shared post's own page — preview-only pulse items still showed raw t.co and no quote in the theater (the reviewer caught it in the Up-next rows, now-playing, and show-more).
+- **What**: `activity` gains `text_links` + `quote_json` (guarded ALTERs; server-resolved at preview time on the status page; share/preview pulses copy them forward; public endpoints stay identifiers-only, regression-tested). Enrichment precedence: bookmark_links → recorded links; recorded quote → saved bookmark quoteContext. List rows strip all bare t.co (`stripShortLinksForPreview`). Rail: platform-glyph+time top-right is a link-out to the ORIGINAL post; Open → source network (hidden when unbuildable); show more/less is a sticky session preference; Send labels honestly (Send w/ share sheet, Download on desktop). TheaterShell syncs the address bar to the current post via replaceState (home+shared) — / and preview URLs are one continuous surface. Preview paths join the theater-dark theme default.
+- **State**: on `feat/theater-phase3` (PR #319), deploying to staging with a full theater-side test pass on the reviewer's exact posts.
+- **Follow-ups**: pre-existing activity rows lack the new columns until a fresh preview re-records them (dedupe takes the newest event); CollectionRail send buttons still say "Send" unconditionally.
+
+## 2026-08-19 — Staging review round: full text, pinned lead, shared quote cards
+
+- **Why**: First real staging pass surfaced five issues: "Show more" expanded to a 240-char-capped string; "Copy link" wrapped on mobile; photo captions duplicated (stage overlay + rail); a shared quoting tweet showed a raw t.co with no quote; ↓ dead when the lead-pick landed at the bottom of the recency list.
+- **What**: getTrendingItems serves the saved bookmark's FULL text (2000 cap; article title still wins; TEXT_CAP 240→500 for preview-only). Labels → "Link". `photoCaption={false}` from TheaterShell (rail/chrome carry the text; collection theater keeps captions). `TheaterItem.quote` (from FxTwitter's quote on preview pages) → StageText renders a quote card + strips the quote link (§6b); rail/chrome hideTweetLinks follow. `pinKeyFirst`: the lead-pick now pins its item to the top like shared mode, so keyboard order == rail order.
+- **Verified live**: Elon quote-tweet preview renders the quote card with no t.co; ↓ advances 0→1→2 from the pinned lead.
+- **State**: on `feat/theater-phase3` (PR #319), redeployed to staging.
+- **Follow-ups**: pulse items never saved by anyone still cap at 500 chars (no fuller source exists).
+
+## 2026-08-19 — Theater t.co policy (spec §6b): expand external links, strip rendered tweet-links
+
+- **Why**: Raw `t.co` labels are opaque; a t.co pointing at a quoted tweet is redundant once the quote card renders it.
+- **What**: Spec §6b decision table added FIRST, then built: `TrendingItem.textLinks` (from `bookmark_links` original/expanded/link_type — public columns, anonymity test green), collection converter + preview-seed (FxTwitter urls/facets) plumbing, and the resolution engine in `TheaterLinkedText` (`resolveLink`/`buildRenderSegments` pure pipeline): external → anchor to expandedUrl with cleaned label; tweet-links stripped only under `hideTweetLinks` (set solely where the quote card renders, in CollectionTheater); unresolved trailing t.co stripped there too (X appends the quote link last); unresolved mid-text links never stripped. Punctuation-tail matching handled.
+- **Verified live**: quote tweet's t.co gone from the stage with the quote card below; textLinks in `/api/activity` JSON with no user-derived fields. 1417 tests green.
+- **State**: in-flight on `feat/theater-phase3` (part of PR #319).
+- **Follow-ups**: quoted-tweet excerpt inside the quote card has no textLinks data (FeedItem shape doesn't carry the quoted post's links) — raw t.co may appear there; list rows stay plain by design.
+
+## 2026-08-19 — Theater text: long posts readable, links clickable
+
+- **Why**: Review caught two gaps — long tweets overflowed StageText unreadably (clamps elsewhere had no expand), and no theater surface linkified URLs (a regression vs FeedCard's `renderTextWithLinks`).
+- **What**: New `TheaterLinkedText` primitive (`src/components/theater/TheaterText.tsx` — pure `splitTextParts` splitter, clay anchors, stopPropagation so links never trigger stage/swipe/row handlers, media t.co stripping). StageText: 70vh internal scroll + a 4th prose-size tier (>600 chars); photo caption gets measured tap-to-expand (45vh scroll panel). Rail now-playing + mobile caption: `useClampExpand` (ref-measured overflow, Show more/less, reset on item change). Quote card linkified. List rows stay plain (anchors in `<button>` rows are invalid HTML).
+- **Verified**: 5,904-char photo caption fully readable via expand; t.co link renders as target=\_blank noopener anchor. 1383 tests green, prettier clean.
+- **State**: in-flight on `feat/theater-phase3` (part of PR #319).
+- **Follow-ups**: pulse TEXT_CAP stays 240 (deliberate — preview page is the full-text surface for community items).
+
+## 2026-08-18 — Theater-first Phase 3: shared previews, dark Browse, authed collection theater
+
+- **Why**: PR 3 of `docs/specs/theater-first.md` — one mental model everywhere: preview pages, Browse, and the signed-in Collection all run in the theater.
+- **What**: The 5 preview pages render `SharedPostStatic` (sr-only semantic article) + `TheaterShell mode="shared"` (shared post pinned lead, "More being sent right now", authed Save→/api/bookmarks/add). `/trending` hubs swap the grid for the dark `TrendingRankedList` (trendCount-desc ranking, SEO untouched). `CollectionTheater`+`CollectionRail` replace `TriageMode` in AuthedHome: preserved keyboard map (→ Done / ← Later / ↓ Delete+undo / U / Esc), deferred-delete semantics, HLS `VideoPlayer` for twitter video, Collection↔Live tabs. Theme-dark default extended to /trending.
+- **Verified**: SEO byte-diff of all 4 preview page types vs pre-change snapshots — JSON-LD/OG identical (only live engagement counts moved); authed flow tested with a forged local session (Done → read_status persisted, streak ticked).
+- **Gotchas**: `TrendingItem.url` is the ON-ADHX path, not the source URL — saves must reconstruct via `sourceUrl()`; importing from TrendingStaticList into a client component drags better-sqlite3 into the bundle; CLAUDE.md's old Lightbox/Q/P/R/U keyboard prose was stale (that component no longer existed) — docs fixed.
+- **State**: in-flight on `feat/theater-phase3` (stacked on `feat/theater-stage-matrix`). Full suite green.
+- **Follow-ups**: staging pass on real devices; TriageMode.tsx + DiscoverFeed.tsx + \*PreviewLanding now unmounted — deletion candidates for a cleanup PR once the theater sticks; mobile chrome lacks a "Shared post" indicator (parity nit).
+
+## 2026-08-18 — Theater-first Phase 2: full stage matrix + mobile reel
+
+- **Why**: PR 2 of `docs/specs/theater-first.md` — every platform must actually play on the stage, and phones get the reel.
+- **What**: `StageInstagram` (probe-then-play via `probeInstagramVideo`, ≤3s spinner → "starting…", IG-embed fallback; reuses StageVideo chrome), `StageYouTube` (nocookie iframe, concrete-height box), `StageArticle` (splash → reader from `/api/share/tweet` `article.content`, dependency-free markdown parser in `src/lib/theater/article-markdown.ts`, reading-progress bar), mobile reel (full-viewport stage, swipe up/down via `swipeDirection`, top/bottom scrims + 70dvh Up-next sheet in `TheaterMobileChrome`), `useSendFile` (2s-delayed blob prefetch, `files` + `via <url>` never `url`+`files`, desktop = download), `/trending/play` → 307 `/`.
+- **Gotchas hit**: `useSendFile` is mounted twice (Rail + mobile chrome, CSS-hidden at the other breakpoint) — needs the module-level in-flight dedupe or every MP4 downloads twice; Chrome defers media-element loading in never-interacted automated tabs (looks like a stalled `<video>`, is not a product bug).
+- **State**: in-flight on `feat/theater-stage-matrix` (stacked on `feat/theater-shell`). Smoke-verified: IG probe→play with sound, YT iframe, article real-body reader, redirect. Full suite green (1330).
+- **Follow-ups**: real-device mobile pass on staging (swipe/sheet/Send share sheet on iOS); Phase 3 (preview pages as shared theater, dark /trending list, authed focus mode, AppShell header still sits under the overlay).
+
+## 2026-08-18 — Theater-first Phase 1: signed-out `/` is the theater
+
+- **Why**: Implementing PR #316's spec (`docs/specs/theater-first.md`) — users said the live community stream is the product; theater-first won three design rounds.
+- **What**: `page.tsx` → server component (authed → `AuthedHome.tsx` verbatim move; signed-out → `TheaterShell` in `src/components/theater/` + sr-only crawlable list/JSON-LD). Seen model (`adhx-seen-v1`/`adhx-last-visit`), 12s poll, muted autoplay (media-event-driven, no play()/autoPlay race), ↓↑ nav, `POST /api/activity/preview` pulse (identifiers-only, bot-filtered), `theater.*` Sentry metrics, dark default on `/` when theme unset, public-tag backfill (<12 items).
+- **Gotchas hit**: seed limit must equal `/api/activity` LIMIT (30) or the first poll surfaces old items as "fresh" (merge now appends unknown-but-older quietly); a manual `play()` racing the `autoPlay` attr flags a spurious needs-gesture overlay over a playing video.
+- **State**: in-flight on `feat/theater-shell`. Smoke-tested locally (SSR JSON-LD via curl, playback, seen divider across reloads, pulse increments trendCount). Full suite green.
+- **Follow-ups**: Phase 2 (IG probe/warm stage, YouTube iframe, article reader, mobile reel + swipe, Send prefetch, `/trending/play` redirect); Phase 3 (preview pages, dark /trending list, authed focus mode); AppShell still mounts the Header under the theater overlay (z-60) — fold into Phase 3; client-gesture metrics (`theater.advanced`/`sound_enabled`) have no server path yet.
+
 ## 2026-08-14 — Send bar: portal to body so it actually sticks to the viewport
 
 - **Why**: Staging iPhone showed "Send this video" mid-page over "Preview another link". `position:fixed` was inside the fadeInUp column (`transform` + `forwards`), so it behaved like `absolute` at the bottom of that column.

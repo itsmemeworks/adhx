@@ -180,8 +180,28 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 try {
                   var theme = localStorage.getItem('theme');
                   var resolved = theme;
-                  if (theme === 'system' || !theme) {
+                  if (theme === 'system') {
                     resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                  } else if (!theme) {
+                    // No stored preference: theater-dark routes default to dark
+                    // (theater-first.md §7) — the home theater ('/'), the dark
+                    // ranked-list Browse view ('/trending', '/trending/<filter>'),
+                    // and the four preview-page shapes; everywhere else follows
+                    // the device. Mirrors isTheaterDarkRoute()/resolveInitialTheme()
+                    // in src/lib/theme/context.tsx (and its preview regexes mirror
+                    // isPreviewPage in src/components/AppShell.tsx) — keep all
+                    // three in lockstep.
+                    var p = location.pathname;
+                    var isTheaterDark = p === '/'
+                      || p === '/trending'
+                      || p.indexOf('/trending/') === 0
+                      || /^\\/\\w+\\/status\\/\\d+$/.test(p)
+                      || /^\\/reels?\\/[A-Za-z0-9_-]+$/.test(p)
+                      || /^\\/shorts\\/[A-Za-z0-9_-]{11}$/.test(p)
+                      || /^\\/@?[A-Za-z0-9._]+\\/video\\/\\d+$/.test(p);
+                    resolved = isTheaterDark
+                      ? 'dark'
+                      : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
                   }
                   document.documentElement.classList.add(resolved);
                 } catch (e) {}

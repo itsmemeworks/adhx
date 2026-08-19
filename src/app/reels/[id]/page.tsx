@@ -1,10 +1,9 @@
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { Metadata } from 'next'
-import { InstagramPreviewLanding } from '@/components/InstagramPreviewLanding'
 import { fetchReelMetadata, isValidReelId } from '@/lib/media/instafix'
 import { resolveInstagramVideo } from '@/lib/media/mirrors'
-import { getSession } from '@/lib/auth/session'
+import { getCurrentUserId } from '@/lib/auth/session'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 import { isLikelyBot } from '@/lib/activity/bot'
 import { buildVideoObjectLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
@@ -14,6 +13,10 @@ import {
   attributionFact,
 } from '@/lib/utils/content-metadata'
 import { RelatedSaves } from '@/components/RelatedSaves'
+import { SharedPostStatic } from '@/components/theater/SharedPostStatic'
+import { TheaterShell } from '@/components/theater/TheaterShell'
+import { buildSharedSeed, reelToTheaterItem } from '@/lib/theater/shared-seed'
+import { metrics } from '@/lib/sentry'
 import { db } from '@/lib/db'
 import { bookmarks } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
@@ -66,7 +69,7 @@ export default async function ReelPreviewPage({ params }: Props) {
   // thumbnail proxy (it re-resolves the signed CDN URL from the id), so the
   // saved row's author/name/caption is all the UI needs.
   const saved = getSavedReel(id)
-  const session = await getSession()
+  const userId = await getCurrentUserId()
   const meta = saved ? null : await fetchReelMetadata(id)
 
   const author = saved?.author || meta?.author || null
@@ -102,7 +105,17 @@ export default async function ReelPreviewPage({ params }: Props) {
       thumbnailUrl: imageUrl ?? null,
       url: previewPath('instagram', author || 'instagram', id),
     })
+    metrics.theaterOpened('shared')
   }
+
+  const sharedItem = reelToTheaterItem({
+    id,
+    author: author || 'instagram',
+    authorName: authorName || author || null,
+    text: caption || description || null,
+    thumbnailUrl: imageUrl ?? null,
+  })
+  const { seed } = await buildSharedSeed(sharedItem)
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
   const ldAuthorName = authorName || author
@@ -130,15 +143,13 @@ export default async function ReelPreviewPage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScriptContent(jsonLd) }}
       />
-      <InstagramPreviewLanding
-        reelId={id}
-        caption={caption || undefined}
-        description={description || undefined}
-        // Served via the proxy (re-resolves the signed CDN URL fresh).
-        imageUrl={imageUrl}
-        author={author || undefined}
-        authorName={authorName || undefined}
-        isAuthenticated={!!session}
+      <SharedPostStatic
+        kind="instagram-reel"
+        authorName={authorName || author}
+        handle={author}
+        text={caption || description}
+        sourceUrl={`https://www.instagram.com/reel/${id}/`}
+        label="Instagram post"
         below={
           available ? (
             <RelatedSaves
@@ -150,6 +161,7 @@ export default async function ReelPreviewPage({ params }: Props) {
           ) : undefined
         }
       />
+      <TheaterShell seed={seed} mode="shared" sharedItem={sharedItem} authed={!!userId} />
     </>
   )
 }

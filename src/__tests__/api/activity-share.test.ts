@@ -68,6 +68,40 @@ describe('POST /api/activity/share', () => {
     expect(shares[0].text).not.toContain('script')
   })
 
+  it('ignores client-sent textLinks/quote and keeps the server-recorded values', async () => {
+    recordActivity({
+      action: 'preview',
+      platform: 'twitter',
+      bookmarkId: 'qt1',
+      author: 'someone',
+      url: '/someone/status/qt1',
+      textLinks: [{ expandedUrl: 'https://real-source.example/article' }],
+      quote: { author: 'realquoter', text: 'the real quote' },
+    })
+
+    const res = await post({
+      platform: 'twitter',
+      id: 'qt1',
+      textLinks: [{ expandedUrl: 'https://evil.example/x' }],
+      quote: { author: 'hijacked', text: 'injected quote' },
+    })
+    expect(res.status).toBe(204)
+
+    const shares = testInstance.db
+      .select()
+      .from(activity)
+      .all()
+      .filter((r) => r.action === 'share')
+    expect(shares).toHaveLength(1)
+    expect(JSON.parse(shares[0].textLinks!)).toEqual([
+      { shortUrl: null, expandedUrl: 'https://real-source.example/article', linkType: null },
+    ])
+    expect(JSON.parse(shares[0].quoteJson!)).toMatchObject({
+      author: 'realquoter',
+      text: 'the real quote',
+    })
+  })
+
   it('is a no-op 204 for an unknown post (does not invent a card)', async () => {
     const res = await post({ platform: 'tiktok', id: 'nope' })
     expect(res.status).toBe(204)

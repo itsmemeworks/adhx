@@ -30,10 +30,75 @@ import type { PlatformId } from '@/lib/platform/url'
 
 type ContentType = 'video' | 'photo' | 'text' | 'quote' | 'article'
 
+/**
+ * A short-link expansion carried alongside a post's text (spec §6b) so the
+ * theater never shows a raw `t.co` when the real destination is known.
+ * Public data only — comes from `bookmark_links` (or FxTwitter's `urls[]` on
+ * preview pages); never anything user-derived.
+ */
+export interface TextLinkRef {
+  /** The short link as it appears in the text (t.co). Null when unknown. */
+  shortUrl?: string | null
+  expandedUrl: string
+  /** bookmark_links.link_type: 'tweet' = twitter content, 'link'/'article' = external. */
+  linkType?: string | null
+}
+
+/**
+ * The quoted post a tweet references, when the source can supply it (the
+ * FxTwitter tweet on preview pages carries the full quote). Public content
+ * only — the quoted tweet is public by construction; never anything
+ * user-derived. When present, the stage renders it as a quote card and the
+ * trailing quote link is stripped (spec §6b).
+ */
+export interface TheaterQuoteRef {
+  author: string
+  authorName?: string | null
+  text?: string | null
+  authorAvatarUrl?: string | null
+}
+
 const CONTENT_TYPES = new Set<string>(['video', 'photo', 'text', 'quote', 'article'])
 /** Coerce a recorded `activity.content_type` string to a known ContentType. */
 function asContentType(v: string | null | undefined): ContentType | undefined {
   return v && CONTENT_TYPES.has(v) ? (v as ContentType) : undefined
+}
+
+/** Parse a stored JSON column back into a value, defensively — malformed JSON serves absent, never throws. */
+function safeParse<T>(json: string | null | undefined): T | undefined {
+  if (!json) return undefined
+  try {
+    return JSON.parse(json) as T
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Shape of `bookmarks.quote_context` (legacy JSON, see `QuoteContext` in
+ * `src/components/feed/types.ts`) — read defensively, mapped to the public
+ * `TheaterQuoteRef` shape below.
+ */
+interface StoredQuoteContext {
+  author?: string | null
+  authorName?: string | null
+  text?: string | null
+  authorProfileImageUrl?: string | null
+}
+
+/** Map a saved bookmark's legacy `quoteContext` JSON to a `TheaterQuoteRef`, when it has anything worth showing. */
+function quoteFromBookmarkContext(json: string | null | undefined): TheaterQuoteRef | undefined {
+  const parsed = safeParse<StoredQuoteContext>(json)
+  if (!parsed) return undefined
+  const author = parsed.author || ''
+  const text = parsed.text || null
+  if (!author && !text) return undefined
+  return {
+    author,
+    authorName: parsed.authorName || null,
+    text,
+    authorAvatarUrl: parsed.authorProfileImageUrl || null,
+  }
 }
 
 /**
@@ -59,10 +124,24 @@ export interface TrendingItem {
   trendCount?: number
   /** Real post type from the saved bookmark, when known (else client infers it). */
   contentType?: ContentType
+  /** Short-link expansions for URLs in `text` (spec §6b). Absent when never saved. */
+  textLinks?: TextLinkRef[]
+  /** The quoted post, when the source supplies it (preview pages). See TheaterQuoteRef. */
+  quote?: TheaterQuoteRef
 }
 
 const FETCH = 80
 const LIMIT = 30
+/** Max short-link expansions attached per post (spec §6b) — keeps the payload bounded. */
+const MAX_TEXT_LINKS = 8
+/**
+ * Max chars of post text served to clients. `activity.text` is capped at write
+ * time (240/500 chars, see `record.ts`'s TEXT_CAP) so "Show more" on a
+ * preview-only pulse item can dead-end mid-sentence with a bare "…". For SAVED
+ * posts we have the full, uncapped `bookmarks.text` — serve that instead, but
+ * still cap it here so the payload stays bounded.
+ */
+const MAX_SERVED_TEXT = 2000
 
 export interface GetTrendingOptions {
   /** Restrict to a single platform's recent events. */
@@ -177,6 +256,8 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
       text: activity.text,
       thumbnailUrl: activity.thumbnailUrl,
       contentType: activity.contentType,
+      textLinks: activity.textLinks,
+      quoteJson: activity.quoteJson,
       url: activity.url,
       createdAt: activity.createdAt,
     })
@@ -214,6 +295,9 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
   const mediaKinds = new Map<string, { video: boolean; photo: boolean }>()
   const articleCovers = new Map<string, string>()
   const articleTitles = new Map<string, string>()
+  const fullTexts = new Map<string, string>()
+  const textLinksByPost = new Map<string, TextLinkRef[]>()
+  const quoteContexts = new Map<string, string>()
   const avatars = new Map<string, string>()
   const previewCounts = new Map<string, number>()
   const shareCounts = new Map<string, number>()
@@ -226,6 +310,13 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
         isQuote: sql<number>`max(${bookmarks.isQuote})`,
         category: sql<string | null>`max(${bookmarks.category})`,
         avatar: sql<string | null>`max(${bookmarks.authorProfileImageUrl})`,
+        // All rows for a post share the same text (it's the same source
+        // content regardless of which user saved it) — `max()` picks any one,
+        // same trick as `avatar` above. Public post content, fine to select.
+        fullText: sql<string | null>`max(${bookmarks.text})`,
+        // Legacy quote JSON — same "any row, same content" trick. Only ever
+        // populated for twitter quote tweets; public content, fine to select.
+        quoteContext: sql<string | null>`max(${bookmarks.quoteContext})`,
       })
       .from(bookmarks)
       .where(inArray(bookmarks.id, ids))
@@ -236,6 +327,8 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
       counts.set(k, Number(r.saveCount) || 0)
       flags.set(k, { isQuote: !!Number(r.isQuote), category: r.category ?? null })
       if (r.avatar) avatars.set(k, r.avatar)
+      if (r.fullText) fullTexts.set(k, r.fullText)
+      if (r.quoteContext) quoteContexts.set(k, r.quoteContext)
     }
 
     // Preview interest — how many times each post has been previewed (events,
@@ -289,11 +382,14 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
     // Article cover + title — the same hero/headline the collection card uses.
     // Cross-user is fine (they're identical regardless of who saved it). Prefer
     // the explicit article link; otherwise take any link that carries them.
+    // PUBLIC COLUMNS ONLY (anonymity choke point) — no userId in this select.
     const linkRows = db
       .select({
         platform: bookmarkLinks.platform,
         bookmarkId: bookmarkLinks.bookmarkId,
         linkType: bookmarkLinks.linkType,
+        originalUrl: bookmarkLinks.originalUrl,
+        expandedUrl: bookmarkLinks.expandedUrl,
         imageUrl: bookmarkLinks.previewImageUrl,
         title: bookmarkLinks.previewTitle,
       })
@@ -306,6 +402,18 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
         articleCovers.set(k, l.imageUrl)
       if (l.title && (!articleTitles.has(k) || l.linkType === 'article'))
         articleTitles.set(k, l.title)
+
+      // Short-link expansions for the theater's t.co policy (spec §6b) — capped
+      // and deduped by expandedUrl so a post with many repeated links doesn't
+      // bloat the payload.
+      if (l.expandedUrl) {
+        const refs = textLinksByPost.get(k) ?? []
+        const alreadyHave = refs.some((ref) => ref.expandedUrl === l.expandedUrl)
+        if (!alreadyHave && refs.length < MAX_TEXT_LINKS) {
+          refs.push({ shortUrl: l.originalUrl, expandedUrl: l.expandedUrl, linkType: l.linkType })
+          textLinksByPost.set(k, refs)
+        }
+      }
     }
   }
 
@@ -346,11 +454,21 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
     // to the type recorded at preview time so preview-only items (esp. articles)
     // still render the right card instead of a bare text "Saved post".
     const contentType = typeOf(i.platform, key) ?? asContentType(i.contentType)
+    // Text precedence: article title (unchanged) beats the full saved bookmark
+    // text (uncapped at write time, unlike the recorded `activity.text`) beats
+    // the recorded text (the only option for preview-only posts). Capped here
+    // so the payload stays bounded.
+    const text =
+      contentType === 'article'
+        ? (articleTitles.get(key) ?? i.text)
+        : (fullTexts.get(key) ?? i.text)
+    // Drop the raw stored JSON columns from the spread below — they're
+    // replaced with parsed `textLinks`/`quote` fields and must never leak to
+    // clients as opaque JSON strings.
+    const { textLinks: _rawTextLinks, quoteJson: _rawQuoteJson, ...rest } = i
     return {
-      ...i,
-      // Article cards show the article's own headline (the recorded `text` is
-      // usually just the wrapper tweet's t.co link), matching the collection.
-      text: contentType === 'article' ? (articleTitles.get(key) ?? i.text) : i.text,
+      ...rest,
+      text: text && text.length > MAX_SERVED_TEXT ? `${text.slice(0, MAX_SERVED_TEXT - 1)}…` : text,
       saveCount: counts.get(key) ?? 0,
       // Trending score = distinct savers + preview events + send events.
       trendCount:
@@ -360,6 +478,17 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
       // The post author's avatar for tweet-style cards — the recorded value
       // (preview-only items) else the saved bookmark's avatar (saved items).
       authorAvatarUrl: i.authorAvatarUrl ?? avatars.get(key) ?? null,
+      // Short-link expansions (spec §6b). Precedence: bookmark_links (saved
+      // posts, resolved at save time) → the recorded `activity.text_links`
+      // (server-resolved at preview time) → absent.
+      textLinks: textLinksByPost.get(key) ?? safeParse<TextLinkRef[]>(i.textLinks),
+      // Quoted-post reference. Precedence: the recorded `activity.quote_json`
+      // (server-resolved at preview time) → for saved twitter posts, derived
+      // from the bookmark's legacy `quoteContext` JSON → absent. IG/TikTok/
+      // YouTube have no quote concept, so this only ever applies to twitter.
+      quote:
+        safeParse<TheaterQuoteRef>(i.quoteJson) ??
+        (i.platform === 'twitter' ? quoteFromBookmarkContext(quoteContexts.get(key)) : undefined),
     }
   })
 
