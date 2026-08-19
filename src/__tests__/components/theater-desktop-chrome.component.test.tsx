@@ -3,7 +3,11 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { DesktopStageChrome, DesktopDock } from '@/components/theater/TheaterDesktopChrome'
+import {
+  DesktopStageChrome,
+  DesktopDock,
+  navigateToAppPath,
+} from '@/components/theater/TheaterDesktopChrome'
 import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterItem } from '@/components/theater/types'
 
@@ -198,7 +202,28 @@ describe('DesktopStageChrome', () => {
     fireEvent.change(input, { target: { value: 'https://x.com/alice/status/123' } })
     fireEvent.submit(input.closest('form')!)
 
-    expect(assignSpy).toHaveBeenCalledWith('/alice/status/123')
+    expect(assignSpy).toHaveBeenCalledWith(
+      new URL('/alice/status/123', window.location.origin).toString(),
+    )
+  })
+
+  it('navigateToAppPath only navigates to same-origin app paths', () => {
+    const assignSpy = vi.fn()
+    Object.defineProperty(window, 'location', {
+      value: { ...window.location, assign: assignSpy },
+      writable: true,
+    })
+
+    navigateToAppPath('//evil.com/x')
+    navigateToAppPath('https://evil.com/x')
+
+    navigateToAppPath('javascript:alert(1)')
+    expect(assignSpy).not.toHaveBeenCalled()
+
+    navigateToAppPath('/alice/status/123')
+    expect(assignSpy).toHaveBeenCalledWith(
+      new URL('/alice/status/123', window.location.origin).toString(),
+    )
   })
 
   it('shows "Not a supported link" for a garbage paste', () => {

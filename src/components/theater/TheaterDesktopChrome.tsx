@@ -213,6 +213,21 @@ function FlameChip({ trendCount }: { trendCount: number }) {
   )
 }
 
+/**
+ * Navigate to an app-internal path only. `resolvePastedLink` already only
+ * builds root-relative app paths, but the pasted text is user/clipboard
+ * input, so the sink enforces the invariant too (defense-in-depth, and what
+ * proves it to CodeQL: no `javascript:` scheme can survive the leading-`/`
+ * requirement, no protocol-relative `//host` escape, and the resolved URL
+ * must land on this origin). Exported for unit testing.
+ */
+export function navigateToAppPath(path: string): void {
+  if (!path.startsWith('/') || path.startsWith('//')) return
+  const dest = new URL(path, window.location.origin)
+  if (dest.origin !== window.location.origin) return
+  window.location.assign(dest.toString())
+}
+
 export function DesktopStageChrome({
   mode,
   current,
@@ -243,7 +258,7 @@ export function DesktopStageChrome({
     if (path) {
       setPasteValue('')
       setPasteError(false)
-      window.location.assign(path)
+      navigateToAppPath(path)
       return
     }
     setPasteError(true)
@@ -266,7 +281,7 @@ export function DesktopStageChrome({
       const text = e.clipboardData?.getData('text')
       if (!text) return
       const path = resolvePastedLink(text)
-      if (path) window.location.assign(path)
+      if (path) navigateToAppPath(path)
     }
     window.addEventListener('paste', handler)
     return () => window.removeEventListener('paste', handler)
