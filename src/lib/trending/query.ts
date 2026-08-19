@@ -44,6 +44,20 @@ export interface TextLinkRef {
   linkType?: string | null
 }
 
+/**
+ * The quoted post a tweet references, when the source can supply it (the
+ * FxTwitter tweet on preview pages carries the full quote). Public content
+ * only — the quoted tweet is public by construction; never anything
+ * user-derived. When present, the stage renders it as a quote card and the
+ * trailing quote link is stripped (spec §6b).
+ */
+export interface TheaterQuoteRef {
+  author: string
+  authorName?: string | null
+  text?: string | null
+  authorAvatarUrl?: string | null
+}
+
 const CONTENT_TYPES = new Set<string>(['video', 'photo', 'text', 'quote', 'article'])
 /** Coerce a recorded `activity.content_type` string to a known ContentType. */
 function asContentType(v: string | null | undefined): ContentType | undefined {
@@ -75,6 +89,8 @@ export interface TrendingItem {
   contentType?: ContentType
   /** Short-link expansions for URLs in `text` (spec §6b). Absent when never saved. */
   textLinks?: TextLinkRef[]
+  /** The quoted post, when the source supplies it (preview pages). See TheaterQuoteRef. */
+  quote?: TheaterQuoteRef
 }
 
 const FETCH = 80

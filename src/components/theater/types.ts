@@ -1,6 +1,6 @@
 import type { TrendingItem } from '@/lib/trending/query'
 
-export type { TextLinkRef } from '@/lib/trending/query'
+export type { TextLinkRef, TheaterQuoteRef } from '@/lib/trending/query'
 
 /**
  * Shared contract for the theater surfaces (docs/specs/theater-first.md).
