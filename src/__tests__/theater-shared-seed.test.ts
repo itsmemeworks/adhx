@@ -142,6 +142,55 @@ describe('per-platform mappers', () => {
     expect(out.textLinks).toBeUndefined()
   })
 
+  it('tweetToTheaterItem passes a quote through when provided', () => {
+    const out = tweetToTheaterItem({
+      id: '123',
+      author: 'testauthor',
+      contentType: 'text',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      quote: {
+        author: 'quotedauthor',
+        authorName: 'Quoted Author',
+        text: 'the quoted text',
+        authorAvatarUrl: 'https://example.com/quoted.jpg',
+      },
+    })
+
+    expect(out.quote).toEqual({
+      author: 'quotedauthor',
+      authorName: 'Quoted Author',
+      text: 'the quoted text',
+      authorAvatarUrl: 'https://example.com/quoted.jpg',
+    })
+  })
+
+  it('tweetToTheaterItem leaves quote absent (not an empty object) when not provided', () => {
+    const out = tweetToTheaterItem({
+      id: '123',
+      author: 'testauthor',
+      contentType: 'text',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    })
+
+    expect(out.quote).toBeUndefined()
+    expect(out).not.toHaveProperty('quote')
+  })
+
+  it('tweetToTheaterItem passes a quote through with only text (no author)', () => {
+    const out = tweetToTheaterItem({
+      id: '123',
+      author: 'testauthor',
+      contentType: 'text',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      quote: {
+        author: '',
+        text: 'the quoted text',
+      },
+    })
+
+    expect(out.quote).toEqual({ author: '', text: 'the quoted text' })
+  })
+
   it('reelToTheaterItem is always contentType video and strips a leading @', () => {
     const out = reelToTheaterItem({
       id: 'abc123',

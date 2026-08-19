@@ -97,6 +97,14 @@ const FETCH = 80
 const LIMIT = 30
 /** Max short-link expansions attached per post (spec §6b) — keeps the payload bounded. */
 const MAX_TEXT_LINKS = 8
+/**
+ * Max chars of post text served to clients. `activity.text` is capped at write
+ * time (240/500 chars, see `record.ts`'s TEXT_CAP) so "Show more" on a
+ * preview-only pulse item can dead-end mid-sentence with a bare "…". For SAVED
+ * posts we have the full, uncapped `bookmarks.text` — serve that instead, but
+ * still cap it here so the payload stays bounded.
+ */
+const MAX_SERVED_TEXT = 2000
 
 export interface GetTrendingOptions {
   /** Restrict to a single platform's recent events. */
@@ -248,6 +256,7 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
   const mediaKinds = new Map<string, { video: boolean; photo: boolean }>()
   const articleCovers = new Map<string, string>()
   const articleTitles = new Map<string, string>()
+  const fullTexts = new Map<string, string>()
   const textLinksByPost = new Map<string, TextLinkRef[]>()
   const avatars = new Map<string, string>()
   const previewCounts = new Map<string, number>()
@@ -261,6 +270,10 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
         isQuote: sql<number>`max(${bookmarks.isQuote})`,
         category: sql<string | null>`max(${bookmarks.category})`,
         avatar: sql<string | null>`max(${bookmarks.authorProfileImageUrl})`,
+        // All rows for a post share the same text (it's the same source
+        // content regardless of which user saved it) — `max()` picks any one,
+        // same trick as `avatar` above. Public post content, fine to select.
+        fullText: sql<string | null>`max(${bookmarks.text})`,
       })
       .from(bookmarks)
       .where(inArray(bookmarks.id, ids))
@@ -271,6 +284,7 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
       counts.set(k, Number(r.saveCount) || 0)
       flags.set(k, { isQuote: !!Number(r.isQuote), category: r.category ?? null })
       if (r.avatar) avatars.set(k, r.avatar)
+      if (r.fullText) fullTexts.set(k, r.fullText)
     }
 
     // Preview interest — how many times each post has been previewed (events,
@@ -396,11 +410,17 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
     // to the type recorded at preview time so preview-only items (esp. articles)
     // still render the right card instead of a bare text "Saved post".
     const contentType = typeOf(i.platform, key) ?? asContentType(i.contentType)
+    // Text precedence: article title (unchanged) beats the full saved bookmark
+    // text (uncapped at write time, unlike the recorded `activity.text`) beats
+    // the recorded text (the only option for preview-only posts). Capped here
+    // so the payload stays bounded.
+    const text =
+      contentType === 'article'
+        ? (articleTitles.get(key) ?? i.text)
+        : (fullTexts.get(key) ?? i.text)
     return {
       ...i,
-      // Article cards show the article's own headline (the recorded `text` is
-      // usually just the wrapper tweet's t.co link), matching the collection.
-      text: contentType === 'article' ? (articleTitles.get(key) ?? i.text) : i.text,
+      text: text && text.length > MAX_SERVED_TEXT ? `${text.slice(0, MAX_SERVED_TEXT - 1)}…` : text,
       saveCount: counts.get(key) ?? 0,
       // Trending score = distinct savers + preview events + send events.
       trendCount:

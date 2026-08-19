@@ -15,7 +15,7 @@ import { RelatedSaves } from '@/components/RelatedSaves'
 import { SharedPostStatic } from '@/components/theater/SharedPostStatic'
 import { TheaterShell } from '@/components/theater/TheaterShell'
 import { buildSharedSeed, tweetToTheaterItem } from '@/lib/theater/shared-seed'
-import type { TextLinkRef } from '@/components/theater/types'
+import type { TextLinkRef, TheaterQuoteRef } from '@/components/theater/types'
 import { metrics } from '@/lib/sentry'
 
 type FxTweet = NonNullable<FxTwitterResponse['tweet']>
@@ -175,6 +175,21 @@ export default async function QuickAddPage({ params }: Props) {
       if (textLinks.length >= 8) break
     }
 
+    // The quoted post, when this tweet quotes another (FxTwitter already
+    // fetched it above). Deleted/protected quotes can arrive with a missing
+    // author or text — only pass one through when there's at least something
+    // to show, so the stage never renders an empty quote card.
+    const quoteAuthor = tweet.quote?.author?.screen_name
+    const quote: TheaterQuoteRef | undefined =
+      tweet.quote && (quoteAuthor || tweet.quote.text)
+        ? {
+            author: quoteAuthor || '',
+            authorName: tweet.quote.author?.name || null,
+            text: tweet.quote.text || null,
+            authorAvatarUrl: tweet.quote.author?.avatar_url || null,
+          }
+        : undefined
+
     const sharedItem = tweetToTheaterItem({
       id,
       author: previewAuthor,
@@ -185,6 +200,7 @@ export default async function QuickAddPage({ params }: Props) {
       contentType: previewType,
       createdAt: tweet.created_at,
       textLinks: textLinks.length > 0 ? textLinks : undefined,
+      quote,
     })
     const { seed } = await buildSharedSeed(sharedItem)
 

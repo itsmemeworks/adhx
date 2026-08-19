@@ -181,7 +181,7 @@ function NowPlaying({
           text={text}
           hasMedia={hasMedia}
           links={current.textLinks}
-          hideTweetLinks={false}
+          hideTweetLinks={!!current.quote}
         />
       </p>
       {overflowing && (
@@ -332,7 +332,7 @@ function Actions({
 
         <button type="button" onClick={handleCopy} className={buttonBase}>
           {copied ? <Check size={14} className="text-done" /> : <Copy size={14} />}
-          {copied ? 'Copied' : 'Copy link'}
+          {copied ? 'Copied' : 'Link'}
         </button>
 
         {showAuthedSave ? (

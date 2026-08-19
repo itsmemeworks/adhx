@@ -24,12 +24,49 @@ export interface StageTextProps {
   /** When set, render the photo variant (image full-bleed + caption). */
   photo?: boolean
   /**
+   * Photo variant only: show the author+caption scrim over the image.
+   * Default true (CollectionTheater's stages, whose rail has no now-playing
+   * text of its own). TheaterShell passes false since its rail (desktop) and
+   * mobile chrome already render the author + caption — the stage's own
+   * scrim would just duplicate them.
+   */
+  photoCaption?: boolean
+  /**
    * The surface below already renders the referenced tweet content (e.g. a
    * quote card), so tweet-resolving links in `item.text` should be stripped
    * (spec §6b). Defaults to false — most stages render no quote card of
    * their own, so a tweet link is the only path to that content.
    */
   hideTweetLinks?: boolean
+}
+
+/**
+ * Compact quote card for the typeset stage, shown under the main text when
+ * `item.quote` is present — same dark vocabulary as CollectionTheater's
+ * `StageQuoteCard` (bordered rounded box, avatar-or-initial + name + @handle,
+ * up-to-4-line clamped text), rebuilt locally since CollectionTheater isn't
+ * shared code.
+ */
+function StageQuoteCard({ quote }: { quote: NonNullable<TheaterItem['quote']> }) {
+  const name = quote.authorName || quote.author || 'unknown'
+  const handle = quote.author || ''
+  const text = (quote.text || '').trim()
+  if (!text && !handle) return null
+
+  return (
+    <div className="mt-4 w-full max-w-2xl rounded-xl border border-white/15 bg-white/[0.04] p-4">
+      <div className="mb-2 flex items-center gap-2">
+        <AuthorAvatar src={quote.authorAvatarUrl ?? undefined} author={handle} size="sm" />
+        <span className="truncate text-[13px] font-semibold text-white">{name}</span>
+        {handle && <span className="truncate font-mono text-xs text-white/50">@{handle}</span>}
+      </div>
+      {text && (
+        <p className="line-clamp-4 text-[13.5px] leading-snug text-white/80">
+          <TheaterLinkedText text={text} />
+        </p>
+      )}
+    </div>
+  )
 }
 
 /**
@@ -46,7 +83,12 @@ export function textSizeClass(text: string): string {
   return 'text-lg sm:text-xl leading-relaxed'
 }
 
-export function StageText({ item, photo, hideTweetLinks = false }: StageTextProps) {
+export function StageText({
+  item,
+  photo,
+  photoCaption = true,
+  hideTweetLinks = false,
+}: StageTextProps) {
   const text = (item.text || '').trim()
   const authorName = item.authorName || (item.author ? `@${item.author}` : 'Saved post')
 
@@ -89,60 +131,75 @@ export function StageText({ item, photo, hideTweetLinks = false }: StageTextProp
         {/* Bottom scrim: author + up-to-2-line caption. Padding on the
             wrapper, line-clamp on a child with no vertical padding, so the
             clamp doesn't let a clipped extra line peek through. Expanding
-            grows the caption into a scrollable panel over a stronger scrim. */}
-        <div
-          className={cn(
-            'absolute inset-x-0 bottom-0 px-6 pt-16 sm:px-10',
-            expanded ? 'pb-4 sm:pb-6' : 'pb-6 sm:pb-10',
-          )}
-          style={{
-            background: expanded
-              ? 'linear-gradient(transparent, rgba(8,7,10,.94) 25%, rgba(8,7,10,.94))'
-              : 'linear-gradient(transparent, rgba(11,11,17,.84))',
-          }}
-        >
-          <div className="mb-2 flex items-center gap-2.5">
-            <AuthorAvatar src={item.authorAvatarUrl ?? undefined} author={item.author} size="sm" />
-            <span className="truncate text-[13.5px] font-semibold text-white">{authorName}</span>
-            <PlatformChip platform={item.platform} />
-          </div>
-          {text && (
-            <div>
-              <p
-                ref={captionRef}
-                className={cn(
-                  'text-[15px] leading-snug text-white/90',
-                  expanded
-                    ? 'max-h-[45vh] overflow-y-auto overscroll-contain pr-1'
-                    : 'line-clamp-2',
-                )}
-              >
-                <TheaterLinkedText
-                  text={text}
-                  hasMedia
-                  links={item.textLinks}
-                  hideTweetLinks={hideTweetLinks}
-                />
-              </p>
-              {overflowing && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setExpanded((v) => !v)
-                  }}
-                  onTouchEnd={(e) => e.stopPropagation()}
-                  className="mt-1 flex min-h-[44px] items-center text-[13px] font-semibold text-clay"
-                >
-                  {expanded ? 'less' : 'more'}
-                </button>
-              )}
+            grows the caption into a scrollable panel over a stronger scrim.
+            Suppressed when `photoCaption` is false (TheaterShell) — its rail
+            (desktop) and mobile chrome already show the author + caption, so
+            the stage's own scrim would just duplicate them. */}
+        {photoCaption && (
+          <div
+            className={cn(
+              'absolute inset-x-0 bottom-0 px-6 pt-16 sm:px-10',
+              expanded ? 'pb-4 sm:pb-6' : 'pb-6 sm:pb-10',
+            )}
+            style={{
+              background: expanded
+                ? 'linear-gradient(transparent, rgba(8,7,10,.94) 25%, rgba(8,7,10,.94))'
+                : 'linear-gradient(transparent, rgba(11,11,17,.84))',
+            }}
+          >
+            <div className="mb-2 flex items-center gap-2.5">
+              <AuthorAvatar
+                src={item.authorAvatarUrl ?? undefined}
+                author={item.author}
+                size="sm"
+              />
+              <span className="truncate text-[13.5px] font-semibold text-white">{authorName}</span>
+              <PlatformChip platform={item.platform} />
             </div>
-          )}
-        </div>
+            {text && (
+              <div>
+                <p
+                  ref={captionRef}
+                  className={cn(
+                    'text-[15px] leading-snug text-white/90',
+                    expanded
+                      ? 'max-h-[45vh] overflow-y-auto overscroll-contain pr-1'
+                      : 'line-clamp-2',
+                  )}
+                >
+                  <TheaterLinkedText
+                    text={text}
+                    hasMedia
+                    links={item.textLinks}
+                    hideTweetLinks={hideTweetLinks}
+                  />
+                </p>
+                {overflowing && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setExpanded((v) => !v)
+                    }}
+                    onTouchEnd={(e) => e.stopPropagation()}
+                    className="mt-1 flex min-h-[44px] items-center text-[13px] font-semibold text-clay"
+                  >
+                    {expanded ? 'less' : 'more'}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     )
   }
+
+  // When the post carries a quote (spec §6b), the quote card below the text
+  // already renders the referenced tweet, so its trailing tweet-resolving
+  // link in `item.text` is stripped too — OR'd with any caller-supplied
+  // `hideTweetLinks` rather than replacing it.
+  const hideLinks = hideTweetLinks || !!item.quote
 
   return (
     <div className="flex h-full w-full items-center justify-center bg-[#08070a] px-6 sm:px-10">
@@ -167,12 +224,13 @@ export function StageText({ item, photo, hideTweetLinks = false }: StageTextProp
                 text={text}
                 hasMedia={false}
                 links={item.textLinks}
-                hideTweetLinks={hideTweetLinks}
+                hideTweetLinks={hideLinks}
               />
             ) : (
               'Saved post'
             )}
           </p>
+          {item.quote && <StageQuoteCard quote={item.quote} />}
         </div>
       </div>
     </div>

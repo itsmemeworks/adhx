@@ -28,6 +28,26 @@ export interface TheaterShellProps {
 /** How long a post must stay staged before it counts as "seen" (spec §4/§5). */
 const SEEN_DWELL_MS = 2_000
 
+/**
+ * Pure: move the item matching `pinnedKey` to the front of `items`, order
+ * otherwise preserved. A missing key (not found, or already at index 0)
+ * returns `items` unchanged (same reference) — cheap to call on every render.
+ * Used so the rail's visual order and the keyboard-nav order are always the
+ * same list: shared mode pins the shared post, home mode pins the lead pick,
+ * once either is chosen.
+ */
+export function pinKeyFirst<
+  T extends { platform: string; bookmarkId?: string | null; url: string },
+>(items: T[], pinnedKey: string | null): T[] {
+  if (!pinnedKey) return items
+  const idx = items.findIndex((it) => theaterItemKey(it) === pinnedKey)
+  if (idx <= 0) return items
+  const copy = items.slice()
+  const [pinned] = copy.splice(idx, 1)
+  copy.unshift(pinned)
+  return copy
+}
+
 export function TheaterShell({
   seed,
   mode = 'home',
@@ -40,6 +60,15 @@ export function TheaterShell({
 
   const [muted, setMuted] = useState(true)
   const [currentKey, setCurrentKey] = useState<string | null>(null)
+  // The item pinned to the front of the display order: the shared post in
+  // shared mode (set once, on mount), else the home lead-pick once it's
+  // chosen below. Pinning — rather than leaving the pick wherever it sits in
+  // the recency-ordered feed — is what keeps ↓/keyboard nav and the rail's
+  // visual order in agreement; without it, a lead-pick that lands near the
+  // end of `items` clamps goNext immediately.
+  const [pinnedKey, setPinnedKey] = useState<string | null>(() =>
+    sharedItem ? theaterItemKey(sharedItem) : null,
+  )
 
   // Set once a user has navigated (keyboard/rail click) — after that, the
   // "lead item = max trendCount among unseen" pick below never overrides
@@ -47,11 +76,16 @@ export function TheaterShell({
   const hasNavigatedRef = useRef(false)
   const leadAppliedRef = useRef(false)
 
+  // The list every index/nav computation below operates on — `items` with
+  // the pinned key (if any) moved to the front. Keep this as THE list used
+  // everywhere so the rail/mobile-chrome render order matches keyboard order.
+  const displayItems = useMemo(() => pinKeyFirst(items, pinnedKey), [items, pinnedKey])
+
   // Kept in refs (rather than effect deps) so the seen/pulse timer below only
   // resets when `currentKey` itself changes, not on every unrelated re-render
   // (polling, seen-state updates, etc.).
-  const itemsRef = useRef(items)
-  itemsRef.current = items
+  const itemsRef = useRef(displayItems)
+  itemsRef.current = displayItems
   const seenSetRef = useRef(seenSet)
   seenSetRef.current = seenSet
 
@@ -61,10 +95,10 @@ export function TheaterShell({
   // In shared mode the seed's first item IS the shared post (buildSharedSeed
   // puts it first), so this already lands on it with no extra branching.
   useEffect(() => {
-    if (currentKey === null && items.length > 0) {
-      setCurrentKey(theaterItemKey(items[0]))
+    if (currentKey === null && displayItems.length > 0) {
+      setCurrentKey(theaterItemKey(displayItems[0]))
     }
-  }, [items, currentKey])
+  }, [displayItems, currentKey])
 
   useEffect(() => {
     // Shared mode never re-picks a "best" lead — the shared post is ALWAYS
@@ -79,14 +113,18 @@ export function TheaterShell({
       (best, it) => ((it.trendCount ?? 0) > (best.trendCount ?? 0) ? it : best),
       pool[0],
     )
-    setCurrentKey(theaterItemKey(lead))
+    const leadKey = theaterItemKey(lead)
+    // Pin the pick to the front of the display order — otherwise a lead that
+    // sits near the end of the recency-ordered feed clamps goNext right away.
+    setPinnedKey(leadKey)
+    setCurrentKey(leadKey)
   }, [seenSet, items])
 
   const currentIndex = useMemo(
-    () => items.findIndex((it) => theaterItemKey(it) === currentKey),
-    [items, currentKey],
+    () => displayItems.findIndex((it) => theaterItemKey(it) === currentKey),
+    [displayItems, currentKey],
   )
-  const current: TheaterItem | null = currentIndex === -1 ? null : items[currentIndex]
+  const current: TheaterItem | null = currentIndex === -1 ? null : displayItems[currentIndex]
 
   const goNext = useCallback(() => {
     setCurrentKey((key) => {
@@ -197,9 +235,9 @@ export function TheaterShell({
   // Prefetch at most one item ahead.
   useEffect(() => {
     if (currentIndex === -1) return
-    const next = items[currentIndex + 1]
+    const next = displayItems[currentIndex + 1]
     if (next) prefetchPlayback(next)
-  }, [currentIndex, items])
+  }, [currentIndex, displayItems])
 
   // Items newer than the last visit and not yet seen. Zero on a first-ever
   // visit (no `lastVisitAt` to compare against) — the caught-up state is the
@@ -207,11 +245,11 @@ export function TheaterShell({
   const newCount = useMemo(() => {
     if (!seenSet.ready || seenSet.lastVisitAt == null) return 0
     const lastVisitAt = seenSet.lastVisitAt
-    return items.filter((it) => {
+    return displayItems.filter((it) => {
       if (seenSet.isSeen(theaterItemKey(it))) return false
       return new Date(it.createdAt).getTime() > lastVisitAt
     }).length
-  }, [items, seenSet])
+  }, [displayItems, seenSet])
 
   return (
     <div className="fixed inset-0 z-[60] flex flex-col overflow-hidden bg-[#08070a] lg:flex-row">
@@ -224,12 +262,17 @@ export function TheaterShell({
           onTouchStart={onStageTouchStart}
           onTouchEnd={onStageTouchEnd}
         >
-          <Stage item={current} muted={muted} onRequestUnmute={onRequestUnmute} />
+          <Stage
+            item={current}
+            muted={muted}
+            onRequestUnmute={onRequestUnmute}
+            photoCaption={false}
+          />
         </div>
         <TheaterMobileChrome
           mode={mode}
           current={current}
-          items={items}
+          items={displayItems}
           currentKey={currentKey}
           isSeen={seenSet.isSeen}
           seenReady={seenSet.ready}
@@ -241,7 +284,7 @@ export function TheaterShell({
       <div className="hidden min-h-0 flex-1 overflow-y-auto lg:flex lg:h-full lg:flex-none">
         <Rail
           mode={mode}
-          items={items}
+          items={displayItems}
           current={current}
           currentKey={currentKey}
           isSeen={seenSet.isSeen}

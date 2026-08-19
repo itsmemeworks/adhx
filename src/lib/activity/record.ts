@@ -53,7 +53,7 @@ export interface ActivityInput {
   userId?: string | null
 }
 
-const TEXT_CAP = 240
+const TEXT_CAP = 500
 const AUTHOR_CAP = 40
 const AUTHOR_NAME_CAP = 60
 const DEDUPE_WINDOW_MS = 60_000

@@ -26,9 +26,16 @@ export interface StageProps {
   onRequestUnmute: () => void
   /** Current video finished (show replay + "↓ next" nudge; no auto-advance). */
   onEnded?: () => void
+  /**
+   * Forwarded to StageText's photo variant. Default true (CollectionTheater's
+   * stages, whose rail has no now-playing text of its own). TheaterShell
+   * passes false — its rail (desktop) and mobile chrome already show the
+   * author + caption, so the stage's own scrim would be a duplicate.
+   */
+  photoCaption?: boolean
 }
 
-export function Stage({ item, muted, onRequestUnmute, onEnded }: StageProps) {
+export function Stage({ item, muted, onRequestUnmute, onEnded, photoCaption }: StageProps) {
   const playback = usePlaybackSource(item)
 
   if (!item) {
@@ -77,7 +84,7 @@ export function Stage({ item, muted, onRequestUnmute, onEnded }: StageProps) {
   }
 
   if (type === 'photo') {
-    return <StageText item={item} photo />
+    return <StageText item={item} photo photoCaption={photoCaption} />
   }
 
   if (type === 'text' || type === 'quote') {

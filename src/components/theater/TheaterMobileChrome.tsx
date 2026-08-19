@@ -186,7 +186,7 @@ export function TheaterMobileChrome({
                     text={caption}
                     hasMedia
                     links={current?.textLinks}
-                    hideTweetLinks={false}
+                    hideTweetLinks={!!current?.quote}
                   />
                 </p>
                 {overflowing && (
@@ -236,7 +236,7 @@ export function TheaterMobileChrome({
             <button
               type="button"
               onClick={handleCopy}
-              aria-label="Copy link"
+              aria-label="Link"
               className="inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md"
             >
               {copied ? <Check size={16} className="text-done" /> : <Copy size={16} />}

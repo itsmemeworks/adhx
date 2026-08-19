@@ -4,6 +4,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-19 — Staging review round: full text, pinned lead, shared quote cards
+
+- **Why**: First real staging pass surfaced five issues: "Show more" expanded to a 240-char-capped string; "Copy link" wrapped on mobile; photo captions duplicated (stage overlay + rail); a shared quoting tweet showed a raw t.co with no quote; ↓ dead when the lead-pick landed at the bottom of the recency list.
+- **What**: getTrendingItems serves the saved bookmark's FULL text (2000 cap; article title still wins; TEXT_CAP 240→500 for preview-only). Labels → "Link". `photoCaption={false}` from TheaterShell (rail/chrome carry the text; collection theater keeps captions). `TheaterItem.quote` (from FxTwitter's quote on preview pages) → StageText renders a quote card + strips the quote link (§6b); rail/chrome hideTweetLinks follow. `pinKeyFirst`: the lead-pick now pins its item to the top like shared mode, so keyboard order == rail order.
+- **Verified live**: Elon quote-tweet preview renders the quote card with no t.co; ↓ advances 0→1→2 from the pinned lead.
+- **State**: on `feat/theater-phase3` (PR #319), redeployed to staging.
+- **Follow-ups**: pulse items never saved by anyone still cap at 500 chars (no fuller source exists).
+
 ## 2026-08-19 — Theater t.co policy (spec §6b): expand external links, strip rendered tweet-links
 
 - **Why**: Raw `t.co` labels are opaque; a t.co pointing at a quoted tweet is redundant once the quote card renders it.

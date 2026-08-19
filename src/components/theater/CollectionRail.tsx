@@ -327,7 +327,7 @@ function LiveActions({
         )}
         <button type="button" onClick={handleCopy} className={buttonBase}>
           {copied ? <Check size={14} className="text-done" /> : <Copy size={14} />}
-          {copied ? 'Copied' : 'Copy link'}
+          {copied ? 'Copied' : 'Link'}
         </button>
         <button
           type="button"

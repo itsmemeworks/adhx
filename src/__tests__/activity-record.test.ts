@@ -96,7 +96,7 @@ describe('activity — recordActivity', () => {
       url: '/a/status/9',
     })
     const [row] = rows()
-    expect(row.text!.length).toBeLessThanOrEqual(240)
+    expect(row.text!.length).toBeLessThanOrEqual(500)
     expect(row.text!.endsWith('…')).toBe(true)
   })
 
