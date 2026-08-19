@@ -30,6 +30,20 @@ import type { PlatformId } from '@/lib/platform/url'
 
 type ContentType = 'video' | 'photo' | 'text' | 'quote' | 'article'
 
+/**
+ * A short-link expansion carried alongside a post's text (spec §6b) so the
+ * theater never shows a raw `t.co` when the real destination is known.
+ * Public data only — comes from `bookmark_links` (or FxTwitter's `urls[]` on
+ * preview pages); never anything user-derived.
+ */
+export interface TextLinkRef {
+  /** The short link as it appears in the text (t.co). Null when unknown. */
+  shortUrl?: string | null
+  expandedUrl: string
+  /** bookmark_links.link_type: 'tweet' = twitter content, 'link'/'article' = external. */
+  linkType?: string | null
+}
+
 const CONTENT_TYPES = new Set<string>(['video', 'photo', 'text', 'quote', 'article'])
 /** Coerce a recorded `activity.content_type` string to a known ContentType. */
 function asContentType(v: string | null | undefined): ContentType | undefined {
@@ -59,6 +73,8 @@ export interface TrendingItem {
   trendCount?: number
   /** Real post type from the saved bookmark, when known (else client infers it). */
   contentType?: ContentType
+  /** Short-link expansions for URLs in `text` (spec §6b). Absent when never saved. */
+  textLinks?: TextLinkRef[]
 }
 
 const FETCH = 80

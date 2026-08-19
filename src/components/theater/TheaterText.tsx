@@ -53,6 +53,18 @@ export interface TheaterLinkedTextProps {
   className?: string
   /** Link styling override — defaults to clay-on-dark. */
   linkClassName?: string
+  /**
+   * Short-link expansions for URLs in the text (spec §6b — from
+   * bookmark_links / FxTwitter urls). When a t.co matches, the anchor points
+   * at the real destination and displays a cleaned form of it.
+   */
+  links?: import('./types').TextLinkRef[]
+  /**
+   * The surface renders the referenced tweet content (a quote card), so
+   * links resolving to twitter statuses are stripped — plus the trailing
+   * unresolved t.co, as X clients do (spec §6b).
+   */
+  hideTweetLinks?: boolean
 }
 
 /**
@@ -65,6 +77,10 @@ export function TheaterLinkedText({
   hasMedia = false,
   className,
   linkClassName,
+  // Accepted per the contract; resolution is implemented by the link-policy
+  // pass (spec §6b) — until then the raw URL renders, which is safe.
+  links: _links,
+  hideTweetLinks: _hideTweetLinks,
 }: TheaterLinkedTextProps) {
   const cleaned = stripMediaUrls(decodeHtmlEntities(text), hasMedia)
   const lines = cleaned.split('\n')

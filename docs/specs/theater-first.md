@@ -89,6 +89,28 @@ Route wiring:
 - **End of video**: stop and show a replay + "↓ next" nudge. No auto-advance (fights the caught-up model); revisit after telemetry.
 - All external fetches keep `AbortSignal.timeout()`.
 
+## 6b. Links in post text (the t.co policy)
+
+Tweet text carries opaque `t.co` links. The theater never shows a raw `t.co` when it can do better:
+
+| The link resolves to                                                                                       | Data available                                        | Rendering                                                                                                                               |
+| ---------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Twitter content the surface ALREADY renders (the quoted tweet shown in a quote card; the post's own media) | expansion known, or the trailing-link heuristic below | **Stripped from the text** — the rendered content replaces it                                                                           |
+| Twitter content the surface does NOT render (community `quote` posts on the stage carry no quote data)     | any                                                   | Kept clickable (it's the only path to that content), expanded href when known                                                           |
+| An external page                                                                                           | expansion known                                       | Anchor with `href = expandedUrl`, label = cleaned expanded URL (protocol + `www.` stripped, truncated ~40 chars) — like X's own display |
+| Unknown (no expansion data)                                                                                | —                                                     | Kept as a clickable `t.co` anchor                                                                                                       |
+
+**Expansion sources** (never a new fetch — all data we already hold):
+
+- Saved posts: `bookmark_links` (`original_url` → `expanded_url`, `link_type` `'tweet' | 'link' | 'article'`). `getTrendingItems()` attaches these as `TrendingItem.textLinks` (public columns only — the anonymity invariant is untouched).
+- Collection theater: `FeedItem.links` via the converter.
+- Shared preview pages: the FxTwitter tweet's `urls[]` (facets fallback) mapped at seed time.
+- Pulse items never saved by anyone have no expansion — they keep the raw-but-clickable `t.co`.
+
+**Trailing-link heuristic**: X appends the quote-tweet link as the LAST URL of a quoting post. When a surface renders the quote content and the trailing `t.co` has no known expansion, strip it anyway; never strip mid-text unresolved links.
+
+Rendering lives in one place: `TheaterLinkedText` (`src/components/theater/TheaterText.tsx`) with `links?: TextLinkRef[]` + `hideTweetLinks?: boolean`.
+
 ## 7. Theme
 
 - The stage is always near-black (`#08070a`) in both themes.
