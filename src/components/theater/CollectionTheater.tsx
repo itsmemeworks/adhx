@@ -35,6 +35,7 @@ import { reelVideoSrc } from '@/components/feed/video-src'
 import { sourceUrl } from '@/lib/activity/preview-path'
 import { Stage } from './Stage'
 import { StageText } from './StageText'
+import { TheaterLinkedText } from './TheaterText'
 import { StageArticle } from './StageArticle'
 import { StageInstagram } from './StageInstagram'
 import { StageYouTube } from './StageYouTube'
@@ -134,6 +135,7 @@ function StageQuoteCard({ item }: { item: FeedItem }) {
   const qName = q?.authorName || q?.author || qc?.authorName || qc?.author || 'unknown'
   const qHandle = q?.author || qc?.author || ''
   const qText = q?.text || qc?.text || ''
+  const qHasMedia = !!(q?.media?.length || qc?.media?.photos?.length || qc?.media?.videos?.length)
   if (!qText && !qHandle) return null
   return (
     <div className="mt-4 w-full max-w-2xl rounded-xl border border-white/15 bg-white/[0.04] p-4">
@@ -146,7 +148,11 @@ function StageQuoteCard({ item }: { item: FeedItem }) {
         <span className="truncate text-[13px] font-semibold text-white">{qName}</span>
         {qHandle && <span className="truncate font-mono text-xs text-white/50">@{qHandle}</span>}
       </div>
-      {qText && <p className="line-clamp-4 text-[13.5px] leading-snug text-white/80">{qText}</p>}
+      {qText && (
+        <p className="line-clamp-4 text-[13.5px] leading-snug text-white/80">
+          <TheaterLinkedText text={qText} hasMedia={qHasMedia} />
+        </p>
+      )}
     </div>
   )
 }

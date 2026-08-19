@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   Bookmark,
   Check,
@@ -12,14 +12,42 @@ import {
   Loader2,
   Send,
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
 import { MatterLogo, LiveDot, PlatformChip, ConnectWithX } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
+import { inferType } from '@/lib/trending/filter'
 import { UpNextList } from './UpNextList'
 import { useSendFile } from './useSendFile'
+import { TheaterLinkedText } from './TheaterText'
 import { theaterItemKey } from './types'
 import type { TheaterItem, TheaterMode } from './types'
+
+/**
+ * Clamped text + expand toggle, shared by the desktop rail's now-playing
+ * block and the mobile chrome's bottom-scrim caption. Detects overflow via
+ * `scrollHeight` vs `clientHeight` on the ref'd (clamped) element — never a
+ * character-count guess — and resets to collapsed whenever `resetKey`
+ * changes (the theater advancing to a new item).
+ */
+export function useClampExpand(resetKey: string | null) {
+  const ref = useRef<HTMLParagraphElement>(null)
+  const [expanded, setExpanded] = useState(false)
+  const [overflowing, setOverflowing] = useState(false)
+
+  useEffect(() => {
+    setExpanded(false)
+  }, [resetKey])
+
+  useLayoutEffect(() => {
+    if (expanded) return
+    const el = ref.current
+    setOverflowing(!!el && el.scrollHeight > el.clientHeight + 1)
+  }, [resetKey, expanded])
+
+  return { ref, expanded, setExpanded, overflowing }
+}
 
 /**
  * ~400px right rail (spec §3): brand + Connect, the now-playing post, actions
@@ -88,6 +116,9 @@ function NowPlaying({
   current: TheaterItem | null
   sharedItem?: TheaterItem
 }) {
+  const key = current ? theaterItemKey(current) : null
+  const { ref, expanded, setExpanded, overflowing } = useClampExpand(key)
+
   if (!current) {
     return (
       <div className="flex-none border-b border-hairline px-5 py-5">
@@ -102,6 +133,8 @@ function NowPlaying({
   const trendCount = current.trendCount ?? current.saveCount ?? 0
   const handle = current.author ? current.author.replace(/^@+/, '') : ''
   const isSharedCurrent = !!sharedItem && theaterItemKey(current) === theaterItemKey(sharedItem)
+  const text = (current.text || '').trim() || 'Saved post'
+  const hasMedia = inferType(current) === 'video' || inferType(current) === 'photo'
 
   return (
     <div className="flex-none border-b border-hairline px-5 py-4">
@@ -137,9 +170,24 @@ function NowPlaying({
         </div>
       </div>
 
-      <p className="mt-2.5 line-clamp-4 text-[14px] leading-relaxed text-ink">
-        {(current.text || '').trim() || 'Saved post'}
+      <p
+        ref={ref}
+        className={cn(
+          'mt-2.5 text-[14px] leading-relaxed text-ink',
+          expanded ? 'max-h-[40vh] overflow-y-auto' : 'line-clamp-4',
+        )}
+      >
+        <TheaterLinkedText text={text} hasMedia={hasMedia} />
       </p>
+      {overflowing && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-0.5 flex min-h-[44px] items-center text-[12.5px] font-semibold text-ink-3 transition-colors hover:text-ink"
+        >
+          {expanded ? 'Show less' : 'Show more'}
+        </button>
+      )}
     </div>
   )
 }

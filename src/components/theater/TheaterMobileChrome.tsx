@@ -18,6 +18,8 @@ import { cn } from '@/lib/utils'
 import { MatterLogo, ConnectWithX, PlatformChip } from '@/components/matter'
 import { previewPath } from '@/lib/activity/preview-path'
 import { useSendFile } from './useSendFile'
+import { useClampExpand } from './Rail'
+import { TheaterLinkedText } from './TheaterText'
 import { UpNextList } from './UpNextList'
 import type { TheaterItem, TheaterMode } from './types'
 
@@ -66,6 +68,7 @@ export function TheaterMobileChrome({
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const dragStartYRef = useRef<number | null>(null)
   const sendFile = useSendFile(current)
+  const { ref: captionRef, expanded, setExpanded, overflowing } = useClampExpand(currentKey)
 
   useEffect(
     () => () => {
@@ -166,9 +169,35 @@ export function TheaterMobileChrome({
               )}
             </div>
             {caption && (
-              <p className="mt-1.5 line-clamp-2 text-[13.5px] leading-snug text-white/90 [text-shadow:0_1px_3px_rgba(0,0,0,.6)]">
-                {caption}
-              </p>
+              <div
+                className={cn(
+                  'mt-1.5',
+                  expanded && 'rounded-lg bg-black/70 px-2 py-1.5 backdrop-blur-sm',
+                )}
+              >
+                <p
+                  ref={captionRef}
+                  className={cn(
+                    'text-[13.5px] leading-snug text-white/90 [text-shadow:0_1px_3px_rgba(0,0,0,.6)]',
+                    expanded ? 'max-h-[38dvh] overflow-y-auto' : 'line-clamp-2',
+                  )}
+                >
+                  <TheaterLinkedText text={caption} hasMedia />
+                </p>
+                {overflowing && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setExpanded((v) => !v)
+                    }}
+                    onTouchEnd={(e) => e.stopPropagation()}
+                    className="mt-1 flex min-h-[44px] items-center text-[12.5px] font-semibold text-white/80 [text-shadow:0_1px_3px_rgba(0,0,0,.6)]"
+                  >
+                    {expanded ? 'less' : 'more'}
+                  </button>
+                )}
+              </div>
             )}
           </div>
 

@@ -4,6 +4,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-19 — Theater text: long posts readable, links clickable
+
+- **Why**: Review caught two gaps — long tweets overflowed StageText unreadably (clamps elsewhere had no expand), and no theater surface linkified URLs (a regression vs FeedCard's `renderTextWithLinks`).
+- **What**: New `TheaterLinkedText` primitive (`src/components/theater/TheaterText.tsx` — pure `splitTextParts` splitter, clay anchors, stopPropagation so links never trigger stage/swipe/row handlers, media t.co stripping). StageText: 70vh internal scroll + a 4th prose-size tier (>600 chars); photo caption gets measured tap-to-expand (45vh scroll panel). Rail now-playing + mobile caption: `useClampExpand` (ref-measured overflow, Show more/less, reset on item change). Quote card linkified. List rows stay plain (anchors in `<button>` rows are invalid HTML).
+- **Verified**: 5,904-char photo caption fully readable via expand; t.co link renders as target=\_blank noopener anchor. 1383 tests green, prettier clean.
+- **State**: in-flight on `feat/theater-phase3` (part of PR #319).
+- **Follow-ups**: pulse TEXT_CAP stays 240 (deliberate — preview page is the full-text surface for community items).
+
 ## 2026-08-18 — Theater-first Phase 3: shared previews, dark Browse, authed collection theater
 
 - **Why**: PR 3 of `docs/specs/theater-first.md` — one mental model everywhere: preview pages, Browse, and the signed-in Collection all run in the theater.
