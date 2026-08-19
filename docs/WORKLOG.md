@@ -4,6 +4,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-19 — Mobile playback: persistent video element, gesture arbitration
+
+- **Why**: Phone testing — the next video after a swipe didn't autoplay (fresh <video> elements lack the sound permission the user's tap granted), the tap-for-sound chip was easy to miss, and swipe-down fought the browser's pull-to-refresh.
+- **What**: StageVideo keeps ONE persistent <video> (no key={src}; src swapped imperatively, one play() caller, event-driven state) so the unmute carries across video→video swipes, with an in-effect fall-back-to-muted when a browser still denies. Centered pulsing "Tap for sound" pill until first unmute. TheaterShell: overscroll-behavior none while mounted + touch-action none + non-passive preventDefault on the stage kills pull-to-refresh; gestures starting in `[data-theater-scroll]`, links, buttons, or any overflow-y:auto ancestor are ignored entirely so scrolling long posts and long-press copy stay native (JS ignore-flag is authoritative; CSS touch-action is a hint).
+- **State**: on `feat/theater-phase3` (PR #319), deployed to staging. Needs a real-device pass: sound continuity across swipes, pull-to-refresh gone, text copy inside posts.
+- **Follow-ups**: unlock is lost crossing non-video items (text/article/YouTube) — retries unmuted and degrades to the pill; IG reels only keep the element when the mirror is pre-warmed.
+
 ## 2026-08-19 — Staging round 2: pulse carries links+quote, link-out, URL sync
 
 - **Why**: Round-1 fixes only covered SAVED posts and the shared post's own page — preview-only pulse items still showed raw t.co and no quote in the theater (the reviewer caught it in the Up-next rows, now-playing, and show-more).

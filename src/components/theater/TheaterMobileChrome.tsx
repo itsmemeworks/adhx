@@ -214,9 +214,12 @@ export function TheaterMobileChrome({
               >
                 <p
                   ref={captionRef}
+                  data-theater-scroll={expanded || undefined}
                   className={cn(
                     'text-[13.5px] leading-snug text-white/90 [text-shadow:0_1px_3px_rgba(0,0,0,.6)]',
-                    expanded ? 'max-h-[38dvh] overflow-y-auto' : 'line-clamp-2',
+                    expanded
+                      ? 'max-h-[38dvh] touch-pan-y overflow-y-auto overscroll-contain'
+                      : 'line-clamp-2',
                   )}
                 >
                   <TheaterLinkedText
@@ -295,10 +298,15 @@ export function TheaterMobileChrome({
 
       {/* Up-next sheet: a peek bar pinned to the bottom, dragged/tapped open
           to ~70dvh. Transform-only (no layout thrash), theme-following
-          surface (unlike the hardcoded-dark scrims above it). */}
+          surface (unlike the hardcoded-dark scrims above it). The sheet is a
+          separate DOM sibling from the stage's swipe wrapper, so a drag here
+          never reaches TheaterShell's gesture handler regardless —
+          `data-theater-scroll` + touch-action are added anyway for
+          consistency with the other opt-out regions. */}
       <div
+        data-theater-scroll
         className={cn(
-          'pointer-events-auto absolute inset-x-0 bottom-0 z-20 flex h-[70dvh] flex-col rounded-t-2xl bg-surface shadow-[0_-8px_24px_rgba(0,0,0,.35)] transition-transform duration-300 ease-out',
+          'pointer-events-auto absolute inset-x-0 bottom-0 z-20 flex h-[70dvh] touch-pan-y flex-col overscroll-contain rounded-t-2xl bg-surface shadow-[0_-8px_24px_rgba(0,0,0,.35)] transition-transform duration-300 ease-out',
           sheetOpen ? 'translate-y-0' : 'translate-y-[calc(100%-3.75rem)]',
         )}
       >

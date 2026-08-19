@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { pinKeyFirst, theaterUrlSyncPath } from '@/components/theater/TheaterShell'
+import {
+  pinKeyFirst,
+  theaterUrlSyncPath,
+  isScrollableTarget,
+} from '@/components/theater/TheaterShell'
 import { theaterItemKey } from '@/components/theater/types'
 
 /**
@@ -83,5 +87,61 @@ describe('theaterUrlSyncPath', () => {
 
   it('returns null for a null item', () => {
     expect(theaterUrlSyncPath(null)).toBe(null)
+  })
+})
+
+/**
+ * isScrollableTarget() backs the mobile gesture split between a theater
+ * swipe and native scroll/selection/link behavior. Exercised with minimal
+ * duck-typed stand-ins for `Element` (closest/parentElement) rather than a
+ * real DOM, since this suite runs in the `node` vitest environment — a
+ * `getOverflowY` override replaces `window.getComputedStyle`.
+ */
+describe('isScrollableTarget', () => {
+  // `Element.parentElement` is typed as `HTMLElement | null` (not `Element`)
+  // in lib.dom, so the stand-in returns `HTMLElement` to satisfy that field.
+  function fakeEl(overrides: Partial<HTMLElement> = {}): HTMLElement {
+    return {
+      closest: () => null,
+      parentElement: null,
+      ...overrides,
+    } as unknown as HTMLElement
+  }
+
+  it('returns false for a null target', () => {
+    expect(isScrollableTarget(null, null)).toBe(false)
+  })
+
+  it('returns true when the target or an ancestor matches the opt-out selector (data-theater-scroll, a, button, input, textarea)', () => {
+    const match = fakeEl()
+    const el = fakeEl({ closest: () => match })
+    expect(isScrollableTarget(el, null)).toBe(true)
+  })
+
+  it('returns false when nothing opts out and no ancestor up to root is independently scrollable', () => {
+    const root = fakeEl()
+    const el = fakeEl({ parentElement: root })
+    expect(isScrollableTarget(el, root, () => 'visible')).toBe(false)
+  })
+
+  it('returns true for an ancestor between the target and root that is independently scrollable (e.g. StageArticle’s own reader, which we cannot tag)', () => {
+    const root = fakeEl()
+    const scrollableAncestor = fakeEl({ parentElement: root })
+    const el = fakeEl({ parentElement: scrollableAncestor })
+    const getOverflowY = (node: Element) => (node === scrollableAncestor ? 'auto' : 'visible')
+    expect(isScrollableTarget(el, root, getOverflowY)).toBe(true)
+  })
+
+  it('treats overflow-y: scroll the same as auto', () => {
+    const root = fakeEl()
+    const el = fakeEl({ parentElement: root })
+    expect(isScrollableTarget(el, root, () => 'scroll')).toBe(true)
+  })
+
+  it('does not consider root itself, even when root is scrollable — the walk stops before it', () => {
+    const root = fakeEl()
+    const el = fakeEl({ parentElement: root })
+    const getOverflowY = (node: Element) => (node === root ? 'auto' : 'visible')
+    expect(isScrollableTarget(el, root, getOverflowY)).toBe(false)
   })
 })

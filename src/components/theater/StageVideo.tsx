@@ -2,9 +2,25 @@
 
 /**
  * <video> stage for twitter/tiktok MP4s (spec §6): poster-first, muted
- * autoplay, thin progress bar, "Tap for sound" chip, replay + next nudge on
- * end. Falls back to a big centered play button when autoplay is rejected
- * (iOS low-power mode blocks even muted autoplay — spec §11).
+ * autoplay, thin progress bar, "Tap for sound" affordance, replay + next
+ * nudge on end. Falls back to a big centered play button when autoplay is
+ * rejected even muted (iOS low-power mode blocks even muted autoplay — spec
+ * §11).
+ *
+ * The <video> element is intentionally NEVER remounted on a src change (no
+ * `key={src}`) — mobile browsers grant unmuted-autoplay permission to the
+ * ELEMENT the user gestured on, not to the app. A fresh element for every
+ * item would lose that grant on every swipe, forcing the user to re-tap
+ * "sound" on every single video. Reusing the element lets an unmute survive
+ * across items rendered by the same StageVideo instance (Stage.tsx renders
+ * this component for both twitter and tiktok, so X→TikTok→X keeps it;
+ * swapping to a non-video item — text/article/YouTube/a re-probing
+ * Instagram reel — unmounts this component entirely, an accepted gap).
+ *
+ * `src`/`muted` are applied imperatively (not as controlled JSX attributes)
+ * so there is exactly one caller of `play()` per item — the effect below —
+ * instead of racing a manual play() against the `autoPlay` attribute like
+ * the old per-item element did.
  */
 
 import { useEffect, useRef, useState } from 'react'
@@ -34,32 +50,65 @@ export function StageVideo({
   const [needsGesture, setNeedsGesture] = useState(false)
   const [errored, setErrored] = useState(false)
   const [playing, setPlaying] = useState(false)
+  // Mirrors the live element's `.muted`. Initialized from the `muted` prop,
+  // which is only the extern/initial signal from here on — once the user
+  // (or a fallback below) changes the element's mute state directly, this is
+  // what the rest of the component reads, never the prop again.
+  const [effectiveMuted, setEffectiveMuted] = useState(muted)
 
-  // New item: reset per-video state. The <video> itself remounts (key={src})
-  // and starts via its `autoPlay` attribute — deliberately NOT via a manual
-  // play() here: a play() issued while the new source is still loading gets
-  // aborted by the load ("interrupted by a new load request") and would
-  // flag a spurious needs-gesture overlay over a video that is in fact
-  // playing. Real autoplay rejection is detected in onCanPlay below.
+  // Reconcile the shell's `muted` signal onto the persistent element — but
+  // only on an actual prop transition (this effect's dependency array), so
+  // a stale/unchanged prop value never echoes back over a mute state a tap
+  // or the unmuted-autoplay fallback already changed for the item currently
+  // on screen. Declared before the src-change effect so, on mount, the
+  // element's initial mute state is set before that effect's play() call.
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+    video.muted = muted
+    setEffectiveMuted(muted)
+  }, [muted])
+
+  // New item: reset per-video UI state, then swap the element's source in
+  // place and play it. This is the ONLY place that calls play() for a
+  // freshly-loaded source, so a rejection here is a trustworthy "needs a
+  // gesture" signal — there's no second caller (like the old `autoPlay`
+  // attribute) it could be racing against.
   useEffect(() => {
     setProgress(0)
     setEnded(false)
     setNeedsGesture(false)
     setErrored(false)
     setPlaying(false)
-  }, [src])
 
-  // Genuine autoplay rejection (e.g. iOS low-power mode blocks even muted
-  // autoplay — spec §11): once the video CAN play but still hasn't, one
-  // explicit attempt tells us whether a gesture is required.
-  const handleCanPlay = () => {
     const video = videoRef.current
-    if (!video || !video.paused || ended) return
+    if (!video) return
+
+    video.src = src
+    video.load()
+
+    // Continue with whatever mute state the element already carries (an
+    // earlier unmute, or a previous item's fallback re-mute) — never
+    // re-derive from the `muted` prop here.
     video.play().then(
       () => setPlaying(true),
-      () => setNeedsGesture(true),
+      () => {
+        if (!video.muted) {
+          // Unmuted continuation denied for this item — never leave the
+          // video frozen. Drop back to muted and surface the sound
+          // affordance again so the user can re-grant it.
+          video.muted = true
+          setEffectiveMuted(true)
+          video.play().then(
+            () => setPlaying(true),
+            () => setNeedsGesture(true),
+          )
+        } else {
+          setNeedsGesture(true)
+        }
+      },
     )
-  }
+  }, [src])
 
   useEffect(() => {
     const handler = () => {
@@ -114,13 +163,26 @@ export function StageVideo({
     )
   }
 
+  // Tapping the sound affordance unmutes the ELEMENT directly (works without
+  // a fresh permission grant — it's the same element the tap gestured on),
+  // then tells the shell so its `muted` state (and the next item's initial
+  // signal) follows.
+  const handleUnmuteTap = () => {
+    const video = videoRef.current
+    if (video) {
+      video.muted = false
+      setEffectiveMuted(false)
+    }
+    onRequestUnmute()
+  }
+
   const handleStageTap = () => {
     if (needsGesture) {
       handleStartTap()
       return
     }
-    if (muted) {
-      onRequestUnmute()
+    if (effectiveMuted) {
+      handleUnmuteTap()
       return
     }
     const video = videoRef.current
@@ -140,16 +202,12 @@ export function StageVideo({
     <div className="relative h-full w-full bg-[#08070a]" onClick={handleStageTap}>
       <video
         ref={videoRef}
-        key={src}
-        src={src}
         poster={poster ?? undefined}
         playsInline
-        autoPlay
-        muted={muted}
-        onCanPlay={handleCanPlay}
         onPlaying={() => {
           // The media element is the source of truth — a successful start
-          // (autoplay or any play() path) clears the gesture overlay.
+          // (initial play() or any later play() path) clears the gesture
+          // overlay.
           setPlaying(true)
           setNeedsGesture(false)
         }}
@@ -160,27 +218,34 @@ export function StageVideo({
         className="h-full w-full object-contain"
       />
 
-      {/* Persistent unmute chip while muted (before the first gesture). */}
-      {muted && !needsGesture && !ended && !errored && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            onRequestUnmute()
-          }}
-          className="absolute bottom-6 left-4 inline-flex min-h-[44px] items-center gap-2 rounded-full bg-black/55 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur-md"
-        >
-          <VolumeX size={16} />
-          Tap for sound
-        </button>
-      )}
-      {!muted && playing && (
+      {/* Small unmuted-state indicator (bottom-left), unchanged. */}
+      {!effectiveMuted && playing && (
         <div className="pointer-events-none absolute bottom-6 left-4 inline-flex items-center gap-2 rounded-full bg-black/40 px-3 py-1.5 text-xs font-medium text-white/80 backdrop-blur-sm">
           <Volume2 size={14} />
         </div>
       )}
 
-      {/* Tap-to-play fallback (autoplay rejected). */}
+      {/* Prominent, hard-to-miss sound affordance: centered in the lower
+          third, large tap target, gentle pulse. Shown any time the current
+          video is muted-but-playing — the first video, or a later item that
+          fell back to muted after an unmuted-continuation rejection. */}
+      {effectiveMuted && playing && !needsGesture && !ended && !errored && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-[18%] flex justify-center px-4">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleUnmuteTap()
+            }}
+            className="animate-sound-pulse pointer-events-auto inline-flex min-h-[48px] items-center gap-2.5 rounded-full bg-black/70 px-6 py-3 text-base font-semibold text-white shadow-lg backdrop-blur-md"
+          >
+            <VolumeX size={20} />
+            Tap for sound
+          </button>
+        </div>
+      )}
+
+      {/* Tap-to-play fallback (autoplay rejected even muted). */}
       {needsGesture && !ended && !errored && (
         <div className="absolute inset-0 flex items-center justify-center">
           <button

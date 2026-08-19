@@ -117,6 +117,12 @@ const config: Config = {
           '70%': { boxShadow: '0 0 0 7px rgba(16,185,129,0)' },
           '100%': { boxShadow: '0 0 0 0 rgba(16,185,129,0)' },
         },
+        // Theater "tap for sound" affordance — subtle scale/opacity breathing,
+        // never a hard flash.
+        'sound-pulse': {
+          '0%, 100%': { transform: 'scale(1)', opacity: '1' },
+          '50%': { transform: 'scale(1.045)', opacity: '0.9' },
+        },
       },
       animation: {
         'bounce-in': 'bounce-in 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
@@ -126,6 +132,7 @@ const config: Config = {
         'sparkle-4': 'sparkle-4 0.6s ease-out 0.15s forwards',
         marquee: 'marquee var(--marquee-duration, 60s) linear infinite',
         'live-pulse': 'live-pulse 1.8s infinite',
+        'sound-pulse': 'sound-pulse 2.2s ease-in-out infinite',
       },
     },
   },

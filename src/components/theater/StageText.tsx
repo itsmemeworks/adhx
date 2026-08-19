@@ -160,10 +160,11 @@ export function StageText({
               <div>
                 <p
                   ref={captionRef}
+                  data-theater-scroll={expanded || undefined}
                   className={cn(
                     'text-[15px] leading-snug text-white/90',
                     expanded
-                      ? 'max-h-[45vh] overflow-y-auto overscroll-contain pr-1'
+                      ? 'max-h-[45vh] touch-pan-y overflow-y-auto overscroll-contain pr-1'
                       : 'line-clamp-2',
                   )}
                 >
@@ -216,8 +217,14 @@ export function StageText({
         </div>
         {/* Capped + scrollable so a long-form post never overflows off-stage;
             short posts (the common case) size to content and stay centered
-            by the outer flex, exactly as before. */}
-        <div className="max-h-[70vh] overflow-y-auto overscroll-contain pr-2 sm:pr-3">
+            by the outer flex, exactly as before. `data-theater-scroll` opts
+            this out of the stage swipe gesture unconditionally — even a
+            short, non-overflowing post should support native text selection
+            and copying, not just long ones. */}
+        <div
+          data-theater-scroll
+          className="max-h-[70vh] touch-pan-y overflow-y-auto overscroll-contain pr-2 sm:pr-3"
+        >
           <p className={cn('font-serif leading-tight text-white', textSizeClass(text || ''))}>
             {text ? (
               <TheaterLinkedText
