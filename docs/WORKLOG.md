@@ -4,6 +4,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-19 — Desktop theater "Filmstrip dock" redesign (direction C shipped)
+
+- **Why**: User live review judged the rail-based desktop layout weaker than mobile's "stage owns the post" model and selected direction C.
+- **What**: Rail.tsx deleted. Desktop = full-width stage (flex-1) + bottom filmstrip dock (`DesktopDock`: transport buttons + horizontal queue cards auto-scrolled to keep current visible + "Show all" panel with full `UpNextList` + savedToday line). `DesktopStageChrome`: top bar (brand + LIVE + paste-to-preview input ⌘V + de-clutter); stage overlays (meta/flame/platform pinned top-right for text/quote/article; merged avatar·name·@handle·platform·flame overlay + 2-line clamped caption with show-more for video/photo); bottom actions (Download when sendable / Link / Save / Open). New `useClampExpand.ts` module extracted, `lib/theater/paste-preview.ts` for `resolvePastedLink()`, ←/→ keyboard prev/next. Mobile chrome untouched.
+- **State**: on `feat/theater-desktop-controls`, PR #322. Earlier same-day rail de-clutter entry (#322) is superseded.
+- **Follow-ups**: none.
+
 ## 2026-08-19 — Desktop theater rail de-clutter per user review
 
 - **Why**: Streamline the desktop theater rail controls and layout based on user feedback.

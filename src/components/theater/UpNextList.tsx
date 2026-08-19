@@ -15,7 +15,7 @@ import { theaterItemKey } from './types'
 const warmedRows = new Set<string>()
 
 /** Warm an Instagram row's mirror on hover, at most once per session per item. */
-function warmOnHover(item: TheaterItem) {
+export function warmOnHover(item: TheaterItem) {
   if (!instagramWarmSrc(item)) return
   const key = theaterItemKey(item)
   if (warmedRows.has(key)) return
@@ -59,14 +59,16 @@ export interface UpNextListProps {
   collapsedCount?: number
 }
 
-const TYPE_TILE: Record<ContentType, { bg: string; icon: React.ComponentType<{ size?: number }> }> =
-  {
-    video: { bg: 'bg-type-video/15 text-type-video', icon: Play },
-    photo: { bg: 'bg-type-photo/15 text-type-photo', icon: ImageIcon },
-    text: { bg: 'bg-type-text/15 text-type-text', icon: TypeIcon },
-    article: { bg: 'bg-type-article/15 text-type-article', icon: FileText },
-    quote: { bg: 'bg-type-quote/15 text-type-quote', icon: Quote },
-  }
+export const TYPE_TILE: Record<
+  ContentType,
+  { bg: string; icon: React.ComponentType<{ size?: number }> }
+> = {
+  video: { bg: 'bg-type-video/15 text-type-video', icon: Play },
+  photo: { bg: 'bg-type-photo/15 text-type-photo', icon: ImageIcon },
+  text: { bg: 'bg-type-text/15 text-type-text', icon: TypeIcon },
+  article: { bg: 'bg-type-article/15 text-type-article', icon: FileText },
+  quote: { bg: 'bg-type-quote/15 text-type-quote', icon: Quote },
+}
 
 function Thumb({ item, fresh }: { item: TheaterItem; fresh: boolean }) {
   const type = inferType(item)

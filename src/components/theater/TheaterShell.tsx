@@ -1,17 +1,19 @@
 'use client'
 
 /**
- * Theater orchestrator (spec §3/§4/§5/§6/§8): full-viewport <Stage/> + <Rail/>.
+ * Theater orchestrator (spec §3/§4/§5/§6/§8): a full-width <Stage/> with
+ * overlaid chrome and a bottom filmstrip dock on desktop (the "Filmstrip
+ * dock" layout — see <DesktopStageChrome/>/<DesktopDock/> in
+ * TheaterDesktopChrome.tsx, which replaced the old right-hand <Rail/>).
  * Owns current-item state, keyboard nav, mute state, the seen model + preview
  * pulse, and next-item prefetch. See docs/specs/theater-first.md.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Maximize2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { Stage } from './Stage'
 import { StageWaiting } from './StageWaiting'
-import { Rail } from './Rail'
+import { DesktopStageChrome, DesktopDock } from './TheaterDesktopChrome'
 import { TheaterMobileChrome } from './TheaterMobileChrome'
 import { useTheaterFeed } from './useTheaterFeed'
 import { useSeenSet } from './useSeenSet'
@@ -317,10 +319,12 @@ export function TheaterShell({
     }
   }, [])
 
-  // Keyboard nav: ↓/j next, ↑/k prev, space toggles play/pause (delegated to
-  // Stage via a custom event, matching the repo's cross-component keyboard
-  // pattern), m toggles mute. Ignored while typing in an input/textarea/
-  // contentEditable element.
+  // Keyboard nav: ↓/→/j next, ↑/←/k prev — the arrows double up because the
+  // desktop dock's filmstrip queue reads horizontally while mobile still
+  // scrolls vertically. Space toggles play/pause (delegated to Stage via a
+  // custom event, matching the repo's cross-component keyboard pattern), m
+  // toggles mute. Ignored while typing in an input/textarea/contentEditable
+  // element.
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       const target = e.target as HTMLElement | null
@@ -330,12 +334,14 @@ export function TheaterShell({
 
       switch (e.key) {
         case 'ArrowDown':
+        case 'ArrowRight':
         case 'j':
         case 'J':
           e.preventDefault()
           goNext()
           break
         case 'ArrowUp':
+        case 'ArrowLeft':
         case 'k':
         case 'K':
           e.preventDefault()
@@ -450,11 +456,13 @@ export function TheaterShell({
   }, [displayItems, seenSet])
 
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col overflow-hidden bg-[#08070a] lg:flex-row">
-      {/* Full-viewport stage below lg (spec §8) — the desktop 62dvh-stage +
-          stacked-rail layout only applies at lg+, where <Rail/> takes its
-          own column instead of overlaying the stage. */}
-      <div className="relative h-full w-full flex-1 overflow-hidden lg:min-w-0">
+    <div className="fixed inset-0 z-[60] flex flex-col overflow-hidden bg-[#08070a]">
+      {/* Full-width stage on every viewport (spec §8, "Filmstrip dock"):
+          below lg the mobile chrome overlays it full-viewport as before;
+          at lg+ <DesktopStageChrome/> overlays it with the top bar/post
+          overlay/actions, and <DesktopDock/> (a sibling, in-flow below) is
+          the bottom filmstrip queue — no more side-by-side rail column. */}
+      <div className="relative h-full w-full flex-1 overflow-hidden">
         <div className="absolute inset-0">
           {waiting ? (
             <StageWaiting savedToday={feed.savedToday} />
@@ -507,37 +515,35 @@ export function TheaterShell({
           muted={muted}
           onToggleMute={onToggleMute}
         />
-      </div>
-      <div
-        className={cn(
-          'hidden min-h-0 flex-1 overflow-hidden transition-[width] duration-200 ease-out lg:flex lg:h-full lg:flex-none',
-          desktopDeclutter ? 'lg:w-0' : 'lg:w-[360px] xl:w-[400px]',
-        )}
-      >
-        <Rail
+        <DesktopStageChrome
           mode={mode}
-          items={displayItems}
           current={waiting ? null : current}
-          currentKey={currentKey}
-          isSeen={seenSet.isSeen}
-          seenReady={seenSet.ready}
-          freshKeys={feed.freshKeys}
-          newCount={newCount}
-          savedToday={feed.savedToday}
-          onSelect={onSelect}
           sharedItem={sharedItem}
           authed={authed}
-          waiting={waiting}
-          muted={muted}
-          onToggleMute={onToggleMute}
-          canPrev={canPrev}
-          canNext={canNext}
-          onPrev={goPrev}
-          onNext={goNext}
           declutter={desktopDeclutter}
           onToggleDeclutter={onToggleDesktopDeclutter}
         />
       </div>
+      <DesktopDock
+        mode={mode}
+        items={displayItems}
+        current={waiting ? null : current}
+        currentKey={currentKey}
+        isSeen={seenSet.isSeen}
+        seenReady={seenSet.ready}
+        freshKeys={feed.freshKeys}
+        newCount={newCount}
+        savedToday={feed.savedToday}
+        onSelect={onSelect}
+        waiting={waiting}
+        muted={muted}
+        onToggleMute={onToggleMute}
+        canPrev={canPrev}
+        canNext={canNext}
+        onPrev={goPrev}
+        onNext={goNext}
+        declutter={desktopDeclutter}
+      />
     </div>
   )
 }

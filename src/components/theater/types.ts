@@ -23,6 +23,14 @@ export function theaterItemKey(item: Pick<TheaterItem, 'platform' | 'bookmarkId'
 /** Which rail the theater carries: signed-out home vs a shared preview (PR 3). */
 export type TheaterMode = 'home' | 'shared'
 
+/** Human platform label for "Open on {platform}" titles — shared by the desktop chrome, mobile chrome, and `CollectionRail`. */
+export const PLATFORM_LABEL: Record<string, string> = {
+  twitter: 'X',
+  tiktok: 'TikTok',
+  instagram: 'Instagram',
+  youtube: 'YouTube',
+}
+
 /** Server-rendered seed for the shell — same items as the crawlable list. */
 export interface TheaterFeedSeed {
   items: TheaterItem[]
