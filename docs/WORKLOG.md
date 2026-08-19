@@ -4,6 +4,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-19 — Peek bar mirrored, swipe removed, end-state chevrons
+
+- **Why**: Live review — nav belongs under the right thumb; de-clutter hid the controls people still wanted; the label was off-center; swiping to the next video re-muted it (our preventDefault voided user activation, so unmuted play() was denied); testers hit the first post and couldn't tell why "back" did nothing.
+- **What**: Peek bar mirrored — [audio · de-clutter] left, absolutely-centered "{N} new"/"Up next" label, [prev · pause · next] right. De-clutter hides only the scrims; the peek bar stays (button toggles in place; corner restore deleted). Swipe navigation REMOVED entirely (touch handlers, native preventDefault listener, isScrollableTarget, swipeDirection, data-theater-scroll attrs, dead tests) — buttons + auto-advance navigate, fixing the audio drop by construction; overscroll-behavior none stays for pull-to-refresh. Prev/next chevrons render disabled (opacity-35, native disabled) at the ends via canPrev/canNext.
+- **State**: on `feat/theater-phase3` (PR #319), deploying to staging.
+- **Follow-ups**: iOS may rubber-band slightly on aggressive drags now that preventDefault is gone (noted in code); acceptable.
+
 ## 2026-08-19 — Peek-bar controls: pause, audio, de-clutter; hold-to-pause removed
 
 - **Why**: Live review — hold-to-pause fought text selection and felt unreliable; videos needed an explicit audio toggle; the reviewer wanted an immersive full-screen mode and suggested the sheet peek bar as the control surface.

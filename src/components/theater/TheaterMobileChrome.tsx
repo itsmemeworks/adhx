@@ -6,8 +6,8 @@
  * (brand only — the Save CTA below covers sign-in), a bottom scrim
  * (author/caption + Download/Save/Share), and an
  * Up-next bottom sheet — all `pointer-events-auto` islands inside an
- * otherwise `pointer-events-none` layer so taps/swipes on the bare stage fall
- * through to `TheaterShell`'s swipe handler untouched.
+ * otherwise `pointer-events-none` layer. Navigation is buttons + keyboard +
+ * video-ended auto-advance only — there is no swipe gesture on the stage.
  *
  * Rendered only below `lg` (`TheaterShell` mounts this alongside, not
  * instead of, the desktop `<Rail/>`).
@@ -52,9 +52,12 @@ export interface TheaterMobileChromeProps {
   freshKeys: ReadonlySet<string>
   newCount: number
   onSelect: (key: string) => void
-  /** Prev/next navigation for the peek bar's chevrons (text posts can't swipe — their body scrolls/selects). */
+  /** Prev/next navigation for the peek bar's chevrons — the only mobile nav besides keyboard and video-ended auto-advance. */
   onPrev: () => void
   onNext: () => void
+  /** Whether there's a previous/next post to navigate to — disables the corresponding chevron (in place, no layout shift) at either end of the list. */
+  canPrev: boolean
+  canNext: boolean
   /** Current sound state (owned by TheaterShell) — the audio button's fallback signal, see `liveMuted` below. */
   muted: boolean
   /** Flips TheaterShell's `muted` state. */
@@ -66,20 +69,11 @@ const PEEK_H = '4.25rem'
 /** Shared style for the icon-only controls living in the peek bar — subtle on the themed (light/dark-following) surface, unlike the dark-stage scrim buttons above. */
 const PEEK_ICON_BTN =
   'inline-flex h-10 w-10 flex-none items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-inset hover:text-ink active:bg-inset active:text-ink'
+/** Applied on top of `PEEK_ICON_BTN` for a disabled prev/next chevron at either end of the list — dimmed, no hover/active feedback, but the button stays in place (no layout shift) so the row never reflows. */
+const PEEK_ICON_BTN_DISABLED =
+  'opacity-35 hover:bg-transparent hover:text-ink-3 active:bg-transparent active:text-ink-3 disabled:cursor-default'
 /** Minimum finger travel (px) on the peek handle to count as a drag, not a tap. */
 const DRAG_THRESHOLD = 30
-
-/**
- * Pure swipe-gesture decision (spec §8): vertical swipe on the stage only,
- * gated to a dominant vertical axis so horizontal scrubbing/taps never fire
- * navigation. `dx`/`dy` are `touchend.clientX/Y - touchstart.clientX/Y`.
- */
-export function swipeDirection(dx: number, dy: number): 'next' | 'prev' | null {
-  const THRESHOLD = 48
-  if (Math.abs(dy) < THRESHOLD) return null
-  if (Math.abs(dy) <= Math.abs(dx) * 1.5) return null
-  return dy < 0 ? 'next' : 'prev'
-}
 
 export function TheaterMobileChrome({
   current,
@@ -92,6 +86,8 @@ export function TheaterMobileChrome({
   onSelect,
   onPrev,
   onNext,
+  canPrev,
+  canNext,
   muted,
   onToggleMute,
 }: TheaterMobileChromeProps) {
@@ -116,10 +112,12 @@ export function TheaterMobileChrome({
   // the element falls back to muted on its own). Starts null — until the
   // first event arrives, the button trusts the `muted` prop.
   const [liveMuted, setLiveMuted] = useState<boolean | null>(null)
-  // De-clutter: hides every chrome overlay (scrims, nav cluster, sheet peek
-  // bar) for an unobstructed view of the stage. Deliberately NOT reset on
-  // `currentKey` — a viewer who de-clutters wants it to stay that way while
-  // browsing, not fight it back open on every swipe.
+  // De-clutter: hides the top and bottom scrims (brand + caption/actions) for
+  // an unobstructed view of the stage. The peek bar (nav/pause/audio + the
+  // up-next sheet) deliberately stays visible and functional — the point is
+  // an unobstructed view while still being able to skip quickly. Deliberately
+  // NOT reset on `currentKey` — a viewer who de-clutters wants it to stay
+  // that way while browsing, not fight it back open on every navigation.
   const [declutter, setDeclutter] = useState(false)
 
   useEffect(() => {
@@ -313,12 +311,9 @@ export function TheaterMobileChrome({
               >
                 <p
                   ref={captionRef}
-                  data-theater-scroll={expanded || undefined}
                   className={cn(
                     'text-[13.5px] leading-snug text-white/90 [text-shadow:0_1px_3px_rgba(0,0,0,.6)]',
-                    expanded
-                      ? 'max-h-[38dvh] touch-pan-y overflow-y-auto overscroll-contain'
-                      : 'line-clamp-2',
+                    expanded ? 'max-h-[38dvh] overflow-y-auto overscroll-contain' : 'line-clamp-2',
                   )}
                 >
                   <TheaterLinkedText
@@ -389,8 +384,10 @@ export function TheaterMobileChrome({
         </div>
       )}
 
-      {/* Backdrop: closes the sheet + blocks stage swipe/tap while it's open. */}
-      {sheetOpen && !declutter && (
+      {/* Backdrop: closes the sheet + blocks taps on the stage below while
+          it's open. Shown regardless of de-clutter — the sheet itself stays
+          live there. */}
+      {sheetOpen && (
         <div
           className="pointer-events-auto absolute inset-0"
           onClick={() => setSheetOpen(false)}
@@ -400,27 +397,22 @@ export function TheaterMobileChrome({
 
       {/* Up-next sheet: a peek bar pinned to the bottom, dragged/tapped open
           to ~70dvh. Transform-only (no layout thrash), theme-following
-          surface (unlike the hardcoded-dark scrims above it). The sheet is a
-          separate DOM sibling from the stage's swipe wrapper, so a drag here
-          never reaches TheaterShell's gesture handler regardless —
-          `data-theater-scroll` + touch-action are added anyway for
-          consistency with the other opt-out regions. De-clutter fades the
-          whole sheet out (on top of its own open/closed transform) without
-          losing that transform's state, so it's exactly where it was when
-          the viewer restores the chrome. */}
+          surface (unlike the hardcoded-dark scrims above it). Unlike the
+          scrims, de-clutter does NOT fade this out — the reviewer wants the
+          nav/pause/audio controls and the sheet available at all times, even
+          while immersed, so only the top/bottom scrims above hide. */}
       <div
-        data-theater-scroll
         className={cn(
-          'absolute inset-x-0 bottom-0 z-20 flex h-[70dvh] touch-pan-y flex-col overscroll-contain rounded-t-2xl bg-surface shadow-[0_-8px_24px_rgba(0,0,0,.35)] transition-[opacity,transform] duration-300 ease-out',
+          'pointer-events-auto absolute inset-x-0 bottom-0 z-20 flex h-[70dvh] flex-col overscroll-contain rounded-t-2xl bg-surface shadow-[0_-8px_24px_rgba(0,0,0,.35)] transition-transform duration-300 ease-out',
           sheetOpen ? 'translate-y-0' : 'translate-y-[calc(100%-4.25rem)]',
-          declutter ? 'pointer-events-none opacity-0' : 'pointer-events-auto opacity-100',
         )}
       >
         {/* Peek bar: drag handle on top (tap/drag toggles the sheet, as
-            before), then a control row — prev/pause/next on the left, the
-            up-next label in the middle (also toggles the sheet), and
-            audio/de-clutter on the right. The nav and de-clutter buttons
-            replace the old floating right-edge cluster entirely; they stop
+            before), then a control row mirrored for right-handed reach —
+            audio/de-clutter on the left, the up-next label screen-centered
+            (absolutely positioned over the bar so it lands at the true
+            midpoint regardless of the side groups' unequal widths), and
+            prev/pause/next on the right. All non-drag-handle buttons stop
             propagation on click AND touchend so pressing them never also
             toggles the sheet open/closed. */}
         <button
@@ -435,86 +427,96 @@ export function TheaterMobileChrome({
           <span className="h-1 w-9 rounded-full bg-hairline" aria-hidden />
         </button>
 
-        <div className="flex flex-none items-center gap-0.5 px-2 pb-2">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onPrev()
-            }}
-            onTouchEnd={(e) => e.stopPropagation()}
-            aria-label="Previous post"
-            className={PEEK_ICON_BTN}
-          >
-            <ChevronUp size={18} />
-          </button>
-          {kind !== 'none' && (
+        <div className="relative flex flex-none items-center px-2 pb-2">
+          <div className="flex items-center gap-0.5">
+            {kind === 'video' && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onToggleMute()
+                }}
+                onTouchEnd={(e) => e.stopPropagation()}
+                aria-label={displayMuted ? 'Unmute' : 'Mute'}
+                className={PEEK_ICON_BTN}
+              >
+                {displayMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+              </button>
+            )}
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation()
-                handleTogglePause()
+                setDeclutter((v) => !v)
               }}
               onTouchEnd={(e) => e.stopPropagation()}
-              aria-label={paused ? 'Play' : 'Pause'}
+              aria-label={declutter ? 'Show controls' : 'Hide controls'}
               className={PEEK_ICON_BTN}
             >
-              {paused ? (
-                <Play size={16} fill="currentColor" />
-              ) : (
-                <Pause size={16} fill="currentColor" />
-              )}
+              {declutter ? <Maximize2 size={16} /> : <Minimize2 size={16} />}
             </button>
-          )}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onNext()
-            }}
-            onTouchEnd={(e) => e.stopPropagation()}
-            aria-label="Next post"
-            className={PEEK_ICON_BTN}
-          >
-            <ChevronDown size={18} />
-          </button>
+          </div>
 
-          <button
-            type="button"
-            onClick={() => setSheetOpen((v) => !v)}
-            aria-expanded={sheetOpen}
-            aria-label={sheetOpen ? 'Collapse up next' : 'Expand up next'}
-            className="min-w-0 flex-1 truncate px-1 text-center text-[12px] font-semibold text-ink-2"
-          >
-            {newCount > 0 ? `Up next · ${newCount} new` : "You're all caught up"}
-          </button>
-
-          {kind === 'video' && (
+          <div className="pointer-events-none absolute inset-x-0 flex justify-center">
             <button
               type="button"
+              onClick={() => setSheetOpen((v) => !v)}
+              aria-expanded={sheetOpen}
+              aria-label={sheetOpen ? 'Collapse up next' : 'Expand up next'}
+              className="pointer-events-auto max-w-[45%] truncate px-1 text-center text-[12px] font-semibold text-ink-2"
+            >
+              {newCount > 0 ? `${newCount} new` : 'Up next'}
+            </button>
+          </div>
+
+          <div className="ml-auto flex items-center gap-0.5">
+            <button
+              type="button"
+              disabled={!canPrev}
               onClick={(e) => {
                 e.stopPropagation()
-                onToggleMute()
+                onPrev()
               }}
               onTouchEnd={(e) => e.stopPropagation()}
-              aria-label={displayMuted ? 'Unmute' : 'Mute'}
-              className={PEEK_ICON_BTN}
+              aria-label="Previous post"
+              aria-disabled={!canPrev}
+              className={cn(PEEK_ICON_BTN, !canPrev && PEEK_ICON_BTN_DISABLED)}
             >
-              {displayMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+              <ChevronUp size={18} />
             </button>
-          )}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              setDeclutter(true)
-            }}
-            onTouchEnd={(e) => e.stopPropagation()}
-            aria-label="Hide controls"
-            className={PEEK_ICON_BTN}
-          >
-            <Minimize2 size={16} />
-          </button>
+            {kind !== 'none' && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleTogglePause()
+                }}
+                onTouchEnd={(e) => e.stopPropagation()}
+                aria-label={paused ? 'Play' : 'Pause'}
+                className={PEEK_ICON_BTN}
+              >
+                {paused ? (
+                  <Play size={16} fill="currentColor" />
+                ) : (
+                  <Pause size={16} fill="currentColor" />
+                )}
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={!canNext}
+              onClick={(e) => {
+                e.stopPropagation()
+                onNext()
+              }}
+              onTouchEnd={(e) => e.stopPropagation()}
+              aria-label="Next post"
+              aria-disabled={!canNext}
+              className={cn(PEEK_ICON_BTN, !canNext && PEEK_ICON_BTN_DISABLED)}
+            >
+              <ChevronDown size={18} />
+            </button>
+          </div>
         </div>
 
         <UpNextList
@@ -528,19 +530,6 @@ export function TheaterMobileChrome({
           className="min-h-0 flex-1 pb-[max(1rem,env(safe-area-inset-bottom))]"
         />
       </div>
-
-      {/* The one control left on screen while de-cluttered — restores every
-          overlay above. */}
-      {declutter && (
-        <button
-          type="button"
-          onClick={() => setDeclutter(false)}
-          aria-label="Show controls"
-          className="pointer-events-auto absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/35 text-white/80 backdrop-blur-sm transition-opacity duration-200 active:bg-black/55"
-        >
-          <Maximize2 size={18} />
-        </button>
-      )}
     </div>
   )
 }

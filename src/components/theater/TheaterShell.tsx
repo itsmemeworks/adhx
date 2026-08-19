@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Stage } from './Stage'
 import { Rail } from './Rail'
-import { TheaterMobileChrome, swipeDirection } from './TheaterMobileChrome'
+import { TheaterMobileChrome } from './TheaterMobileChrome'
 import { useTheaterFeed } from './useTheaterFeed'
 import { useSeenSet } from './useSeenSet'
 import { prefetchPlayback } from './usePlaybackSource'
@@ -62,34 +62,6 @@ export function theaterUrlSyncPath(
 ): string | null {
   if (!item || !item.bookmarkId || !item.author) return null
   return previewPath(item.platform, item.author, item.bookmarkId)
-}
-
-/**
- * Pure: true when a touch starting on `el` should be left entirely to the
- * browser — native scroll, text selection, link/button taps, copying —
- * instead of being read as a theater swipe. Two cases:
- *  1. An explicit opt-out region (`data-theater-scroll`) or an interactive
- *     element (`a`/`button`/`input`/`textarea`) anywhere in the ancestor
- *     chain.
- *  2. A scroll surface we don't own and can't tag (StageArticle's reader,
- *     read-only) — any ancestor up to (not including) `root` that's
- *     independently scrollable (`overflow-y: auto|scroll`), detected via
- *     computed style since we can't add the attribute there.
- * `getOverflowY` is injectable so this stays unit-testable without a real DOM.
- */
-export function isScrollableTarget(
-  el: Element | null,
-  root: Element | null,
-  getOverflowY: (node: Element) => string = (node) => window.getComputedStyle(node).overflowY,
-): boolean {
-  if (!el) return false
-  if (el.closest('[data-theater-scroll], a, button, input, textarea')) return true
-  let node: Element | null = el
-  while (node && node !== root) {
-    if (getOverflowY(node) === 'auto' || getOverflowY(node) === 'scroll') return true
-    node = node.parentElement
-  }
-  return false
 }
 
 export function TheaterShell({
@@ -169,6 +141,11 @@ export function TheaterShell({
     [displayItems, currentKey],
   )
   const current: TheaterItem | null = currentIndex === -1 ? null : displayItems[currentIndex]
+  // End-states for the peek bar's prev/next chevrons (tester feedback: at the
+  // first post, pressing "back" silently did nothing). `currentIndex === -1`
+  // (nothing current, e.g. an empty list) always reads as "can't navigate".
+  const canPrev = currentIndex > 0
+  const canNext = currentIndex !== -1 && currentIndex < displayItems.length - 1
 
   // Read fresh inside the `theater-advance` listener below without
   // re-registering that listener on every navigation (mirrors itemsRef).
@@ -201,45 +178,16 @@ export function TheaterShell({
   const onRequestUnmute = useCallback(() => setMuted(false), [])
   const onToggleMute = useCallback(() => setMuted((m) => !m), [])
 
-  // Mobile swipe nav (spec §8): vertical swipe on the stage only — the
-  // mobile chrome's sheet/backdrop are separate DOM siblings positioned on
-  // top of the stage, so a drag inside the sheet never reaches this handler.
-  // `stageRef` is the touch wrapper below (`touch-none`) — also the `root`
-  // boundary for `isScrollableTarget`'s ancestor walk.
-  const stageRef = useRef<HTMLDivElement>(null)
-  const touchStartRef = useRef<{ x: number; y: number; ignore: boolean } | null>(null)
-  const onStageTouchStart = useCallback((e: React.TouchEvent) => {
-    const t = e.touches[0]
-    // A gesture starting inside a scrollable/selectable/interactive region
-    // (long-post text, an expanded caption, a link, StageArticle's reader)
-    // is ignored entirely — no swipe nav, no preventDefault — so scrolling,
-    // link taps, and long-press text selection/copying behave natively.
-    const ignore = isScrollableTarget(e.target as Element, stageRef.current)
-    touchStartRef.current = { x: t.clientX, y: t.clientY, ignore }
-  }, [])
-  const onStageTouchEnd = useCallback(
-    (e: React.TouchEvent) => {
-      const start = touchStartRef.current
-      touchStartRef.current = null
-      if (!start || start.ignore) return
-      const t = e.changedTouches[0]
-      const direction = swipeDirection(t.clientX - start.x, t.clientY - start.y)
-      if (direction === 'next') goNext()
-      else if (direction === 'prev') goPrev()
-    },
-    [goNext, goPrev],
-  )
-  const onStageTouchCancel = useCallback(() => {
-    touchStartRef.current = null
-  }, [])
-
   // Suppress the browser's native pull-to-refresh / overscroll chaining while
   // the theater is mounted — it's a fixed full-viewport overlay, not a normal
   // scrolling page, so a swipe-down at the top should never yank in the
   // browser's refresh UI. Chrome/Android honors `overscroll-behavior` alone;
-  // older iOS Safari ignores it, hence the touch-action + preventDefault path
-  // below as well. Restores whatever was there before (defensive — nothing
-  // else in the app currently sets this).
+  // without our own touchmove preventDefault (removed along with swipe nav —
+  // navigation is buttons + keyboard + video-ended auto-advance now), older
+  // iOS Safari may still rubber-band the fixed page slightly on an
+  // aggressive drag — acceptable, and Chrome/Android is unaffected. Restores
+  // whatever was there before (defensive — nothing else in the app currently
+  // sets this).
   useEffect(() => {
     const html = document.documentElement
     const body = document.body
@@ -251,28 +199,6 @@ export function TheaterShell({
       html.style.overscrollBehavior = prevHtml
       body.style.overscrollBehavior = prevBody
     }
-  }, [])
-
-  // Non-passive touchmove listener: React's synthetic onTouchMove is passive
-  // by default, so calling preventDefault() from a JSX `onTouchMove` prop is
-  // a silent no-op. Only blocks the browser's default scroll/refresh once the
-  // gesture is clearly vertical AND didn't start in an opt-out region
-  // (`touchStartRef.current.ignore`, set on touchstart above).
-  useEffect(() => {
-    const el = stageRef.current
-    if (!el) return
-    const PREVENT_THRESHOLD = 6
-    function handleTouchMove(e: TouchEvent) {
-      const start = touchStartRef.current
-      if (!start || start.ignore) return
-      const t = e.touches[0]
-      if (!t) return
-      if (Math.abs(t.clientY - start.y) > PREVENT_THRESHOLD) {
-        e.preventDefault()
-      }
-    }
-    el.addEventListener('touchmove', handleTouchMove, { passive: false })
-    return () => el.removeEventListener('touchmove', handleTouchMove)
   }, [])
 
   // Keyboard nav: ↓/j next, ↑/k prev, space toggles play/pause (delegated to
@@ -400,18 +326,7 @@ export function TheaterShell({
           stacked-rail layout only applies at lg+, where <Rail/> takes its
           own column instead of overlaying the stage. */}
       <div className="relative h-full w-full flex-1 overflow-hidden lg:min-w-0">
-        {/* No CSS touch-action here: `none` on this ancestor would ALSO kill
-            native scrolling/selection in descendants (touch-action intersects
-            down the tree), which broke text-post scrolling and swiping alike.
-            The JS ignore-flag + conditional preventDefault in the native
-            touchmove listener is the sole gesture arbiter. */}
-        <div
-          ref={stageRef}
-          className="absolute inset-0"
-          onTouchStart={onStageTouchStart}
-          onTouchEnd={onStageTouchEnd}
-          onTouchCancel={onStageTouchCancel}
-        >
+        <div className="absolute inset-0">
           <Stage
             item={current}
             muted={muted}
@@ -432,6 +347,8 @@ export function TheaterShell({
           onSelect={onSelect}
           onPrev={goPrev}
           onNext={goNext}
+          canPrev={canPrev}
+          canNext={canNext}
           muted={muted}
           onToggleMute={onToggleMute}
         />
