@@ -1,6 +1,6 @@
 import { getTheaterFeed } from './feed'
 import { theaterItemKey } from '@/components/theater/types'
-import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
+import type { TextLinkRef, TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
 import { sourceUrl } from '@/lib/activity/preview-path'
 import { youtubeThumbnail } from '@/lib/media/youtube'
 
@@ -71,6 +71,8 @@ export interface TweetSharedInput {
   thumbnailUrl?: string | null
   contentType: NonNullable<TheaterItem['contentType']>
   createdAt: string
+  /** Short-link expansions from the FxTwitter tweet's `urls[]` (spec §6b). */
+  textLinks?: TextLinkRef[]
 }
 
 /** Map the already-fetched FxTwitter tweet fields (as computed by the status page) into a TheaterItem. */
@@ -88,6 +90,7 @@ export function tweetToTheaterItem(input: TweetSharedInput): TheaterItem {
     url: sourceUrl('twitter', author, input.id) ?? `https://x.com/${author}/status/${input.id}`,
     createdAt: input.createdAt,
     contentType: input.contentType,
+    textLinks: input.textLinks,
   }
 }
 

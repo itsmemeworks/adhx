@@ -5,6 +5,7 @@ import {
   tagShares,
   bookmarkTags,
   bookmarkMedia,
+  bookmarkLinks,
   bookmarks,
   type NewActivity,
 } from '@/lib/db/schema'
@@ -192,5 +193,50 @@ describe('getTheaterFeed', () => {
     const item = seed.items.find((i) => i.bookmarkId === 'pubmedia')
     expect(item?.thumbnailUrl).toBe('https://example.com/photo-preview.jpg')
     expect(item?.contentType).toBe('photo')
+  })
+
+  // spec §6b — link expansions attached via the live getTrendingItems() path
+  // (getTheaterFeed passes live items through unchanged).
+  it('attaches textLinks from bookmark_links for a saved post', async () => {
+    seedActivity({ bookmarkId: 'linked1', createdAt: '2026-06-06T10:00:00Z' })
+    testInstance.db
+      .insert(bookmarks)
+      .values(createTestBookmark('owner-1', 'linked1', { platform: 'twitter' }))
+      .run()
+    testInstance.db
+      .insert(bookmarkLinks)
+      .values({
+        userId: 'owner-1',
+        platform: 'twitter',
+        bookmarkId: 'linked1',
+        originalUrl: 'https://t.co/abc123',
+        expandedUrl: 'https://example.com/article',
+        linkType: 'link',
+      })
+      .run()
+
+    const seed = await getTheaterFeed()
+
+    const item = seed.items.find((i) => i.bookmarkId === 'linked1')
+    expect(item?.textLinks).toEqual([
+      {
+        shortUrl: 'https://t.co/abc123',
+        expandedUrl: 'https://example.com/article',
+        linkType: 'link',
+      },
+    ])
+    // No extra keys leak onto the TextLinkRef shape.
+    expect(Object.keys(item!.textLinks![0]).sort()).toEqual(
+      ['expandedUrl', 'linkType', 'shortUrl'].sort(),
+    )
+  })
+
+  it('leaves textLinks absent for a post with no bookmark_links row (preview-only)', async () => {
+    seedActivity({ bookmarkId: 'nolinks', createdAt: '2026-06-06T10:00:00Z' })
+
+    const seed = await getTheaterFeed()
+
+    const item = seed.items.find((i) => i.bookmarkId === 'nolinks')
+    expect(item?.textLinks).toBeUndefined()
   })
 })

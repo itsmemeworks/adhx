@@ -117,6 +117,31 @@ describe('per-platform mappers', () => {
     expect(out.url).toBe('https://x.com/testauthor/status/123')
   })
 
+  it('tweetToTheaterItem passes textLinks through when provided (spec §6b)', () => {
+    const out = tweetToTheaterItem({
+      id: '123',
+      author: 'testauthor',
+      contentType: 'text',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      textLinks: [{ shortUrl: 'https://t.co/abc', expandedUrl: 'https://example.com' }],
+    })
+
+    expect(out.textLinks).toEqual([
+      { shortUrl: 'https://t.co/abc', expandedUrl: 'https://example.com' },
+    ])
+  })
+
+  it('tweetToTheaterItem leaves textLinks undefined when absent', () => {
+    const out = tweetToTheaterItem({
+      id: '123',
+      author: 'testauthor',
+      contentType: 'text',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    })
+
+    expect(out.textLinks).toBeUndefined()
+  })
+
   it('reelToTheaterItem is always contentType video and strips a leading @', () => {
     const out = reelToTheaterItem({
       id: 'abc123',

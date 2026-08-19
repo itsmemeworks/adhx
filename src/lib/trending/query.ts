@@ -79,6 +79,8 @@ export interface TrendingItem {
 
 const FETCH = 80
 const LIMIT = 30
+/** Max short-link expansions attached per post (spec §6b) — keeps the payload bounded. */
+const MAX_TEXT_LINKS = 8
 
 export interface GetTrendingOptions {
   /** Restrict to a single platform's recent events. */
@@ -230,6 +232,7 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
   const mediaKinds = new Map<string, { video: boolean; photo: boolean }>()
   const articleCovers = new Map<string, string>()
   const articleTitles = new Map<string, string>()
+  const textLinksByPost = new Map<string, TextLinkRef[]>()
   const avatars = new Map<string, string>()
   const previewCounts = new Map<string, number>()
   const shareCounts = new Map<string, number>()
@@ -305,11 +308,14 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
     // Article cover + title — the same hero/headline the collection card uses.
     // Cross-user is fine (they're identical regardless of who saved it). Prefer
     // the explicit article link; otherwise take any link that carries them.
+    // PUBLIC COLUMNS ONLY (anonymity choke point) — no userId in this select.
     const linkRows = db
       .select({
         platform: bookmarkLinks.platform,
         bookmarkId: bookmarkLinks.bookmarkId,
         linkType: bookmarkLinks.linkType,
+        originalUrl: bookmarkLinks.originalUrl,
+        expandedUrl: bookmarkLinks.expandedUrl,
         imageUrl: bookmarkLinks.previewImageUrl,
         title: bookmarkLinks.previewTitle,
       })
@@ -322,6 +328,18 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
         articleCovers.set(k, l.imageUrl)
       if (l.title && (!articleTitles.has(k) || l.linkType === 'article'))
         articleTitles.set(k, l.title)
+
+      // Short-link expansions for the theater's t.co policy (spec §6b) — capped
+      // and deduped by expandedUrl so a post with many repeated links doesn't
+      // bloat the payload.
+      if (l.expandedUrl) {
+        const refs = textLinksByPost.get(k) ?? []
+        const alreadyHave = refs.some((ref) => ref.expandedUrl === l.expandedUrl)
+        if (!alreadyHave && refs.length < MAX_TEXT_LINKS) {
+          refs.push({ shortUrl: l.originalUrl, expandedUrl: l.expandedUrl, linkType: l.linkType })
+          textLinksByPost.set(k, refs)
+        }
+      }
     }
   }
 
@@ -376,6 +394,9 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
       // The post author's avatar for tweet-style cards — the recorded value
       // (preview-only items) else the saved bookmark's avatar (saved items).
       authorAvatarUrl: i.authorAvatarUrl ?? avatars.get(key) ?? null,
+      // Short-link expansions (spec §6b) — only present for saved posts whose
+      // links we resolved at save time; absent for preview-only pulse items.
+      textLinks: textLinksByPost.get(key),
     }
   })
 

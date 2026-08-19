@@ -182,7 +182,12 @@ export function TheaterMobileChrome({
                     expanded ? 'max-h-[38dvh] overflow-y-auto' : 'line-clamp-2',
                   )}
                 >
-                  <TheaterLinkedText text={caption} hasMedia />
+                  <TheaterLinkedText
+                    text={caption}
+                    hasMedia
+                    links={current?.textLinks}
+                    hideTweetLinks={false}
+                  />
                 </p>
                 {overflowing && (
                   <button

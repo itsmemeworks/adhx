@@ -15,6 +15,7 @@ import { RelatedSaves } from '@/components/RelatedSaves'
 import { SharedPostStatic } from '@/components/theater/SharedPostStatic'
 import { TheaterShell } from '@/components/theater/TheaterShell'
 import { buildSharedSeed, tweetToTheaterItem } from '@/lib/theater/shared-seed'
+import type { TextLinkRef } from '@/components/theater/types'
 import { metrics } from '@/lib/sentry'
 
 type FxTweet = NonNullable<FxTwitterResponse['tweet']>
@@ -160,6 +161,20 @@ export default async function QuickAddPage({ params }: Props) {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     const jsonLd = buildJsonLd(tweet, baseUrl, username, id)
 
+    // Short-link expansions for the theater's t.co policy (spec §6b) — reuse
+    // whatever's already fetched, never a new request. `tweet.urls` when
+    // present, else the raw_text.facets fallback; capped + deduped by
+    // expandedUrl to match `getTrendingItems()`'s bookmark_links enrichment.
+    const rawTextLinks = tweet.urls?.length ? tweet.urls : extractUrlsFromFacets(tweet)
+    const seenExpandedUrls = new Set<string>()
+    const textLinks: TextLinkRef[] = []
+    for (const link of rawTextLinks) {
+      if (!link.expanded_url || seenExpandedUrls.has(link.expanded_url)) continue
+      seenExpandedUrls.add(link.expanded_url)
+      textLinks.push({ shortUrl: link.url, expandedUrl: link.expanded_url })
+      if (textLinks.length >= 8) break
+    }
+
     const sharedItem = tweetToTheaterItem({
       id,
       author: previewAuthor,
@@ -169,6 +184,7 @@ export default async function QuickAddPage({ params }: Props) {
       thumbnailUrl: previewThumbnailUrl,
       contentType: previewType,
       createdAt: tweet.created_at,
+      textLinks: textLinks.length > 0 ? textLinks : undefined,
     })
     const { seed } = await buildSharedSeed(sharedItem)
 

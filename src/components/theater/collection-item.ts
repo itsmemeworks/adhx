@@ -11,9 +11,34 @@
  * needs that extra fidelity (video playback, quote cards).
  */
 
-import type { FeedItem } from '@/components/feed/types'
-import type { TheaterItem } from './types'
+import type { FeedItem, LinkItem } from '@/components/feed/types'
+import type { TextLinkRef, TheaterItem } from './types'
 import { theaterItemKey } from './types'
+
+/** Max short-link expansions attached per post (spec §6b) — mirrors trending/query.ts. */
+const MAX_TEXT_LINKS = 8
+
+/**
+ * Map a saved item's resolved links into `TextLinkRef[]` (spec §6b), capped
+ * and deduped by `expandedUrl` — same shape/limits as `getTrendingItems()`'s
+ * `bookmark_links` enrichment, so the theater's link-in-text policy behaves
+ * identically across the public and Collection surfaces.
+ */
+function toTextLinks(links: LinkItem[] | null | undefined): TextLinkRef[] | undefined {
+  if (!links || links.length === 0) return undefined
+  const refs: TextLinkRef[] = []
+  for (const link of links) {
+    if (!link.expandedUrl) continue
+    if (refs.some((ref) => ref.expandedUrl === link.expandedUrl)) continue
+    refs.push({
+      shortUrl: link.originalUrl,
+      expandedUrl: link.expandedUrl,
+      linkType: link.linkType,
+    })
+    if (refs.length >= MAX_TEXT_LINKS) break
+  }
+  return refs.length > 0 ? refs : undefined
+}
 
 export type CollectionContentType = 'video' | 'photo' | 'text' | 'quote' | 'article'
 
@@ -74,6 +99,7 @@ export function feedItemToTheaterItem(item: FeedItem): TheaterItem {
     url: item.tweetUrl,
     createdAt: item.createdAt || item.processedAt,
     contentType,
+    textLinks: toTextLinks(item.links),
   }
 }
 

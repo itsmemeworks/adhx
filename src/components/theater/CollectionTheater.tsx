@@ -225,7 +225,7 @@ function CollectionStage({
   if (theaterItem.contentType === 'quote') {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center overflow-y-auto bg-[#08070a] px-6 py-10 sm:px-10">
-        <StageText item={theaterItem} />
+        <StageText item={theaterItem} hideTweetLinks />
         <StageQuoteCard item={feedItem} />
       </div>
     )

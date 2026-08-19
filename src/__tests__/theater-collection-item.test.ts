@@ -134,6 +134,46 @@ describe('feedItemToTheaterItem', () => {
   })
 })
 
+describe('feedItemToTheaterItem textLinks (spec §6b)', () => {
+  it('maps FeedItem.links to textLinks, tolerating a null originalUrl', () => {
+    const t = feedItemToTheaterItem(
+      item({
+        links: [
+          {
+            id: 1,
+            bookmarkId: '123',
+            originalUrl: null,
+            expandedUrl: 'https://example.com/a',
+            linkType: 'link',
+          },
+        ],
+      }),
+    )
+    expect(t.textLinks).toEqual([
+      { shortUrl: null, expandedUrl: 'https://example.com/a', linkType: 'link' },
+    ])
+  })
+
+  it('dedupes by expandedUrl and caps at 8', () => {
+    const links = Array.from({ length: 10 }, (_, i) => ({
+      id: i,
+      bookmarkId: '123',
+      originalUrl: `https://t.co/${i}`,
+      expandedUrl: i < 2 ? 'https://example.com/dup' : `https://example.com/${i}`,
+      linkType: 'link',
+    }))
+    const t = feedItemToTheaterItem(item({ links }))
+    expect(t.textLinks).toHaveLength(8)
+    const expandedUrls = t.textLinks!.map((l) => l.expandedUrl)
+    expect(new Set(expandedUrls).size).toBe(expandedUrls.length)
+  })
+
+  it('is absent (undefined) when the item has no links', () => {
+    expect(feedItemToTheaterItem(item({ links: null })).textLinks).toBeUndefined()
+    expect(feedItemToTheaterItem(item({ links: [] })).textLinks).toBeUndefined()
+  })
+})
+
 describe('theaterItemsFromFeed', () => {
   it('converts a queue and keeps a reverse lookup back to the original FeedItems', () => {
     const items = [item({ id: '1' }), item({ id: '2', platform: 'tiktok' })]

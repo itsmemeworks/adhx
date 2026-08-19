@@ -4,6 +4,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-19 — Theater t.co policy (spec §6b): expand external links, strip rendered tweet-links
+
+- **Why**: Raw `t.co` labels are opaque; a t.co pointing at a quoted tweet is redundant once the quote card renders it.
+- **What**: Spec §6b decision table added FIRST, then built: `TrendingItem.textLinks` (from `bookmark_links` original/expanded/link_type — public columns, anonymity test green), collection converter + preview-seed (FxTwitter urls/facets) plumbing, and the resolution engine in `TheaterLinkedText` (`resolveLink`/`buildRenderSegments` pure pipeline): external → anchor to expandedUrl with cleaned label; tweet-links stripped only under `hideTweetLinks` (set solely where the quote card renders, in CollectionTheater); unresolved trailing t.co stripped there too (X appends the quote link last); unresolved mid-text links never stripped. Punctuation-tail matching handled.
+- **Verified live**: quote tweet's t.co gone from the stage with the quote card below; textLinks in `/api/activity` JSON with no user-derived fields. 1417 tests green.
+- **State**: in-flight on `feat/theater-phase3` (part of PR #319).
+- **Follow-ups**: quoted-tweet excerpt inside the quote card has no textLinks data (FeedItem shape doesn't carry the quoted post's links) — raw t.co may appear there; list rows stay plain by design.
+
 ## 2026-08-19 — Theater text: long posts readable, links clickable
 
 - **Why**: Review caught two gaps — long tweets overflowed StageText unreadably (clamps elsewhere had no expand), and no theater surface linkified URLs (a regression vs FeedCard's `renderTextWithLinks`).

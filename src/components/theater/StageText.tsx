@@ -23,6 +23,13 @@ export interface StageTextProps {
   item: TheaterItem
   /** When set, render the photo variant (image full-bleed + caption). */
   photo?: boolean
+  /**
+   * The surface below already renders the referenced tweet content (e.g. a
+   * quote card), so tweet-resolving links in `item.text` should be stripped
+   * (spec §6b). Defaults to false — most stages render no quote card of
+   * their own, so a tweet link is the only path to that content.
+   */
+  hideTweetLinks?: boolean
 }
 
 /**
@@ -39,7 +46,7 @@ export function textSizeClass(text: string): string {
   return 'text-lg sm:text-xl leading-relaxed'
 }
 
-export function StageText({ item, photo }: StageTextProps) {
+export function StageText({ item, photo, hideTweetLinks = false }: StageTextProps) {
   const text = (item.text || '').trim()
   const authorName = item.authorName || (item.author ? `@${item.author}` : 'Saved post')
 
@@ -110,7 +117,12 @@ export function StageText({ item, photo }: StageTextProps) {
                     : 'line-clamp-2',
                 )}
               >
-                <TheaterLinkedText text={text} hasMedia />
+                <TheaterLinkedText
+                  text={text}
+                  hasMedia
+                  links={item.textLinks}
+                  hideTweetLinks={hideTweetLinks}
+                />
               </p>
               {overflowing && (
                 <button
@@ -150,7 +162,16 @@ export function StageText({ item, photo }: StageTextProps) {
             by the outer flex, exactly as before. */}
         <div className="max-h-[70vh] overflow-y-auto overscroll-contain pr-2 sm:pr-3">
           <p className={cn('font-serif leading-tight text-white', textSizeClass(text || ''))}>
-            {text ? <TheaterLinkedText text={text} hasMedia={false} /> : 'Saved post'}
+            {text ? (
+              <TheaterLinkedText
+                text={text}
+                hasMedia={false}
+                links={item.textLinks}
+                hideTweetLinks={hideTweetLinks}
+              />
+            ) : (
+              'Saved post'
+            )}
           </p>
         </div>
       </div>

@@ -177,7 +177,12 @@ function NowPlaying({
           expanded ? 'max-h-[40vh] overflow-y-auto' : 'line-clamp-4',
         )}
       >
-        <TheaterLinkedText text={text} hasMedia={hasMedia} />
+        <TheaterLinkedText
+          text={text}
+          hasMedia={hasMedia}
+          links={current.textLinks}
+          hideTweetLinks={false}
+        />
       </p>
       {overflowing && (
         <button
