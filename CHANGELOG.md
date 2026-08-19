@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.51.0](https://github.com/itsmemeworks/adhx/compare/v1.50.1...v1.51.0) (2026-08-19)
+
+
+### Features
+
+* desktop theater controls with progress line and de-clutter ([#322](https://github.com/itsmemeworks/adhx/issues/322)) ([8998200](https://github.com/itsmemeworks/adhx/commit/8998200303010323d635f209deccfc2095f64a8d))
+* theater-first phase 1 — signed-out home becomes the theater ([#317](https://github.com/itsmemeworks/adhx/issues/317)) ([007888d](https://github.com/itsmemeworks/adhx/commit/007888d20e21376acdc13bd1ee825bbe26ccff63))
+* theater-first phase 2 — full stage matrix and the mobile reel ([#321](https://github.com/itsmemeworks/adhx/issues/321)) ([82305fa](https://github.com/itsmemeworks/adhx/commit/82305fa93d30822b428b6d6694f39405d8136f97))
+* theater-first phase 3 — shared previews, dark browse, collection theater ([#319](https://github.com/itsmemeworks/adhx/issues/319)) ([470b20e](https://github.com/itsmemeworks/adhx/commit/470b20eee442db9cd6688e77572eab806e6fea30))
+
 ## [1.50.1](https://github.com/itsmemeworks/adhx/compare/v1.50.0...v1.50.1) (2026-08-14)
 
 
