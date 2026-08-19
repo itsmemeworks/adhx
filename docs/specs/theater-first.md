@@ -10,13 +10,13 @@ adhx.com becomes a **theater**: you land with the hottest community post already
 
 One mental model runs everything:
 
-| Surface                                                                                     | Same theater, different dock / chrome                                                                                                                           |
-| ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/` signed-out                                                                              | Desktop: full-width stage + bottom filmstrip dock (queue cards, transport, Send/Save/Link) + ⌘V paste-to-preview. Mobile: full-bleed reel + bottom sheet.        |
-| Preview pages (`/{user}/status/{id}`, `/reels/{id}`, `/@{user}/video/{id}`, `/shorts/{id}`) | Same theater seeded at the shared post; "Shared post" chip, post meta pinned to stage, dock shows "More being sent right now" queue; SEO markup unchanged      |
-| Mobile                                                                                      | Full-bleed reel (evolution of `/trending/play`): brand on the top scrim, Send primary, Up-next bottom sheet, swipe up/down                                     |
-| Signed-in Collection                                                                        | Same theater; dock = your unread queue, actions = Keep / Done / Delete / Send, tabs Collection ↔ Live                                                          |
-| Browse (escape hatch)                                                                       | The Digg-style ranked list (round-2 design), dark, one click from the dock footer                                                                              |
+| Surface                                                                                     | Same theater, different dock / chrome                                                                                                                     |
+| ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/` signed-out                                                                              | Desktop: full-width stage + bottom filmstrip dock (queue cards, transport, Send/Save/Link) + ⌘V paste-to-preview. Mobile: full-bleed reel + bottom sheet. |
+| Preview pages (`/{user}/status/{id}`, `/reels/{id}`, `/@{user}/video/{id}`, `/shorts/{id}`) | Same theater seeded at the shared post; "Shared post" chip, post meta pinned to stage, dock shows "More being sent right now" queue; SEO markup unchanged |
+| Mobile                                                                                      | Full-bleed reel (evolution of `/trending/play`): brand on the top scrim, Send primary, Up-next bottom sheet, swipe up/down                                |
+| Signed-in Collection                                                                        | Same theater; dock = your unread queue, actions = Keep / Done / Delete / Send, tabs Collection ↔ Live                                                     |
+| Browse (escape hatch)                                                                       | The Digg-style ranked list (round-2 design), dark, one click from the dock footer                                                                         |
 
 ## 2. Non-negotiable constraints (existing invariants)
 
@@ -32,8 +32,8 @@ One mental model runs everything:
 New directory `src/components/theater/`:
 
 ```
-TheaterShell.tsx         — full-viewport layout: <Stage/> flex-1 + <DesktopDock/>/<TheaterMobileChrome/>; 
-                           owns current-item state, keyboard (↓/↑/←/→/esc/space/m), touch swipe, 
+TheaterShell.tsx         — full-viewport layout: <Stage/> flex-1 + <DesktopDock/>/<TheaterMobileChrome/>;
+                           owns current-item state, keyboard (↓/↑/←/→/esc/space/m), touch swipe,
                            history integration
 Stage.tsx                — dark stage dispatcher: renders the variant for the current item
 StageVideo.tsx           — <video> for twitter/tiktok/instagram; poster-first; progress bar,
@@ -44,12 +44,12 @@ StageArticle.tsx         — cover splash → in-stage reader (articleBlocksToMa
                            reading-progress bar replaces the time bar
 StageText.tsx            — tweet typeset large (Newsreader) on the stage; photos reuse it
                            with the image full-bleed (StagePhoto trivial variant)
-TheaterDesktopChrome.tsx — `DesktopStageChrome` (overlays inside stage: top bar with brand + LIVE + 
-                           paste-to-preview input + de-clutter; flame + platform/time chips pinned 
-                           top-right; bottom-left meta overlay for video/photo; bottom-right actions) 
-                           + `DesktopDock` (in-flow bottom dock: transport controls + horizontal 
+TheaterDesktopChrome.tsx — `DesktopStageChrome` (overlays inside stage: top bar with brand + LIVE +
+                           paste-to-preview input + de-clutter; flame + platform/time chips pinned
+                           top-right; bottom-left meta overlay for video/photo; bottom-right actions)
+                           + `DesktopDock` (in-flow bottom dock: transport controls + horizontal
                            filmstrip queue auto-scrolled to keep current visible + "Show all" panel)
-TheaterMobileChrome.tsx  — mobile reel chrome: top/bottom scrims, peek bar with transport + audio + 
+TheaterMobileChrome.tsx  — mobile reel chrome: top/bottom scrims, peek bar with transport + audio +
                            de-clutter, swipe up/down navigation, 70dvh Up-next bottom sheet
 UpNextList.tsx           — feed rows, seen divider, "next ↓" highlight
 useTheaterFeed.ts        — items + polling (see §4)
