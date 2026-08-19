@@ -4,6 +4,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-19 — Peek-bar controls: pause, audio, de-clutter; hold-to-pause removed
+
+- **Why**: Live review — hold-to-pause fought text selection and felt unreliable; videos needed an explicit audio toggle; the reviewer wanted an immersive full-screen mode and suggested the sheet peek bar as the control surface.
+- **What**: The mobile peek bar is now the control strip (drag handle row + a 40px button row): [prev · pause/play · next] left, "Up next · N new" center (still opens the sheet), [audio (video only) · de-clutter] right. Pause = one meaning (10s timer on timed posts, the video itself on videos; hidden on YouTube), icon synced to reality via `theater-playing-state`/`theater-muted-state` events from StageVideo. Hold-to-pause (`theater-hold`/`release`) deleted. De-clutter hides all chrome except the progress line + one restore button; persists across items; swipe/auto-advance still navigate. Floating right-edge cluster removed. PEEK_H 3.75→4.25rem (kept in hand-sync with the literal Tailwind transform class — JIT needs static text).
+- **State**: on `feat/theater-phase3` (PR #319), deploying to staging.
+- **Follow-ups**: none noted.
+
 ## 2026-08-19 — Stories-style auto-advance + mobile button pass
 
 - **Why**: Live review — finished videos should flow to the next post; non-video posts need a visible dwell; Connect in the top scrim was redundant; "Send" undersold the file; copy should be a native share on phones.

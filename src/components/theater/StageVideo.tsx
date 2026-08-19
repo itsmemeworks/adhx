@@ -128,6 +128,49 @@ export function StageVideo({
     return () => window.removeEventListener('theater-toggle-play', handler)
   }, [ended, needsGesture])
 
+  // Explicit pause/resume (mobile theater's pause button, TheaterMobileChrome)
+  // — unlike `theater-toggle-play` above, these have a single fixed meaning
+  // each rather than flipping on current state, so a stale re-tap can't
+  // fight itself. Guarded the same way as the toggle handler.
+  useEffect(() => {
+    const handlePause = () => {
+      const video = videoRef.current
+      if (!video || ended) return
+      video.pause()
+      setPlaying(false)
+    }
+    const handleResume = () => {
+      const video = videoRef.current
+      if (!video || ended || needsGesture) return
+      video.play().then(
+        () => setPlaying(true),
+        () => setNeedsGesture(true),
+      )
+    }
+    window.addEventListener('theater-pause', handlePause)
+    window.addEventListener('theater-resume', handleResume)
+    return () => {
+      window.removeEventListener('theater-pause', handlePause)
+      window.removeEventListener('theater-resume', handleResume)
+    }
+  }, [ended, needsGesture])
+
+  // Broadcast the element's real playing/muted state so the mobile chrome's
+  // pause and audio buttons stay in sync regardless of what triggered the
+  // change (chrome button, a tap on the stage itself, an autoplay-rejection
+  // fallback re-muting the element, etc.) — keyed on the state itself rather
+  // than wired into every individual setPlaying/setEffectiveMuted call site,
+  // so no future call site can forget to announce it.
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('theater-playing-state', { detail: { playing } }))
+  }, [playing])
+
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent('theater-muted-state', { detail: { muted: effectiveMuted } }),
+    )
+  }, [effectiveMuted])
+
   const handleTimeUpdate = () => {
     const video = videoRef.current
     if (!video || !video.duration) return

@@ -8,9 +8,10 @@
  *   dispatched by StageVideo on timeupdate.
  * - kind 'timed': a 10s countdown fill; when it completes, dispatches a
  *   `theater-advance` window CustomEvent (the shell listens and goes next).
- *   Pauses while a `theater-hold` event is active and resumes (from the same
- *   progress) on `theater-release` — hold-to-pause, dispatched by the shell's
- *   stage touch handlers.
+ *   Pauses while a `theater-pause` event is active and resumes (from the same
+ *   progress) on `theater-resume` — dispatched by the mobile chrome's
+ *   explicit pause/play button (TheaterMobileChrome). There is no longer a
+ *   hold-to-pause gesture — it interfered with text selection on long posts.
  * - kind 'none' (YouTube — no progress/ended signal from the iframe): renders
  *   nothing; navigation stays manual.
  *
@@ -105,24 +106,24 @@ export function TheaterProgressLine({ itemKey, kind }: TheaterProgressLineProps)
       rafId = requestAnimationFrame(tick)
     }
 
-    const handleHold = () => {
+    const handlePause = () => {
       paused = true
       // Force the next resumed tick to re-baseline from the accumulated
-      // elapsed time instead of the wall-clock gap the hold created.
+      // elapsed time instead of the wall-clock gap the pause created.
       baseline = null
     }
-    const handleRelease = () => {
+    const handleResume = () => {
       paused = false
     }
 
-    window.addEventListener('theater-hold', handleHold)
-    window.addEventListener('theater-release', handleRelease)
+    window.addEventListener('theater-pause', handlePause)
+    window.addEventListener('theater-resume', handleResume)
     rafId = requestAnimationFrame(tick)
 
     return () => {
       cancelAnimationFrame(rafId)
-      window.removeEventListener('theater-hold', handleHold)
-      window.removeEventListener('theater-release', handleRelease)
+      window.removeEventListener('theater-pause', handlePause)
+      window.removeEventListener('theater-resume', handleResume)
     }
   }, [kind, itemKey])
 

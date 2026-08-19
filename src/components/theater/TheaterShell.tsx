@@ -199,6 +199,7 @@ export function TheaterShell({
   }, [])
 
   const onRequestUnmute = useCallback(() => setMuted(false), [])
+  const onToggleMute = useCallback(() => setMuted((m) => !m), [])
 
   // Mobile swipe nav (spec §8): vertical swipe on the stage only — the
   // mobile chrome's sheet/backdrop are separate DOM siblings positioned on
@@ -215,16 +216,11 @@ export function TheaterShell({
     // link taps, and long-press text selection/copying behave natively.
     const ignore = isScrollableTarget(e.target as Element, stageRef.current)
     touchStartRef.current = { x: t.clientX, y: t.clientY, ignore }
-    // Hold-to-pause (TheaterProgressLine, kind 'timed'): dispatched for every
-    // touch, including ones on text/scrollable regions — holding to read
-    // should pause the auto-advance timer too, not just a swipe attempt.
-    window.dispatchEvent(new CustomEvent('theater-hold'))
   }, [])
   const onStageTouchEnd = useCallback(
     (e: React.TouchEvent) => {
       const start = touchStartRef.current
       touchStartRef.current = null
-      window.dispatchEvent(new CustomEvent('theater-release'))
       if (!start || start.ignore) return
       const t = e.changedTouches[0]
       const direction = swipeDirection(t.clientX - start.x, t.clientY - start.y)
@@ -233,11 +229,8 @@ export function TheaterShell({
     },
     [goNext, goPrev],
   )
-  // A cancelled touch (e.g. the OS intercepts it for a system gesture) still
-  // needs to release the hold — otherwise the timer stays paused forever.
   const onStageTouchCancel = useCallback(() => {
     touchStartRef.current = null
-    window.dispatchEvent(new CustomEvent('theater-release'))
   }, [])
 
   // Suppress the browser's native pull-to-refresh / overscroll chaining while
@@ -439,6 +432,8 @@ export function TheaterShell({
           onSelect={onSelect}
           onPrev={goPrev}
           onNext={goNext}
+          muted={muted}
+          onToggleMute={onToggleMute}
         />
       </div>
       <div className="hidden min-h-0 flex-1 overflow-y-auto lg:flex lg:h-full lg:flex-none">
