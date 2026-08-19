@@ -14,9 +14,7 @@ export type TheaterItem = TrendingItem
  * used by `getTrendingItems()` / `DiscoverFeed` (`platform:bookmarkId`, URL
  * fallback for rows without a source id).
  */
-export function theaterItemKey(
-  item: Pick<TheaterItem, 'platform' | 'bookmarkId' | 'url'>,
-): string {
+export function theaterItemKey(item: Pick<TheaterItem, 'platform' | 'bookmarkId' | 'url'>): string {
   return `${item.platform}:${item.bookmarkId || item.url}`
 }
 
