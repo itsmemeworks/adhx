@@ -34,8 +34,11 @@ import {
 import { cn } from '@/lib/utils'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
 import { PlatformGlyph, type ContentType } from '@/components/matter'
+import { sourceUrl } from '@/lib/activity/preview-path'
 import { inferType } from '@/lib/trending/filter'
+import { PLATFORM_LABEL } from './Rail'
 import { theaterItemKey } from './types'
+import { stripShortLinksForPreview } from './TheaterText'
 import { useSendFile } from './useSendFile'
 import type { TheaterItem } from './types'
 
@@ -144,7 +147,7 @@ function CollectionRow({
   isCurrent: boolean
   onSelect: () => void
 }) {
-  const caption = (item.text || '').trim()
+  const caption = stripShortLinksForPreview((item.text || '').trim())
   const handle = item.author ? item.author.replace(/^@+/, '') : ''
   return (
     <button
@@ -181,7 +184,7 @@ function LiveRow({
   isCurrent: boolean
   onSelect: () => void
 }) {
-  const caption = (item.text || '').trim()
+  const caption = stripShortLinksForPreview((item.text || '').trim())
   const handle = item.author ? item.author.replace(/^@+/, '') : ''
   const trendCount = item.trendCount ?? item.saveCount ?? 0
   return (
@@ -295,6 +298,8 @@ function LiveActions({
 
   if (!current) return null
 
+  const openUrl = sourceUrl(current.platform, current.author, current.bookmarkId || '')
+  const platformLabel = PLATFORM_LABEL[current.platform] ?? current.platform
   const buttonBase =
     'inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-hairline bg-inset px-3 text-[12.5px] font-semibold text-ink transition-colors hover:bg-surface'
   const primaryBase =
@@ -338,16 +343,18 @@ function LiveActions({
           {saved ? <Check size={14} /> : null}
           {saved ? 'Saved' : 'Save'}
         </button>
-        <a
-          href={current.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={buttonBase}
-          title="Open"
-        >
-          <ExternalLink size={14} />
-          Open
-        </a>
+        {openUrl && (
+          <a
+            href={openUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={buttonBase}
+            title={`Open on ${platformLabel}`}
+          >
+            <ExternalLink size={14} />
+            Open
+          </a>
+        )}
       </div>
     </div>
   )

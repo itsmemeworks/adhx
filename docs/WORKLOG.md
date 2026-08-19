@@ -4,6 +4,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-19 — Staging round 2: pulse carries links+quote, link-out, URL sync
+
+- **Why**: Round-1 fixes only covered SAVED posts and the shared post's own page — preview-only pulse items still showed raw t.co and no quote in the theater (the reviewer caught it in the Up-next rows, now-playing, and show-more).
+- **What**: `activity` gains `text_links` + `quote_json` (guarded ALTERs; server-resolved at preview time on the status page; share/preview pulses copy them forward; public endpoints stay identifiers-only, regression-tested). Enrichment precedence: bookmark_links → recorded links; recorded quote → saved bookmark quoteContext. List rows strip all bare t.co (`stripShortLinksForPreview`). Rail: platform-glyph+time top-right is a link-out to the ORIGINAL post; Open → source network (hidden when unbuildable); show more/less is a sticky session preference; Send labels honestly (Send w/ share sheet, Download on desktop). TheaterShell syncs the address bar to the current post via replaceState (home+shared) — / and preview URLs are one continuous surface. Preview paths join the theater-dark theme default.
+- **State**: on `feat/theater-phase3` (PR #319), deploying to staging with a full theater-side test pass on the reviewer's exact posts.
+- **Follow-ups**: pre-existing activity rows lack the new columns until a fresh preview re-records them (dedupe takes the newest event); CollectionRail send buttons still say "Send" unconditionally.
+
 ## 2026-08-19 — Staging review round: full text, pinned lead, shared quote cards
 
 - **Why**: First real staging pass surfaced five issues: "Show more" expanded to a 240-char-capped string; "Copy link" wrapped on mobile; photo captions duplicated (stage overlay + rail); a shared quoting tweet showed a raw t.co with no quote; ↓ dead when the lead-pick landed at the bottom of the recency list.

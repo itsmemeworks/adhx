@@ -6,6 +6,7 @@ import { formatCompactRelativeTime } from '@/lib/utils/format'
 import { PlatformGlyph, type ContentType } from '@/components/matter'
 import { inferType } from '@/lib/trending/filter'
 import { instagramWarmSrc, prefetchPlayback } from './usePlaybackSource'
+import { stripShortLinksForPreview } from './TheaterText'
 import type { TheaterItem } from './types'
 import { theaterItemKey } from './types'
 
@@ -94,7 +95,7 @@ function Row({
   onSelect: (key: string) => void
 }) {
   const key = theaterItemKey(item)
-  const caption = (item.text || '').trim()
+  const caption = stripShortLinksForPreview((item.text || '').trim())
   const handle = item.author ? item.author.replace(/^@+/, '') : ''
 
   return (

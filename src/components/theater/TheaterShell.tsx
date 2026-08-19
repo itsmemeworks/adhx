@@ -14,6 +14,7 @@ import { useTheaterFeed } from './useTheaterFeed'
 import { useSeenSet } from './useSeenSet'
 import { prefetchPlayback } from './usePlaybackSource'
 import { theaterItemKey } from './types'
+import { previewPath } from '@/lib/activity/preview-path'
 import type { TheaterFeedSeed, TheaterItem, TheaterMode } from './types'
 
 export interface TheaterShellProps {
@@ -46,6 +47,20 @@ export function pinKeyFirst<
   const [pinned] = copy.splice(idx, 1)
   copy.unshift(pinned)
   return copy
+}
+
+/**
+ * Pure: the canonical preview path to sync the address bar to for the given
+ * item, or null when there isn't a well-formed one to sync to. `previewPath()`
+ * happily builds a malformed path (e.g. `//status/123`) from an empty author,
+ * so the "both an id AND an author are present" guard lives here rather than
+ * there — a post missing either leaves the address bar alone.
+ */
+export function theaterUrlSyncPath(
+  item: Pick<TheaterItem, 'platform' | 'bookmarkId' | 'author'> | null,
+): string | null {
+  if (!item || !item.bookmarkId || !item.author) return null
+  return previewPath(item.platform, item.author, item.bookmarkId)
 }
 
 export function TheaterShell({
@@ -230,6 +245,28 @@ export function TheaterShell({
       }
     }, SEEN_DWELL_MS)
     return () => window.clearTimeout(timer)
+  }, [currentKey])
+
+  // Keep the address bar's path in lockstep with the item currently staged
+  // (theater-first.md §7): a reload — or a URL someone copies mid-session —
+  // always lands exactly where the viewer was, and "Link" copy is trivially
+  // honest. replaceState only (never push — no history spam), and only once
+  // theaterUrlSyncPath() can build a real app path; an item missing an id or
+  // an author leaves the URL untouched. Keyed on currentKey alone (itemsRef
+  // gives the fresh item without re-running on every unrelated re-render),
+  // so this also fires once for the very first item — currentKey starts null
+  // and transitions to that item's key exactly like any other selection, so
+  // landing on `/` ends up indistinguishable from landing on its post URL.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const item = itemsRef.current.find((it) => theaterItemKey(it) === currentKey) ?? null
+    const path = theaterUrlSyncPath(item)
+    if (!path || window.location.pathname === path) return
+    try {
+      window.history.replaceState(null, '', path)
+    } catch {
+      // Blocked in some embedded/sandboxed contexts — never worth breaking playback over.
+    }
   }, [currentKey])
 
   // Prefetch at most one item ahead.

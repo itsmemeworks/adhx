@@ -13,14 +13,25 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 /**
- * Theater-dark routes: the home theater ('/') and the dark ranked-list Browse
- * view ('/trending', '/trending/[filter]'). Kept as one helper so
- * resolveInitialTheme() and the FOUC script below can't drift on which
- * routes qualify — extend this (not the two call sites) when a new theater
- * surface needs the dark default.
+ * Theater-dark routes: the home theater ('/'), the dark ranked-list Browse
+ * view ('/trending', '/trending/[filter]'), and the four preview-page shapes
+ * (theater-first.md §7 — preview paths join the theater-dark default). The
+ * preview patterns mirror `isPreviewPage` in `src/components/AppShell.tsx` —
+ * keep the two in lockstep when either changes. Kept as one helper so
+ * resolveInitialTheme() and the inline FOUC script in src/app/layout.tsx
+ * can't drift on which routes qualify — extend this (not the other call
+ * sites) when a new theater surface needs the dark default.
  */
 function isTheaterDarkRoute(pathname: string): boolean {
-  return pathname === '/' || pathname === '/trending' || pathname.startsWith('/trending/')
+  if (pathname === '/' || pathname === '/trending' || pathname.startsWith('/trending/')) {
+    return true
+  }
+  return (
+    /^\/\w+\/status\/\d+$/.test(pathname) ||
+    /^\/reels?\/[A-Za-z0-9_-]+$/.test(pathname) ||
+    /^\/shorts\/[A-Za-z0-9_-]{11}$/.test(pathname) ||
+    /^\/@?[A-Za-z0-9._]+\/video\/\d+$/.test(pathname)
+  )
 }
 
 /**

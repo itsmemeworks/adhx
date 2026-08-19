@@ -194,6 +194,8 @@ export const FULL_SCHEMA_SQL = `
     text TEXT,
     thumbnail_url TEXT,
     content_type TEXT,
+    text_links TEXT,
+    quote_json TEXT,
     url TEXT NOT NULL,
     user_id TEXT,
     created_at TEXT NOT NULL

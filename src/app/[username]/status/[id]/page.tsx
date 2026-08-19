@@ -140,27 +140,6 @@ export default async function QuickAddPage({ params }: Props) {
     const previewThumbnailUrl =
       articleCover || tweet.media?.all?.[0]?.thumbnail_url || tweet.media?.all?.[0]?.url || null
 
-    // Record a human preview for the public pulse (skip OG-unfurl crawlers).
-    const ua = (await headers()).get('user-agent')
-    if (!isLikelyBot(ua)) {
-      recordActivity({
-        action: 'preview',
-        platform: 'twitter',
-        bookmarkId: id,
-        author: previewAuthor,
-        authorName: tweet.author?.name || null,
-        authorAvatarUrl: tweet.author?.avatar_url || null,
-        text: tweet.article?.title || tweet.text || null,
-        thumbnailUrl: previewThumbnailUrl,
-        contentType: previewType,
-        url: previewPath('twitter', previewAuthor, id),
-      })
-      metrics.theaterOpened('shared')
-    }
-
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-    const jsonLd = buildJsonLd(tweet, baseUrl, username, id)
-
     // Short-link expansions for the theater's t.co policy (spec §6b) — reuse
     // whatever's already fetched, never a new request. `tweet.urls` when
     // present, else the raw_text.facets fallback; capped + deduped by
@@ -189,6 +168,32 @@ export default async function QuickAddPage({ params }: Props) {
             authorAvatarUrl: tweet.quote.author?.avatar_url || null,
           }
         : undefined
+
+    // Record a human preview for the public pulse (skip OG-unfurl crawlers).
+    // Carries the same server-resolved textLinks/quote as the shared seed
+    // below, so a preview-only pulse item never shows a raw t.co or drops
+    // its quote card.
+    const ua = (await headers()).get('user-agent')
+    if (!isLikelyBot(ua)) {
+      recordActivity({
+        action: 'preview',
+        platform: 'twitter',
+        bookmarkId: id,
+        author: previewAuthor,
+        authorName: tweet.author?.name || null,
+        authorAvatarUrl: tweet.author?.avatar_url || null,
+        text: tweet.article?.title || tweet.text || null,
+        thumbnailUrl: previewThumbnailUrl,
+        contentType: previewType,
+        textLinks: textLinks.length > 0 ? textLinks : undefined,
+        quote,
+        url: previewPath('twitter', previewAuthor, id),
+      })
+      metrics.theaterOpened('shared')
+    }
+
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const jsonLd = buildJsonLd(tweet, baseUrl, username, id)
 
     const sharedItem = tweetToTheaterItem({
       id,

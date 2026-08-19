@@ -35,6 +35,25 @@ describe('resolveInitialTheme', () => {
     expect(resolveInitialTheme(null, '/trending-archive', false)).toBe('light')
   })
 
+  it('defaults to dark on the four preview-page shapes when unset', () => {
+    expect(resolveInitialTheme(null, '/someuser/status/123', false)).toBe('dark')
+    expect(resolveInitialTheme(undefined, '/someuser/status/123', false)).toBe('dark')
+    expect(resolveInitialTheme(null, '/reel/abc123', false)).toBe('dark')
+    expect(resolveInitialTheme(null, '/reels/abc123', true)).toBe('dark')
+    expect(resolveInitialTheme(null, '/shorts/dQw4w9WgXcQ', false)).toBe('dark')
+    expect(resolveInitialTheme(null, '/@someuser/video/1234567890', false)).toBe('dark')
+    expect(resolveInitialTheme(null, '/someuser/video/1234567890', true)).toBe('dark')
+  })
+
+  it('does not treat non-preview lookalikes as theater-dark routes', () => {
+    expect(resolveInitialTheme(null, '/settings', false)).toBe('light')
+    expect(resolveInitialTheme(null, '/t/someuser/sometag', false)).toBe('light')
+    // Not enough path segments to be a status/video URL.
+    expect(resolveInitialTheme(null, '/someuser/status', false)).toBe('light')
+    // Shorts id must be exactly 11 chars.
+    expect(resolveInitialTheme(null, '/shorts/tooshort', false)).toBe('light')
+  })
+
   it('explicit stored "system" always follows the device, even on theater-dark routes', () => {
     expect(resolveInitialTheme('system', '/', false)).toBe('light')
     expect(resolveInitialTheme('system', '/', true)).toBe('dark')

@@ -6,8 +6,43 @@ import {
   resolveLink,
   isTrailingLink,
   buildRenderSegments,
+  stripShortLinksForPreview,
 } from '@/components/theater/TheaterText'
 import type { TextLinkRef } from '@/components/theater/types'
+
+describe('stripShortLinksForPreview', () => {
+  it('removes a trailing t.co link and trims the trailing space it leaves', () => {
+    expect(stripShortLinksForPreview('check this out https://t.co/abc123')).toBe('check this out')
+  })
+
+  it('removes a mid-text t.co link and collapses the doubled space', () => {
+    expect(stripShortLinksForPreview('before https://t.co/abc123 after')).toBe('before after')
+  })
+
+  it('removes multiple t.co links', () => {
+    expect(stripShortLinksForPreview('https://t.co/a one https://t.co/b two https://t.co/c')).toBe(
+      'one two',
+    )
+  })
+
+  it('does not touch non-t.co URLs', () => {
+    expect(stripShortLinksForPreview('see https://example.com/page for details')).toBe(
+      'see https://example.com/page for details',
+    )
+  })
+
+  it('does not leave a dangling space before trailing punctuation', () => {
+    expect(stripShortLinksForPreview('great point https://t.co/abc123.')).toBe('great point.')
+  })
+
+  it('returns an empty string when the text is only a t.co link', () => {
+    expect(stripShortLinksForPreview('https://t.co/abc123')).toBe('')
+  })
+
+  it('leaves plain text with no links unchanged', () => {
+    expect(stripShortLinksForPreview('just some words')).toBe('just some words')
+  })
+})
 
 describe('splitTextParts', () => {
   it('returns a single text part when there are no URLs', () => {

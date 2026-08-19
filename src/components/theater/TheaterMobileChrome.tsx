@@ -13,10 +13,19 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { Send as SendIcon, Loader2, Copy, Check, LogIn, Flame } from 'lucide-react'
+import {
+  Send as SendIcon,
+  Download as DownloadIcon,
+  Loader2,
+  Copy,
+  Check,
+  LogIn,
+  Flame,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { MatterLogo, ConnectWithX, PlatformChip } from '@/components/matter'
-import { previewPath } from '@/lib/activity/preview-path'
+import { formatCompactRelativeTime } from '@/lib/utils/format'
+import { MatterLogo, ConnectWithX, PlatformGlyph } from '@/components/matter'
+import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { useSendFile } from './useSendFile'
 import { useClampExpand } from './Rail'
 import { TheaterLinkedText } from './TheaterText'
@@ -157,16 +166,44 @@ export function TheaterMobileChrome({
         >
           <div>
             <div className="flex items-center gap-2">
-              <PlatformChip platform={current.platform} />
               <span className="min-w-0 truncate text-[13px] font-semibold text-white">
                 {current.authorName || (handle ? `@${handle}` : 'Saved post')}
               </span>
               {trendCount >= 2 && (
-                <span className="ml-auto inline-flex flex-none items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-[11px] font-bold text-orange-300">
+                <span className="inline-flex flex-none items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-[11px] font-bold text-orange-300">
                   <Flame size={11} className="text-orange-400" fill="currentColor" />
                   {trendCount}
                 </span>
               )}
+              {/* Link-out to the original post: platform glyph + human time,
+                  top-right of the preview (mirrors the desktop rail's chip). */}
+              {(() => {
+                const src = sourceUrl(current.platform, current.author, current.bookmarkId ?? '')
+                const inner = (
+                  <>
+                    <PlatformGlyph platform={current.platform} size={12} />
+                    <span className="font-mono text-[11px]" suppressHydrationWarning>
+                      {formatCompactRelativeTime(current.createdAt)}
+                    </span>
+                  </>
+                )
+                const cls =
+                  'ml-auto inline-flex min-h-[32px] flex-none items-center gap-1.5 rounded-full bg-black/40 px-2.5 text-white/80 backdrop-blur-sm'
+                return src ? (
+                  <a
+                    href={src}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    onTouchEnd={(e) => e.stopPropagation()}
+                    className={cls}
+                  >
+                    {inner}
+                  </a>
+                ) : (
+                  <span className={cls}>{inner}</span>
+                )
+              })()}
             </div>
             {caption && (
               <div
@@ -220,10 +257,12 @@ export function TheaterMobileChrome({
               >
                 {sendFile.sending ? (
                   <Loader2 size={15} className="animate-spin" />
-                ) : (
+                ) : sendFile.mode === 'share' ? (
                   <SendIcon size={15} />
+                ) : (
+                  <DownloadIcon size={15} />
                 )}
-                Send
+                {sendFile.mode === 'share' ? 'Send' : 'Download'}
               </button>
             )}
             <a

@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   Bookmark,
   Check,
   Copy,
+  Download,
   ExternalLink,
   Flame,
   ChevronRight,
@@ -14,7 +15,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
-import { MatterLogo, LiveDot, PlatformChip, ConnectWithX } from '@/components/matter'
+import { MatterLogo, LiveDot, PlatformGlyph, ConnectWithX } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { inferType } from '@/lib/trending/filter'
@@ -25,19 +26,29 @@ import { theaterItemKey } from './types'
 import type { TheaterItem, TheaterMode } from './types'
 
 /**
+ * Session-scoped expand preference shared by every `useClampExpand` call site
+ * (desktop rail + mobile chrome, both always mounted at once). Once the user
+ * explicitly expands or collapses a caption, later items default to that
+ * choice instead of always collapsing — in-memory only (no sessionStorage) is
+ * fine since it only needs to survive item changes, not reloads.
+ */
+let preferExpanded = false
+
+/**
  * Clamped text + expand toggle, shared by the desktop rail's now-playing
  * block and the mobile chrome's bottom-scrim caption. Detects overflow via
  * `scrollHeight` vs `clientHeight` on the ref'd (clamped) element — never a
- * character-count guess — and resets to collapsed whenever `resetKey`
- * changes (the theater advancing to a new item).
+ * character-count guess — and resets to the shared `preferExpanded`
+ * preference whenever `resetKey` changes (the theater advancing to a new
+ * item), not unconditionally to collapsed.
  */
 export function useClampExpand(resetKey: string | null) {
   const ref = useRef<HTMLParagraphElement>(null)
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpandedState] = useState(preferExpanded)
   const [overflowing, setOverflowing] = useState(false)
 
   useEffect(() => {
-    setExpanded(false)
+    setExpandedState(preferExpanded)
   }, [resetKey])
 
   useLayoutEffect(() => {
@@ -45,6 +56,14 @@ export function useClampExpand(resetKey: string | null) {
     const el = ref.current
     setOverflowing(!!el && el.scrollHeight > el.clientHeight + 1)
   }, [resetKey, expanded])
+
+  const setExpanded = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
+    setExpandedState((prev) => {
+      const next = typeof value === 'function' ? (value as (prev: boolean) => boolean)(prev) : value
+      preferExpanded = next
+      return next
+    })
+  }, [])
 
   return { ref, expanded, setExpanded, overflowing }
 }
@@ -57,7 +76,8 @@ export function useClampExpand(resetKey: string | null) {
  * (spec §7), not from hardcoded colors in this component.
  */
 
-const PLATFORM_LABEL: Record<string, string> = {
+/** Human platform label for "Open on {platform}" titles — shared with `CollectionRail`. */
+export const PLATFORM_LABEL: Record<string, string> = {
   twitter: 'X',
   tiktok: 'TikTok',
   instagram: 'Instagram',
@@ -109,6 +129,50 @@ function BrandRow({ mode }: { mode: TheaterMode }) {
   )
 }
 
+/**
+ * Platform glyph + relative time, doubling as the link-out to the original
+ * post on its native network. Renders as a plain (non-interactive) chip when
+ * `sourceUrl` can't build a link (no bookmark id) — never a dead anchor.
+ */
+function LinkOutChip({
+  platform,
+  author,
+  bookmarkId,
+  createdAt,
+}: {
+  platform: string
+  author: string
+  bookmarkId?: string | null
+  createdAt: string
+}) {
+  const href = sourceUrl(platform, author, bookmarkId ?? '')
+  const platformLabel = PLATFORM_LABEL[platform] ?? platform
+  const content = (
+    <>
+      <PlatformGlyph platform={platform} size={12} />
+      <span className="font-mono text-[12px]" suppressHydrationWarning>
+        {formatCompactRelativeTime(createdAt)}
+      </span>
+    </>
+  )
+
+  if (!href) {
+    return <span className="inline-flex flex-none items-center gap-1.5 text-ink-3">{content}</span>
+  }
+
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={`Open on ${platformLabel}`}
+      className="inline-flex flex-none items-center gap-1.5 text-ink-3 transition-colors hover:text-ink"
+    >
+      {content}
+    </a>
+  )
+}
+
 function NowPlaying({
   current,
   sharedItem,
@@ -139,21 +203,25 @@ function NowPlaying({
   return (
     <div className="flex-none border-b border-hairline px-5 py-4">
       <div className="flex items-center gap-2">
-        <PlatformChip platform={current.platform} />
         {isSharedCurrent && (
           <span className="inline-flex items-center rounded-full bg-clay/15 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-clay">
             Shared post
           </span>
         )}
-        <span className="font-mono text-[12px] text-ink-3" suppressHydrationWarning>
-          {formatCompactRelativeTime(current.createdAt)}
-        </span>
-        {trendCount >= 2 && (
-          <span className="ml-auto inline-flex flex-none items-center gap-1 rounded-full bg-black/30 px-2 py-0.5 text-[11px] font-bold text-orange-300">
-            <Flame size={11} className="text-orange-400" fill="currentColor" />
-            {trendCount}
-          </span>
-        )}
+        <div className="ml-auto flex flex-none items-center gap-2">
+          {trendCount >= 2 && (
+            <span className="inline-flex flex-none items-center gap-1 rounded-full bg-black/30 px-2 py-0.5 text-[11px] font-bold text-orange-300">
+              <Flame size={11} className="text-orange-400" fill="currentColor" />
+              {trendCount}
+            </span>
+          )}
+          <LinkOutChip
+            platform={current.platform}
+            author={current.author}
+            bookmarkId={current.bookmarkId}
+            createdAt={current.createdAt}
+          />
+        </div>
       </div>
 
       <div className="mt-3 flex items-center gap-2.5">
@@ -284,7 +352,7 @@ function Actions({
 }) {
   const [copied, setCopied] = useState(false)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const { supported: sendSupported, sending, send } = useSendFile(current)
+  const { supported: sendSupported, sending, send, mode: sendMode } = useSendFile(current)
 
   useEffect(
     () => () => {
@@ -296,6 +364,7 @@ function Actions({
   if (!current) return null
 
   const platformLabel = PLATFORM_LABEL[current.platform] ?? current.platform
+  const openUrl = sourceUrl(current.platform, current.author, current.bookmarkId || '')
   const showAuthedSave = mode === 'shared' && authed
 
   const handleCopy = async () => {
@@ -325,8 +394,14 @@ function Actions({
             disabled={sending}
             className={`${primaryBase} disabled:opacity-60`}
           >
-            {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-            Send
+            {sending ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : sendMode === 'share' ? (
+              <Send size={14} />
+            ) : (
+              <Download size={14} />
+            )}
+            {sendMode === 'share' ? 'Send' : 'Download'}
           </button>
         )}
 
@@ -349,16 +424,18 @@ function Actions({
           </a>
         )}
 
-        <a
-          href={current.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={buttonBase}
-          title={`Open on ${platformLabel}`}
-        >
-          <ExternalLink size={14} />
-          Open
-        </a>
+        {openUrl && (
+          <a
+            href={openUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={buttonBase}
+            title={`Open on ${platformLabel}`}
+          >
+            <ExternalLink size={14} />
+            Open
+          </a>
+        )}
       </div>
     </div>
   )

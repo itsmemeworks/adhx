@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { pinKeyFirst } from '@/components/theater/TheaterShell'
+import { pinKeyFirst, theaterUrlSyncPath } from '@/components/theater/TheaterShell'
 import { theaterItemKey } from '@/components/theater/types'
 
 /**
@@ -38,5 +38,50 @@ describe('pinKeyFirst', () => {
   it('returns the list unchanged when pinnedKey is null', () => {
     const result = pinKeyFirst(items, null)
     expect(result).toBe(items)
+  })
+})
+
+/**
+ * theaterUrlSyncPath() backs TheaterShell's address-bar sync (theater-first.md
+ * §7): guards previewPath() with the "id AND author both present" rule so a
+ * malformed path (e.g. `//status/123`) never reaches history.replaceState.
+ */
+describe('theaterUrlSyncPath', () => {
+  it('builds the canonical preview path for a tweet', () => {
+    expect(theaterUrlSyncPath({ platform: 'twitter', bookmarkId: '123', author: 'someuser' })).toBe(
+      '/someuser/status/123',
+    )
+  })
+
+  it('builds the canonical preview path for instagram, tiktok, and youtube', () => {
+    expect(
+      theaterUrlSyncPath({ platform: 'instagram', bookmarkId: 'abc', author: 'someuser' }),
+    ).toBe('/reels/abc')
+    expect(theaterUrlSyncPath({ platform: 'tiktok', bookmarkId: '999', author: '@someuser' })).toBe(
+      '/@someuser/video/999',
+    )
+    expect(theaterUrlSyncPath({ platform: 'youtube', bookmarkId: 'xyz', author: 'someuser' })).toBe(
+      '/shorts/xyz',
+    )
+  })
+
+  it('returns null when bookmarkId is missing', () => {
+    expect(theaterUrlSyncPath({ platform: 'twitter', bookmarkId: null, author: 'someuser' })).toBe(
+      null,
+    )
+    expect(
+      theaterUrlSyncPath({ platform: 'twitter', bookmarkId: undefined, author: 'someuser' }),
+    ).toBe(null)
+    expect(theaterUrlSyncPath({ platform: 'twitter', bookmarkId: '', author: 'someuser' })).toBe(
+      null,
+    )
+  })
+
+  it('returns null when author is missing or empty', () => {
+    expect(theaterUrlSyncPath({ platform: 'twitter', bookmarkId: '123', author: '' })).toBe(null)
+  })
+
+  it('returns null for a null item', () => {
+    expect(theaterUrlSyncPath(null)).toBe(null)
   })
 })

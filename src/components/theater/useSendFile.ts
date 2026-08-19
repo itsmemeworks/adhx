@@ -31,6 +31,14 @@ export interface SendFile {
   ready: boolean
   /** True while a send is in flight. */
   sending: boolean
+  /**
+   * The verb `send()` will actually perform: `'share'` when the Web Share API
+   * is available (mobile — opens the native share sheet), `'download'`
+   * otherwise (desktop reality — `send()` saves the file directly). Computed
+   * client-side from `typeof navigator.share === 'function'`; SSR-safe
+   * default `'share'` since it only affects a label/icon, never `supported`.
+   */
+  mode: 'share' | 'download'
   /** Open the native share sheet (or fall back to the link). Call from a tap. */
   send: () => Promise<void>
 }
@@ -165,7 +173,20 @@ function pingSharePulse(platform: string, id: string): void {
 export function useSendFile(item: TheaterItem | null): SendFile {
   const [ready, setReady] = useState(false)
   const [sending, setSending] = useState(false)
+  // SSR-safe default: 'share' until the client effect below settles it. This
+  // only drives a label/icon, so a brief mismatch on desktop's first paint is
+  // harmless (and avoided in practice — Rail/mobile chrome only render the
+  // button once `supported` is known, by which point this has run).
+  const [mode, setMode] = useState<'share' | 'download'>('share')
   const blobRef = useRef<Blob | null>(null)
+
+  useEffect(() => {
+    setMode(
+      typeof navigator !== 'undefined' && typeof navigator.share === 'function'
+        ? 'share'
+        : 'download',
+    )
+  }, [])
 
   const source = resolveSendSource(item)
   const supported = source !== null
@@ -271,5 +292,5 @@ export function useSendFile(item: TheaterItem | null): SendFile {
     }
   }, [item, source])
 
-  return { supported, ready, sending, send }
+  return { supported, ready, sending, mode, send }
 }
