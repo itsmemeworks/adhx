@@ -8,7 +8,6 @@ import {
   Download,
   ExternalLink,
   Flame,
-  ChevronRight,
   ChevronUp,
   ChevronDown,
   LogIn,
@@ -22,7 +21,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
-import { MatterLogo, LiveDot, PlatformGlyph, ConnectWithX } from '@/components/matter'
+import { MatterLogo, LiveDot, PlatformGlyph } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { inferType } from '@/lib/trending/filter'
@@ -77,11 +76,13 @@ export function useClampExpand(resetKey: string | null) {
 }
 
 /**
- * ~400px right rail (spec §3): brand + Connect, the now-playing post, actions
- * (Copy link / Save / Open on {platform}), the live Up-next feed, and a
- * footer link to the browse list. Follows the theme tokens — the dark look
- * on theater routes comes from the theme system defaulting dark there
- * (spec §7), not from hardcoded colors in this component.
+ * ~400px right rail (spec §3): a FIXED header block — brand, transport
+ * (prev/pause/next/audio/de-clutter), and actions (Copy link / Save / Open on
+ * {platform}) — that never shifts position regardless of post-text length,
+ * followed by a single scroll container holding the now-playing post text and
+ * the live Up-next feed. Follows the theme tokens — the dark look on theater
+ * routes comes from the theme system defaulting dark there (spec §7), not
+ * from hardcoded colors in this component.
  */
 
 /** Human platform label for "Open on {platform}" titles — shared with `CollectionRail`. */
@@ -127,7 +128,7 @@ export interface RailProps {
   onToggleDeclutter: () => void
 }
 
-function BrandRow({ mode }: { mode: TheaterMode }) {
+function BrandRow() {
   return (
     <div className="flex-none border-b border-hairline px-5 pt-5 pb-4">
       <div className="flex items-center justify-between">
@@ -139,18 +140,6 @@ function BrandRow({ mode }: { mode: TheaterMode }) {
           Live
         </span>
       </div>
-
-      {mode === 'home' && (
-        <div className="mt-3.5">
-          <a
-            href="/api/auth/twitter"
-            className="flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-full bg-clay-grad px-4 text-[13px] font-semibold text-white shadow-glow transition-opacity hover:opacity-90"
-          >
-            <ConnectWithX size={14} />
-          </a>
-          <p className="mt-2 text-center text-[11.5px] text-ink-3">Keep a pile, later.</p>
-        </div>
-      )}
     </div>
   )
 }
@@ -279,10 +268,7 @@ function NowPlaying({
 
       <p
         ref={ref}
-        className={cn(
-          'mt-2.5 text-[14px] leading-relaxed text-ink',
-          expanded ? 'max-h-[40vh] overflow-y-auto' : 'line-clamp-4',
-        )}
+        className={cn('mt-2.5 text-[14px] leading-relaxed text-ink', !expanded && 'line-clamp-4')}
       >
         <TheaterLinkedText
           platform={current.platform}
@@ -544,7 +530,16 @@ function Actions({
     [],
   )
 
-  if (!current) return null
+  if (!current) {
+    // Same bordered container as the populated state, holding an
+    // invisible same-height spacer — keeps the fixed header block's height
+    // stable through loading/waiting instead of collapsing to nothing.
+    return (
+      <div className="flex-none border-b border-hairline px-5 py-3">
+        <div className="min-h-[44px]" aria-hidden />
+      </div>
+    )
+  }
 
   const platformLabel = PLATFORM_LABEL[current.platform] ?? current.platform
   const openUrl = sourceUrl(current.platform, current.author, current.bookmarkId || '')
@@ -646,10 +641,18 @@ export function Rail({
   declutter,
   onToggleDeclutter,
 }: RailProps) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Jump back to the top of the scroller (now-playing + up-next) every time
+  // the theater advances to a new item — otherwise a deep scroll into a long
+  // caption or the up-next list would carry over to the next post.
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = 0
+  }, [currentKey])
+
   return (
     <div className="flex h-full w-full flex-col bg-surface text-ink lg:h-full lg:border-l lg:border-hairline">
-      <BrandRow mode={mode} />
-      <NowPlaying current={current} sharedItem={sharedItem} waiting={waiting} />
+      <BrandRow />
       <TransportRow
         current={current}
         currentKey={currentKey}
@@ -664,33 +667,30 @@ export function Rail({
       />
       <Actions mode={mode} current={current} authed={authed} />
 
-      <div className="flex min-h-0 flex-1 flex-col">
-        <h2 className="flex-none px-5 pb-1 pt-3 text-[11px] font-bold uppercase tracking-wide text-ink-3">
-          {mode === 'shared' ? 'More being sent right now' : 'Up next'}
-        </h2>
-        <UpNextList
-          items={items}
-          currentKey={currentKey}
-          isSeen={isSeen}
-          seenReady={seenReady}
-          freshKeys={freshKeys}
-          newCount={newCount}
-          onSelect={onSelect}
-          className="flex-1"
-        />
-      </div>
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
+        <NowPlaying current={current} sharedItem={sharedItem} waiting={waiting} />
 
-      <div className="flex flex-none items-center justify-between gap-3 border-t border-hairline px-5 py-3">
-        <a
-          href="/trending"
-          className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-ink-2 hover:text-ink"
-        >
-          Browse as list
-          <ChevronRight size={14} />
-        </a>
-        {savedToday > 0 && (
-          <span className="text-[11.5px] text-ink-3">{savedToday} saved today</span>
-        )}
+        <div className="flex flex-col">
+          <h2 className="flex flex-none items-center justify-between px-5 pb-1 pt-3 text-[11px] font-bold uppercase tracking-wide text-ink-3">
+            <span>{mode === 'shared' ? 'More being sent right now' : 'Up next'}</span>
+            {savedToday > 0 && (
+              <span className="text-[11.5px] font-normal normal-case tracking-normal text-ink-3">
+                {savedToday} saved today
+              </span>
+            )}
+          </h2>
+          <UpNextList
+            items={items}
+            currentKey={currentKey}
+            isSeen={isSeen}
+            seenReady={seenReady}
+            freshKeys={freshKeys}
+            newCount={newCount}
+            onSelect={onSelect}
+            ownScroll={false}
+            collapsedCount={6}
+          />
+        </div>
       </div>
     </div>
   )

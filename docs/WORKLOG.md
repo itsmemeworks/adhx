@@ -4,6 +4,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-19 — Desktop theater rail de-clutter per user review
+
+- **Why**: Streamline the desktop theater rail controls and layout based on user feedback.
+- **What**: Removed rail Connect CTA block; signed-out saving via Save action button → `/api/auth/twitter`. Removed desktop "Tap for sound" pill; sound affordance now the rail transport row's pulsing audio button or tapping stage. Removed "Browse as list" footer link (page `/trending` remains for SEO). Rail layout redesigned: fixed top block = brand → transport → actions, then ONE scroll container for now-playing post + collapsed Up next (Show all · N more toggle; mobile sheet unchanged).
+- **State**: on `feat/theater-desktop-controls`, PR #322.
+- **Follow-ups**: none noted.
+
 ## 2026-08-19 — Desktop theater controls (port of the mobile round)
 
 - **Why**: Bring the mobile features to desktop: visible transport controls, audio toggle, de-clutter, the progress line, and the 10s timed auto-advance.

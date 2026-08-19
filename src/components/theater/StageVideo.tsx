@@ -2,7 +2,8 @@
 
 /**
  * <video> stage for twitter/tiktok MP4s (spec §6): poster-first, muted
- * autoplay, "Tap for sound" affordance, replay + next
+ * autoplay, a whole-stage tap to unmute plus the rail/peek-bar audio button
+ * as the sound affordance, replay + next
  * nudge on end. Falls back to a big centered play button when autoplay is
  * rejected even muted (iOS low-power mode blocks even muted autoplay — spec
  * §11).
@@ -24,7 +25,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { Play, RotateCcw, Volume2, VolumeX, ArrowDown } from 'lucide-react'
+import { Play, RotateCcw, Volume2, ArrowDown } from 'lucide-react'
 import type { TheaterItem } from './types'
 
 export interface StageVideoProps {
@@ -268,30 +269,6 @@ export function StageVideo({
       {!effectiveMuted && playing && (
         <div className="pointer-events-none absolute bottom-6 left-4 inline-flex items-center gap-2 rounded-full bg-black/40 px-3 py-1.5 text-xs font-medium text-white/80 backdrop-blur-sm">
           <Volume2 size={14} />
-        </div>
-      )}
-
-      {/* Prominent, hard-to-miss sound affordance: centered in the lower
-          third, large tap target, gentle pulse. Shown any time the current
-          video is muted-but-playing — the first video, or a later item that
-          fell back to muted after an unmuted-continuation rejection.
-          Desktop only — on mobile the affordance lives on the peek bar's
-          audio button instead (TheaterMobileChrome pulses it under the same
-          condition); the whole-stage tap-to-unmute here still works on
-          mobile unchanged, this is just the visual nudge. */}
-      {effectiveMuted && playing && !needsGesture && !ended && !errored && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-[18%] hidden justify-center px-4 lg:flex">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              handleUnmuteTap()
-            }}
-            className="animate-sound-pulse pointer-events-auto inline-flex min-h-[48px] items-center gap-2.5 rounded-full bg-black/70 px-6 py-3 text-base font-semibold text-white shadow-lg backdrop-blur-md"
-          >
-            <VolumeX size={20} />
-            Tap for sound
-          </button>
         </div>
       )}
 

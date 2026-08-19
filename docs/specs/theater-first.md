@@ -36,15 +36,15 @@ TheaterShell.tsx      — full-viewport layout: <Stage/> + <Rail/>; owns current
                         keyboard (↓/↑/esc/space/m), touch swipe, history integration
 Stage.tsx             — dark stage dispatcher: renders the variant for the current item
 StageVideo.tsx        — <video> for twitter/tiktok/instagram; poster-first; progress bar,
-                        mute state, "Tap for sound" chip
+                        mute state; sound toggle via the rail/peek-bar audio button or stage tap
 StageYouTube.tsx      — official youtube-nocookie iframe in a CONCRETE-height container
                         (aspect box collapses around absolute iframes — known gotcha)
 StageArticle.tsx      — cover splash → in-stage reader (articleBlocksToMarkdown output);
                         reading-progress bar replaces the time bar
 StageText.tsx         — tweet typeset large (Newsreader) on the stage; photos reuse it
                         with the image full-bleed (StagePhoto trivial variant)
-Rail.tsx              — brand row / shared-post row / signed-in header + NowPlaying +
-                        actions + UpNextList + footer
+Rail.tsx              — fixed top block (brand row → transport row → actions row), then
+                        scroll container holding now-playing post + collapsed UpNextList ("Show all" toggle)
 UpNextList.tsx        — rail feed rows, seen divider, "next ↓" highlight
 useTheaterFeed.ts     — items + polling (see §4)
 useSeenSet.ts         — localStorage seen model (see §5)
@@ -56,7 +56,7 @@ Route wiring:
 - `src/app/page.tsx` signed-out branch renders `TheaterShell` (server component wrapper server-renders the crawlable list + `CollectionPage`/`ItemList` JSON-LD exactly like `TrendingStaticList`, then mounts the shell seeded with the same items — no skeleton flash, same pattern as the hubs).
 - Preview pages keep their server components (metadata, JSON-LD, `recordActivity('preview')`, bot filtering) and swap the `*PreviewLanding` visual layer for `TheaterShell` seeded at the post with `mode="shared"`. The crawlable tweet `<article>` stays in the DOM (sr-only).
 - `AppShell` suppresses the global Header for `/` signed-out and preview paths (extend the existing `isFullWidth` regex).
-- Browse list: `/trending` becomes the dark ranked-list view (round-2 design restyled); the rail's "Browse as list" links there. Hubs `/trending/[filter]` unchanged.
+- Browse list: `/trending` remains the dark ranked-list view (round-2 design restyled). Hubs `/trending/[filter]` unchanged.
 - Signed-in: `/` keeps the Collection as home. The theater becomes the Collection's focus mode (replacing the current Lightbox/triage surface, keeping its keyboard map: ←→, R/U, Q/P, Keep/Delete/Done) and the **Live** tab in the rail opens the community theater. This is Phase 3; Phases 1–2 must not regress the existing authed feed.
 
 ## 4. Data
@@ -84,7 +84,7 @@ Route wiring:
 | youtube                        | official `youtube-nocookie` iframe               | no MP4 exists; appears instantly, plays on its own tap; CSP already allows it                                                                                                                                  |
 | photo / text / quote / article | Stage variants (no media pipeline)               | article body via `articleBlocksToMarkdown`                                                                                                                                                                     |
 
-- **Autoplay**: first landing has no gesture → autoplay **muted** with a persistent "Tap for sound" chip; after the first user interaction, all subsequent posts play with sound. Focus-mode convention (click-to-play-with-sound) applies once a gesture exists.
+- **Autoplay**: first landing has no gesture → autoplay **muted**; sound toggle is the rail/peek-bar audio button (pulsing while muted+playing) or tapping the stage. After the first user interaction, all subsequent posts play with sound. Focus-mode convention (click-to-play-with-sound) applies once a gesture exists.
 - **Prefetch**: current post plays; next post's source resolves in the background (IG warms, MP4s get a Range 0-1 request). Prefetch at most 1 ahead — bandwidth restraint, no cost explosion.
 - **End of video**: stop and show a replay + "↓ next" nudge. No auto-advance (fights the caught-up model); revisit after telemetry.
 - All external fetches keep `AbortSignal.timeout()`.
@@ -118,7 +118,7 @@ Rendering lives in one place: `TheaterLinkedText` (`src/components/theater/Theat
 
 ## 8. Mobile
 
-- `/` signed-out on mobile = the reel: brand + Connect on the top scrim (no close button — it's home), progress bar, "Tap for sound" chip, caption + meta on the bottom scrim, Send primary + Save + share-link, Up-next bottom sheet (peek → swipe up for the list with the seen divider). Swipe video up/down = next/prev. Evolves `/trending/play` rather than duplicating it — `/trending/play` redirects into the theater.
+- `/` signed-out on mobile = the reel: brand on the top scrim (no close button — it's home), progress bar, caption + meta on the bottom scrim, Send primary + Save + share-link, Up-next bottom sheet (peek with pulsing audio button while muted → swipe up for the list with the seen divider). Swipe video up/down = next/prev; audio toggle via peek-bar button. Evolves `/trending/play` rather than duplicating it — `/trending/play` redirects into the theater.
 - Non-video posts in the mobile feed render their stage variants full-screen (text typeset large; article cover splash → reader).
 - Tap targets ≥ 44px. No fake status bar or keyboard chrome.
 
