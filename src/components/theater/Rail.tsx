@@ -392,6 +392,7 @@ function Actions({
             type="button"
             onClick={() => void send()}
             disabled={sending}
+            title={sendMode === 'share' ? 'Share the video file' : 'Download the video file'}
             className={`${primaryBase} disabled:opacity-60`}
           >
             {sending ? (
@@ -401,7 +402,7 @@ function Actions({
             ) : (
               <Download size={14} />
             )}
-            {sendMode === 'share' ? 'Send' : 'Download'}
+            {sendMode === 'share' ? 'Send video' : 'Download'}
           </button>
         )}
 

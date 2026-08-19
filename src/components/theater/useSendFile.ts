@@ -181,11 +181,20 @@ export function useSendFile(item: TheaterItem | null): SendFile {
   const blobRef = useRef<Blob | null>(null)
 
   useEffect(() => {
-    setMode(
-      typeof navigator !== 'undefined' && typeof navigator.share === 'function'
-        ? 'share'
-        : 'download',
-    )
+    // 'share' only when the browser can put a FILE on the share sheet —
+    // navigator.share existing alone isn't enough (some desktops expose it
+    // for links only, and send() would fall through to the download path
+    // while the button still said "Send").
+    let canShareFiles = false
+    try {
+      canShareFiles =
+        typeof navigator !== 'undefined' &&
+        typeof navigator.canShare === 'function' &&
+        navigator.canShare({ files: [new File([''], 'probe.mp4', { type: 'video/mp4' })] })
+    } catch {
+      canShareFiles = false
+    }
+    setMode(canShareFiles ? 'share' : 'download')
   }, [])
 
   const source = resolveSendSource(item)
