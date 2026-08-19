@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Check, Play, Image as ImageIcon, Type as TypeIcon, FileText, Quote } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
@@ -14,7 +15,7 @@ import { theaterItemKey } from './types'
 const warmedRows = new Set<string>()
 
 /** Warm an Instagram row's mirror on hover, at most once per session per item. */
-function warmOnHover(item: TheaterItem) {
+export function warmOnHover(item: TheaterItem) {
   if (!instagramWarmSrc(item)) return
   const key = theaterItemKey(item)
   if (warmedRows.has(key)) return
@@ -42,16 +43,32 @@ export interface UpNextListProps {
   onSelect: (key: string) => void
   /** Optional layout override for the scroll container — Rail passes `flex-1`. */
   className?: string
+  /**
+   * Whether this list owns its own vertical scroll (`overflow-y-auto`).
+   * Default `true` (the mobile bottom-sheet relies on this). The desktop
+   * rail passes `false` since it now owns a single shared scroll container
+   * spanning the now-playing text and this list together.
+   */
+  ownScroll?: boolean
+  /**
+   * When set, collapses the list to at most this many rows (or through the
+   * current item's row and its "next ↓" row, whichever is larger, so a
+   * viewer who's navigated deep never loses sight of where they are) behind
+   * a "Show all" toggle. Omit to always render every row (mobile default).
+   */
+  collapsedCount?: number
 }
 
-const TYPE_TILE: Record<ContentType, { bg: string; icon: React.ComponentType<{ size?: number }> }> =
-  {
-    video: { bg: 'bg-type-video/15 text-type-video', icon: Play },
-    photo: { bg: 'bg-type-photo/15 text-type-photo', icon: ImageIcon },
-    text: { bg: 'bg-type-text/15 text-type-text', icon: TypeIcon },
-    article: { bg: 'bg-type-article/15 text-type-article', icon: FileText },
-    quote: { bg: 'bg-type-quote/15 text-type-quote', icon: Quote },
-  }
+export const TYPE_TILE: Record<
+  ContentType,
+  { bg: string; icon: React.ComponentType<{ size?: number }> }
+> = {
+  video: { bg: 'bg-type-video/15 text-type-video', icon: Play },
+  photo: { bg: 'bg-type-photo/15 text-type-photo', icon: ImageIcon },
+  text: { bg: 'bg-type-text/15 text-type-text', icon: TypeIcon },
+  article: { bg: 'bg-type-article/15 text-type-article', icon: FileText },
+  quote: { bg: 'bg-type-quote/15 text-type-quote', icon: Quote },
+}
 
 function Thumb({ item, fresh }: { item: TheaterItem; fresh: boolean }) {
   const type = inferType(item)
@@ -144,7 +161,11 @@ export function UpNextList({
   newCount,
   onSelect,
   className,
+  ownScroll = true,
+  collapsedCount,
 }: UpNextListProps) {
+  const [expanded, setExpanded] = useState(false)
+
   // Per-row seen flags (SSR-safe: everything false until seenReady).
   const seenFlags = items.map((item) => seenReady && isSeen(theaterItemKey(item)))
 
@@ -162,8 +183,17 @@ export function UpNextList({
 
   const currentIndex = currentKey ? items.findIndex((it) => theaterItemKey(it) === currentKey) : -1
 
+  // Collapsed cutoff always covers the current row + its "next ↓" row, even
+  // if the viewer has navigated past `collapsedCount` items already. The
+  // divider above only ever falls within this prefix, so slicing preserves
+  // its index unchanged.
+  const cutoff = collapsedCount != null ? Math.max(collapsedCount, currentIndex + 2) : items.length
+  const showToggle = collapsedCount != null && items.length > cutoff
+  const visibleItems = collapsedCount != null && !expanded ? items.slice(0, cutoff) : items
+  const hiddenCount = items.length - cutoff
+
   return (
-    <div className={cn('overflow-y-auto', className)}>
+    <div className={cn(ownScroll && 'overflow-y-auto', className)}>
       {seenReady && newCount > 0 && (
         <div className="px-3 pb-2 pt-3 text-[11.5px] font-semibold text-ink-2">
           {newCount} new since your last visit
@@ -176,7 +206,7 @@ export function UpNextList({
       )}
 
       <div className="flex flex-col gap-1 px-2">
-        {items.map((item, i) => {
+        {visibleItems.map((item, i) => {
           const key = theaterItemKey(item)
           const isCurrent = i === currentIndex
           const isNext = currentIndex >= 0 && i === currentIndex + 1
@@ -209,6 +239,16 @@ export function UpNextList({
           return row
         })}
       </div>
+
+      {showToggle && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="flex min-h-[44px] w-full items-center justify-center text-[12.5px] font-semibold text-ink-3 transition-colors hover:text-ink"
+        >
+          {expanded ? 'Show less' : `Show all · ${hiddenCount} more`}
+        </button>
+      )}
     </div>
   )
 }

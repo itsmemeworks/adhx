@@ -4,6 +4,28 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-19 — Desktop theater "Filmstrip dock" redesign (direction C shipped)
+
+- **Why**: User live review judged the rail-based desktop layout weaker than mobile's "stage owns the post" model and selected direction C.
+- **What**: Rail.tsx deleted. Desktop = full-width stage (flex-1) + bottom filmstrip dock (`DesktopDock`: transport buttons + horizontal queue cards auto-scrolled to keep current visible + "Show all" panel with full `UpNextList` + savedToday line). `DesktopStageChrome`: top bar (brand + LIVE + paste-to-preview input ⌘V + de-clutter); stage overlays (meta/flame/platform pinned top-right for text/quote/article; merged avatar·name·@handle·platform·flame overlay + 2-line clamped caption with show-more for video/photo); bottom actions (Download when sendable / Link / Save / Open). New `useClampExpand.ts` module extracted, `lib/theater/paste-preview.ts` for `resolvePastedLink()`, ←/→ keyboard prev/next. Mobile chrome untouched.
+- **State**: on `feat/theater-desktop-controls`, PR #322. Earlier same-day rail de-clutter entry (#322) is superseded.
+- **Follow-ups**: none.
+
+## 2026-08-19 — Desktop theater rail de-clutter per user review
+
+- **Why**: Streamline the desktop theater rail controls and layout based on user feedback.
+- **What**: Removed rail Connect CTA block; signed-out saving via Save action button → `/api/auth/twitter`. Removed desktop "Tap for sound" pill; sound affordance now the rail transport row's pulsing audio button or tapping stage. Removed "Browse as list" footer link (page `/trending` remains for SEO). Rail layout redesigned: fixed top block = brand → transport → actions, then ONE scroll container for now-playing post + collapsed Up next (Show all · N more toggle; mobile sheet unchanged).
+- **State**: on `feat/theater-desktop-controls`, PR #322.
+- **Follow-ups**: none noted.
+
+## 2026-08-19 — Desktop theater controls (port of the mobile round)
+
+- **Why**: Bring the mobile features to desktop: visible transport controls, audio toggle, de-clutter, the progress line, and the 10s timed auto-advance.
+- **What**: Rail gains a TransportRow ([prev · pause/play · next · audio] + de-clutter right) mirroring the mobile event semantics exactly. The progress line mounts per-viewport via `useIsDesktopViewport()` (matchMedia) — exactly ONE live 'timed'/'video' kind at a time. De-clutter collapses the rail column (w-0 transition) into a full-bleed stage with a fixed restore button. StageVideo's internal bottom bar removed — the top line is the single progress indicator on both viewports.
+- **Latent bug fixed en route**: the mobile chrome is CSS-hidden (not unmounted) at desktop widths, so its 10s timer was ALREADY running invisibly on desktop and auto-advancing text posts — display:none doesn't stop rAF. The viewport gating (`current=null` to the chrome at lg+) kills it properly.
+- **State**: on `feat/theater-desktop-controls`, deploying to staging.
+- **Follow-ups**: none noted.
+
 ## 2026-08-19 — Waiting stage, tappable mentions, chrome polish
 
 - **Why**: Live review continued — the theater dead-ended at the last post while fresh pulse items prepended unseen; @mentions were plain text; the reviewer wanted stable control positions, an open-original button, fixed post meta, avatars, the sound affordance on the audio button, and a see-through peek bar.

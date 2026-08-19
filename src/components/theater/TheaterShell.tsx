@@ -1,23 +1,52 @@
 'use client'
 
 /**
- * Theater orchestrator (spec §3/§4/§5/§6/§8): full-viewport <Stage/> + <Rail/>.
+ * Theater orchestrator (spec §3/§4/§5/§6/§8): a full-width <Stage/> with
+ * overlaid chrome and a bottom filmstrip dock on desktop (the "Filmstrip
+ * dock" layout — see <DesktopStageChrome/>/<DesktopDock/> in
+ * TheaterDesktopChrome.tsx, which replaced the old right-hand <Rail/>).
  * Owns current-item state, keyboard nav, mute state, the seen model + preview
  * pulse, and next-item prefetch. See docs/specs/theater-first.md.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Maximize2 } from 'lucide-react'
 import { Stage } from './Stage'
 import { StageWaiting } from './StageWaiting'
-import { Rail } from './Rail'
+import { DesktopStageChrome, DesktopDock } from './TheaterDesktopChrome'
 import { TheaterMobileChrome } from './TheaterMobileChrome'
 import { useTheaterFeed } from './useTheaterFeed'
 import { useSeenSet } from './useSeenSet'
 import { prefetchPlayback } from './usePlaybackSource'
-import { progressKindFor } from './TheaterProgressLine'
+import { TheaterProgressLine, progressKindFor } from './TheaterProgressLine'
 import { theaterItemKey } from './types'
 import { previewPath } from '@/lib/activity/preview-path'
 import type { TheaterFeedSeed, TheaterItem, TheaterMode } from './types'
+
+/**
+ * Live viewport check matching Tailwind's `lg` breakpoint (1024px) — the JS
+ * counterpart to the `lg:hidden`/`lg:flex` split between the mobile chrome
+ * and the desktop rail. Needed because CSS `display: none` on the chrome's
+ * wrapper only hides it VISUALLY — its effects (including the mobile
+ * `TheaterProgressLine`'s 10s auto-advance timer) keep running underneath
+ * regardless of viewport. Gating the chrome's `current` prop (and this hook's
+ * own desktop-progress-line kind) on this flag is what keeps exactly one
+ * 'timed' timer alive at a time; without it, a desktop viewer would get two
+ * independent timers double-dispatching `theater-advance`. SSR-safe default
+ * `false` (matches mobile) to avoid a hydration mismatch — the real value
+ * settles a moment after mount.
+ */
+function useIsDesktopViewport(): boolean {
+  const [isDesktop, setIsDesktop] = useState(false)
+  useEffect(() => {
+    const mql = window.matchMedia('(min-width: 1024px)')
+    setIsDesktop(mql.matches)
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
+    mql.addEventListener('change', handler)
+    return () => mql.removeEventListener('change', handler)
+  }, [])
+  return isDesktop
+}
 
 export interface TheaterShellProps {
   seed: TheaterFeedSeed
@@ -120,6 +149,36 @@ export function TheaterShell({
   const { items } = feed
 
   const [muted, setMuted] = useState(true)
+
+  // Sound preference survives full-page navigations within the theater —
+  // paste-to-preview navigates with `window.location.assign`, which used to
+  // silently reset a viewer's sound to muted. Read on mount (not in the
+  // useState initializer — SSR renders muted, and a differing first client
+  // render would be a hydration mismatch on the audio buttons), write on
+  // every change. Best-effort only: on a fresh document the browser may
+  // still veto audible autoplay (no gesture yet); StageVideo's
+  // rejected-play fallback then re-mutes gracefully, exactly as before.
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem('adhx-theater-sound') === 'on') setMuted(false)
+    } catch {
+      // Storage can be unavailable (private mode) — keep the muted default.
+    }
+  }, [])
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('adhx-theater-sound', muted ? 'off' : 'on')
+    } catch {
+      // Same — never let a storage failure break playback.
+    }
+  }, [muted])
+  const isDesktop = useIsDesktopViewport()
+  // Desktop de-clutter: collapses the rail column for a full-bleed stage.
+  // Desktop-only concept — mobile has its own independent de-clutter state
+  // local to TheaterMobileChrome. Persists across item navigation (not reset
+  // on `currentKey`), same as the mobile one.
+  const [desktopDeclutter, setDesktopDeclutter] = useState(false)
+  const onToggleDesktopDeclutter = useCallback(() => setDesktopDeclutter((v) => !v), [])
   const [currentKey, setCurrentKey] = useState<string | null>(null)
   // Virtual "end of feed" stage entered by advancing past the last item (spec
   // addendum: end-of-feed waiting stage). `currentKey` is deliberately left
@@ -283,10 +342,12 @@ export function TheaterShell({
     }
   }, [])
 
-  // Keyboard nav: ↓/j next, ↑/k prev, space toggles play/pause (delegated to
-  // Stage via a custom event, matching the repo's cross-component keyboard
-  // pattern), m toggles mute. Ignored while typing in an input/textarea/
-  // contentEditable element.
+  // Keyboard nav: ↓/→/j next, ↑/←/k prev — the arrows double up because the
+  // desktop dock's filmstrip queue reads horizontally while mobile still
+  // scrolls vertically. Space toggles play/pause (delegated to Stage via a
+  // custom event, matching the repo's cross-component keyboard pattern), m
+  // toggles mute. Ignored while typing in an input/textarea/contentEditable
+  // element.
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       const target = e.target as HTMLElement | null
@@ -296,12 +357,14 @@ export function TheaterShell({
 
       switch (e.key) {
         case 'ArrowDown':
+        case 'ArrowRight':
         case 'j':
         case 'J':
           e.preventDefault()
           goNext()
           break
         case 'ArrowUp':
+        case 'ArrowLeft':
         case 'k':
         case 'K':
           e.preventDefault()
@@ -416,11 +479,13 @@ export function TheaterShell({
   }, [displayItems, seenSet])
 
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col overflow-hidden bg-[#08070a] lg:flex-row">
-      {/* Full-viewport stage below lg (spec §8) — the desktop 62dvh-stage +
-          stacked-rail layout only applies at lg+, where <Rail/> takes its
-          own column instead of overlaying the stage. */}
-      <div className="relative h-full w-full flex-1 overflow-hidden lg:min-w-0">
+    <div className="fixed inset-0 z-[60] flex flex-col overflow-hidden bg-[#08070a]">
+      {/* Full-width stage on every viewport (spec §8, "Filmstrip dock"):
+          below lg the mobile chrome overlays it full-viewport as before;
+          at lg+ <DesktopStageChrome/> overlays it with the top bar/post
+          overlay/actions, and <DesktopDock/> (a sibling, in-flow below) is
+          the bottom filmstrip queue — no more side-by-side rail column. */}
+      <div className="relative h-full w-full flex-1 overflow-hidden">
         <div className="absolute inset-0">
           {waiting ? (
             <StageWaiting savedToday={feed.savedToday} />
@@ -434,9 +499,31 @@ export function TheaterShell({
             />
           )}
         </div>
+        {/* Desktop counterpart to the mobile chrome's top progress line
+            (Instagram-style, spans the full viewport including the rail —
+            that's fine, arguably good). `kind` is gated on `isDesktop` rather
+            than just rendered unconditionally: the mobile chrome below is
+            ALWAYS mounted (only CSS-hidden at lg, its effects keep running),
+            so without this gate — and the matching gate on the chrome's
+            `current` prop below — two independent 'timed' timers would both
+            be alive on desktop and double-dispatch `theater-advance`. */}
+        <TheaterProgressLine
+          itemKey={currentKey}
+          kind={isDesktop ? progressKindFor(waiting ? null : current) : 'none'}
+        />
+        {desktopDeclutter && (
+          <button
+            type="button"
+            onClick={onToggleDesktopDeclutter}
+            aria-label="Show controls"
+            className="absolute right-4 top-4 z-20 hidden h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md transition-colors hover:bg-black/70 lg:flex"
+          >
+            <Maximize2 size={18} />
+          </button>
+        )}
         <TheaterMobileChrome
           mode={mode}
-          current={waiting ? null : current}
+          current={waiting || isDesktop ? null : current}
           items={displayItems}
           currentKey={currentKey}
           isSeen={seenSet.isSeen}
@@ -451,24 +538,35 @@ export function TheaterShell({
           muted={muted}
           onToggleMute={onToggleMute}
         />
-      </div>
-      <div className="hidden min-h-0 flex-1 overflow-y-auto lg:flex lg:h-full lg:flex-none">
-        <Rail
+        <DesktopStageChrome
           mode={mode}
-          items={displayItems}
           current={waiting ? null : current}
-          currentKey={currentKey}
-          isSeen={seenSet.isSeen}
-          seenReady={seenSet.ready}
-          freshKeys={feed.freshKeys}
-          newCount={newCount}
-          savedToday={feed.savedToday}
-          onSelect={onSelect}
           sharedItem={sharedItem}
           authed={authed}
-          waiting={waiting}
+          declutter={desktopDeclutter}
+          onToggleDeclutter={onToggleDesktopDeclutter}
         />
       </div>
+      <DesktopDock
+        mode={mode}
+        items={displayItems}
+        current={waiting ? null : current}
+        currentKey={currentKey}
+        isSeen={seenSet.isSeen}
+        seenReady={seenSet.ready}
+        freshKeys={feed.freshKeys}
+        newCount={newCount}
+        savedToday={feed.savedToday}
+        onSelect={onSelect}
+        waiting={waiting}
+        muted={muted}
+        onToggleMute={onToggleMute}
+        canPrev={canPrev}
+        canNext={canNext}
+        onPrev={goPrev}
+        onNext={goNext}
+        declutter={desktopDeclutter}
+      />
     </div>
   )
 }

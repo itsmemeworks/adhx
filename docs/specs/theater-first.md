@@ -6,17 +6,17 @@
 
 ## 1. Product summary
 
-adhx.com becomes a **theater**: you land with the hottest community post already playing full-bleed on a near-black stage, and a ~400px right rail carries the whole app — brand + Connect, the now-playing post (author, text, trend count, Send / Save / Copy), and the live **"Up next"** feed. `↓`/`↑` (swipe on mobile) chain through the feed without leaving the theater. Every post viewed is marked **seen**; the rail shows "N new since your last visit" above a caught-up divider, with seen items dimmed below it.
+adhx.com becomes a **theater**: you land with the hottest community post already playing full-bleed on a near-black stage. Desktop: full-width stage owns the post + meta/caption overlays; a bottom filmstrip dock carries transport controls, a horizontal queue of upcoming posts (current ringed clay, next labeled, seen dimmed), a "Show all" panel reopening the full vertical Up-next list, and Send/Save/Link actions. ⌘V paste-to-preview navigates any supported link. Mobile: the reel variant with top/bottom scrims, Send as primary, bottom sheet Up-next, and swipe up/down navigation. `↓`/`↑` or swipe chain through the feed without leaving the theater. Every post viewed is marked **seen**; the Up-next list shows "N new since your last visit" above a caught-up divider, with seen items dimmed below it.
 
 One mental model runs everything:
 
-| Surface                                                                                     | Same theater, different rail                                                                                                                                      |
-| ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/` signed-out                                                                              | Rail = brand + Connect + live Up-next feed                                                                                                                        |
-| Preview pages (`/{user}/status/{id}`, `/reels/{id}`, `/@{user}/video/{id}`, `/shorts/{id}`) | Same theater seeded at the shared post; "Shared post" chip + canonical URL + copy; rail feed labeled "More being sent right now"; SEO markup unchanged underneath |
-| Mobile                                                                                      | Full-bleed reel (evolution of `/trending/play`): brand on the top scrim, Send primary, Up-next bottom sheet, swipe up/down                                        |
-| Signed-in Collection                                                                        | Same theater; rail = your unread queue, actions = Keep / Done / Delete / Send, tabs Collection ↔ Live                                                             |
-| Browse (escape hatch)                                                                       | The Digg-style ranked list (round-2 design), dark, one click from the rail footer                                                                                 |
+| Surface                                                                                     | Same theater, different dock / chrome                                                                                                                     |
+| ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/` signed-out                                                                              | Desktop: full-width stage + bottom filmstrip dock (queue cards, transport, Send/Save/Link) + ⌘V paste-to-preview. Mobile: full-bleed reel + bottom sheet. |
+| Preview pages (`/{user}/status/{id}`, `/reels/{id}`, `/@{user}/video/{id}`, `/shorts/{id}`) | Same theater seeded at the shared post; "Shared post" chip, post meta pinned to stage, dock shows "More being sent right now" queue; SEO markup unchanged |
+| Mobile                                                                                      | Full-bleed reel (evolution of `/trending/play`): brand on the top scrim, Send primary, Up-next bottom sheet, swipe up/down                                |
+| Signed-in Collection                                                                        | Same theater; dock = your unread queue, actions = Keep / Done / Delete / Send, tabs Collection ↔ Live                                                     |
+| Browse (escape hatch)                                                                       | The Digg-style ranked list (round-2 design), dark, one click from the dock footer                                                                         |
 
 ## 2. Non-negotiable constraints (existing invariants)
 
@@ -32,23 +32,32 @@ One mental model runs everything:
 New directory `src/components/theater/`:
 
 ```
-TheaterShell.tsx      — full-viewport layout: <Stage/> + <Rail/>; owns current-item state,
-                        keyboard (↓/↑/esc/space/m), touch swipe, history integration
-Stage.tsx             — dark stage dispatcher: renders the variant for the current item
-StageVideo.tsx        — <video> for twitter/tiktok/instagram; poster-first; progress bar,
-                        mute state, "Tap for sound" chip
-StageYouTube.tsx      — official youtube-nocookie iframe in a CONCRETE-height container
-                        (aspect box collapses around absolute iframes — known gotcha)
-StageArticle.tsx      — cover splash → in-stage reader (articleBlocksToMarkdown output);
-                        reading-progress bar replaces the time bar
-StageText.tsx         — tweet typeset large (Newsreader) on the stage; photos reuse it
-                        with the image full-bleed (StagePhoto trivial variant)
-Rail.tsx              — brand row / shared-post row / signed-in header + NowPlaying +
-                        actions + UpNextList + footer
-UpNextList.tsx        — rail feed rows, seen divider, "next ↓" highlight
-useTheaterFeed.ts     — items + polling (see §4)
-useSeenSet.ts         — localStorage seen model (see §5)
-usePlaybackSource.ts  — per-platform src resolution + prefetch/warm (see §6)
+TheaterShell.tsx         — full-viewport layout: <Stage/> flex-1 + <DesktopDock/>/<TheaterMobileChrome/>;
+                           owns current-item state, keyboard (↓/↑/←/→/esc/space/m), touch swipe,
+                           history integration
+Stage.tsx                — dark stage dispatcher: renders the variant for the current item
+StageVideo.tsx           — <video> for twitter/tiktok/instagram; poster-first; progress bar,
+                           mute state; sound toggle via the peek-bar audio button or stage tap
+StageYouTube.tsx         — official youtube-nocookie iframe in a CONCRETE-height container
+                           (aspect box collapses around absolute iframes — known gotcha)
+StageArticle.tsx         — cover splash → in-stage reader (articleBlocksToMarkdown output);
+                           reading-progress bar replaces the time bar
+StageText.tsx            — tweet typeset large (Newsreader) on the stage; photos reuse it
+                           with the image full-bleed (StagePhoto trivial variant)
+TheaterDesktopChrome.tsx — `DesktopStageChrome` (overlays inside stage: top bar with brand + LIVE +
+                           paste-to-preview input + de-clutter; flame + platform/time chips pinned
+                           top-right; bottom-left meta overlay for video/photo; bottom-right actions)
+                           + `DesktopDock` (in-flow bottom dock: transport controls + horizontal
+                           filmstrip queue auto-scrolled to keep current visible + "Show all" panel)
+TheaterMobileChrome.tsx  — mobile reel chrome: top/bottom scrims, peek bar with transport + audio +
+                           de-clutter, swipe up/down navigation, 70dvh Up-next bottom sheet
+UpNextList.tsx           — feed rows, seen divider, "next ↓" highlight
+useTheaterFeed.ts        — items + polling (see §4)
+useSeenSet.ts            — localStorage seen model (see §5)
+usePlaybackSource.ts     — per-platform src resolution + prefetch/warm (see §6)
+useClampExpand.ts        — text clamp + show-more expand for captions + article text (shared)
+lib/theater/paste-preview.ts  — `resolvePastedLink(text)` for ⌘V → preview navigation
+types.ts                 — shared types incl. PLATFORM_LABEL
 ```
 
 Route wiring:
@@ -56,7 +65,7 @@ Route wiring:
 - `src/app/page.tsx` signed-out branch renders `TheaterShell` (server component wrapper server-renders the crawlable list + `CollectionPage`/`ItemList` JSON-LD exactly like `TrendingStaticList`, then mounts the shell seeded with the same items — no skeleton flash, same pattern as the hubs).
 - Preview pages keep their server components (metadata, JSON-LD, `recordActivity('preview')`, bot filtering) and swap the `*PreviewLanding` visual layer for `TheaterShell` seeded at the post with `mode="shared"`. The crawlable tweet `<article>` stays in the DOM (sr-only).
 - `AppShell` suppresses the global Header for `/` signed-out and preview paths (extend the existing `isFullWidth` regex).
-- Browse list: `/trending` becomes the dark ranked-list view (round-2 design restyled); the rail's "Browse as list" links there. Hubs `/trending/[filter]` unchanged.
+- Browse list: `/trending` remains the dark ranked-list view (round-2 design restyled). Hubs `/trending/[filter]` unchanged.
 - Signed-in: `/` keeps the Collection as home. The theater becomes the Collection's focus mode (replacing the current Lightbox/triage surface, keeping its keyboard map: ←→, R/U, Q/P, Keep/Delete/Done) and the **Live** tab in the rail opens the community theater. This is Phase 3; Phases 1–2 must not regress the existing authed feed.
 
 ## 4. Data
@@ -84,7 +93,7 @@ Route wiring:
 | youtube                        | official `youtube-nocookie` iframe               | no MP4 exists; appears instantly, plays on its own tap; CSP already allows it                                                                                                                                  |
 | photo / text / quote / article | Stage variants (no media pipeline)               | article body via `articleBlocksToMarkdown`                                                                                                                                                                     |
 
-- **Autoplay**: first landing has no gesture → autoplay **muted** with a persistent "Tap for sound" chip; after the first user interaction, all subsequent posts play with sound. Focus-mode convention (click-to-play-with-sound) applies once a gesture exists.
+- **Autoplay**: first landing has no gesture → autoplay **muted**; sound toggle is the rail/peek-bar audio button (pulsing while muted+playing) or tapping the stage. After the first user interaction, all subsequent posts play with sound. Focus-mode convention (click-to-play-with-sound) applies once a gesture exists.
 - **Prefetch**: current post plays; next post's source resolves in the background (IG warms, MP4s get a Range 0-1 request). Prefetch at most 1 ahead — bandwidth restraint, no cost explosion.
 - **End of video**: stop and show a replay + "↓ next" nudge. No auto-advance (fights the caught-up model); revisit after telemetry.
 - All external fetches keep `AbortSignal.timeout()`.
@@ -118,7 +127,7 @@ Rendering lives in one place: `TheaterLinkedText` (`src/components/theater/Theat
 
 ## 8. Mobile
 
-- `/` signed-out on mobile = the reel: brand + Connect on the top scrim (no close button — it's home), progress bar, "Tap for sound" chip, caption + meta on the bottom scrim, Send primary + Save + share-link, Up-next bottom sheet (peek → swipe up for the list with the seen divider). Swipe video up/down = next/prev. Evolves `/trending/play` rather than duplicating it — `/trending/play` redirects into the theater.
+- `/` signed-out on mobile = the reel: brand on the top scrim (no close button — it's home), progress bar, caption + meta on the bottom scrim, Send primary + Save + share-link, Up-next bottom sheet (peek with pulsing audio button while muted → swipe up for the list with the seen divider). Swipe video up/down = next/prev; audio toggle via peek-bar button. Evolves `/trending/play` rather than duplicating it — `/trending/play` redirects into the theater.
 - Non-video posts in the mobile feed render their stage variants full-screen (text typeset large; article cover splash → reader).
 - Tap targets ≥ 44px. No fake status bar or keyboard chrome.
 
