@@ -372,9 +372,14 @@ export function TheaterShell({
           stacked-rail layout only applies at lg+, where <Rail/> takes its
           own column instead of overlaying the stage. */}
       <div className="relative h-full w-full flex-1 overflow-hidden lg:min-w-0">
+        {/* No CSS touch-action here: `none` on this ancestor would ALSO kill
+            native scrolling/selection in descendants (touch-action intersects
+            down the tree), which broke text-post scrolling and swiping alike.
+            The JS ignore-flag + conditional preventDefault in the native
+            touchmove listener is the sole gesture arbiter. */}
         <div
           ref={stageRef}
-          className="absolute inset-0 touch-none"
+          className="absolute inset-0"
           onTouchStart={onStageTouchStart}
           onTouchEnd={onStageTouchEnd}
         >
@@ -395,6 +400,8 @@ export function TheaterShell({
           freshKeys={feed.freshKeys}
           newCount={newCount}
           onSelect={onSelect}
+          onPrev={goPrev}
+          onNext={goNext}
         />
       </div>
       <div className="hidden min-h-0 flex-1 overflow-y-auto lg:flex lg:h-full lg:flex-none">

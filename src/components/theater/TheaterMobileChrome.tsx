@@ -21,11 +21,14 @@ import {
   Check,
   LogIn,
   Flame,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
 import { MatterLogo, ConnectWithX, PlatformGlyph } from '@/components/matter'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
+import { inferType } from '@/lib/trending/filter'
 import { useSendFile } from './useSendFile'
 import { useClampExpand } from './Rail'
 import { TheaterLinkedText } from './TheaterText'
@@ -42,6 +45,9 @@ export interface TheaterMobileChromeProps {
   freshKeys: ReadonlySet<string>
   newCount: number
   onSelect: (key: string) => void
+  /** Prev/next navigation for the edge chevrons (text posts can't swipe — their body scrolls/selects). */
+  onPrev: () => void
+  onNext: () => void
 }
 
 /** Height of the collapsed sheet's peek bar — kept in sync with the transform below. */
@@ -71,6 +77,8 @@ export function TheaterMobileChrome({
   freshKeys,
   newCount,
   onSelect,
+  onPrev,
+  onNext,
 }: TheaterMobileChromeProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -131,7 +139,11 @@ export function TheaterMobileChrome({
 
   const trendCount = current ? (current.trendCount ?? current.saveCount ?? 0) : 0
   const handle = current?.author ? current.author.replace(/^@+/, '') : ''
-  const caption = (current?.text || '').trim()
+  // The stage IS the text for text/quote/article posts — repeating the body
+  // (and the author header) in the bottom scrim doubles it up and buries the
+  // stage. Those posts get a compact scrim: chip + actions only.
+  const textLike = current ? ['text', 'quote', 'article'].includes(inferType(current)) : false
+  const caption = textLike ? '' : (current?.text || '').trim()
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10 lg:hidden">
@@ -153,6 +165,28 @@ export function TheaterMobileChrome({
         )}
       </div>
 
+      {/* Prev/next chevrons on the right edge — always-available navigation
+          (swipe is ignored inside scrollable/selectable text, so text and
+          thread posts need buttons; light enough to sit over any stage). */}
+      <div className="pointer-events-auto absolute right-2 top-1/2 flex -translate-y-1/2 flex-col gap-2">
+        <button
+          type="button"
+          onClick={onPrev}
+          aria-label="Previous post"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/35 text-white/75 backdrop-blur-sm active:bg-black/55"
+        >
+          <ChevronUp size={22} />
+        </button>
+        <button
+          type="button"
+          onClick={onNext}
+          aria-label="Next post"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/35 text-white/75 backdrop-blur-sm active:bg-black/55"
+        >
+          <ChevronDown size={22} />
+        </button>
+      </div>
+
       {/* Bottom scrim: author/caption + Send / Save / Copy. Padded above the
           sheet's peek bar (opaque, themed) so the gradient tucks under it. */}
       {current && (
@@ -166,9 +200,11 @@ export function TheaterMobileChrome({
         >
           <div>
             <div className="flex items-center gap-2">
-              <span className="min-w-0 truncate text-[13px] font-semibold text-white">
-                {current.authorName || (handle ? `@${handle}` : 'Saved post')}
-              </span>
+              {!textLike && (
+                <span className="min-w-0 truncate text-[13px] font-semibold text-white">
+                  {current.authorName || (handle ? `@${handle}` : 'Saved post')}
+                </span>
+              )}
               {trendCount >= 2 && (
                 <span className="inline-flex flex-none items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-[11px] font-bold text-orange-300">
                   <Flame size={11} className="text-orange-400" fill="currentColor" />
