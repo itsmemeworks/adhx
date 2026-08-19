@@ -437,9 +437,7 @@ export function TheaterMobileChrome({
       <div
         className={cn(
           'pointer-events-auto absolute inset-x-0 bottom-0 z-20 flex h-[70dvh] flex-col overscroll-contain rounded-t-2xl shadow-[0_-8px_24px_rgba(0,0,0,.35)] backdrop-blur-md transition-[transform,background-color] duration-300 ease-out',
-          sheetOpen
-            ? 'translate-y-0 bg-surface/95'
-            : 'translate-y-[calc(100%-4.25rem)] bg-surface/70',
+          sheetOpen ? 'translate-y-0 bg-surface' : 'translate-y-[calc(100%-4.25rem)] bg-surface/70',
         )}
       >
         {/* Peek bar: drag handle on top (tap/drag toggles the sheet, as
