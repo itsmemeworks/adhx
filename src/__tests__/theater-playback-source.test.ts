@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolvePlaybackSource } from '@/components/theater/usePlaybackSource'
+import { instagramWarmSrc, resolvePlaybackSource } from '@/components/theater/usePlaybackSource'
 import type { TrendingItem } from '@/lib/trending/query'
 
 /**
@@ -58,7 +58,7 @@ describe('resolvePlaybackSource', () => {
     expect(result.src).toBe('/api/media/tiktok/video?username=bob&id=7')
   })
 
-  it('instagram → poster only (PR 1 scope), never the Twitter proxy', () => {
+  it('instagram → poster only here (StageInstagram owns the probe-gated <video>), never the Twitter proxy', () => {
     const result = resolvePlaybackSource(
       item({ platform: 'instagram', bookmarkId: 'DXVsqQ7CSXw', contentType: 'video' }),
     )
@@ -67,7 +67,7 @@ describe('resolvePlaybackSource', () => {
     expect(result.src).toBe(null)
   })
 
-  it('youtube → poster only (PR 1 scope)', () => {
+  it('youtube → poster only (no MP4 exists; official iframe only)', () => {
     const result = resolvePlaybackSource(
       item({ platform: 'youtube', bookmarkId: 'Y9aytLYBajw', contentType: 'video' }),
     )
@@ -88,5 +88,25 @@ describe('resolvePlaybackSource', () => {
   it('poster falls back to null when there is no thumbnail', () => {
     const result = resolvePlaybackSource(item({ thumbnailUrl: undefined, contentType: 'text' }))
     expect(result.poster).toBe(null)
+  })
+})
+
+describe('instagramWarmSrc', () => {
+  it('resolves the mirror proxy URL for an instagram item', () => {
+    expect(instagramWarmSrc(item({ platform: 'instagram', bookmarkId: 'DXVsqQ7CSXw' }))).toBe(
+      '/api/media/instagram/video?id=DXVsqQ7CSXw',
+    )
+  })
+
+  it('returns null for non-instagram platforms', () => {
+    expect(instagramWarmSrc(item({ platform: 'twitter', bookmarkId: '123' }))).toBe(null)
+    expect(instagramWarmSrc(item({ platform: 'tiktok', bookmarkId: '123' }))).toBe(null)
+    expect(instagramWarmSrc(item({ platform: 'youtube', bookmarkId: '123' }))).toBe(null)
+  })
+
+  it('returns null when there is no source id, or no item at all', () => {
+    expect(instagramWarmSrc(item({ platform: 'instagram', bookmarkId: undefined }))).toBe(null)
+    expect(instagramWarmSrc(item({ platform: 'instagram', bookmarkId: '' }))).toBe(null)
+    expect(instagramWarmSrc(null)).toBe(null)
   })
 })

@@ -4,6 +4,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-18 — Theater-first Phase 2: full stage matrix + mobile reel
+
+- **Why**: PR 2 of `docs/specs/theater-first.md` — every platform must actually play on the stage, and phones get the reel.
+- **What**: `StageInstagram` (probe-then-play via `probeInstagramVideo`, ≤3s spinner → "starting…", IG-embed fallback; reuses StageVideo chrome), `StageYouTube` (nocookie iframe, concrete-height box), `StageArticle` (splash → reader from `/api/share/tweet` `article.content`, dependency-free markdown parser in `src/lib/theater/article-markdown.ts`, reading-progress bar), mobile reel (full-viewport stage, swipe up/down via `swipeDirection`, top/bottom scrims + 70dvh Up-next sheet in `TheaterMobileChrome`), `useSendFile` (2s-delayed blob prefetch, `files` + `via <url>` never `url`+`files`, desktop = download), `/trending/play` → 307 `/`.
+- **Gotchas hit**: `useSendFile` is mounted twice (Rail + mobile chrome, CSS-hidden at the other breakpoint) — needs the module-level in-flight dedupe or every MP4 downloads twice; Chrome defers media-element loading in never-interacted automated tabs (looks like a stalled `<video>`, is not a product bug).
+- **State**: in-flight on `feat/theater-stage-matrix` (stacked on `feat/theater-shell`). Smoke-verified: IG probe→play with sound, YT iframe, article real-body reader, redirect. Full suite green (1330).
+- **Follow-ups**: real-device mobile pass on staging (swipe/sheet/Send share sheet on iOS); Phase 3 (preview pages as shared theater, dark /trending list, authed focus mode, AppShell header still sits under the overlay).
+
 ## 2026-08-18 — Theater-first Phase 1: signed-out `/` is the theater
 
 - **Why**: Implementing PR #316's spec (`docs/specs/theater-first.md`) — users said the live community stream is the product; theater-first won three design rounds.

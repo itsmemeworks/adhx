@@ -13,6 +13,9 @@ import { previewPath } from '@/lib/activity/preview-path'
 import { usePlaybackSource } from './usePlaybackSource'
 import { StageVideo } from './StageVideo'
 import { StageText } from './StageText'
+import { StageInstagram } from './StageInstagram'
+import { StageYouTube } from './StageYouTube'
+import { StageArticle } from './StageArticle'
 import type { TheaterItem } from './types'
 
 export interface StageProps {
@@ -36,6 +39,24 @@ export function Stage({ item, muted, onRequestUnmute, onEnded }: StageProps) {
     )
   }
 
+  // Instagram gets its own stage: the mirror MP4 must be Range-probed before
+  // a <video src> is attached (cold-cache 404s), so it can't share StageVideo.
+  if (item.platform === 'instagram') {
+    return (
+      <StageInstagram
+        item={item}
+        muted={muted}
+        onRequestUnmute={onRequestUnmute}
+        onEnded={onEnded}
+      />
+    )
+  }
+
+  // YouTube has no MP4 — official youtube-nocookie iframe only.
+  if (item.platform === 'youtube') {
+    return <StageYouTube item={item} />
+  }
+
   if (playback.kind === 'video' && playback.src) {
     return (
       <StageVideo
@@ -51,6 +72,10 @@ export function Stage({ item, muted, onRequestUnmute, onEnded }: StageProps) {
 
   const type = inferType(item)
 
+  if (type === 'article') {
+    return <StageArticle item={item} />
+  }
+
   if (type === 'photo') {
     return <StageText item={item} photo />
   }
@@ -59,8 +84,7 @@ export function Stage({ item, muted, onRequestUnmute, onEnded }: StageProps) {
     return <StageText item={item} />
   }
 
-  // instagram/youtube (their real stages land in PR 2) and articles: a
-  // graceful poster fallback — never a dead black stage.
+  // Anything unresolvable: a graceful poster fallback — never a dead black stage.
   return <StagePoster item={item} poster={playback.poster} />
 }
 

@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Check, Copy, ExternalLink, Flame, ChevronRight, LogIn } from 'lucide-react'
+import { Check, Copy, ExternalLink, Flame, ChevronRight, LogIn, Loader2, Send } from 'lucide-react'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
 import { MatterLogo, LiveDot, PlatformChip, ConnectWithX } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { previewPath } from '@/lib/activity/preview-path'
 import { UpNextList } from './UpNextList'
+import { useSendFile } from './useSendFile'
 import type { TheaterItem, TheaterMode } from './types'
 
 /**
@@ -119,6 +120,7 @@ function NowPlaying({ current }: { current: TheaterItem | null }) {
 function Actions({ mode, current }: { mode: TheaterMode; current: TheaterItem | null }) {
   const [copied, setCopied] = useState(false)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { supported: sendSupported, sending, send } = useSendFile(current)
 
   useEffect(
     () => () => {
@@ -147,20 +149,34 @@ function Actions({ mode, current }: { mode: TheaterMode; current: TheaterItem | 
 
   const buttonBase =
     'inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-hairline bg-inset px-3 text-[12.5px] font-semibold text-ink transition-colors hover:bg-surface'
+  // The emphasized (clay-grad) treatment: Save normally wears this on the home
+  // rail, but Send takes it over as the first, primary action whenever the
+  // current item has a sendable file — Save then drops to the outline style.
+  const primaryBase =
+    'inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full bg-clay-grad px-3 text-[12.5px] font-semibold text-white shadow-glow transition-opacity hover:opacity-90'
 
   return (
     <div className="flex-none border-b border-hairline px-5 py-3">
       <div className="flex items-center gap-2">
+        {sendSupported && (
+          <button
+            type="button"
+            onClick={() => void send()}
+            disabled={sending}
+            className={`${primaryBase} disabled:opacity-60`}
+          >
+            {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+            Send
+          </button>
+        )}
+
         <button type="button" onClick={handleCopy} className={buttonBase}>
           {copied ? <Check size={14} className="text-done" /> : <Copy size={14} />}
           {copied ? 'Copied' : 'Copy link'}
         </button>
 
-        {mode === 'home' ? (
-          <a
-            href="/api/auth/twitter"
-            className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full bg-clay-grad px-3 text-[12.5px] font-semibold text-white shadow-glow transition-opacity hover:opacity-90"
-          >
+        {mode === 'home' && !sendSupported ? (
+          <a href="/api/auth/twitter" className={primaryBase}>
             <LogIn size={14} />
             Save
           </a>

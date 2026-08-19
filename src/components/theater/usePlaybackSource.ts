@@ -1,13 +1,14 @@
 'use client'
 
 /**
- * Per-platform playback resolution for a theater item (spec §6). PR 1 scope:
- * twitter + tiktok MP4 via `reelVideoSrc` (the video-src SSOT — never inline
- * a per-platform URL here, that's the regression that made Instagram fall
+ * Per-platform playback resolution for a theater item (spec §6). Twitter +
+ * tiktok MP4 via `reelVideoSrc` (the video-src SSOT — never inline a
+ * per-platform URL here, that's the regression that made Instagram fall
  * through to the Twitter proxy repeatedly); instagram/youtube resolve to
- * `poster` for now (their real stages — the IG Range-probe warm path and the
- * YouTube iframe — land in PR 2); everything else (photo/text/quote/article)
- * needs no media pipeline at all.
+ * `poster` here — instagram's real playback is a Range-probe-gated `<video>`
+ * that only `StageInstagram` renders (never attach `<video src>` on the
+ * mirror before the probe confirms 200/206, spec §6/§11), and youtube has no
+ * MP4 at all (official iframe only).
  *
  * The resolution itself is exported as a pure function (`resolvePlaybackSource`)
  * so it's unit-testable without React; the hook is a thin `useMemo` wrapper.
@@ -15,6 +16,7 @@
 
 import { useMemo } from 'react'
 import { reelVideoSrc } from '@/components/feed/video-src'
+import { instagramVideoSrc } from '@/lib/media/instagram-playback'
 import type { TheaterItem } from './types'
 
 export interface PlaybackSource {
@@ -45,16 +47,37 @@ export function usePlaybackSource(item: TheaterItem | null): PlaybackSource {
   return useMemo(() => resolvePlaybackSource(item), [item])
 }
 
-/** Fire-and-forget warm of the NEXT item's source (Range 0-1). At most 1 ahead. */
+/**
+ * The Instagram mirror URL to warm for this item, or null when the item
+ * isn't an Instagram post (or has no source id yet). Pure — exported
+ * separately from `prefetchPlayback` so the warm-target resolution is
+ * testable without a `fetch`/`window`.
+ */
+export function instagramWarmSrc(item: TheaterItem | null): string | null {
+  if (!item || item.platform !== 'instagram' || !item.bookmarkId) return null
+  return instagramVideoSrc(item.bookmarkId)
+}
+
+/**
+ * Fire-and-forget warm of a source (Range 0-1). For twitter/tiktok this is
+ * the MP4 proxy; for instagram it's the vxinstagram mirror — its cold cache
+ * can take 10–20s (see `instagram-playback.ts`), so warming early is what
+ * makes the probe in `StageInstagram` usually resolve fast instead of
+ * showing the "starting…" state. At most 1 item ahead (bandwidth restraint).
+ */
 export function prefetchPlayback(item: TheaterItem | null): void {
   if (typeof window === 'undefined' || !item) return
-  const source = resolvePlaybackSource(item)
-  if (source.kind !== 'video' || !source.src) return
-  fetch(source.src, {
+
+  const warmSrc = instagramWarmSrc(item)
+  const source = warmSrc ? null : resolvePlaybackSource(item)
+  const src = warmSrc ?? (source?.kind === 'video' ? source.src : null)
+  if (!src) return
+
+  fetch(src, {
     headers: { Range: 'bytes=0-1' },
     signal: AbortSignal.timeout(10_000),
   }).catch(() => {
     // Best-effort warm — a failed prefetch just means the real request (on
-    // play) pays the cold-start cost instead.
+    // play, or the probe) pays the cold-start cost instead.
   })
 }
