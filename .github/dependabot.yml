@@ -6,9 +6,23 @@ updates:
       interval: 'weekly'
     target-branch: 'main'
     open-pull-requests-limit: 10
+    # Grouped updates: one PR per group instead of one per package — separate
+    # per-package PRs all edit pnpm-lock.yaml from the same base, so merging
+    # one invalidates the rest (each then needs a rebase + CI round). A group
+    # regenerates a single coherent lockfile. Majors for production deps stay
+    # individual PRs so breaking changes get their own review.
+    groups:
+      dev-dependencies:
+        dependency-type: 'development'
+      production-minor-patch:
+        dependency-type: 'production'
+        update-types: ['minor', 'patch']
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
       interval: 'weekly'
     target-branch: 'main'
     open-pull-requests-limit: 10
+    groups:
+      actions:
+        patterns: ['*']
