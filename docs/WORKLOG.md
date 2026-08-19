@@ -11,7 +11,7 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - **Verified**: SEO byte-diff of all 4 preview page types vs pre-change snapshots — JSON-LD/OG identical (only live engagement counts moved); authed flow tested with a forged local session (Done → read_status persisted, streak ticked).
 - **Gotchas**: `TrendingItem.url` is the ON-ADHX path, not the source URL — saves must reconstruct via `sourceUrl()`; importing from TrendingStaticList into a client component drags better-sqlite3 into the bundle; CLAUDE.md's old Lightbox/Q/P/R/U keyboard prose was stale (that component no longer existed) — docs fixed.
 - **State**: in-flight on `feat/theater-phase3` (stacked on `feat/theater-stage-matrix`). Full suite green.
-- **Follow-ups**: staging pass on real devices; TriageMode.tsx + DiscoverFeed.tsx + *PreviewLanding now unmounted — deletion candidates for a cleanup PR once the theater sticks; mobile chrome lacks a "Shared post" indicator (parity nit).
+- **Follow-ups**: staging pass on real devices; TriageMode.tsx + DiscoverFeed.tsx + \*PreviewLanding now unmounted — deletion candidates for a cleanup PR once the theater sticks; mobile chrome lacks a "Shared post" indicator (parity nit).
 
 ## 2026-08-18 — Theater-first Phase 2: full stage matrix + mobile reel
 
