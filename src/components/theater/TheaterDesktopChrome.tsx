@@ -132,6 +132,17 @@ export function SavePostButton({
     setStatus('idle')
   }, [key])
 
+  // The shell completes a deferred ?save=1 save (post-sign-in) itself and
+  // announces it here so the button reflects reality without owning the flow.
+  useEffect(() => {
+    function handleSaved(e: Event) {
+      const detail = (e as CustomEvent<{ key?: string }>).detail
+      if (detail?.key === key) setStatus('saved')
+    }
+    window.addEventListener('theater-post-saved', handleSaved)
+    return () => window.removeEventListener('theater-post-saved', handleSaved)
+  }, [key])
+
   useEffect(
     () => () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
