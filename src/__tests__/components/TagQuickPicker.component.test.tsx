@@ -121,6 +121,26 @@ describe('TagQuickPicker Component', () => {
     await waitFor(() => expect(screen.getByText('#claude-cod')).toBeTruthy())
   })
 
+  it('dispatches bookmark-tags-changed with the full updated tag list on toggle', async () => {
+    render(<TagQuickPicker platform="twitter" bookmarkId="tw1" open={true} onClose={vi.fn()} />)
+
+    await waitFor(() => expect(screen.getByText('#reading')).toBeTruthy())
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+    fireEvent.click(screen.getByText('#reading'))
+
+    await waitFor(() => {
+      const changeEvent = dispatchSpy.mock.calls
+        .map((call) => call[0] as CustomEvent)
+        .find((e) => e.type === 'bookmark-tags-changed')
+      expect(changeEvent).toBeDefined()
+      expect(changeEvent?.detail).toEqual({
+        platform: 'twitter',
+        bookmarkId: 'tw1',
+        tags: ['work', 'reading'],
+      })
+    })
+  })
+
   it('calls onClose on Escape', async () => {
     const onClose = vi.fn()
     render(<TagQuickPicker platform="twitter" bookmarkId="tw1" open={true} onClose={onClose} />)

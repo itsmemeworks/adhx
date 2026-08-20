@@ -604,6 +604,21 @@ function FeedPageContent(): React.ReactElement {
     fetchFeed(true)
   }, [searchParams]) // Only run when searchParams changes
 
+  // Preselect a tag from `?tag=` — the `/tags` screen's "View" action
+  // (unified-theater-triage.md §4). Applied once on arrival via a ref guard:
+  // unlike filter/sort/etc above, `selectedTags` has no URL round-trip (the
+  // writer effect below never sets/clears `tag`), so continuously re-reading
+  // it on every searchParams change would silently undo an explicit "clear
+  // tag filter" click made afterward.
+  const tagParamAppliedRef = useRef(false)
+  useEffect(() => {
+    if (tagParamAppliedRef.current) return
+    const urlTag = searchParams.get('tag')
+    if (!urlTag) return
+    tagParamAppliedRef.current = true
+    setSelectedTags([urlTag])
+  }, [searchParams])
+
   // Header's Collection/Live nav (unified-theater-triage.md §1) dispatches
   // `open-theater` with `{ tab: 'triage' | 'live' }` for both the Triage
   // pill and the Live nav item — open the triage overlay on the matching

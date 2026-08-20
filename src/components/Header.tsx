@@ -15,6 +15,7 @@ import {
   Bookmark,
   Radio,
   LogOut,
+  Tag,
 } from 'lucide-react'
 import { useTheme } from '@/lib/theme/context'
 import { cn } from '@/lib/utils'
@@ -405,6 +406,15 @@ export function Header() {
                 >
                   Live
                 </button>
+                <Link
+                  href="/tags"
+                  className={cn(
+                    'rounded-full px-3 py-1.5 font-semibold transition-colors',
+                    pathname === '/tags' ? 'bg-clay/[0.12] text-clay' : 'text-ink-2 hover:text-ink',
+                  )}
+                >
+                  Tags
+                </Link>
               </nav>
             )}
           </div>
@@ -569,6 +579,19 @@ export function Header() {
                           <Radio className="w-4 h-4" />
                           Live
                         </button>
+                        <Link
+                          href="/tags"
+                          onClick={() => setShowUserMenu(false)}
+                          className={cn(
+                            'flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset transition-colors',
+                            pathname === '/tags'
+                              ? 'font-semibold text-clay'
+                              : 'text-ink-2 hover:text-ink',
+                          )}
+                        >
+                          <Tag className="w-4 h-4" />
+                          Tags
+                        </Link>
                         <Link
                           href="/settings"
                           onClick={() => setShowUserMenu(false)}

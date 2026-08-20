@@ -142,6 +142,24 @@ describe('Header', () => {
     expect(liveEvent?.detail).toEqual({ tab: 'live' })
   })
 
+  it('shows a Tags nav link (top bar + avatar menu)', async () => {
+    mockFetch(true)
+    render(<Header />)
+    await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
+
+    // Desktop primary nav
+    const navTagsLink = screen.getByRole('link', { name: 'Tags' })
+    expect(navTagsLink).toHaveAttribute('href', '/tags')
+
+    // Avatar menu also carries a Tags entry
+    const avatarButtons = screen.getAllByRole('button')
+    const avatarButton = avatarButtons.find((btn) => btn.className.includes('rounded-full'))
+    avatarButton!.click()
+
+    const menuTagsLinks = screen.getAllByRole('link', { name: 'Tags' })
+    expect(menuTagsLinks.some((l) => l.getAttribute('href') === '/tags')).toBe(true)
+  })
+
   it('dispatches open-theater {tab: "triage"} plus the legacy open-triage event from the Triage pill', async () => {
     mockFetch(true)
     render(<Header />)

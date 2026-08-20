@@ -120,13 +120,11 @@ export function TagQuickPicker({
 
   async function toggleTag(tag: string): Promise<void> {
     const wasChecked = checked.has(tag)
+    const nextChecked = new Set(checked)
+    if (wasChecked) nextChecked.delete(tag)
+    else nextChecked.add(tag)
     setError(null)
-    setChecked((prev) => {
-      const next = new Set(prev)
-      if (wasChecked) next.delete(tag)
-      else next.add(tag)
-      return next
-    })
+    setChecked(nextChecked)
     try {
       const res = await fetch(
         `/api/bookmarks/${encodeURIComponent(bookmarkId)}/tags?platform=${encodeURIComponent(platform)}`,
@@ -146,6 +144,14 @@ export function TagQuickPicker({
             : [...prev, { tag, count: 1 }],
         )
       }
+      // Announce the post's full updated tag list (unified-theater-triage.md
+      // §4/§B) so any open triage queue can patch its snapshot without a
+      // refetch — see TheaterShell's `bookmark-tags-changed` listener.
+      window.dispatchEvent(
+        new CustomEvent('bookmark-tags-changed', {
+          detail: { platform, bookmarkId, tags: Array.from(nextChecked) },
+        }),
+      )
     } catch {
       // Revert on failure.
       setChecked((prev) => {

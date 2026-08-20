@@ -66,6 +66,8 @@ export interface TheaterTriageChrome {
   onDelete: () => void
   /** Open the TagQuickPicker for the current item (Collection tab only). */
   onTag: () => void
+  /** Current Collection-tab item's tags (unified-theater-triage.md §B) — display-only chip rendering, kept live by TheaterShell's `bookmark-tags-changed` listener. Undefined/empty renders nothing. */
+  tags?: string[]
   /** Save the current Live-tab item to the collection. */
   onSave: (item: TheaterItem) => void
   savedKeys: ReadonlySet<string>
