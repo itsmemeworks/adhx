@@ -4,6 +4,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-20 — Live-review fixes + tags screen (PRs #337/#338)
+
+- **Why**: User tested the unified theater on staging and reported: invisible active label on the Collection/Live switcher, already-saved posts showing "Save" in the live tab, triage twitter video rendering tiny, live-saves needing a reload to appear in the collection tab, tags invisible after tagging, and no home for tag collections.
+- **What (#337)**: switcher active pill hardcodes dark ink (`text-ink` flips light in dark theme); shell bulk-seeds `savedKeys` from `/api/feed?id=…` + SavePostButton cached per-post lookup; triage twitter video sized via dvh (VideoPlayer wraps `<video>` in a height-less div — % heights collapse; bug predates the port); live-saves append into the open triage queue. Plus the CI "database is locked" root fix: the sqlite busy handler is now armed BEFORE the WAL pragma (constructor `timeout`), which was killing parallel `next build` page-data workers on fresh CI dbs.
+- **What (#338)**: `/tags` screen (count, PUBLIC chip, copyable share URL, View `/?tag=`, Share as theater, Open, Make private), Tags in the nav (desktop bar + avatar menu), `bookmark-tags-changed` event from TagQuickPicker → open triage queue patches + `#tag` chips in both chromes (text posts get a standalone row — no media overlay), `?tag=` deep links.
+- **State**: both merged to main, deployed to staging, Chrome-verified. Production still pending the user's call.
+- **Follow-ups**: `resolvePastedLink` returns null for canonical TikTok URLs (verify+widen); triage live tab briefly shows "Loading…" on first open (no SSR seed).
+
 ## 2026-08-20 — Nav simplification, theater avatar, tags create/fill, paste-first add
 
 - **Why**: Live user review after the accounts launch — one theater UX everywhere, nav down to Collection · Live, tags as the organizing tool (spec: `docs/specs/unified-theater-triage.md`).
