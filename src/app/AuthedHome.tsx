@@ -17,7 +17,7 @@ import {
 } from '@/components/feed'
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { Loader2, CheckCircle2 } from 'lucide-react'
+import { Loader2, CheckCircle2, MessageSquare } from 'lucide-react'
 import { TheaterShell } from '@/components/theater/TheaterShell'
 import type { TriageTab } from '@/components/theater/types'
 import { PasteToPreview } from '@/components/PasteToPreview'
@@ -103,6 +103,10 @@ function FeedPageContent(): React.ReactElement {
   // Set when arriving via `?triage=1` (e.g. the Triage pill pressed on /discover);
   // opens the focus queue once the feed has loaded.
   const [pendingTriage, setPendingTriage] = useState(false)
+  // Set when arriving via `?live=1` (e.g. the Header's Live nav pressed from
+  // a page other than `/`, which has no `open-theater` listener of its own);
+  // opens the theater on the Live tab once authenticated.
+  const [pendingLive, setPendingLive] = useState(false)
   const prevLoadingRef = useRef(false)
   // Track seen item IDs for O(1) duplicate detection during sync streaming
   const seenItemIdsRef = useRef<Set<string>>(new Set())
@@ -651,6 +655,26 @@ function FeedPageContent(): React.ReactElement {
     startTriageAll()
   }, [pendingTriage, isAuthenticated, startTriageAll])
 
+  // `?live=1` — the Live nav item was pressed from a route other than `/`
+  // (Header's `open-theater` event has no listener outside the feed page),
+  // so we navigated here to open the theater's Live tab. Flag it, then clear
+  // the param — mirrors the ?triage=1 handling above.
+  useEffect(() => {
+    if (searchParams.get('live') !== '1') return
+    setPendingLive(true)
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('live')
+    const qs = params.toString()
+    router.replace(qs ? `?${qs}` : '/', { scroll: false })
+  }, [searchParams, router])
+
+  // Arrived via ?live=1 — open the theater on the Live tab once authenticated.
+  useEffect(() => {
+    if (!pendingLive || isAuthenticated !== true) return
+    setPendingLive(false)
+    startTriageAll('live')
+  }, [pendingLive, isAuthenticated, startTriageAll])
+
   // Drop/mark items the triage mode resolved, keeping the feed in sync.
   const handleTriageResolved = useCallback(
     (id: string, action: 'archive' | 'delete') => {
@@ -886,7 +910,7 @@ function FeedPageContent(): React.ReactElement {
                         </div>
                       ) : (
                         <div className="w-16 h-16 rounded-lg flex-shrink-0 bg-inset flex items-center justify-center">
-                          <span className="text-2xl">💬</span>
+                          <MessageSquare className="w-6 h-6 text-ink-3" />
                         </div>
                       )}
                       {/* Content */}

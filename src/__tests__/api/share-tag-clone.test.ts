@@ -433,6 +433,8 @@ describe('API: /api/share/tag/by-name/[username]/[tag]/clone', () => {
       refreshToken: 'refresh',
       expiresAt: Date.now() + 100000,
     })
+    // Canonical users row (accounts migration) — username lookups read this first
+    await testInstance.db.insert(schema.users).values({ id: USER_B, username: SOURCE_USERNAME })
   })
 
   afterEach(() => {

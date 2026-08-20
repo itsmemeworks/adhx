@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { tagShares, bookmarkTags, bookmarks, bookmarkMedia, oauthTokens } from '@/lib/db/schema'
+import { getUserIdForUsername } from '@/lib/users/lookup'
+import { tagShares, bookmarkTags, bookmarks, bookmarkMedia } from '@/lib/db/schema'
 import { eq, and, inArray, desc } from 'drizzle-orm'
 import { resolveMediaUrl, getShareableUrl, getThumbnailUrl } from '@/lib/media/fxembed'
 
@@ -15,12 +16,10 @@ export async function GET(
   try {
     const { username, tag: tagName } = await params
 
-    // Find user by username
-    const [user] = await db
-      .select({ userId: oauthTokens.userId })
-      .from(oauthTokens)
-      .where(eq(oauthTokens.username, username))
-      .limit(1)
+    // Find user by username (users-table-first — email-only accounts have no
+    // oauth_tokens row)
+    const ownerId = await getUserIdForUsername(username)
+    const user = ownerId ? { userId: ownerId } : null
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })

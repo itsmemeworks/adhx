@@ -33,7 +33,7 @@ describe('SignInModal', () => {
         open
         onClose={vi.fn()}
         title="Save this to your collection"
-        subtitle="12 posts from claude-code, curated by @weedauwl — keep them in your pile."
+        subtitle="12 posts from claude-code, curated by @weedauwl — keep them in your collection."
       />,
     )
     expect(screen.getByText('Save this to your collection')).toBeInTheDocument()

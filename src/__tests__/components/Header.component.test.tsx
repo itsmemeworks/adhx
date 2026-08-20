@@ -9,12 +9,18 @@
  * actual signed-out surfaces). This test guards against it reappearing here.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { Header } from '@/components/Header'
 
+// Mutable so individual tests can simulate being on a route other than `/`
+// (e.g. /tags) — real usePathname() would return whatever route Header is
+// mounted under.
+let mockPathname = '/'
+const pushSpy = vi.fn()
+
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn(), refresh: vi.fn() }),
-  usePathname: () => '/',
+  useRouter: () => ({ push: pushSpy, replace: vi.fn(), prefetch: vi.fn(), refresh: vi.fn() }),
+  usePathname: () => mockPathname,
   useSearchParams: () => new URLSearchParams(),
 }))
 
@@ -27,7 +33,7 @@ function jsonResponse(body: unknown) {
   return Promise.resolve({ ok: true, json: () => Promise.resolve(body) } as Response)
 }
 
-function mockFetch(authenticated: boolean) {
+function mockFetch(authenticated: boolean, xConnected = true) {
   global.fetch = vi.fn((input: RequestInfo | URL) => {
     const url = typeof input === 'string' ? input : input.toString()
     if (url.startsWith('/api/auth/twitter/status')) {
@@ -43,8 +49,10 @@ function mockFetch(authenticated: boolean) {
           ? {
               authenticated: true,
               user: { id: '1', username: 'tester', displayName: 'tester', avatarUrl: null },
-              identities: { x: { username: 'tester' }, email: null },
-              xConnected: true,
+              identities: xConnected
+                ? { x: { username: 'tester' }, email: null }
+                : { x: null, email: { email: 'tester@example.com' } },
+              xConnected,
             }
           : {
               authenticated: false,
@@ -68,6 +76,8 @@ describe('Header', () => {
     vi.clearAllMocks()
     localStorage.clear()
     sessionStorage.clear()
+    mockPathname = '/'
+    pushSpy.mockClear()
   })
 
   it('renders nothing (no GitHub link) when signed out', async () => {
@@ -152,9 +162,13 @@ describe('Header', () => {
     expect(navTagsLink).toHaveAttribute('href', '/tags')
 
     // Avatar menu also carries a Tags entry
+    // Distinguish from the Triage pill and mobile search icon, which also
+    // carry `rounded-full` — the avatar toggle is the only 33px round button.
+    // Use fireEvent (not a raw `.click()`) so the resulting setState is
+    // flushed before we assert on the menu contents.
     const avatarButtons = screen.getAllByRole('button')
-    const avatarButton = avatarButtons.find((btn) => btn.className.includes('rounded-full'))
-    avatarButton!.click()
+    const avatarButton = avatarButtons.find((btn) => btn.className.includes('w-[33px]'))
+    fireEvent.click(avatarButton!)
 
     const menuTagsLinks = screen.getAllByRole('link', { name: 'Tags' })
     expect(menuTagsLinks.some((l) => l.getAttribute('href') === '/tags')).toBe(true)
@@ -175,5 +189,74 @@ describe('Header', () => {
       .map((call) => call[0] as CustomEvent)
       .find((e) => e.type === 'open-theater')
     expect(theaterEvent?.detail).toEqual({ tab: 'triage' })
+  })
+
+  it('navigates to /?live=1 instead of dispatching when Live is clicked off the feed page', async () => {
+    mockPathname = '/tags'
+    mockFetch(true)
+    render(<Header />)
+    await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
+
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+    screen.getByRole('button', { name: 'Live' }).click()
+
+    expect(pushSpy).toHaveBeenCalledWith('/?live=1')
+    const liveEvent = dispatchSpy.mock.calls
+      .map((call) => call[0] as CustomEvent)
+      .find((e) => e.type === 'open-theater')
+    expect(liveEvent).toBeUndefined()
+  })
+
+  it('navigates to /?live=1 from the avatar menu entry too when off the feed page', async () => {
+    mockPathname = '/tags'
+    mockFetch(true)
+    render(<Header />)
+    await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
+
+    // Distinguish from the Triage pill and mobile search icon, which also
+    // carry `rounded-full` — the avatar toggle is the only 33px round button.
+    // Use fireEvent (not a raw `.click()`) so the resulting setState is
+    // flushed before we assert on the menu contents.
+    const avatarButtons = screen.getAllByRole('button')
+    const avatarButton = avatarButtons.find((btn) => btn.className.includes('w-[33px]'))
+    fireEvent.click(avatarButton!)
+
+    const menuLiveButton = screen.getAllByRole('button', { name: 'Live' })[0]
+    menuLiveButton.click()
+
+    expect(pushSpy).toHaveBeenCalledWith('/?live=1')
+  })
+
+  it('hides "Sync bookmarks" in the avatar menu for an email-only account (no X connected)', async () => {
+    mockFetch(true, false)
+    render(<Header />)
+    await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
+
+    // Distinguish from the Triage pill and mobile search icon, which also
+    // carry `rounded-full` — the avatar toggle is the only 33px round button.
+    // Use fireEvent (not a raw `.click()`) so the resulting setState is
+    // flushed before we assert on the menu contents.
+    const avatarButtons = screen.getAllByRole('button')
+    const avatarButton = avatarButtons.find((btn) => btn.className.includes('w-[33px]'))
+    fireEvent.click(avatarButton!)
+
+    expect(screen.queryByText('Sync bookmarks')).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Sync in /)).not.toBeInTheDocument()
+  })
+
+  it('shows "Sync bookmarks" in the avatar menu for an X-connected account', async () => {
+    mockFetch(true, true)
+    render(<Header />)
+    await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
+
+    // Distinguish from the Triage pill and mobile search icon, which also
+    // carry `rounded-full` — the avatar toggle is the only 33px round button.
+    // Use fireEvent (not a raw `.click()`) so the resulting setState is
+    // flushed before we assert on the menu contents.
+    const avatarButtons = screen.getAllByRole('button')
+    const avatarButton = avatarButtons.find((btn) => btn.className.includes('w-[33px]'))
+    fireEvent.click(avatarButton!)
+
+    expect(screen.getByText('Sync bookmarks')).toBeInTheDocument()
   })
 })

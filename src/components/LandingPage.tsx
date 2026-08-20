@@ -193,7 +193,7 @@ export function LandingPage() {
 
             <p className="text-[15px] min-[860px]:text-[17px] text-ink-2 leading-[1.55] mb-7 max-w-[440px]">
               Watch a Reel, TikTok, Short or tweet and send the file — friends don&apos;t need the
-              app. Login is for keeping a pile, not for the useful loop.
+              app. Login is for keeping a collection, not for the useful loop.
             </p>
 
             <div className="flex flex-wrap items-center gap-3.5">
@@ -326,7 +326,7 @@ export function LandingPage() {
             <ValueProp
               icon={<Zap className="w-5 h-5" />}
               title="Triage, don't doomscroll"
-              body="Swipe through the pile one card at a time. Keep, clear, or admit you'll never watch it."
+              body="Swipe through your collection one card at a time. Keep, clear, or admit you'll never watch it."
             />
             <ValueProp
               icon={<Search className="w-5 h-5" />}
@@ -414,7 +414,7 @@ function HowItWorks() {
     },
     {
       icon: <Bookmark className="w-[17px] h-[17px]" />,
-      h: 'Keep a pile, later',
+      h: 'Keep a collection, later',
       b: 'Sign in if you want a private collection of things you will never rewatch. Optional. Honored.',
     },
   ]

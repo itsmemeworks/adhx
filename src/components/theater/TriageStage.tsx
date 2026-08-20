@@ -30,6 +30,25 @@ function durationSecondsOf(item: FeedItem): number | undefined {
   return typeof ms === 'number' && ms > 0 ? ms / 1000 : undefined
 }
 
+/** Subtle tag-chip row (unified-theater-triage.md §B) for the text/quote
+ * stage branches — display-only, nothing renders without tags. Muted styling
+ * so it reads as metadata, not another CTA. */
+function TriageTagChips({ tags }: { tags?: string[] }) {
+  if (!tags || tags.length === 0) return null
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {tags.map((t) => (
+        <span
+          key={t}
+          className="flex-none rounded-full border border-white/12 bg-white/[.06] px-2 py-0.5 text-[10.5px] text-white/55"
+        >
+          #{t}
+        </span>
+      ))}
+    </div>
+  )
+}
+
 /** Minimal inline quote card for the stage — dark-themed, compact. There is no
  * exported `QuoteCard` (the equivalent view in `MediaCard.tsx` is a private,
  * light-surface-only component), so this is a small purpose-built variant. */
@@ -65,12 +84,16 @@ export interface TriageStageProps {
   feedItem: FeedItem
   muted: boolean
   onRequestUnmute: () => void
+  /** Current item's tags (unified-theater-triage.md §B), for the text/quote
+   * branches below — media posts get their chips from the chrome's bottom-left
+   * overlay instead, which already sits over the content. */
+  tags?: string[]
 }
 
 /** Dispatches the right stage variant for the current triage `FeedItem`,
  * converting to `TheaterItem` for the read-only theater stages and using
  * `VideoPlayer` (HLS-aware) directly for twitter video. */
-export function TriageStage({ feedItem, muted, onRequestUnmute }: TriageStageProps) {
+export function TriageStage({ feedItem, muted, onRequestUnmute, tags }: TriageStageProps) {
   const theaterItem = feedItemToTheaterItem(feedItem)
   const platform = feedItem.platform ?? 'twitter'
   const primary = feedItem.media?.[0]
@@ -130,14 +153,39 @@ export function TriageStage({ feedItem, muted, onRequestUnmute }: TriageStagePro
     return (
       <div className="flex h-full w-full flex-col items-center justify-center overflow-y-auto bg-[#08070a] px-6 py-10 sm:px-10">
         <StageText item={theaterItem} hideTweetLinks />
+        {/* Same "w-full max-w-2xl" sibling pattern TriageQuoteCard below uses
+            to match the text column's width inside this flex-col parent —
+            keeps the chip row left-aligned with the post text, not pinned to
+            a viewport corner. */}
+        {tags && tags.length > 0 && (
+          <div className="mt-4 w-full max-w-2xl">
+            <TriageTagChips tags={tags} />
+          </div>
+        )}
         <TriageQuoteCard item={feedItem} />
       </div>
     )
   }
 
-  return <StageText item={theaterItem} />
+  return (
+    <div className="relative h-full w-full">
+      <StageText item={theaterItem} />
+      {/* StageText centers its own `max-w-2xl` text column via `flex
+          justify-center` + `px-6 sm:px-10` on a full-bleed wrapper. Mirroring
+          that exact recipe here — independently, as a sibling overlay —
+          lands this row's `max-w-2xl` box at the same horizontal position as
+          StageText's, without needing to reach into StageText itself. */}
+      {tags && tags.length > 0 && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-6 flex justify-center px-6 sm:px-10">
+          <div className="pointer-events-auto w-full max-w-2xl">
+            <TriageTagChips tags={tags} />
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 /** Re-exported so callers never need to import the generic `<Stage/>` just to
- * fall back to it for the triage "Pile clear" / null-item case. */
+ * fall back to it for the triage "All caught up" / null-item case. */
 export { Stage }

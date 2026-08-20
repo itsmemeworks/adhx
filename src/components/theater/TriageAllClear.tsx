@@ -10,18 +10,18 @@
 
 import { Flame, PartyPopper } from 'lucide-react'
 
-export interface TriagePileClearProps {
+export interface TriageAllClearProps {
   total: number
   streak: { current: number; longest: number }
   onClose: () => void
 }
 
-export function TriagePileClear({ total, streak, onClose }: TriagePileClearProps) {
+export function TriageAllClear({ total, streak, onClose }: TriageAllClearProps) {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-[#08070a] px-6 text-center">
       <PartyPopper className="h-10 w-10 text-clay" />
       <h2 className="font-serif text-2xl leading-tight text-white sm:text-3xl">
-        {total > 0 ? 'Pile clear 🎉' : 'Nothing to triage'}
+        {total > 0 ? 'All caught up' : 'Nothing to triage'}
       </h2>
       {total > 0 ? (
         <p className="text-sm text-white/60">

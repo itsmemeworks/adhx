@@ -236,24 +236,82 @@ export function FilterBar({
   return (
     <div className="sticky top-0 z-30 bg-paper/95 backdrop-blur-sm border-b border-hairline">
       <div className="flex items-center gap-2 px-4 sm:px-[26px] py-3 overflow-x-auto scrollbar-hide">
-        {/* Type filter pills */}
-        {FILTER_OPTIONS.map((opt) => {
-          const active = filter === opt.value
-          return (
+        {/* Left side: type filter pills, OR — while a tag is selected — the
+            tag's identity + actions (formerly a separate toolbar row below
+            the filter bar, now folded into it). Type filtering is
+            deliberately dropped while a tag is active; clearing the tag (✕)
+            or deselecting it via the Tags dropdown restores the pills. */}
+        {selectedTag ? (
+          <div className="flex flex-shrink-0 items-center gap-3">
+            <span className="min-w-0 truncate text-[17px] font-bold text-ink">#{selectedTag}</span>
+            <span className="flex-none font-mono text-[12px] text-ink-3">
+              {selectedTagInfo?.count ?? 0} post{selectedTagInfo?.count === 1 ? '' : 's'}
+            </span>
+            {selectedTagInfo?.isPublic && (
+              <span className="flex-none rounded-full bg-done/15 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-done">
+                Public
+              </span>
+            )}
+            {copiedLabel && (
+              <span className="flex flex-none items-center gap-1.5 whitespace-nowrap rounded-full bg-inset px-2.5 py-1 font-mono text-[11px] text-ink-2">
+                <Check size={12} className="text-done" />
+                {copiedLabel} copied
+              </span>
+            )}
+            {onTagSelectChange && (
+              <button
+                type="button"
+                onClick={() => onTagSelectChange(tagSelect === selectedTag ? null : selectedTag)}
+                className={cn(
+                  'flex-shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-[7px] text-[13px] font-semibold transition-colors',
+                  tagSelect === selectedTag
+                    ? 'bg-done/15 text-done'
+                    : 'bg-surface border border-hairline text-ink-2 hover:text-ink',
+                )}
+              >
+                <ListChecks size={13} />
+                {tagSelect === selectedTag ? 'Done adding' : 'Add posts'}
+              </button>
+            )}
             <button
-              key={opt.value}
-              onClick={() => onFilterChange(opt.value)}
-              className={cn(
-                'flex-shrink-0 px-3.5 py-[7px] rounded-full text-[13.5px] font-semibold whitespace-nowrap transition-all duration-150',
-                active
-                  ? 'bg-clay-grad text-white shadow-glow'
-                  : 'bg-surface border border-hairline text-ink-2 hover:text-ink',
-              )}
+              type="button"
+              onClick={() => void handleShareAsTheater(selectedTag)}
+              disabled={sharing}
+              className="flex-shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-clay-grad px-3.5 py-[7px] text-[13px] font-semibold text-white shadow-glow transition-opacity hover:opacity-90 disabled:opacity-60"
             >
-              {opt.label}
+              <Repeat size={13} />
+              Share as theater
             </button>
-          )
-        })}
+            {onSelectedTagsChange && (
+              <button
+                type="button"
+                onClick={() => onSelectedTagsChange([])}
+                aria-label="Clear tag filter"
+                className="flex-none text-ink-3 transition-colors hover:text-ink"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+        ) : (
+          FILTER_OPTIONS.map((opt) => {
+            const active = filter === opt.value
+            return (
+              <button
+                key={opt.value}
+                onClick={() => onFilterChange(opt.value)}
+                className={cn(
+                  'flex-shrink-0 px-3.5 py-[7px] rounded-full text-[13.5px] font-semibold whitespace-nowrap transition-all duration-150',
+                  active
+                    ? 'bg-clay-grad text-white shadow-glow'
+                    : 'bg-surface border border-hairline text-ink-2 hover:text-ink',
+                )}
+              >
+                {opt.label}
+              </button>
+            )
+          })
+        )}
 
         {/* Spacer */}
         <div className="flex-1 min-w-2" />
@@ -511,65 +569,6 @@ export function FilterBar({
           </span>
         </button>
       </div>
-
-      {/* Selected-tag toolbar: shown while a specific tag is selected — count,
-          Public status, and the "Share as theater" flow that publishes the
-          tag and copies its `/t/{username}/{tag}` link. */}
-      {selectedTag && (
-        <div className="flex items-center gap-3 border-t border-hairline px-4 py-2.5 sm:px-[26px]">
-          <span className="min-w-0 truncate text-[17px] font-bold text-ink">#{selectedTag}</span>
-          <span className="flex-none font-mono text-[12px] text-ink-3">
-            {selectedTagInfo?.count ?? 0} post{selectedTagInfo?.count === 1 ? '' : 's'}
-          </span>
-          {selectedTagInfo?.isPublic && (
-            <span className="flex-none rounded-full bg-done/15 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-done">
-              Public
-            </span>
-          )}
-          <div className="ml-auto flex flex-none items-center gap-2">
-            {copiedLabel && (
-              <span className="flex items-center gap-1.5 rounded-full bg-inset px-2.5 py-1 font-mono text-[11px] text-ink-2">
-                <Check size={12} className="text-done" />
-                {copiedLabel} copied
-              </span>
-            )}
-            {onTagSelectChange && (
-              <button
-                type="button"
-                onClick={() => onTagSelectChange(tagSelect === selectedTag ? null : selectedTag)}
-                className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full px-3.5 py-[7px] text-[13px] font-semibold transition-colors',
-                  tagSelect === selectedTag
-                    ? 'bg-done/15 text-done'
-                    : 'bg-surface border border-hairline text-ink-2 hover:text-ink',
-                )}
-              >
-                <ListChecks size={13} />
-                {tagSelect === selectedTag ? 'Done adding' : 'Add posts'}
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => void handleShareAsTheater(selectedTag)}
-              disabled={sharing}
-              className="inline-flex items-center gap-1.5 rounded-full bg-clay-grad px-3.5 py-[7px] text-[13px] font-semibold text-white shadow-glow transition-opacity hover:opacity-90 disabled:opacity-60"
-            >
-              <Repeat size={13} />
-              Share as theater
-            </button>
-            {onSelectedTagsChange && (
-              <button
-                type="button"
-                onClick={() => onSelectedTagsChange([])}
-                aria-label="Clear tag filter"
-                className="flex-none text-ink-3 transition-colors hover:text-ink"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

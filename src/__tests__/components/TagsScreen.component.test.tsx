@@ -108,6 +108,130 @@ describe('TagsClient', () => {
     )
   })
 
+  it('shows a visible inline error when the PATCH fails, and keeps the card private', async () => {
+    global.fetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (url === '/api/tags' && !init) {
+        return jsonResponse({ tags: [{ tag: 'work', count: 3, isPublic: false, shareUrl: null }] })
+      }
+      if (url === '/api/tags' && init?.method === 'PATCH') {
+        return jsonResponse({ error: 'User not found' }, false)
+      }
+      return jsonResponse({})
+    }) as unknown as typeof fetch
+
+    render(<TagsClient />)
+
+    await waitFor(() => expect(screen.getByText('#work')).toBeInTheDocument())
+    fireEvent.click(screen.getByText('Share as theater'))
+
+    await waitFor(() => expect(screen.getByText('User not found')).toBeInTheDocument())
+    expect(screen.queryByText('Public')).not.toBeInTheDocument()
+  })
+
+  it('shows a visible inline error when the PATCH request throws (network failure)', async () => {
+    global.fetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (url === '/api/tags' && !init) {
+        return jsonResponse({ tags: [{ tag: 'work', count: 3, isPublic: false, shareUrl: null }] })
+      }
+      if (url === '/api/tags' && init?.method === 'PATCH') {
+        return Promise.reject(new Error('network down'))
+      }
+      return jsonResponse({})
+    }) as unknown as typeof fetch
+
+    render(<TagsClient />)
+
+    await waitFor(() => expect(screen.getByText('#work')).toBeInTheDocument())
+    fireEvent.click(screen.getByText('Share as theater'))
+
+    await waitFor(() => expect(screen.getByText(/couldn't reach the server/i)).toBeInTheDocument())
+  })
+
+  it('still flips the card public when the clipboard write rejects, and shows a copy hint', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('NotAllowedError'))
+    Object.assign(navigator, { clipboard: { writeText } })
+
+    global.fetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (url === '/api/tags' && !init) {
+        return jsonResponse({ tags: [{ tag: 'work', count: 3, isPublic: false, shareUrl: null }] })
+      }
+      if (url === '/api/tags' && init?.method === 'PATCH') {
+        return jsonResponse({ success: true, shareUrl: '/t/tester/work', isPublic: true })
+      }
+      return jsonResponse({})
+    }) as unknown as typeof fetch
+
+    render(<TagsClient />)
+
+    await waitFor(() => expect(screen.getByText('#work')).toBeInTheDocument())
+    fireEvent.click(screen.getByText('Share as theater'))
+
+    // The card flips public regardless of the clipboard outcome.
+    await waitFor(() => expect(screen.getByText('Public')).toBeInTheDocument())
+    expect(screen.getByText('adhx.com/t/tester/work')).toBeInTheDocument()
+    await waitFor(() =>
+      expect(screen.getByText(/couldn't copy automatically/i)).toBeInTheDocument(),
+    )
+  })
+
+  it('renders a content mosaic for a tag with posts', async () => {
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/tags') {
+        return jsonResponse({
+          tags: [{ tag: 'work', count: 6, isPublic: false, shareUrl: null }],
+        })
+      }
+      if (url.startsWith('/api/feed?tag=work')) {
+        return jsonResponse({
+          items: [
+            {
+              id: '1',
+              platform: 'twitter',
+              author: 'alice',
+              text: 'hello world',
+              tweetUrl: 'https://x.com/alice/status/1',
+              processedAt: '2026-01-01T00:00:00.000Z',
+              isRead: false,
+              media: [
+                {
+                  id: 'm1',
+                  mediaType: 'photo',
+                  url: 'https://example.com/full.jpg',
+                  thumbnailUrl: 'https://example.com/thumb.jpg',
+                  shareUrl: 'https://example.com/full.jpg',
+                },
+              ],
+              links: null,
+              tags: ['work'],
+            },
+            {
+              id: '2',
+              platform: 'twitter',
+              author: 'bob',
+              text: 'a text-only post with no media at all here',
+              tweetUrl: 'https://x.com/bob/status/2',
+              processedAt: '2026-01-01T00:00:00.000Z',
+              isRead: false,
+              media: null,
+              links: null,
+              tags: ['work'],
+            },
+          ],
+        })
+      }
+      return jsonResponse({})
+    }) as unknown as typeof fetch
+
+    render(<TagsClient />)
+
+    await waitFor(() => expect(screen.getByText('#work')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByAltText('')).toBeInTheDocument())
+    expect(screen.getByAltText('')).toHaveAttribute('src', 'https://example.com/thumb.jpg')
+    expect(screen.getByText(/a text-only post/i)).toBeInTheDocument()
+    // 6 posts in the tag, only 2 fetched → overflow tile shows the remainder.
+    expect(screen.getByText('+4')).toBeInTheDocument()
+  })
+
   it('"Make private" PATCHes isPublic: false and drops the Public chip', async () => {
     global.fetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
       if (url === '/api/tags' && !init) {

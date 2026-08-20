@@ -254,6 +254,7 @@ export function TheaterMobileChrome({
   }
 
   const trendCount = current ? (current.trendCount ?? current.saveCount ?? 0) : 0
+  const tagCount = triage?.tags?.length ?? 0
   const handle = current?.author ? current.author.replace(/^@+/, '') : ''
   // The stage IS the text for text/quote/article posts — repeating the body
   // (and the author header) in the bottom scrim doubles it up and buries the
@@ -445,7 +446,7 @@ export function TheaterMobileChrome({
                 {triage.tags.map((t) => (
                   <span
                     key={t}
-                    className="flex-none rounded-full bg-clay/25 px-2 py-0.5 text-[11px] font-semibold text-white"
+                    className="flex-none rounded-full border border-white/12 bg-white/[.06] px-2 py-0.5 text-[10.5px] text-white/55"
                   >
                     #{t}
                   </span>
@@ -467,10 +468,13 @@ export function TheaterMobileChrome({
               <button
                 type="button"
                 onClick={triage.onTag}
-                className="inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/25 bg-white/10 text-[11px] font-semibold text-white backdrop-blur-md"
+                className={cn(
+                  'inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border bg-white/10 text-[11px] font-semibold backdrop-blur-md',
+                  tagCount > 0 ? 'border-clay/50 text-clay' : 'border-white/25 text-white',
+                )}
               >
-                <TagIcon size={16} />
-                Tag
+                <TagIcon size={16} fill={tagCount > 0 ? 'currentColor' : 'none'} />
+                {tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}
               </button>
               <button
                 type="button"

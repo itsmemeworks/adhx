@@ -3,7 +3,7 @@ import { fetchTweetData, extractUrlsFromFacets, type FxTwitterResponse } from '@
 import { fetchOgMetadata } from '@/lib/utils/og-fetch'
 import { articleBlocksToMarkdown, normalizeEntityMap } from '@/lib/utils/article-text'
 import { db } from '@/lib/db'
-import { bookmarks, bookmarkTags, tagShares, oauthTokens } from '@/lib/db/schema'
+import { bookmarks, bookmarkTags, tagShares, users } from '@/lib/db/schema'
 import { eq, and, sql } from 'drizzle-orm'
 
 type FxTweet = NonNullable<FxTwitterResponse['tweet']>
@@ -133,7 +133,7 @@ function buildAdhxContext(tweetId: string) {
     const publicTagResults = db
       .select({
         tag: tagShares.tag,
-        username: oauthTokens.username,
+        username: users.username,
       })
       .from(bookmarkTags)
       .innerJoin(
@@ -144,7 +144,7 @@ function buildAdhxContext(tweetId: string) {
           eq(tagShares.isPublic, true),
         ),
       )
-      .innerJoin(oauthTokens, eq(tagShares.userId, oauthTokens.userId))
+      .innerJoin(users, eq(tagShares.userId, users.id))
       .where(and(eq(bookmarkTags.bookmarkId, tweetId), eq(bookmarkTags.platform, 'twitter')))
       .all()
 

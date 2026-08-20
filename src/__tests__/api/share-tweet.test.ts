@@ -404,6 +404,8 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
           expiresAt: Date.now() + 3600000,
         })
         .run()
+      // Canonical users row (accounts migration) — username lookups read this first
+      testInstance.db.insert(schema.users).values({ id: USER_A, username: 'alice' }).run()
 
       testInstance.db
         .insert(schema.bookmarks)
@@ -461,6 +463,8 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
           expiresAt: Date.now() + 3600000,
         })
         .run()
+      // Canonical users row (accounts migration) — username lookups read this first
+      testInstance.db.insert(schema.users).values({ id: USER_A, username: 'alice' }).run()
 
       testInstance.db
         .insert(schema.bookmarks)

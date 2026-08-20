@@ -368,6 +368,7 @@ export function DesktopStageChrome({
   const textLike = kind !== null && ['text', 'quote', 'article'].includes(kind)
   const isMedia = kind === 'video' || kind === 'photo'
   const trendCount = current ? (current.trendCount ?? current.saveCount ?? 0) : 0
+  const tagCount = triage?.tags?.length ?? 0
   const handle = current?.author ? current.author.replace(/^@+/, '') : ''
   const caption = current ? (current.text || '').trim() : ''
   const platformLabel = current ? (PLATFORM_LABEL[current.platform] ?? current.platform) : ''
@@ -601,13 +602,16 @@ export function DesktopStageChrome({
           )}
 
           {/* Tag chips (unified-theater-triage.md §B) — the Collection tab's
-              current item only; display-only, nothing renders without tags. */}
+              current item only; display-only, nothing renders without tags.
+              Text/quote/article posts render their own composition on the
+              stage (no media overlay here), so their chips are rendered by
+              `TriageStage` itself, aligned to the text column instead. */}
           {triage?.tab === 'collection' && triage.tags && triage.tags.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5">
               {triage.tags.map((t) => (
                 <span
                   key={t}
-                  className="flex-none rounded-full bg-clay/25 px-2 py-0.5 text-[11px] font-semibold text-white"
+                  className="flex-none rounded-full border border-white/12 bg-white/[.06] px-2 py-0.5 text-[10.5px] text-white/55"
                 >
                   #{t}
                 </span>
@@ -616,31 +620,6 @@ export function DesktopStageChrome({
           )}
         </div>
       )}
-
-      {/* Text/quote/article triage posts render their composition on the
-          stage itself (no bottom-left media overlay above), so their tag
-          chips get a standalone bottom-left row — same spot, same styling. */}
-      {current &&
-        !isMedia &&
-        triage?.tab === 'collection' &&
-        triage.tags &&
-        triage.tags.length > 0 && (
-          <div
-            className={cn(
-              'pointer-events-none absolute bottom-6 left-7 flex w-[min(640px,46vw)] flex-wrap items-center gap-1.5 transition-opacity duration-200',
-              declutter && 'opacity-0',
-            )}
-          >
-            {triage.tags.map((t) => (
-              <span
-                key={t}
-                className="flex-none rounded-full bg-clay/25 px-2 py-0.5 text-[11px] font-semibold text-white"
-              >
-                #{t}
-              </span>
-            ))}
-          </div>
-        )}
 
       {/* Bottom-right: action buttons. Triage's Collection tab replaces the
           whole set with Later/Tag/Delete/Done — see
@@ -656,9 +635,13 @@ export function DesktopStageChrome({
             <Clock size={14} />
             Later
           </button>
-          <button type="button" onClick={triage.onTag} className={GLASS}>
-            <TagIcon size={14} />
-            Tag
+          <button
+            type="button"
+            onClick={triage.onTag}
+            className={cn(GLASS, tagCount > 0 && 'border-clay/50 text-clay')}
+          >
+            <TagIcon size={14} fill={tagCount > 0 ? 'currentColor' : 'none'} />
+            {tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}
           </button>
           <button type="button" onClick={triage.onDelete} className={GLASS}>
             <Trash2 size={14} />

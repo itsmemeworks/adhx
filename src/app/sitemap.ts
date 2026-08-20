@@ -1,6 +1,6 @@
 import { MetadataRoute } from 'next'
 import { db } from '@/lib/db'
-import { tagShares, bookmarks, oauthTokens, activity } from '@/lib/db/schema'
+import { tagShares, bookmarks, users, activity } from '@/lib/db/schema'
 import { eq, desc, sql } from 'drizzle-orm'
 import { previewPath } from '@/lib/activity/record'
 import type { PlatformId } from '@/lib/platform/url'
@@ -90,9 +90,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // Public tag-collection pages (`/t/{user}/{tag}`). Private tags are excluded.
   try {
     const publicShares = db
-      .select({ tag: tagShares.tag, username: oauthTokens.username })
+      .select({ tag: tagShares.tag, username: users.username })
       .from(tagShares)
-      .innerJoin(oauthTokens, eq(tagShares.userId, oauthTokens.userId))
+      .innerJoin(users, eq(tagShares.userId, users.id))
       .where(eq(tagShares.isPublic, true))
       .all()
     for (const share of publicShares) {
