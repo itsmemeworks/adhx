@@ -547,27 +547,31 @@ export function FilterBar({
           </AnchoredMenu>
         </div>
 
-        {/* Unread only toggle */}
-        <button
-          onClick={() => onUnreadOnlyChange(!unreadOnly)}
-          className={cn(
-            'flex items-center gap-2 px-3.5 py-[7px] rounded-full text-[13.5px] font-semibold whitespace-nowrap flex-shrink-0 transition-all duration-150',
-            unreadOnly
-              ? 'bg-clay-grad text-white shadow-glow'
-              : 'bg-surface border border-hairline text-ink-2 hover:text-ink',
-          )}
-        >
-          <EyeOff className="w-3.5 h-3.5" />
-          <span>Unread only</span>
-          <span
+        {/* Unread only toggle — hidden while a tag is selected: a tag is a
+            deliberately curated set, so read state doesn't apply there (the
+            feed fetch ignores unreadOnly for tag views too). */}
+        {selectedTags.length === 0 && (
+          <button
+            onClick={() => onUnreadOnlyChange(!unreadOnly)}
             className={cn(
-              'text-[11.5px] rounded-full px-[7px] py-px',
-              unreadOnly ? 'bg-white/28 text-white' : 'bg-inset text-ink-2',
+              'flex items-center gap-2 px-3.5 py-[7px] rounded-full text-[13.5px] font-semibold whitespace-nowrap flex-shrink-0 transition-all duration-150',
+              unreadOnly
+                ? 'bg-clay-grad text-white shadow-glow'
+                : 'bg-surface border border-hairline text-ink-2 hover:text-ink',
             )}
           >
-            {unreadOnly ? stats.unread : stats.total}
-          </span>
-        </button>
+            <EyeOff className="w-3.5 h-3.5" />
+            <span>Unread only</span>
+            <span
+              className={cn(
+                'text-[11.5px] rounded-full px-[7px] py-px',
+                unreadOnly ? 'bg-white/28 text-white' : 'bg-inset text-ink-2',
+              )}
+            >
+              {unreadOnly ? stats.unread : stats.total}
+            </span>
+          </button>
+        )}
       </div>
     </div>
   )

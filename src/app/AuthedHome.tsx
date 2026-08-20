@@ -387,16 +387,21 @@ function FeedPageContent(): React.ReactElement {
 
       try {
         setLoading(true)
-        // Add-posts mode browses the WHOLE pile: drop the tag filter (else the
-        // grid only shows posts already carrying the tag — nothing left to
-        // add) and the unread-only gate (already-read posts are prime tagging
-        // candidates). The FilterBar's selected-tag UI state is untouched.
+        // Add-posts mode browses the WHOLE collection: drop the tag filter
+        // (else the grid only shows posts already carrying the tag — nothing
+        // left to add) and the unread-only gate (already-read posts are prime
+        // tagging candidates). The FilterBar's selected-tag UI state is
+        // untouched. VIEWING a tag also ignores unread: a tag is a deliberate
+        // collection the user curated — read state is irrelevant there, and
+        // the default unread-only filter otherwise greets a fully-read tag
+        // with a misleading "All caught up" empty state.
         const addingToTag = tagSelectTag !== null
+        const tagActive = addingToTag || selectedTags.length > 0
         const params = new URLSearchParams({
           page: currentPage.toString(),
           limit: '50',
           filter,
-          unreadOnly: (addingToTag ? false : unreadOnly).toString(),
+          unreadOnly: (tagActive ? false : unreadOnly).toString(),
         })
         if (platformFilter !== 'all') params.set('platform', platformFilter)
         if (sort !== 'added') params.set('sort', sort)
