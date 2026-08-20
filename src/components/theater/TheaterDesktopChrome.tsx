@@ -401,7 +401,15 @@ export function DesktopStageChrome({
         )}
         style={{ background: 'linear-gradient(rgba(8,7,10,.62), transparent)' }}
       >
-        <div className="pointer-events-auto flex min-w-0 items-center gap-3.5">
+        <div
+          className={cn(
+            'pointer-events-auto flex min-w-0 gap-3.5',
+            // Collection mode: the wordmark, tag name and curator line sit on
+            // one shared text baseline (per live review) — other modes keep
+            // vertical centering for their pill controls.
+            collection && !triage ? 'items-baseline' : 'items-center',
+          )}
+        >
           <a href="/" aria-label="ADHX home" className="flex-none">
             <MatterLogo size={19} className="[&>span]:text-white" />
           </a>
@@ -430,10 +438,7 @@ export function DesktopStageChrome({
             </>
           ) : collection ? (
             <>
-              <span className="h-5 w-px flex-none bg-white/20" aria-hidden />
-              <span className="flex-none rounded-full bg-clay/15 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-clay">
-                Collection
-              </span>
+              <span className="h-5 w-px flex-none self-center bg-white/20" aria-hidden />
               <span className="flex-none truncate text-[19px] font-bold text-white">
                 {collection.tag}
               </span>
