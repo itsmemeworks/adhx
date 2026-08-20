@@ -6,8 +6,6 @@ import {
   EyeOff,
   ChevronDown,
   SlidersHorizontal,
-  Instagram,
-  Youtube,
   LayoutGrid,
   List as ListIcon,
   LayoutDashboard,
@@ -47,11 +45,14 @@ interface FilterBarProps {
   onTagUpdated?: (tag: string, isPublic: boolean, shareUrl: string) => void
 }
 
+// All four platforms render through the app's own PlatformGlyph — lucide v1
+// removed its brand icons (Instagram/Youtube), and the in-house glyphs match
+// the rest of the UI anyway.
 function PlatformIcon({ value, className }: { value: PlatformFilter; className?: string }) {
   if (value === 'twitter') return <PlatformGlyph platform="x" className={className} />
-  if (value === 'instagram') return <Instagram className={className} />
+  if (value === 'instagram') return <PlatformGlyph platform="instagram" className={className} />
   if (value === 'tiktok') return <PlatformGlyph platform="tiktok" className={className} />
-  if (value === 'youtube') return <Youtube className={className} />
+  if (value === 'youtube') return <PlatformGlyph platform="youtube" className={className} />
   return null
 }
 
