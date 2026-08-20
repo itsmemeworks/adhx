@@ -23,6 +23,9 @@ import {
   LogIn,
   Flame,
   Repeat,
+  Clock,
+  Tag as TagIcon,
+  Trash2,
   ChevronUp,
   ChevronDown,
   Pause,
@@ -31,6 +34,7 @@ import {
   VolumeX,
   Minimize2,
   Maximize2,
+  X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
@@ -40,12 +44,19 @@ import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { inferType } from '@/lib/trending/filter'
 import { useSendFile } from './useSendFile'
 import { useClampExpand } from './useClampExpand'
-import { PLATFORM_LABEL } from './types'
+import { theaterItemKey, PLATFORM_LABEL } from './types'
 import { TheaterLinkedText } from './TheaterText'
 import { TheaterProgressLine, progressKindFor } from './TheaterProgressLine'
 import { UpNextList } from './UpNextList'
 import { SaveCollectionButton } from './SaveCollectionButton'
-import type { SaveCollectionStatus, TheaterCollectionMeta, TheaterItem, TheaterMode } from './types'
+import { TheaterAvatarMenu } from './TheaterAvatarMenu'
+import type {
+  SaveCollectionStatus,
+  TheaterCollectionMeta,
+  TheaterItem,
+  TheaterMode,
+  TheaterTriageChrome,
+} from './types'
 
 export interface TheaterMobileChromeProps {
   mode: TheaterMode
@@ -72,6 +83,8 @@ export interface TheaterMobileChromeProps {
   saveStatus?: SaveCollectionStatus
   onSaveCollection?: () => void
   onRequestSignIn?: () => void
+  /** Triage mode (unified-theater-triage.md §2): swaps the top scrim's meta for a Collection↔Live tab switcher, and the bottom action row for Later/Tag/Delete/Done. */
+  triage?: TheaterTriageChrome
 }
 
 /** Height of the collapsed sheet's peek bar — kept in sync with the transform below. Two rows now (drag handle + the nav/pause/audio/de-clutter controls), taller than the old label-only bar. */
@@ -104,6 +117,7 @@ export function TheaterMobileChrome({
   saveStatus = 'idle',
   onSaveCollection,
   onRequestSignIn,
+  triage,
 }: TheaterMobileChromeProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -112,7 +126,9 @@ export function TheaterMobileChrome({
   const sendFile = useSendFile(current)
   const { ref: captionRef, expanded, setExpanded, overflowing } = useClampExpand(currentKey)
 
-  const kind = progressKindFor(current)
+  // Triage's Collection tab never auto-advances (Done/Later/Delete are the
+  // only ways forward) — force the 10s dwell progress line off there.
+  const kind = triage && triage.tab === 'collection' ? 'none' : progressKindFor(current)
 
   // Pause/play button state. `'video'`-kind items mirror StageVideo's real
   // playing state (so a tap on the video itself, or an autoplay retry, keeps
@@ -255,7 +271,30 @@ export function TheaterMobileChrome({
           bottom scrim. De-clutter hides this whole scrim (meta included) —
           expected: immersion hides meta too. Collection mode replaces post
           meta with the tag/curator identity chrome (two rows). */}
-      {collection ? (
+      {triage ? (
+        <div
+          className={cn(
+            'pointer-events-auto absolute inset-x-0 top-0 flex items-center justify-between gap-3 px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
+            declutter && 'pointer-events-none -translate-y-3 opacity-0',
+          )}
+          style={{ background: 'linear-gradient(to bottom, rgba(11,11,17,.75), transparent)' }}
+        >
+          <a href="/" className="flex items-center" aria-label="ADHX home">
+            <MatterLogo size={16} className="[&>span]:text-white" />
+          </a>
+          <div className="flex flex-none items-center gap-1.5">
+            <TheaterAvatarMenu />
+            <button
+              type="button"
+              onClick={triage.onClose}
+              aria-label="Close triage"
+              className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      ) : collection ? (
         <div
           className={cn(
             'pointer-events-auto absolute inset-x-0 top-0 flex flex-col gap-1.5 px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
@@ -292,36 +331,39 @@ export function TheaterMobileChrome({
           <a href="/" className="flex items-center" aria-label="ADHX home">
             <MatterLogo size={16} className="[&>span]:text-white" />
           </a>
-          {current && (
-            <div className="flex flex-none items-center gap-2">
-              {trendCount >= 2 && (
-                <span className="inline-flex flex-none items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-[11px] font-bold text-orange-300">
-                  <Flame size={11} className="text-orange-400" fill="currentColor" />
-                  {trendCount}
-                </span>
-              )}
-              {(() => {
-                const src = sourceUrl(current.platform, current.author, current.bookmarkId ?? '')
-                const inner = (
-                  <>
-                    <PlatformGlyph platform={current.platform} size={12} />
-                    <span className="font-mono text-[11px]" suppressHydrationWarning>
-                      {formatCompactRelativeTime(current.createdAt)}
-                    </span>
-                  </>
-                )
-                const cls =
-                  'inline-flex min-h-[32px] flex-none items-center gap-1.5 rounded-full bg-black/40 px-2.5 text-white/80 backdrop-blur-sm'
-                return src ? (
-                  <a href={src} target="_blank" rel="noopener noreferrer" className={cls}>
-                    {inner}
-                  </a>
-                ) : (
-                  <span className={cls}>{inner}</span>
-                )
-              })()}
-            </div>
-          )}
+          <div className="flex flex-none items-center gap-1.5">
+            {current && (
+              <div className="flex flex-none items-center gap-2">
+                {trendCount >= 2 && (
+                  <span className="inline-flex flex-none items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-[11px] font-bold text-orange-300">
+                    <Flame size={11} className="text-orange-400" fill="currentColor" />
+                    {trendCount}
+                  </span>
+                )}
+                {(() => {
+                  const src = sourceUrl(current.platform, current.author, current.bookmarkId ?? '')
+                  const inner = (
+                    <>
+                      <PlatformGlyph platform={current.platform} size={12} />
+                      <span className="font-mono text-[11px]" suppressHydrationWarning>
+                        {formatCompactRelativeTime(current.createdAt)}
+                      </span>
+                    </>
+                  )
+                  const cls =
+                    'inline-flex min-h-[32px] flex-none items-center gap-1.5 rounded-full bg-black/40 px-2.5 text-white/80 backdrop-blur-sm'
+                  return src ? (
+                    <a href={src} target="_blank" rel="noopener noreferrer" className={cls}>
+                      {inner}
+                    </a>
+                  ) : (
+                    <span className={cls}>{inner}</span>
+                  )
+                })()}
+              </div>
+            )}
+            <TheaterAvatarMenu />
+          </div>
         </div>
       )}
 
@@ -396,75 +438,154 @@ export function TheaterMobileChrome({
             )}
           </div>
 
-          <div className="flex items-center gap-2">
-            {collection ? (
-              <SaveCollectionButton
-                count={collection.count}
-                status={saveStatus}
-                onSave={() => onSaveCollection?.()}
-                className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full bg-clay-grad px-3 text-[13px] font-semibold text-white shadow-glow transition-opacity disabled:opacity-70"
-              />
-            ) : (
-              <>
-                {sendFile.supported && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      // No awaits before this call — the tap must stay a fresh
-                      // user gesture for iOS's share sheet (spec §2/§6).
-                      void sendFile.send()
-                    }}
-                    disabled={sendFile.sending}
-                    title={
-                      sendFile.mode === 'share'
-                        ? 'Opens your share sheet with the video file'
-                        : 'Download the video file'
-                    }
-                    className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full bg-clay-grad px-3 text-[13px] font-semibold text-white shadow-glow transition-opacity disabled:opacity-70"
+          {triage && triage.tab === 'collection' ? (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={triage.onLater}
+                className="inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/25 bg-white/10 text-[11px] font-semibold text-white backdrop-blur-md"
+              >
+                <Clock size={16} />
+                Later
+              </button>
+              <button
+                type="button"
+                onClick={triage.onTag}
+                className="inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/25 bg-white/10 text-[11px] font-semibold text-white backdrop-blur-md"
+              >
+                <TagIcon size={16} />
+                Tag
+              </button>
+              <button
+                type="button"
+                onClick={triage.onDelete}
+                className="inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/25 bg-white/10 text-[11px] font-semibold text-white backdrop-blur-md"
+              >
+                <Trash2 size={16} />
+                Delete
+              </button>
+              <button
+                type="button"
+                onClick={triage.onDone}
+                className="inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl bg-done/25 text-[11px] font-semibold text-done"
+              >
+                <Check size={16} />
+                Done
+              </button>
+              {(() => {
+                const openUrl = sourceUrl(
+                  current.platform,
+                  current.author,
+                  current.bookmarkId ?? '',
+                )
+                if (!openUrl) return null
+                const platformLabel = PLATFORM_LABEL[current.platform] ?? current.platform
+                return (
+                  <a
+                    href={openUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Open on ${platformLabel}`}
+                    className="inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md"
                   >
-                    {sendFile.sending ? (
-                      <Loader2 size={15} className="animate-spin" />
-                    ) : (
-                      <DownloadIcon size={15} />
-                    )}
-                    Download
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => onRequestSignIn?.()}
-                  className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 text-[13px] font-semibold text-white backdrop-blur-md"
-                >
-                  <LogIn size={15} />
-                  Save
-                </button>
-              </>
-            )}
-            <button
-              type="button"
-              onClick={() => void handleShare()}
-              aria-label="Share link"
-              className="inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md"
-            >
-              {copied ? <Check size={16} className="text-done" /> : <Share2 size={16} />}
-            </button>
-            {(() => {
-              const openUrl = sourceUrl(current.platform, current.author, current.bookmarkId ?? '')
-              if (!openUrl) return null
-              const platformLabel = PLATFORM_LABEL[current.platform] ?? current.platform
-              return (
-                <a
-                  href={openUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={`Open on ${platformLabel}`}
-                  className="inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md"
-                >
-                  <ExternalLink size={16} />
-                </a>
-              )
-            })()}
-          </div>
+                    <ExternalLink size={16} />
+                  </a>
+                )
+              })()}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              {collection ? (
+                <SaveCollectionButton
+                  count={collection.count}
+                  status={saveStatus}
+                  onSave={() => onSaveCollection?.()}
+                  className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full bg-clay-grad px-3 text-[13px] font-semibold text-white shadow-glow transition-opacity disabled:opacity-70"
+                />
+              ) : (
+                <>
+                  {sendFile.supported && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // No awaits before this call — the tap must stay a fresh
+                        // user gesture for iOS's share sheet (spec §2/§6).
+                        void sendFile.send()
+                      }}
+                      disabled={sendFile.sending}
+                      title={
+                        sendFile.mode === 'share'
+                          ? 'Opens your share sheet with the video file'
+                          : 'Download the video file'
+                      }
+                      className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full bg-clay-grad px-3 text-[13px] font-semibold text-white shadow-glow transition-opacity disabled:opacity-70"
+                    >
+                      {sendFile.sending ? (
+                        <Loader2 size={15} className="animate-spin" />
+                      ) : (
+                        <DownloadIcon size={15} />
+                      )}
+                      Download
+                    </button>
+                  )}
+                  {triage?.tab === 'live' ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!triage.savedKeys.has(theaterItemKey(current))) triage.onSave(current)
+                      }}
+                      disabled={triage.savedKeys.has(theaterItemKey(current))}
+                      className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 text-[13px] font-semibold text-white backdrop-blur-md disabled:opacity-70"
+                    >
+                      {triage.savedKeys.has(theaterItemKey(current)) ? (
+                        <Check size={15} />
+                      ) : (
+                        <LogIn size={15} />
+                      )}
+                      {triage.savedKeys.has(theaterItemKey(current)) ? 'Saved' : 'Save'}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onRequestSignIn?.()}
+                      className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 text-[13px] font-semibold text-white backdrop-blur-md"
+                    >
+                      <LogIn size={15} />
+                      Save
+                    </button>
+                  )}
+                </>
+              )}
+              <button
+                type="button"
+                onClick={() => void handleShare()}
+                aria-label="Share link"
+                className="inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md"
+              >
+                {copied ? <Check size={16} className="text-done" /> : <Share2 size={16} />}
+              </button>
+              {(() => {
+                const openUrl = sourceUrl(
+                  current.platform,
+                  current.author,
+                  current.bookmarkId ?? '',
+                )
+                if (!openUrl) return null
+                const platformLabel = PLATFORM_LABEL[current.platform] ?? current.platform
+                return (
+                  <a
+                    href={openUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Open on ${platformLabel}`}
+                    className="inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md"
+                  >
+                    <ExternalLink size={16} />
+                  </a>
+                )
+              })()}
+            </div>
+          )}
         </div>
       )}
 
@@ -551,26 +672,52 @@ export function TheaterMobileChrome({
           </div>
 
           <div className="pointer-events-none absolute inset-x-0 flex justify-center">
-            <button
-              type="button"
-              onClick={() => setSheetOpen((v) => !v)}
-              aria-expanded={sheetOpen}
-              aria-label={sheetOpen ? 'Collapse up next' : 'Expand up next'}
-              className="pointer-events-auto flex max-w-[45%] items-center justify-center gap-1 truncate px-1 text-center text-[12px] font-semibold text-ink-2"
-            >
-              {collection ? (
-                <>
-                  <Repeat size={11} className="flex-none" aria-hidden />
-                  <span className="truncate">
-                    {collection.tag} · {collection.count}
-                  </span>
-                </>
-              ) : newCount > 0 ? (
-                `${newCount} new`
-              ) : (
-                'Up next'
-              )}
-            </button>
+            {triage ? (
+              <div
+                className="pointer-events-auto inline-flex rounded-full bg-inset p-0.5 text-[11.5px] font-semibold"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {(['collection', 'live'] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      triage.onTabChange(t)
+                    }}
+                    onTouchEnd={(e) => e.stopPropagation()}
+                    aria-current={triage.tab === t ? 'true' : undefined}
+                    className={cn(
+                      'rounded-full px-3 py-1 capitalize transition-colors',
+                      triage.tab === t ? 'bg-surface text-ink shadow-sm' : 'text-ink-3',
+                    )}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setSheetOpen((v) => !v)}
+                aria-expanded={sheetOpen}
+                aria-label={sheetOpen ? 'Collapse up next' : 'Expand up next'}
+                className="pointer-events-auto flex max-w-[45%] items-center justify-center gap-1 truncate px-1 text-center text-[12px] font-semibold text-ink-2"
+              >
+                {collection ? (
+                  <>
+                    <Repeat size={11} className="flex-none" aria-hidden />
+                    <span className="truncate">
+                      {collection.tag} · {collection.count}
+                    </span>
+                  </>
+                ) : newCount > 0 ? (
+                  `${newCount} new`
+                ) : (
+                  'Up next'
+                )}
+              </button>
+            )}
           </div>
 
           <div className="ml-auto flex items-center gap-0.5">

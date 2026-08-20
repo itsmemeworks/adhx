@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Image, Loader2 } from 'lucide-react'
 import { FeedCard } from './FeedCard'
 import { FeedListRow } from './FeedListRow'
@@ -21,6 +21,16 @@ interface FeedGridProps {
   onExpand: (index: number) => void
   onLoadMore: () => void
   onShowAll: () => void
+  // Tags: "Add posts" selection mode (unified-theater-triage §4). Non-null
+  // puts the grid view into selection mode for that tag; FilterBar owns the
+  // toggle/exit (Escape + the toolbar's "Done adding" button) — this prop is
+  // display + membership-toggling only.
+  tagSelectTag?: string | null
+}
+
+/** `platform:id` key for the optimistic tag-membership overlay below. */
+function tagOverlayKey(item: FeedItem): string {
+  return `${item.platform || 'twitter'}:${item.id}`
 }
 
 // Calm Matter grid: mobile 1 col → tablet 2 col (≥640) → 3 col (≥820) →
@@ -41,7 +51,51 @@ export function FeedGrid({
   onExpand,
   onLoadMore,
   onShowAll,
+  tagSelectTag = null,
 }: FeedGridProps): React.ReactElement {
+  // Optimistic overlay for tag-membership toggles, keyed by `platform:id` —
+  // items arrive via props, so membership changes are tracked here rather
+  // than mutating them. Cleared whenever selection mode starts/stops/switches
+  // tags so a stale overlay from a previous tag can't leak in.
+  const [tagOverlay, setTagOverlay] = useState<Map<string, boolean>>(new Map())
+  useEffect(() => {
+    setTagOverlay(new Map())
+  }, [tagSelectTag])
+
+  const toggleTagMembership = useCallback(
+    (item: FeedItem) => {
+      if (!tagSelectTag) return
+      const key = tagOverlayKey(item)
+      const current = tagOverlay.get(key) ?? item.tags.includes(tagSelectTag)
+      const next = !current
+      setTagOverlay((prev) => new Map(prev).set(key, next))
+      const platform = item.platform || 'twitter'
+      fetch(
+        `/api/bookmarks/${encodeURIComponent(item.id)}/tags?platform=${encodeURIComponent(platform)}`,
+        {
+          method: next ? 'POST' : 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tag: tagSelectTag }),
+        },
+      )
+        .then((res) => {
+          if (!res.ok) throw new Error(`tag toggle failed: ${res.status}`)
+        })
+        .catch(() => {
+          // Revert on failure — best-effort, no toast (mirrors the
+          // "Share as theater" fetch's fire-and-forget error handling).
+          setTagOverlay((prev) => new Map(prev).set(key, current))
+        })
+    },
+    [tagSelectTag, tagOverlay],
+  )
+
+  const selectedCount = tagSelectTag
+    ? items.filter(
+        (item) => tagOverlay.get(tagOverlayKey(item)) ?? item.tags.includes(tagSelectTag),
+      ).length
+    : 0
+
   // Infinite scroll: a sentinel below the grid triggers onLoadMore when it
   // scrolls into view. Latest loading/hasMore/onLoadMore are read through a
   // ref so the observer doesn't need re-creating on every render.
@@ -88,15 +142,23 @@ export function FeedGrid({
     <>
       {view === 'grid' && (
         <div className={GRID_CLASS}>
-          {items.map((item, index) => (
-            <FeedCard
-              key={item.id}
-              item={item}
-              lastSyncAt={lastSyncAt}
-              sortField={sortField}
-              onExpand={() => onExpand(index)}
-            />
-          ))}
+          {items.map((item, index) => {
+            const selected = tagSelectTag
+              ? (tagOverlay.get(tagOverlayKey(item)) ?? item.tags.includes(tagSelectTag))
+              : false
+            return (
+              <FeedCard
+                key={item.id}
+                item={item}
+                lastSyncAt={lastSyncAt}
+                sortField={sortField}
+                onExpand={() => onExpand(index)}
+                selectionMode={!!tagSelectTag}
+                selected={selected}
+                onToggleSelect={() => toggleTagMembership(item)}
+              />
+            )
+          })}
         </div>
       )}
 
@@ -149,6 +211,19 @@ export function FeedGrid({
             )}
           </div>
         </>
+      )}
+
+      {tagSelectTag && (
+        // Display-only: count + hint. Exiting selection mode is owned by
+        // FilterBar (Escape listener + the toolbar's "Done adding" button) —
+        // this component has no onTagSelectChange callback to call.
+        <div className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-center gap-3 border-t border-hairline bg-surface/95 px-4 py-3 shadow-m-sm backdrop-blur-sm">
+          <span className="text-[13.5px] font-semibold text-ink">
+            Adding to <span className="text-clay">#{tagSelectTag}</span> · {selectedCount} post
+            {selectedCount === 1 ? '' : 's'}
+          </span>
+          <span className="text-[12px] text-ink-3">Esc to finish</span>
+        </div>
       )}
     </>
   )

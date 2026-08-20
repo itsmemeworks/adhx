@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import {
   Search,
-  Plus,
   Settings,
   Sun,
   Moon,
@@ -14,13 +13,12 @@ import {
   Zap,
   Flame,
   Bookmark,
-  Compass,
+  Radio,
   LogOut,
 } from 'lucide-react'
 import { useTheme } from '@/lib/theme/context'
 import { cn } from '@/lib/utils'
 import { MatterLogo } from '@/components/matter'
-import { AddTweetModal, AddTweetResult } from './AddTweetModal'
 import { SyncProgress } from './sync/SyncProgress'
 import {
   readLastVisibleAt,
@@ -63,8 +61,6 @@ export function Header() {
   const pathname = usePathname()
   const { resolvedTheme, setTheme } = useTheme()
   const [searchValue, setSearchValue] = useState(searchParams.get('search') || '')
-  const [showAddTweet, setShowAddTweet] = useState(false)
-  const [addTweetResult, setAddTweetResult] = useState<AddTweetResult | null>(null)
   const [showSync, setShowSync] = useState(false)
   const [silentSync, setSilentSync] = useState(false)
   const [cooldownReady, setCooldownReady] = useState(false)
@@ -110,19 +106,13 @@ export function Header() {
 
     // Keyboard shortcut events
     const handleFocusSearch = () => searchInputRef.current?.focus()
-    const handleOpenAddTweet = () => setShowAddTweet(true)
-    const handleCloseAddTweet = () => setShowAddTweet(false)
 
     window.addEventListener('focus-search', handleFocusSearch)
-    window.addEventListener('open-add-tweet', handleOpenAddTweet)
-    window.addEventListener('close-add-tweet', handleCloseAddTweet)
 
     return () => {
       window.removeEventListener('stats-updated', handleStatsUpdate)
       window.removeEventListener('sync-complete', handleSyncComplete)
       window.removeEventListener('focus-search', handleFocusSearch)
-      window.removeEventListener('open-add-tweet', handleOpenAddTweet)
-      window.removeEventListener('close-add-tweet', handleCloseAddTweet)
     }
   }, [authStatus?.authenticated])
 
@@ -209,45 +199,6 @@ export function Header() {
   useEffect(() => {
     setSearchValue(searchParams.get('search') || '')
   }, [searchParams])
-
-  // Handle ?added= URL params from URL prefix feature
-  useEffect(() => {
-    const addedState = searchParams.get('added') as 'success' | 'duplicate' | 'error' | null
-    if (!addedState) return
-
-    // Tweet previews pass ?tweetId=&author=&text=; Instagram/TikTok previews
-    // pass ?platform=&id= (no author/text). Accept either id param.
-    const bookmarkId = searchParams.get('tweetId') || searchParams.get('id')
-
-    const result: AddTweetResult = {
-      state: addedState,
-      platform:
-        searchParams.get('platform') || (searchParams.get('tweetId') ? 'twitter' : undefined),
-      bookmark: bookmarkId
-        ? {
-            id: bookmarkId,
-            author: searchParams.get('author') || '',
-            text: searchParams.get('text') || '',
-          }
-        : undefined,
-      error: searchParams.get('error') || undefined,
-    }
-
-    setAddTweetResult(result)
-    setShowAddTweet(true)
-
-    // Clear the URL params
-    const params = new URLSearchParams(window.location.search)
-    params.delete('added')
-    params.delete('tweetId')
-    params.delete('id')
-    params.delete('platform')
-    params.delete('author')
-    params.delete('text')
-    params.delete('error')
-    const queryString = params.toString()
-    router.replace(queryString ? `/?${queryString}` : '/', { scroll: false })
-  }, [searchParams, router])
 
   // Real-time search with debounce. Deliberately does NOT depend on `searchParams`:
   // this component is the sole owner of writing `search` into the URL, and page.tsx
@@ -382,10 +333,19 @@ export function Header() {
     // The feed page owns triage. If we're already there, open it directly;
     // otherwise navigate to the feed with ?triage=1 so it opens once loaded.
     if (pathname === '/') {
+      // `open-theater` is the standardized event (unified theater nav); a
+      // parallel migration listens for it. `open-triage` is the legacy event
+      // some listeners still expect — dispatch both until that integration
+      // lands, then drop the legacy one.
+      window.dispatchEvent(new CustomEvent('open-theater', { detail: { tab: 'triage' } }))
       window.dispatchEvent(new CustomEvent('open-triage'))
     } else {
       router.push('/?triage=1')
     }
+  }
+
+  const openLive = () => {
+    window.dispatchEvent(new CustomEvent('open-theater', { detail: { tab: 'live' } }))
   }
 
   const toggleTheme = () => {
@@ -424,7 +384,8 @@ export function Header() {
               <MatterLogo size={20} />
             </Link>
 
-            {/* Primary nav — switch between the collection feed and Discover.
+            {/* Primary nav — Collection stays a link; Live opens the theater
+                overlay on the community pulse instead of navigating.
                 Only when authenticated, hidden on mobile (mobile uses the menu). */}
             {authStatus?.authenticated && (
               <nav className="hidden lg:flex items-center gap-1 text-[13.5px]">
@@ -437,17 +398,13 @@ export function Header() {
                 >
                   Collection
                 </Link>
-                <Link
-                  href="/trending"
-                  className={cn(
-                    'rounded-full px-3 py-1.5 font-semibold transition-colors',
-                    pathname.startsWith('/trending')
-                      ? 'bg-clay/[0.12] text-clay'
-                      : 'text-ink-2 hover:text-ink',
-                  )}
+                <button
+                  type="button"
+                  onClick={openLive}
+                  className="rounded-full px-3 py-1.5 font-semibold text-ink-2 hover:text-ink transition-colors"
                 >
-                  Trending
-                </Link>
+                  Live
+                </button>
               </nav>
             )}
           </div>
@@ -512,17 +469,8 @@ export function Header() {
               </button>
 
               {/* Theme toggle + Sync are secondary actions — they live in the
-                  avatar menu (all viewports), not the main nav bar. */}
-
-              {/* Add Button */}
-              <button
-                onClick={() => setShowAddTweet(true)}
-                className="w-[33px] h-[33px] flex items-center justify-center rounded-card bg-clay-grad text-white shadow-glow transition-transform hover:scale-105"
-                title="Add link"
-                aria-label="Add link"
-              >
-                <Plus className="w-[18px] h-[18px]" />
-              </button>
+                  avatar menu (all viewports), not the main nav bar. Adding by
+                  URL is paste-first now (PasteToPreview) — no Add button. */}
 
               {/* User Menu */}
               <div className="relative">
@@ -610,19 +558,17 @@ export function Header() {
                           <Bookmark className="w-4 h-4" />
                           Collection
                         </Link>
-                        <Link
-                          href="/trending"
-                          onClick={() => setShowUserMenu(false)}
-                          className={cn(
-                            'flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset transition-colors',
-                            pathname.startsWith('/trending')
-                              ? 'font-semibold text-clay'
-                              : 'text-ink-2 hover:text-ink',
-                          )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowUserMenu(false)
+                            openLive()
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset text-ink-2 hover:text-ink transition-colors"
                         >
-                          <Compass className="w-4 h-4" />
-                          Trending
-                        </Link>
+                          <Radio className="w-4 h-4" />
+                          Live
+                        </button>
                         <Link
                           href="/settings"
                           onClick={() => setShowUserMenu(false)}
@@ -715,24 +661,6 @@ export function Header() {
           </div>
         )}
       </header>
-
-      {/* Add Tweet Modal */}
-      <AddTweetModal
-        isOpen={showAddTweet}
-        onClose={() => {
-          setShowAddTweet(false)
-          setAddTweetResult(null)
-        }}
-        onSuccess={() => {
-          fetchStats()
-          window.dispatchEvent(new CustomEvent('tweet-added'))
-        }}
-        onOpenTweet={(tweetId) => {
-          // Navigate to home page with open param to trigger lightbox
-          router.push(`/?open=${tweetId}`)
-        }}
-        initialResult={addTweetResult}
-      />
 
       {/* Sync Progress Modal */}
       <SyncProgress

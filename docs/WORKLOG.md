@@ -4,6 +4,21 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-20 — Nav simplification, theater avatar, tags create/fill, paste-first add
+
+- **Why**: Live user review after the accounts launch — one theater UX everywhere, nav down to Collection · Live, tags as the organizing tool (spec: `docs/specs/unified-theater-triage.md`).
+- **What**: Header tabs → Collection · Live (Live/Triage open the theater via `open-theater` {tab}; Trending removed from authed nav, public SEO routes untouched); `+` Add button + AddTweetModal deleted → `PasteToPreview` global paste listener; `TheaterAvatarMenu` (authed avatar in ALL theater modes: Your collection/Settings/Sign out); FilterBar `+ New tag` + "Add posts" grid selection mode (tap cards to toggle membership) + shared `TagQuickPicker` used by triage's Tag action. Integration fix: Add-posts mode drops the tag + unread-only feed filters (else the grid only shows already-tagged posts — nothing to add).
+- **Verified in Chrome**: triage keyboard map (→/←/↓/U/Esc) with DB persistence, delete-undo toast, TagQuickPicker toggle, Live tab (visibility-gated poll — hidden automation tabs legitimately show empty), Add-posts whole-pile fix, paste→preview navigation (note: extension isolated-world synthetic pastes don't carry clipboardData — test from page world).
+- **State**: on `feat/unified-theater-nav` with the triage-shell rebuild below. 1593 tests green, build clean.
+- **Follow-ups**: canonical TikTok URLs return null from `resolvePastedLink` (only shortlinks + x.com/IG/YT resolve?) — verify + widen; live-tab first-open has a brief "Loading…" (no SSR seed).
+
+## 2026-08-20 — Triage folded into TheaterShell (`mode="triage"`), CollectionTheater/CollectionRail deleted
+
+- **Why**: `docs/specs/unified-theater-triage.md` §2 — one TheaterShell for every surface; the old vertical-rail `CollectionTheater`/`CollectionRail` was a second, competing UX.
+- **What**: New `TheaterMode: 'triage'`. `TheaterShell` gained a self-contained triage state machine (queue/index/undo/streak, ported verbatim from `CollectionTheater`) that's entirely separate from the shell's live-feed `current`/`displayItems` — those now describe triage's own **Live** sub-tab too. Keyboard: `triageKeyAction()` reproduces the old map (→Done/←Later/↓·Backspace·Delete=Delete/U=Undo/Esc=Close) plus new `↑`=Back (pure nav, no state change). New `TriageStage.tsx` (FeedItem-aware dispatch incl. HLS `VideoPlayer` + quote cards, ported from the deleted `CollectionStage`) and `TriagePileClear.tsx` (end-of-queue state, not `StageWaiting`). `TheaterDesktopChrome`/`TheaterMobileChrome` gained one bundled `triage?: TheaterTriageChrome` prop: Collection↔Live tab switcher (desktop top bar / mobile peek-bar center), Later/Tag/Delete/Done actions replacing Save/Download, a 5s undo toast, and `TheaterAvatarMenu` now mounted in ALL modes' top bar/scrim. `AuthedHome` mounts `<TheaterShell mode="triage">` conditionally (replacing the always-mounted `CollectionTheater`), listens for Header's `open-theater {tab}` event, mounts `<PasteToPreview/>`, and wires FilterBar/FeedGrid's already-shipped `tagSelect`/`tagSelectTag` props. Deleted: `CollectionTheater.tsx`, `CollectionRail.tsx`, `src/components/feed/TriageMode.tsx` (already unmounted), `AddTweetModal.tsx` (confirmed zero remaining usage) + their dedicated tests.
+- **Verified**: 442 theater/component tests green post-edit (no regressions); new `theater-triage.test.ts` covers the key map + delete-undo/advance pure logic.
+- **Follow-ups**: twitter video in triage's Collection tab uses the old `VideoPlayer` (HLS-aware, preserved for fidelity) which doesn't emit the newer `theater-playing-state`/`theater-muted-state` events, so the dock's transport pause/mute buttons are inert for that one content type — pre-existing gap, not a regression. Triage's Live sub-tab seeds `/api/activity` from empty (no SSR data available in the authed shell), so its first open shows a brief "Loading…" instead of instant content.
+
 ## 2026-08-20 — Accounts: magic-link + X identities, Settings rebuild, collections as looping theaters
 
 - **Why**: The tagged-collections design (canvas, 2026-08-19) needed real accounts — `userId` was the X id everywhere, so magic-link-only users couldn't exist and collections couldn't convert signed-out viewers.

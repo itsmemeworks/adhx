@@ -11,14 +11,18 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Maximize2 } from 'lucide-react'
+import type { FeedItem } from '@/components/feed/types'
 import { Stage } from './Stage'
+import { TriageStage } from './TriageStage'
 import { StageWaiting } from './StageWaiting'
+import { TriagePileClear } from './TriagePileClear'
 import { DesktopStageChrome, DesktopDock } from './TheaterDesktopChrome'
 import { TheaterMobileChrome } from './TheaterMobileChrome'
 import { useTheaterFeed } from './useTheaterFeed'
 import { useSeenSet } from './useSeenSet'
 import { prefetchPlayback } from './usePlaybackSource'
 import { TheaterProgressLine, progressKindFor } from './TheaterProgressLine'
+import { feedItemToTheaterItem } from './collection-item'
 import { theaterItemKey } from './types'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 // SignInModal + useAuthMe are built by a parallel agent under the same
@@ -26,13 +30,101 @@ import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 // module may not exist yet at review time; see the "Save collection" CTA
 // below (collection mode only).
 import { SignInModal, useAuthMe } from '@/components/auth'
+// TagQuickPicker is built by a parallel agent (unified-theater-triage.md §4)
+// — imported per the shared contract for the triage "Tag" action.
+import { TagQuickPicker } from '@/components/tags'
 import type {
   SaveCollectionStatus,
   TheaterCollectionMeta,
   TheaterFeedSeed,
   TheaterItem,
   TheaterMode,
+  TheaterTriageChrome,
+  TriageTab,
 } from './types'
+
+/** Stable empty key set for triage's Collection tab (no "fresh" concept there) — avoids allocating a new Set every render for something read-only. */
+const EMPTY_KEY_SET: ReadonlySet<string> = new Set()
+
+export interface TriageUndoAction {
+  type: 'archive' | 'keep' | 'delete'
+  item: FeedItem
+  index: number
+}
+
+/** User's LOCAL calendar day as YYYY-MM-DD (streaks are per the user's days). */
+function localToday(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+interface TriageKeyLike {
+  key: string
+  metaKey?: boolean
+  ctrlKey?: boolean
+  altKey?: boolean
+  target?: EventTarget | null
+}
+
+function isTriageTypingTarget(target: EventTarget | null | undefined): boolean {
+  if (!target || typeof HTMLElement === 'undefined') return false
+  if (!(target instanceof HTMLElement)) return false
+  if (target.isContentEditable) return true
+  return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA'
+}
+
+export type TriageKeyAction = 'done' | 'later' | 'delete' | 'back' | 'undo' | 'close'
+
+/**
+ * Pure key → action mapping for triage mode's Collection tab
+ * (docs/specs/unified-theater-triage.md §2). Preserves the deleted
+ * `CollectionTheater.tsx`'s map VERBATIM — ArrowRight=Done, ArrowLeft=Later,
+ * ArrowDown/Backspace/Delete=Delete, U=Undo, Escape=Close — and adds
+ * ArrowUp=Back (step to the previous item without touching its read/delete
+ * state; distinct from `U`, which reverses the *last* action).
+ */
+export function triageKeyAction(e: TriageKeyLike): TriageKeyAction | null {
+  if (e.metaKey || e.ctrlKey || e.altKey) return null
+  if (isTriageTypingTarget(e.target)) return null
+  switch (e.key) {
+    case 'ArrowRight':
+      return 'done'
+    case 'ArrowLeft':
+      return 'later'
+    case 'ArrowDown':
+    case 'Backspace':
+    case 'Delete':
+      return 'delete'
+    case 'ArrowUp':
+      return 'back'
+    case 'u':
+    case 'U':
+      return 'undo'
+    case 'Escape':
+      return 'close'
+    default:
+      return null
+  }
+}
+
+/** Pure: does committing a pending delete-undo owe the server a DELETE call?
+ * Only when the pending undo is itself a `'delete'` — an `'archive'`/`'keep'`
+ * undo never scheduled one, so committing it (by doing nothing) is correct. */
+export function shouldCommitDelete(undo: TriageUndoAction | null): boolean {
+  return undo?.type === 'delete'
+}
+
+/** Pure: the triage queue index after Done/Later/Delete — always a plain
+ * advance, regardless of which of the three actions fired. */
+export function triageAdvance(index: number): number {
+  return index + 1
+}
+
+/** Pure: the triage queue index after ArrowUp ("Back") — steps to the
+ * previous item without going below the start of the queue. */
+export function triageStepBackIndex(index: number): number {
+  return Math.max(0, index - 1)
+}
 
 /**
  * Live viewport check matching Tailwind's `lg` breakpoint (1024px) — the JS
@@ -73,6 +165,24 @@ export interface TheaterShellProps {
   authed?: boolean
   /** Collection mode (`/t/{username}/{tag}` — tag-collections-as-theater): identity + count driving the chrome and the Save-collection CTA. */
   collection?: TheaterCollectionMeta
+  /**
+   * Triage mode (`mode="triage"`, unified-theater-triage.md §2): the
+   * snapshot of the authed Collection's unread queue to triage — same
+   * contract as the deleted `CollectionTheater`'s `initialQueue`. Taken once
+   * at mount; AuthedHome remounts the shell (conditional render) for a fresh
+   * triage session rather than this prop changing underneath an open one.
+   */
+  triageItems?: FeedItem[]
+  /** Where to start in the triage queue — a gallery click jumps to the clicked item (same contract as the deleted `CollectionTheater`'s `startIndex`). */
+  initialTriageIndex?: number
+  /** Which triage sub-tab to open on (the Triage pill vs. the Live pill in Header both dispatch `open-theater`, differing only in this). */
+  initialTriageTab?: TriageTab
+  /** Notify the Collection feed so it can drop archived/deleted items without a refetch. */
+  onTriageResolved?: (id: string, action: 'archive' | 'delete') => void
+  /** Notify the Collection feed an archive was undone, so it can restore the item + unread count. */
+  onTriageRestored?: (item: FeedItem) => void
+  /** Triage mode only — closes the overlay (it lives over `/`, there is no page to navigate back to). */
+  onClose?: () => void
 }
 
 /** How long a post must stay staged before it counts as "seen" (spec §4/§5). */
@@ -191,13 +301,250 @@ export function TheaterShell({
   sharedItem,
   authed = false,
   collection,
+  triageItems,
+  initialTriageIndex,
+  initialTriageTab,
+  onTriageResolved,
+  onTriageRestored,
+  onClose,
 }: TheaterShellProps) {
+  const isTriage = mode === 'triage'
   // Collection mode (`/t/{username}/{tag}`) is a fixed, curated queue to loop
-  // through — never a live blend with the anonymous community pulse.
+  // through — never a live blend with the anonymous community pulse. Triage
+  // mode never loops either — its queue is a finite backlog with a real end
+  // ("Pile clear"), not a wraparound.
   const loop = mode === 'collection'
-  const feed = useTheaterFeed(seed, { live: !loop })
+  // Triage's Collection tab never blends the live pulse in; its Live tab
+  // reuses the exact same live feed home/shared mode does.
+  const [triageTab, setTriageTab] = useState<TriageTab>(initialTriageTab ?? 'collection')
+  const isTriageCollection = isTriage && triageTab === 'collection'
+  const feed = useTheaterFeed(seed, { live: !loop && !isTriageCollection })
   const seenSet = useSeenSet()
   const { items } = feed
+
+  // --- Triage mode (unified-theater-triage.md §2): a separate, small state
+  // machine ported from the deleted CollectionTheater/CollectionRail. It
+  // deliberately does NOT share `items`/`currentKey`/goNext/goPrev with the
+  // rest of the shell — those always describe the live pulse feed (used
+  // directly by home/shared/collection modes, and by triage's OWN Live tab);
+  // the triage queue below is a wholly separate, non-live, non-looping list.
+  // The queue itself never mutates after the initial snapshot — Done/Later/
+  // Delete only ever advance `triageIndex`, exactly like the deleted
+  // `CollectionTheater` (which never spliced/replaced its `queue` either).
+  const [triageQueue] = useState<FeedItem[]>(() => triageItems ?? [])
+  const [triageIndex, setTriageIndex] = useState(() => Math.max(0, initialTriageIndex ?? 0))
+  const [triageStreak, setTriageStreak] = useState<{ current: number; longest: number }>({
+    current: 0,
+    longest: 0,
+  })
+  const [triageUndo, setTriageUndo] = useState<TriageUndoAction | null>(null)
+  const [triageSavedKeys, setTriageSavedKeys] = useState<Set<string>>(new Set())
+  const [tagPickerItem, setTagPickerItem] = useState<{
+    platform: string
+    bookmarkId: string
+  } | null>(null)
+  const triageRecordedRef = useRef(false)
+  const triageUndoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const shellRef = useRef<HTMLDivElement>(null)
+  const previousFocusRef = useRef<HTMLElement | null>(null)
+
+  const triageTotal = triageQueue.length
+  const triageRemaining = Math.max(0, triageTotal - triageIndex)
+  const triageCurrentFeedItem: FeedItem | null =
+    triageIndex < triageQueue.length ? triageQueue[triageIndex] : null
+  const triageFinished = triageIndex >= triageQueue.length
+  const triageDisplayItems = useMemo(() => triageQueue.map(feedItemToTheaterItem), [triageQueue])
+  const triageProcessedKeys = useMemo(() => {
+    const keys = new Set<string>()
+    for (let i = 0; i < Math.min(triageIndex, triageQueue.length); i++) {
+      keys.add(theaterItemKey(feedItemToTheaterItem(triageQueue[i])))
+    }
+    return keys
+  }, [triageQueue, triageIndex])
+  const triageIsSeen = useCallback(
+    (key: string) => triageProcessedKeys.has(key),
+    [triageProcessedKeys],
+  )
+
+  // Triage streak card (Settings has the full version; this is the same
+  // read/write pair CollectionTheater used).
+  useEffect(() => {
+    if (!isTriage) return
+    let cancelled = false
+    fetch(`/api/triage/streak?today=${localToday()}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then(
+        (s) =>
+          !cancelled && s && setTriageStreak({ current: s.current ?? 0, longest: s.longest ?? 0 }),
+      )
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [isTriage])
+
+  const recordTriageStreak = useCallback(() => {
+    if (triageRecordedRef.current) return
+    triageRecordedRef.current = true
+    fetch('/api/triage/streak', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ today: localToday() }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((s) => {
+        if (!s) return
+        setTriageStreak({ current: s.current, longest: s.longest })
+      })
+      .catch(() => {})
+  }, [])
+
+  const clearTriageUndoTimer = useCallback(() => {
+    if (triageUndoTimerRef.current) clearTimeout(triageUndoTimerRef.current)
+    triageUndoTimerRef.current = null
+  }, [])
+
+  // A pending delete must be COMMITTED (not just cancelled) when the next
+  // action lands within its 5s undo window, or the previous delete silently
+  // never reaches the server. `shouldCommitDelete()` is the pure "is one
+  // owed" check; this does the actual fetch + notification.
+  const commitPendingTriageDelete = useCallback(() => {
+    if (!triageUndoTimerRef.current) return
+    clearTriageUndoTimer()
+    setTriageUndo((u) => {
+      if (shouldCommitDelete(u) && u) {
+        fetch(`/api/bookmarks/${u.item.id}?platform=${u.item.platform ?? 'twitter'}`, {
+          method: 'DELETE',
+        }).catch(() => {})
+        onTriageResolved?.(u.item.id, 'delete')
+      }
+      return null
+    })
+  }, [clearTriageUndoTimer, onTriageResolved])
+
+  // Done: mark read and advance.
+  const triageDone = useCallback(() => {
+    if (!triageCurrentFeedItem) return
+    recordTriageStreak()
+    const item = triageCurrentFeedItem
+    const idx = triageIndex
+    fetch(`/api/bookmarks/${item.id}/read?platform=${item.platform ?? 'twitter'}`, {
+      method: 'POST',
+    }).catch(() => {})
+    onTriageResolved?.(item.id, 'archive')
+    commitPendingTriageDelete()
+    setTriageUndo({ type: 'archive', item, index: idx })
+    setTriageIndex(triageAdvance)
+  }, [
+    triageCurrentFeedItem,
+    triageIndex,
+    recordTriageStreak,
+    onTriageResolved,
+    commitPendingTriageDelete,
+  ])
+
+  // Later: defer — advance without changing read state.
+  const triageLater = useCallback(() => {
+    if (!triageCurrentFeedItem) return
+    recordTriageStreak()
+    commitPendingTriageDelete()
+    setTriageUndo({ type: 'keep', item: triageCurrentFeedItem, index: triageIndex })
+    setTriageIndex(triageAdvance)
+  }, [triageCurrentFeedItem, triageIndex, recordTriageStreak, commitPendingTriageDelete])
+
+  const triageDelete = useCallback(() => {
+    if (!triageCurrentFeedItem) return
+    recordTriageStreak()
+    const item = triageCurrentFeedItem
+    commitPendingTriageDelete()
+    const timer = setTimeout(() => {
+      fetch(`/api/bookmarks/${item.id}?platform=${item.platform ?? 'twitter'}`, {
+        method: 'DELETE',
+      }).catch(() => {})
+      onTriageResolved?.(item.id, 'delete')
+      setTriageUndo((u) => (u && u.type === 'delete' && u.item.id === item.id ? null : u))
+    }, 5000)
+    triageUndoTimerRef.current = timer
+    setTriageUndo({ type: 'delete', item, index: triageIndex })
+    setTriageIndex(triageAdvance)
+  }, [
+    triageCurrentFeedItem,
+    triageIndex,
+    recordTriageStreak,
+    onTriageResolved,
+    commitPendingTriageDelete,
+  ])
+
+  const triageDoUndo = useCallback(() => {
+    if (!triageUndo) return
+    if (triageUndo.type === 'archive') {
+      fetch(
+        `/api/bookmarks/${triageUndo.item.id}/read?platform=${triageUndo.item.platform ?? 'twitter'}`,
+        {
+          method: 'DELETE',
+        },
+      ).catch(() => {})
+      onTriageRestored?.(triageUndo.item)
+    } else if (triageUndo.type === 'delete') {
+      clearTriageUndoTimer()
+    }
+    setTriageIndex(triageUndo.index)
+    setTriageUndo(null)
+  }, [triageUndo, onTriageRestored, clearTriageUndoTimer])
+
+  // ArrowUp "Back": pure navigation only — never touches read/delete state,
+  // unlike `U` (which reverses the last action).
+  const triageStepBack = useCallback(() => {
+    setTriageIndex(triageStepBackIndex)
+  }, [])
+
+  // Flush any pending delete when the shell unmounts (AuthedHome closes
+  // triage by conditionally unmounting the whole `<TheaterShell/>`).
+  useEffect(() => {
+    if (!isTriage) return
+    return () => {
+      commitPendingTriageDelete()
+    }
+  }, [isTriage, commitPendingTriageDelete])
+
+  // Dialog a11y: move focus into the overlay on mount, restore on unmount.
+  useEffect(() => {
+    if (!isTriage) return
+    previousFocusRef.current = document.activeElement as HTMLElement | null
+    shellRef.current?.focus()
+    return () => {
+      previousFocusRef.current?.focus?.()
+    }
+  }, [isTriage])
+
+  // Lock the underlying page's scroll while the triage overlay is mounted.
+  useEffect(() => {
+    if (!isTriage) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [isTriage])
+
+  const handleTriageLiveSave = useCallback(async (item: TheaterItem) => {
+    const key = theaterItemKey(item)
+    const url = sourceUrl(item.platform, item.author, item.bookmarkId || '')
+    if (!url) return
+    try {
+      const res = await fetch('/api/bookmarks/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, source: 'manual' }),
+      })
+      if (res.ok) {
+        setTriageSavedKeys((prev) => new Set(prev).add(key))
+        window.dispatchEvent(new CustomEvent('tweet-added'))
+      }
+    } catch {
+      // Best effort — the button simply won't flip to "Saved".
+    }
+  }, [])
 
   const [muted, setMuted] = useState(true)
 
@@ -416,6 +763,44 @@ export function TheaterShell({
       if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return
       if (e.metaKey || e.ctrlKey || e.altKey) return
 
+      // Triage mode's Collection tab uses an entirely different keymap
+      // (action-and-advance, not pure navigation) — see `triageKeyAction()`.
+      // The Live tab keeps the standard ↓/↑/space/m nav below (it's the same
+      // live pulse feed home mode uses), and Escape always closes the
+      // overlay regardless of which triage tab is active.
+      if (isTriage && triageTab === 'collection') {
+        const action = triageKeyAction(e)
+        if (!action) return
+        e.preventDefault()
+        switch (action) {
+          case 'done':
+            triageDone()
+            break
+          case 'later':
+            triageLater()
+            break
+          case 'delete':
+            triageDelete()
+            break
+          case 'back':
+            triageStepBack()
+            break
+          case 'undo':
+            triageDoUndo()
+            break
+          case 'close':
+            onClose?.()
+            break
+        }
+        return
+      }
+
+      if (isTriage && e.key === 'Escape') {
+        e.preventDefault()
+        onClose?.()
+        return
+      }
+
       switch (e.key) {
         case 'ArrowDown':
         case 'ArrowRight':
@@ -446,7 +831,18 @@ export function TheaterShell({
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [goNext, goPrev])
+  }, [
+    goNext,
+    goPrev,
+    isTriage,
+    triageTab,
+    triageDone,
+    triageLater,
+    triageDelete,
+    triageStepBack,
+    triageDoUndo,
+    onClose,
+  ])
 
   // Mark seen + fire the preview pulse once the current post has been staged
   // for SEEN_DWELL_MS. Resets only when `currentKey` changes. Collection mode
@@ -455,7 +851,10 @@ export function TheaterShell({
   // never records a `preview` activity event, matching the pre-theater
   // `/t/{username}/{tag}` page's behavior.
   useEffect(() => {
-    if (!currentKey) return
+    // Triage mode's overlay lives on top of `/` — it never records a
+    // `preview` pulse for the person's own queue, and its Collection tab
+    // isn't even displaying `currentKey`'s item (see `TriageStage` below).
+    if (!currentKey || isTriage) return
     const timer = window.setTimeout(() => {
       const item = itemsRef.current.find((it) => theaterItemKey(it) === currentKey)
       if (!item) return
@@ -469,7 +868,7 @@ export function TheaterShell({
       }
     }, SEEN_DWELL_MS)
     return () => window.clearTimeout(timer)
-  }, [currentKey, loop])
+  }, [currentKey, loop, isTriage])
 
   // Keep the address bar's path in lockstep with the item currently staged
   // (theater-first.md §7): a reload — or a URL someone copies mid-session —
@@ -485,7 +884,7 @@ export function TheaterShell({
   // for the whole collection; browsing within it must never rewrite the URL
   // to a per-post preview path (that's a different, off-collection surface).
   useEffect(() => {
-    if (typeof window === 'undefined' || mode === 'collection') return
+    if (typeof window === 'undefined' || mode === 'collection' || isTriage) return
     const item = itemsRef.current.find((it) => theaterItemKey(it) === currentKey) ?? null
     const path = theaterUrlSyncPath(item)
     if (!path || window.location.pathname === path) return
@@ -494,7 +893,7 @@ export function TheaterShell({
     } catch {
       // Blocked in some embedded/sandboxed contexts — never worth breaking playback over.
     }
-  }, [currentKey, mode])
+  }, [currentKey, mode, isTriage])
 
   // Stories-style auto-advance: a finished video advances via <Stage>'s
   // `onEnded` prop directly (all viewports — see below); a non-video item's
@@ -508,12 +907,17 @@ export function TheaterShell({
   useEffect(() => {
     function handleAdvance() {
       if (showSignInRef.current) return
+      // Triage's Collection tab never auto-advances — Done/Later/Delete are
+      // the only ways forward there. A leftover mobile progress-line timer
+      // from the same content type would otherwise fire this and silently
+      // step the (unrelated, unrendered) live-feed cursor underneath it.
+      if (isTriageCollection) return
       if (progressKindFor(currentRef.current) !== 'timed') return
       goNext()
     }
     window.addEventListener('theater-advance', handleAdvance)
     return () => window.removeEventListener('theater-advance', handleAdvance)
-  }, [goNext])
+  }, [goNext, isTriageCollection])
 
   // Prefetch at most one item ahead.
   useEffect(() => {
@@ -676,8 +1080,77 @@ export function TheaterShell({
     if (isCollectionAuthed) void performClone()
   }, [collection, authMe.loading, isCollectionAuthed, performClone])
 
+  // --- Effective render inputs: triage's Collection tab is a wholly
+  // separate list from the general `current`/`displayItems` (which always
+  // describe the live pulse feed — used directly by home/shared/collection
+  // modes, and by triage's own Live tab). Everything below picks the right
+  // source once, so the chrome components stay mode-agnostic wherever
+  // possible.
+  const triageStageTheaterItem = triageCurrentFeedItem
+    ? feedItemToTheaterItem(triageCurrentFeedItem)
+    : null
+  const chromeCurrent: TheaterItem | null = isTriageCollection
+    ? triageFinished
+      ? null
+      : triageStageTheaterItem
+    : waiting
+      ? null
+      : current
+  const chromeItems = isTriageCollection ? triageDisplayItems : displayItems
+  const chromeCurrentKey = isTriageCollection
+    ? chromeCurrent
+      ? theaterItemKey(chromeCurrent)
+      : null
+    : currentKey
+  const chromeIsSeen = isTriageCollection ? triageIsSeen : seenSet.isSeen
+  const chromeSeenReady = isTriageCollection ? true : seenSet.ready
+  const chromeFreshKeys = isTriageCollection ? EMPTY_KEY_SET : feed.freshKeys
+  const chromeNewCount = isTriageCollection ? 0 : newCount
+  const chromeCanPrev = isTriageCollection ? triageIndex > 0 : canPrev
+  const chromeCanNext = isTriageCollection ? !triageFinished : canNext
+  // The transport chevrons in triage's Collection tab are pure skip/back —
+  // "next" is exactly "Later" (advance without changing read state); the
+  // dedicated Done/Tag/Delete buttons handle actual actions.
+  const chromeOnPrev = isTriageCollection ? triageStepBack : goPrev
+  const chromeOnNext = isTriageCollection ? triageLater : goNext
+  const chromeOnSelect = isTriageCollection
+    ? (key: string) => {
+        const idx = triageQueue.findIndex((fi) => theaterItemKey(feedItemToTheaterItem(fi)) === key)
+        if (idx !== -1) setTriageIndex(idx)
+      }
+    : onSelect
+
+  const triageChrome: TheaterTriageChrome | undefined = isTriage
+    ? {
+        tab: triageTab,
+        onTabChange: setTriageTab,
+        onDone: triageDone,
+        onLater: triageLater,
+        onDelete: triageDelete,
+        onTag: () => {
+          if (!triageCurrentFeedItem) return
+          setTagPickerItem({
+            platform: triageCurrentFeedItem.platform ?? 'twitter',
+            bookmarkId: triageCurrentFeedItem.id,
+          })
+        },
+        onSave: handleTriageLiveSave,
+        savedKeys: triageSavedKeys,
+        remaining: triageRemaining,
+        streak: triageStreak,
+        onClose: () => onClose?.(),
+      }
+    : undefined
+
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col overflow-hidden bg-[#08070a]">
+    <div
+      ref={shellRef}
+      role={isTriage ? 'dialog' : undefined}
+      aria-modal={isTriage ? true : undefined}
+      aria-label={isTriage ? 'Triage' : undefined}
+      tabIndex={isTriage ? -1 : undefined}
+      className="fixed inset-0 z-[60] flex flex-col overflow-hidden bg-[#08070a] outline-none"
+    >
       {/* Full-width stage on every viewport (spec §8, "Filmstrip dock"):
           below lg the mobile chrome overlays it full-viewport as before;
           at lg+ <DesktopStageChrome/> overlays it with the top bar/post
@@ -685,7 +1158,21 @@ export function TheaterShell({
           the bottom filmstrip queue — no more side-by-side rail column. */}
       <div className="relative h-full w-full flex-1 overflow-hidden">
         <div className="absolute inset-0">
-          {waiting ? (
+          {isTriageCollection ? (
+            triageFinished ? (
+              <TriagePileClear
+                total={triageTotal}
+                streak={triageStreak}
+                onClose={() => onClose?.()}
+              />
+            ) : triageCurrentFeedItem ? (
+              <TriageStage
+                feedItem={triageCurrentFeedItem}
+                muted={muted}
+                onRequestUnmute={onRequestUnmute}
+              />
+            ) : null
+          ) : waiting ? (
             <StageWaiting savedToday={feed.savedToday} />
           ) : (
             <Stage
@@ -706,10 +1193,12 @@ export function TheaterShell({
             ALWAYS mounted (only CSS-hidden at lg, its effects keep running),
             so without this gate — and the matching gate on the chrome's
             `current` prop below — two independent 'timed' timers would both
-            be alive on desktop and double-dispatch `theater-advance`. */}
+            be alive on desktop and double-dispatch `theater-advance`.
+            Triage's Collection tab never auto-advances (see `handleAdvance`
+            above), so its progress line is always suppressed. */}
         <TheaterProgressLine
-          itemKey={currentKey}
-          kind={isDesktop ? progressKindFor(waiting ? null : current) : 'none'}
+          itemKey={chromeCurrentKey}
+          kind={isTriageCollection ? 'none' : isDesktop ? progressKindFor(chromeCurrent) : 'none'}
         />
         {desktopDeclutter && (
           <button
@@ -723,28 +1212,29 @@ export function TheaterShell({
         )}
         <TheaterMobileChrome
           mode={mode}
-          current={waiting || isDesktop ? null : current}
-          items={displayItems}
-          currentKey={currentKey}
-          isSeen={seenSet.isSeen}
-          seenReady={seenSet.ready}
-          freshKeys={feed.freshKeys}
-          newCount={newCount}
-          onSelect={onSelect}
-          onPrev={goPrev}
-          onNext={goNext}
-          canPrev={canPrev}
-          canNext={canNext}
+          current={isDesktop ? null : chromeCurrent}
+          items={chromeItems}
+          currentKey={chromeCurrentKey}
+          isSeen={chromeIsSeen}
+          seenReady={chromeSeenReady}
+          freshKeys={chromeFreshKeys}
+          newCount={chromeNewCount}
+          onSelect={chromeOnSelect}
+          onPrev={chromeOnPrev}
+          onNext={chromeOnNext}
+          canPrev={chromeCanPrev}
+          canNext={chromeCanNext}
           muted={muted}
           onToggleMute={onToggleMute}
           collection={collection}
           saveStatus={saveStatus}
           onSaveCollection={handleSaveCollection}
           onRequestSignIn={openSignIn}
+          triage={triageChrome}
         />
         <DesktopStageChrome
           mode={mode}
-          current={waiting ? null : current}
+          current={chromeCurrent}
           sharedItem={sharedItem}
           authed={authed}
           declutter={desktopDeclutter}
@@ -753,28 +1243,50 @@ export function TheaterShell({
           saveStatus={saveStatus}
           onSaveCollection={handleSaveCollection}
           onRequestSignIn={openSignIn}
+          triage={triageChrome}
         />
+        {/* Triage's Delete (and Done/Later) undo toast — a 5s window, same
+            deadline as `commitPendingTriageDelete`'s timer. Works the same
+            on both viewports, so it lives here rather than duplicated inside
+            each chrome component. */}
+        {isTriageCollection && triageUndo && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-24 z-30 flex justify-center lg:bottom-36">
+            <div className="pointer-events-auto flex items-center gap-3 rounded-full bg-black/80 px-4 py-2 text-[13px] text-white shadow-lg backdrop-blur-md">
+              <span>
+                {triageUndo.type === 'archive'
+                  ? 'Done'
+                  : triageUndo.type === 'delete'
+                    ? 'Deleted'
+                    : 'Later'}
+              </span>
+              <button type="button" onClick={triageDoUndo} className="font-semibold text-clay">
+                Undo
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       <DesktopDock
         mode={mode}
-        items={displayItems}
-        current={waiting ? null : current}
-        currentKey={currentKey}
-        isSeen={seenSet.isSeen}
-        seenReady={seenSet.ready}
-        freshKeys={feed.freshKeys}
-        newCount={newCount}
+        items={chromeItems}
+        current={chromeCurrent}
+        currentKey={chromeCurrentKey}
+        isSeen={chromeIsSeen}
+        seenReady={chromeSeenReady}
+        freshKeys={chromeFreshKeys}
+        newCount={chromeNewCount}
         savedToday={feed.savedToday}
-        onSelect={onSelect}
-        waiting={waiting}
+        onSelect={chromeOnSelect}
+        waiting={isTriageCollection ? false : waiting}
         muted={muted}
         onToggleMute={onToggleMute}
-        canPrev={canPrev}
-        canNext={canNext}
-        onPrev={goPrev}
-        onNext={goNext}
+        canPrev={chromeCanPrev}
+        canNext={chromeCanNext}
+        onPrev={chromeOnPrev}
+        onNext={chromeOnNext}
         declutter={desktopDeclutter}
         collection={collection}
+        triage={triageChrome}
       />
       <SignInModal
         open={showSignIn}
@@ -794,6 +1306,14 @@ export function TheaterShell({
             : (signInReturnTo ?? undefined)
         }
       />
+      {isTriage && tagPickerItem && (
+        <TagQuickPicker
+          platform={tagPickerItem.platform}
+          bookmarkId={tagPickerItem.bookmarkId}
+          open
+          onClose={() => setTagPickerItem(null)}
+        />
+      )}
     </div>
   )
 }

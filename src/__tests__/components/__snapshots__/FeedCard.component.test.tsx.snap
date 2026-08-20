@@ -5,7 +5,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > '4
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
+    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
   >
     <div
       class="relative"
@@ -87,7 +87,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
+    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
   >
     <div
       class="relative overflow-hidden p-4 bg-gradient-to-br from-clay/[0.14] to-surface"
@@ -163,7 +163,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
+    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
   >
     <div
       class="relative"
@@ -230,7 +230,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'e
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
+    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
   >
     <div
       class="relative"
@@ -331,7 +331,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
+    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
   >
     <div
       class="relative"
@@ -441,7 +441,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
+    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
   >
     <div
       class="relative"
@@ -530,7 +530,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
+    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
   >
     <div
       class="bg-surface p-4"
@@ -876,7 +876,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'p
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
+    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
   >
     <div
       class="bg-surface p-4"
@@ -940,7 +940,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
+    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
   >
     <div
       class="bg-surface p-4"
@@ -1155,7 +1155,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
+    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
   >
     <div
       class="bg-surface p-4"
@@ -1250,7 +1250,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'r
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
+    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
   >
     <div
       class="bg-surface p-4"
@@ -1323,7 +1323,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 't
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
+    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
   >
     <div
       class="bg-surface p-4"
@@ -1430,7 +1430,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'v
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
+    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
   >
     <div
       class="relative"
@@ -1527,7 +1527,7 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'y
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer"
+    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
   >
     <div
       class="bg-surface p-4"

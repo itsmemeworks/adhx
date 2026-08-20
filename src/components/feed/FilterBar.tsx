@@ -13,6 +13,8 @@ import {
   Repeat,
   Check,
   X,
+  Plus,
+  ListChecks,
 } from 'lucide-react'
 import {
   FILTER_OPTIONS,
@@ -26,6 +28,7 @@ import {
 import type { FeedView } from './FeedGrid'
 import { PlatformGlyph } from '@/components/matter'
 import { cn } from '@/lib/utils'
+import { sanitizeTag } from '@/lib/utils/tag'
 
 interface FilterBarProps {
   filter: FilterType
@@ -47,6 +50,10 @@ interface FilterBarProps {
   availableTags?: TagItem[]
   stats: { total: number; unread: number }
   onTagUpdated?: (tag: string, isPublic: boolean, shareUrl: string) => void
+  // Tags: create + fill (unified-theater-triage §4). `tagSelect` is the tag
+  // currently in grid "Add posts" selection mode (null when inactive).
+  tagSelect?: string | null
+  onTagSelectChange?: (tag: string | null) => void
 }
 
 // All four platforms render through the app's own PlatformGlyph — lucide v1
@@ -134,19 +141,25 @@ export function FilterBar({
   availableTags = [],
   stats,
   onTagUpdated,
+  tagSelect = null,
+  onTagSelectChange,
 }: FilterBarProps): React.ReactElement {
   const [showPlatformDropdown, setShowPlatformDropdown] = useState(false)
   const [showSortDropdown, setShowSortDropdown] = useState(false)
   const [showTagsDropdown, setShowTagsDropdown] = useState(false)
+  const [showNewTagForm, setShowNewTagForm] = useState(false)
+  const [newTagValue, setNewTagValue] = useState('')
   const [sharing, setSharing] = useState(false)
   const [copiedLabel, setCopiedLabel] = useState<string | null>(null)
   const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const platformBtnRef = useRef<HTMLButtonElement>(null)
   const sortBtnRef = useRef<HTMLButtonElement>(null)
   const tagsBtnRef = useRef<HTMLButtonElement>(null)
+  const newTagInputRef = useRef<HTMLInputElement>(null)
   const currentPlatform = PLATFORM_OPTIONS.find((o) => o.value === platform) || PLATFORM_OPTIONS[0]
   const selectedTag = selectedTags[0]
   const selectedTagInfo = selectedTag ? availableTags.find((t) => t.tag === selectedTag) : undefined
+  const newTagPreview = sanitizeTag(newTagValue)
 
   useEffect(
     () => () => {
@@ -154,6 +167,39 @@ export function FilterBar({
     },
     [],
   )
+
+  // Exit "Add posts" selection mode on Escape, wherever focus is — the grid
+  // itself has no callback wired (FilterBar owns onTagSelectChange), so this
+  // is the one place Esc-to-finish is implemented.
+  useEffect(() => {
+    if (!tagSelect || !onTagSelectChange) return
+    const exitSelect = onTagSelectChange
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') exitSelect(null)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [tagSelect, onTagSelectChange])
+
+  useEffect(() => {
+    if (showNewTagForm) newTagInputRef.current?.focus()
+  }, [showNewTagForm])
+
+  /**
+   * "+ New tag": a tag exists once one post carries it, so there's no create
+   * endpoint — Enter just selects it as the active filter AND flips on grid
+   * "Add posts" selection mode so the user can start tagging immediately.
+   */
+  function handleCreateTag(e: React.FormEvent) {
+    e.preventDefault()
+    const tag = sanitizeTag(newTagValue)
+    if (!tag) return
+    onSelectedTagsChange?.([tag])
+    onTagSelectChange?.(tag)
+    setShowNewTagForm(false)
+    setNewTagValue('')
+    setShowTagsDropdown(false)
+  }
 
   /**
    * "Share as theater": marks the tag public (idempotent — safe to call even
@@ -290,8 +336,10 @@ export function FilterBar({
         )}
 
         {/* Tags dropdown pill — selecting a tag drives the selected-tag
-            toolbar below (count + Public chip + Share as theater). */}
-        {onSelectedTagsChange && availableTags.length > 0 && (
+            toolbar below (count + Public chip + Share as theater). Stays
+            visible with zero tags when tag-creation (onTagSelectChange) is
+            wired, so the first tag can be created from an empty state. */}
+        {onSelectedTagsChange && (availableTags.length > 0 || onTagSelectChange) && (
           <div className="flex-shrink-0">
             <button
               ref={tagsBtnRef}
@@ -315,7 +363,11 @@ export function FilterBar({
 
             <AnchoredMenu
               open={showTagsDropdown}
-              onClose={() => setShowTagsDropdown(false)}
+              onClose={() => {
+                setShowTagsDropdown(false)
+                setShowNewTagForm(false)
+                setNewTagValue('')
+              }}
               anchorRef={tagsBtnRef}
               width={220}
             >
@@ -335,6 +387,53 @@ export function FilterBar({
                   <span className="ml-auto flex-none text-ink-3">{t.count}</span>
                 </button>
               ))}
+
+              <div className="my-1 border-t border-hairline" />
+
+              {showNewTagForm ? (
+                <form onSubmit={handleCreateTag} className="px-3 py-2">
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      ref={newTagInputRef}
+                      type="text"
+                      value={newTagValue}
+                      onChange={(e) => setNewTagValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          e.stopPropagation()
+                          setShowNewTagForm(false)
+                          setNewTagValue('')
+                        }
+                      }}
+                      placeholder="tag name"
+                      maxLength={10}
+                      className="min-w-0 flex-1 rounded-md border border-hairline bg-paper px-2 py-1 text-sm text-ink outline-none focus:border-clay"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!newTagPreview}
+                      aria-label="Create tag"
+                      className="flex-none rounded-md bg-clay-grad p-1.5 text-white disabled:opacity-50"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  {newTagValue.trim() && (
+                    <p className="mt-1 text-[11px] text-ink-3">
+                      {newTagPreview ? `→ #${newTagPreview}` : 'Enter a valid tag'}
+                    </p>
+                  )}
+                </form>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowNewTagForm(true)}
+                  className="w-full px-3 py-2 text-left text-sm flex items-center gap-2 text-clay font-medium hover:bg-inset transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  New tag
+                </button>
+              )}
             </AnchoredMenu>
           </div>
         )}
@@ -433,6 +532,21 @@ export function FilterBar({
                 <Check size={12} className="text-done" />
                 {copiedLabel} copied
               </span>
+            )}
+            {onTagSelectChange && (
+              <button
+                type="button"
+                onClick={() => onTagSelectChange(tagSelect === selectedTag ? null : selectedTag)}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full px-3.5 py-[7px] text-[13px] font-semibold transition-colors',
+                  tagSelect === selectedTag
+                    ? 'bg-done/15 text-done'
+                    : 'bg-surface border border-hairline text-ink-2 hover:text-ink',
+                )}
+              >
+                <ListChecks size={13} />
+                {tagSelect === selectedTag ? 'Done adding' : 'Add posts'}
+              </button>
             )}
             <button
               type="button"

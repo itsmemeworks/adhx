@@ -25,6 +25,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   Bookmark,
   Check,
+  Clock,
   Loader2,
   Clipboard,
   Minimize2,
@@ -34,6 +35,8 @@ import {
   ExternalLink,
   Flame,
   Repeat,
+  Tag as TagIcon,
+  Trash2,
   ChevronLeft,
   ChevronRight,
   ChevronUp,
@@ -58,7 +61,14 @@ import { TheaterLinkedText, stripShortLinksForPreview } from './TheaterText'
 import { progressKindFor } from './TheaterProgressLine'
 import { UpNextList, TYPE_TILE, warmOnHover } from './UpNextList'
 import { SaveCollectionButton } from './SaveCollectionButton'
-import type { SaveCollectionStatus, TheaterCollectionMeta, TheaterItem, TheaterMode } from './types'
+import { TheaterAvatarMenu } from './TheaterAvatarMenu'
+import type {
+  SaveCollectionStatus,
+  TheaterCollectionMeta,
+  TheaterItem,
+  TheaterMode,
+  TheaterTriageChrome,
+} from './types'
 
 export interface DesktopStageChromeProps {
   mode: TheaterMode
@@ -76,6 +86,8 @@ export interface DesktopStageChromeProps {
   saveStatus?: SaveCollectionStatus
   onSaveCollection?: () => void
   onRequestSignIn?: () => void
+  /** Triage mode (unified-theater-triage.md §2): swaps the top bar's Live/paste-input for a Collection↔Live tab switcher, and the bottom-right action set for Later/Tag/Delete/Done. */
+  triage?: TheaterTriageChrome
 }
 
 export interface DesktopDockProps {
@@ -100,6 +112,8 @@ export interface DesktopDockProps {
   declutter: boolean
   /** Collection mode: appends a "loops" divider + a ghosted copy of the first card after the filmstrip, and hides the live-pulse-only savedToday/newCount lines in the end cap. */
   collection?: TheaterCollectionMeta
+  /** Triage mode: end cap shows "{remaining} left" + streak instead of savedToday/newCount. */
+  triage?: TheaterTriageChrome
 }
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -258,6 +272,7 @@ export function DesktopStageChrome({
   saveStatus = 'idle',
   onSaveCollection,
   onRequestSignIn,
+  triage,
 }: DesktopStageChromeProps) {
   const [pasteValue, setPasteValue] = useState('')
   const [pasteError, setPasteError] = useState(false)
@@ -294,6 +309,11 @@ export function DesktopStageChrome({
   // alongside a (future) mobile equivalent, and must never hijack a paste
   // aimed at an actual input/textarea/contentEditable.
   useEffect(() => {
+    // Triage mode's global paste-to-preview is already covered by
+    // `<PasteToPreview/>` (mounted once, app-wide, in AuthedHome) — this
+    // component doesn't even render the paste input in triage mode (see the
+    // top bar below), so a second listener here would just double-navigate.
+    if (triage) return
     const handler = (e: ClipboardEvent) => {
       const target = e.target as HTMLElement | null
       if (target) {
@@ -308,7 +328,7 @@ export function DesktopStageChrome({
     }
     window.addEventListener('paste', handler)
     return () => window.removeEventListener('paste', handler)
-  }, [])
+  }, [triage])
 
   const kind = current ? inferType(current) : null
   const textLike = kind !== null && ['text', 'quote', 'article'].includes(kind)
@@ -350,7 +370,27 @@ export function DesktopStageChrome({
           <a href="/" aria-label="ADHX home" className="flex-none">
             <MatterLogo size={19} className="[&>span]:text-white" />
           </a>
-          {collection ? (
+          {triage ? (
+            <>
+              <span className="h-5 w-px flex-none bg-white/20" aria-hidden />
+              <div className="inline-flex flex-none rounded-full bg-white/10 p-1 text-[12.5px] font-semibold">
+                {(['collection', 'live'] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => triage.onTabChange(t)}
+                    aria-current={triage.tab === t ? 'true' : undefined}
+                    className={cn(
+                      'rounded-full px-4 py-1.5 capitalize transition-colors',
+                      triage.tab === t ? 'bg-white text-ink' : 'text-white/60 hover:text-white',
+                    )}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : collection ? (
             <>
               <span className="h-5 w-px flex-none bg-white/20" aria-hidden />
               <span className="flex-none rounded-full bg-clay/15 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-clay">
@@ -376,7 +416,14 @@ export function DesktopStageChrome({
         </div>
 
         <div className="pointer-events-auto flex flex-none items-center gap-2.5">
-          {collection ? (
+          {triage ? (
+            triage.tab === 'live' && current && textLike ? (
+              <>
+                <FlameChip trendCount={trendCount} />
+                <PlatformTimeChip item={current} />
+              </>
+            ) : null
+          ) : collection ? (
             <a href="/" className={GLASS}>
               Make your own
             </a>
@@ -424,6 +471,19 @@ export function DesktopStageChrome({
                 )}
               </form>
             </>
+          )}
+
+          <TheaterAvatarMenu />
+
+          {triage && (
+            <button
+              type="button"
+              onClick={triage.onClose}
+              aria-label="Close triage"
+              className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-full border border-white/[.18] bg-white/[.08] text-white backdrop-blur-md"
+            >
+              <X size={16} />
+            </button>
           )}
 
           <button
@@ -505,8 +565,46 @@ export function DesktopStageChrome({
         </div>
       )}
 
-      {/* Bottom-right: action buttons. */}
-      {current && (
+      {/* Bottom-right: action buttons. Triage's Collection tab replaces the
+          whole set with Later/Tag/Delete/Done — see
+          docs/specs/unified-theater-triage.md §2. */}
+      {current && triage && triage.tab === 'collection' ? (
+        <div
+          className={cn(
+            'pointer-events-auto absolute bottom-6 right-7 flex items-center gap-2 transition-[opacity,transform] duration-200 ease-out',
+            declutter && 'translate-y-3 opacity-0 pointer-events-none',
+          )}
+        >
+          <button type="button" onClick={triage.onLater} className={GLASS}>
+            <Clock size={14} />
+            Later
+          </button>
+          <button type="button" onClick={triage.onTag} className={GLASS}>
+            <TagIcon size={14} />
+            Tag
+          </button>
+          <button type="button" onClick={triage.onDelete} className={GLASS}>
+            <Trash2 size={14} />
+            Delete
+          </button>
+          <button type="button" onClick={triage.onDone} className={PRIMARY}>
+            <Check size={14} />
+            Done
+          </button>
+          {openUrl && (
+            <a
+              href={openUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={`Open on ${platformLabel}`}
+              className={GLASS}
+            >
+              <ExternalLink size={14} />
+              Open
+            </a>
+          )}
+        </div>
+      ) : current ? (
         <div
           className={cn(
             'pointer-events-auto absolute bottom-6 right-7 flex items-center gap-2 transition-[opacity,transform] duration-200 ease-out',
@@ -544,8 +642,12 @@ export function DesktopStageChrome({
               onSave={() => onSaveCollection?.()}
               className={PRIMARY}
             />
-          ) : mode === 'shared' && authed ? (
-            <SavePostButton current={current} className={GLASS} />
+          ) : (mode === 'shared' && authed) || triage?.tab === 'live' ? (
+            triage?.tab === 'live' ? (
+              <TriageLiveSaveButton current={current} triage={triage} className={GLASS} />
+            ) : (
+              <SavePostButton current={current} className={GLASS} />
+            )
           ) : (
             <button
               type="button"
@@ -569,8 +671,38 @@ export function DesktopStageChrome({
             </a>
           )}
         </div>
-      )}
+      ) : null}
     </div>
+  )
+}
+
+/**
+ * Triage mode's Live-tab Save button: always-authed direct save (the theater
+ * is only ever reached signed in from the authed Collection), tracked via
+ * `TheaterTriageChrome.savedKeys` rather than owning its own fetch state —
+ * `SavePostButton` above assumes `mode === 'shared'`'s sign-in-modal flow,
+ * which doesn't apply here.
+ */
+function TriageLiveSaveButton({
+  current,
+  triage,
+  className,
+}: {
+  current: TheaterItem
+  triage: TheaterTriageChrome
+  className: string
+}) {
+  const saved = triage.savedKeys.has(theaterItemKey(current))
+  return (
+    <button
+      type="button"
+      onClick={() => !saved && triage.onSave(current)}
+      disabled={saved}
+      className={className}
+    >
+      {saved ? <Check size={14} /> : <Bookmark size={14} />}
+      {saved ? 'Saved' : 'Save'}
+    </button>
   )
 }
 
@@ -597,6 +729,7 @@ export function DesktopDock({
   onNext,
   declutter,
   collection,
+  triage,
 }: DesktopDockProps) {
   const [showAll, setShowAll] = useState(false)
   const cardRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
@@ -882,17 +1015,33 @@ export function DesktopDock({
           Show all · {items.length}
         </button>
         {/* savedToday/newCount are live-pulse concepts — collection mode is a
-            static curated queue, so neither line is meaningful there. */}
-        {!collection &&
-          (waiting ? (
-            <span className="text-[10.5px] text-ink-3">Waiting for new sends…</span>
-          ) : (
-            savedToday > 0 && (
-              <span className="text-[10.5px] text-ink-3">{savedToday} saved today</span>
-            )
-          ))}
-        {!collection && newCount > 0 && (
-          <span className="text-[10.5px] font-semibold text-clay">{newCount} new</span>
+            static curated queue, and triage's Collection tab is the user's
+            own backlog, so neither line is meaningful for either. Triage
+            shows "{remaining} left" + streak instead. */}
+        {triage && triage.tab === 'collection' ? (
+          <span className="flex items-center gap-1.5 text-[10.5px] text-ink-3">
+            <span className="font-mono">{triage.remaining} left</span>
+            {triage.streak.current > 0 && (
+              <span className="inline-flex items-center gap-0.5 font-semibold text-flame">
+                <Flame size={10} fill="currentColor" />
+                {triage.streak.current}
+              </span>
+            )}
+          </span>
+        ) : (
+          <>
+            {!collection &&
+              (waiting ? (
+                <span className="text-[10.5px] text-ink-3">Waiting for new sends…</span>
+              ) : (
+                savedToday > 0 && (
+                  <span className="text-[10.5px] text-ink-3">{savedToday} saved today</span>
+                )
+              ))}
+            {!collection && newCount > 0 && (
+              <span className="text-[10.5px] font-semibold text-clay">{newCount} new</span>
+            )}
+          </>
         )}
 
         {showAll && (

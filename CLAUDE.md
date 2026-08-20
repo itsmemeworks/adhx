@@ -632,7 +632,7 @@ The authed `Header` (`src/components/Header.tsx`) packs many controls. On phones
 
 - Secondary actions (theme toggle + sync) are hidden in the bar (`hidden sm:*`) and moved into the **avatar dropdown menu** (`sm:hidden` section there).
 - The Triage pill hides its streak segment below `sm`.
-- There is **no** separate mobile hamburger — the avatar menu already has Collection / Trending / Settings.
+- There is **no** separate mobile hamburger — the avatar menu already has Collection / Live / Settings.
 
 When adding header controls, verify the cluster's minimum width still fits ~360px (macOS Chrome won't render below ~500px, so measure item widths in the DOM rather than trusting a visual check).
 
@@ -686,9 +686,9 @@ This avoids prop drilling and keeps keyboard logic centralized while allowing di
 The authed Collection (moved verbatim from the old client `page.tsx`). Client component with:
 
 - **FeedGrid** (`src/components/feed/FeedGrid.tsx`): three view modes toggled in the FilterBar — **grid** (masonry via CSS columns, `FeedCard`), **list** (dense rows, `FeedListRow`), **bento** (mixed-size mosaic, `FeedBentoTile`). Infinite scroll via an `IntersectionObserver` sentinel.
-- **Focus / Triage**: `CollectionTheater` (`src/components/theater/CollectionTheater.tsx`) — the theater as the authed focus mode: dark stage (twitter video via the HLS-aware `VideoPlayer`, everything else via the theater Stage variants) + `CollectionRail` with **Collection ↔ Live** tabs. Keyboard map preserved from the old TriageMode: `→` Done (mark read + advance), `←` Later, `↓`/Backspace/Delete = Delete (5s undo window), `U` undo, Esc close. Marking Done posts the existing `/api/bookmarks/[id]/read` (now with `?platform=`). The **Live** tab shows the community pulse in-place (Save → `/api/bookmarks/add`, then a `tweet-added` event refreshes the feed). The old `TriageMode.tsx` remains in the tree but is no longer mounted.
+- **Focus / Triage**: `TheaterShell mode="triage"` (spec: `docs/specs/unified-theater-triage.md`) — the SAME filmstrip theater as everywhere else, seeded from the current filtered feed. Actions: Done (POST `/api/bookmarks/[id]/read?platform=` + advance) / Later / Tag (`TagQuickPicker`) / Delete (5s undo). Keyboard: `→` Done, `←` Later, `↓`/Backspace/Delete = Delete, `U` undo, `↑` back, Esc close — gated on triage mode so other modes keep ↓↑/jk. **Collection ↔ Live** tabs live in the theater top bar/peek bar (Live = the pulse feed with an authed Save). Twitter video plays via the HLS-aware `VideoPlayer` inside `TriageStage.tsx`; end-of-queue shows `TriagePileClear`. Opened via `CustomEvent('open-theater', { detail: { tab: 'live' | 'triage' } })` (Header dispatches; AuthedHome listens). The old `CollectionTheater`/`CollectionRail`/`TriageMode`/`AddTweetModal` are DELETED.
 - **FilterBar**: category filters + **platform filter** (All / X / Instagram / TikTok) + view toggles + tags + search.
-- **Nav**: the top bar carries **Collection / Trending** tabs (replacing the old saved/unread counts) so users can reach `/trending` from anywhere; mobile collapses search to an icon.
+- **Nav**: the top bar carries **Collection · Live** (Live opens the theater via the `open-theater` event; Trending was removed from the authed nav — the public `/trending` SEO routes are untouched). The `+` Add button is gone: adding by URL is paste-first via `PasteToPreview` (global paste listener → `resolvePastedLink()` → preview page). Mobile collapses search to an icon.
 - **FeedCard**: tweet-style per-type cards with a `PlatformChip` + `TimePill`; non-Twitter items show their platform glyph.
 - **Settings** has a gamification **Streak card** (current streak, 7-day dot row, longest/triaged/this-week) fed by `/api/triage/streak`.
 
@@ -699,11 +699,11 @@ Quote tweets display embedded content showing the quoted tweet. Two data sources
 - `quotedTweet`: Full `FeedItem` when the quoted tweet exists in user's collection
 - `quoteContext`: Fallback JSON blob with basic info (author, text, thumbnail) when not in collection
 
-**Rendering:** the collection theater's stage shows `StageText` plus a compact `StageQuoteCard` (`src/components/theater/CollectionTheater.tsx`); the gallery cards render quote context inline. Historical note: an older `Lightbox.tsx` with `Q`/`P` quoted/parent keyboard navigation and `R`/`U` read keys no longer exists — the focus surface was `TriageMode` (card stack) and is now `CollectionTheater`; neither ever carried those bindings, so don't "restore" them from stale docs.
+**Rendering:** the triage theater's stage shows `StageText` plus a compact quote card (`src/components/theater/TriageStage.tsx`); the gallery cards render quote context inline. Historical note: an older `Lightbox.tsx` with `Q`/`P` quoted/parent keyboard navigation and `R`/`U` read keys no longer exists — the focus surface went `TriageMode` → `CollectionTheater` → `TheaterShell mode="triage"`; none ever carried those bindings, so don't "restore" them from stale docs.
 
 Files:
 
-- `src/components/theater/CollectionTheater.tsx` - StageQuoteCard, quote rendering in the focus mode
+- `src/components/theater/TriageStage.tsx` - quote-card rendering in the triage theater
 - `src/components/feed/types.ts` - FeedItem.quotedTweet, FeedItem.quoteContext types
 
 ### Tag Sharing with Friendly URLs

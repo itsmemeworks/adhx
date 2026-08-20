@@ -22,11 +22,19 @@ export function theaterItemKey(item: Pick<TheaterItem, 'platform' | 'bookmarkId'
 
 /**
  * Which rail the theater carries: signed-out home, a shared preview (PR 3),
- * or a public tag collection (`/t/{username}/{tag}` — tag-collections-as-
- * theater). Collection mode loops (advancing past the last item wraps to the
- * first, and vice versa) and never enters the end-of-feed waiting stage.
+ * a public tag collection (`/t/{username}/{tag}` — tag-collections-as-
+ * theater), or the authed Collection's triage queue (`unified-theater-
+ * triage.md` §2). Collection mode loops (advancing past the last item wraps
+ * to the first, and vice versa) and never enters the end-of-feed waiting
+ * stage. Triage mode is an overlay over `/` with its own Done/Later/Delete
+ * queue (never live, never loops, never rewrites the URL) plus a
+ * Collection ↔ Live sub-tab that blends in the same live pulse feed home
+ * mode uses.
  */
-export type TheaterMode = 'home' | 'shared' | 'collection'
+export type TheaterMode = 'home' | 'shared' | 'collection' | 'triage'
+
+/** Triage mode's Collection ↔ Live sub-tab (unified-theater-triage.md §2). */
+export type TriageTab = 'collection' | 'live'
 
 /** Identity + loop metadata for a public tag collection theater (mode `'collection'`). */
 export interface TheaterCollectionMeta {
@@ -40,6 +48,33 @@ export interface TheaterCollectionMeta {
 
 /** Save-collection CTA status, shared by the desktop and mobile chrome. */
 export type SaveCollectionStatus = 'idle' | 'saving' | 'saved' | 'error'
+
+/**
+ * Bundled triage-mode chrome contract (unified-theater-triage.md §2) —
+ * passed as a single optional prop to `DesktopStageChrome`/
+ * `TheaterMobileChrome`/`DesktopDock` instead of a dozen separate ones.
+ * Present only when `mode === 'triage'`.
+ */
+export interface TheaterTriageChrome {
+  tab: TriageTab
+  onTabChange: (tab: TriageTab) => void
+  /** Done: mark read + advance (Collection tab only). */
+  onDone: () => void
+  /** Later: advance without changing read state (Collection tab only). */
+  onLater: () => void
+  /** Delete: 5s undo window, then DELETE (Collection tab only). */
+  onDelete: () => void
+  /** Open the TagQuickPicker for the current item (Collection tab only). */
+  onTag: () => void
+  /** Save the current Live-tab item to the collection. */
+  onSave: (item: TheaterItem) => void
+  savedKeys: ReadonlySet<string>
+  /** Items left in the Collection queue. */
+  remaining: number
+  streak: { current: number; longest: number }
+  /** Closes the whole triage overlay. */
+  onClose: () => void
+}
 
 /** Human platform label for "Open on {platform}" titles — shared by the desktop chrome, mobile chrome, and `CollectionRail`. */
 export const PLATFORM_LABEL: Record<string, string> = {

@@ -336,4 +336,118 @@ describe('FilterBar Component', () => {
       await waitFor(() => expect(screen.getByText(/copied/i)).toBeTruthy())
     })
   })
+
+  describe('"+ New tag" (tags: create + fill)', () => {
+    it('renders a "+ New tag" row in the Tags dropdown', () => {
+      render(<FilterBar {...defaultProps} onTagSelectChange={vi.fn()} />)
+
+      const buttons = screen.getAllByRole('button')
+      fireEvent.click(buttons.find((b) => b.textContent?.includes('Tags'))!)
+
+      expect(screen.getByRole('button', { name: /new tag/i })).toBeTruthy()
+    })
+
+    it('shows an inline input with a sanitized preview after clicking "+ New tag"', () => {
+      render(<FilterBar {...defaultProps} onTagSelectChange={vi.fn()} />)
+
+      const buttons = screen.getAllByRole('button')
+      fireEvent.click(buttons.find((b) => b.textContent?.includes('Tags'))!)
+      fireEvent.click(screen.getByRole('button', { name: /new tag/i }))
+
+      const input = screen.getByPlaceholderText('tag name')
+      fireEvent.change(input, { target: { value: 'Claude Code!' } })
+
+      expect(screen.getByText('→ #claude-cod')).toBeTruthy()
+    })
+
+    it('submitting the new-tag form selects it and enters Add-posts mode', () => {
+      const onSelectedTagsChange = vi.fn()
+      const onTagSelectChange = vi.fn()
+      render(
+        <FilterBar
+          {...defaultProps}
+          onSelectedTagsChange={onSelectedTagsChange}
+          onTagSelectChange={onTagSelectChange}
+        />,
+      )
+
+      const buttons = screen.getAllByRole('button')
+      fireEvent.click(buttons.find((b) => b.textContent?.includes('Tags'))!)
+      fireEvent.click(screen.getByRole('button', { name: /new tag/i }))
+
+      const input = screen.getByPlaceholderText('tag name')
+      fireEvent.change(input, { target: { value: 'Reading List' } })
+      fireEvent.submit(input.closest('form')!)
+
+      expect(onSelectedTagsChange).toHaveBeenCalledWith(['reading-li'])
+      expect(onTagSelectChange).toHaveBeenCalledWith('reading-li')
+    })
+
+    it('keeps the Tags dropdown visible with zero tags when onTagSelectChange is wired', () => {
+      render(<FilterBar {...defaultProps} availableTags={[]} onTagSelectChange={vi.fn()} />)
+
+      const buttons = screen.getAllByRole('button')
+      expect(buttons.find((b) => b.textContent === 'Tags')).toBeTruthy()
+    })
+  })
+
+  describe('"Add posts" / "Done adding" toolbar toggle', () => {
+    it('shows "Add posts" for the selected tag when onTagSelectChange is wired', () => {
+      render(<FilterBar {...defaultProps} selectedTags={['work']} onTagSelectChange={vi.fn()} />)
+
+      expect(screen.getByRole('button', { name: /add posts/i })).toBeTruthy()
+    })
+
+    it('clicking "Add posts" calls onTagSelectChange with the selected tag', () => {
+      const onTagSelectChange = vi.fn()
+      render(
+        <FilterBar
+          {...defaultProps}
+          selectedTags={['work']}
+          onTagSelectChange={onTagSelectChange}
+        />,
+      )
+
+      fireEvent.click(screen.getByRole('button', { name: /add posts/i }))
+      expect(onTagSelectChange).toHaveBeenCalledWith('work')
+    })
+
+    it('shows "Done adding" and calls onTagSelectChange(null) when tagSelect matches', () => {
+      const onTagSelectChange = vi.fn()
+      render(
+        <FilterBar
+          {...defaultProps}
+          selectedTags={['work']}
+          tagSelect="work"
+          onTagSelectChange={onTagSelectChange}
+        />,
+      )
+
+      const doneButton = screen.getByRole('button', { name: /done adding/i })
+      fireEvent.click(doneButton)
+      expect(onTagSelectChange).toHaveBeenCalledWith(null)
+    })
+
+    it('does not render the Add posts/Done adding button without onTagSelectChange', () => {
+      render(<FilterBar {...defaultProps} selectedTags={['work']} />)
+
+      expect(screen.queryByRole('button', { name: /add posts/i })).toBeFalsy()
+      expect(screen.queryByRole('button', { name: /done adding/i })).toBeFalsy()
+    })
+
+    it('pressing Escape while tagSelect is active exits selection mode', () => {
+      const onTagSelectChange = vi.fn()
+      render(
+        <FilterBar
+          {...defaultProps}
+          selectedTags={['work']}
+          tagSelect="work"
+          onTagSelectChange={onTagSelectChange}
+        />,
+      )
+
+      fireEvent.keyDown(window, { key: 'Escape' })
+      expect(onTagSelectChange).toHaveBeenCalledWith(null)
+    })
+  })
 })
