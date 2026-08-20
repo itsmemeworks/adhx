@@ -42,7 +42,15 @@ export const POST = withAuth(async (request: NextRequest, userId: string) => {
     if (detected?.platform === 'twitter') {
       // Delegate to the existing tweet-specific flow (FxTwitter resolver +
       // article + quote-tweet + facet URL handling are all baked in there).
-      const tweetResponse = await fetch(new URL('/api/tweets/add', request.url).toString(), {
+      // The self-call MUST go over loopback: `request.url`'s public origin is
+      // not reachable from inside the machine the same way it is from outside
+      // (on Fly the app speaks plain HTTP on $PORT behind the proxy, so
+      // dialing our own https:// origin fails the TLS handshake with
+      // "wrong version number" and every tweet save 500s with fetch failed).
+      const delegateUrl = new URL('/api/tweets/add', request.url)
+      delegateUrl.protocol = 'http:'
+      delegateUrl.host = `127.0.0.1:${process.env.PORT || delegateUrl.port || '3000'}`
+      const tweetResponse = await fetch(delegateUrl.toString(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
