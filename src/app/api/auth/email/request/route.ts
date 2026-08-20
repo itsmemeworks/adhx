@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createLoginToken, hasRecentLoginToken } from '@/lib/auth/account'
 import { sendMagicLinkEmail } from '@/lib/email/magic-link'
+import { isValidEmail } from '@/lib/utils/email'
 import { isSafeReturnUrl } from '@/lib/auth/return-url'
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 // POST /api/auth/email/request - kick off an email sign-in.
 // Always returns { ok: true } for a well-formed email (even when sending
@@ -18,7 +17,7 @@ export async function POST(request: NextRequest) {
   }
 
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
-  if (!EMAIL_RE.test(email)) {
+  if (!isValidEmail(email)) {
     return NextResponse.json({ error: 'Enter a valid email address' }, { status: 400 })
   }
 

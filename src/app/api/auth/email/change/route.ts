@@ -2,11 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { withAuth } from '@/lib/api/with-auth'
 import { createLoginToken, hasRecentLoginToken } from '@/lib/auth/account'
 import { sendMagicLinkEmail } from '@/lib/email/magic-link'
+import { isValidEmail } from '@/lib/utils/email'
 import { db } from '@/lib/db'
 import { userIdentities } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 // POST /api/auth/email/change (authed) - request confirmation for a new
 // email on the current account. Unlike /request, this is authenticated so
@@ -20,7 +19,7 @@ export const POST = withAuth(async (req: NextRequest, userId: string) => {
   }
 
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
-  if (!EMAIL_RE.test(email)) {
+  if (!isValidEmail(email)) {
     return NextResponse.json({ error: 'Enter a valid email address' }, { status: 400 })
   }
 

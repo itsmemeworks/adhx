@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { isValidEmail } from '@/lib/utils/email'
 import { Mail } from 'lucide-react'
 import { PlatformGlyph } from '@/components/matter'
 
@@ -25,8 +26,6 @@ const PANEL = '#201b16'
 const BORDER = '#322b23'
 const INPUT_BG = '#2a241d'
 const ACCENT_GRADIENT = 'linear-gradient(135deg,#e88a5e,#d26b40)'
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 // Keys the theater's window-level keydown handler (and similar global
 // shortcuts) act on. We block these from bubbling past the modal so ↓/↑/space
@@ -105,7 +104,7 @@ export function SignInModal({
     e.preventDefault()
     setError(null)
     const trimmed = email.trim()
-    if (!trimmed || !EMAIL_RE.test(trimmed)) {
+    if (!trimmed || !isValidEmail(trimmed)) {
       setError('Enter a valid email address.')
       return
     }
