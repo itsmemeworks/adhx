@@ -149,22 +149,43 @@ function FeedPageContent(): React.ReactElement {
   // Open triage over the FULL unread queue (not just the loaded page), so the
   // progress count matches the unread total shown on the Triage pill. The feed
   // API caps at 100/request, which covers a typical backlog.
+  // Build the triage-queue query from the CURRENT view state — the theater's
+  // Collection tab shows what the grid shows. Hard-coding unreadOnly=true here
+  // hid read posts from users who had explicitly turned the unread filter off
+  // ("only seeing 1 post in my collection, but there's 2").
+  const buildTriageQuery = useCallback(() => {
+    const params = new URLSearchParams({
+      filter,
+      unreadOnly: unreadOnly.toString(),
+      limit: '100',
+    })
+    if (platformFilter !== 'all') params.set('platform', platformFilter)
+    if (search) params.set('search', search)
+    selectedTags.forEach((tag) => params.append('tag', tag))
+    // Tag views ignore read state entirely (see fetchFeed) — keep the queue
+    // consistent with that.
+    if (selectedTags.length > 0) params.set('unreadOnly', 'false')
+    return params
+  }, [filter, unreadOnly, platformFilter, search, selectedTags])
+
   const startTriageAll = useCallback(
     async (tab: TriageTab = 'collection') => {
-      let queue: FeedItem[] = items.filter((i) => !i.isRead)
+      const respectUnread = unreadOnly && selectedTags.length === 0
+      let queue: FeedItem[] = respectUnread ? items.filter((i) => !i.isRead) : items
       try {
-        const res = await fetch('/api/feed?filter=all&unreadOnly=true&limit=100')
+        const res = await fetch(`/api/feed?${buildTriageQuery()}`)
         if (res.ok) {
           const data = await res.json()
-          const all: FeedItem[] = (data.items || []).filter((i: FeedItem) => !i.isRead)
+          const fetched: FeedItem[] = data.items || []
+          const all = respectUnread ? fetched.filter((i: FeedItem) => !i.isRead) : fetched
           if (all.length) queue = all
         }
       } catch {
-        /* fall back to the loaded unread items */
+        /* fall back to the loaded items */
       }
       openTriage(queue, 0, tab)
     },
-    [items, openTriage],
+    [items, openTriage, buildTriageQuery, unreadOnly, selectedTags],
   )
 
   // Open triage from a tapped gallery item: triage the FULL unread backlog (not
@@ -173,29 +194,32 @@ function FeedPageContent(): React.ReactElement {
   const openTriageFromItem = useCallback(
     async (idx: number) => {
       const clicked = items[idx]
-      let queue: FeedItem[] = items.filter((i) => !i.isRead)
+      const respectUnread = unreadOnly && selectedTags.length === 0
+      let queue: FeedItem[] = respectUnread ? items.filter((i) => !i.isRead) : items
       try {
-        const res = await fetch('/api/feed?filter=all&unreadOnly=true&limit=100')
+        const res = await fetch(`/api/feed?${buildTriageQuery()}`)
         if (res.ok) {
           const data = await res.json()
-          const all: FeedItem[] = (data.items || []).filter((i: FeedItem) => !i.isRead)
+          const fetched: FeedItem[] = data.items || []
+          const all = respectUnread ? fetched.filter((i: FeedItem) => !i.isRead) : fetched
           if (all.length) queue = all
         }
       } catch {
-        /* fall back to the loaded unread items */
+        /* fall back to the loaded items */
       }
       const plat = (i: FeedItem) => i.platform ?? 'twitter'
       let start = clicked
         ? queue.findIndex((i) => i.id === clicked.id && plat(i) === plat(clicked))
         : 0
       if (start === -1) {
-        // Tapped item isn't in the unread set (e.g. already read) — open it alone.
+        // Tapped item isn't in the queue (e.g. read while unread-only is on) —
+        // open it alone.
         queue = clicked ? [clicked] : queue
         start = 0
       }
       openTriage(queue, Math.max(0, start))
     },
-    [items, openTriage],
+    [items, openTriage, buildTriageQuery, unreadOnly, selectedTags],
   )
 
   const startSync = useCallback(
@@ -473,6 +497,16 @@ function FeedPageContent(): React.ReactElement {
     isSyncing,
     isAuthenticated,
   ])
+
+  // Any surface that changes a post's tags (grid Add-posts toggles, the
+  // triage TagQuickPicker) announces it — refetch tag counts so the toolbar
+  // "{n} posts" and the Tags dropdown never go stale.
+  useEffect(() => {
+    if (!isAuthenticated) return
+    const handler = () => fetchTags()
+    window.addEventListener('bookmark-tags-changed', handler)
+    return () => window.removeEventListener('bookmark-tags-changed', handler)
+  }, [isAuthenticated])
 
   useEffect(() => {
     if (isAuthenticated) {

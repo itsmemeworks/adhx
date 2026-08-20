@@ -80,6 +80,16 @@ export function FeedGrid({
       )
         .then((res) => {
           if (!res.ok) throw new Error(`tag toggle failed: ${res.status}`)
+          // Same event TagQuickPicker dispatches — AuthedHome refetches tag
+          // counts so the toolbar "{n} posts" / Tags dropdown never go stale.
+          const tags = next
+            ? [...item.tags.filter((t) => t !== tagSelectTag), tagSelectTag]
+            : item.tags.filter((t) => t !== tagSelectTag)
+          window.dispatchEvent(
+            new CustomEvent('bookmark-tags-changed', {
+              detail: { platform, bookmarkId: item.id, tags },
+            }),
+          )
         })
         .catch(() => {
           // Revert on failure — best-effort, no toast (mirrors the

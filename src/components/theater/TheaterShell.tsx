@@ -339,6 +339,10 @@ export function TheaterShell({
   })
   const [triageUndo, setTriageUndo] = useState<TriageUndoAction | null>(null)
   const [triageSavedKeys, setTriageSavedKeys] = useState<Set<string>>(new Set())
+  const triageSavedKeysRef = useRef(triageSavedKeys)
+  useEffect(() => {
+    triageSavedKeysRef.current = triageSavedKeys
+  }, [triageSavedKeys])
   const [tagPickerItem, setTagPickerItem] = useState<{
     platform: string
     bookmarkId: string
@@ -552,10 +556,18 @@ export function TheaterShell({
     }
   }, [isTriage])
 
-  const handleTriageLiveSave = useCallback(async (item: TheaterItem) => {
+  // Tag-from-live target: tapping Tag on a live item first ensures the post
+  // is SAVED (a tag row needs a bookmark row to hang off), then opens the
+  // TagQuickPicker for it.
+  const [liveTagTarget, setLiveTagTarget] = useState<{
+    platform: TheaterItem['platform']
+    bookmarkId: string
+  } | null>(null)
+
+  const handleTriageLiveSave = useCallback(async (item: TheaterItem): Promise<boolean> => {
     const key = theaterItemKey(item)
     const url = sourceUrl(item.platform, item.author, item.bookmarkId || '')
-    if (!url) return
+    if (!url) return false
     try {
       const res = await fetch('/api/bookmarks/add', {
         method: 'POST',
@@ -596,10 +608,27 @@ export function TheaterShell({
           }
         }
       }
+      return res.ok
     } catch {
       // Best effort — the button simply won't flip to "Saved".
     }
+    return false
   }, [])
+
+  const handleTriageLiveTag = useCallback(
+    async (item: TheaterItem) => {
+      if (!item.bookmarkId) return
+      const key = theaterItemKey(item)
+      // Tagging implies keeping: save first when the post isn't in the
+      // collection yet, then open the picker.
+      if (!triageSavedKeysRef.current.has(key)) {
+        const ok = await handleTriageLiveSave(item)
+        if (!ok) return
+      }
+      setLiveTagTarget({ platform: item.platform, bookmarkId: item.bookmarkId })
+    },
+    [handleTriageLiveSave],
+  )
 
   const [muted, setMuted] = useState(true)
 
@@ -1218,6 +1247,7 @@ export function TheaterShell({
           })
         },
         onSave: handleTriageLiveSave,
+        onLiveTag: handleTriageLiveTag,
         tags: triageCurrentFeedItem?.tags,
         savedKeys: triageSavedKeys,
         remaining: triageRemaining,
@@ -1373,6 +1403,14 @@ export function TheaterShell({
         collection={collection}
         triage={triageChrome}
       />
+      {liveTagTarget && (
+        <TagQuickPicker
+          platform={liveTagTarget.platform}
+          bookmarkId={liveTagTarget.bookmarkId}
+          open
+          onClose={() => setLiveTagTarget(null)}
+        />
+      )}
       <SignInModal
         open={showSignIn}
         onClose={() => {
