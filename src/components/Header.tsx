@@ -70,6 +70,9 @@ export function Header() {
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null)
   const [identities, setIdentities] = useState<Identities | null>(null)
+  // Whether this account has a live X connection — email-only accounts have
+  // no bookmarks to sync, so sync affordances are hidden entirely for them.
+  const [xConnected, setXConnected] = useState(false)
   const [stats, setStats] = useState<Stats>({ total: 0, unread: 0 })
   const [streak, setStreak] = useState(0)
   const [cooldown, setCooldown] = useState<CooldownStatus>({
@@ -120,13 +123,13 @@ export function Header() {
   // Separate effect for sync shortcut to track cooldown state
   useEffect(() => {
     const handleOpenSync = () => {
-      if (cooldown.canSync) {
+      if (cooldown.canSync && xConnected) {
         setShowSync(true)
       }
     }
     window.addEventListener('open-sync', handleOpenSync)
     return () => window.removeEventListener('open-sync', handleOpenSync)
-  }, [cooldown.canSync])
+  }, [cooldown.canSync, xConnected])
 
   // Refresh stats and cooldown when auth status changes to authenticated
   useEffect(() => {
@@ -144,7 +147,7 @@ export function Header() {
   // After a day away, pull new bookmarks in the background. First-login sync
   // (the OAuth callback) owns that path, so skip it here.
   useEffect(() => {
-    if (!authStatus?.authenticated || !cooldownReady) return
+    if (!authStatus?.authenticated || !cooldownReady || !xConnected) return
     if (resumeAttemptedRef.current) return
     if (searchParams.get('firstLogin') === 'true') {
       resumeAttemptedRef.current = true
@@ -168,10 +171,11 @@ export function Header() {
     cooldown.canSync,
     cooldown.lastSyncAt,
     searchParams,
+    xConnected,
   ])
 
   useEffect(() => {
-    if (!authStatus?.authenticated) return
+    if (!authStatus?.authenticated || !xConnected) return
 
     const onVis = () => {
       if (document.visibilityState !== 'visible') return
@@ -194,7 +198,7 @@ export function Header() {
 
     document.addEventListener('visibilitychange', onVis)
     return () => document.removeEventListener('visibilitychange', onVis)
-  }, [authStatus?.authenticated, cooldown.canSync, searchParams, showSync, silentSync])
+  }, [authStatus?.authenticated, cooldown.canSync, searchParams, showSync, silentSync, xConnected])
 
   // Update search from URL params
   useEffect(() => {
@@ -247,6 +251,7 @@ export function Header() {
           : undefined,
       })
       setIdentities(data.identities ?? null)
+      setXConnected(Boolean(data.xConnected))
     } catch (error) {
       console.error('Failed to fetch auth status:', error)
     }
@@ -346,7 +351,15 @@ export function Header() {
   }
 
   const openLive = () => {
-    window.dispatchEvent(new CustomEvent('open-theater', { detail: { tab: 'live' } }))
+    // Mirrors openTriage: the theater lives on the feed page (`/`), so only
+    // dispatch the open-theater event when we're already there. From any
+    // other route (e.g. /tags), navigate to the feed with ?live=1 so it
+    // opens the theater on the Live tab once loaded.
+    if (pathname === '/') {
+      window.dispatchEvent(new CustomEvent('open-theater', { detail: { tab: 'live' } }))
+    } else {
+      router.push('/?live=1')
+    }
   }
 
   const toggleTheme = () => {
@@ -616,26 +629,31 @@ export function Header() {
                           )}
                           {resolvedTheme === 'dark' ? 'Light mode' : 'Dark mode'}
                         </button>
-                        <button
-                          onClick={() => {
-                            if (cooldown.canSync) {
-                              setShowSync(true)
-                              setShowUserMenu(false)
-                            }
-                          }}
-                          disabled={!cooldown.canSync}
-                          className={cn(
-                            'w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors',
-                            cooldown.canSync
-                              ? 'hover:bg-inset text-ink hover:text-ink'
-                              : 'text-ink-3 opacity-40 cursor-not-allowed',
-                          )}
-                        >
-                          <RefreshCw className="w-4 h-4" />
-                          {cooldown.canSync
-                            ? 'Sync bookmarks'
-                            : `Sync in ${formatCooldown(displayedCooldown)}`}
-                        </button>
+                        {/* Email-only accounts have no X connection, so
+                            there's nothing to sync — hide the item rather
+                            than showing an action that can never succeed. */}
+                        {xConnected && (
+                          <button
+                            onClick={() => {
+                              if (cooldown.canSync) {
+                                setShowSync(true)
+                                setShowUserMenu(false)
+                              }
+                            }}
+                            disabled={!cooldown.canSync}
+                            className={cn(
+                              'w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors',
+                              cooldown.canSync
+                                ? 'hover:bg-inset text-ink hover:text-ink'
+                                : 'text-ink-3 opacity-40 cursor-not-allowed',
+                            )}
+                          >
+                            <RefreshCw className="w-4 h-4" />
+                            {cooldown.canSync
+                              ? 'Sync bookmarks'
+                              : `Sync in ${formatCooldown(displayedCooldown)}`}
+                          </button>
+                        )}
                       </div>
 
                       {/* Sign out */}

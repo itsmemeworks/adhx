@@ -29,7 +29,7 @@ export function SaveCollectionButton({
     return (
       <a href="/" className={className}>
         <Check size={14} />
-        Saved &middot; View in your pile
+        Saved &middot; View in your collection
       </a>
     )
   }

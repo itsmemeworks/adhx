@@ -722,7 +722,7 @@ function SidebarActions({
 
       {!isAuthenticated && (
         <div className="rounded-2xl px-4 py-4 bg-clay/10 border border-clay/20">
-          <div className="font-bold text-sm text-ink mb-0.5">Keep a pile, later</div>
+          <div className="font-bold text-sm text-ink mb-0.5">Keep a collection, later</div>
           <p className="text-[13px] text-ink-2 leading-snug mb-3">
             Sending doesn&apos;t need an account. Sign in if you want a private collection.
           </p>

@@ -10,7 +10,7 @@ export interface SignInModalProps {
   onClose: () => void
   /** Default: "Sign in to ADHX" */
   title?: string
-  /** e.g. "12 posts from claude-code, curated by @weedauwl — keep them in your pile." */
+  /** e.g. "12 posts from claude-code, curated by @weedauwl — keep them in your collection." */
   subtitle?: string
   /** Path to land on after auth. Default: current location.pathname. */
   returnTo?: string

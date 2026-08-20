@@ -203,7 +203,7 @@ describe('SettingsClient — Sign-in & connection', () => {
     render(<SettingsClient />)
 
     await waitFor(() => expect(screen.getByText('+7 new')).toBeInTheDocument())
-    expect(screen.getByText(/42 bookmarks in your pile/i)).toBeInTheDocument()
+    expect(screen.getByText(/42 bookmarks in your collection/i)).toBeInTheDocument()
     expect(screen.getByText('1 page')).toBeInTheDocument()
   })
 })

@@ -249,7 +249,7 @@ function SignInConnectionCard({ me, refresh }: { me: AuthMe; refresh: () => void
     <SCard
       icon={Lock}
       title="Sign-in & connection"
-      sub="Two ways in — same pile"
+      sub="Two ways in — one collection"
       bodyPadded={false}
     >
       <div className="divide-y divide-hairline">
@@ -392,7 +392,7 @@ function SignInConnectionCard({ me, refresh }: { me: AuthMe; refresh: () => void
         </div>
       </div>
       <p className="px-5 py-3 text-[12px] text-ink-3 border-t border-hairline">
-        Either method signs you into the same pile.
+        Either method signs you into the same collection.
       </p>
     </SCard>
   )
@@ -454,7 +454,7 @@ function SyncBookmarksCard({
       <p className="text-[13px] text-ink-3 text-center mt-3">
         {lastSyncAt ? `Last sync ${getTimeSince(lastSyncAt)}` : 'No syncs yet'}
         {' · '}
-        {totalBookmarks} {totalBookmarks === 1 ? 'bookmark' : 'bookmarks'} in your pile
+        {totalBookmarks} {totalBookmarks === 1 ? 'bookmark' : 'bookmarks'} in your collection
       </p>
       <p className="text-xs text-ink-3 text-center mt-1.5">
         Syncs are rate-limited to once per 15 minutes.
@@ -1220,7 +1220,10 @@ function SettingsPage() {
                 <li>Sync history</li>
                 <li>Collections and preferences</li>
               </ul>
-              <p className="text-sm text-green-700">✓ Your sign-in connections will be preserved</p>
+              <p className="text-sm text-green-700 flex items-center gap-1.5">
+                <Check className="h-4 w-4 flex-shrink-0" />
+                Your sign-in connections will be preserved
+              </p>
               <div>
                 <label className="block text-sm font-medium text-ink-2 mb-2">
                   Type <span className="font-mono bg-inset px-1.5 py-0.5 rounded">CLEAR</span> to

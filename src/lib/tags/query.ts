@@ -1,13 +1,7 @@
 import { db } from '@/lib/db'
-import {
-  tagShares,
-  bookmarkTags,
-  bookmarks,
-  bookmarkMedia,
-  bookmarkLinks,
-  oauthTokens,
-} from '@/lib/db/schema'
+import { tagShares, bookmarkTags, bookmarks, bookmarkMedia, bookmarkLinks } from '@/lib/db/schema'
 import { eq, and, inArray, desc } from 'drizzle-orm'
+import { getUserIdForUsername } from '@/lib/users/lookup'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { getThumbnailUrl } from '@/lib/media/fxembed'
 
@@ -121,11 +115,8 @@ function resolveThumbnail(
 }
 
 async function fetchTagCollection(username: string, tagName: string): Promise<TagCollectionResult> {
-  const [user] = await db
-    .select({ userId: oauthTokens.userId })
-    .from(oauthTokens)
-    .where(eq(oauthTokens.username, username))
-    .limit(1)
+  const ownerId = await getUserIdForUsername(username)
+  const user = ownerId ? { userId: ownerId } : null
   if (!user) return { status: 'not_found' }
 
   const [share] = await db

@@ -4,6 +4,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-20 — Review round 2: copy/emoji, tag UX, nav reach, email-account share fix
+
+- **Why**: Second live staging review — "pile" wording + native emoji read cheap; tags lacked state/subtlety; Live dead outside `/`; Share-as-theater silently dead; 3 header rows viewing a tag; Sync shown to email-only accounts.
+- **What**: "All caught up" (TriagePileClear→TriageAllClear), full native-emoji sweep (lucide only), "pile"→collection copy everywhere; Tag action shows `Tag · {n}` clay state; chips = subtle white/12 badges aligned to the content column (TriageStage renders them inside the text composition); Live routes `/?live=1` off `/` (mirrors ?triage=1); Sync hidden + background resyncs gated on xConnected; tag toolbar merged into the filter row (2 rows, type pills swap out while a tag is active); /tags Share fixed (root cause: NO error handling — network/4xx failures were silent, not clipboard) + inline errors + content-preview mosaics per card.
+- **Accounts bug found en route**: username lookups still read `oauth_tokens` — email-only accounts 404'd on every share action and were invisible to /t pages, sitemap, and tweet enrichment. New `src/lib/users/lookup.ts` (users-table-first, oauth fallback); joins in sitemap/share-tweet now hit `users`.
+- **State**: on `fix/review-round-2`, 1612 tests green, Chrome-verified (share toggle, make-private, Live-from-/tags, previews, merged filter row).
+- **Follow-ups**: article stage posts don't show tag chips (text/quote only); tag-preview mosaics fetch per tag (fine at current scale).
+
 ## 2026-08-20 — Live-review fixes + tags screen (PRs #337/#338)
 
 - **Why**: User tested the unified theater on staging and reported: invisible active label on the Collection/Live switcher, already-saved posts showing "Save" in the live tab, triage twitter video rendering tiny, live-saves needing a reload to appear in the collection tab, tags invisible after tagging, and no home for tag collections.

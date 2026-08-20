@@ -100,6 +100,22 @@ describe('FilterBar Component', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Videos' }))
       expect(onFilterChange).toHaveBeenCalledWith('videos')
     })
+
+    it('hides the type filter pills while a tag is selected', () => {
+      render(<FilterBar {...defaultProps} selectedTags={['work']} />)
+
+      expect(screen.queryByRole('button', { name: 'All' })).toBeFalsy()
+      expect(screen.queryByRole('button', { name: 'Photos' })).toBeFalsy()
+      expect(screen.queryByRole('button', { name: 'Videos' })).toBeFalsy()
+    })
+
+    it('shows the type filter pills again once the tag is cleared', () => {
+      const { rerender } = render(<FilterBar {...defaultProps} selectedTags={['work']} />)
+      expect(screen.queryByRole('button', { name: 'All' })).toBeFalsy()
+
+      rerender(<FilterBar {...defaultProps} selectedTags={[]} />)
+      expect(screen.getByRole('button', { name: 'All' })).toBeTruthy()
+    })
   })
 
   describe('Platform Dropdown', () => {

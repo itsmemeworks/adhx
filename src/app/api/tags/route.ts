@@ -1,18 +1,13 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { bookmarkTags, tagShares, oauthTokens } from '@/lib/db/schema'
+import { getUsernameForUserId } from '@/lib/users/lookup'
+import { bookmarkTags, tagShares } from '@/lib/db/schema'
 import { eq, sql, and } from 'drizzle-orm'
 import { withAuth } from '@/lib/api/with-auth'
 
-// Get username for a user (for constructing friendly share URLs)
-async function getUsername(userId: string): Promise<string | null> {
-  const [token] = await db
-    .select({ username: oauthTokens.username })
-    .from(oauthTokens)
-    .where(eq(oauthTokens.userId, userId))
-    .limit(1)
-  return token?.username ?? null
-}
+// Username for friendly share URLs — users-table-first (email-only accounts
+// have no oauth_tokens row; reading only that table 404'd their shares).
+const getUsername = getUsernameForUserId
 
 // Generate a short random code for sharing
 function generateShareCode(): string {

@@ -1,13 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db, runInTransaction } from '@/lib/db'
-import {
-  tagShares,
-  bookmarkTags,
-  bookmarks,
-  bookmarkMedia,
-  bookmarkLinks,
-  oauthTokens,
-} from '@/lib/db/schema'
+import { getUserIdForUsername } from '@/lib/users/lookup'
+import { tagShares, bookmarkTags, bookmarks, bookmarkMedia, bookmarkLinks } from '@/lib/db/schema'
 import { eq, and, inArray } from 'drizzle-orm'
 import { withAuth } from '@/lib/api/with-auth'
 
@@ -32,11 +26,8 @@ export const POST = withAuth(
       const { username, tag: tagName } = await params
 
       // Find user by username
-      const [user] = await db
-        .select({ userId: oauthTokens.userId })
-        .from(oauthTokens)
-        .where(eq(oauthTokens.username, username))
-        .limit(1)
+      const resolvedOwnerId = await getUserIdForUsername(username)
+      const user = resolvedOwnerId ? { userId: resolvedOwnerId } : undefined
 
       if (!user) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 })

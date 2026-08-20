@@ -15,7 +15,7 @@ import type { FeedItem } from '@/components/feed/types'
 import { Stage } from './Stage'
 import { TriageStage } from './TriageStage'
 import { StageWaiting } from './StageWaiting'
-import { TriagePileClear } from './TriagePileClear'
+import { TriageAllClear } from './TriageAllClear'
 import { DesktopStageChrome, DesktopDock } from './TheaterDesktopChrome'
 import { TheaterMobileChrome } from './TheaterMobileChrome'
 import { useTheaterFeed } from './useTheaterFeed'
@@ -312,7 +312,7 @@ export function TheaterShell({
   // Collection mode (`/t/{username}/{tag}`) is a fixed, curated queue to loop
   // through — never a live blend with the anonymous community pulse. Triage
   // mode never loops either — its queue is a finite backlog with a real end
-  // ("Pile clear"), not a wraparound.
+  // ("All caught up"), not a wraparound.
   const loop = mode === 'collection'
   // Triage's Collection tab never blends the live pulse in; its Live tab
   // reuses the exact same live feed home/shared mode does.
@@ -1244,7 +1244,7 @@ export function TheaterShell({
         <div className="absolute inset-0">
           {isTriageCollection ? (
             triageFinished ? (
-              <TriagePileClear
+              <TriageAllClear
                 total={triageTotal}
                 streak={triageStreak}
                 onClose={() => onClose?.()}
@@ -1254,6 +1254,7 @@ export function TheaterShell({
                 feedItem={triageCurrentFeedItem}
                 muted={muted}
                 onRequestUnmute={onRequestUnmute}
+                tags={triageCurrentFeedItem.tags}
               />
             ) : null
           ) : waiting ? (
@@ -1378,10 +1379,10 @@ export function TheaterShell({
           setShowSignIn(false)
           authMe.refresh()
         }}
-        title={collection ? 'Save this collection' : 'Save it to your pile'}
+        title={collection ? 'Save this collection' : 'Save it to your collection'}
         subtitle={
           collection
-            ? `${collection.count} ${collection.count === 1 ? 'post' : 'posts'} from ${collection.tag}, curated by @${collection.curator} — keep them in your pile.`
+            ? `${collection.count} ${collection.count === 1 ? 'post' : 'posts'} from ${collection.tag}, curated by @${collection.curator} — save them to your collection.`
             : 'Your saved posts stay yours — sync your X bookmarks anytime from Settings.'
         }
         returnTo={

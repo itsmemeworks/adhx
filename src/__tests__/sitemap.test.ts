@@ -72,6 +72,8 @@ describe('Dynamic Sitemap', () => {
         expiresAt: Date.now() + 3600000,
       })
       .run()
+    // Canonical users row (accounts migration) — username lookups read this first
+    testInstance.db.insert(schema.users).values({ id: USER_A, username: 'alice' }).run()
 
     testInstance.db
       .insert(schema.tagShares)
@@ -149,6 +151,8 @@ describe('Dynamic Sitemap', () => {
         expiresAt: Date.now() + 3600000,
       })
       .run()
+    // Canonical users row (accounts migration) — username lookups read this first
+    testInstance.db.insert(schema.users).values({ id: USER_A, username: 'alice' }).run()
 
     testInstance.db
       .insert(schema.tagShares)
@@ -182,6 +186,14 @@ describe('Dynamic Sitemap', () => {
         },
       ])
       .run()
+    // Canonical users rows (accounts migration) — username lookups read these first
+    testInstance.db
+      .insert(schema.users)
+      .values([
+        { id: USER_A, username: 'alice' },
+        { id: USER_B, username: 'bob' },
+      ])
+      .run()
 
     testInstance.db
       .insert(schema.tagShares)
@@ -209,6 +221,8 @@ describe('Dynamic Sitemap', () => {
         expiresAt: Date.now() + 3600000,
       })
       .run()
+    // Canonical users row (accounts migration) — username lookups read this first
+    testInstance.db.insert(schema.users).values({ id: USER_A, username: 'alice' }).run()
 
     testInstance.db
       .insert(schema.bookmarks)
@@ -566,6 +580,8 @@ describe('Dynamic Sitemap', () => {
         expiresAt: Date.now() + 3600000,
       })
       .run()
+    // Canonical users row (accounts migration) — username lookups read this first
+    testInstance.db.insert(schema.users).values({ id: USER_A, username: 'alice' }).run()
 
     testInstance.db
       .insert(schema.tagShares)
