@@ -198,7 +198,8 @@ export const FULL_SCHEMA_SQL = `
     quote_json TEXT,
     url TEXT NOT NULL,
     user_id TEXT,
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    hidden INTEGER NOT NULL DEFAULT 0
   );
   CREATE INDEX activity_created_at_idx ON activity(created_at);
   CREATE INDEX activity_dedupe_idx ON activity(action, platform, bookmark_id, created_at);

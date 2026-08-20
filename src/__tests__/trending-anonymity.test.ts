@@ -124,3 +124,34 @@ describe('trending anonymity invariant', () => {
     expect(JSON.stringify(body)).not.toContain(SECRET_USER)
   })
 })
+
+describe('trending moderation (activity.hidden)', () => {
+  beforeEach(() => {
+    testInstance = createTestDb()
+  })
+  afterEach(() => testInstance.close())
+
+  it('getTrendingItems() excludes rows with hidden=1', async () => {
+    seedActivity({ bookmarkId: 'ok', createdAt: '2026-06-06T10:00:00Z' })
+    seedActivity({ bookmarkId: 'spammy', createdAt: '2026-06-06T10:01:00Z', hidden: 1 })
+
+    const { items } = await getTrendingItems()
+
+    const ids = items.map((i) => i.bookmarkId)
+    expect(ids).toContain('ok')
+    expect(ids).not.toContain('spammy')
+  })
+
+  it('GET /api/trending excludes hidden rows too', async () => {
+    seedActivity({ bookmarkId: 'ok', createdAt: '2026-06-06T10:00:00Z' })
+    seedActivity({ bookmarkId: 'spammy', createdAt: '2026-06-06T10:01:00Z', hidden: 1 })
+
+    const req = new NextRequest('http://localhost/api/trending')
+    const res = await trendingGET(req)
+    const body = await res.json()
+
+    const ids = body.items.map((i: { bookmarkId: string }) => i.bookmarkId)
+    expect(ids).toContain('ok')
+    expect(ids).not.toContain('spammy')
+  })
+})

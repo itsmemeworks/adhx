@@ -262,7 +262,11 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
       createdAt: activity.createdAt,
     })
     .from(activity)
-    .where(platformFilter ? eq(activity.platform, platformFilter) : undefined)
+    .where(
+      platformFilter
+        ? and(eq(activity.hidden, 0), eq(activity.platform, platformFilter))
+        : eq(activity.hidden, 0),
+    )
     .orderBy(desc(activity.createdAt))
     .limit(rawFetchSize)
     .all()
