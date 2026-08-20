@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createLoginToken, hasRecentLoginToken } from '@/lib/auth/account'
+import { createLoginToken, hasRecentLoginToken, invalidateLoginToken } from '@/lib/auth/account'
 import { sendMagicLinkEmail } from '@/lib/email/magic-link'
 import { isValidEmail } from '@/lib/utils/email'
 import { isSafeReturnUrl } from '@/lib/auth/return-url'
@@ -38,6 +38,9 @@ export async function POST(request: NextRequest) {
 
   const result = await sendMagicLinkEmail({ email, url: url.toString(), intent: 'signin' })
   if (!result.ok) {
+    // Release the rate-limit hold so the user can retry immediately after a
+    // transient send failure instead of hitting the 60s "wait a minute" wall.
+    await invalidateLoginToken(token)
     return NextResponse.json(
       { error: 'Could not send sign-in email. Try again shortly.' },
       { status: 503 },

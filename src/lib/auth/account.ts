@@ -319,6 +319,16 @@ export async function createLoginToken(params: {
   return raw
 }
 
+/**
+ * Delete a token that was created but whose email failed to send, so the
+ * failed attempt doesn't hold the per-email rate limit for 60s and lock the
+ * user out with a confusing "wait a minute" after a transient send error.
+ */
+export async function invalidateLoginToken(rawToken: string): Promise<void> {
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex')
+  await db.delete(loginTokens).where(eq(loginTokens.tokenHash, tokenHash))
+}
+
 export async function consumeLoginToken(
   rawToken: string,
 ): Promise<typeof loginTokens.$inferSelect | null> {

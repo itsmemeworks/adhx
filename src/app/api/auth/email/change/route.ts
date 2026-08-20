@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withAuth } from '@/lib/api/with-auth'
-import { createLoginToken, hasRecentLoginToken } from '@/lib/auth/account'
+import { createLoginToken, hasRecentLoginToken, invalidateLoginToken } from '@/lib/auth/account'
 import { sendMagicLinkEmail } from '@/lib/email/magic-link'
 import { isValidEmail } from '@/lib/utils/email'
 import { db } from '@/lib/db'
@@ -47,6 +47,8 @@ export const POST = withAuth(async (req: NextRequest, userId: string) => {
 
   const result = await sendMagicLinkEmail({ email, url: url.toString(), intent: 'change' })
   if (!result.ok) {
+    // Release the rate-limit hold so a transient send failure is retryable.
+    await invalidateLoginToken(token)
     return NextResponse.json(
       { error: 'Could not send confirmation email. Try again shortly.' },
       { status: 503 },

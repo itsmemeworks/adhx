@@ -126,6 +126,23 @@ describe('API: /api/auth/email/*', () => {
       expect(rows).toHaveLength(1) // second request never created a token
     })
 
+    it('releases the rate limit when the email fails to send (503 is retryable)', async () => {
+      mockSendMagicLinkEmail.mockResolvedValueOnce({ ok: false })
+      const { POST } = await import('@/app/api/auth/email/request/route')
+      const first = await POST(
+        postRequest('/api/auth/email/request', { email: 'retry@example.com' }),
+      )
+      expect(first.status).toBe(503)
+      // The failed attempt's token is deleted so the 60s hold doesn't apply…
+      const rows = await testInstance.db.select().from(schema.loginTokens)
+      expect(rows).toHaveLength(0)
+      // …and an immediate retry succeeds instead of 429ing.
+      const second = await POST(
+        postRequest('/api/auth/email/request', { email: 'retry@example.com' }),
+      )
+      expect(second.status).toBe(200)
+    })
+
     it('drops an open-redirect returnTo (https://evil.com)', async () => {
       const { POST } = await import('@/app/api/auth/email/request/route')
       await POST(
