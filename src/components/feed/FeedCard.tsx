@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Image, Play, FileText } from 'lucide-react'
+import { Image, Play, FileText, Check } from 'lucide-react'
 import { AuthorAvatar } from './AuthorAvatar'
 import { renderTextWithLinks, renderBionicTextWithLinks, stripMediaUrls } from './utils'
 import { usePreferences } from '@/lib/preferences-context'
@@ -16,6 +16,11 @@ interface FeedCardProps {
   lastSyncAt: string | null
   sortField: 'processedAt' | 'createdAt'
   onExpand: () => void
+  // Tag "Add posts" selection mode (unified-theater-triage §4): when active,
+  // clicking the card toggles tag membership instead of opening it.
+  selectionMode?: boolean
+  selected?: boolean
+  onToggleSelect?: () => void
 }
 
 /** Time pill — mono white on translucent black, for media/article overlays. */
@@ -37,6 +42,9 @@ export function FeedCard({
   lastSyncAt,
   sortField,
   onExpand,
+  selectionMode = false,
+  selected = false,
+  onToggleSelect,
 }: FeedCardProps): React.ReactElement {
   const [error, setError] = useState(false)
   const [loaded, setLoaded] = useState(false)
@@ -91,13 +99,29 @@ export function FeedCard({
     <div className="mb-4 break-inside-avoid transition-all duration-300">
       <div
         className={cn(
-          'group relative bg-surface border border-hairline rounded-card shadow-m-sm overflow-hidden cursor-pointer',
+          'group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer',
+          selectionMode && selected ? 'border-clay ring-2 ring-clay' : 'border-hairline',
           newGlowClass,
         )}
-        onClick={onExpand}
+        onClick={selectionMode ? onToggleSelect : onExpand}
         onMouseEnter={canHover ? () => setIsHovered(true) : undefined}
         onMouseLeave={canHover ? () => setIsHovered(false) : undefined}
       >
+        {/* Add-posts selection affordance: ring (above) + a check badge that
+            floats over every card type. z-10 keeps it above media/article
+            overlays which are themselves absolutely positioned. */}
+        {selectionMode && (
+          <div
+            className={cn(
+              'absolute top-2.5 right-2.5 z-10 flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors',
+              selected ? 'bg-clay border-clay' : 'bg-black/35 border-white/70 backdrop-blur',
+            )}
+            aria-hidden
+          >
+            {selected && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
+          </div>
+        )}
+
         {/* Content based on type */}
         {hasMedia && primaryMedia ? (
           <MediaContent

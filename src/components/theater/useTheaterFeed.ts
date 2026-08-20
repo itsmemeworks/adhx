@@ -127,6 +127,13 @@ export function useTheaterFeed(
       }
     }
 
+    // A feed seeded with zero items (e.g. triage mode's Live sub-tab, which
+    // has no server-rendered seed of its own) would otherwise sit blank for
+    // a full POLL_MS before its first paint — poll right away in that case.
+    // Feeds seeded from the server render (home/shared) already have
+    // something to show, so this never changes their existing behavior.
+    if (itemsRef.current.length === 0) void poll()
+
     const id = window.setInterval(poll, POLL_MS)
     return () => {
       cancelled = true

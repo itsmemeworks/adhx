@@ -18,10 +18,23 @@ import {
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Loader2, CheckCircle2 } from 'lucide-react'
-import { CollectionTheater } from '@/components/theater/CollectionTheater'
+import { TheaterShell } from '@/components/theater/TheaterShell'
+import type { TriageTab } from '@/components/theater/types'
+import { PasteToPreview } from '@/components/PasteToPreview'
 import { useTheme } from '@/lib/theme/context'
 import { ConnectWithX } from '@/components/matter'
 import { parseSyncErrorEvent, type SyncErrorCode } from '@/lib/sync/messages'
+
+/**
+ * Seed for triage's Live sub-tab (unified-theater-triage.md §2) — the same
+ * live community pulse home mode uses, but AuthedHome has no server-rendered
+ * trending items of its own to seed it with. `useTheaterFeed` polls
+ * `/api/activity` immediately when seeded empty (see its 2026-08-20 change),
+ * so this only costs a brief "Loading…" the first time a triage session's
+ * Live tab is opened — module-level so it's a stable reference across
+ * re-renders/re-opens.
+ */
+const TRIAGE_LIVE_SEED = { items: [], savedToday: 0, recentActivity: 0 }
 
 export default function AuthedHome(): React.ReactElement {
   return (
@@ -59,6 +72,11 @@ function FeedPageContent(): React.ReactElement {
   const [search, setSearch] = useState(searchParams.get('search') || '')
   const [triageQueue, setTriageQueue] = useState<FeedItem[]>([])
   const [triageStart, setTriageStart] = useState(0)
+  const [triageInitialTab, setTriageInitialTab] = useState<TriageTab>('collection')
+  // Tag-select plumbing (unified-theater-triage.md §4, built by a parallel
+  // agent) — FilterBar owns entering/exiting select mode; FeedGrid reads it
+  // to render the tap-to-toggle-membership grid.
+  const [tagSelectTag, setTagSelectTag] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const [stats, setStats] = useState({ total: 0, unread: 0 })
@@ -114,29 +132,36 @@ function FeedPageContent(): React.ReactElement {
   }, [])
 
   // Open the unified triage viewer on a snapshot of the queue at a given index.
-  const openTriage = useCallback((queue: FeedItem[], start: number) => {
-    setTriageQueue(queue)
-    setTriageStart(Math.max(0, start))
-    setTriageOpen(true)
-  }, [])
+  const openTriage = useCallback(
+    (queue: FeedItem[], start: number, tab: TriageTab = 'collection') => {
+      setTriageQueue(queue)
+      setTriageStart(Math.max(0, start))
+      setTriageInitialTab(tab)
+      setTriageOpen(true)
+    },
+    [],
+  )
 
   // Open triage over the FULL unread queue (not just the loaded page), so the
   // progress count matches the unread total shown on the Triage pill. The feed
   // API caps at 100/request, which covers a typical backlog.
-  const startTriageAll = useCallback(async () => {
-    let queue: FeedItem[] = items.filter((i) => !i.isRead)
-    try {
-      const res = await fetch('/api/feed?filter=all&unreadOnly=true&limit=100')
-      if (res.ok) {
-        const data = await res.json()
-        const all: FeedItem[] = (data.items || []).filter((i: FeedItem) => !i.isRead)
-        if (all.length) queue = all
+  const startTriageAll = useCallback(
+    async (tab: TriageTab = 'collection') => {
+      let queue: FeedItem[] = items.filter((i) => !i.isRead)
+      try {
+        const res = await fetch('/api/feed?filter=all&unreadOnly=true&limit=100')
+        if (res.ok) {
+          const data = await res.json()
+          const all: FeedItem[] = (data.items || []).filter((i: FeedItem) => !i.isRead)
+          if (all.length) queue = all
+        }
+      } catch {
+        /* fall back to the loaded unread items */
       }
-    } catch {
-      /* fall back to the loaded unread items */
-    }
-    openTriage(queue, 0)
-  }, [items, openTriage])
+      openTriage(queue, 0, tab)
+    },
+    [items, openTriage],
+  )
 
   // Open triage from a tapped gallery item: triage the FULL unread backlog (not
   // just the loaded page) so the progress count reflects everything, but start
@@ -358,17 +383,22 @@ function FeedPageContent(): React.ReactElement {
 
       try {
         setLoading(true)
+        // Add-posts mode browses the WHOLE pile: drop the tag filter (else the
+        // grid only shows posts already carrying the tag — nothing left to
+        // add) and the unread-only gate (already-read posts are prime tagging
+        // candidates). The FilterBar's selected-tag UI state is untouched.
+        const addingToTag = tagSelectTag !== null
         const params = new URLSearchParams({
           page: currentPage.toString(),
           limit: '50',
           filter,
-          unreadOnly: unreadOnly.toString(),
+          unreadOnly: (addingToTag ? false : unreadOnly).toString(),
         })
         if (platformFilter !== 'all') params.set('platform', platformFilter)
         if (sort !== 'added') params.set('sort', sort)
         if (sortDirection !== 'desc') params.set('sortDir', sortDirection)
         if (search) params.set('search', search)
-        selectedTags.forEach((tag) => params.append('tag', tag))
+        if (!addingToTag) selectedTags.forEach((tag) => params.append('tag', tag))
 
         const response = await fetch(`/api/feed?${params}`)
         const data = await response.json()
@@ -388,7 +418,17 @@ function FeedPageContent(): React.ReactElement {
         setLoading(false)
       }
     },
-    [filter, platformFilter, sort, sortDirection, unreadOnly, search, page, selectedTags],
+    [
+      filter,
+      platformFilter,
+      sort,
+      sortDirection,
+      unreadOnly,
+      search,
+      page,
+      selectedTags,
+      tagSelectTag,
+    ],
   )
 
   useEffect(() => {
@@ -420,6 +460,7 @@ function FeedPageContent(): React.ReactElement {
     unreadOnly,
     search,
     selectedTags,
+    tagSelectTag,
     isSyncing,
     isAuthenticated,
   ])
@@ -563,12 +604,18 @@ function FeedPageContent(): React.ReactElement {
     fetchFeed(true)
   }, [searchParams]) // Only run when searchParams changes
 
-  // The Matter top-bar Triage pill dispatches `open-triage`; open the focus
-  // queue on the current unread items.
+  // Header's Collection/Live nav (unified-theater-triage.md §1) dispatches
+  // `open-theater` with `{ tab: 'triage' | 'live' }` for both the Triage
+  // pill and the Live nav item — open the triage overlay on the matching
+  // sub-tab, seeded from the current unread queue either way (so switching
+  // tabs mid-session always has a Collection queue to fall back to).
   useEffect(() => {
-    const handler = () => startTriageAll()
-    window.addEventListener('open-triage', handler)
-    return () => window.removeEventListener('open-triage', handler)
+    function handler(e: Event) {
+      const detail = (e as CustomEvent<{ tab?: 'triage' | 'live' }>).detail
+      void startTriageAll(detail?.tab === 'live' ? 'live' : 'collection')
+    }
+    window.addEventListener('open-theater', handler)
+    return () => window.removeEventListener('open-theater', handler)
   }, [startTriageAll])
 
   // `?triage=1` — the Triage pill was pressed from another route (e.g. Discover),
@@ -651,11 +698,6 @@ function FeedPageContent(): React.ReactElement {
       if (e.metaKey || e.ctrlKey || e.altKey) return
 
       switch (e.key) {
-        case 'Escape':
-          e.preventDefault()
-          // Close any open modals
-          window.dispatchEvent(new CustomEvent('close-add-tweet'))
-          break
         case '/':
           e.preventDefault()
           window.dispatchEvent(new CustomEvent('focus-search'))
@@ -663,11 +705,6 @@ function FeedPageContent(): React.ReactElement {
         case '?':
           e.preventDefault()
           setShowShortcutsModal(true)
-          break
-        case 'a':
-        case 'A':
-          e.preventDefault()
-          window.dispatchEvent(new CustomEvent('open-add-tweet'))
           break
         case 'g':
         case 'G':
@@ -931,6 +968,12 @@ function FeedPageContent(): React.ReactElement {
         </div>
       )}
 
+      {/* Paste-first add (unified-theater-triage.md §1): no more `+` Add
+          button/modal — pasting a platform URL anywhere outside an
+          input/textarea routes straight to its preview page. No UI of its
+          own. */}
+      <PasteToPreview />
+
       <ErrorBoundary componentName="FilterBar">
         <FilterBar
           filter={filter}
@@ -955,11 +998,13 @@ function FeedPageContent(): React.ReactElement {
               prev.map((t) => (t.tag === tag ? { ...t, isPublic, shareUrl } : t)),
             )
           }}
+          tagSelect={tagSelectTag}
+          onTagSelectChange={setTagSelectTag}
         />
       </ErrorBoundary>
 
-      {/* Triage now lives in the top bar (Matter); it dispatches `open-triage`,
-          which we listen for below. Live activity moved to the Discover view. */}
+      {/* Collection/Live now live in the top bar (Matter); Live opens the
+          theater via `open-theater`, which we listen for below. */}
       <div className="px-4 sm:px-[26px] py-4">
         <ErrorBoundary componentName="FeedGrid">
           <FeedGrid
@@ -974,24 +1019,29 @@ function FeedPageContent(): React.ReactElement {
             onExpand={openTriageFromItem}
             onLoadMore={loadMore}
             onShowAll={() => setUnreadOnly(false)}
+            tagSelectTag={tagSelectTag}
           />
         </ErrorBoundary>
       </div>
 
-      <ErrorBoundary componentName="CollectionTheater">
-        <CollectionTheater
-          isOpen={triageOpen}
-          onClose={() => {
-            setTriageOpen(false)
-            // Refresh the top-bar streak + counts after a triage session.
-            window.dispatchEvent(new CustomEvent('stats-updated'))
-          }}
-          initialQueue={triageQueue}
-          startIndex={triageStart}
-          onItemResolved={handleTriageResolved}
-          onItemRestored={handleTriageRestored}
-        />
-      </ErrorBoundary>
+      {triageOpen && (
+        <ErrorBoundary componentName="TheaterShell">
+          <TheaterShell
+            mode="triage"
+            seed={TRIAGE_LIVE_SEED}
+            triageItems={triageQueue}
+            initialTriageIndex={triageStart}
+            initialTriageTab={triageInitialTab}
+            onTriageResolved={handleTriageResolved}
+            onTriageRestored={handleTriageRestored}
+            onClose={() => {
+              setTriageOpen(false)
+              // Refresh the top-bar streak + counts after a triage session.
+              window.dispatchEvent(new CustomEvent('stats-updated'))
+            }}
+          />
+        </ErrorBoundary>
+      )}
 
       {/* Keyboard Shortcuts Modal */}
       <KeyboardShortcutsModal
