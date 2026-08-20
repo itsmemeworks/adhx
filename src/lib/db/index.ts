@@ -13,14 +13,16 @@ if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true })
 }
 
-// Create SQLite connection with WAL mode for better performance
-const sqlite = new Database(DB_PATH)
+// Create SQLite connection with WAL mode for better performance.
+// The constructor `timeout` installs the busy handler BEFORE any pragma runs:
+// `journal_mode = WAL` takes an exclusive lock, and `next build`'s parallel
+// page-data workers each import this module against a fresh db file — without
+// a pre-armed busy handler one worker throws "database is locked" and the
+// whole build dies (flaked twice in CI before this fix).
+const sqlite = new Database(DB_PATH, { timeout: 10000 })
+sqlite.pragma('busy_timeout = 10000')
 sqlite.pragma('journal_mode = WAL')
 sqlite.pragma('foreign_keys = ON')
-// Defensive: if a second connection (e.g. a future worker/CLI script) ever
-// touches this file concurrently, wait up to 5s for a lock instead of
-// throwing SQLITE_BUSY immediately.
-sqlite.pragma('busy_timeout = 5000')
 
 // Create Drizzle instance
 export const db = drizzle(sqlite, { schema })
