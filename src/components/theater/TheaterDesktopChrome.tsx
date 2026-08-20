@@ -130,6 +130,10 @@ const PRIMARY =
  * platform-agnostic endpoint the preview pages' own "Save to collection"
  * CTAs use. Computed via `sourceUrl()` rather than trusting `current.url`.
  */
+/** Cross-mount cache of "is this post already in the viewer's collection?"
+ * lookups, keyed by theaterItemKey — one GET per post per page lifetime. */
+const ownershipCache = new Map<string, boolean>()
+
 export function SavePostButton({
   current,
   className,
@@ -145,6 +149,35 @@ export function SavePostButton({
   useEffect(() => {
     setStatus('idle')
   }, [key])
+
+  // A post already in the viewer's collection must open as "Saved", not
+  // "Save" — this button only renders for signed-in viewers, so the
+  // `/api/feed?id=` single-bookmark lookup (which ignores read state) is the
+  // membership check. Cached per key so re-staging a post costs nothing.
+  useEffect(() => {
+    if (!current.bookmarkId) return
+    if (ownershipCache.has(key)) {
+      if (ownershipCache.get(key)) setStatus('saved')
+      return
+    }
+    let cancelled = false
+    const q = new URLSearchParams({ unreadOnly: 'false', filter: 'all', limit: '5' })
+    q.append('id', current.bookmarkId)
+    fetch(`/api/feed?${q}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        const owned = !!(d?.items ?? []).find(
+          (f: { id: string; platform?: string }) =>
+            (f.platform ?? 'twitter') === current.platform && f.id === current.bookmarkId,
+        )
+        ownershipCache.set(key, owned)
+        if (!cancelled && owned) setStatus('saved')
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [key, current.bookmarkId, current.platform])
 
   // The shell completes a deferred ?save=1 save (post-sign-in) itself and
   // announces it here so the button reflects reality without owning the flow.
@@ -177,6 +210,7 @@ export function SavePostButton({
       })
       const data = await res.json().catch(() => null)
       if (!res.ok || data?.error) throw new Error(data?.error || 'Save failed')
+      ownershipCache.set(key, true)
       setStatus('saved')
     } catch {
       // Quiet failure — never crash the chrome over a save hiccup. Reset
@@ -382,7 +416,10 @@ export function DesktopStageChrome({
                     aria-current={triage.tab === t ? 'true' : undefined}
                     className={cn(
                       'rounded-full px-4 py-1.5 capitalize transition-colors',
-                      triage.tab === t ? 'bg-white text-ink' : 'text-white/60 hover:text-white',
+                      // Hardcoded dark ink: `text-ink` flips light in dark theme and vanishes on the white pill.
+                      triage.tab === t
+                        ? 'bg-white text-[#1c1917]'
+                        : 'text-white/60 hover:text-white',
                     )}
                   >
                     {t}
