@@ -436,6 +436,22 @@ export function TheaterMobileChrome({
                 )}
               </div>
             )}
+
+            {/* Tag chips (unified-theater-triage.md §B) — the Collection
+                tab's current item only; display-only, nothing renders
+                without tags. */}
+            {triage?.tab === 'collection' && triage.tags && triage.tags.length > 0 && (
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                {triage.tags.map((t) => (
+                  <span
+                    key={t}
+                    className="flex-none rounded-full bg-clay/25 px-2 py-0.5 text-[11px] font-semibold text-white"
+                  >
+                    #{t}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {triage && triage.tab === 'collection' ? (

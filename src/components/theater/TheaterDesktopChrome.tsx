@@ -599,8 +599,48 @@ export function DesktopStageChrome({
               )}
             </div>
           )}
+
+          {/* Tag chips (unified-theater-triage.md §B) — the Collection tab's
+              current item only; display-only, nothing renders without tags. */}
+          {triage?.tab === 'collection' && triage.tags && triage.tags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {triage.tags.map((t) => (
+                <span
+                  key={t}
+                  className="flex-none rounded-full bg-clay/25 px-2 py-0.5 text-[11px] font-semibold text-white"
+                >
+                  #{t}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       )}
+
+      {/* Text/quote/article triage posts render their composition on the
+          stage itself (no bottom-left media overlay above), so their tag
+          chips get a standalone bottom-left row — same spot, same styling. */}
+      {current &&
+        !isMedia &&
+        triage?.tab === 'collection' &&
+        triage.tags &&
+        triage.tags.length > 0 && (
+          <div
+            className={cn(
+              'pointer-events-none absolute bottom-6 left-7 flex w-[min(640px,46vw)] flex-wrap items-center gap-1.5 transition-opacity duration-200',
+              declutter && 'opacity-0',
+            )}
+          >
+            {triage.tags.map((t) => (
+              <span
+                key={t}
+                className="flex-none rounded-full bg-clay/25 px-2 py-0.5 text-[11px] font-semibold text-white"
+              >
+                #{t}
+              </span>
+            ))}
+          </div>
+        )}
 
       {/* Bottom-right: action buttons. Triage's Collection tab replaces the
           whole set with Later/Tag/Delete/Done — see

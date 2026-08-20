@@ -507,6 +507,31 @@ export function TheaterShell({
     }
   }, [isTriage, commitPendingTriageDelete])
 
+  // Keep the OPEN triage queue's tags live (unified-theater-triage.md §B):
+  // `TagQuickPicker` broadcasts a post's full updated tag list on every
+  // successful toggle/create. The queue itself is a fixed snapshot taken at
+  // mount (see the comment above `triageQueue`'s declaration), so this is the
+  // one place its items mutate in place — same immutable-map pattern used
+  // elsewhere in this file, never a splice/replace.
+  useEffect(() => {
+    if (!isTriage) return
+    function handleTagsChanged(e: Event) {
+      const detail = (e as CustomEvent<{ platform?: string; bookmarkId?: string; tags?: string[] }>)
+        .detail
+      if (!detail?.bookmarkId) return
+      const platform = detail.platform ?? 'twitter'
+      setTriageQueue((prev) =>
+        prev.map((item) =>
+          item.id === detail.bookmarkId && (item.platform ?? 'twitter') === platform
+            ? { ...item, tags: detail.tags ?? [] }
+            : item,
+        ),
+      )
+    }
+    window.addEventListener('bookmark-tags-changed', handleTagsChanged)
+    return () => window.removeEventListener('bookmark-tags-changed', handleTagsChanged)
+  }, [isTriage])
+
   // Dialog a11y: move focus into the overlay on mount, restore on unmount.
   useEffect(() => {
     if (!isTriage) return
@@ -1193,6 +1218,7 @@ export function TheaterShell({
           })
         },
         onSave: handleTriageLiveSave,
+        tags: triageCurrentFeedItem?.tags,
         savedKeys: triageSavedKeys,
         remaining: triageRemaining,
         streak: triageStreak,
