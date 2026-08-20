@@ -70,6 +70,8 @@ export interface TheaterTriageChrome {
   tags?: string[]
   /** Save the current Live-tab item to the collection. */
   onSave: (item: TheaterItem) => void
+  /** Live tab: tag a community post — saves it first when not yet in the collection, then opens the tag picker. */
+  onLiveTag?: (item: TheaterItem) => void
   savedKeys: ReadonlySet<string>
   /** Items left in the Collection queue. */
   remaining: number
