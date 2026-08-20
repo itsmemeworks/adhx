@@ -324,6 +324,34 @@ try {
   console.log('[migrate] Warning: users/user_identities backfill failed', error)
 }
 
+// users.username_chosen — gates the one-time `/welcome` username-choice
+// prompt for new email signups (their auto-derived username is the email
+// local-part, which otherwise leaks into public /t/{username}/ URLs).
+// SQLite has no ADD COLUMN IF NOT EXISTS, so guard re-runs.
+try {
+  db.exec('ALTER TABLE users ADD COLUMN username_chosen INTEGER NOT NULL DEFAULT 0')
+  console.log('[migrate] Added users.username_chosen')
+} catch {
+  // Column already exists — nothing to do.
+}
+
+// Backfill: X users picked their handle on X, so they never need the
+// prompt. Idempotent (UPDATE is a no-op once already 1) — safe every boot.
+try {
+  const res = db
+    .prepare(
+      `UPDATE users SET username_chosen = 1
+       WHERE username_chosen = 0
+       AND id IN (SELECT user_id FROM user_identities WHERE provider = 'x')`,
+    )
+    .run()
+  if (res.changes > 0) {
+    console.log(`[migrate] Marked username_chosen for ${res.changes} X-linked users`)
+  }
+} catch (error) {
+  console.log('[migrate] Warning: username_chosen backfill failed', error)
+}
+
 console.log(`[migrate] Database ready at: ${path.resolve(DB_PATH)}`)
 
 db.close()

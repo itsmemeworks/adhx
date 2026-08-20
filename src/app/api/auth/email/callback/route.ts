@@ -31,9 +31,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/settings?email_changed=1', BASE_URL))
   }
 
-  const { userId, username } = await findOrCreateUserForEmail(row.email)
+  const { userId, username, created } = await findOrCreateUserForEmail(row.email)
   const destination = row.returnTo && isSafeReturnUrl(row.returnTo) ? row.returnTo : '/'
-  const response = NextResponse.redirect(new URL(destination, BASE_URL))
+  // Brand-new email accounts get one chance to pick a public username before
+  // landing where they were headed — their auto-derived username is the
+  // email local-part, which otherwise leaks into public /t/{username}/ URLs.
+  const target = created ? `/welcome?returnTo=${encodeURIComponent(destination)}` : destination
+  const response = NextResponse.redirect(new URL(target, BASE_URL))
   await setSessionCookie(response, { userId, username })
   return response
 }

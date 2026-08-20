@@ -185,7 +185,9 @@ describe('API: /api/auth/email/*', () => {
       const response = await GET(getRequest(`/api/auth/email/callback?token=${token}`))
 
       expect(response.status).toBe(307)
-      expect(response.headers.get('location')).toBe('http://localhost:3000/')
+      // New account -> one-shot username prompt before landing at the
+      // original destination.
+      expect(response.headers.get('location')).toBe('http://localhost:3000/welcome?returnTo=%2F')
       const cookies = response.headers.getSetCookie()
       expect(cookies.some((c) => c.includes('adhx_session'))).toBe(true)
 
@@ -200,21 +202,24 @@ describe('API: /api/auth/email/*', () => {
       expect(identityRows[0].userId).toBe(userRows[0].id)
     })
 
-    it('redirects to a safe returnTo after sign-in', async () => {
+    it('redirects to /welcome carrying a safe returnTo for a new account', async () => {
       const token = await requestToken('returner@example.com', '/feed')
       const { GET } = await import('@/app/api/auth/email/callback/route')
       const response = await GET(getRequest(`/api/auth/email/callback?token=${token}`))
-      expect(response.headers.get('location')).toBe('http://localhost:3000/feed')
+      expect(response.headers.get('location')).toBe(
+        'http://localhost:3000/welcome?returnTo=%2Ffeed',
+      )
     })
 
-    it('reuses the existing account on a second sign-in for the same email', async () => {
+    it('reuses the existing account on a second sign-in for the same email, redirecting directly (no /welcome)', async () => {
       const { GET } = await import('@/app/api/auth/email/callback/route')
 
       const token1 = await requestToken('again@example.com')
       await GET(getRequest(`/api/auth/email/callback?token=${token1}`))
 
       const token2 = await requestToken('again@example.com')
-      await GET(getRequest(`/api/auth/email/callback?token=${token2}`))
+      const second = await GET(getRequest(`/api/auth/email/callback?token=${token2}`))
+      expect(second.headers.get('location')).toBe('http://localhost:3000/')
 
       const userRows = await testInstance.db.select().from(schema.users)
       expect(userRows).toHaveLength(1)

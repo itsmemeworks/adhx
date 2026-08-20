@@ -22,6 +22,7 @@ export interface Account {
     displayName: string | null
     avatarUrl: string | null
     email: string | null
+    usernameChosen: boolean
   }
   identities: AccountIdentities
   xConnected: boolean
@@ -58,6 +59,7 @@ export async function getAccount(userId: string): Promise<Account | null> {
       displayName: user.displayName,
       avatarUrl: user.avatarUrl,
       email: user.email,
+      usernameChosen: !!user.usernameChosen,
     },
     identities: {
       x: xIdentity
@@ -77,13 +79,19 @@ function randomHex(bytes: number): string {
   return crypto.randomBytes(bytes).toString('hex')
 }
 
-async function isUsernameTaken(username: string): Promise<boolean> {
+/**
+ * True if `username` is already taken by a *different* account.
+ * `excludeUserId` lets a user check/re-claim their own current username
+ * without it reading as taken.
+ */
+export async function isUsernameTaken(username: string, excludeUserId?: string): Promise<boolean> {
   const rows = await db
     .select({ id: users.id })
     .from(users)
     .where(eq(users.username, username))
     .limit(1)
-  return rows.length > 0
+  if (rows.length === 0) return false
+  return rows[0].id !== excludeUserId
 }
 
 function sanitizeLocalPart(email: string): string {
@@ -95,6 +103,48 @@ function sanitizeLocalPart(email: string): string {
     .replace(/^-|-$/g, '')
     .slice(0, 15)
   return cleaned || 'reader'
+}
+
+/**
+ * Public username grammar: lowercase `[a-z0-9_-]`, must start alphanumeric,
+ * capped at 15 chars. Used by the `/welcome` one-shot chooser and its live
+ * availability check — the single normalizer so client preview and server
+ * validation never disagree.
+ */
+export function sanitizeUsername(raw: string): string {
+  const stripped = raw.toLowerCase().replace(/[^a-z0-9_-]/g, '')
+  const startsAlnum = stripped.replace(/^[-_]+/, '')
+  return startsAlnum.slice(0, 15)
+}
+
+export type ChooseUsernameResult =
+  { ok: true; username: string } | { error: 'taken' | 'invalid' | 'already_chosen' }
+
+/**
+ * One-shot username claim for the `/welcome` prompt. Rejects when the user
+ * has already spent their choice (`usernameChosen`), validates grammar, then
+ * atomically updates `username` + `usernameChosen` so a claim can never be
+ * spent twice.
+ */
+export async function chooseUsername(userId: string, raw: string): Promise<ChooseUsernameResult> {
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1)
+  if (!user) return { error: 'invalid' }
+  if (user.usernameChosen) return { error: 'already_chosen' }
+
+  const username = sanitizeUsername(raw)
+  if (username.length < 3 || username.length > 15) {
+    return { error: 'invalid' }
+  }
+
+  if (await isUsernameTaken(username, userId)) {
+    return { error: 'taken' }
+  }
+
+  runInTransaction(() => {
+    db.update(users).set({ username, usernameChosen: true }).where(eq(users.id, userId)).run()
+  })
+
+  return { ok: true, username }
 }
 
 // ===========================================
@@ -192,6 +242,7 @@ export async function findOrCreateUserForX(
         username,
         displayName: x.name ?? null,
         avatarUrl: x.profileImageUrl,
+        usernameChosen: true, // picked their handle on X — no /welcome prompt
       })
       .run()
     db.insert(userIdentities)
