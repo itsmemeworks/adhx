@@ -177,8 +177,7 @@ db.exec(`
 `)
 function isSettled(key: string): boolean {
   const row = db.prepare('SELECT value FROM migration_state WHERE key = ?').get(key) as
-    | { value: string }
-    | undefined
+    { value: string } | undefined
   return row?.value === '1'
 }
 function markSettled(key: string): void {

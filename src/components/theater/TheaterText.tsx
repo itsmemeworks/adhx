@@ -198,8 +198,7 @@ export function isTrailingLink(parts: TextPart[], index: number): boolean {
 }
 
 export type LinkResolution =
-  | { kind: 'strip'; tail: string }
-  | { kind: 'anchor'; href: string; label: string; tail: string }
+  { kind: 'strip'; tail: string } | { kind: 'anchor'; href: string; label: string; tail: string }
 
 /**
  * Pure: the whole t.co resolution policy (spec §6b) for a single URL token.

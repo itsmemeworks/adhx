@@ -52,9 +52,7 @@ export interface TagCollection {
 }
 
 export type TagCollectionResult =
-  | { status: 'not_found' }
-  | { status: 'private' }
-  | { status: 'ok'; data: TagCollection }
+  { status: 'not_found' } | { status: 'private' } | { status: 'ok'; data: TagCollection }
 
 const ITEM_LIMIT = 60
 
