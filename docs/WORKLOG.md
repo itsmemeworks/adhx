@@ -4,6 +4,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-20 — Poster cards, curator profiles, owner view (design round shipped)
+
+- **Why**: User picked Option C (poster) from the Tags Card Redesign canvas and approved the Curator Profile canvas; live review also caught clone-your-own-collection CTAs and a cramped mobile tag scrim.
+- **What**: `/tags` cards are Option C posters via the reusable `CollectionPosterCard` (`src/components/tags/PosterCard.tsx`: mosaic-as-card, serif #tag overlay, PUBLIC/Private badges, clay "Make public" pill, glass copy/open actions; "Share as theater" → **"Make public"** everywhere incl. FilterBar). NEW public curator profile at `/t/{username}` (`src/lib/users/profile.ts` + page): monogram/serif handle, public-only stats, poster grid → looping theaters, ProfilePage JSON-LD; 404 for unknown users OR zero public collections (no thin pages / existence leaks). **Owner view**: viewing your own collection theater swaps Make-your-own + Save-collection for "Manage collection" (both chromes). Mobile tag scrim = one row (brand left, #tag right; curator/count live in the peek bar). `/t/` paths joined AppShell chrome suppression (app Header double-stacked above the profile's own bar).
+- **State**: Chrome-verified (posters incl. make public/private + copy, profile 200/404, owner view booleans). Tests green.
+- **Follow-ups**: profile avatar falls back oddly when a stale oauth avatar URL 404s (shows grey generic) — consider monogram-on-error; PosterCard gained optional `subtitle`/`tilesLoading` beyond the shared contract.
+
 ## 2026-08-20 — Review round 3: tag-view semantics, triage-queue filters, username chooser (PRs #341–#344)
 
 - **Why**: Continued live staging review + a privacy call: email local-parts leak into public `/t/{username}/` URLs.

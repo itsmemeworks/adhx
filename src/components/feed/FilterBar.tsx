@@ -202,7 +202,7 @@ export function FilterBar({
   }
 
   /**
-   * "Share as theater": marks the tag public (idempotent — safe to call even
+   * "Make public": marks the tag public (idempotent — safe to call even
    * when it's already public) via the existing `/api/tags` PATCH flow, then
    * copies the friendly `/t/{username}/{tag}` URL the response returns.
    * Always re-PATCHes rather than short-circuiting on `isPublic` so the copy
@@ -280,7 +280,7 @@ export function FilterBar({
               className="flex-shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-clay-grad px-3.5 py-[7px] text-[13px] font-semibold text-white shadow-glow transition-opacity hover:opacity-90 disabled:opacity-60"
             >
               <Repeat size={13} />
-              Share as theater
+              Make public
             </button>
             {onSelectedTagsChange && (
               <button
