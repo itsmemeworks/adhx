@@ -14,11 +14,9 @@ import {
   UserX,
   BookOpen,
   Type,
-  Smartphone,
   Monitor,
   Moon,
   Sun,
-  Copy,
   Check,
   Flame,
   Mail,
@@ -27,12 +25,9 @@ import {
 import { SyncProgress } from '@/components/sync/SyncProgress'
 import { usePreferences, FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
-import { getPlatformType, type PlatformType } from '@/lib/platform'
 import { useTheme } from '@/lib/theme/context'
 import { PlatformGlyph, ConnectWithX } from '@/components/matter'
 import { cn } from '@/lib/utils'
-import { IosShortcutHow, IosShortcutInstallButton } from '@/components/IosShortcutInstall'
-import { BOOKMARKLET_CODE } from '@/lib/share/ios'
 
 const CONNECT_X_URL = '/api/auth/twitter?returnUrl=%2Fsettings'
 
@@ -509,61 +504,6 @@ function SyncHistoryCard({ syncs, loading }: { syncs: SyncHistoryEntry[]; loadin
               </div>
             )
           })}
-        </div>
-      )}
-    </SCard>
-  )
-}
-
-function ShortcutCard() {
-  const [platform, setPlatform] = useState<PlatformType>('desktop')
-  const [copied, setCopied] = useState(false)
-
-  useEffect(() => {
-    setPlatform(getPlatformType())
-  }, [])
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(BOOKMARKLET_CODE)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  if (platform === 'ios') {
-    return (
-      <SCard icon={Smartphone} title="Quick save tools" sub="Share any X post straight into ADHX">
-        <p className="text-[13.5px] text-ink-2 leading-relaxed mb-3">
-          Add the shortcut once. In X, tap Share → ADHX — the preview opens so you can watch and
-          send the file. No rewriting the URL.
-        </p>
-        <IosShortcutInstallButton />
-        <IosShortcutHow />
-      </SCard>
-    )
-  }
-
-  return (
-    <SCard icon={Monitor} title="Quick save tools" sub="Save posts with one click">
-      <p className="text-[13.5px] text-ink-2 leading-relaxed mb-[13px]">
-        Drag this to your bookmarks bar, or copy it. Click it on any X, Instagram, TikTok or YouTube
-        page to open it in ADHX.
-      </p>
-      <div className="px-[15px] py-[13px] bg-inset rounded-[11px] font-mono text-xs text-ink-2 leading-relaxed break-all select-all mb-[13px]">
-        {BOOKMARKLET_CODE}
-      </div>
-      <button
-        onClick={handleCopy}
-        className="inline-flex items-center gap-2 px-[18px] py-[11px] min-h-[44px] rounded-[11px] bg-clay-grad text-white shadow-glow font-semibold text-sm transition-all hover:opacity-90"
-      >
-        {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-        {copied ? 'Copied!' : 'Copy bookmarklet'}
-      </button>
-
-      {platform === 'android' && (
-        <div className="mt-4 px-[15px] py-3 bg-inset rounded-[11px]">
-          <p className="text-[13px] text-ink-2">
-            You can also install ADHX as a PWA from your browser menu for share sheet access.
-          </p>
         </div>
       )}
     </SCard>
@@ -1135,9 +1075,6 @@ function SettingsPage() {
             })}
           </div>
         </SCard>
-
-        {/* Quick save tools */}
-        <ShortcutCard />
 
         {/* Danger Zone */}
         <SCard icon={AlertTriangle} title="Danger zone" sub="Irreversible actions" danger>

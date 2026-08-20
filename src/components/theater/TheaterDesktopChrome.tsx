@@ -704,7 +704,18 @@ export function DesktopStageChrome({
             />
           ) : (mode === 'shared' && authed) || triage?.tab === 'live' ? (
             triage?.tab === 'live' ? (
-              <TriageLiveSaveButton current={current} triage={triage} className={GLASS} />
+              <>
+                <button
+                  type="button"
+                  onClick={() => triage.onLiveTag?.(current)}
+                  title="Tag this post (saves it to your collection first)"
+                  className={GLASS}
+                >
+                  <TagIcon size={14} />
+                  Tag
+                </button>
+                <TriageLiveSaveButton current={current} triage={triage} className={GLASS} />
+              </>
             ) : (
               <SavePostButton current={current} className={GLASS} />
             )

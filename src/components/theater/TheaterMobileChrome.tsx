@@ -549,21 +549,35 @@ export function TheaterMobileChrome({
                     </button>
                   )}
                   {triage?.tab === 'live' ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!triage.savedKeys.has(theaterItemKey(current))) triage.onSave(current)
-                      }}
-                      disabled={triage.savedKeys.has(theaterItemKey(current))}
-                      className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 text-[13px] font-semibold text-white backdrop-blur-md disabled:opacity-70"
-                    >
-                      {triage.savedKeys.has(theaterItemKey(current)) ? (
-                        <Check size={15} />
-                      ) : (
-                        <LogIn size={15} />
-                      )}
-                      {triage.savedKeys.has(theaterItemKey(current)) ? 'Saved' : 'Save'}
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          triage.onLiveTag?.(current)
+                        }}
+                        onTouchEnd={(e) => e.stopPropagation()}
+                        className="inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md"
+                        aria-label="Tag this post"
+                      >
+                        <TagIcon size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!triage.savedKeys.has(theaterItemKey(current))) triage.onSave(current)
+                        }}
+                        disabled={triage.savedKeys.has(theaterItemKey(current))}
+                        className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 text-[13px] font-semibold text-white backdrop-blur-md disabled:opacity-70"
+                      >
+                        {triage.savedKeys.has(theaterItemKey(current)) ? (
+                          <Check size={15} />
+                        ) : (
+                          <LogIn size={15} />
+                        )}
+                        {triage.savedKeys.has(theaterItemKey(current)) ? 'Saved' : 'Save'}
+                      </button>
+                    </>
                   ) : (
                     <button
                       type="button"
