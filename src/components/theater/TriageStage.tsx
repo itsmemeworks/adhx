@@ -96,7 +96,11 @@ export function TriageStage({ feedItem, muted, onRequestUnmute }: TriageStagePro
           platform="twitter"
           loop
           autoPlay
-          className="h-full max-h-full w-auto max-w-full object-contain"
+          // Viewport-based height: VideoPlayer wraps the <video> in a plain
+          // `div.relative` with no height, so percentage heights collapse to
+          // the intrinsic (tiny) size — dvh sidesteps the broken chain. The
+          // offsets clear the mobile peek bar (~84px) / desktop dock (~160px).
+          className="mx-auto h-[calc(100dvh-84px)] w-auto max-w-full object-contain lg:h-[calc(100dvh-160px)]"
         />
       </div>
     )

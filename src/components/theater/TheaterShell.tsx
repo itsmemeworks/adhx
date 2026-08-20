@@ -331,7 +331,7 @@ export function TheaterShell({
   // The queue itself never mutates after the initial snapshot — Done/Later/
   // Delete only ever advance `triageIndex`, exactly like the deleted
   // `CollectionTheater` (which never spliced/replaced its `queue` either).
-  const [triageQueue] = useState<FeedItem[]>(() => triageItems ?? [])
+  const [triageQueue, setTriageQueue] = useState<FeedItem[]>(() => triageItems ?? [])
   const [triageIndex, setTriageIndex] = useState(() => Math.max(0, initialTriageIndex ?? 0))
   const [triageStreak, setTriageStreak] = useState<{ current: number; longest: number }>({
     current: 0,
@@ -540,6 +540,36 @@ export function TheaterShell({
       if (res.ok) {
         setTriageSavedKeys((prev) => new Set(prev).add(key))
         window.dispatchEvent(new CustomEvent('tweet-added'))
+        // Pull the freshly saved bookmark into the OPEN triage queue too, so
+        // switching to the Collection tab shows it without a page reload
+        // (the queue is a snapshot taken when the overlay opened).
+        if (item.bookmarkId) {
+          try {
+            const q = new URLSearchParams({ unreadOnly: 'false', filter: 'all', limit: '5' })
+            q.append('id', item.bookmarkId)
+            const fres = await fetch(`/api/feed?${q}`)
+            if (fres.ok) {
+              const data = await fres.json()
+              const saved = (data.items ?? []).find(
+                (f: FeedItem) =>
+                  (f.platform ?? 'twitter') === item.platform && f.id === item.bookmarkId,
+              )
+              if (saved) {
+                setTriageQueue((prev) =>
+                  prev.some(
+                    (f) =>
+                      f.id === saved.id &&
+                      (f.platform ?? 'twitter') === (saved.platform ?? 'twitter'),
+                  )
+                    ? prev
+                    : [...prev, saved],
+                )
+              }
+            }
+          } catch {
+            // Queue update is best-effort; the grid behind refreshes anyway.
+          }
+        }
       }
     } catch {
       // Best effort — the button simply won't flip to "Saved".
@@ -605,6 +635,34 @@ export function TheaterShell({
   // the pinned key (if any) moved to the front. Keep this as THE list used
   // everywhere so the rail/mobile-chrome render order matches keyboard order.
   const displayItems = useMemo(() => pinKeyFirst(items, pinnedKey), [items, pinnedKey])
+
+  // Seed savedKeys with EXISTING collection membership: a live-tab post the
+  // viewer already saved (this session or any other) must show "Saved", not
+  // "Save". One bulk `/api/feed?id=…&id=…` lookup per batch of unseen items;
+  // each id is checked at most once per mount.
+  const membershipCheckedRef = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    if (!isTriage || triageTab !== 'live') return
+    const unknown = displayItems
+      .filter((it) => it.bookmarkId && !membershipCheckedRef.current.has(theaterItemKey(it)))
+      .slice(0, 50)
+    if (unknown.length === 0) return
+    unknown.forEach((it) => membershipCheckedRef.current.add(theaterItemKey(it)))
+    const params = new URLSearchParams({ unreadOnly: 'false', filter: 'all', limit: '50' })
+    unknown.forEach((it) => params.append('id', it.bookmarkId as string))
+    fetch(`/api/feed?${params}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        const owned: FeedItem[] = d?.items ?? []
+        if (!owned.length) return
+        setTriageSavedKeys((prev) => {
+          const next = new Set(prev)
+          for (const f of owned) next.add(`${f.platform ?? 'twitter'}:${f.id}`)
+          return next
+        })
+      })
+      .catch(() => {})
+  }, [isTriage, triageTab, displayItems])
 
   // Kept in refs (rather than effect deps) so the seen/pulse timer below only
   // resets when `currentKey` itself changes, not on every unrelated re-render
