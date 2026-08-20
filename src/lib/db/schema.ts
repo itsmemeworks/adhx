@@ -327,6 +327,54 @@ export const activity = sqliteTable(
 )
 
 // ===========================================
+// ACCOUNTS - users + linked sign-in identities
+// ===========================================
+
+// First-class account row. `id` is either the X user id (X-first signups —
+// matches the historical convention that `userId` == the X id everywhere
+// else, e.g. bookmarks.userId) or a generated `u_<hex>` id (email-first
+// signups). Everything else keys off this id via `userId`.
+export const users = sqliteTable('users', {
+  id: text('id').primaryKey(),
+  username: text('username').notNull().unique(),
+  displayName: text('display_name'),
+  avatarUrl: text('avatar_url'),
+  email: text('email'),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+})
+
+// Linked sign-in identities for a user — X OAuth and/or email magic link.
+// PK (provider, providerId) so the same X account or email can't be linked
+// to two different users at once.
+export const userIdentities = sqliteTable(
+  'user_identities',
+  {
+    provider: text('provider').notNull(), // 'x' | 'email'
+    providerId: text('provider_id').notNull(), // X user id, or lowercased email
+    userId: text('user_id').notNull(),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.provider, table.providerId] }),
+    userIdIdx: index('user_identities_user_id_idx').on(table.userId),
+  }),
+)
+
+// One-time magic-link tokens for email sign-in / email-change confirmation.
+// Only the sha256 hash is stored — the raw token exists only in the emailed
+// URL, so a DB read (or leak) can never produce a usable login token.
+export const loginTokens = sqliteTable('login_tokens', {
+  tokenHash: text('token_hash').primaryKey(),
+  email: text('email').notNull(), // lowercased
+  intent: text('intent').notNull(), // 'signin' | 'change'
+  userId: text('user_id'), // set for 'change' — the account confirming a new email
+  returnTo: text('return_to'),
+  expiresAt: integer('expires_at').notNull(), // epoch ms
+  usedAt: text('used_at'),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+})
+
+// ===========================================
 // Relations
 // ===========================================
 
@@ -408,3 +456,9 @@ export type TagShare = typeof tagShares.$inferSelect
 export type NewTagShare = typeof tagShares.$inferInsert
 export type Activity = typeof activity.$inferSelect
 export type NewActivity = typeof activity.$inferInsert
+export type User = typeof users.$inferSelect
+export type NewUser = typeof users.$inferInsert
+export type UserIdentity = typeof userIdentities.$inferSelect
+export type NewUserIdentity = typeof userIdentities.$inferInsert
+export type LoginToken = typeof loginTokens.$inferSelect
+export type NewLoginToken = typeof loginTokens.$inferInsert

@@ -15,6 +15,9 @@ vi.mock('@/lib/db', () => ({
   get db() {
     return testInstance.db
   },
+  runInTransaction<R>(fn: () => R): R {
+    return testInstance.sqlite.transaction(fn)()
+  },
 }))
 
 vi.mock('@/lib/sentry', () => ({
@@ -25,6 +28,19 @@ vi.mock('@/lib/sentry', () => ({
   },
   captureException: vi.fn(),
 }))
+
+// getSession() reads cookies() from next/headers, which throws outside a real
+// request scope (this test invokes the route handler directly, not through
+// Next's server runtime). Mock just getSession to "no existing session" by
+// default; keep setSessionCookie/clearSessionCookie real since they only use
+// NextResponse.cookies (no next/headers involved).
+vi.mock('@/lib/auth/session', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/auth/session')>('@/lib/auth/session')
+  return {
+    ...actual,
+    getSession: vi.fn(() => Promise.resolve(null)),
+  }
+})
 
 // Mock fetch for Twitter API
 const mockFetch = vi.fn()

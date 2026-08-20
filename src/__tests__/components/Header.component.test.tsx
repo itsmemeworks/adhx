@@ -37,6 +37,23 @@ function mockFetch(authenticated: boolean) {
           : { authenticated: false },
       )
     }
+    if (url.startsWith('/api/auth/me')) {
+      return jsonResponse(
+        authenticated
+          ? {
+              authenticated: true,
+              user: { id: '1', username: 'tester', displayName: 'tester', avatarUrl: null },
+              identities: { x: { username: 'tester' }, email: null },
+              xConnected: true,
+            }
+          : {
+              authenticated: false,
+              user: null,
+              identities: { x: null, email: null },
+              xConnected: false,
+            },
+      )
+    }
     if (url.startsWith('/api/stats')) return jsonResponse({ total: 0, unread: 0 })
     if (url.startsWith('/api/triage/streak')) return jsonResponse({ current: 0 })
     if (url.startsWith('/api/sync/cooldown')) {

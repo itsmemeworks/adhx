@@ -7,7 +7,8 @@ import {
   saveTokens,
   hasExistingTokens,
 } from '@/lib/auth/oauth'
-import { setSessionCookie } from '@/lib/auth/session'
+import { getSession, setSessionCookie } from '@/lib/auth/session'
+import { findOrCreateUserForX } from '@/lib/auth/account'
 import { isSafeReturnUrl } from '@/lib/auth/return-url'
 import { metrics, captureException } from '@/lib/sentry'
 
@@ -77,12 +78,38 @@ export async function GET(request: NextRequest) {
     // Get user info
     const user = await getCurrentUser(tokens.accessToken)
 
-    // Check if this is a new user (for metrics)
-    const isNewUser = !(await hasExistingTokens(user.id))
+    // Resolve (or create) the app account for this X login. If there's an
+    // active session (e.g. an email user connecting X), link to it instead
+    // of creating a second account.
+    const existingSession = await getSession()
+    const linkResult = await findOrCreateUserForX(
+      {
+        xUserId: user.id,
+        username: user.username,
+        name: user.name,
+        profileImageUrl: user.profileImageUrl,
+      },
+      existingSession?.userId,
+    )
 
-    // Save tokens to database
+    if (linkResult.conflict === 'linked_elsewhere') {
+      // This X account is already linked to a different account than the one
+      // currently signed in — don't touch the session, bounce back to
+      // Settings with an error instead.
+      return NextResponse.redirect(new URL('/settings?auth_error=x_already_linked', BASE_URL))
+    }
+
+    const appUserId = linkResult.userId
+    const appUsername = linkResult.username
+
+    // Check if this is a new user (for metrics) — keyed by the app userId,
+    // since an email user linking X already has no oauth_tokens row yet.
+    const isNewUser = !(await hasExistingTokens(appUserId))
+
+    // Save tokens to database, keyed by the APP userId (equal to the X id
+    // for X-first signups; distinct from it when linking X to an email user).
     await saveTokens(
-      user.id,
+      appUserId,
       user.username,
       user.profileImageUrl,
       tokens.accessToken,
@@ -95,7 +122,7 @@ export async function GET(request: NextRequest) {
 
     // Track successful auth completion
     metrics.authCompleted(isNewUser)
-    metrics.trackUser(user.id)
+    metrics.trackUser(appUserId)
 
     // Check for a return URL cookie (from URL prefix feature)
     const returnUrlCookie = request.cookies.get('adhx_return_url')
@@ -126,8 +153,8 @@ export async function GET(request: NextRequest) {
 
     // Set session cookie with user info (JWT signed)
     await setSessionCookie(response, {
-      userId: user.id,
-      username: user.username,
+      userId: appUserId,
+      username: appUsername,
     })
 
     return response

@@ -177,8 +177,7 @@ db.exec(`
 `)
 function isSettled(key: string): boolean {
   const row = db.prepare('SELECT value FROM migration_state WHERE key = ?').get(key) as
-    | { value: string }
-    | undefined
+    { value: string } | undefined
   return row?.value === '1'
 }
 function markSettled(key: string): void {
@@ -258,6 +257,71 @@ try {
   }
 } catch (error) {
   console.log('[migrate] Warning: activity pruning failed', error)
+}
+
+// Accounts foundation: users + user_identities + login_tokens (magic link).
+// Guarded CREATE TABLE IF NOT EXISTS — safe on every boot, no Drizzle
+// migration file needed for a table-recreate.
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      username TEXT NOT NULL UNIQUE,
+      display_name TEXT,
+      avatar_url TEXT,
+      email TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS user_identities (
+      provider TEXT NOT NULL,
+      provider_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (provider, provider_id)
+    );
+    CREATE INDEX IF NOT EXISTS user_identities_user_id_idx ON user_identities(user_id);
+    CREATE TABLE IF NOT EXISTS login_tokens (
+      token_hash TEXT PRIMARY KEY,
+      email TEXT NOT NULL,
+      intent TEXT NOT NULL,
+      user_id TEXT,
+      return_to TEXT,
+      expires_at INTEGER NOT NULL,
+      used_at TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+  `)
+  console.log('[migrate] Ensured users/user_identities/login_tokens tables')
+} catch (error) {
+  console.log('[migrate] Warning: failed to create account tables', error)
+}
+
+// Backfill `users` + `user_identities` ('x' provider) from existing
+// oauth_tokens rows, plus a fallback for users whose tokens were later
+// deleted (bookmarks.user_id with no matching users row) so every existing
+// account gets a first-class row without forcing re-auth. INSERT OR IGNORE
+// makes this idempotent — safe to re-run every boot. Both source columns
+// (oauth_tokens.user_id, bookmarks.user_id) are indexed, so this reads via
+// index rather than a full table scan.
+try {
+  db.exec(`
+    INSERT OR IGNORE INTO users (id, username, avatar_url)
+    SELECT user_id, COALESCE(username, user_id), profile_image_url
+    FROM oauth_tokens;
+
+    INSERT OR IGNORE INTO users (id, username)
+    SELECT DISTINCT b.user_id, b.user_id
+    FROM bookmarks b
+    LEFT JOIN users u ON u.id = b.user_id
+    WHERE u.id IS NULL;
+
+    INSERT OR IGNORE INTO user_identities (provider, provider_id, user_id)
+    SELECT 'x', user_id, user_id
+    FROM oauth_tokens;
+  `)
+  console.log('[migrate] Backfilled users/user_identities from oauth_tokens + bookmarks')
+} catch (error) {
+  console.log('[migrate] Warning: users/user_identities backfill failed', error)
 }
 
 console.log(`[migrate] Database ready at: ${path.resolve(DB_PATH)}`)

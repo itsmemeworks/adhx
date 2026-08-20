@@ -22,6 +22,7 @@ import {
   Check,
   LogIn,
   Flame,
+  Repeat,
   ChevronUp,
   ChevronDown,
   Pause,
@@ -43,7 +44,8 @@ import { PLATFORM_LABEL } from './types'
 import { TheaterLinkedText } from './TheaterText'
 import { TheaterProgressLine, progressKindFor } from './TheaterProgressLine'
 import { UpNextList } from './UpNextList'
-import type { TheaterItem, TheaterMode } from './types'
+import { SaveCollectionButton } from './SaveCollectionButton'
+import type { SaveCollectionStatus, TheaterCollectionMeta, TheaterItem, TheaterMode } from './types'
 
 export interface TheaterMobileChromeProps {
   mode: TheaterMode
@@ -65,6 +67,11 @@ export interface TheaterMobileChromeProps {
   muted: boolean
   /** Flips TheaterShell's `muted` state. */
   onToggleMute: () => void
+  /** Collection mode (`/t/{username}/{tag}`): identity chrome + swaps the bottom action row's Download/Save-login for the Save-collection CTA. */
+  collection?: TheaterCollectionMeta
+  saveStatus?: SaveCollectionStatus
+  onSaveCollection?: () => void
+  onRequestSignIn?: () => void
 }
 
 /** Height of the collapsed sheet's peek bar — kept in sync with the transform below. Two rows now (drag handle + the nav/pause/audio/de-clutter controls), taller than the old label-only bar. */
@@ -93,6 +100,10 @@ export function TheaterMobileChrome({
   canNext,
   muted,
   onToggleMute,
+  collection,
+  saveStatus = 'idle',
+  onSaveCollection,
+  onRequestSignIn,
 }: TheaterMobileChromeProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -242,48 +253,77 @@ export function TheaterMobileChrome({
           and the platform+time link-out chip live HERE now, one fixed
           location on every content type, instead of repeating per-row in the
           bottom scrim. De-clutter hides this whole scrim (meta included) —
-          expected: immersion hides meta too. */}
-      <div
-        className={cn(
-          'pointer-events-auto absolute inset-x-0 top-0 flex items-center justify-between gap-3 px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
-          declutter && 'pointer-events-none -translate-y-3 opacity-0',
-        )}
-        style={{ background: 'linear-gradient(to bottom, rgba(11,11,17,.75), transparent)' }}
-      >
-        <a href="/" className="flex items-center" aria-label="ADHX home">
-          <MatterLogo size={16} className="[&>span]:text-white" />
-        </a>
-        {current && (
-          <div className="flex flex-none items-center gap-2">
-            {trendCount >= 2 && (
-              <span className="inline-flex flex-none items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-[11px] font-bold text-orange-300">
-                <Flame size={11} className="text-orange-400" fill="currentColor" />
-                {trendCount}
-              </span>
-            )}
-            {(() => {
-              const src = sourceUrl(current.platform, current.author, current.bookmarkId ?? '')
-              const inner = (
-                <>
-                  <PlatformGlyph platform={current.platform} size={12} />
-                  <span className="font-mono text-[11px]" suppressHydrationWarning>
-                    {formatCompactRelativeTime(current.createdAt)}
-                  </span>
-                </>
-              )
-              const cls =
-                'inline-flex min-h-[32px] flex-none items-center gap-1.5 rounded-full bg-black/40 px-2.5 text-white/80 backdrop-blur-sm'
-              return src ? (
-                <a href={src} target="_blank" rel="noopener noreferrer" className={cls}>
-                  {inner}
-                </a>
-              ) : (
-                <span className={cls}>{inner}</span>
-              )
-            })()}
+          expected: immersion hides meta too. Collection mode replaces post
+          meta with the tag/curator identity chrome (two rows). */}
+      {collection ? (
+        <div
+          className={cn(
+            'pointer-events-auto absolute inset-x-0 top-0 flex flex-col gap-1.5 px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
+            declutter && 'pointer-events-none -translate-y-3 opacity-0',
+          )}
+          style={{ background: 'linear-gradient(to bottom, rgba(11,11,17,.75), transparent)' }}
+        >
+          <div className="flex items-center justify-between">
+            <a href="/" className="flex items-center" aria-label="ADHX home">
+              <MatterLogo size={16} className="[&>span]:text-white" />
+            </a>
+            <span className="flex-none rounded-full bg-clay/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-clay">
+              Collection
+            </span>
           </div>
-        )}
-      </div>
+          <div className="flex items-center justify-between gap-2">
+            <span className="min-w-0 truncate text-[15px] font-bold text-white">
+              {collection.tag}
+            </span>
+            <span className="flex-none font-mono text-[10.5px] text-white/60">
+              by @{collection.curator} · {collection.count} ·{' '}
+              <Repeat size={9} className="inline" aria-hidden />
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div
+          className={cn(
+            'pointer-events-auto absolute inset-x-0 top-0 flex items-center justify-between gap-3 px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
+            declutter && 'pointer-events-none -translate-y-3 opacity-0',
+          )}
+          style={{ background: 'linear-gradient(to bottom, rgba(11,11,17,.75), transparent)' }}
+        >
+          <a href="/" className="flex items-center" aria-label="ADHX home">
+            <MatterLogo size={16} className="[&>span]:text-white" />
+          </a>
+          {current && (
+            <div className="flex flex-none items-center gap-2">
+              {trendCount >= 2 && (
+                <span className="inline-flex flex-none items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-[11px] font-bold text-orange-300">
+                  <Flame size={11} className="text-orange-400" fill="currentColor" />
+                  {trendCount}
+                </span>
+              )}
+              {(() => {
+                const src = sourceUrl(current.platform, current.author, current.bookmarkId ?? '')
+                const inner = (
+                  <>
+                    <PlatformGlyph platform={current.platform} size={12} />
+                    <span className="font-mono text-[11px]" suppressHydrationWarning>
+                      {formatCompactRelativeTime(current.createdAt)}
+                    </span>
+                  </>
+                )
+                const cls =
+                  'inline-flex min-h-[32px] flex-none items-center gap-1.5 rounded-full bg-black/40 px-2.5 text-white/80 backdrop-blur-sm'
+                return src ? (
+                  <a href={src} target="_blank" rel="noopener noreferrer" className={cls}>
+                    {inner}
+                  </a>
+                ) : (
+                  <span className={cls}>{inner}</span>
+                )
+              })()}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Bottom scrim: author/caption + Send / Save / Share / Open. Padded
           above the sheet's peek bar (opaque, themed) so the gradient tucks
@@ -357,37 +397,49 @@ export function TheaterMobileChrome({
           </div>
 
           <div className="flex items-center gap-2">
-            {sendFile.supported && (
-              <button
-                type="button"
-                onClick={() => {
-                  // No awaits before this call — the tap must stay a fresh
-                  // user gesture for iOS's share sheet (spec §2/§6).
-                  void sendFile.send()
-                }}
-                disabled={sendFile.sending}
-                title={
-                  sendFile.mode === 'share'
-                    ? 'Opens your share sheet with the video file'
-                    : 'Download the video file'
-                }
+            {collection ? (
+              <SaveCollectionButton
+                count={collection.count}
+                status={saveStatus}
+                onSave={() => onSaveCollection?.()}
                 className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full bg-clay-grad px-3 text-[13px] font-semibold text-white shadow-glow transition-opacity disabled:opacity-70"
-              >
-                {sendFile.sending ? (
-                  <Loader2 size={15} className="animate-spin" />
-                ) : (
-                  <DownloadIcon size={15} />
+              />
+            ) : (
+              <>
+                {sendFile.supported && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // No awaits before this call — the tap must stay a fresh
+                      // user gesture for iOS's share sheet (spec §2/§6).
+                      void sendFile.send()
+                    }}
+                    disabled={sendFile.sending}
+                    title={
+                      sendFile.mode === 'share'
+                        ? 'Opens your share sheet with the video file'
+                        : 'Download the video file'
+                    }
+                    className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full bg-clay-grad px-3 text-[13px] font-semibold text-white shadow-glow transition-opacity disabled:opacity-70"
+                  >
+                    {sendFile.sending ? (
+                      <Loader2 size={15} className="animate-spin" />
+                    ) : (
+                      <DownloadIcon size={15} />
+                    )}
+                    Download
+                  </button>
                 )}
-                Download
-              </button>
+                <button
+                  type="button"
+                  onClick={() => onRequestSignIn?.()}
+                  className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 text-[13px] font-semibold text-white backdrop-blur-md"
+                >
+                  <LogIn size={15} />
+                  Save
+                </button>
+              </>
             )}
-            <a
-              href="/api/auth/twitter"
-              className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 text-[13px] font-semibold text-white backdrop-blur-md"
-            >
-              <LogIn size={15} />
-              Save
-            </a>
             <button
               type="button"
               onClick={() => void handleShare()}
@@ -504,9 +556,20 @@ export function TheaterMobileChrome({
               onClick={() => setSheetOpen((v) => !v)}
               aria-expanded={sheetOpen}
               aria-label={sheetOpen ? 'Collapse up next' : 'Expand up next'}
-              className="pointer-events-auto max-w-[45%] truncate px-1 text-center text-[12px] font-semibold text-ink-2"
+              className="pointer-events-auto flex max-w-[45%] items-center justify-center gap-1 truncate px-1 text-center text-[12px] font-semibold text-ink-2"
             >
-              {newCount > 0 ? `${newCount} new` : 'Up next'}
+              {collection ? (
+                <>
+                  <Repeat size={11} className="flex-none" aria-hidden />
+                  <span className="truncate">
+                    {collection.tag} · {collection.count}
+                  </span>
+                </>
+              ) : newCount > 0 ? (
+                `${newCount} new`
+              ) : (
+                'Up next'
+              )}
             </button>
           </div>
 

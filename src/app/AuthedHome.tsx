@@ -318,7 +318,9 @@ function FeedPageContent(): React.ReactElement {
   useEffect(() => {
     async function checkAuth(): Promise<void> {
       try {
-        const response = await fetch('/api/auth/twitter/status')
+        // /api/auth/me (not the X-only /api/auth/twitter/status) so email-only
+        // accounts are treated as fully signed in here too.
+        const response = await fetch('/api/auth/me')
         const data = await response.json()
         setIsAuthenticated(data.authenticated)
 

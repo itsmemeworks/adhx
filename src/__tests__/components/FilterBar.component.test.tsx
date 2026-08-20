@@ -8,14 +8,13 @@
  * - Platform dropdown
  * - Sort dropdown
  * - Unread-only toggle
- *
- * Note: tagging UI was fully removed in the Matter redesign. The component
- * still accepts tag-related props for caller compatibility but renders nothing
- * for them, so those test cases have been deleted.
+ * - Tag selection + "Share as theater" (tag-collections-as-theater feature —
+ *   tagging UI was removed in the original Matter redesign, then reintroduced
+ *   here specifically to drive the selected-tag toolbar's share flow)
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, fireEvent, screen } from '@testing-library/react'
+import { render, fireEvent, screen, waitFor } from '@testing-library/react'
 import { FilterBar } from '@/components/feed/FilterBar'
 import { FILTER_OPTIONS, type FilterType, type TagItem } from '@/components/feed/types'
 
@@ -236,13 +235,105 @@ describe('FilterBar Component', () => {
     })
   })
 
-  describe('Tagging removed', () => {
-    it('does not render any Tags button (tagging removed in Matter redesign)', () => {
-      render(<FilterBar {...defaultProps} availableTags={defaultProps.availableTags} />)
+  describe('Tag selection + Share as theater', () => {
+    it('renders a Tags dropdown listing available tags with counts', () => {
+      render(<FilterBar {...defaultProps} />)
 
       const buttons = screen.getAllByRole('button')
       const tagsButton = buttons.find((b) => b.textContent?.includes('Tags'))
+      expect(tagsButton).toBeTruthy()
+
+      fireEvent.click(tagsButton!)
+      expect(screen.getByText('#work')).toBeTruthy()
+      expect(screen.getByText('#personal')).toBeTruthy()
+      expect(screen.getByText('#important')).toBeTruthy()
+    })
+
+    it('does not render the Tags dropdown when there are no tags', () => {
+      render(<FilterBar {...defaultProps} availableTags={[]} />)
+
+      const buttons = screen.getAllByRole('button')
+      const tagsButton = buttons.find((b) => b.textContent === 'Tags')
       expect(tagsButton).toBeFalsy()
+    })
+
+    it('selecting a tag calls onSelectedTagsChange with just that tag', () => {
+      const onSelectedTagsChange = vi.fn()
+      render(<FilterBar {...defaultProps} onSelectedTagsChange={onSelectedTagsChange} />)
+
+      const buttons = screen.getAllByRole('button')
+      const tagsButton = buttons.find((b) => b.textContent?.includes('Tags'))
+      fireEvent.click(tagsButton!)
+      fireEvent.click(screen.getByText('#work'))
+
+      expect(onSelectedTagsChange).toHaveBeenCalledWith(['work'])
+    })
+
+    it('shows the selected-tag toolbar with post count and a Share as theater button', () => {
+      render(<FilterBar {...defaultProps} selectedTags={['work']} />)
+
+      // "#work" appears twice while selected: the Tags dropdown pill's own
+      // label, and the toolbar's tag heading — both are expected here.
+      expect(screen.getAllByText('#work').length).toBeGreaterThanOrEqual(1)
+      expect(screen.getByText(/5 post/)).toBeTruthy()
+      expect(screen.getByRole('button', { name: /share as theater/i })).toBeTruthy()
+    })
+
+    it('does not show the toolbar when no tag is selected', () => {
+      render(<FilterBar {...defaultProps} selectedTags={[]} />)
+
+      expect(screen.queryByRole('button', { name: /share as theater/i })).toBeFalsy()
+    })
+
+    it('shows a Public chip when the selected tag is already public', () => {
+      render(
+        <FilterBar
+          {...defaultProps}
+          selectedTags={['work']}
+          availableTags={[{ tag: 'work', count: 5, isPublic: true, shareUrl: '/t/user/work' }]}
+        />,
+      )
+
+      expect(screen.getByText('Public')).toBeTruthy()
+    })
+
+    it('clears the selected tag via the clear button', () => {
+      const onSelectedTagsChange = vi.fn()
+      render(
+        <FilterBar
+          {...defaultProps}
+          selectedTags={['work']}
+          onSelectedTagsChange={onSelectedTagsChange}
+        />,
+      )
+
+      fireEvent.click(screen.getByLabelText(/clear tag filter/i))
+      expect(onSelectedTagsChange).toHaveBeenCalledWith([])
+    })
+
+    it('PATCHes /api/tags, copies the share link, and notifies onTagUpdated', async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined)
+      Object.assign(navigator, { clipboard: { writeText } })
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: true, shareUrl: '/t/user/work', isPublic: true }),
+      }) as unknown as typeof fetch
+      const onTagUpdated = vi.fn()
+
+      render(<FilterBar {...defaultProps} selectedTags={['work']} onTagUpdated={onTagUpdated} />)
+      fireEvent.click(screen.getByRole('button', { name: /share as theater/i }))
+
+      await waitFor(() => expect(writeText).toHaveBeenCalled())
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/tags',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ tag: 'work', isPublic: true }),
+        }),
+      )
+      expect(onTagUpdated).toHaveBeenCalledWith('work', true, '/t/user/work')
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining('/t/user/work'))
+      await waitFor(() => expect(screen.getByText(/copied/i)).toBeTruthy())
     })
   })
 })

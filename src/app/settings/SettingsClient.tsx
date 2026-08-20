@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, Suspense, useRef } from 'react'
+import { useEffect, useState, Suspense, useRef, type FormEvent } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import {
   CheckCircle,
@@ -9,8 +9,6 @@ import {
   RefreshCw,
   AlertCircle,
   History,
-  ChevronDown,
-  ChevronUp,
   AlertTriangle,
   Eraser,
   UserX,
@@ -23,31 +21,34 @@ import {
   Copy,
   Check,
   Flame,
+  Mail,
+  Lock,
 } from 'lucide-react'
 import { SyncProgress } from '@/components/sync/SyncProgress'
 import { usePreferences, FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
 import { getPlatformType, type PlatformType } from '@/lib/platform'
 import { useTheme } from '@/lib/theme/context'
-import { PlatformGlyph } from '@/components/matter'
+import { PlatformGlyph, ConnectWithX } from '@/components/matter'
 import { cn } from '@/lib/utils'
 import { IosShortcutHow, IosShortcutInstallButton } from '@/components/IosShortcutInstall'
 import { BOOKMARKLET_CODE } from '@/lib/share/ios'
 
-interface AuthStatus {
+const CONNECT_X_URL = '/api/auth/twitter?returnUrl=%2Fsettings'
+
+interface AuthMe {
   authenticated: boolean
-  user?: {
+  user: {
     id: string
     username: string
-    profileImageUrl?: string | null
+    displayName: string
+    avatarUrl: string
+  } | null
+  identities: {
+    x: { username: string } | null
+    email: { email: string } | null
   }
-  tokenExpired?: boolean
-}
-
-interface Stats {
-  total: number
-  unread: number
-  manual: number
+  xConnected: boolean
 }
 
 interface CooldownStatus {
@@ -57,26 +58,19 @@ interface CooldownStatus {
   fetchedAt: number // timestamp when cooldown was fetched
 }
 
-interface SyncLog {
+interface SyncHistoryEntry {
   id: string
   startedAt: string
   completedAt: string | null
   status: string
-  totalFetched: number
   newBookmarks: number
-  duplicatesSkipped: number
-  categorized: number
-  errorMessage: string | null
-  triggerType: string | null
+  totalFetched: number
 }
 
-// X (formerly Twitter) logo component
-function XLogo({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
-      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-    </svg>
-  )
+interface SyncHistoryData {
+  syncs: SyncHistoryEntry[]
+  lastSyncAt: string | null
+  totalBookmarks: number
 }
 
 /* ── Matter card shell ─────────────────────────────────────────── */
@@ -169,6 +163,358 @@ function SettingsLoadingSkeleton() {
   )
 }
 
+/* ── Sign-in & connection ──────────────────────────────────────── */
+function SignInConnectionCard({ me, refresh }: { me: AuthMe; refresh: () => void }) {
+  const [xActionLoading, setXActionLoading] = useState(false)
+  const [xError, setXError] = useState<string | null>(null)
+
+  const [emailEditing, setEmailEditing] = useState(false)
+  const [emailValue, setEmailValue] = useState('')
+  const [emailSubmitting, setEmailSubmitting] = useState(false)
+  const [emailError, setEmailError] = useState<string | null>(null)
+  const [emailSuccess, setEmailSuccess] = useState<string | null>(null)
+
+  const [addEmailValue, setAddEmailValue] = useState('')
+  const [addEmailSubmitting, setAddEmailSubmitting] = useState(false)
+  const [addEmailError, setAddEmailError] = useState<string | null>(null)
+  const [addEmailSuccess, setAddEmailSuccess] = useState<string | null>(null)
+
+  async function handleDisconnectX() {
+    if (!window.confirm('Disconnect your X account? You can reconnect any time.')) return
+    setXActionLoading(true)
+    setXError(null)
+    try {
+      const res = await fetch('/api/auth/twitter/disconnect', { method: 'POST' })
+      if (res.ok) {
+        refresh()
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setXError(data.error || 'Failed to disconnect.')
+      }
+    } catch {
+      setXError('Failed to disconnect. Please try again.')
+    } finally {
+      setXActionLoading(false)
+    }
+  }
+
+  async function handleChangeEmail(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setEmailSubmitting(true)
+    setEmailError(null)
+    try {
+      const res = await fetch('/api/auth/email/change', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailValue }),
+      })
+      if (res.ok) {
+        setEmailSuccess(`Check ${emailValue} — confirmation link sent.`)
+        setEmailEditing(false)
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setEmailError(data.error || 'Failed to send confirmation link.')
+      }
+    } catch {
+      setEmailError('Failed to send confirmation link.')
+    } finally {
+      setEmailSubmitting(false)
+    }
+  }
+
+  async function handleAddEmail(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setAddEmailSubmitting(true)
+    setAddEmailError(null)
+    try {
+      const res = await fetch('/api/auth/email/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: addEmailValue, returnTo: '/settings' }),
+      })
+      if (res.ok) {
+        setAddEmailSuccess(`Check ${addEmailValue} for a sign-in link.`)
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setAddEmailError(data.error || 'Failed to send sign-in link.')
+      }
+    } catch {
+      setAddEmailError('Failed to send sign-in link.')
+    } finally {
+      setAddEmailSubmitting(false)
+    }
+  }
+
+  return (
+    <SCard
+      icon={Lock}
+      title="Sign-in & connection"
+      sub="Two ways in — same pile"
+      bodyPadded={false}
+    >
+      <div className="divide-y divide-hairline">
+        {/* X row */}
+        <div className="px-5 py-4">
+          <div className="flex items-center gap-[13px]">
+            <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center flex-shrink-0">
+              <PlatformGlyph platform="twitter" size={18} className="text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              {me.identities.x ? (
+                <>
+                  <p className="font-mono font-bold text-[14.5px] text-ink truncate">
+                    @{me.identities.x.username}
+                  </p>
+                  <span className="inline-flex items-center text-[10px] font-bold tracking-[0.06em] uppercase text-green-700 bg-green-500/10 px-2 py-0.5 rounded-full mt-1">
+                    Connected
+                  </span>
+                </>
+              ) : (
+                <p className="text-[13.5px] text-ink-3">Not connected</p>
+              )}
+            </div>
+            {me.identities.x ? (
+              <button
+                onClick={handleDisconnectX}
+                disabled={xActionLoading}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] rounded-[10px] border border-hairline text-ink-2 font-semibold text-[13px] whitespace-nowrap hover:bg-inset transition-colors disabled:opacity-60"
+              >
+                {xActionLoading ? (
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <LogOut className="h-3.5 w-3.5" />
+                )}
+                Disconnect
+              </button>
+            ) : (
+              <a
+                href={CONNECT_X_URL}
+                className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-[10px] bg-clay-grad text-white shadow-glow font-semibold text-[13.5px] whitespace-nowrap hover:opacity-90 transition-all"
+              >
+                <ConnectWithX size={14} />
+              </a>
+            )}
+          </div>
+          {xError && <p className="text-xs text-red-600 mt-2">{xError}</p>}
+        </div>
+
+        {/* Email row */}
+        <div className="px-5 py-4">
+          <div className="flex items-center gap-[13px]">
+            <div className="w-10 h-10 rounded-full bg-inset flex items-center justify-center flex-shrink-0">
+              <Mail className="h-[18px] w-[18px] text-ink-2" />
+            </div>
+            <div className="flex-1 min-w-0">
+              {me.identities.email ? (
+                <>
+                  <p className="font-mono font-bold text-[14.5px] text-ink truncate">
+                    {me.identities.email.email}
+                  </p>
+                  <span className="inline-flex items-center text-[10px] font-bold tracking-[0.06em] uppercase text-clay bg-clay/[0.12] px-2 py-0.5 rounded-full mt-1">
+                    Magic link
+                  </span>
+                </>
+              ) : (
+                <p className="text-[13.5px] text-ink-2">
+                  Add an email so you can sign in without X.
+                </p>
+              )}
+            </div>
+            {me.identities.email && !emailEditing && (
+              <button
+                onClick={() => {
+                  setEmailValue('')
+                  setEmailError(null)
+                  setEmailSuccess(null)
+                  setEmailEditing(true)
+                }}
+                className="inline-flex items-center px-3.5 py-2 min-h-[44px] rounded-[10px] border border-hairline text-ink-2 font-semibold text-[13px] whitespace-nowrap hover:bg-inset transition-colors"
+              >
+                Change
+              </button>
+            )}
+          </div>
+
+          {me.identities.email && emailEditing && (
+            <form onSubmit={handleChangeEmail} className="mt-3 flex flex-col sm:flex-row gap-2">
+              <input
+                type="email"
+                required
+                autoFocus
+                value={emailValue}
+                onChange={(e) => setEmailValue(e.target.value)}
+                placeholder="new@email.com"
+                className="flex-1 px-3.5 py-2.5 text-base sm:text-sm rounded-[10px] border border-hairline bg-inset text-ink focus:outline-none focus:ring-2 focus:ring-clay"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={emailSubmitting}
+                  className="flex-1 sm:flex-none px-4 py-2.5 min-h-[44px] rounded-[10px] bg-clay-grad text-white font-semibold text-sm whitespace-nowrap hover:opacity-90 transition-all disabled:opacity-60"
+                >
+                  {emailSubmitting ? 'Sending…' : 'Send confirmation link'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEmailEditing(false)}
+                  className="px-3.5 py-2.5 min-h-[44px] rounded-[10px] text-ink-3 font-semibold text-sm hover:bg-inset transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
+
+          {!me.identities.email && (
+            <form onSubmit={handleAddEmail} className="mt-3 flex flex-col sm:flex-row gap-2">
+              <input
+                type="email"
+                required
+                value={addEmailValue}
+                onChange={(e) => setAddEmailValue(e.target.value)}
+                placeholder="you@email.com"
+                className="flex-1 px-3.5 py-2.5 text-base sm:text-sm rounded-[10px] border border-hairline bg-inset text-ink focus:outline-none focus:ring-2 focus:ring-clay"
+              />
+              <button
+                type="submit"
+                disabled={addEmailSubmitting}
+                className="px-4 py-2.5 min-h-[44px] rounded-[10px] bg-clay-grad text-white font-semibold text-sm whitespace-nowrap hover:opacity-90 transition-all disabled:opacity-60"
+              >
+                {addEmailSubmitting ? 'Sending…' : 'Add email'}
+              </button>
+            </form>
+          )}
+
+          {emailError && <p className="text-xs text-red-600 mt-2">{emailError}</p>}
+          {emailSuccess && <p className="text-xs text-green-700 mt-2">{emailSuccess}</p>}
+          {addEmailError && <p className="text-xs text-red-600 mt-2">{addEmailError}</p>}
+          {addEmailSuccess && <p className="text-xs text-green-700 mt-2">{addEmailSuccess}</p>}
+        </div>
+      </div>
+      <p className="px-5 py-3 text-[12px] text-ink-3 border-t border-hairline">
+        Either method signs you into the same pile.
+      </p>
+    </SCard>
+  )
+}
+
+/* ── Sync X bookmarks ──────────────────────────────────────────── */
+function SyncBookmarksCard({
+  xConnected,
+  cooldown,
+  displayedCooldown,
+  formatCooldown,
+  onSyncClick,
+  lastSyncAt,
+  totalBookmarks,
+  getTimeSince,
+}: {
+  xConnected: boolean
+  cooldown: CooldownStatus
+  displayedCooldown: number
+  formatCooldown: (ms: number) => string
+  onSyncClick: () => void
+  lastSyncAt: string | null
+  totalBookmarks: number
+  getTimeSince: (dateStr: string) => string
+}) {
+  if (!xConnected) {
+    return (
+      <SCard icon={RefreshCw} title="Sync X bookmarks" sub="Pull your latest posts on demand">
+        <div className="text-center py-2">
+          <p className="text-[13.5px] text-ink-2 mb-4">
+            Connect your X account to sync your bookmarks.
+          </p>
+          <a
+            href={CONNECT_X_URL}
+            className="inline-flex items-center gap-2 px-5 py-3 min-h-[44px] rounded-[12px] bg-clay-grad text-white shadow-glow font-semibold text-sm hover:opacity-90 transition-all"
+          >
+            <ConnectWithX size={14} />
+          </a>
+        </div>
+      </SCard>
+    )
+  }
+
+  return (
+    <SCard icon={RefreshCw} title="Sync X bookmarks" sub="Pull your latest posts on demand">
+      <button
+        onClick={() => cooldown.canSync && onSyncClick()}
+        disabled={!cooldown.canSync}
+        className={cn(
+          'w-full flex items-center justify-center gap-2.5 py-[15px] min-h-[44px] rounded-[12px] font-bold text-[15.5px] transition-all',
+          cooldown.canSync
+            ? 'bg-clay-grad text-white shadow-glow hover:opacity-90'
+            : 'bg-clay-grad text-white/70 opacity-60 cursor-not-allowed',
+        )}
+      >
+        <RefreshCw className="h-[18px] w-[18px]" />
+        {cooldown.canSync ? 'Sync now' : `Available in ${formatCooldown(displayedCooldown)}`}
+      </button>
+      <p className="text-[13px] text-ink-3 text-center mt-3">
+        {lastSyncAt ? `Last sync ${getTimeSince(lastSyncAt)}` : 'No syncs yet'}
+        {' · '}
+        {totalBookmarks} {totalBookmarks === 1 ? 'bookmark' : 'bookmarks'} in your pile
+      </p>
+      <p className="text-xs text-ink-3 text-center mt-1.5">
+        Syncs are rate-limited to once per 15 minutes.
+      </p>
+    </SCard>
+  )
+}
+
+/* ── Sync history ──────────────────────────────────────────────── */
+function formatSyncTimestamp(dateStr: string) {
+  const d = new Date(dateStr)
+  const month = d.toLocaleString('en-US', { month: 'short' })
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  return `${month} ${d.getDate()}, ${hh}:${mm}`
+}
+
+function SyncHistoryCard({ syncs, loading }: { syncs: SyncHistoryEntry[]; loading: boolean }) {
+  return (
+    <SCard icon={History} title="Sync history" sub="Recent sync operations">
+      {loading ? (
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-12 bg-inset rounded-[11px] animate-pulse" />
+          ))}
+        </div>
+      ) : syncs.length === 0 ? (
+        <div className="text-center py-8 text-ink-3">
+          <History className="h-10 w-10 mx-auto mb-2 opacity-50" />
+          <p>No syncs yet.</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {syncs.map((log) => {
+            const pages = log.totalFetched > 0 ? Math.max(1, Math.ceil(log.totalFetched / 100)) : 0
+            return (
+              <div
+                key={log.id}
+                className="flex items-center gap-3 px-[14px] py-3 bg-inset rounded-[11px]"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="font-mono font-bold text-[13px] text-ink truncate">
+                    {formatSyncTimestamp(log.startedAt)}
+                  </div>
+                </div>
+                <div className="font-mono font-bold text-[13px] text-green-700 whitespace-nowrap">
+                  +{log.newBookmarks} new
+                </div>
+                <div className="text-xs text-ink-3 whitespace-nowrap">
+                  {pages} {pages === 1 ? 'page' : 'pages'}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </SCard>
+  )
+}
+
 function ShortcutCard() {
   const [platform, setPlatform] = useState<PlatformType>('desktop')
   const [copied, setCopied] = useState(false)
@@ -185,7 +531,7 @@ function ShortcutCard() {
 
   if (platform === 'ios') {
     return (
-      <SCard icon={Smartphone} title="iOS Share Sheet" sub="Share any X post straight into ADHX">
+      <SCard icon={Smartphone} title="Quick save tools" sub="Share any X post straight into ADHX">
         <p className="text-[13.5px] text-ink-2 leading-relaxed mb-3">
           Add the shortcut once. In X, tap Share → ADHX — the preview opens so you can watch and
           send the file. No rewriting the URL.
@@ -197,7 +543,7 @@ function ShortcutCard() {
   }
 
   return (
-    <SCard icon={Monitor} title="Bookmarklet" sub="Save posts with one click">
+    <SCard icon={Monitor} title="Quick save tools" sub="Save posts with one click">
       <p className="text-[13.5px] text-ink-2 leading-relaxed mb-[13px]">
         Drag this to your bookmarks bar, or copy it. Click it on any X, Instagram, TikTok or YouTube
         page to open it in ADHX.
@@ -238,7 +584,7 @@ interface StreakData {
 }
 
 /**
- * Gamification streak card (top of Settings): current streak, a Mon–Sun dot row
+ * Gamification streak card: current streak, a Mon–Sun dot row
  * (done / today / upcoming), and stats — longest streak, posts triaged, this week.
  */
 function StreakCard() {
@@ -326,7 +672,7 @@ function StreakCard() {
           ))}
         </div>
       </div>
-      <div className="flex gap-7 mt-4 pt-4 border-t border-clay/20">
+      <div className="flex gap-7 mt-4 pt-4 border-t border-clay/20 font-mono">
         {stats.map(([n, l]) => (
           <div key={l}>
             <div className="font-extrabold text-[18px] text-ink">{n}</div>
@@ -342,12 +688,12 @@ function SettingsPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { theme, setTheme } = useTheme()
-  const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [actionLoading, setActionLoading] = useState(false)
+
+  const [me, setMe] = useState<AuthMe | null>(null)
+  const [meLoading, setMeLoading] = useState(true)
+
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [showSyncModal, setShowSyncModal] = useState(false)
-  const [stats, setStats] = useState<Stats>({ total: 0, unread: 0, manual: 0 })
   const [cooldown, setCooldown] = useState<CooldownStatus>({
     canSync: true,
     cooldownRemaining: 0,
@@ -356,11 +702,13 @@ function SettingsPage() {
   })
   const [displayedCooldown, setDisplayedCooldown] = useState(0)
 
-  // Sync log state
-  const [syncLogs, setSyncLogs] = useState<SyncLog[]>([])
-  const [syncLogsLoading, setSyncLogsLoading] = useState(true)
-  const [showAllLogs, setShowAllLogs] = useState(false)
-  const [latestLog, setLatestLog] = useState<SyncLog | null>(null)
+  // Sync history state
+  const [syncHistory, setSyncHistory] = useState<SyncHistoryData>({
+    syncs: [],
+    lastSyncAt: null,
+    totalBookmarks: 0,
+  })
+  const [syncHistoryLoading, setSyncHistoryLoading] = useState(true)
 
   // Danger zone state
   const [showClearDataModal, setShowClearDataModal] = useState(false)
@@ -418,35 +766,64 @@ function SettingsPage() {
   useEffect(() => {
     const success = searchParams.get('success')
     const error = searchParams.get('error')
-    if (success) setMessage({ type: 'success', text: success })
-    else if (error) setMessage({ type: 'error', text: error })
+    const emailChanged = searchParams.get('email_changed')
+    const authError = searchParams.get('auth_error')
+
+    if (emailChanged) {
+      setMessage({ type: 'success', text: 'Email updated.' })
+    } else if (authError === 'email_in_use') {
+      setMessage({ type: 'error', text: 'That email is already linked to another account.' })
+    } else if (authError === 'x_already_linked') {
+      setMessage({ type: 'error', text: 'That X account is already linked to another account.' })
+    } else if (authError) {
+      setMessage({ type: 'error', text: 'Something went wrong signing you in.' })
+    } else if (success) {
+      setMessage({ type: 'success', text: success })
+    } else if (error) {
+      setMessage({ type: 'error', text: error })
+    }
   }, [searchParams])
 
-  useEffect(() => {
-    fetchAuthStatus()
-  }, [])
-
-  useEffect(() => {
-    if (authStatus?.authenticated) {
-      fetchSyncLogs()
-      fetchStats()
-      fetchCooldown()
-
-      // Update cooldown timer every 30 seconds for more accurate countdown
-      const cooldownInterval = setInterval(fetchCooldown, 30000)
-      return () => clearInterval(cooldownInterval)
-    }
-  }, [authStatus?.authenticated])
-
-  async function fetchStats() {
+  async function fetchMe() {
+    setMeLoading(true)
     try {
-      const response = await fetch('/api/stats')
+      const response = await fetch('/api/auth/me')
       const data = await response.json()
-      setStats({ total: data.total || 0, unread: data.unread || 0, manual: data.manual || 0 })
+      setMe(data)
     } catch (error) {
-      console.error('Failed to fetch stats:', error)
+      console.error('Failed to fetch account identity:', error)
+      setMe({
+        authenticated: false,
+        user: null,
+        identities: { x: null, email: null },
+        xConnected: false,
+      })
+    } finally {
+      setMeLoading(false)
     }
   }
+
+  async function fetchSyncHistory() {
+    setSyncHistoryLoading(true)
+    try {
+      const response = await fetch('/api/sync/history')
+      const data = await response.json()
+      setSyncHistory({
+        syncs: data.syncs || [],
+        lastSyncAt: data.lastSyncAt ?? null,
+        totalBookmarks: data.totalBookmarks ?? 0,
+      })
+    } catch (error) {
+      console.error('Failed to fetch sync history:', error)
+    } finally {
+      setSyncHistoryLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchMe()
+    fetchSyncHistory()
+  }, [])
 
   async function fetchCooldown() {
     try {
@@ -457,6 +834,15 @@ function SettingsPage() {
       console.error('Failed to fetch cooldown:', error)
     }
   }
+
+  useEffect(() => {
+    if (me?.xConnected) {
+      fetchCooldown()
+      // Update cooldown timer every 30 seconds for more accurate countdown
+      const cooldownInterval = setInterval(fetchCooldown, 30000)
+      return () => clearInterval(cooldownInterval)
+    }
+  }, [me?.xConnected])
 
   // Live countdown timer - updates every second
   useEffect(() => {
@@ -500,79 +886,14 @@ function SettingsPage() {
     return `${seconds}s`
   }
 
-  async function fetchSyncLogs() {
-    setSyncLogsLoading(true)
-    try {
-      const [logsRes, latestRes] = await Promise.all([
-        fetch('/api/sync/logs?page=1&limit=10'),
-        fetch('/api/sync/logs?latest=true'),
-      ])
-      const logsData = await logsRes.json()
-      const latestData = await latestRes.json()
-      setSyncLogs(logsData.logs || [])
-      setLatestLog(latestData.log)
-    } catch (error) {
-      console.error('Failed to fetch sync logs:', error)
-    } finally {
-      setSyncLogsLoading(false)
-    }
-  }
-
   function handleSyncComplete() {
     setShowSyncModal(false)
-    fetchSyncLogs()
-    fetchStats()
+    fetchSyncHistory()
     fetchCooldown()
     setMessage({ type: 'success', text: 'Bookmarks synced successfully!' })
     // Notify Header to refresh stats and cooldown
     window.dispatchEvent(new CustomEvent('stats-updated'))
     window.dispatchEvent(new CustomEvent('sync-complete'))
-  }
-
-  async function fetchAuthStatus() {
-    try {
-      const response = await fetch('/api/auth/twitter/status')
-      const data = await response.json()
-      setAuthStatus(data)
-    } catch (error) {
-      console.error('Failed to fetch auth status:', error)
-      setAuthStatus({ authenticated: false })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function handleConnect() {
-    window.location.href = '/api/auth/twitter'
-  }
-
-  async function handleDisconnect() {
-    setActionLoading(true)
-    try {
-      await fetch('/api/auth/twitter', { method: 'DELETE' })
-      // Redirect to landing page after disconnect
-      window.location.href = '/'
-    } catch {
-      setMessage({ type: 'error', text: 'Failed to disconnect' })
-      setActionLoading(false)
-    }
-  }
-
-  function formatDate(dateStr: string) {
-    return new Date(dateStr).toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
-
-  function formatDuration(startedAt: string, completedAt: string | null) {
-    if (!completedAt) return '-'
-    const durationMs = new Date(completedAt).getTime() - new Date(startedAt).getTime()
-    const seconds = Math.floor(durationMs / 1000)
-    if (seconds < 60) return `${seconds}s`
-    return `${Math.floor(seconds / 60)}m ${seconds % 60}s`
   }
 
   function getTimeSince(dateStr: string) {
@@ -593,13 +914,11 @@ function SettingsPage() {
       if (response.ok) {
         setMessage({
           type: 'success',
-          text: 'All data cleared. Your Twitter connection is preserved.',
+          text: 'All data cleared. Your sign-in connections are preserved.',
         })
         setShowClearDataModal(false)
         setConfirmText('')
-        // Refresh local data
-        setSyncLogs([])
-        setLatestLog(null)
+        setSyncHistory({ syncs: [], lastSyncAt: null, totalBookmarks: 0 })
         // Notify Header to refresh stats
         window.dispatchEvent(new CustomEvent('stats-updated'))
       } else {
@@ -638,13 +957,6 @@ function SettingsPage() {
     { value: 'system', label: 'System', icon: Monitor },
   ]
 
-  const Stat = ({ n, l, c }: { n: number; l: string; c: string }) => (
-    <div className="text-center flex-1">
-      <p className={cn('font-bold text-[22px] sm:text-[26px]', c)}>{n}</p>
-      <p className="text-[12.5px] text-ink-3 mt-0.5">{l}</p>
-    </div>
-  )
-
   return (
     <div className="min-h-screen bg-paper">
       <div className="max-w-[760px] mx-auto px-4 sm:px-8 py-8 sm:py-10 flex flex-col gap-5">
@@ -653,13 +965,8 @@ function SettingsPage() {
           <h1 className="font-serif text-[30px] sm:text-[38px] font-semibold tracking-tight text-ink mb-1">
             Settings
           </h1>
-          <p className="text-[15px] text-ink-2">
-            Manage your connection, reading and sync preferences.
-          </p>
+          <p className="text-[15px] text-ink-2">Your account, sync, and reading setup</p>
         </div>
-
-        {/* Streak / gamification */}
-        <StreakCard />
 
         {/* Message Toast */}
         {message && (
@@ -686,92 +993,37 @@ function SettingsPage() {
           </div>
         )}
 
-        {/* Connection Card */}
-        <SCard>
-          {loading ? (
+        {/* Sign-in & connection */}
+        {meLoading ? (
+          <SCard>
             <div className="flex items-center gap-3 text-ink-3 px-5 py-[18px]">
               <RefreshCw className="h-5 w-5 animate-spin" />
-              <span>Checking connection...</span>
+              <span>Checking your account…</span>
             </div>
-          ) : authStatus?.authenticated ? (
-            <div className="px-5 py-[18px]">
-              <div className="flex items-center gap-[13px] flex-wrap">
-                <div className="relative">
-                  {authStatus.user?.profileImageUrl ? (
-                    <img
-                      src={authStatus.user.profileImageUrl}
-                      alt={authStatus.user.username}
-                      className="w-[46px] h-[46px] rounded-full flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="w-[46px] h-[46px] rounded-full bg-inset flex items-center justify-center text-ink font-semibold flex-shrink-0">
-                      {authStatus.user?.username[0].toUpperCase()}
-                    </div>
-                  )}
-                  {/* X badge */}
-                  <div className="absolute -bottom-[3px] -right-[3px] w-5 h-5 rounded-full bg-black flex items-center justify-center ring-2 ring-surface">
-                    <PlatformGlyph platform="twitter" size={10} className="text-white" />
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-mono font-bold text-base text-ink">
-                    @{authStatus.user?.username}
-                  </p>
-                  <p className="text-[13px] font-semibold text-green-700 flex items-center gap-1.5 mt-0.5">
-                    <CheckCircle className="h-3.5 w-3.5" /> Connected
-                  </p>
-                </div>
-                <button
-                  onClick={handleDisconnect}
-                  disabled={actionLoading}
-                  className="inline-flex items-center gap-2 px-3.5 py-2 min-h-[44px] rounded-[10px] text-red-600 font-semibold text-sm hover:bg-red-500/10 transition-colors"
-                >
-                  <LogOut className="h-[15px] w-[15px]" />
-                  Disconnect
-                </button>
-              </div>
-              {/* Stats display */}
-              <div className="flex mt-[18px] pt-[18px] border-t border-hairline">
-                <Stat n={stats.total - stats.manual} l="Synced" c="text-ink" />
-                <Stat n={stats.manual} l="Manual" c="text-clay-2" />
-                <Stat n={stats.total - stats.unread} l="Read" c="text-green-700" />
-                <Stat n={stats.unread} l="Unread" c="text-clay" />
-              </div>
-              {/* Also save from */}
-              <div className="flex items-center gap-2 mt-4 text-[13px] text-ink-3 flex-wrap">
-                <span className="font-semibold text-ink-2 font-mono">Also save from</span>
-                {(['instagram', 'tiktok', 'youtube'] as const).map((p) => (
-                  <span
-                    key={p}
-                    className="w-[26px] h-[26px] rounded-lg bg-inset inline-flex items-center justify-center text-ink-2"
-                  >
-                    <PlatformGlyph platform={p} size={14} />
-                  </span>
-                ))}
-                <span>by pasting a link — no extra account.</span>
-              </div>
-            </div>
-          ) : (
-            <div className="px-5 py-[18px] space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-[46px] h-[46px] rounded-full bg-inset flex items-center justify-center">
-                  <XLogo className="h-6 w-6 text-ink" />
-                </div>
-                <div>
-                  <h2 className="font-serif text-base font-semibold text-ink">X Connection</h2>
-                  <p className="text-[13px] text-ink-3">Connect to sync your bookmarks</p>
-                </div>
-              </div>
-              <button
-                onClick={handleConnect}
-                className="w-full py-3.5 min-h-[44px] bg-clay-grad text-white shadow-glow rounded-[12px] font-semibold hover:opacity-90 transition-all flex items-center justify-center gap-2"
-              >
-                <XLogo className="h-5 w-5" />
-                Connect X
-              </button>
-            </div>
-          )}
-        </SCard>
+          </SCard>
+        ) : (
+          me && <SignInConnectionCard me={me} refresh={fetchMe} />
+        )}
+
+        {/* Sync X bookmarks */}
+        {!meLoading && me && (
+          <SyncBookmarksCard
+            xConnected={me.xConnected}
+            cooldown={cooldown}
+            displayedCooldown={displayedCooldown}
+            formatCooldown={formatCooldown}
+            onSyncClick={() => setShowSyncModal(true)}
+            lastSyncAt={syncHistory.lastSyncAt}
+            totalBookmarks={syncHistory.totalBookmarks}
+            getTimeSince={getTimeSince}
+          />
+        )}
+
+        {/* Sync history */}
+        <SyncHistoryCard syncs={syncHistory.syncs} loading={syncHistoryLoading} />
+
+        {/* Streak / gamification */}
+        <StreakCard />
 
         {/* Appearance Card */}
         <SCard
@@ -802,131 +1054,8 @@ function SettingsPage() {
           }
         />
 
-        {/* Sync Bookmarks Card */}
-        {authStatus?.authenticated && (
-          <SCard
-            icon={RefreshCw}
-            title="Sync Bookmarks"
-            sub="Pull your most recent bookmarks from X"
-          >
-            <button
-              onClick={() => cooldown.canSync && setShowSyncModal(true)}
-              disabled={!cooldown.canSync}
-              className={cn(
-                'w-full flex items-center justify-center gap-2.5 py-[15px] min-h-[44px] rounded-[12px] font-bold text-[15.5px] transition-all',
-                cooldown.canSync
-                  ? 'bg-clay-grad text-white shadow-glow hover:opacity-90'
-                  : 'bg-clay-grad text-white/70 opacity-60 cursor-not-allowed',
-              )}
-            >
-              <RefreshCw className="h-[18px] w-[18px]" />
-              {cooldown.canSync
-                ? 'Sync Bookmarks'
-                : `Available in ${formatCooldown(displayedCooldown)}`}
-            </button>
-
-            {!cooldown.canSync && (
-              <p className="text-xs text-clay text-center mt-3">
-                To protect your X account, syncing is limited to once every 15 minutes.
-              </p>
-            )}
-
-            <p className="text-[13px] text-ink-3 text-center mt-3">
-              Each sync pulls up to 50 of your most recent X bookmarks.
-            </p>
-          </SCard>
-        )}
-
-        {/* Sync History Card */}
-        {authStatus?.authenticated && (
-          <SCard
-            icon={History}
-            title="Sync History"
-            sub="Recent sync operations"
-            right={
-              latestLog ? (
-                <div className="text-right">
-                  <div className="font-mono font-bold text-[13.5px] text-ink">
-                    {getTimeSince(latestLog.startedAt)}
-                  </div>
-                  <div className="text-xs text-ink-3">Last sync</div>
-                </div>
-              ) : undefined
-            }
-          >
-            {syncLogsLoading ? (
-              <div className="space-y-2">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-12 bg-inset rounded-[11px] animate-pulse" />
-                ))}
-              </div>
-            ) : syncLogs.length === 0 ? (
-              <div className="text-center py-8 text-ink-3">
-                <History className="h-10 w-10 mx-auto mb-2 opacity-50" />
-                <p>No sync history yet</p>
-              </div>
-            ) : (
-              <>
-                <div className="flex flex-col gap-2">
-                  {(showAllLogs ? syncLogs : syncLogs.slice(0, 5)).map((log) => (
-                    <div
-                      key={log.id}
-                      className="flex items-start sm:items-center gap-3 px-[14px] py-3 bg-inset rounded-[11px]"
-                    >
-                      {log.status === 'completed' ? (
-                        <CheckCircle className="h-[17px] w-[17px] text-green-700 flex-shrink-0 mt-0.5 sm:mt-0" />
-                      ) : log.status === 'failed' ? (
-                        <XCircle className="h-[17px] w-[17px] text-red-600 flex-shrink-0 mt-0.5 sm:mt-0" />
-                      ) : (
-                        <RefreshCw className="h-[17px] w-[17px] text-clay animate-spin flex-shrink-0 mt-0.5 sm:mt-0" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="font-mono font-bold text-[13.5px] text-ink truncate">
-                          {formatDate(log.startedAt)}
-                        </div>
-                        <div className="text-xs text-ink-3">
-                          {log.triggerType === 'scheduled' ? 'Auto' : 'Manual'} ·{' '}
-                          {formatDuration(log.startedAt, log.completedAt)}
-                        </div>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        {log.newBookmarks > 0 ? (
-                          <div className="font-mono font-bold text-[13.5px] text-green-700">
-                            +{log.newBookmarks}
-                          </div>
-                        ) : (
-                          <div className="font-mono text-[13.5px] text-ink-3">0 new</div>
-                        )}
-                        {log.duplicatesSkipped > 0 && (
-                          <div className="text-xs text-ink-3">{log.duplicatesSkipped} skipped</div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {syncLogs.length > 5 && (
-                  <button
-                    onClick={() => setShowAllLogs(!showAllLogs)}
-                    className="w-full mt-3 py-2 text-sm font-medium text-ink-3 hover:text-ink flex items-center justify-center gap-1"
-                  >
-                    {showAllLogs ? (
-                      <>
-                        Show Less <ChevronUp className="h-4 w-4" />
-                      </>
-                    ) : (
-                      <>
-                        Show More <ChevronDown className="h-4 w-4" />
-                      </>
-                    )}
-                  </button>
-                )}
-              </>
-            )}
-          </SCard>
-        )}
-
         {/* Reading Preferences Card */}
-        <SCard icon={BookOpen} title="Reading Preferences" sub="Customize your reading experience">
+        <SCard icon={BookOpen} title="Reading preferences" sub="Customize your reading experience">
           {/* Bionic Reading Toggle */}
           <div className="flex items-center gap-[13px] px-[15px] py-[14px] bg-inset rounded-[12px] mb-[14px]">
             <div className="flex-1">
@@ -966,7 +1095,7 @@ function SettingsPage() {
             <Type className="w-3.5 h-3.5" />
             Body Font
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div className="flex flex-col gap-2">
             {(
               Object.entries(FONT_OPTIONS) as [BodyFont, { name: string; description: string }][]
             ).map(([key, { name, description }]) => {
@@ -976,113 +1105,80 @@ function SettingsPage() {
                 <button
                   key={key}
                   onClick={() => updatePreference('bodyFont', key)}
+                  role="radio"
+                  aria-checked={selected}
                   className={cn(
-                    'px-[15px] py-[13px] min-h-[44px] rounded-[12px] text-left border-[1.5px] transition-all',
+                    'flex items-center gap-3 px-[15px] py-[13px] min-h-[44px] rounded-[12px] text-left border-[1.5px] transition-all',
                     selected
                       ? 'border-clay bg-clay/[0.07]'
                       : 'border-hairline bg-surface hover:border-ink-3',
                   )}
                 >
-                  <p className="font-bold text-[14.5px] text-ink" style={{ fontFamily: fontVar }}>
-                    {name}
-                  </p>
-                  <p className="text-xs text-ink-3 mt-0.5" style={{ fontFamily: fontVar }}>
-                    {description}
-                  </p>
+                  <span
+                    className={cn(
+                      'flex-none w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center',
+                      selected ? 'border-clay' : 'border-ink-3',
+                    )}
+                  >
+                    {selected && <span className="w-[9px] h-[9px] rounded-full bg-clay-grad" />}
+                  </span>
+                  <span>
+                    <p className="font-bold text-[14.5px] text-ink" style={{ fontFamily: fontVar }}>
+                      {name}
+                    </p>
+                    <p className="text-xs text-ink-3 mt-0.5" style={{ fontFamily: fontVar }}>
+                      The quick brown fox — {description}
+                    </p>
+                  </span>
                 </button>
               )
             })}
           </div>
         </SCard>
 
-        {/* Bookmarklet / Quick Save Tools Card */}
+        {/* Quick save tools */}
         <ShortcutCard />
 
         {/* Danger Zone */}
-        {authStatus?.authenticated && (
-          <SCard icon={AlertTriangle} title="Danger Zone" sub="Irreversible actions" danger>
-            {/* Clear Data */}
-            <div className="flex items-center gap-[13px] px-[15px] py-[13px] bg-inset rounded-[11px]">
-              <div className="flex-1 min-w-0">
-                <div className="font-bold text-[14.5px] text-ink flex items-center gap-2">
-                  <Eraser className="h-[15px] w-[15px] text-ink-3 flex-shrink-0" />
-                  Clear all data
-                </div>
-                <div className="text-[12.5px] text-ink-3 mt-0.5">
-                  Delete all bookmarks and sync history. Keeps X connected.
-                </div>
+        <SCard icon={AlertTriangle} title="Danger zone" sub="Irreversible actions" danger>
+          {/* Clear Data */}
+          <div className="flex items-center gap-[13px] px-[15px] py-[13px] bg-inset rounded-[11px]">
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-[14.5px] text-ink flex items-center gap-2">
+                <Eraser className="h-[15px] w-[15px] text-ink-3 flex-shrink-0" />
+                Clear all data
               </div>
-              <button
-                onClick={() => setShowClearDataModal(true)}
-                className="px-[15px] py-[9px] min-h-[44px] rounded-[10px] border border-red-500/40 text-red-600 font-semibold text-[13.5px] whitespace-nowrap hover:bg-red-500/10 transition-colors"
-              >
-                Clear data
-              </button>
+              <div className="text-[12.5px] text-ink-3 mt-0.5">
+                Delete all bookmarks and sync history. Keeps your sign-in connections.
+              </div>
             </div>
+            <button
+              onClick={() => setShowClearDataModal(true)}
+              className="px-[15px] py-[9px] min-h-[44px] rounded-[10px] border border-red-500/40 text-red-600 font-semibold text-[13.5px] whitespace-nowrap hover:bg-red-500/10 transition-colors"
+            >
+              Clear data
+            </button>
+          </div>
 
-            {/* Delete Account */}
-            <div className="flex items-center gap-[13px] px-[15px] py-[13px] bg-inset rounded-[11px] mt-2.5">
-              <div className="flex-1 min-w-0">
-                <div className="font-bold text-[14.5px] text-ink flex items-center gap-2">
-                  <UserX className="h-[15px] w-[15px] text-ink-3 flex-shrink-0" />
-                  Delete account
-                </div>
-                <div className="text-[12.5px] text-ink-3 mt-0.5">
-                  Permanently delete everything, including your X connection.
-                </div>
-              </div>
-              <button
-                onClick={() => setShowDeleteAccountModal(true)}
-                className="px-[15px] py-[9px] min-h-[44px] rounded-[10px] bg-red-600 text-white font-semibold text-[13.5px] whitespace-nowrap hover:bg-red-700 transition-colors"
-              >
+          {/* Delete Account */}
+          <div className="flex items-center gap-[13px] px-[15px] py-[13px] bg-inset rounded-[11px] mt-2.5">
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-[14.5px] text-ink flex items-center gap-2">
+                <UserX className="h-[15px] w-[15px] text-ink-3 flex-shrink-0" />
                 Delete account
-              </button>
+              </div>
+              <div className="text-[12.5px] text-ink-3 mt-0.5">
+                Permanently delete everything, including your sign-in connections.
+              </div>
             </div>
-          </SCard>
-        )}
-
-        {/* Setup Instructions (when not connected) */}
-        {!authStatus?.authenticated && !loading && (
-          <SCard>
-            <div className="px-5 py-[18px]">
-              <h2 className="font-serif text-base font-semibold text-ink mb-4">
-                Setup Instructions
-              </h2>
-              <ol className="list-decimal list-inside space-y-3 text-sm text-ink-2">
-                <li>
-                  Go to{' '}
-                  <a
-                    href="https://developer.x.com/en/portal/dashboard"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-clay hover:underline"
-                  >
-                    X Developer Portal
-                  </a>
-                </li>
-                <li>Create a new Project and App</li>
-                <li>Enable &quot;OAuth 2.0&quot; under User Authentication Settings</li>
-                <li>
-                  Set callback URL to:{' '}
-                  <code className="bg-inset px-2 py-0.5 rounded text-xs font-mono">
-                    http://localhost:3000/api/auth/twitter/callback
-                  </code>
-                </li>
-                <li>Copy Client ID and Client Secret</li>
-                <li>
-                  Add to{' '}
-                  <code className="bg-inset px-2 py-0.5 rounded text-xs font-mono">.env.local</code>
-                  :
-                  <pre className="mt-2 bg-inset p-3 rounded-card text-xs overflow-x-auto font-mono text-ink-2">
-                    {`TWITTER_CLIENT_ID=your_client_id
-TWITTER_CLIENT_SECRET=your_client_secret`}
-                  </pre>
-                </li>
-                <li>Restart the server and connect</li>
-              </ol>
-            </div>
-          </SCard>
-        )}
+            <button
+              onClick={() => setShowDeleteAccountModal(true)}
+              className="px-[15px] py-[9px] min-h-[44px] rounded-[10px] bg-red-600 text-white font-semibold text-[13.5px] whitespace-nowrap hover:bg-red-700 transition-colors"
+            >
+              Delete account
+            </button>
+          </div>
+        </SCard>
 
         {/* Version Footer */}
         <div className="text-center pt-4">
@@ -1124,7 +1220,7 @@ TWITTER_CLIENT_SECRET=your_client_secret`}
                 <li>Sync history</li>
                 <li>Collections and preferences</li>
               </ul>
-              <p className="text-sm text-green-700">✓ Your X connection will be preserved</p>
+              <p className="text-sm text-green-700">✓ Your sign-in connections will be preserved</p>
               <div>
                 <label className="block text-sm font-medium text-ink-2 mb-2">
                   Type <span className="font-mono bg-inset px-1.5 py-0.5 rounded">CLEAR</span> to
@@ -1195,7 +1291,7 @@ TWITTER_CLIENT_SECRET=your_client_secret`}
               <p className="text-ink-2">This will permanently delete:</p>
               <ul className="list-disc list-inside text-sm text-ink-2 space-y-1 ml-2">
                 <li>All synced bookmarks and data</li>
-                <li>Your X connection</li>
+                <li>Your X and email sign-in connections</li>
                 <li>All account settings</li>
               </ul>
               <div>

@@ -11,6 +11,10 @@ import {
   LayoutGrid,
   List as ListIcon,
   LayoutDashboard,
+  Tag as TagIcon,
+  Repeat,
+  Check,
+  X,
 } from 'lucide-react'
 import {
   FILTER_OPTIONS,
@@ -124,13 +128,63 @@ export function FilterBar({
   onUnreadOnlyChange,
   view = 'grid',
   onViewChange,
+  selectedTags = [],
+  onSelectedTagsChange,
+  availableTags = [],
   stats,
+  onTagUpdated,
 }: FilterBarProps): React.ReactElement {
   const [showPlatformDropdown, setShowPlatformDropdown] = useState(false)
   const [showSortDropdown, setShowSortDropdown] = useState(false)
+  const [showTagsDropdown, setShowTagsDropdown] = useState(false)
+  const [sharing, setSharing] = useState(false)
+  const [copiedLabel, setCopiedLabel] = useState<string | null>(null)
+  const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const platformBtnRef = useRef<HTMLButtonElement>(null)
   const sortBtnRef = useRef<HTMLButtonElement>(null)
+  const tagsBtnRef = useRef<HTMLButtonElement>(null)
   const currentPlatform = PLATFORM_OPTIONS.find((o) => o.value === platform) || PLATFORM_OPTIONS[0]
+  const selectedTag = selectedTags[0]
+  const selectedTagInfo = selectedTag ? availableTags.find((t) => t.tag === selectedTag) : undefined
+
+  useEffect(
+    () => () => {
+      if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current)
+    },
+    [],
+  )
+
+  /**
+   * "Share as theater": marks the tag public (idempotent — safe to call even
+   * when it's already public) via the existing `/api/tags` PATCH flow, then
+   * copies the friendly `/t/{username}/{tag}` URL the response returns.
+   * Always re-PATCHes rather than short-circuiting on `isPublic` so the copy
+   * URL comes straight from the authoritative API response instead of being
+   * reconstructed client-side.
+   */
+  async function handleShareAsTheater(tag: string) {
+    setSharing(true)
+    try {
+      const res = await fetch('/api/tags', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tag, isPublic: true }),
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok || !data?.shareUrl) return
+      onTagUpdated?.(tag, true, data.shareUrl)
+      const fullUrl = `${window.location.origin}${data.shareUrl}`
+      await navigator.clipboard.writeText(fullUrl)
+      setCopiedLabel(fullUrl.replace(/^https?:\/\//, ''))
+      if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current)
+      copiedTimeoutRef.current = setTimeout(() => setCopiedLabel(null), 4000)
+    } catch {
+      // Best-effort — a network/clipboard hiccup here isn't worth surfacing
+      // as an error state; the button stays clickable to retry.
+    } finally {
+      setSharing(false)
+    }
+  }
 
   return (
     <div className="sticky top-0 z-30 bg-paper/95 backdrop-blur-sm border-b border-hairline">
@@ -234,6 +288,56 @@ export function FilterBar({
           </div>
         )}
 
+        {/* Tags dropdown pill — selecting a tag drives the selected-tag
+            toolbar below (count + Public chip + Share as theater). */}
+        {onSelectedTagsChange && availableTags.length > 0 && (
+          <div className="flex-shrink-0">
+            <button
+              ref={tagsBtnRef}
+              onClick={() => setShowTagsDropdown((v) => !v)}
+              className={cn(
+                'flex items-center gap-1.5 px-3.5 py-[7px] rounded-full text-[13.5px] font-semibold whitespace-nowrap transition-all duration-150',
+                selectedTag
+                  ? 'bg-clay-grad text-white shadow-glow'
+                  : 'bg-surface border border-hairline text-ink-2 hover:text-ink',
+              )}
+              title="Filter by tag"
+            >
+              <TagIcon className={cn('w-3.5 h-3.5', selectedTag ? 'text-white' : 'text-ink-3')} />
+              <span className="max-w-[110px] truncate">
+                {selectedTag ? `#${selectedTag}` : 'Tags'}
+              </span>
+              <ChevronDown
+                className={cn('w-3.5 h-3.5', selectedTag ? 'text-white' : 'text-ink-3')}
+              />
+            </button>
+
+            <AnchoredMenu
+              open={showTagsDropdown}
+              onClose={() => setShowTagsDropdown(false)}
+              anchorRef={tagsBtnRef}
+              width={220}
+            >
+              {availableTags.map((t) => (
+                <button
+                  key={t.tag}
+                  onClick={() => {
+                    onSelectedTagsChange(selectedTag === t.tag ? [] : [t.tag])
+                    setShowTagsDropdown(false)
+                  }}
+                  className={cn(
+                    'w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors',
+                    selectedTag === t.tag ? 'text-clay font-medium' : 'text-ink-2 hover:bg-inset',
+                  )}
+                >
+                  <span className="truncate">#{t.tag}</span>
+                  <span className="ml-auto flex-none text-ink-3">{t.count}</span>
+                </button>
+              ))}
+            </AnchoredMenu>
+          </div>
+        )}
+
         {/* Sort dropdown pill */}
         <div className="flex-shrink-0">
           <button
@@ -307,6 +411,50 @@ export function FilterBar({
           </span>
         </button>
       </div>
+
+      {/* Selected-tag toolbar: shown while a specific tag is selected — count,
+          Public status, and the "Share as theater" flow that publishes the
+          tag and copies its `/t/{username}/{tag}` link. */}
+      {selectedTag && (
+        <div className="flex items-center gap-3 border-t border-hairline px-4 py-2.5 sm:px-[26px]">
+          <span className="min-w-0 truncate text-[17px] font-bold text-ink">#{selectedTag}</span>
+          <span className="flex-none font-mono text-[12px] text-ink-3">
+            {selectedTagInfo?.count ?? 0} post{selectedTagInfo?.count === 1 ? '' : 's'}
+          </span>
+          {selectedTagInfo?.isPublic && (
+            <span className="flex-none rounded-full bg-done/15 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-done">
+              Public
+            </span>
+          )}
+          <div className="ml-auto flex flex-none items-center gap-2">
+            {copiedLabel && (
+              <span className="flex items-center gap-1.5 rounded-full bg-inset px-2.5 py-1 font-mono text-[11px] text-ink-2">
+                <Check size={12} className="text-done" />
+                {copiedLabel} copied
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => void handleShareAsTheater(selectedTag)}
+              disabled={sharing}
+              className="inline-flex items-center gap-1.5 rounded-full bg-clay-grad px-3.5 py-[7px] text-[13px] font-semibold text-white shadow-glow transition-opacity hover:opacity-90 disabled:opacity-60"
+            >
+              <Repeat size={13} />
+              Share as theater
+            </button>
+            {onSelectedTagsChange && (
+              <button
+                type="button"
+                onClick={() => onSelectedTagsChange([])}
+                aria-label="Clear tag filter"
+                className="flex-none text-ink-3 transition-colors hover:text-ink"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
