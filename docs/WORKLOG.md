@@ -4,6 +4,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-20 — Review round 3: tag-view semantics, triage-queue filters, username chooser (PRs #341–#344)
+
+- **Why**: Continued live staging review + a privacy call: email local-parts leak into public `/t/{username}/` URLs.
+- **What**: #341 tag views ignore read state (feed forces unreadOnly=false with a tag active; toggle hides). #342 triage queue built from the CURRENT filter state instead of hard-coded unreadOnly=true; tag counts refresh via `bookmark-tags-changed` from grid toggles; **tag-from-live** (Tag on the live tab saves first, then opens TagQuickPicker); Quick save tools card deleted. #343 collection theater top bar: COLLECTION chip dropped, wordmark/tag/curator share one text baseline. #344 **one-shot username chooser**: new email accounts land on `/welcome` (prefilled suggestion, live availability, 3–15 `[a-z0-9_-]`), claim re-issues the session cookie, `users.username_chosen` guarded-ALTER + X-backfill; `/welcome` added to AppShell chrome suppression (hidden Header search was focusable under the overlay).
+- **Design canvases** (await user pick before building): Tags Card Redesign (toggle/one-button/poster directions; "Share as theater" → "Make public") and Curator Profile (`/t/{username}` public page: stats + public collections as poster cards).
+- **State**: all merged + on staging, Chrome-verified. Production still pending the user's call.
+- **Follow-ups**: Resend 422s on reserved domains (example.com) surface as generic 503 — fine; local dev tip: run `RESEND_API_KEY= pnpm dev` to log magic links instead of sending.
+
 ## 2026-08-20 — Review round 2: copy/emoji, tag UX, nav reach, email-account share fix
 
 - **Why**: Second live staging review — "pile" wording + native emoji read cheap; tags lacked state/subtlety; Live dead outside `/`; Share-as-theater silently dead; 3 header rows viewing a tag; Sync shown to email-only accounts.
