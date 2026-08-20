@@ -34,7 +34,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     /^\/shorts\/[A-Za-z0-9_-]{11}$/.test(pathname) ||
     /^\/@?[A-Za-z0-9._]+\/video\/\d+$/.test(pathname)
   const isFullWidth =
-    pathname === '/trending/play' || pathname.startsWith('/share/') || isPreviewPage
+    pathname === '/trending/play' ||
+    pathname.startsWith('/share/') ||
+    // /welcome is the one-shot username chooser: a full-screen dark card with
+    // no app chrome — a mounted (visually hidden) Header would leave its
+    // search input focusable underneath the overlay.
+    pathname === '/welcome' ||
+    isPreviewPage
 
   if (isFullWidth) {
     return (

@@ -340,6 +340,11 @@ export const users = sqliteTable('users', {
   displayName: text('display_name'),
   avatarUrl: text('avatar_url'),
   email: text('email'),
+  // Whether the user has spent their one-time username-choice prompt
+  // (`/welcome`, shown after first magic-link sign-in). X users get this set
+  // true at backfill/creation — they already picked a handle on X. Defaults
+  // to false so existing/new email users are only ever prompted once.
+  usernameChosen: integer('username_chosen', { mode: 'boolean' }).notNull().default(false),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 })
 

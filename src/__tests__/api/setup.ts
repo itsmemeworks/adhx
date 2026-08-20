@@ -209,6 +209,7 @@ export const FULL_SCHEMA_SQL = `
     display_name TEXT,
     avatar_url TEXT,
     email TEXT,
+    username_chosen INTEGER NOT NULL DEFAULT 0,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   );
 

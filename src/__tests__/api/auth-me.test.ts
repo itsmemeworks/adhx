@@ -51,6 +51,7 @@ describe('API: /api/auth/me', () => {
       username: 'xuser',
       displayName: 'X User',
       avatarUrl: 'https://example.com/avatar.jpg',
+      usernameChosen: true,
     })
     await testInstance.db.insert(schema.userIdentities).values({
       provider: 'x',
@@ -76,6 +77,7 @@ describe('API: /api/auth/me', () => {
       username: 'xuser',
       displayName: 'X User',
       avatarUrl: 'https://example.com/avatar.jpg',
+      usernameChosen: true,
     })
     expect(data.identities.x).toEqual({ providerId: 'x-user-1', username: 'xuser' })
     expect(data.identities.email).toBeNull()
