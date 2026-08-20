@@ -307,9 +307,6 @@ export function TheaterMobileChrome({
             <a href="/" className="flex items-center" aria-label="ADHX home">
               <MatterLogo size={16} className="[&>span]:text-white" />
             </a>
-            <span className="flex-none rounded-full bg-clay/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-clay">
-              Collection
-            </span>
           </div>
           <div className="flex items-center justify-between gap-2">
             <span className="min-w-0 truncate text-[15px] font-bold text-white">
