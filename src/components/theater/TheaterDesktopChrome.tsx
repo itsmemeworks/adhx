@@ -64,7 +64,7 @@ export interface DesktopStageChromeProps {
   mode: TheaterMode
   /** Null while loading or in the end-of-feed waiting stage — hide the post overlays, keep the top bar. */
   current: TheaterItem | null
-  /** Shared mode (preview pages): the post the visitor landed on — drives the "Shared post" chip. */
+  /** Shared mode (preview pages): the post the visitor landed on (pinned lead). */
   sharedItem?: TheaterItem
   /** Whether the visiting user is signed in (shared mode: swaps the Save link for a direct SavePostButton). */
   authed?: boolean
@@ -251,7 +251,6 @@ export function navigateToAppPath(path: string): void {
 export function DesktopStageChrome({
   mode,
   current,
-  sharedItem,
   authed,
   declutter,
   onToggleDeclutter,
@@ -315,8 +314,6 @@ export function DesktopStageChrome({
   const textLike = kind !== null && ['text', 'quote', 'article'].includes(kind)
   const isMedia = kind === 'video' || kind === 'photo'
   const trendCount = current ? (current.trendCount ?? current.saveCount ?? 0) : 0
-  const isSharedCurrent =
-    !!sharedItem && !!current && theaterItemKey(current) === theaterItemKey(sharedItem)
   const handle = current?.author ? current.author.replace(/^@+/, '') : ''
   const caption = current ? (current.text || '').trim() : ''
   const platformLabel = current ? (PLATFORM_LABEL[current.platform] ?? current.platform) : ''
@@ -340,7 +337,7 @@ export function DesktopStageChrome({
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10 hidden lg:block">
-      {/* Top bar: brand + LIVE (+ Shared post chip) left, meta chips (text-like
+      {/* Top bar: brand + LIVE left, meta chips (text-like
           posts only) + paste-a-link + de-clutter right. */}
       <div
         className={cn(
@@ -374,11 +371,6 @@ export function DesktopStageChrome({
                 <span className="h-2 w-2 flex-none rounded-full bg-live" aria-hidden />
                 Live
               </span>
-              {isSharedCurrent && (
-                <span className="rounded-full bg-clay/15 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-clay">
-                  Shared post
-                </span>
-              )}
             </>
           )}
         </div>
