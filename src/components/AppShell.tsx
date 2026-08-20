@@ -40,6 +40,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     // no app chrome — a mounted (visually hidden) Header would leave its
     // search input focusable underneath the overlay.
     pathname === '/welcome' ||
+    // Public share surfaces (/t profile + tag theaters) own their chrome — the
+    // app Header stacking above their brand row reads as a double header.
+    pathname.startsWith('/t/') ||
     isPreviewPage
 
   if (isFullWidth) {

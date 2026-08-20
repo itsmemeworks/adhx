@@ -2,9 +2,9 @@
  * @vitest-environment jsdom
  *
  * TagsScreen (`/tags`) component tests (unified-theater-triage.md §4) —
- * covers the tag grid render (counts + Public chip), "Share as theater"
+ * covers the poster-card grid render (counts + Public badge), "Make public"
  * (PATCH make-public + copy the friendly URL), "Make private", the empty
- * state, and the "View" link's `?tag=` target.
+ * state, and the card's `?tag=` link target.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, fireEvent, screen, waitFor } from '@testing-library/react'
@@ -68,7 +68,7 @@ describe('TagsClient', () => {
     expect(screen.getByRole('link', { name: /open/i })).toHaveAttribute('href', '/t/tester/work')
   })
 
-  it('"View" links to /?tag={tag}', async () => {
+  it('the poster card links to /?tag={tag}', async () => {
     global.fetch = vi.fn().mockImplementation((url: string) => {
       if (url === '/api/tags') {
         return jsonResponse({ tags: [{ tag: 'work', count: 2, isPublic: false, shareUrl: null }] })
@@ -79,10 +79,10 @@ describe('TagsClient', () => {
     render(<TagsClient />)
 
     await waitFor(() => expect(screen.getByText('#work')).toBeInTheDocument())
-    expect(screen.getByRole('link', { name: 'View' })).toHaveAttribute('href', '/?tag=work')
+    expect(screen.getByRole('link', { name: 'View #work' })).toHaveAttribute('href', '/?tag=work')
   })
 
-  it('"Share as theater" PATCHes make-public and copies the friendly URL', async () => {
+  it('"Make public" PATCHes make-public and copies the friendly URL', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.assign(navigator, { clipboard: { writeText } })
 
@@ -100,7 +100,7 @@ describe('TagsClient', () => {
     render(<TagsClient />)
 
     await waitFor(() => expect(screen.getByText('#work')).toBeInTheDocument())
-    fireEvent.click(screen.getByText('Share as theater'))
+    fireEvent.click(screen.getByText('Make public'))
 
     await waitFor(() => expect(screen.getByText('Public')).toBeInTheDocument())
     await waitFor(() =>
@@ -122,7 +122,7 @@ describe('TagsClient', () => {
     render(<TagsClient />)
 
     await waitFor(() => expect(screen.getByText('#work')).toBeInTheDocument())
-    fireEvent.click(screen.getByText('Share as theater'))
+    fireEvent.click(screen.getByText('Make public'))
 
     await waitFor(() => expect(screen.getByText('User not found')).toBeInTheDocument())
     expect(screen.queryByText('Public')).not.toBeInTheDocument()
@@ -142,7 +142,7 @@ describe('TagsClient', () => {
     render(<TagsClient />)
 
     await waitFor(() => expect(screen.getByText('#work')).toBeInTheDocument())
-    fireEvent.click(screen.getByText('Share as theater'))
+    fireEvent.click(screen.getByText('Make public'))
 
     await waitFor(() => expect(screen.getByText(/couldn't reach the server/i)).toBeInTheDocument())
   })
@@ -164,7 +164,7 @@ describe('TagsClient', () => {
     render(<TagsClient />)
 
     await waitFor(() => expect(screen.getByText('#work')).toBeInTheDocument())
-    fireEvent.click(screen.getByText('Share as theater'))
+    fireEvent.click(screen.getByText('Make public'))
 
     // The card flips public regardless of the clipboard outcome.
     await waitFor(() => expect(screen.getByText('Public')).toBeInTheDocument())

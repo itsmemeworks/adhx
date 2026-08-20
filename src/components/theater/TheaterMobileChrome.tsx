@@ -82,6 +82,8 @@ export interface TheaterMobileChromeProps {
   collection?: TheaterCollectionMeta
   saveStatus?: SaveCollectionStatus
   onSaveCollection?: () => void
+  /** The signed-in viewer IS this collection's curator — hide the clone CTA, show Manage. */
+  isCollectionOwner?: boolean
   onRequestSignIn?: () => void
   /** Triage mode (unified-theater-triage.md §2): swaps the top scrim's meta for a Collection↔Live tab switcher, and the bottom action row for Later/Tag/Delete/Done. */
   triage?: TheaterTriageChrome
@@ -116,6 +118,7 @@ export function TheaterMobileChrome({
   collection,
   saveStatus = 'idle',
   onSaveCollection,
+  isCollectionOwner = false,
   onRequestSignIn,
   triage,
 }: TheaterMobileChromeProps) {
@@ -303,18 +306,15 @@ export function TheaterMobileChrome({
           )}
           style={{ background: 'linear-gradient(to bottom, rgba(11,11,17,.75), transparent)' }}
         >
-          <div className="flex items-center justify-between">
+          {/* One row: brand left, #tag right — the curator/count live in the
+              peek bar's center label; a second scrim row was too much for
+              phone widths (live review). */}
+          <div className="flex items-center justify-between gap-3">
             <a href="/" className="flex items-center" aria-label="ADHX home">
               <MatterLogo size={16} className="[&>span]:text-white" />
             </a>
-          </div>
-          <div className="flex items-center justify-between gap-2">
             <span className="min-w-0 truncate text-[15px] font-bold text-white">
               #{collection.tag}
-            </span>
-            <span className="flex-none font-mono text-[10.5px] text-white/60">
-              by @{collection.curator} · {collection.count} ·{' '}
-              <Repeat size={9} className="inline" aria-hidden />
             </span>
           </div>
         </div>
@@ -512,7 +512,15 @@ export function TheaterMobileChrome({
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              {collection ? (
+              {collection && isCollectionOwner ? (
+                <a
+                  href={`/?tag=${encodeURIComponent(collection.tag)}`}
+                  className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 text-[13px] font-semibold text-white backdrop-blur-md"
+                >
+                  <TagIcon size={15} />
+                  Manage collection
+                </a>
+              ) : collection ? (
                 <SaveCollectionButton
                   count={collection.count}
                   status={saveStatus}

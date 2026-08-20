@@ -85,6 +85,8 @@ export interface DesktopStageChromeProps {
   collection?: TheaterCollectionMeta
   saveStatus?: SaveCollectionStatus
   onSaveCollection?: () => void
+  /** The signed-in viewer IS this collection's curator — hide clone/make-your-own, show Manage. */
+  isCollectionOwner?: boolean
   onRequestSignIn?: () => void
   /** Triage mode (unified-theater-triage.md §2): swaps the top bar's Live/paste-input for a Collection↔Live tab switcher, and the bottom-right action set for Later/Tag/Delete/Done. */
   triage?: TheaterTriageChrome
@@ -305,6 +307,7 @@ export function DesktopStageChrome({
   collection,
   saveStatus = 'idle',
   onSaveCollection,
+  isCollectionOwner = false,
   onRequestSignIn,
   triage,
 }: DesktopStageChromeProps) {
@@ -489,9 +492,11 @@ export function DesktopStageChrome({
               </>
             ) : null
           ) : collection ? (
-            <a href="/" className={GLASS}>
-              Make your own
-            </a>
+            !isCollectionOwner && (
+              <a href="/" className={GLASS}>
+                Make your own
+              </a>
+            )
           ) : (
             <>
               {current && textLike && (
@@ -723,12 +728,19 @@ export function DesktopStageChrome({
             {linkCopied ? 'Copied' : 'Link'}
           </button>
           {collection ? (
-            <SaveCollectionButton
-              count={collection.count}
-              status={saveStatus}
-              onSave={() => onSaveCollection?.()}
-              className={PRIMARY}
-            />
+            isCollectionOwner ? (
+              <a href={`/?tag=${encodeURIComponent(collection.tag)}`} className={GLASS}>
+                <TagIcon size={14} />
+                Manage collection
+              </a>
+            ) : (
+              <SaveCollectionButton
+                count={collection.count}
+                status={saveStatus}
+                onSave={() => onSaveCollection?.()}
+                className={PRIMARY}
+              />
+            )
           ) : (mode === 'shared' && authed) || triage?.tab === 'live' ? (
             triage?.tab === 'live' ? (
               <>

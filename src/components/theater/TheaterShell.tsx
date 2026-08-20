@@ -1070,6 +1070,10 @@ export function TheaterShell({
   // up immediately via `refresh()` below.
   const authMe = useAuthMe()
   const isCollectionAuthed = loop ? !!authMe.me?.authenticated : authed
+  // Viewing your OWN public collection: cloning it (or being told to "make
+  // your own") is nonsense — the chromes swap those CTAs for a Manage link.
+  const isCollectionOwner =
+    !!collection && !!authMe.me?.user?.username && authMe.me.user.username === collection.curator
   const [saveStatus, setSaveStatus] = useState<SaveCollectionStatus>('idle')
   const [showSignIn, setShowSignIn] = useState(false)
   const pendingSaveRef = useRef(false)
@@ -1342,6 +1346,7 @@ export function TheaterShell({
           muted={muted}
           onToggleMute={onToggleMute}
           collection={collection}
+          isCollectionOwner={isCollectionOwner}
           saveStatus={saveStatus}
           onSaveCollection={handleSaveCollection}
           onRequestSignIn={openSignIn}
@@ -1355,6 +1360,7 @@ export function TheaterShell({
           declutter={desktopDeclutter}
           onToggleDeclutter={onToggleDesktopDeclutter}
           collection={collection}
+          isCollectionOwner={isCollectionOwner}
           saveStatus={saveStatus}
           onSaveCollection={handleSaveCollection}
           onRequestSignIn={openSignIn}

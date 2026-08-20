@@ -8,7 +8,7 @@
  * - Platform dropdown
  * - Sort dropdown
  * - Unread-only toggle
- * - Tag selection + "Share as theater" (tag-collections-as-theater feature —
+ * - Tag selection + "Make public" (tag-collections-as-theater feature —
  *   tagging UI was removed in the original Matter redesign, then reintroduced
  *   here specifically to drive the selected-tag toolbar's share flow)
  */
@@ -251,7 +251,7 @@ describe('FilterBar Component', () => {
     })
   })
 
-  describe('Tag selection + Share as theater', () => {
+  describe('Tag selection + Make public', () => {
     it('renders a Tags dropdown listing available tags with counts', () => {
       render(<FilterBar {...defaultProps} />)
 
@@ -285,20 +285,20 @@ describe('FilterBar Component', () => {
       expect(onSelectedTagsChange).toHaveBeenCalledWith(['work'])
     })
 
-    it('shows the selected-tag toolbar with post count and a Share as theater button', () => {
+    it('shows the selected-tag toolbar with post count and a Make public button', () => {
       render(<FilterBar {...defaultProps} selectedTags={['work']} />)
 
       // "#work" appears twice while selected: the Tags dropdown pill's own
       // label, and the toolbar's tag heading — both are expected here.
       expect(screen.getAllByText('#work').length).toBeGreaterThanOrEqual(1)
       expect(screen.getByText(/5 post/)).toBeTruthy()
-      expect(screen.getByRole('button', { name: /share as theater/i })).toBeTruthy()
+      expect(screen.getByRole('button', { name: /make public/i })).toBeTruthy()
     })
 
     it('does not show the toolbar when no tag is selected', () => {
       render(<FilterBar {...defaultProps} selectedTags={[]} />)
 
-      expect(screen.queryByRole('button', { name: /share as theater/i })).toBeFalsy()
+      expect(screen.queryByRole('button', { name: /make public/i })).toBeFalsy()
     })
 
     it('shows a Public chip when the selected tag is already public', () => {
@@ -337,7 +337,7 @@ describe('FilterBar Component', () => {
       const onTagUpdated = vi.fn()
 
       render(<FilterBar {...defaultProps} selectedTags={['work']} onTagUpdated={onTagUpdated} />)
-      fireEvent.click(screen.getByRole('button', { name: /share as theater/i }))
+      fireEvent.click(screen.getByRole('button', { name: /make public/i }))
 
       await waitFor(() => expect(writeText).toHaveBeenCalled())
       expect(global.fetch).toHaveBeenCalledWith(
