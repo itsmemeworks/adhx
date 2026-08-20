@@ -4,6 +4,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-20 — Fix fatal Sentry double-bundle stack overflow crash
+
+- **Why**: Staging was crashing with `RangeError: Maximum call stack size exceeded` (Sentry issues 7683515836, 7681948228, 7680748280). Root cause: `next.config.js` only externalized `better-sqlite3`, so Turbopack bundled a full copy of `@sentry/node` into both the server and SSR chunk graphs. Two independent SDK instances each Proxy-wrapped `http.Server.emit` (httpServerIntegration) and recursed into each other until the stack overflowed — a process-killing uncaughtException.
+- **What**: Added `'@sentry/node'` to `serverExternalPackages` in `next.config.js` (alongside `better-sqlite3`), forcing Node to load the single `node_modules` copy at runtime instead of bundling it twice.
+- **Verified**: `grep -rl "Handling incoming request" .next/server/chunks` (Sentry's http-instrumentation marker string) went from present-in-multiple-chunks to `0` hits post-fix. Output tracing packages `@sentry/node` into `.next/standalone` with the same hashed-symlink pattern as the already-working `better-sqlite3`. `pnpm typecheck` and `pnpm test` (1643 tests) pass.
+- **Follow-ups**: none — minimal one-line config fix, no behavior change.
+
 ## 2026-08-20 — Poster cards, curator profiles, owner view (design round shipped)
 
 - **Why**: User picked Option C (poster) from the Tags Card Redesign canvas and approved the Curator Profile canvas; live review also caught clone-your-own-collection CTAs and a cramped mobile tag scrim.

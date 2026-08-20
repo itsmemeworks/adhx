@@ -18,8 +18,12 @@ const nextConfig = {
   // Enable standalone output for Docker deployment
   output: 'standalone',
 
-  // Enable server-side external packages for better-sqlite3
-  serverExternalPackages: ['better-sqlite3'],
+  // Enable server-side external packages for better-sqlite3.
+  // @sentry/node is also external: without this, Turbopack bundles a full
+  // copy of the SDK into both the server and SSR chunk graphs, producing two
+  // independent instances that each wrap http.Server.emit (httpServerIntegration)
+  // and recurse into each other — a stack-overflow crash in production.
+  serverExternalPackages: ['better-sqlite3', '@sentry/node'],
 
   // Image optimization for Twitter media
   images: {
