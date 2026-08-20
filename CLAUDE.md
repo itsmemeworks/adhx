@@ -133,6 +133,17 @@ Sessions use JWT signing via `jose` library to prevent tampering:
 - 30-day expiration
 - httpOnly, secure (in production), sameSite: lax
 
+### Accounts & Identities (magic link + X)
+
+Accounts are first-class (`users` table) with **linked identities** — email (magic link via Resend) and X OAuth land in ONE account:
+
+- **Tables**: `users` (id, unique username, display/avatar/email), `user_identities` (PK `(provider, provider_id)` — provider `'x'` with the X user id, or `'email'` with the lowercased address → `user_id`), `login_tokens` (sha256 token hash, intent `'signin'|'change'`, 15-min expiry, single-use). Created + backfilled idempotently in `migrate.ts` (existing users keep `userId == X id`; email-first users get `u_<hex>` ids).
+- **Core lib**: `src/lib/auth/account.ts` (`getAccount`, `findOrCreateUserForX`, `findOrCreateUserForEmail`, `linkEmailToUser`, `unlinkX`, `createLoginToken`/`consumeLoginToken`). Email delivery: `src/lib/email/magic-link.ts` — Resend HTTP API when `RESEND_API_KEY` is set; **in dev without the key the link is logged to the server console** (`[magic-link] …`) so local testing needs no email round-trip.
+- **Routes**: `GET /api/auth/me` (account view: `{ authenticated, user, identities: { x, email }, xConnected }` — the client-side source of truth; Header/AuthedHome/preferences use it, NOT the twitter/status route), `POST /api/auth/email/request` (rate-limited 60s/email, no user enumeration), `GET /api/auth/email/callback?token=` (signin sets session; change relinks email), `POST /api/auth/email/change` (authed), `POST /api/auth/twitter/disconnect` (409 when it's the last identity), `POST /api/auth/logout`.
+- **X callback** (`/api/auth/twitter/callback`) resolves the app user via `findOrCreateUserForX(x, existingSession?.userId)`: signed-in email users get X **linked** to their account; an X identity already on another account redirects `/settings?auth_error=x_already_linked` without touching the session. Tokens are saved under the app userId.
+- **Status route semantics** (`/api/auth/twitter/status`): `authenticated` = valid session + users row (independent of X). A **fatal token-refresh error deletes the X tokens but keeps the session** — the account outlives the X connection; `xConnected`/`needsReconnect` describe the X state. Sync for users without X tokens surfaces SSE `code: 'reauth'` with a Connect-with-X prompt.
+- **Sign-in UI**: `SignInModal` + `useAuthMe` in `src/components/auth/` — always-dark modal (Continue with X primary, magic-link email secondary), opened at **save-intent** (theater Save buttons, collection Save CTA); viewing never requires an account.
+
 ### Authentication
 
 All data-modifying endpoints require authentication via `getCurrentUserId()`:
@@ -703,13 +714,13 @@ Users can share tag collections publicly via human-readable URLs:
 - **Route**: `src/app/t/[username]/[tag]/page.tsx`
 - **API**: `src/app/api/share/tag/by-name/[username]/[tag]/route.ts`
 
-**Sharing flow:**
+**Sharing flow ("Share as theater"):**
 
-1. User selects a tag in FilterBar and clicks "Make Public"
-2. API creates/updates `tagShares` record and returns friendly URL
-3. URL copied to clipboard automatically
-4. Anyone with the URL can view the collection
-5. Authenticated users can clone the collection to their account
+1. User selects a tag in the FilterBar Tags dropdown → a selected-tag toolbar shows (count, Public chip, **Share as theater**)
+2. Share as theater PATCHes `/api/tags` (make public), copies the friendly URL, shows a "… copied" chip
+3. `/t/{username}/{tag}` renders the **collection theater**: `TheaterShell mode="collection"` seeded with the tag's posts — the queue **loops** (wrap on next/prev and video-ended; dashed "LOOPS" divider + ghosted first card in the desktop dock; no StageWaiting, no paste-to-preview, no /api/activity polling, no address-bar rewriting). SEO is preserved: generateMetadata + CollectionPage JSON-LD + sr-only item list; private/unknown tags 404/noindex exactly as before.
+4. **Save collection · N** is the conversion CTA: authed → POSTs the clone endpoint; signed-out → opens `SignInModal` (returnTo `/t/{user}/{tag}?save=1`, which auto-clones once after sign-in and strips the param)
+5. Seed conversion lives in `src/lib/theater/tag-seed.ts`; loop math (`computeLoopedNext/Prev`) is exported from TheaterShell and unit-tested
 
 **Clone endpoint**: `/api/share/tag/by-name/[username]/[tag]/clone`
 
@@ -852,6 +863,9 @@ Database location: `./data/adhdone.db`
 | `bookmark_links`    | `id` (auto) + `userId` + `platform`            | URLs with enrichment data                                                                                                                                                                                                     |
 | `read_status`       | `(userId, platform, bookmarkId)`               | Read/unread tracking                                                                                                                                                                                                          |
 | `user_preferences`  | `(userId, key)`                                | User settings (theme, font, etc.)                                                                                                                                                                                             |
+| `users`             | `id`                                           | First-class accounts (unique `username`, display name, avatar, email). X-first users keep `id == X user id`; email-first users get `u_<hex>`                                                                                  |
+| `user_identities`   | `(provider, providerId)`                       | Linked sign-in methods per user — `'x'` (X user id) and `'email'` (lowercased address) → `userId`                                                                                                                             |
+| `login_tokens`      | `tokenHash`                                    | Magic-link tokens (sha256 hash only, 15-min expiry, single-use, intent `signin`/`change`)                                                                                                                                     |
 | `oauth_tokens`      | `userId`                                       | Twitter OAuth credentials                                                                                                                                                                                                     |
 | `sync_logs`         | `id` + `userId`                                | Sync history per user                                                                                                                                                                                                         |
 | `collections`       | `id` + `userId`                                | Custom bookmark collections                                                                                                                                                                                                   |
@@ -942,6 +956,8 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 # Optional
 SESSION_SECRET=           # For JWT signing (falls back to TWITTER_CLIENT_SECRET)
+RESEND_API_KEY=           # Magic-link sign-in emails; unset in dev = links logged to server console
+EMAIL_FROM=               # From address for magic-link emails (default 'ADHX <login@adhx.com>'; must be a verified Resend domain)
 SENTRY_DSN=               # Sentry error tracking DSN
 SENTRY_RELEASE=           # Set automatically in Docker builds
 SENTRY_ENVIRONMENT=       # 'staging' or 'production' (set in fly.toml/fly.production.toml)

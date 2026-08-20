@@ -15,6 +15,7 @@ import {
   Flame,
   Bookmark,
   Compass,
+  LogOut,
 } from 'lucide-react'
 import { useTheme } from '@/lib/theme/context'
 import { cn } from '@/lib/utils'
@@ -35,6 +36,13 @@ interface AuthStatus {
     username: string
     profileImageUrl?: string | null
   }
+}
+
+// From /api/auth/me — lets the menu tell an X-connected identity apart from
+// an email-only one (which has no @handle to show).
+interface Identities {
+  x: { username: string } | null
+  email: { email: string } | null
 }
 
 interface Stats {
@@ -64,6 +72,7 @@ export function Header() {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null)
+  const [identities, setIdentities] = useState<Identities | null>(null)
   const [stats, setStats] = useState<Stats>({ total: 0, unread: 0 })
   const [streak, setStreak] = useState(0)
   const [cooldown, setCooldown] = useState<CooldownStatus>({
@@ -270,11 +279,33 @@ export function Header() {
 
   async function fetchAuthStatus() {
     try {
-      const response = await fetch('/api/auth/twitter/status')
+      // /api/auth/me (not the X-only /api/auth/twitter/status) so email-only
+      // accounts render the authed header too, and so we get `identities`
+      // for the avatar menu's identity line.
+      const response = await fetch('/api/auth/me')
       const data = await response.json()
-      setAuthStatus(data)
+      setAuthStatus({
+        authenticated: data.authenticated,
+        user: data.user
+          ? {
+              id: data.user.id,
+              username: data.user.username,
+              profileImageUrl: data.user.avatarUrl,
+            }
+          : undefined,
+      })
+      setIdentities(data.identities ?? null)
     } catch (error) {
       console.error('Failed to fetch auth status:', error)
+    }
+  }
+
+  async function handleSignOut() {
+    setShowUserMenu(false)
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+    } finally {
+      window.location.href = '/'
     }
   }
 
@@ -516,26 +547,37 @@ export function Header() {
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
                     <div className="absolute right-0 top-full mt-2 w-64 bg-surface rounded-card shadow-m-lg border border-hairline py-2 z-50">
-                      {/* User info at top */}
+                      {/* User info at top. Email-only accounts have no @handle
+                          from X, so lead with the email instead; accounts
+                          with both show the handle plus a small email line. */}
                       {authStatus?.authenticated && authStatus.user && (
                         <div className="px-4 py-3 border-b border-hairline">
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
                             {profileImage ? (
                               <img
                                 src={profileImage}
                                 alt={authStatus.user.username}
-                                className="w-10 h-10 rounded-full"
+                                className="w-10 h-10 rounded-full flex-shrink-0"
                               />
                             ) : (
-                              <div className="w-10 h-10 rounded-full bg-clay-grad flex items-center justify-center text-white font-semibold">
+                              <div className="w-10 h-10 rounded-full bg-clay-grad flex items-center justify-center text-white font-semibold flex-shrink-0">
                                 {userInitial}
                               </div>
                             )}
-                            <div>
-                              <p className="font-semibold text-ink font-mono">
-                                @{authStatus.user.username}
+                            <div className="min-w-0">
+                              <p className="font-semibold text-ink font-mono truncate">
+                                {identities?.x
+                                  ? `@${identities.x.username}`
+                                  : identities?.email?.email || `@${authStatus.user.username}`}
                               </p>
-                              <p className="text-xs text-ink-3">Connected</p>
+                              <p className="text-xs text-ink-3">
+                                {identities?.x ? 'Connected' : 'Signed in with email'}
+                              </p>
+                              {identities?.x && identities?.email && (
+                                <p className="text-[11px] text-ink-3 truncate">
+                                  {identities.email.email}
+                                </p>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -624,6 +666,17 @@ export function Header() {
                           {cooldown.canSync
                             ? 'Sync bookmarks'
                             : `Sync in ${formatCooldown(displayedCooldown)}`}
+                        </button>
+                      </div>
+
+                      {/* Sign out */}
+                      <div className="border-t border-hairline py-1">
+                        <button
+                          onClick={handleSignOut}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset text-ink-2 hover:text-ink transition-colors"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          Sign out
                         </button>
                       </div>
                     </div>

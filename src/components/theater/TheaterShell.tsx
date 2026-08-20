@@ -21,7 +21,18 @@ import { prefetchPlayback } from './usePlaybackSource'
 import { TheaterProgressLine, progressKindFor } from './TheaterProgressLine'
 import { theaterItemKey } from './types'
 import { previewPath } from '@/lib/activity/preview-path'
-import type { TheaterFeedSeed, TheaterItem, TheaterMode } from './types'
+// SignInModal + useAuthMe are built by a parallel agent under the same
+// accounts/magic-link PR — imported per the shared contract even though the
+// module may not exist yet at review time; see the "Save collection" CTA
+// below (collection mode only).
+import { SignInModal, useAuthMe } from '@/components/auth'
+import type {
+  SaveCollectionStatus,
+  TheaterCollectionMeta,
+  TheaterFeedSeed,
+  TheaterItem,
+  TheaterMode,
+} from './types'
 
 /**
  * Live viewport check matching Tailwind's `lg` breakpoint (1024px) — the JS
@@ -53,8 +64,15 @@ export interface TheaterShellProps {
   mode?: TheaterMode
   /** Shared mode (PR 3): the post the visitor landed on — always the initial current item. */
   sharedItem?: TheaterItem
-  /** Whether the visiting user is signed in (shared mode: swaps Connect for a direct Save). */
+  /**
+   * Whether the visiting user is signed in. Shared mode: swaps Connect for a
+   * direct Save. Collection mode: initial SSR hint for the Save-collection
+   * CTA — `useAuthMe()` inside the shell is the live source of truth (it can
+   * change without a reload if sign-in completes in-modal).
+   */
   authed?: boolean
+  /** Collection mode (`/t/{username}/{tag}` — tag-collections-as-theater): identity + count driving the chrome and the Save-collection CTA. */
+  collection?: TheaterCollectionMeta
 }
 
 /** How long a post must stay staged before it counts as "seen" (spec §4/§5). */
@@ -138,13 +156,46 @@ export function findFreshArrival(
   return null
 }
 
+/**
+ * Pure: the index `goNext` should land on in a `length`-long list. Collection
+ * mode (`loop: true`) wraps past the last item to `0` instead of entering the
+ * end-of-feed waiting stage — `'waiting'` signals that non-loop case so the
+ * caller can enter it. `null` when there's nowhere to go (key not found, or
+ * an empty list).
+ */
+export function computeLoopedNext(
+  length: number,
+  index: number,
+  loop: boolean,
+): number | 'waiting' | null {
+  if (index === -1 || length === 0) return null
+  if (index === length - 1) return loop ? 0 : 'waiting'
+  return index + 1
+}
+
+/**
+ * Pure: the index `goPrev` should land on in a `length`-long list. Collection
+ * mode (`loop: true`) wraps back from `0` to the last item. `null` when
+ * there's nowhere to go (key not found, an empty list, or index 0 without
+ * looping — the existing "back does nothing at the start" behavior).
+ */
+export function computeLoopedPrev(length: number, index: number, loop: boolean): number | null {
+  if (index === -1 || length === 0) return null
+  if (index === 0) return loop ? length - 1 : null
+  return index - 1
+}
+
 export function TheaterShell({
   seed,
   mode = 'home',
   sharedItem,
   authed = false,
+  collection,
 }: TheaterShellProps) {
-  const feed = useTheaterFeed(seed)
+  // Collection mode (`/t/{username}/{tag}`) is a fixed, curated queue to loop
+  // through — never a live blend with the anonymous community pulse.
+  const loop = mode === 'collection'
+  const feed = useTheaterFeed(seed, { live: !loop })
   const seenSet = useSeenSet()
   const { items } = feed
 
@@ -240,7 +291,11 @@ export function TheaterShell({
   useEffect(() => {
     // Shared mode never re-picks a "best" lead — the shared post is ALWAYS
     // the initial current item, regardless of trendCount or seen-state.
-    if (sharedItem) return
+    // Collection mode never re-picks either — a curated tag collection
+    // always opens on its first item (curated order), never reshuffled by
+    // trendCount (mostly 0/absent for saved items anyway) or by whatever
+    // this viewer happens to have already seen elsewhere on the site.
+    if (sharedItem || loop) return
     if (!seenSet.ready || leadAppliedRef.current || hasNavigatedRef.current) return
     leadAppliedRef.current = true
     if (items.length === 0) return
@@ -265,9 +320,10 @@ export function TheaterShell({
   // End-states for the peek bar's prev/next chevrons (tester feedback: at the
   // first post, pressing "back" silently did nothing). `currentIndex === -1`
   // (nothing current, e.g. an empty list) always reads as "can't navigate".
-  // Both fold in the waiting stage — see computeCanPrev/computeCanNext.
-  const canPrev = computeCanPrev(currentIndex, waiting)
-  const canNext = computeCanNext(currentIndex, waiting)
+  // Collection mode loops, so both chevrons stay enabled the whole time
+  // there's a current item — there's no waiting stage and no dead end.
+  const canPrev = loop ? currentIndex !== -1 : computeCanPrev(currentIndex, waiting)
+  const canNext = loop ? currentIndex !== -1 : computeCanNext(currentIndex, waiting)
 
   // Read fresh inside the `theater-advance` listener below without
   // re-registering that listener on every navigation (mirrors itemsRef).
@@ -277,13 +333,16 @@ export function TheaterShell({
   const goNext = useCallback(() => {
     setCurrentKey((key) => {
       const idx = itemsRef.current.findIndex((it) => theaterItemKey(it) === key)
-      if (idx === -1) return key
-      if (isFeedEnd(itemsRef.current.length, idx)) {
+      const next = computeLoopedNext(itemsRef.current.length, idx, loop)
+      if (next === null) return key
+      if (next === 'waiting') {
         // Advancing past the last post enters the waiting stage instead of
         // clamping silently. Idempotent: a repeat advance (e.g. another
         // keypress) while already waiting must not reset the baseline —
         // that would make an item that arrived a moment ago look "not new"
-        // and get missed by the fresh-arrival effect below.
+        // and get missed by the fresh-arrival effect below. Collection mode
+        // never reaches this branch (computeLoopedNext never returns
+        // 'waiting' when `loop` is true).
         if (!waitingRef.current) {
           waitingBaselineFreshKeysRef.current = new Set(freshKeysRef.current)
           setWaiting(true)
@@ -291,24 +350,26 @@ export function TheaterShell({
         return key
       }
       hasNavigatedRef.current = true
-      return theaterItemKey(itemsRef.current[idx + 1])
+      return theaterItemKey(itemsRef.current[next])
     })
-  }, [])
+  }, [loop])
 
   const goPrev = useCallback(() => {
     // While waiting, "back" just returns to the last post it's already
     // parked on (currentKey never moved) — never step further back too.
+    // (Collection mode never sets `waiting`, so this branch is inert there.)
     if (waitingRef.current) {
       setWaiting(false)
       return
     }
     setCurrentKey((key) => {
       const idx = itemsRef.current.findIndex((it) => theaterItemKey(it) === key)
-      if (idx <= 0) return key
+      const prev = computeLoopedPrev(itemsRef.current.length, idx, loop)
+      if (prev === null) return key
       hasNavigatedRef.current = true
-      return theaterItemKey(itemsRef.current[idx - 1])
+      return theaterItemKey(itemsRef.current[prev])
     })
-  }, [])
+  }, [loop])
 
   const onSelect = useCallback((key: string) => {
     hasNavigatedRef.current = true
@@ -388,14 +449,18 @@ export function TheaterShell({
   }, [goNext, goPrev])
 
   // Mark seen + fire the preview pulse once the current post has been staged
-  // for SEEN_DWELL_MS. Resets only when `currentKey` changes.
+  // for SEEN_DWELL_MS. Resets only when `currentKey` changes. Collection mode
+  // is a curated surface, not the public pulse — it marks seen locally (so a
+  // loop doesn't visually re-highlight already-viewed cards as "fresh") but
+  // never records a `preview` activity event, matching the pre-theater
+  // `/t/{username}/{tag}` page's behavior.
   useEffect(() => {
     if (!currentKey) return
     const timer = window.setTimeout(() => {
       const item = itemsRef.current.find((it) => theaterItemKey(it) === currentKey)
       if (!item) return
       seenSetRef.current.markSeen(currentKey)
-      if (item.bookmarkId) {
+      if (item.bookmarkId && !loop) {
         fetch('/api/activity/preview', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -404,7 +469,7 @@ export function TheaterShell({
       }
     }, SEEN_DWELL_MS)
     return () => window.clearTimeout(timer)
-  }, [currentKey])
+  }, [currentKey, loop])
 
   // Keep the address bar's path in lockstep with the item currently staged
   // (theater-first.md §7): a reload — or a URL someone copies mid-session —
@@ -416,8 +481,11 @@ export function TheaterShell({
   // so this also fires once for the very first item — currentKey starts null
   // and transitions to that item's key exactly like any other selection, so
   // landing on `/` ends up indistinguishable from landing on its post URL.
+  // Collection mode is exempt — `/t/{username}/{tag}` is the stable address
+  // for the whole collection; browsing within it must never rewrite the URL
+  // to a per-post preview path (that's a different, off-collection surface).
   useEffect(() => {
-    if (typeof window === 'undefined') return
+    if (typeof window === 'undefined' || mode === 'collection') return
     const item = itemsRef.current.find((it) => theaterItemKey(it) === currentKey) ?? null
     const path = theaterUrlSyncPath(item)
     if (!path || window.location.pathname === path) return
@@ -426,7 +494,7 @@ export function TheaterShell({
     } catch {
       // Blocked in some embedded/sandboxed contexts — never worth breaking playback over.
     }
-  }, [currentKey])
+  }, [currentKey, mode])
 
   // Stories-style auto-advance: a finished video advances via <Stage>'s
   // `onEnded` prop directly (all viewports — see below); a non-video item's
@@ -477,6 +545,76 @@ export function TheaterShell({
       return new Date(it.createdAt).getTime() > lastVisitAt
     }).length
   }, [displayItems, seenSet])
+
+  // Save-collection CTA (collection mode only): clones the shared tag to the
+  // signed-in visitor's own account via the existing clone endpoint. Auth
+  // state is `useAuthMe()`'s live client read rather than the `authed` SSR
+  // prop, so a sign-in completed inside the modal (no full reload) is picked
+  // up immediately via `refresh()` below.
+  const authMe = useAuthMe()
+  const isCollectionAuthed = loop ? !!authMe.me?.authenticated : authed
+  const [saveStatus, setSaveStatus] = useState<SaveCollectionStatus>('idle')
+  const [showSignIn, setShowSignIn] = useState(false)
+  const pendingSaveRef = useRef(false)
+  const autoSaveTriggeredRef = useRef(false)
+
+  const performClone = useCallback(async () => {
+    if (!collection) return
+    setSaveStatus((s) => {
+      if (s === 'saving' || s === 'saved') return s
+      return 'saving'
+    })
+    try {
+      const res = await fetch(
+        `/api/share/tag/by-name/${encodeURIComponent(collection.curator)}/${encodeURIComponent(collection.tag)}/clone`,
+        { method: 'POST' },
+      )
+      if (res.status === 401) {
+        pendingSaveRef.current = true
+        setShowSignIn(true)
+        setSaveStatus('idle')
+        return
+      }
+      if (!res.ok) throw new Error('clone failed')
+      setSaveStatus('saved')
+    } catch {
+      setSaveStatus('error')
+    }
+  }, [collection])
+
+  const handleSaveCollection = useCallback(() => {
+    if (!collection) return
+    if (!isCollectionAuthed) {
+      pendingSaveRef.current = true
+      setShowSignIn(true)
+      return
+    }
+    void performClone()
+  }, [collection, isCollectionAuthed, performClone])
+
+  // If sign-in completes while the modal is open (in-modal magic link, no
+  // reload), fire the deferred clone as soon as `useAuthMe()` reflects it.
+  useEffect(() => {
+    if (!pendingSaveRef.current || !isCollectionAuthed) return
+    pendingSaveRef.current = false
+    void performClone()
+  }, [isCollectionAuthed, performClone])
+
+  // Cross-reload path: a sign-in flow that redirects (e.g. the X OAuth
+  // round-trip) lands back on `returnTo` with `?save=1`. Auto-clone once auth
+  // state has settled, then strip the param so a manual refresh never
+  // re-triggers it.
+  useEffect(() => {
+    if (!collection || typeof window === 'undefined' || autoSaveTriggeredRef.current) return
+    if (authMe.loading) return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('save') !== '1') return
+    autoSaveTriggeredRef.current = true
+    params.delete('save')
+    const qs = params.toString()
+    window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''))
+    if (isCollectionAuthed) void performClone()
+  }, [collection, authMe.loading, isCollectionAuthed, performClone])
 
   return (
     <div className="fixed inset-0 z-[60] flex flex-col overflow-hidden bg-[#08070a]">
@@ -537,6 +675,10 @@ export function TheaterShell({
           canNext={canNext}
           muted={muted}
           onToggleMute={onToggleMute}
+          collection={collection}
+          saveStatus={saveStatus}
+          onSaveCollection={handleSaveCollection}
+          onRequestSignIn={() => setShowSignIn(true)}
         />
         <DesktopStageChrome
           mode={mode}
@@ -545,6 +687,10 @@ export function TheaterShell({
           authed={authed}
           declutter={desktopDeclutter}
           onToggleDeclutter={onToggleDesktopDeclutter}
+          collection={collection}
+          saveStatus={saveStatus}
+          onSaveCollection={handleSaveCollection}
+          onRequestSignIn={() => setShowSignIn(true)}
         />
       </div>
       <DesktopDock
@@ -566,6 +712,21 @@ export function TheaterShell({
         onPrev={goPrev}
         onNext={goNext}
         declutter={desktopDeclutter}
+        collection={collection}
+      />
+      <SignInModal
+        open={showSignIn}
+        onClose={() => {
+          setShowSignIn(false)
+          authMe.refresh()
+        }}
+        title={collection ? 'Save this collection' : 'Save it to your pile'}
+        subtitle={
+          collection
+            ? `${collection.count} ${collection.count === 1 ? 'post' : 'posts'} from ${collection.tag}, curated by @${collection.curator} — keep them in your pile.`
+            : 'Your saved posts stay yours — sync your X bookmarks anytime from Settings.'
+        }
+        returnTo={collection ? `/t/${collection.curator}/${collection.tag}?save=1` : undefined}
       />
     </div>
   )

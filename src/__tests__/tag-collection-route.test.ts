@@ -8,6 +8,15 @@ import { renderToStaticMarkup } from 'react-dom/server'
  * (`@/lib/tags/query`) and asserts the route's branching (not_found → 404,
  * private → quiet no-index page with zero item content, ok → rendered page +
  * rich metadata) without touching a real database.
+ *
+ * The `ok` + non-empty branch mounts `<TheaterShell mode="collection">` (the
+ * tag-collections-as-theater feature) instead of a server-rendered card grid
+ * — that component is a heavy client component (localStorage/matchMedia/
+ * fetch-backed hooks) with no business being exercised via
+ * `renderToStaticMarkup` in a DOM-less test, so it's mocked here the same way
+ * `url-prefix-route.test.ts` mocks it for the tweet-preview route. This test
+ * asserts the SEO-critical bits this page still owns directly: the sr-only
+ * crawlable link list and the props handed to the theater.
  */
 
 vi.mock('@/lib/auth/session', () => ({
@@ -26,6 +35,14 @@ vi.mock('next/navigation', () => ({
   notFound: vi.fn(() => {
     throw new Error('NOT_FOUND')
   }),
+}))
+
+const theaterShellSpy = vi.fn()
+vi.mock('@/components/theater/TheaterShell', () => ({
+  TheaterShell: (props: unknown) => {
+    theaterShellSpy(props)
+    return null
+  },
 }))
 
 const SAMPLE_COLLECTION = {
@@ -140,7 +157,7 @@ describe('Shared tag route: /t/[username]/[tag]', () => {
       expect(html).not.toContain('someauthor')
     })
 
-    it('renders the collection for a public tag', async () => {
+    it('renders the sr-only crawlable list + mounts the theater for a public tag', async () => {
       const { getPublicTagCollection } = await import('@/lib/tags/query')
       vi.mocked(getPublicTagCollection).mockResolvedValue(SAMPLE_COLLECTION)
 
@@ -152,20 +169,27 @@ describe('Shared tag route: /t/[username]/[tag]', () => {
       expect(result).not.toBeNull()
       const html = renderToStaticMarkup(result as React.ReactElement)
 
-      // Every item's primary link must point on-site, to the ADHX preview path.
+      // The sr-only crawlable list is this page's own SEO-critical content —
+      // every item's link must point on-site, to the ADHX preview path.
       expect(html).toContain('href="/someauthor/status/1"')
       expect(html).toContain('href="/someauthor/status/2"')
+      expect(html).toContain('Hello world')
+      expect(html).toContain('A video post')
 
-      // Any anchor that DOES point at x.com must be the demoted secondary
-      // "view on the original platform" icon link (target="_blank" + the
-      // specific aria-label), never a bare/primary card link.
-      const anchors = html.match(/<a\b[^>]*>/g) ?? []
-      const externalAnchors = anchors.filter((a) => /href="https:\/\/x\.com/.test(a))
-      expect(externalAnchors.length).toBeGreaterThan(0)
-      for (const a of externalAnchors) {
-        expect(a).toContain('target="_blank"')
-        expect(a).toContain('aria-label="View on the original platform"')
+      // The interactive surface is `TheaterShell` (mocked above) — assert
+      // it's mounted in collection mode with the right identity + seed.
+      expect(theaterShellSpy).toHaveBeenCalledTimes(1)
+      const props = theaterShellSpy.mock.calls[0][0] as {
+        mode: string
+        authed: boolean
+        collection: { tag: string; curator: string; count: number }
+        seed: { items: Array<{ platform: string; bookmarkId: string | null }> }
       }
+      expect(props.mode).toBe('collection')
+      expect(props.authed).toBe(false)
+      expect(props.collection).toEqual({ tag: 'cool-stuff', curator: 'curator', count: 2 })
+      expect(props.seed.items).toHaveLength(2)
+      expect(props.seed.items.map((i) => i.bookmarkId)).toEqual(['1', '2'])
     })
 
     it('decodes a percent-encoded username/tag before querying', async () => {

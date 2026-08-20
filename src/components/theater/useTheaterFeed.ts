@@ -70,7 +70,21 @@ export function mergeFeedItems(
   return { items: [...fresh, ...prev, ...older], freshKeys }
 }
 
-export function useTheaterFeed(seed: TheaterFeedSeed): TheaterFeed {
+export interface UseTheaterFeedOptions {
+  /**
+   * Whether to poll `/api/activity` for fresh pulse items. Defaults to
+   * `true`. Collection mode (`/t/{username}/{tag}`) passes `false` — a
+   * public tag collection is a fixed, curated queue to loop through, not a
+   * live blend with the anonymous community pulse.
+   */
+  live?: boolean
+}
+
+export function useTheaterFeed(
+  seed: TheaterFeedSeed,
+  options?: UseTheaterFeedOptions,
+): TheaterFeed {
+  const live = options?.live ?? true
   const [items, setItems] = useState<TheaterItem[]>(seed.items)
   const [savedToday, setSavedToday] = useState(seed.savedToday)
   const [recentActivity, setRecentActivity] = useState(seed.recentActivity)
@@ -84,6 +98,7 @@ export function useTheaterFeed(seed: TheaterFeedSeed): TheaterFeed {
   }, [items])
 
   useEffect(() => {
+    if (!live) return
     let cancelled = false
 
     const poll = async () => {
@@ -117,7 +132,7 @@ export function useTheaterFeed(seed: TheaterFeedSeed): TheaterFeed {
       cancelled = true
       window.clearInterval(id)
     }
-  }, [])
+  }, [live])
 
   return { items, savedToday, recentActivity, freshKeys }
 }

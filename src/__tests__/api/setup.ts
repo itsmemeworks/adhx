@@ -202,6 +202,35 @@ export const FULL_SCHEMA_SQL = `
   );
   CREATE INDEX activity_created_at_idx ON activity(created_at);
   CREATE INDEX activity_dedupe_idx ON activity(action, platform, bookmark_id, created_at);
+
+  CREATE TABLE users (
+    id TEXT PRIMARY KEY,
+    username TEXT NOT NULL UNIQUE,
+    display_name TEXT,
+    avatar_url TEXT,
+    email TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE user_identities (
+    provider TEXT NOT NULL,
+    provider_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (provider, provider_id)
+  );
+  CREATE INDEX user_identities_user_id_idx ON user_identities(user_id);
+
+  CREATE TABLE login_tokens (
+    token_hash TEXT PRIMARY KEY,
+    email TEXT NOT NULL,
+    intent TEXT NOT NULL,
+    user_id TEXT,
+    return_to TEXT,
+    expires_at INTEGER NOT NULL,
+    used_at TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
 `
 
 export interface TestDbInstance {

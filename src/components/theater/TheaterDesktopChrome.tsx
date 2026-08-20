@@ -33,6 +33,7 @@ import {
   LogIn,
   ExternalLink,
   Flame,
+  Repeat,
   ChevronLeft,
   ChevronRight,
   ChevronUp,
@@ -56,7 +57,8 @@ import { theaterItemKey, PLATFORM_LABEL } from './types'
 import { TheaterLinkedText, stripShortLinksForPreview } from './TheaterText'
 import { progressKindFor } from './TheaterProgressLine'
 import { UpNextList, TYPE_TILE, warmOnHover } from './UpNextList'
-import type { TheaterItem, TheaterMode } from './types'
+import { SaveCollectionButton } from './SaveCollectionButton'
+import type { SaveCollectionStatus, TheaterCollectionMeta, TheaterItem, TheaterMode } from './types'
 
 export interface DesktopStageChromeProps {
   mode: TheaterMode
@@ -69,6 +71,11 @@ export interface DesktopStageChromeProps {
   /** De-clutter fades the overlays out (mobile-chrome pattern: opacity + slight translate, pointer-events-none). */
   declutter: boolean
   onToggleDeclutter: () => void
+  /** Collection mode (`/t/{username}/{tag}`): identity chrome + swaps the top bar's LIVE/paste-input right side for "Make your own", and the bottom-right Save action for the Save-collection CTA. */
+  collection?: TheaterCollectionMeta
+  saveStatus?: SaveCollectionStatus
+  onSaveCollection?: () => void
+  onRequestSignIn?: () => void
 }
 
 export interface DesktopDockProps {
@@ -91,6 +98,8 @@ export interface DesktopDockProps {
   onNext: () => void
   /** De-clutter slides the dock away entirely (the shell's floating restore button brings it back). */
   declutter: boolean
+  /** Collection mode: appends a "loops" divider + a ghosted copy of the first card after the filmstrip, and hides the live-pulse-only savedToday/newCount lines in the end cap. */
+  collection?: TheaterCollectionMeta
 }
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -235,6 +244,10 @@ export function DesktopStageChrome({
   authed,
   declutter,
   onToggleDeclutter,
+  collection,
+  saveStatus = 'idle',
+  onSaveCollection,
+  onRequestSignIn,
 }: DesktopStageChromeProps) {
   const [pasteValue, setPasteValue] = useState('')
   const [pasteError, setPasteError] = useState(false)
@@ -325,63 +338,90 @@ export function DesktopStageChrome({
         )}
         style={{ background: 'linear-gradient(rgba(8,7,10,.62), transparent)' }}
       >
-        <div className="pointer-events-auto flex items-center gap-3.5">
-          <a href="/" aria-label="ADHX home">
+        <div className="pointer-events-auto flex min-w-0 items-center gap-3.5">
+          <a href="/" aria-label="ADHX home" className="flex-none">
             <MatterLogo size={19} className="[&>span]:text-white" />
           </a>
-          <span className="inline-flex flex-none items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-white/55">
-            <span className="h-2 w-2 flex-none rounded-full bg-live" aria-hidden />
-            Live
-          </span>
-          {isSharedCurrent && (
-            <span className="rounded-full bg-clay/15 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-clay">
-              Shared post
-            </span>
+          {collection ? (
+            <>
+              <span className="h-5 w-px flex-none bg-white/20" aria-hidden />
+              <span className="flex-none rounded-full bg-clay/15 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-clay">
+                Collection
+              </span>
+              <span className="flex-none truncate text-[19px] font-bold text-white">
+                {collection.tag}
+              </span>
+              <span className="min-w-0 truncate font-mono text-[11px] text-white/55">
+                curated by @{collection.curator} · {collection.count}{' '}
+                {collection.count === 1 ? 'post' : 'posts'} ·{' '}
+                <Repeat size={10} className="inline" aria-hidden /> loops
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="inline-flex flex-none items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-white/55">
+                <span className="h-2 w-2 flex-none rounded-full bg-live" aria-hidden />
+                Live
+              </span>
+              {isSharedCurrent && (
+                <span className="rounded-full bg-clay/15 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-clay">
+                  Shared post
+                </span>
+              )}
+            </>
           )}
         </div>
 
-        <div className="pointer-events-auto flex items-center gap-2.5">
-          {current && textLike && (
+        <div className="pointer-events-auto flex flex-none items-center gap-2.5">
+          {collection ? (
+            <a href="/" className={GLASS}>
+              Make your own
+            </a>
+          ) : (
             <>
-              <FlameChip trendCount={trendCount} />
-              <PlatformTimeChip item={current} />
+              {current && textLike && (
+                <>
+                  <FlameChip trendCount={trendCount} />
+                  <PlatformTimeChip item={current} />
+                </>
+              )}
+
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  tryResolve(pasteValue)
+                }}
+                className={cn(
+                  'flex h-11 w-[420px] items-center gap-2.5 rounded-full border bg-white/[.08] px-4 pr-2 backdrop-blur-md transition-colors',
+                  pasteError ? 'border-red-400/60' : 'border-white/[.18]',
+                )}
+              >
+                <Clipboard size={15} className="flex-none text-white/55" />
+                <input
+                  type="text"
+                  aria-label="Paste a link to preview"
+                  placeholder="Paste a link to preview — X, Instagram, TikTok, YouTube"
+                  spellCheck={false}
+                  value={pasteValue}
+                  onChange={(e) => setPasteValue(e.target.value)}
+                  onPaste={(e) => {
+                    const text = e.clipboardData.getData('text')
+                    if (!text) return
+                    e.preventDefault()
+                    tryResolve(text)
+                  }}
+                  className="min-w-0 flex-1 bg-transparent text-[13px] text-white outline-none placeholder:text-white/45"
+                />
+                {pasteError ? (
+                  <span className="flex-none text-[11px] text-red-300">Not a supported link</span>
+                ) : (
+                  <span className="flex-none rounded-md border border-white/[.22] px-1.5 py-0.5 font-mono text-[10.5px] text-white/50">
+                    ⌘V
+                  </span>
+                )}
+              </form>
             </>
           )}
-
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              tryResolve(pasteValue)
-            }}
-            className={cn(
-              'flex h-11 w-[420px] items-center gap-2.5 rounded-full border bg-white/[.08] px-4 pr-2 backdrop-blur-md transition-colors',
-              pasteError ? 'border-red-400/60' : 'border-white/[.18]',
-            )}
-          >
-            <Clipboard size={15} className="flex-none text-white/55" />
-            <input
-              type="text"
-              aria-label="Paste a link to preview"
-              placeholder="Paste a link to preview — X, Instagram, TikTok, YouTube"
-              spellCheck={false}
-              value={pasteValue}
-              onChange={(e) => setPasteValue(e.target.value)}
-              onPaste={(e) => {
-                const text = e.clipboardData.getData('text')
-                if (!text) return
-                e.preventDefault()
-                tryResolve(text)
-              }}
-              className="min-w-0 flex-1 bg-transparent text-[13px] text-white outline-none placeholder:text-white/45"
-            />
-            {pasteError ? (
-              <span className="flex-none text-[11px] text-red-300">Not a supported link</span>
-            ) : (
-              <span className="flex-none rounded-md border border-white/[.22] px-1.5 py-0.5 font-mono text-[10.5px] text-white/50">
-                ⌘V
-              </span>
-            )}
-          </form>
 
           <button
             type="button"
@@ -494,16 +534,24 @@ export function DesktopStageChrome({
             {linkCopied ? <Check size={14} className="text-done" /> : <LinkIcon size={14} />}
             {linkCopied ? 'Copied' : 'Link'}
           </button>
-          {mode === 'shared' && authed ? (
+          {collection ? (
+            <SaveCollectionButton
+              count={collection.count}
+              status={saveStatus}
+              onSave={() => onSaveCollection?.()}
+              className={PRIMARY}
+            />
+          ) : mode === 'shared' && authed ? (
             <SavePostButton current={current} className={GLASS} />
           ) : (
-            <a
-              href="/api/auth/twitter"
+            <button
+              type="button"
+              onClick={() => onRequestSignIn?.()}
               className={mode === 'home' && !sendFile.supported ? PRIMARY : GLASS}
             >
               <LogIn size={14} />
               Save
-            </a>
+            </button>
           )}
           {openUrl && (
             <a
@@ -545,6 +593,7 @@ export function DesktopDock({
   onPrev,
   onNext,
   declutter,
+  collection,
 }: DesktopDockProps) {
   const [showAll, setShowAll] = useState(false)
   const cardRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
@@ -754,6 +803,69 @@ export function DesktopDock({
             </button>
           )
         })}
+
+        {/* Collection mode loops: a dashed divider announces the wrap, then a
+            ghosted (opacity-45) copy of the first card previews where "next"
+            after the last item goes — matching goNext's actual wrap target. */}
+        {collection && items.length > 0 && (
+          <>
+            <div
+              aria-hidden
+              className="flex w-[72px] flex-none flex-col items-center justify-center gap-1 rounded-[10px] border-2 border-dashed border-hairline text-ink-3"
+            >
+              <Repeat size={16} />
+              <span className="text-[9px] font-bold uppercase tracking-wide">Loops</span>
+            </div>
+            {(() => {
+              const first = items[0]
+              const key = theaterItemKey(first)
+              const type = inferType(first)
+              const tile = TYPE_TILE[type]
+              const Icon = tile.icon
+              const handle = first.author ? first.author.replace(/^@+/, '') : ''
+              const caption = stripShortLinksForPreview((first.text || '').trim())
+              return (
+                <button
+                  type="button"
+                  onClick={() => onSelect(key)}
+                  aria-label="Back to the first post"
+                  className="flex w-[168px] flex-none flex-col gap-1.5 rounded-[10px] border-2 border-transparent bg-black/15 p-2 text-left opacity-45 transition-opacity hover:opacity-70"
+                >
+                  <div className="relative h-14 w-full flex-none overflow-hidden rounded-md bg-inset">
+                    {first.thumbnailUrl ? (
+                      <img
+                        src={first.thumbnailUrl}
+                        alt=""
+                        referrerPolicy="no-referrer"
+                        loading="lazy"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div
+                        className={cn('flex h-full w-full items-center justify-center', tile.bg)}
+                      >
+                        <Icon size={14} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <PlatformGlyph
+                      platform={first.platform}
+                      size={10}
+                      className="flex-none text-ink-3"
+                    />
+                    <span className="font-mono text-[10px] text-ink-3" suppressHydrationWarning>
+                      {formatCompactRelativeTime(first.createdAt)}
+                    </span>
+                  </div>
+                  <p className="truncate text-[11.5px] leading-tight text-ink">
+                    {caption || (handle ? `@${handle}` : 'Saved post')}
+                  </p>
+                </button>
+              )
+            })()}
+          </>
+        )}
       </div>
 
       {/* End cap */}
@@ -766,14 +878,17 @@ export function DesktopDock({
           {showAll ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
           Show all · {items.length}
         </button>
-        {waiting ? (
-          <span className="text-[10.5px] text-ink-3">Waiting for new sends…</span>
-        ) : (
-          savedToday > 0 && (
-            <span className="text-[10.5px] text-ink-3">{savedToday} saved today</span>
-          )
-        )}
-        {newCount > 0 && (
+        {/* savedToday/newCount are live-pulse concepts — collection mode is a
+            static curated queue, so neither line is meaningful there. */}
+        {!collection &&
+          (waiting ? (
+            <span className="text-[10.5px] text-ink-3">Waiting for new sends…</span>
+          ) : (
+            savedToday > 0 && (
+              <span className="text-[10.5px] text-ink-3">{savedToday} saved today</span>
+            )
+          ))}
+        {!collection && newCount > 0 && (
           <span className="text-[10.5px] font-semibold text-clay">{newCount} new</span>
         )}
 

@@ -64,7 +64,7 @@ describe('API: /api/auth/twitter/status', () => {
       expect(data.user).toBeNull()
     })
 
-    it('returns authenticated: false when no tokens stored', async () => {
+    it('returns authenticated: true with xConnected: false when no tokens stored (account outlives X)', async () => {
       mockSession = { userId: 'user-no-tokens' }
 
       const { GET } = await import('@/app/api/auth/twitter/status/route')
@@ -72,8 +72,13 @@ describe('API: /api/auth/twitter/status', () => {
 
       expect(response.status).toBe(200)
       const data = await response.json()
-      expect(data.authenticated).toBe(false)
-      expect(data.user).toBeNull()
+      // A valid session + no X connection is still an authenticated account
+      // (e.g. email-only sign-in, or a disconnected X account) — it no
+      // longer implies logged out.
+      expect(data.authenticated).toBe(true)
+      expect(data.user.id).toBe('user-no-tokens')
+      expect(data.xConnected).toBe(false)
+      expect(data.needsReconnect).toBe(false)
     })
   })
 
@@ -150,7 +155,7 @@ describe('API: /api/auth/twitter/status', () => {
       )
     })
 
-    it('clears session and returns unauthenticated on refresh failure', async () => {
+    it('drops X tokens but KEEPS the session on a fatal refresh failure (account outlives X)', async () => {
       // Mock failed token refresh
       mockFetch.mockResolvedValueOnce({
         ok: false,
@@ -163,12 +168,18 @@ describe('API: /api/auth/twitter/status', () => {
 
       expect(response.status).toBe(200)
       const data = await response.json()
-      // When refresh fails, user should be logged out to break error loop
-      expect(data.authenticated).toBe(false)
-      expect(data.user).toBeNull()
-      // Cookie should be cleared (set to empty value with expired date)
+      // The account survives a dead X refresh token — only the X connection
+      // is torn down, flagged via needsReconnect for the UI to prompt a
+      // fresh /api/auth/twitter round-trip.
+      expect(data.authenticated).toBe(true)
+      expect(data.xConnected).toBe(false)
+      expect(data.needsReconnect).toBe(true)
+      // Session cookie is untouched (never set/cleared by this route now).
       const sessionCookie = response.cookies.get('adhx_session')
-      expect(sessionCookie?.value).toBe('')
+      expect(sessionCookie).toBeUndefined()
+      // X tokens are gone.
+      const { getStoredTokens } = await import('@/lib/auth/oauth')
+      expect(await getStoredTokens('user-123')).toBeNull()
     })
 
     it('keeps the session on a TRANSIENT refresh failure (5xx)', async () => {

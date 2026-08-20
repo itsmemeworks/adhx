@@ -49,8 +49,10 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function fetchPreferences() {
       try {
-        // Check auth status first to avoid 401 on landing page
-        const authResponse = await fetch('/api/auth/twitter/status')
+        // Check auth status first to avoid 401 on landing page. /api/auth/me
+        // (not the X-only /api/auth/twitter/status) so email-only accounts
+        // fetch their preferences too instead of being treated as signed out.
+        const authResponse = await fetch('/api/auth/me')
         const authData = await authResponse.json()
 
         if (!authData.authenticated) {

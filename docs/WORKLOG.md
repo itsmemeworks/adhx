@@ -4,6 +4,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-20 — Accounts: magic-link + X identities, Settings rebuild, collections as looping theaters
+
+- **Why**: The tagged-collections design (canvas, 2026-08-19) needed real accounts — `userId` was the X id everywhere, so magic-link-only users couldn't exist and collections couldn't convert signed-out viewers.
+- **What**: `users`/`user_identities`/`login_tokens` tables + idempotent backfill in `migrate.ts`; `src/lib/auth/account.ts` + `src/lib/email/magic-link.ts` (Resend; dev logs the link); routes `/api/auth/me|email/request|email/callback|email/change|twitter/disconnect|logout`; X callback links identities (email user connecting X joins ONE account); status route: fatal refresh now deletes tokens but KEEPS the session. `SignInModal`+`useAuthMe` (`src/components/auth/`), opened at save-intent in all theater modes. Settings rebuilt per artboard (Sign-in & connection card, X-gated sync + `/api/sync/history`). `/t/{user}/{tag}` = looping collection theater (`mode="collection"`, `tag-seed.ts`, loop divider dock, Save collection · N → clone or modal + `?save=1` auto-clone); FilterBar got Tags dropdown + Share-as-theater. Built by 4 parallel agents (disjoint file ownership), integrated + full Chrome pass (magic-link signup/change/logout, 429/409/reauth paths, share→theater→clone loop) on 2026-08-20.
+- **State**: on `feat/accounts-magic-link`. 1569 tests green. `RESEND_API_KEY`+`EMAIL_FROM` must be set on Fly (staging+prod) before the email flow works in deploys.
+- **Follow-ups**: X OAuth full round-trip untested live (needs real X login — covered by unit tests); legacy `DELETE /api/auth/twitter` still clears the whole session (deprecate?); LandingPage fallback in AuthedHome is now dead weight; local dev DBs created via drizzle-kit push need the journal-tag backfill (see 2026-08-20 session) before `pnpm db:migrate`.
+
 ## 2026-08-19 — Desktop theater "Filmstrip dock" redesign (direction C shipped)
 
 - **Why**: User live review judged the rail-based desktop layout weaker than mobile's "stage owns the post" model and selected direction C.

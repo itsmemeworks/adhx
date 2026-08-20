@@ -145,6 +145,14 @@ beforeEach(() => {
     if (url.startsWith('/api/auth/twitter/status')) {
       return jsonResponse({ authenticated: true, user: { id: '1', username: 'tester' } })
     }
+    if (url.startsWith('/api/auth/me')) {
+      return jsonResponse({
+        authenticated: true,
+        user: { id: '1', username: 'tester', displayName: 'tester', avatarUrl: null },
+        identities: { x: { username: 'tester' }, email: null },
+        xConnected: true,
+      })
+    }
     if (url.startsWith('/api/tags')) return jsonResponse({ tags: [] })
     if (url.startsWith('/api/stats')) return jsonResponse({ total: 0, unread: 0 })
     if (url.startsWith('/api/triage/streak')) return jsonResponse({ currentStreak: 0 })
