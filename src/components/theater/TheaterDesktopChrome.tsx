@@ -410,9 +410,31 @@ export function DesktopStageChrome({
             collection && !triage ? 'items-baseline' : 'items-center',
           )}
         >
-          <a href="/" aria-label="ADHX home" className="flex-none">
-            <MatterLogo size={19} className="[&>span]:text-white" />
-          </a>
+          {collection && !triage ? (
+            // Inline-flow brand: an inline anchor's baseline is its TEXT
+            // baseline, so the wordmark sits on the same ruler as the tag
+            // name + curator line (MatterLogo is a nested flex whose
+            // computed baseline is the icon's bottom edge — wrong ruler).
+            <a href="/" aria-label="ADHX home" className="flex-none whitespace-nowrap">
+              <img
+                src="/adhx-cloud.png"
+                alt=""
+                aria-hidden
+                style={{ height: 32 }}
+                className="inline-block w-auto align-[-30%]"
+              />
+              <span
+                className="ml-2 font-indie-flower leading-none text-white"
+                style={{ fontSize: 28.5 }}
+              >
+                ADHX
+              </span>
+            </a>
+          ) : (
+            <a href="/" aria-label="ADHX home" className="flex-none">
+              <MatterLogo size={19} className="[&>span]:text-white" />
+            </a>
+          )}
           {triage ? (
             <>
               <span className="h-5 w-px flex-none bg-white/20" aria-hidden />
@@ -439,10 +461,10 @@ export function DesktopStageChrome({
           ) : collection ? (
             <>
               <span className="h-5 w-px flex-none self-center bg-white/20" aria-hidden />
-              <span className="flex-none truncate text-[19px] font-bold text-white">
-                {collection.tag}
+              <span className="flex-none truncate text-[19px] font-bold leading-none text-white">
+                #{collection.tag}
               </span>
-              <span className="min-w-0 truncate font-mono text-[11px] text-white/55">
+              <span className="min-w-0 truncate font-mono text-[11px] leading-none text-white/55">
                 curated by @{collection.curator} · {collection.count}{' '}
                 {collection.count === 1 ? 'post' : 'posts'} ·{' '}
                 <Repeat size={10} className="inline" aria-hidden /> loops

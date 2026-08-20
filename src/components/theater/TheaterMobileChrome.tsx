@@ -310,7 +310,7 @@ export function TheaterMobileChrome({
           </div>
           <div className="flex items-center justify-between gap-2">
             <span className="min-w-0 truncate text-[15px] font-bold text-white">
-              {collection.tag}
+              #{collection.tag}
             </span>
             <span className="flex-none font-mono text-[10.5px] text-white/60">
               by @{collection.curator} · {collection.count} ·{' '}
@@ -739,7 +739,7 @@ export function TheaterMobileChrome({
                   <>
                     <Repeat size={11} className="flex-none" aria-hidden />
                     <span className="truncate">
-                      {collection.tag} · {collection.count}
+                      #{collection.tag} · {collection.count}
                     </span>
                   </>
                 ) : newCount > 0 ? (
