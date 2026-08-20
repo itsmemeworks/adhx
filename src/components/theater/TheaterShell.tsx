@@ -20,7 +20,7 @@ import { useSeenSet } from './useSeenSet'
 import { prefetchPlayback } from './usePlaybackSource'
 import { TheaterProgressLine, progressKindFor } from './TheaterProgressLine'
 import { theaterItemKey } from './types'
-import { previewPath } from '@/lib/activity/preview-path'
+import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 // SignInModal + useAuthMe are built by a parallel agent under the same
 // accounts/magic-link PR — imported per the shared contract even though the
 // module may not exist yet at review time; see the "Save collection" CTA
@@ -507,6 +507,7 @@ export function TheaterShell({
   // from a since-navigated-away item can never advance past the wrong post.
   useEffect(() => {
     function handleAdvance() {
+      if (showSignInRef.current) return
       if (progressKindFor(currentRef.current) !== 'timed') return
       goNext()
     }
@@ -557,6 +558,65 @@ export function TheaterShell({
   const [showSignIn, setShowSignIn] = useState(false)
   const pendingSaveRef = useRef(false)
   const autoSaveTriggeredRef = useRef(false)
+
+  // Save-intent continuity for INDIVIDUAL posts (home/shared modes). The
+  // sign-in modal must return the viewer to the exact post whose Save they
+  // tapped — not to wherever the theater drifted while they typed their
+  // email — and then finish the save for them. Three pieces:
+  //  1. `signInReturnTo` freezes the post's preview path (+ ?save=1) at the
+  //     moment Save is tapped.
+  //  2. `showSignInRef` pauses auto-advance (timed + video-ended) while the
+  //     modal is open, so the stage doesn't wander behind the blur.
+  //  3. `saveIntentOnLoad` (read at FIRST RENDER — the URL-sync effect
+  //     rewrites the address bar and drops the query before any effect can
+  //     see it) triggers the deferred /api/bookmarks/add once auth settles.
+  const [signInReturnTo, setSignInReturnTo] = useState<string | null>(null)
+  const showSignInRef = useRef(false)
+  useEffect(() => {
+    showSignInRef.current = showSignIn
+  }, [showSignIn])
+  const [saveIntentOnLoad] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('save') === '1',
+  )
+  const sharedAutoSaveRef = useRef(false)
+
+  const openSignIn = useCallback(() => {
+    const item = currentRef.current
+    const path = theaterUrlSyncPath(item)
+    setSignInReturnTo(path ? `${path}?save=1` : null)
+    setShowSignIn(true)
+  }, [])
+
+  // Deferred single-post save: landing on a preview path with ?save=1 after
+  // the sign-in round-trip (magic link or X OAuth) completes the save the
+  // viewer originally asked for. Waits for authMe to settle; if the link
+  // expired and they sign in via the modal instead, authMe's refresh re-runs
+  // this and the intent still completes. Announces success via a window
+  // event so the chrome's SavePostButton flips to "Saved".
+  useEffect(() => {
+    if (!saveIntentOnLoad || mode !== 'shared' || !sharedItem) return
+    if (sharedAutoSaveRef.current) return
+    if (authMe.loading || !authMe.me?.authenticated) return
+    sharedAutoSaveRef.current = true
+    const url = sourceUrl(sharedItem.platform, sharedItem.author, sharedItem.bookmarkId ?? '')
+    if (!url) return
+    void fetch('/api/bookmarks/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    })
+      .then((res) => {
+        if (!res.ok) return
+        window.dispatchEvent(
+          new CustomEvent('theater-post-saved', {
+            detail: { key: theaterItemKey(sharedItem) },
+          }),
+        )
+      })
+      .catch(() => {})
+  }, [saveIntentOnLoad, mode, sharedItem, authMe.loading, authMe.me])
 
   const performClone = useCallback(async () => {
     if (!collection) return
@@ -632,7 +692,9 @@ export function TheaterShell({
               item={current}
               muted={muted}
               onRequestUnmute={onRequestUnmute}
-              onEnded={goNext}
+              onEnded={() => {
+                if (!showSignInRef.current) goNext()
+              }}
               photoCaption={false}
             />
           )}
@@ -678,7 +740,7 @@ export function TheaterShell({
           collection={collection}
           saveStatus={saveStatus}
           onSaveCollection={handleSaveCollection}
-          onRequestSignIn={() => setShowSignIn(true)}
+          onRequestSignIn={openSignIn}
         />
         <DesktopStageChrome
           mode={mode}
@@ -690,7 +752,7 @@ export function TheaterShell({
           collection={collection}
           saveStatus={saveStatus}
           onSaveCollection={handleSaveCollection}
-          onRequestSignIn={() => setShowSignIn(true)}
+          onRequestSignIn={openSignIn}
         />
       </div>
       <DesktopDock
@@ -726,7 +788,11 @@ export function TheaterShell({
             ? `${collection.count} ${collection.count === 1 ? 'post' : 'posts'} from ${collection.tag}, curated by @${collection.curator} — keep them in your pile.`
             : 'Your saved posts stay yours — sync your X bookmarks anytime from Settings.'
         }
-        returnTo={collection ? `/t/${collection.curator}/${collection.tag}?save=1` : undefined}
+        returnTo={
+          collection
+            ? `/t/${collection.curator}/${collection.tag}?save=1`
+            : (signInReturnTo ?? undefined)
+        }
       />
     </div>
   )
