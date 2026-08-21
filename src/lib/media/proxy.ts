@@ -124,3 +124,23 @@ export function downloadResponse(upstream: Response, filename: string): Response
 
   return new Response(upstream.body, { headers })
 }
+
+/**
+ * Build an attachment `Response` for an image download (the `downloadResponse`
+ * counterpart for images — unlike video downloads, the upstream Content-Type
+ * varies by format, so it's passed through instead of hardcoded).
+ */
+export function imageDownloadResponse(
+  upstream: Response,
+  filename: string,
+  fallbackContentType = 'image/jpeg',
+): Response {
+  const headers = new Headers()
+  headers.set('Content-Type', upstream.headers.get('content-type') || fallbackContentType)
+  headers.set('Content-Disposition', `attachment; filename="${filename}"`)
+
+  const contentLength = upstream.headers.get('content-length')
+  if (contentLength) headers.set('Content-Length', contentLength)
+
+  return new Response(upstream.body, { headers })
+}

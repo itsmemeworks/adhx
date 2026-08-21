@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { isValidTweetAuthor, isValidTweetId } from '@/lib/media/proxy'
+import { imageDownloadResponse, isValidTweetAuthor, isValidTweetId } from '@/lib/media/proxy'
 import { mediaRateLimit } from '@/lib/rate-limit'
 
-// GET /api/media/image?author=xxx&tweetId=xxx&index=1
+// GET /api/media/image?author=xxx&tweetId=xxx&index=1[&download=1]
 // Proxies images through the server to avoid CORS issues when downloading/sharing
-// Uses FxTwitter's image CDN which provides reliable access to Twitter media
+// Uses FxTwitter's image CDN which provides reliable access to Twitter media.
+// `download=1` sets Content-Disposition: attachment instead of the inline
+// (cacheable) response — the theater's Download button for photo posts uses
+// this variant, mirroring /api/media/video/download for videos.
 export async function GET(request: NextRequest) {
   const rateLimited = mediaRateLimit(request)
   if (rateLimited) return rateLimited
@@ -13,6 +16,7 @@ export async function GET(request: NextRequest) {
   const author = searchParams.get('author')
   const tweetId = searchParams.get('tweetId')
   const index = searchParams.get('index') || '1'
+  const download = searchParams.get('download') === '1'
 
   if (!author || !tweetId) {
     return NextResponse.json({ error: 'Missing author or tweetId' }, { status: 400 })
@@ -46,6 +50,10 @@ export async function GET(request: NextRequest) {
 
     if (!imageResponse.ok) {
       throw new Error(`Image fetch failed with status ${imageResponse.status}`)
+    }
+
+    if (download) {
+      return imageDownloadResponse(imageResponse, `adhx-${author}-${tweetId}.jpg`)
     }
 
     const contentType = imageResponse.headers.get('content-type') || 'image/jpeg'
