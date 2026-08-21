@@ -688,7 +688,7 @@ The authed Collection (moved verbatim from the old client `page.tsx`). Client co
 - **FeedGrid** (`src/components/feed/FeedGrid.tsx`): three view modes toggled in the FilterBar — **grid** (masonry via CSS columns, `FeedCard`), **list** (dense rows, `FeedListRow`), **bento** (mixed-size mosaic, `FeedBentoTile`). Infinite scroll via an `IntersectionObserver` sentinel.
 - **Focus / Triage**: `TheaterShell mode="triage"` (spec: `docs/specs/unified-theater-triage.md`) — the SAME filmstrip theater as everywhere else, seeded from the current filtered feed. Actions: Done (POST `/api/bookmarks/[id]/read?platform=` + advance) / Later / Tag (`TagQuickPicker`) / Delete (5s undo). Keyboard: `→` Done, `←` Later, `↓`/Backspace/Delete = Delete, `U` undo, `↑` back, Esc close — gated on triage mode so other modes keep ↓↑/jk. **Collection ↔ Live** tabs live in the theater top bar/peek bar (Live = the pulse feed with an authed Save). Twitter video plays via the HLS-aware `VideoPlayer` inside `TriageStage.tsx`; end-of-queue shows `TriagePileClear`. Opened via `CustomEvent('open-theater', { detail: { tab: 'live' | 'triage' } })` (Header dispatches; AuthedHome listens). The old `CollectionTheater`/`CollectionRail`/`TriageMode`/`AddTweetModal` are DELETED.
 - **FilterBar**: category filters + **platform filter** (All / X / Instagram / TikTok) + view toggles + tags + search.
-- **Nav**: the top bar carries **Collection · Theater · Tags · Leaderboard** (Theater — a rename of the former "Live" entry, same behavior — opens the theater via the `open-theater` event; it's named for the mode, not one tab, since the theater holds both the live community pulse and your own collection-as-theater as internal tabs. Leaderboard links to `/collections`. Trending was removed from the authed nav — the public `/trending` SEO routes are untouched). The `+` Add button is gone: adding by URL is paste-first via `PasteToPreview` (global paste listener → `resolvePastedLink()` → preview page). Mobile collapses search to an icon.
+- **Nav**: the top bar carries **Collection · Theater · Tags · Leaderboard** (Theater — a rename of the former "Live" entry, same behavior — opens the theater via the `open-theater` event; it's named for the mode, not one tab, since the theater holds both the live community pulse and your own collection-as-theater as internal tabs. Leaderboard links to `/leaderboard`. Trending was removed from the authed nav — the public `/trending` SEO routes are untouched). The `+` Add button is gone: adding by URL is paste-first via `PasteToPreview` (global paste listener → `resolvePastedLink()` → preview page). Mobile collapses search to an icon.
 - **FeedCard**: tweet-style per-type cards with a `PlatformChip` + `TimePill`; non-Twitter items show their platform glyph.
 - **Settings** has a gamification **Streak card** (current streak, 7-day dot row, longest/triaged/this-week) fed by `/api/triage/streak`.
 
@@ -872,7 +872,7 @@ Database location: `./data/adhdone.db`
 | `collection_tweets` | `(userId, collectionId, platform, bookmarkId)` | Bookmarks in collections                                                                                                                                                                                                      |
 | `tag_shares`        | `(userId, tag)`                                | Public tag sharing settings                                                                                                                                                                                                   |
 | `activity`          | `id` (auto)                                    | Append-only public activity pulse — anonymous event log (`userId` stored but never exposed; `author_avatar_url` added via guarded ALTER in `migrate.ts`). Not user-owned content, so exempt from the composite-key convention |
-| `collection_events` | `id` (auto)                                    | Append-only collection view/clone log behind the `/collections` leaderboards (`viewer_id` stored but never exposed; read only via `src/lib/discovery/rank.ts`). Same event-log exemptions as `activity`                       |
+| `collection_events` | `id` (auto)                                    | Append-only collection view/clone log behind the `/leaderboard` leaderboards (`viewer_id` stored but never exposed; read only via `src/lib/discovery/rank.ts`). Same event-log exemptions as `activity`                       |
 
 **Why composite keys with `platform`**: Allows User A and User B to both bookmark tweet X independently (multi-user), AND lets the same numeric id exist across platforms without collision (a TikTok video id and a tweet id can both be 19 digits). `platform` is one of `twitter` | `instagram` | `tiktok`, default `twitter`. Every query that filters by `bookmarkId` must also filter by `platform`.
 
@@ -949,11 +949,15 @@ export async function GET() {
 | `/api/collections/trending`                     | GET         | No   | Public anonymous collection leaderboard JSON (`?window=today\|week\|month\|all-time`, wraps `getCollectionLeaderboard`) |
 | `/api/admin/collections/hide`                   | POST        | Yes  | Admin-only (`ADMIN_USERNAMES`): hide/unhide a collection from leaderboards (`{ username, tag, hidden? }`)               |
 
-### Discovery leaderboards (`/collections`)
+### Discovery leaderboards (`/leaderboard`)
 
-Public tagged collections are ranked on `/collections` (+ `/collections/{today|month|all-time}`;
+Public tagged collections are ranked on `/leaderboard` (+ `/leaderboard/{today|month|all-time}`;
 week is the default at the bare path) — the "podium" leaderboard per
-`docs/specs/discovery-leaderboards.md`. Data model: append-only `collection_events`
+`docs/specs/discovery-leaderboards.md`. (This page lived at `/collections` until it was renamed
+— that path collided with the unrelated `/api/collections` custom-collections API. The old
+`/collections`(`/[window]`) URLs still work via thin `permanentRedirect` stubs — they're on
+staging and already shipped in sitemaps. `/api/collections/trending`, the machine JSON endpoint,
+was NOT renamed.) Data model: append-only `collection_events`
 (`view` from the `/t/{username}/{tag}` page — bot-filtered, self-views excluded, public tags
 only; `clone` ×5 from the clone endpoint), read exclusively through
 `src/lib/discovery/rank.ts` (the anonymity choke point — `viewerId` is never selected; 60s

@@ -365,10 +365,10 @@ describe('slugToWindow / windowToPath', () => {
     expect(slugToWindow('bogus')).toBeNull()
   })
 
-  it("week is the default path '/collections'; others get a slug segment", () => {
-    expect(windowToPath('week')).toBe('/collections')
-    expect(windowToPath('day')).toBe('/collections/today')
-    expect(windowToPath('month')).toBe('/collections/month')
-    expect(windowToPath('all')).toBe('/collections/all-time')
+  it("week is the default path '/leaderboard'; others get a slug segment", () => {
+    expect(windowToPath('week')).toBe('/leaderboard')
+    expect(windowToPath('day')).toBe('/leaderboard/today')
+    expect(windowToPath('month')).toBe('/leaderboard/month')
+    expect(windowToPath('all')).toBe('/leaderboard/all-time')
   })
 })

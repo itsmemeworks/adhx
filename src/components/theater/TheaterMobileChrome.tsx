@@ -44,7 +44,7 @@ import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { inferType } from '@/lib/trending/filter'
 import { useSendFile } from './useSendFile'
 import { useClampExpand } from './useClampExpand'
-import { theaterItemKey, PLATFORM_LABEL } from './types'
+import { theaterItemKey, PLATFORM_LABEL, TRIAGE_TAB_ORDER, TRIAGE_TAB_LABEL } from './types'
 import { TheaterLinkedText } from './TheaterText'
 import { TheaterProgressLine, progressKindFor } from './TheaterProgressLine'
 import { UpNextList } from './UpNextList'
@@ -732,7 +732,7 @@ export function TheaterMobileChrome({
                 className="pointer-events-auto inline-flex rounded-full bg-inset p-0.5 text-[11.5px] font-semibold"
                 onClick={(e) => e.stopPropagation()}
               >
-                {(['collection', 'live'] as const).map((t) => (
+                {TRIAGE_TAB_ORDER.map((t) => (
                   <button
                     key={t}
                     type="button"
@@ -743,11 +743,11 @@ export function TheaterMobileChrome({
                     onTouchEnd={(e) => e.stopPropagation()}
                     aria-current={triage.tab === t ? 'true' : undefined}
                     className={cn(
-                      'rounded-full px-3 py-1 capitalize transition-colors',
+                      'rounded-full px-3 py-1 whitespace-nowrap transition-colors',
                       triage.tab === t ? 'bg-surface text-ink shadow-sm' : 'text-ink-3',
                     )}
                   >
-                    {t}
+                    {TRIAGE_TAB_LABEL[t]}
                   </button>
                 ))}
               </div>

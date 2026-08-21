@@ -11,7 +11,7 @@ import {
 } from '@/lib/discovery/rank'
 
 /**
- * The visual surface of /collections + /collections/[window] — the "podium"
+ * The visual surface of /leaderboard + /leaderboard/[window] — the "podium"
  * design (docs/specs/discovery-leaderboards.md §6). Entirely server-rendered:
  * unlike `TrendingRankedList` (which polls a live feed client-side), the
  * leaderboard is a per-request snapshot and the window switcher is real
@@ -22,15 +22,18 @@ import {
  * `src/components/trending/TrendingRankedList.tsx` on purpose — same Matter
  * dark vocabulary, different content. Signed-in visitors already have the
  * global app Header as their chrome (AppShell doesn't suppress it for
- * `/collections`), so this internal header is skipped entirely for them via
+ * `/leaderboard`), so this internal header is skipped entirely for them via
  * the `authed` prop — otherwise the page stacks two headers. Signed-out
- * visitors keep it (it's their only nav on this public page). Per the owner's
- * review, the "Trending posts →" link is gone from this header in both
- * states — /trending is SEO-only infrastructure, not a user-facing surface.
+ * visitors keep it (it's their only nav on this public page); while auth is
+ * still unresolved, Header itself renders nothing on this route rather than
+ * flashing its own light chrome over this dark one (see the flash guard in
+ * `src/components/Header.tsx`). Per the owner's review, the "Trending
+ * posts →" link is gone from this header in both states — /trending is
+ * SEO-only infrastructure, not a user-facing surface.
  *
  * Cards are the canonical `CollectionPosterCard` (`@/components/tags`) — the
  * leaderboard used to have its own bespoke `CollectionCard`, now deleted, so
- * /collections, /tags, and /t/{username} all render collections identically.
+ * /leaderboard, /tags, and /t/{username} all render collections identically.
  * The board's own contribution on top is the rank medallion (`rank` prop,
  * safe with `wholeCardLink`) and the size hierarchy below.
  */

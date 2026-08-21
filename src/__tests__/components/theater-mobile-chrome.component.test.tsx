@@ -146,6 +146,33 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     expect(downloadBtn.className).not.toContain('bg-clay-grad')
   })
 
+  it('renders Live before My Collection, not the bare "Collection" label', () => {
+    const triage: TheaterTriageChrome = {
+      tab: 'live',
+      onTabChange: vi.fn(),
+      onDone: vi.fn(),
+      onLater: vi.fn(),
+      onDelete: vi.fn(),
+      onTag: vi.fn(),
+      onSave: vi.fn(),
+      onLiveTag: vi.fn(),
+      savedKeys: new Set<string>(),
+      remaining: 0,
+      streak: { current: 0, longest: 0 },
+      onClose: vi.fn(),
+    }
+    render(<TheaterMobileChrome {...base} current={videoItem()} triage={triage} />)
+
+    expect(screen.queryByText('Collection')).not.toBeInTheDocument()
+    const liveTab = screen.getByText('Live', { selector: 'button' })
+    const collectionTab = screen.getByText('My Collection')
+    expect(
+      liveTab.compareDocumentPosition(collectionTab) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+  })
+})
+
+describe('TheaterMobileChrome: text posts', () => {
   it('text posts never show Download (nothing sendable)', () => {
     render(<TheaterMobileChrome {...base} current={textItem()} />)
     expect(screen.queryByText('Download')).not.toBeInTheDocument()

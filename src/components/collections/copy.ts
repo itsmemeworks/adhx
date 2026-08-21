@@ -1,10 +1,11 @@
 import type { RankWindow } from '@/lib/discovery/rank'
 
 /**
- * Per-window title/description copy for the /collections leaderboard pages.
- * Shared between `/collections/page.tsx` (week, the default) and
- * `/collections/[window]/page.tsx` (the other three windows) so metadata,
- * JSON-LD `name`/`description`, and the sr-only heading never drift apart.
+ * Per-window title/description copy for the /leaderboard pages.
+ * Shared between `src/app/leaderboard/page.tsx` (week, the default) and
+ * `src/app/leaderboard/[window]/page.tsx` (the other three windows) so
+ * metadata, JSON-LD `name`/`description`, and the sr-only heading never
+ * drift apart.
  */
 export const WINDOW_COPY: Record<RankWindow, { title: string; description: string }> = {
   day: {

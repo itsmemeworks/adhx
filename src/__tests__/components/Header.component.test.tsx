@@ -97,6 +97,49 @@ describe('Header', () => {
     expect(screen.queryByText(/view on github/i)).not.toBeInTheDocument()
   })
 
+  describe('leaderboard flash guard (avoids a header flash over the board on load)', () => {
+    it('renders nothing on /leaderboard while auth is still unresolved', () => {
+      mockPathname = '/leaderboard'
+      // A promise that never resolves during this test — simulates the
+      // window between mount and the /api/auth/me response, where
+      // `authStatus` is still `null` (unresolved), not yet `{ authenticated:
+      // false }`.
+      global.fetch = vi.fn(() => new Promise(() => {})) as unknown as typeof fetch
+      const { container } = render(<Header />)
+
+      expect(container).toBeEmptyDOMElement()
+    })
+
+    it('renders nothing on the old /collections URL while auth is still unresolved', () => {
+      mockPathname = '/collections'
+      global.fetch = vi.fn(() => new Promise(() => {})) as unknown as typeof fetch
+      const { container } = render(<Header />)
+
+      expect(container).toBeEmptyDOMElement()
+    })
+
+    it('renders the bar on /leaderboard once auth resolves to authenticated', async () => {
+      mockPathname = '/leaderboard'
+      mockFetch(true)
+      render(<Header />)
+
+      await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
+    })
+
+    it('still renders nothing on other routes while auth is unresolved (unchanged prior behavior — this guard must not become global)', () => {
+      mockPathname = '/'
+      global.fetch = vi.fn(() => new Promise(() => {})) as unknown as typeof fetch
+      const { container } = render(<Header />)
+
+      // Unlike the leaderboard routes, elsewhere the component renders its
+      // full JSX tree while auth is unresolved (most of it gated on
+      // `authStatus?.authenticated`, so it collapses to just the sticky
+      // header shell + logo) — it does not bail out to `null`.
+      expect(container).not.toBeEmptyDOMElement()
+      expect(screen.getByLabelText('ADHX home')).toBeInTheDocument()
+    })
+  })
+
   it('shows Collection · Theater · Tags · Leaderboard nav, with no Add button', async () => {
     mockFetch(true)
     render(<Header />)
@@ -109,7 +152,7 @@ describe('Header', () => {
     expect(screen.getByRole('link', { name: 'Tags' })).toHaveAttribute('href', '/tags')
     expect(screen.getByRole('link', { name: 'Leaderboard' })).toHaveAttribute(
       'href',
-      '/collections',
+      '/leaderboard',
     )
 
     // "Live" is gone — renamed to "Theater" (the mode contains both the live
@@ -157,7 +200,7 @@ describe('Header', () => {
     expect(liveEvent?.detail).toEqual({ tab: 'live' })
   })
 
-  it('shows a Leaderboard link in the avatar menu too, pointing at /collections', async () => {
+  it('shows a Leaderboard link in the avatar menu too, pointing at /leaderboard', async () => {
     mockFetch(true)
     render(<Header />)
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
@@ -167,7 +210,7 @@ describe('Header', () => {
     fireEvent.click(avatarButton!)
 
     const menuLeaderboardLinks = screen.getAllByRole('link', { name: 'Leaderboard' })
-    expect(menuLeaderboardLinks.some((l) => l.getAttribute('href') === '/collections')).toBe(true)
+    expect(menuLeaderboardLinks.some((l) => l.getAttribute('href') === '/leaderboard')).toBe(true)
   })
 
   it('shows a Tags nav link (top bar + avatar menu)', async () => {

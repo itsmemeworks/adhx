@@ -17,7 +17,7 @@
 - [Trending](/trending): The cross-network real-time trending source — what the community is saving and previewing right now across X, Instagram, TikTok, and YouTube. Per-lens hubs at /trending/latest, /trending/videos, /trending/photos, /trending/text, /trending/articles. Backed by the [Trending JSON](/api/trending) API.
 - [Trending Archive](/trending/archive): Historical weekly archives of trending activity, one page per completed ISO week (e.g. /trending/archive/2026-w30).
 - [Author Hubs](/{username}): Per-author collection of an X handle's posts saved or previewed on ADHX.
-- [Collections Leaderboard](/collections): Ranked list of the most-viewed and most-cloned public tag collections this week. Other windows at /collections/today, /collections/month, /collections/all-time. Backed by the [Collections Leaderboard JSON](/api/collections/trending) API.
+- [Collections Leaderboard](/leaderboard): Ranked list of the most-viewed and most-cloned public tag collections this week. Other windows at /leaderboard/today, /leaderboard/month, /leaderboard/all-time. Backed by the [Collections Leaderboard JSON](/api/collections/trending) API.
 
 ## Content Types
 

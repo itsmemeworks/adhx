@@ -1,7 +1,7 @@
 import type { LeaderboardEntry } from '@/lib/discovery/rank'
 
 /**
- * Server-rendered, crawlable ranked list for the /collections leaderboard —
+ * Server-rendered, crawlable ranked list for the /leaderboard page —
  * visually hidden (the podium + grid in `CollectionsBoard` is what users
  * see) but present in the HTML source with full rank/tag/curator/counts +
  * links, so search engines and no-JS clients get real content. Mirrors the

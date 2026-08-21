@@ -348,4 +348,29 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
     render(<DesktopStageChrome {...stageBase} current={textItem()} />)
     expect(screen.queryByText('Download')).not.toBeInTheDocument()
   })
+
+  it('renders Live before My Collection, not the bare "Collection" label', () => {
+    const triage = {
+      tab: 'live' as const,
+      onTabChange: vi.fn(),
+      onDone: vi.fn(),
+      onLater: vi.fn(),
+      onDelete: vi.fn(),
+      onTag: vi.fn(),
+      onSave: vi.fn(),
+      onLiveTag: vi.fn(),
+      savedKeys: new Set<string>(),
+      remaining: 0,
+      streak: { current: 0, longest: 0 },
+      onClose: vi.fn(),
+    }
+    render(<DesktopStageChrome {...stageBase} current={videoItem()} triage={triage} />)
+
+    expect(screen.queryByText('Collection')).not.toBeInTheDocument()
+    const liveTab = screen.getByText('Live', { selector: 'button' })
+    const collectionTab = screen.getByText('My Collection')
+    expect(
+      liveTab.compareDocumentPosition(collectionTab) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+  })
 })

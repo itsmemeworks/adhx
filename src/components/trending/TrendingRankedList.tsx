@@ -200,10 +200,10 @@ export function TrendingRankedList({
           </span>
         </span>
         <Link
-          href="/collections"
+          href="/leaderboard"
           className="ml-auto text-[13px] font-semibold text-white/60 underline decoration-white/20 underline-offset-4 transition-colors hover:text-white"
         >
-          Top collections →
+          Leaderboard →
         </Link>
         <Link
           href="/"

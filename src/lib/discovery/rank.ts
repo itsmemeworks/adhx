@@ -55,12 +55,17 @@ export function slugToWindow(slug: string): RankWindow | null {
 
 /**
  * The public, tidy path for a window. `week` is the default view and lives at
- * the bare `/collections` path; every other window gets its own slug segment
+ * the bare `/leaderboard` path; every other window gets its own slug segment
  * so it's shareable/crawlable (mirrors `/trending` vs `/trending/[filter]`).
+ *
+ * This lived at `/collections` until the owner asked for it to move — that
+ * path collides with the unrelated `/api/collections` custom-collections
+ * API. The old `/collections`(`/[window]`) paths still resolve, via thin
+ * `permanentRedirect` stubs in `src/app/collections/`.
  */
 export function windowToPath(window: RankWindow): string {
-  if (window === 'week') return '/collections'
-  return `/collections/${RANK_WINDOWS.find((w) => w.id === window)!.slug}`
+  if (window === 'week') return '/leaderboard'
+  return `/leaderboard/${RANK_WINDOWS.find((w) => w.id === window)!.slug}`
 }
 
 export interface LeaderboardTile {

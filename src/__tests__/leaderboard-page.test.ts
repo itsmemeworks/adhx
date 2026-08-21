@@ -5,8 +5,10 @@ import { collectionEvents, tagShares, users, type NewCollectionEvent } from '@/l
 import { getCurrentUserId } from '@/lib/auth/session'
 
 /**
- * /collections leaderboard page tests — `src/app/collections/page.tsx` and
- * `src/app/collections/[window]/page.tsx`.
+ * /leaderboard page tests — `src/app/leaderboard/page.tsx` and
+ * `src/app/leaderboard/[window]/page.tsx`, plus the old-URL redirect stubs
+ * at `src/app/collections/page.tsx` and `src/app/collections/[window]/page.tsx`
+ * (this file used to be named collections-page.test.ts, before the rename).
  *
  * Unlike `tag-collection-route.test.ts` (which mocks the data layer
  * entirely), this seeds a real in-memory `collection_events`/`tag_shares`/
@@ -73,13 +75,13 @@ function extractJsonLd(html: string): Record<string, unknown> {
   return JSON.parse(match![1].replace(/\\u003c/g, '<')) as Record<string, unknown>
 }
 
-describe('/collections leaderboard pages', () => {
+describe('/leaderboard pages', () => {
   beforeEach(() => {
     testInstance = createTestDb()
   })
   afterEach(() => testInstance.close())
 
-  describe('/collections (week, the default window)', () => {
+  describe('/leaderboard (week, the default window)', () => {
     it('renders the podium + sr-only list in correct rank order', async () => {
       seedUser('u1', 'alice')
       seedUser('u2', 'bob')
@@ -90,8 +92,8 @@ describe('/collections leaderboard pages', () => {
       }
       seedEvent({ ownerUserId: 'u2', tag: 'lower-tag', action: 'view', createdAt: iso() })
 
-      const CollectionsPage = (await import('@/app/collections/page')).default
-      const html = renderToStaticMarkup(await CollectionsPage())
+      const LeaderboardPage = (await import('@/app/leaderboard/page')).default
+      const html = renderToStaticMarkup(await LeaderboardPage())
 
       const topIdx = html.indexOf('top-tag')
       const lowerIdx = html.indexOf('lower-tag')
@@ -109,8 +111,8 @@ describe('/collections leaderboard pages', () => {
       seedEvent({ ownerUserId: 'u1', tag: 'a', createdAt: iso() })
       seedEvent({ ownerUserId: 'u1', tag: 'b', createdAt: iso() })
 
-      const CollectionsPage = (await import('@/app/collections/page')).default
-      const html = renderToStaticMarkup(await CollectionsPage())
+      const LeaderboardPage = (await import('@/app/leaderboard/page')).default
+      const html = renderToStaticMarkup(await LeaderboardPage())
       const ld = extractJsonLd(html)
 
       expect(ld['@type']).toBe('CollectionPage')
@@ -120,8 +122,8 @@ describe('/collections leaderboard pages', () => {
     })
 
     it('renders an empty state when no collections are charting', async () => {
-      const CollectionsPage = (await import('@/app/collections/page')).default
-      const html = renderToStaticMarkup(await CollectionsPage())
+      const LeaderboardPage = (await import('@/app/leaderboard/page')).default
+      const html = renderToStaticMarkup(await LeaderboardPage())
 
       expect(html).toContain('No public collections charting yet')
     })
@@ -131,26 +133,26 @@ describe('/collections leaderboard pages', () => {
       seedShare('u1', 'secret-tag', false)
       seedEvent({ ownerUserId: 'u1', tag: 'secret-tag', createdAt: iso() })
 
-      const CollectionsPage = (await import('@/app/collections/page')).default
-      const html = renderToStaticMarkup(await CollectionsPage())
+      const LeaderboardPage = (await import('@/app/leaderboard/page')).default
+      const html = renderToStaticMarkup(await LeaderboardPage())
 
       expect(html).not.toContain('secret-tag')
     })
   })
 
-  describe('/collections/[window]', () => {
+  describe('/leaderboard/[window]', () => {
     it('404s on an unknown window slug', async () => {
-      const CollectionsWindowPage = (await import('@/app/collections/[window]/page')).default
+      const LeaderboardWindowPage = (await import('@/app/leaderboard/[window]/page')).default
       await expect(
-        CollectionsWindowPage({ params: Promise.resolve({ window: 'bogus' }) }),
+        LeaderboardWindowPage({ params: Promise.resolve({ window: 'bogus' }) }),
       ).rejects.toThrow('NOT_FOUND')
     })
 
-    it("permanent-redirects '/collections/week' to the canonical '/collections'", async () => {
-      const CollectionsWindowPage = (await import('@/app/collections/[window]/page')).default
+    it("permanent-redirects '/leaderboard/week' to the canonical '/leaderboard'", async () => {
+      const LeaderboardWindowPage = (await import('@/app/leaderboard/[window]/page')).default
       await expect(
-        CollectionsWindowPage({ params: Promise.resolve({ window: 'week' }) }),
-      ).rejects.toThrow('REDIRECT:/collections')
+        LeaderboardWindowPage({ params: Promise.resolve({ window: 'week' }) }),
+      ).rejects.toThrow('REDIRECT:/leaderboard')
     })
 
     it('renders the today window with only its own window entries', async () => {
@@ -162,9 +164,9 @@ describe('/collections leaderboard pages', () => {
       // Outside the 24h "today" window, but within "week"/"all".
       seedEvent({ ownerUserId: 'u2', tag: 'ancient-tag', createdAt: iso(3 * 24 * 60 * 60 * 1000) })
 
-      const CollectionsWindowPage = (await import('@/app/collections/[window]/page')).default
+      const LeaderboardWindowPage = (await import('@/app/leaderboard/[window]/page')).default
       const html = renderToStaticMarkup(
-        await CollectionsWindowPage({ params: Promise.resolve({ window: 'today' }) }),
+        await LeaderboardWindowPage({ params: Promise.resolve({ window: 'today' }) }),
       )
 
       expect(html).toContain('today-tag')
@@ -179,9 +181,9 @@ describe('/collections leaderboard pages', () => {
       seedEvent({ ownerUserId: 'u1', tag: 'many-clones', action: 'clone', createdAt: iso() })
       seedEvent({ ownerUserId: 'u2', tag: 'few-views', action: 'view', createdAt: iso() })
 
-      const CollectionsWindowPage = (await import('@/app/collections/[window]/page')).default
+      const LeaderboardWindowPage = (await import('@/app/leaderboard/[window]/page')).default
       const html = renderToStaticMarkup(
-        await CollectionsWindowPage({ params: Promise.resolve({ window: 'all-time' }) }),
+        await LeaderboardWindowPage({ params: Promise.resolve({ window: 'all-time' }) }),
       )
 
       // 1 clone (score 5) outranks 1 view (score 1).
@@ -207,8 +209,8 @@ describe('/collections leaderboard pages', () => {
 
     it('signed-out: keeps its own dark header, with no "Trending posts" link', async () => {
       vi.mocked(getCurrentUserId).mockResolvedValue(null)
-      const CollectionsPage = (await import('@/app/collections/page')).default
-      const html = renderToStaticMarkup(await CollectionsPage())
+      const LeaderboardPage = (await import('@/app/leaderboard/page')).default
+      const html = renderToStaticMarkup(await LeaderboardPage())
 
       expect(html).toContain('ADHX home')
       expect(html).not.toContain('Trending posts')
@@ -216,11 +218,46 @@ describe('/collections leaderboard pages', () => {
 
     it('signed-in: renders no internal header at all (the global app Header is the chrome)', async () => {
       vi.mocked(getCurrentUserId).mockResolvedValue('u1')
-      const CollectionsPage = (await import('@/app/collections/page')).default
-      const html = renderToStaticMarkup(await CollectionsPage())
+      const LeaderboardPage = (await import('@/app/leaderboard/page')).default
+      const html = renderToStaticMarkup(await LeaderboardPage())
 
       expect(html).not.toContain('ADHX home')
       expect(html).not.toContain('Trending posts')
+    })
+  })
+
+  describe('/collections and /collections/[window] — old-URL redirect stubs', () => {
+    it("'/collections' permanent-redirects to '/leaderboard'", async () => {
+      const CollectionsRedirect = (await import('@/app/collections/page')).default
+      expect(() => CollectionsRedirect()).toThrow('REDIRECT:/leaderboard')
+    })
+
+    it("'/collections/today' permanent-redirects to '/leaderboard/today'", async () => {
+      const CollectionsWindowRedirect = (await import('@/app/collections/[window]/page')).default
+      await expect(
+        CollectionsWindowRedirect({ params: Promise.resolve({ window: 'today' }) }),
+      ).rejects.toThrow('REDIRECT:/leaderboard/today')
+    })
+
+    it("'/collections/week' permanent-redirects to the bare '/leaderboard' (not '/leaderboard/week')", async () => {
+      const CollectionsWindowRedirect = (await import('@/app/collections/[window]/page')).default
+      await expect(
+        CollectionsWindowRedirect({ params: Promise.resolve({ window: 'week' }) }),
+      ).rejects.toThrow('REDIRECT:/leaderboard')
+    })
+
+    it("'/collections/all-time' permanent-redirects to '/leaderboard/all-time'", async () => {
+      const CollectionsWindowRedirect = (await import('@/app/collections/[window]/page')).default
+      await expect(
+        CollectionsWindowRedirect({ params: Promise.resolve({ window: 'all-time' }) }),
+      ).rejects.toThrow('REDIRECT:/leaderboard/all-time')
+    })
+
+    it('an unknown slug still 404s instead of redirecting', async () => {
+      const CollectionsWindowRedirect = (await import('@/app/collections/[window]/page')).default
+      await expect(
+        CollectionsWindowRedirect({ params: Promise.resolve({ window: 'bogus' }) }),
+      ).rejects.toThrow('NOT_FOUND')
     })
   })
 })

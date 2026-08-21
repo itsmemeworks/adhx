@@ -408,6 +408,20 @@ export function Header() {
   // its own nav — so the app top bar renders nothing (avoids a double header).
   if (authStatus !== null && !authStatus.authenticated) return null
 
+  // The leaderboard (and its old /collections URL) renders its own dark
+  // header for signed-out visitors (CollectionsBoard). Auth starts out
+  // unresolved (`authStatus === null`) on every page load, and until it
+  // resolves the check above can't yet bail out — so without this guard,
+  // this component's light header briefly stacks above the board's dark one
+  // and then vanishes once the fetch confirms the visitor is signed out.
+  // Scoped to just these routes: making the WHOLE header wait for auth would
+  // flash-hide it on every authed page instead.
+  if (
+    authStatus === null &&
+    (pathname.startsWith('/leaderboard') || pathname.startsWith('/collections'))
+  )
+    return null
+
   return (
     <>
       <header className="sticky top-0 z-50 bg-surface border-b border-hairline">
@@ -453,10 +467,10 @@ export function Header() {
                   Tags
                 </Link>
                 <Link
-                  href="/collections"
+                  href="/leaderboard"
                   className={cn(
                     'rounded-full px-3 py-1.5 font-semibold transition-colors',
-                    pathname === '/collections'
+                    pathname === '/leaderboard'
                       ? 'bg-clay/[0.12] text-clay'
                       : 'text-ink-2 hover:text-ink',
                   )}
@@ -641,11 +655,11 @@ export function Header() {
                           Tags
                         </Link>
                         <Link
-                          href="/collections"
+                          href="/leaderboard"
                           onClick={() => setShowUserMenu(false)}
                           className={cn(
                             'flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset transition-colors',
-                            pathname === '/collections'
+                            pathname === '/leaderboard'
                               ? 'font-semibold text-clay'
                               : 'text-ink-2 hover:text-ink',
                           )}

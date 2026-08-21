@@ -338,7 +338,7 @@ export function TheaterShell({
   const loop = mode === 'collection'
   // Triage's Collection tab never blends the live pulse in; its Live tab
   // reuses the exact same live feed home/shared mode does.
-  const [triageTab, setTriageTab] = useState<TriageTab>(initialTriageTab ?? 'collection')
+  const [triageTab, setTriageTab] = useState<TriageTab>(initialTriageTab ?? 'live')
   const isTriageCollection = isTriage && triageTab === 'collection'
   const feed = useTheaterFeed(seed, { live: !loop && !isTriageCollection })
   const seenSet = useSeenSet()
