@@ -179,6 +179,12 @@ export const metrics = {
       status: statusCode,
     }),
 
+  // Media proxy: FxTwitter reports the underlying tweet as gone (deleted/
+  // private/suspended) — an expected outcome, not an error, so it's a
+  // metric rather than a captureException.
+  mediaUnavailable: (endpoint: string, upstreamStatus: number) =>
+    metricCount('media.unavailable', 1, { endpoint, upstream_status: upstreamStatus }),
+
   // Theater (theater-first home/shared/collection surfaces)
   theaterOpened: (surface: 'home' | 'shared' | 'collection') =>
     metricCount('theater.opened', 1, { surface }),

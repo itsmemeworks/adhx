@@ -4,6 +4,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-21 — Staging v1.52.0 test round: 3 fixes (undo toast, collection audio, deleted tweets)
+
+- **Why**: 4-agent Chrome/curl sweep of staging post-#375 + live owner mobile testing. SEO checks 10/10 pass; theater/preview/authed surfaces pass. Owner found 2 bugs; Sentry surfaced a 3rd.
+- **Undo toast persisted after Done/Later** (owner): only delete's commit timer expired the toast — archive/keep had NO expiry. Now a separate 5s dismiss timer (`shouldDismissUndo` identity guard, unit-tested), toast moved bottom-24→bottom-36 (was overlapping the mobile action row), `toast-in` entrance animation keyed per action.
+- **No audio/pause in My Collection tab, mobile** (owner): `kind` forced 'none' in collection tab (meant for the progress line) also gated the peek-bar controls. Split: `progressKind` (line only) vs `mediaKind` (audio/pause/soundPulse). Desktop dock verified unaffected.
+- **Deleted/private tweets** (Sentry WHITE-SUN-6317-16): fxtwitter returns 401 for deleted tweets (verified: HazBrown1/2090044905120751760 → 401, healthy → 200) → we 500'd + Sentry-spammed + client retry-looped. Now: fxtwitter 401/404 → **410 Gone** `{reason}` + 10-min in-memory negative cache in video/info/download routes, `mediaUnavailable` metric (no captureException), StageVideo/VideoPlayer show "no longer available on X" (poster kept, no retry) via Range-probe on element error.
+- **Test-round false alarms, documented**: `/api/activity/preview` 503s = deploy rollout window; authed Live tab "never polls" = pre-existing `document.hidden` pause (test agents share one Chrome, tab was backgrounded — real foreground use fine; note: no visibilitychange listener, first poll after refocus waits ≤12s); YouTube stall auto-advance = deliberate 8s watchdog (#361).
+- **State**: 1926 tests green, typecheck/format clean. Fix PR merged same day; staging redeployed.
+
 ## 2026-08-21 — v2.0 pre-launch audit: security, code quality, DX/Docker, SEO (8-agent parallel sweep)
 
 - **Security**: ALL 22 open CodeQL alerts fixed — 4 critical request-forgery (fetch URLs now rebuilt from validated parsed components via new `buildAllowlistedUrl()` in `lib/media/proxy.ts`), 11 substring-sanitization (new `isHostOrSubdomainOf()` in `lib/utils/url-host.ts`), 4 DOM-XSS (LandingPage/PreviewAnotherLink now delegate to `parseShareUrl` + `isSafeInternalPath` guard), 3 double-escaping (shared single-pass `decodeHtmlEntities()` in `lib/utils/html-entities.ts`). PLUS an unflagged SSRF gap: tiktok/thumbnail fetched a scraped CDN URL with no allowlist — now validated + only validated URLs cached.

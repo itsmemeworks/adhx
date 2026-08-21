@@ -145,9 +145,15 @@ export function TheaterMobileChrome({
   const sendFile = useSendFile(current)
   const { ref: captionRef, expanded, setExpanded, overflowing } = useClampExpand(currentKey)
 
-  // Triage's Collection tab never auto-advances (Done/Later/Delete are the
-  // only ways forward) — force the 10s dwell progress line off there.
-  const kind = triage && triage.tab === 'collection' ? 'none' : progressKindFor(current)
+  // `mediaKind` is the REAL content kind — drives the audio/pause buttons,
+  // `paused`/`soundPulse` state, and the pause/resume handler in every tab.
+  // `progressKind` additionally forces 'none' in triage's Collection tab
+  // (Done/Later/Delete are the only ways forward there) and feeds ONLY
+  // <TheaterProgressLine/> — the two must not be conflated, or forcing off
+  // the 10s dwell line also silently hides/breaks the audio and pause
+  // controls for collection-tab videos (which still play via StageVideo).
+  const mediaKind = progressKindFor(current)
+  const progressKind = triage && triage.tab === 'collection' ? 'none' : mediaKind
 
   // Pause/play button state. `'video'`-kind items mirror StageVideo's real
   // playing state (so a tap on the video itself, or an autoplay retry, keeps
@@ -201,20 +207,20 @@ export function TheaterMobileChrome({
     setTimedPaused(false)
   }, [currentKey])
 
-  const paused = kind === 'video' ? !videoPlaying : timedPaused
+  const paused = mediaKind === 'video' ? !videoPlaying : timedPaused
   const displayMuted = liveMuted ?? muted
   // Sound affordance moved onto the peek-bar audio button on mobile
   // (StageVideo's centered "Tap for sound" pill is desktop-only now): pulse
   // while the current video is effectively muted AND actually playing, so a
   // paused or already-unmuted video never pulses.
-  const soundPulse = kind === 'video' && displayMuted && videoPlaying
+  const soundPulse = mediaKind === 'video' && displayMuted && videoPlaying
 
   const handleTogglePause = () => {
-    if (kind === 'video') {
+    if (mediaKind === 'video') {
       window.dispatchEvent(new CustomEvent(videoPlaying ? 'theater-pause' : 'theater-resume'))
       return
     }
-    if (kind === 'timed') {
+    if (mediaKind === 'timed') {
       setTimedPaused((was) => {
         window.dispatchEvent(new CustomEvent(was ? 'theater-resume' : 'theater-pause'))
         return !was
@@ -283,7 +289,7 @@ export function TheaterMobileChrome({
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10 lg:hidden">
-      <TheaterProgressLine itemKey={currentKey} kind={kind} />
+      <TheaterProgressLine itemKey={currentKey} kind={progressKind} />
 
       {/* Top scrim: brand (left) + post meta (right) — the flame/trend badge
           and the platform+time link-out chip live HERE now, one fixed
@@ -717,7 +723,7 @@ export function TheaterMobileChrome({
                   inward (Minimize2), restoring the compact chrome. */}
               {declutter ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
             </button>
-            {kind === 'video' && (
+            {mediaKind === 'video' && (
               <button
                 type="button"
                 onClick={(e) => {
@@ -800,7 +806,12 @@ export function TheaterMobileChrome({
             >
               <ChevronUp size={18} />
             </button>
-            {kind !== 'none' && (
+            {/* Video always gets a pause button (even in the collection tab,
+                where `progressKind` is forced 'none'); a 'timed' item only
+                gets one where there's an actual auto-advance to pause — never
+                in the collection tab, where pausing a static post is
+                meaningless. */}
+            {(mediaKind === 'video' || progressKind !== 'none') && (
               <button
                 type="button"
                 onClick={(e) => {

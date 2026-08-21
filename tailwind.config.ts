@@ -123,6 +123,12 @@ const config: Config = {
           '0%, 100%': { transform: 'scale(1)', opacity: '1' },
           '50%': { transform: 'scale(1.045)', opacity: '0.9' },
         },
+        // Triage undo toast entrance — a small rise + fade so it reads as a
+        // transient toast, not a stuck badge.
+        'toast-in': {
+          '0%': { transform: 'translateY(6px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
       },
       animation: {
         'bounce-in': 'bounce-in 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
@@ -133,6 +139,7 @@ const config: Config = {
         marquee: 'marquee var(--marquee-duration, 60s) linear infinite',
         'live-pulse': 'live-pulse 1.8s infinite',
         'sound-pulse': 'sound-pulse 2.2s ease-in-out infinite',
+        'toast-in': 'toast-in 0.18s ease-out',
       },
     },
   },

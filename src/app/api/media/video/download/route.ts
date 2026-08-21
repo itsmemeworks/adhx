@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { captureException } from '@/lib/sentry'
+import { captureException, metrics } from '@/lib/sentry'
 import {
   downloadResponse,
+  goneResponse,
   isAllowedTwitterMediaUrl,
+  isFxTwitterGoneStatus,
+  isTweetGoneCached,
   isValidTweetAuthor,
   isValidTweetId,
+  markTweetGone,
 } from '@/lib/media/proxy'
 import { mediaRateLimit } from '@/lib/rate-limit'
 import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
@@ -39,6 +43,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const goneKey = `${author}/${tweetId}`
+    if (isTweetGoneCached(goneKey)) {
+      return goneResponse()
+    }
+
     // Get video info to find the best MP4 URL
     const infoResponse = await fetchWithTimeout(
       `https://api.fxtwitter.com/${author}/status/${tweetId}`,
@@ -47,6 +56,14 @@ export async function GET(request: NextRequest) {
     )
 
     if (!infoResponse.ok) {
+      if (isFxTwitterGoneStatus(infoResponse.status)) {
+        // Deleted/private/suspended — not a proxy error, and it won't come
+        // back on a retry. Cache it so repeat download attempts for this
+        // tweet don't keep re-hitting FxTwitter.
+        markTweetGone(goneKey)
+        metrics.mediaUnavailable('video-download', infoResponse.status)
+        return goneResponse()
+      }
       return NextResponse.json({ error: 'Failed to fetch video info' }, { status: 404 })
     }
 

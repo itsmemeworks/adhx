@@ -74,6 +74,19 @@ export function shouldCommitDelete(undo: TriageUndoAction | null): boolean {
   return undo?.type === 'delete'
 }
 
+/** Pure: should an undo-toast dismiss timer armed for `expiring` actually
+ * clear the toast when it fires? Only when `current` is still that exact
+ * action (identity, not value, equality — a fresh action object is created
+ * on every Done/Later/Delete, even a repeat of the same type). A `false`
+ * result means a newer action has since replaced it, and the stale timer
+ * must be a no-op rather than wiping the newer undo out from under it. */
+export function shouldDismissUndo(
+  current: TriageUndoAction | null,
+  expiring: TriageUndoAction,
+): boolean {
+  return current === expiring
+}
+
 /** Pure: the triage queue index after Done/Later/Delete — always a plain
  * advance, regardless of which of the three actions fired. */
 export function triageAdvance(index: number): number {
@@ -306,6 +319,11 @@ export function TheaterShell({
   } | null>(null)
   const triageRecordedRef = useRef(false)
   const triageUndoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Separate from `triageUndoTimerRef` (which defers the server DELETE for a
+  // 'delete' undo): this one just auto-dismisses the "Done/Later · Undo"
+  // toast after the same 5s window, since archive/keep undos have nothing to
+  // defer — the read/no-op already happened synchronously.
+  const undoDismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const shellRef = useRef<HTMLDivElement>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
 
@@ -365,6 +383,26 @@ export function TheaterShell({
     triageUndoTimerRef.current = null
   }, [])
 
+  const clearUndoDismissTimer = useCallback(() => {
+    if (undoDismissTimerRef.current) clearTimeout(undoDismissTimerRef.current)
+    undoDismissTimerRef.current = null
+  }, [])
+
+  // Auto-dismiss the undo toast 5s after an archive/keep action — matching
+  // `triageDelete`'s own 5s window. Guarded by identity (`u === action`) so a
+  // stale timer left running from a superseded action can never wipe a
+  // newer undo that's since replaced it.
+  const armUndoDismiss = useCallback(
+    (action: TriageUndoAction) => {
+      clearUndoDismissTimer()
+      undoDismissTimerRef.current = setTimeout(() => {
+        undoDismissTimerRef.current = null
+        setTriageUndo((u) => (shouldDismissUndo(u, action) ? null : u))
+      }, 5000)
+    },
+    [clearUndoDismissTimer],
+  )
+
   // A pending delete must be COMMITTED (not just cancelled) when the next
   // action lands within its 5s undo window, or the previous delete silently
   // never reaches the server. `shouldCommitDelete()` is the pure "is one
@@ -394,7 +432,9 @@ export function TheaterShell({
     }).catch(() => {})
     onTriageResolved?.(item.id, 'archive')
     commitPendingTriageDelete()
-    setTriageUndo({ type: 'archive', item, index: idx })
+    const action: TriageUndoAction = { type: 'archive', item, index: idx }
+    setTriageUndo(action)
+    armUndoDismiss(action)
     setTriageIndex(triageAdvance)
   }, [
     triageCurrentFeedItem,
@@ -402,6 +442,7 @@ export function TheaterShell({
     recordTriageStreak,
     onTriageResolved,
     commitPendingTriageDelete,
+    armUndoDismiss,
   ])
 
   // Later: defer — advance without changing read state.
@@ -409,15 +450,31 @@ export function TheaterShell({
     if (!triageCurrentFeedItem) return
     recordTriageStreak()
     commitPendingTriageDelete()
-    setTriageUndo({ type: 'keep', item: triageCurrentFeedItem, index: triageIndex })
+    const action: TriageUndoAction = {
+      type: 'keep',
+      item: triageCurrentFeedItem,
+      index: triageIndex,
+    }
+    setTriageUndo(action)
+    armUndoDismiss(action)
     setTriageIndex(triageAdvance)
-  }, [triageCurrentFeedItem, triageIndex, recordTriageStreak, commitPendingTriageDelete])
+  }, [
+    triageCurrentFeedItem,
+    triageIndex,
+    recordTriageStreak,
+    commitPendingTriageDelete,
+    armUndoDismiss,
+  ])
 
   const triageDelete = useCallback(() => {
     if (!triageCurrentFeedItem) return
     recordTriageStreak()
     const item = triageCurrentFeedItem
     commitPendingTriageDelete()
+    // A pending delete has its own 5s expiry (the commit timer above), so it
+    // owns the toast's dismissal — any archive/keep dismiss timer still
+    // running from a prior action is now moot.
+    clearUndoDismissTimer()
     const timer = setTimeout(() => {
       fetch(`/api/bookmarks/${item.id}?platform=${item.platform ?? 'twitter'}`, {
         method: 'DELETE',
@@ -434,10 +491,12 @@ export function TheaterShell({
     recordTriageStreak,
     onTriageResolved,
     commitPendingTriageDelete,
+    clearUndoDismissTimer,
   ])
 
   const triageDoUndo = useCallback(() => {
     if (!triageUndo) return
+    clearUndoDismissTimer()
     if (triageUndo.type === 'archive') {
       fetch(
         `/api/bookmarks/${triageUndo.item.id}/read?platform=${triageUndo.item.platform ?? 'twitter'}`,
@@ -451,7 +510,7 @@ export function TheaterShell({
     }
     setTriageIndex(triageUndo.index)
     setTriageUndo(null)
-  }, [triageUndo, onTriageRestored, clearTriageUndoTimer])
+  }, [triageUndo, onTriageRestored, clearTriageUndoTimer, clearUndoDismissTimer])
 
   // ArrowUp "Back": pure navigation only — never touches read/delete state,
   // unlike `U` (which reverses the last action).
@@ -459,14 +518,16 @@ export function TheaterShell({
     setTriageIndex(triageStepBackIndex)
   }, [])
 
-  // Flush any pending delete when the shell unmounts (AuthedHome closes
-  // triage by conditionally unmounting the whole `<TheaterShell/>`).
+  // Flush any pending delete, and cancel the undo-toast dismiss timer, when
+  // the shell unmounts (AuthedHome closes triage by conditionally unmounting
+  // the whole `<TheaterShell/>`).
   useEffect(() => {
     if (!isTriage) return
     return () => {
       commitPendingTriageDelete()
+      clearUndoDismissTimer()
     }
-  }, [isTriage, commitPendingTriageDelete])
+  }, [isTriage, commitPendingTriageDelete, clearUndoDismissTimer])
 
   // Keep the OPEN triage queue's tags live (unified-theater-triage.md §B):
   // `TagQuickPicker` broadcasts a post's full updated tag list on every
@@ -1243,13 +1304,23 @@ export function TheaterShell({
           onRequestMakeYourOwn={handleMakeYourOwn}
           triage={triageChrome}
         />
-        {/* Triage's Delete (and Done/Later) undo toast — a 5s window, same
-            deadline as `commitPendingTriageDelete`'s timer. Works the same
-            on both viewports, so it lives here rather than duplicated inside
-            each chrome component. */}
+        {/* Triage's Delete (and Done/Later) undo toast — auto-dismisses after
+            5s (see `armUndoDismiss`/`commitPendingTriageDelete`'s timer).
+            Works the same on both viewports, so it lives here rather than
+            duplicated inside each chrome component. `bottom-36` (9rem/144px)
+            clears the mobile action row (Later/Tag/Delete/Done — measured:
+            80px bottom padding + 44px min-height = 124px from the screen
+            bottom) with room to spare, and happens to match the desktop
+            dock's own 124px height + margin, so one value now covers both
+            viewports. Keyed by the action's identity so a same-type action
+            right after another (e.g. Later, Later) still replays the
+            entrance transition instead of looking like it never moved. */}
         {isTriageCollection && triageUndo && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-24 z-30 flex justify-center lg:bottom-36">
-            <div className="pointer-events-auto flex items-center gap-3 rounded-full bg-black/80 px-4 py-2 text-[13px] text-white shadow-lg backdrop-blur-md">
+          <div className="pointer-events-none absolute inset-x-0 bottom-36 z-30 flex justify-center">
+            <div
+              key={`${triageUndo.type}-${triageUndo.item.platform ?? 'twitter'}-${triageUndo.item.id}-${triageUndo.index}`}
+              className="pointer-events-auto flex animate-toast-in items-center gap-3 rounded-full bg-black/80 px-4 py-2 text-[13px] text-white shadow-lg backdrop-blur-md"
+            >
               <span>
                 {triageUndo.type === 'archive'
                   ? 'Done'

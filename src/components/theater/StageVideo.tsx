@@ -49,6 +49,12 @@ export function StageVideo({
   const [ended, setEnded] = useState(false)
   const [needsGesture, setNeedsGesture] = useState(false)
   const [errored, setErrored] = useState(false)
+  // Set only when the follow-up probe (below) confirms the src 410'd —
+  // i.e. FxTwitter reports the underlying post gone (deleted/private/
+  // suspended), not just "failed to load this time". Distinguishes the
+  // graceful "gone" state (no retry — it won't come back) from the generic
+  // load-failure state (retry is worth offering).
+  const [unavailableReason, setUnavailableReason] = useState<string | null>(null)
   const [playing, setPlaying] = useState(false)
   // Mirrors the live element's `.muted`. Initialized from the `muted` prop,
   // which is only the extern/initial signal from here on — once the user
@@ -78,6 +84,7 @@ export function StageVideo({
     setEnded(false)
     setNeedsGesture(false)
     setErrored(false)
+    setUnavailableReason(null)
     setPlaying(false)
 
     const video = videoRef.current
@@ -223,6 +230,29 @@ export function StageVideo({
     onRequestUnmute()
   }
 
+  // A <video> error event carries no HTTP status, so it can't tell "this
+  // post is gone for good" (FxTwitter 410 — deleted/private/suspended,
+  // src.ts routes it through /api/media/video) from a transient load
+  // failure worth retrying. Follow up with a lightweight ranged fetch of
+  // the same src: our video routes serve GET (no HEAD), so a 2-byte Range
+  // request is the cheapest way to read the real status without pulling
+  // the whole file. A 410 body carries `{ error: 'unavailable', reason }`;
+  // anything else (including a non-410 error) leaves the generic
+  // load-failure state with its retry button in place.
+  const handleVideoError = () => {
+    setErrored(true)
+    fetch(src, { headers: { Range: 'bytes=0-1' } })
+      .then((res) => (res.status === 410 ? res.json() : null))
+      .then((body) => {
+        if (body && typeof body.reason === 'string') {
+          setUnavailableReason(body.reason)
+        }
+      })
+      .catch(() => {
+        // Probe failed — stay in the generic load-failure state.
+      })
+  }
+
   const handleStageTap = () => {
     if (needsGesture) {
       handleStartTap()
@@ -261,7 +291,7 @@ export function StageVideo({
         onPause={() => setPlaying(false)}
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}
-        onError={() => setErrored(true)}
+        onError={handleVideoError}
         className="h-full w-full object-contain"
       />
 
@@ -282,8 +312,19 @@ export function StageVideo({
         </div>
       )}
 
-      {/* Playback error fallback: poster stays visible, offer a retry. */}
-      {errored && (
+      {/* Gone-for-good fallback (post deleted/private/suspended on X): poster
+          stays visible, no retry — retrying can't bring back content that's
+          been removed at the source. The user's own next/prev navigation
+          (or, in triage, Delete) is how they move past it — we never
+          auto-skip. */}
+      {errored && unavailableReason && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#08070a]/70 px-6 text-center">
+          <p className="max-w-xs text-sm text-white/70">{unavailableReason}</p>
+        </div>
+      )}
+
+      {/* Generic playback error fallback: poster stays visible, offer a retry. */}
+      {errored && !unavailableReason && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#08070a]/70 text-center">
           <p className="max-w-xs text-sm text-white/70">This video couldn&apos;t load.</p>
           <button

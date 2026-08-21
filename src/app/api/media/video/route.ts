@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { captureException } from '@/lib/sentry'
+import { captureException, metrics } from '@/lib/sentry'
 import {
+  goneResponse,
   isAllowedTwitterMediaUrl,
+  isFxTwitterGoneStatus,
+  isTweetGoneCached,
   isValidTweetAuthor,
   isValidTweetId,
+  markTweetGone,
   streamingResponse,
 } from '@/lib/media/proxy'
 import { mediaRateLimit } from '@/lib/rate-limit'
@@ -59,6 +63,11 @@ export async function GET(request: NextRequest) {
 
     // If not cached, resolve from FxTwitter API
     if (!videoUrl) {
+      const goneKey = `${author}/${tweetId}`
+      if (isTweetGoneCached(goneKey)) {
+        return goneResponse()
+      }
+
       const response = await fetchWithTimeout(
         `https://api.fxtwitter.com/${author}/status/${tweetId}`,
         10_000,
@@ -70,6 +79,14 @@ export async function GET(request: NextRequest) {
       )
 
       if (!response.ok) {
+        if (isFxTwitterGoneStatus(response.status)) {
+          // Deleted/private/suspended — not a proxy error, and it won't come
+          // back on a retry. Cache it so the theater's video stage doesn't
+          // hammer FxTwitter every time this tweet is viewed or retried.
+          markTweetGone(goneKey)
+          metrics.mediaUnavailable('video', response.status)
+          return goneResponse()
+        }
         throw new Error(`fxtwitter API returned ${response.status}`)
       }
 
