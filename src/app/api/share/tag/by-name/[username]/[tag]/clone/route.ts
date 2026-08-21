@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db, runInTransaction } from '@/lib/db'
-import { getUserIdForUsername } from '@/lib/users/lookup'
+import { getUserIdForUsername, resolveUsernameAlias } from '@/lib/users/lookup'
 import { tagShares, bookmarkTags, bookmarks, bookmarkMedia, bookmarkLinks } from '@/lib/db/schema'
 import { eq, and, inArray } from 'drizzle-orm'
 import { withAuth } from '@/lib/api/with-auth'
@@ -23,10 +23,16 @@ export const POST = withAuth(
     { params }: { params: Promise<{ username: string; tag: string }> },
   ) => {
     try {
-      const { username, tag: tagName } = await params
+      const { username: usernameParam, tag: tagName } = await params
 
-      // Find user by username
-      const resolvedOwnerId = await getUserIdForUsername(username)
+      // Find user by username. Falls back to `username_aliases` for a
+      // curator who's since renamed — see the by-name GET route for the
+      // same pattern.
+      let resolvedOwnerId = await getUserIdForUsername(usernameParam)
+      if (!resolvedOwnerId) {
+        const alias = await resolveUsernameAlias(usernameParam)
+        if (alias) resolvedOwnerId = alias.userId
+      }
       const user = resolvedOwnerId ? { userId: resolvedOwnerId } : undefined
 
       if (!user) {

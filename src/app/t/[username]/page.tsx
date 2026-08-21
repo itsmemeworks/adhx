@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { getPublicProfile, type PublicProfileResult } from '@/lib/users/profile'
+import { resolveUsernameAlias } from '@/lib/users/lookup'
 import { CollectionPosterCard } from '@/components/tags'
 import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
 
@@ -24,21 +25,34 @@ interface Props {
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://adhx.com'
 
-async function loadProfile(usernameParam: string): Promise<PublicProfileResult> {
+type ProfileLoadResult = PublicProfileResult | { status: 'redirect'; username: string }
+
+/**
+ * Resolves a profile by username, falling back to `username_aliases` when
+ * the direct lookup 404s — a curator who's since renamed still resolves,
+ * via `{ status: 'redirect' }`, so the page component can 308 old shared
+ * links to the current username instead of dead-ending them.
+ */
+async function loadProfile(usernameParam: string): Promise<ProfileLoadResult> {
   let username: string
   try {
     username = decodeURIComponent(usernameParam)
   } catch {
     return { status: 'not_found' }
   }
-  return getPublicProfile(username)
+  const result = await getPublicProfile(username)
+  if (result.status === 'not_found') {
+    const alias = await resolveUsernameAlias(username)
+    if (alias) return { status: 'redirect', username: alias.username }
+  }
+  return result
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username } = await params
   const result = await loadProfile(username)
 
-  if (result.status === 'not_found') {
+  if (result.status === 'not_found' || result.status === 'redirect') {
     return {
       title: `@${username} — ADHX`,
       description: 'A curator on ADHX.',
@@ -87,6 +101,7 @@ function formatMemberSince(iso: string | null): string | null {
 export default async function CuratorProfilePage({ params }: Props) {
   const { username } = await params
   const result = await loadProfile(username)
+  if (result.status === 'redirect') permanentRedirect(`/t/${result.username}`)
   if (result.status === 'not_found') notFound()
 
   const { profile } = result

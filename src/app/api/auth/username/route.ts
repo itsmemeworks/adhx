@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withAuth } from '@/lib/api/with-auth'
-import { chooseUsername, isUsernameTaken, sanitizeUsername } from '@/lib/auth/account'
+import { chooseUsername, isUsernameTaken } from '@/lib/auth/account'
+import { sanitizeUsername } from '@/lib/auth/username-rules'
 import { setSessionCookie } from '@/lib/auth/session'
 
-// POST /api/auth/username (authed) - the one-shot claim from /welcome.
+// POST /api/auth/username (authed) - claim or change a username. Used by
+// the `/welcome` first-claim prompt and the Settings chooser (up to
+// MAX_USERNAME_CHANGES additional changes — see chooseUsername()).
 // On success, re-issues the session cookie so the JWT's `username` claim
 // stays in sync with the new value.
 export const POST = withAuth(async (req: NextRequest, userId: string) => {
@@ -18,11 +21,15 @@ export const POST = withAuth(async (req: NextRequest, userId: string) => {
   const result = await chooseUsername(userId, raw)
 
   if ('error' in result) {
-    const status = result.error === 'taken' ? 409 : result.error === 'already_chosen' ? 403 : 400
+    const status = result.error === 'invalid' ? 400 : 409
     return NextResponse.json({ error: result.error }, { status })
   }
 
-  const response = NextResponse.json({ ok: true, username: result.username })
+  const response = NextResponse.json({
+    ok: true,
+    username: result.username,
+    changesRemaining: result.changesRemaining,
+  })
   await setSessionCookie(response, { userId, username: result.username })
   return response
 })
