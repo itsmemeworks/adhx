@@ -346,11 +346,19 @@ export const users = sqliteTable('users', {
   displayName: text('display_name'),
   avatarUrl: text('avatar_url'),
   email: text('email'),
-  // Whether the user has spent their one-time username-choice prompt
-  // (`/welcome`, shown after first magic-link sign-in). X users get this set
+  // Whether the user has spent their first username-choice prompt
+  // (`/welcome`, shown after first magic-link sign-in, or the claim
+  // affordance in Settings for pre-existing accounts). X users get this set
   // true at backfill/creation — they already picked a handle on X. Defaults
-  // to false so existing/new email users are only ever prompted once.
+  // to false so existing/new email users are only ever prompted once. The
+  // first claim is free (doesn't count against `usernameChangeCount`) —
+  // see `chooseUsername()` in `src/lib/auth/account.ts`.
   usernameChosen: integer('username_chosen', { mode: 'boolean' }).notNull().default(false),
+  // Number of username changes spent AFTER the first free claim, capped at
+  // `MAX_USERNAME_CHANGES` (2) in `chooseUsername()`. Every counted change
+  // records the old name in `username_aliases` so old `/t/{username}/...`
+  // links keep redirecting instead of 404ing.
+  usernameChangeCount: integer('username_change_count').notNull().default(0),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 })
 
@@ -370,6 +378,19 @@ export const userIdentities = sqliteTable(
     userIdIdx: index('user_identities_user_id_idx').on(table.userId),
   }),
 )
+
+// Redirect table for usernames a user has changed AWAY from (after their
+// first free claim — see `users.usernameChosen`/`usernameChangeCount`
+// above). `username` (lowercased) is the PK so a name can only ever redirect
+// to one account at a time; reclaiming your own old name deletes its row
+// (see `chooseUsername()`). Consumed by `src/lib/users/lookup.ts`
+// (`resolveUsernameAlias`) so old `/t/{username}/...` links keep resolving
+// via a permanent redirect instead of 404ing after a rename.
+export const usernameAliases = sqliteTable('username_aliases', {
+  username: text('username').primaryKey(),
+  userId: text('user_id').notNull(),
+  createdAt: integer('created_at').notNull(), // epoch ms
+})
 
 // One-time magic-link tokens for email sign-in / email-change confirmation.
 // Only the sha256 hash is stored — the raw token exists only in the emailed

@@ -21,12 +21,15 @@ import {
   Flame,
   Mail,
   Lock,
+  AtSign,
 } from 'lucide-react'
 import { SyncProgress } from '@/components/sync/SyncProgress'
 import { usePreferences, FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
 import { useTheme } from '@/lib/theme/context'
 import { PlatformGlyph, ConnectWithX } from '@/components/matter'
+import { UsernameChooser, type UsernameClaimSuccess } from '@/components/auth/UsernameChooser'
+import { MAX_USERNAME_CHANGES } from '@/lib/auth/username-rules'
 import { cn } from '@/lib/utils'
 
 const CONNECT_X_URL = '/api/auth/twitter?returnUrl=%2Fsettings'
@@ -38,6 +41,8 @@ interface AuthMe {
     username: string
     displayName: string
     avatarUrl: string
+    usernameChosen: boolean
+    usernameChangeCount: number
   } | null
   identities: {
     x: { username: string } | null
@@ -154,6 +159,84 @@ function SettingsLoadingSkeleton() {
           ))}
         </div>
       </div>
+    </div>
+  )
+}
+
+/* ── Username row ──────────────────────────────────────────────── */
+/**
+ * Every account gets a first free username claim, plus `MAX_USERNAME_CHANGES`
+ * (2) further changes — after that the row goes read-only. Every change past
+ * the first records the old name as a redirect alias (see
+ * `chooseUsername()` in `src/lib/auth/account.ts`), so public collection
+ * links (`/t/{username}/...`) never dead-end after a rename.
+ */
+function UsernameRow({ me, refresh }: { me: AuthMe; refresh: () => void }) {
+  const [editing, setEditing] = useState(false)
+  if (!me.user) return null
+
+  const { username, usernameChosen, usernameChangeCount } = me.user
+  const changesRemaining = usernameChosen
+    ? Math.max(0, MAX_USERNAME_CHANGES - usernameChangeCount)
+    : MAX_USERNAME_CHANGES
+  const canChange = !usernameChosen || changesRemaining > 0
+
+  function handleSuccess(_result: UsernameClaimSuccess) {
+    setEditing(false)
+    refresh()
+  }
+
+  const hint = !usernameChosen
+    ? `This becomes your public handle. You'll get ${MAX_USERNAME_CHANGES} more changes after this one, and old handles keep redirecting so shared links never break.`
+    : changesRemaining > 0
+      ? `${changesRemaining} change${changesRemaining === 1 ? '' : 's'} left. @${username} will keep redirecting here once you change it, so shared links never break.`
+      : 'Username changes used up — this handle is permanent.'
+
+  return (
+    <div className="px-5 py-4">
+      <div className="flex items-center gap-[13px]">
+        <div className="w-10 h-10 rounded-full bg-inset flex items-center justify-center flex-shrink-0">
+          <AtSign className="h-[18px] w-[18px] text-ink-2" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-mono font-bold text-[14.5px] text-ink truncate">@{username}</p>
+          <p className="text-[12px] text-ink-3 mt-0.5">
+            {usernameChosen
+              ? changesRemaining > 0
+                ? `${changesRemaining} change${changesRemaining === 1 ? '' : 's'} left`
+                : 'Usernames are permanent once changes run out'
+              : 'Your public handle on shared collections'}
+          </p>
+        </div>
+        {canChange && !editing && (
+          <button
+            onClick={() => setEditing(true)}
+            className="inline-flex items-center px-3.5 py-2 min-h-[44px] rounded-[10px] border border-hairline text-ink-2 font-semibold text-[13px] whitespace-nowrap hover:bg-inset transition-colors"
+          >
+            {usernameChosen ? 'Change' : 'Choose'}
+          </button>
+        )}
+      </div>
+
+      {editing && (
+        <div className="mt-3">
+          <p className="text-[12.5px] text-ink-3">{hint}</p>
+          <UsernameChooser
+            suggestedUsername={username}
+            theme="matter"
+            showKeepSuggestion={false}
+            autoFocus
+            onSuccess={handleSuccess}
+          />
+          <button
+            type="button"
+            onClick={() => setEditing(false)}
+            className="mt-2 text-[13px] text-ink-3 hover:text-ink transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -385,6 +468,9 @@ function SignInConnectionCard({ me, refresh }: { me: AuthMe; refresh: () => void
           {addEmailError && <p className="text-xs text-red-600 mt-2">{addEmailError}</p>}
           {addEmailSuccess && <p className="text-xs text-green-700 mt-2">{addEmailSuccess}</p>}
         </div>
+
+        {/* Username row */}
+        <UsernameRow me={me} refresh={refresh} />
       </div>
       <p className="px-5 py-3 text-[12px] text-ink-3 border-t border-hairline">
         Either method signs you into the same collection.

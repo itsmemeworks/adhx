@@ -4,6 +4,11 @@
  * Component tests for the rebuilt Settings page's "Sign-in & connection" and
  * "Sync X bookmarks" cards — the identity + sync-gating logic added on top of
  * the new `/api/auth/me` contract (accounts + magic-link work).
+ *
+ * Note: `getAllByText('@tester')[0]` (not `getByText`) is used throughout —
+ * the card's Username row (see `UsernameRow.component.test.tsx`) renders
+ * `@{username}` too, so an X-derived account with a matching handle shows
+ * "@tester" twice on screen (the X row and the Username row).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
@@ -78,7 +83,7 @@ describe('SettingsClient — Sign-in & connection', () => {
     mockFetch(ME_BOTH)
     render(<SettingsClient />)
 
-    await waitFor(() => expect(screen.getByText('@tester')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getAllByText('@tester')[0]).toBeInTheDocument())
     expect(screen.getByText('Connected')).toBeInTheDocument()
     expect(screen.getByText('tester@example.com')).toBeInTheDocument()
     expect(screen.getByText('Magic link')).toBeInTheDocument()
@@ -103,7 +108,7 @@ describe('SettingsClient — Sign-in & connection', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
 
     render(<SettingsClient />)
-    await waitFor(() => expect(screen.getByText('@tester')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getAllByText('@tester')[0]).toBeInTheDocument())
 
     fireEvent.click(screen.getByRole('button', { name: /disconnect/i }))
 
@@ -119,7 +124,7 @@ describe('SettingsClient — Sign-in & connection', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
 
     render(<SettingsClient />)
-    await waitFor(() => expect(screen.getByText('@tester')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getAllByText('@tester')[0]).toBeInTheDocument())
 
     fireEvent.click(screen.getByRole('button', { name: /disconnect/i }))
 
@@ -137,13 +142,13 @@ describe('SettingsClient — Sign-in & connection', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
 
     render(<SettingsClient />)
-    await waitFor(() => expect(screen.getByText('@tester')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getAllByText('@tester')[0]).toBeInTheDocument())
 
     fireEvent.click(screen.getByRole('button', { name: /disconnect/i }))
 
     await waitFor(() => expect(screen.getByText(/add an email sign-in first/i)).toBeInTheDocument())
     // Still connected — the row was not optimistically cleared
-    expect(screen.getByText('@tester')).toBeInTheDocument()
+    expect(screen.getAllByText('@tester')[0]).toBeInTheDocument()
   })
 
   it('posts a new email via the Change form', async () => {

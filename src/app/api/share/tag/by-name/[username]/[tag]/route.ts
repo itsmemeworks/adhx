@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getUserIdForUsername } from '@/lib/users/lookup'
+import { getUserIdForUsername, resolveUsernameAlias } from '@/lib/users/lookup'
 import { tagShares, bookmarkTags, bookmarks, bookmarkMedia } from '@/lib/db/schema'
 import { eq, and, inArray, desc } from 'drizzle-orm'
 import { resolveMediaUrl, getShareableUrl, getThumbnailUrl } from '@/lib/media/fxembed'
@@ -14,11 +14,21 @@ export async function GET(
   { params }: { params: Promise<{ username: string; tag: string }> },
 ) {
   try {
-    const { username, tag: tagName } = await params
+    const { username: usernameParam, tag: tagName } = await params
 
     // Find user by username (users-table-first — email-only accounts have no
-    // oauth_tokens row)
-    const ownerId = await getUserIdForUsername(username)
+    // oauth_tokens row). Falls back to `username_aliases` for a curator who's
+    // since renamed — old links keep working, no redirect needed for a JSON
+    // fetch, so this just resolves to their current username and continues.
+    let ownerId = await getUserIdForUsername(usernameParam)
+    let username = usernameParam
+    if (!ownerId) {
+      const alias = await resolveUsernameAlias(usernameParam)
+      if (alias) {
+        ownerId = alias.userId
+        username = alias.username
+      }
+    }
     const user = ownerId ? { userId: ownerId } : null
 
     if (!user) {
