@@ -31,9 +31,19 @@ vi.mock('@/lib/tags/query', async (importOriginal) => {
   }
 })
 
+// Resolved only on a `not_found` — never hits the real DB in this
+// route-level test. Redirect behavior is covered by its own describe block
+// below.
+vi.mock('@/lib/users/lookup', () => ({
+  resolveUsernameAlias: vi.fn(() => Promise.resolve(null)),
+}))
+
 vi.mock('next/navigation', () => ({
   notFound: vi.fn(() => {
     throw new Error('NOT_FOUND')
+  }),
+  permanentRedirect: vi.fn((path: string) => {
+    throw new Error(`REDIRECT:${path}`)
   }),
 }))
 
@@ -202,6 +212,30 @@ describe('Shared tag route: /t/[username]/[tag]', () => {
       })
 
       expect(vi.mocked(getPublicTagCollection)).toHaveBeenCalledWith('curator', 'cool-stuff')
+    })
+
+    it('308s to the current username when the old one resolves via username_aliases', async () => {
+      const { getPublicTagCollection } = await import('@/lib/tags/query')
+      vi.mocked(getPublicTagCollection).mockResolvedValue({ status: 'not_found' })
+      const { resolveUsernameAlias } = await import('@/lib/users/lookup')
+      vi.mocked(resolveUsernameAlias).mockResolvedValue({ userId: 'u1', username: 'newname' })
+
+      const SharedTagPage = (await import('@/app/t/[username]/[tag]/page')).default
+      await expect(
+        SharedTagPage({ params: Promise.resolve({ username: 'oldname', tag: 'cool-stuff' }) }),
+      ).rejects.toThrow('REDIRECT:/t/newname/cool-stuff')
+    })
+
+    it('still 404s when neither a live user nor an alias matches', async () => {
+      const { getPublicTagCollection } = await import('@/lib/tags/query')
+      vi.mocked(getPublicTagCollection).mockResolvedValue({ status: 'not_found' })
+      const { resolveUsernameAlias } = await import('@/lib/users/lookup')
+      vi.mocked(resolveUsernameAlias).mockResolvedValue(null)
+
+      const SharedTagPage = (await import('@/app/t/[username]/[tag]/page')).default
+      await expect(
+        SharedTagPage({ params: Promise.resolve({ username: 'nobody', tag: 'some-tag' }) }),
+      ).rejects.toThrow('NOT_FOUND')
     })
   })
 })

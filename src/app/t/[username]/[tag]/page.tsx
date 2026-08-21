@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { Lock, Tag as TagIcon } from 'lucide-react'
 import { getPublicTagCollection, type TagCollectionResult } from '@/lib/tags/query'
+import { resolveUsernameAlias } from '@/lib/users/lookup'
 import { MatterLogo } from '@/components/matter'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { getSession } from '@/lib/auth/session'
@@ -39,10 +40,19 @@ function toAbsolute(url: string): string {
   return `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`
 }
 
+type CollectionLoadResult =
+  TagCollectionResult | { status: 'redirect'; username: string; tag: string }
+
+/**
+ * Resolves a collection by username + tag, falling back to
+ * `username_aliases` when the username 404s — a curator who's since renamed
+ * still resolves, via `{ status: 'redirect' }`, so the page component can
+ * 308 old shared links to the current username instead of dead-ending them.
+ */
 async function loadCollection(
   usernameParam: string,
   tagParam: string,
-): Promise<TagCollectionResult> {
+): Promise<CollectionLoadResult> {
   let username: string
   let tag: string
   try {
@@ -51,12 +61,24 @@ async function loadCollection(
   } catch {
     return { status: 'not_found' }
   }
-  return getPublicTagCollection(username, tag)
+  const result = await getPublicTagCollection(username, tag)
+  if (result.status === 'not_found') {
+    const alias = await resolveUsernameAlias(username)
+    if (alias) return { status: 'redirect', username: alias.username, tag }
+  }
+  return result
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username, tag } = await params
   const result = await loadCollection(username, tag)
+
+  if (result.status === 'redirect') {
+    return {
+      title: `#${tag} — ADHX`,
+      description: 'A curated collection on ADHX.',
+    }
+  }
 
   if (result.status === 'private') {
     return {
@@ -140,6 +162,7 @@ function SignedOutNav() {
 export default async function SharedTagPage({ params }: Props) {
   const { username, tag } = await params
   const [result, session] = await Promise.all([loadCollection(username, tag), getSession()])
+  if (result.status === 'redirect') permanentRedirect(`/t/${result.username}/${result.tag}`)
   if (result.status === 'not_found') notFound()
 
   const signedOut = !session
