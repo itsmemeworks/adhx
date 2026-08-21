@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { UsernameChooser, type UsernameClaimSuccess } from '@/components/auth/UsernameChooser'
 import { sanitizeUsername } from '@/lib/auth/username-rules'
 
@@ -40,7 +41,14 @@ export function WelcomeClient({ suggestedUsername, returnTo }: WelcomeClientProp
         style={{ backgroundColor: PANEL, borderColor: BORDER }}
       >
         <div className="mb-6 flex items-center gap-2">
-          <img src="/adhx-cloud.png" alt="" aria-hidden style={{ height: 26 }} className="w-auto" />
+          <Image
+            src="/adhx-cloud.png"
+            alt=""
+            aria-hidden
+            width={23}
+            height={26}
+            style={{ height: 26, width: 'auto' }}
+          />
           <span className="font-indie-flower leading-none" style={{ fontSize: 22, color: INK }}>
             ADHX
           </span>

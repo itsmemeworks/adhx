@@ -5,6 +5,7 @@
  * It's loaded for all tests but only applies DOM matchers when in jsdom environment.
  */
 import { afterEach, vi } from 'vitest'
+import { createElement } from 'react'
 
 // Set test environment variables for token encryption
 process.env.SESSION_SECRET = 'test-secret-for-unit-tests-minimum-32-chars-here'
@@ -63,8 +64,8 @@ vi.mock('next/image', () => ({
     alt: string
     [key: string]: unknown
   }) {
-    // Return a simple img element for testing
-    return { type: 'img', props: { src, alt, ...props } }
+    // Render a plain img element for testing
+    return createElement('img', { src, alt, ...props })
   },
 }))
 

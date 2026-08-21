@@ -10,6 +10,7 @@
  */
 
 import { makeHostAllowlist } from '@/lib/media/proxy'
+import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
 export interface VideoMirror {
   /** Identifier, for logs. */
@@ -177,8 +178,7 @@ export async function resolveInstagramVideo(
     for (let i = 0; i < attempts; i++) {
       let retryable = true
       try {
-        const res = await fetch(url, {
-          signal: AbortSignal.timeout(30_000),
+        const res = await fetchWithTimeout(url, 30_000, {
           redirect: 'follow',
           headers: {
             'User-Agent': STREAM_UA,

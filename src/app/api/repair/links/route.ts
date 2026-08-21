@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { bookmarks, bookmarkLinks } from '@/lib/db/schema'
 import { notInArray, sql, eq, and } from 'drizzle-orm'
 import { withAuth } from '@/lib/api/with-auth'
+import { determineLinkType } from '@/lib/tweets/processor'
 
 interface TwitterUrl {
   url: string
@@ -110,17 +111,6 @@ export const POST = withAuth(async (_req, userId) => {
     return NextResponse.json({ error: message }, { status: 500 })
   }
 })
-
-function determineLinkType(url: string): string {
-  const lower = url.toLowerCase()
-
-  if (lower.includes('twitter.com') || lower.includes('x.com')) return 'tweet'
-  if (lower.includes('youtube.com') || lower.includes('youtu.be')) return 'video'
-  if (/\.(jpg|jpeg|png|gif|webp)$/i.test(lower)) return 'image'
-  if (/\.(mp4|webm|mov)$/i.test(lower)) return 'media'
-
-  return 'link'
-}
 
 // GET /api/repair/links - Check status
 export const GET = withAuth(async (_req, userId) => {

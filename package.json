@@ -48,7 +48,6 @@
     "@sentry/node": "^10.70.0",
     "better-sqlite3": "^13.0.3",
     "clsx": "^2.1.1",
-    "dayjs": "^1.11.22",
     "drizzle-orm": "^0.45.2",
     "hls.js": "^1.7.0",
     "jose": "^6.2.9",

@@ -17,6 +17,7 @@ import { TheaterShell } from '@/components/theater/TheaterShell'
 import { buildSharedSeed, tweetToTheaterItem } from '@/lib/theater/shared-seed'
 import type { TextLinkRef, TheaterQuoteRef } from '@/components/theater/types'
 import { metrics } from '@/lib/sentry'
+import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
 type FxTweet = NonNullable<FxTwitterResponse['tweet']>
 
@@ -192,7 +193,7 @@ export default async function QuickAddPage({ params }: Props) {
       metrics.theaterOpened('shared')
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const baseUrl = PUBLIC_BASE_URL
     const jsonLd = buildJsonLd(tweet, baseUrl, username, id)
 
     const sharedItem = tweetToTheaterItem({
@@ -294,7 +295,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const baseUrl = PUBLIC_BASE_URL
   const canonicalUrl = `${baseUrl}/${username}/status/${id}`
 
   // Content-first `<title>` + SERP snippet description — lead with what the

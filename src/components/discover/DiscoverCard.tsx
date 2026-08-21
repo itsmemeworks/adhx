@@ -7,7 +7,7 @@ import { PlatformGlyph, TypeBadge } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { inferType } from '@/lib/trending/filter'
 import { sourceUrl } from '@/lib/activity/preview-path'
-import type { ActivityItem } from './DiscoverFeed'
+import type { ActivityItem } from './types'
 
 /**
  * A single Discover grid card (Matter direction), rendered per content type.

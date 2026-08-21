@@ -24,6 +24,17 @@ describe('isValidTwitterHandle', () => {
     expect(isValidTwitterHandle('@leadingAt')).toBe(false)
     expect(isValidTwitterHandle('emoji🙂')).toBe(false)
   })
+
+  it('rejects reserved top-level route segments, case-insensitively', () => {
+    expect(isValidTwitterHandle('trending')).toBe(false)
+    expect(isValidTwitterHandle('Trending')).toBe(false)
+    expect(isValidTwitterHandle('shorts')).toBe(false)
+    expect(isValidTwitterHandle('leaderboard')).toBe(false)
+  })
+
+  it('still accepts an ordinary handle that is not reserved', () => {
+    expect(isValidTwitterHandle('elonmusk')).toBe(true)
+  })
 })
 
 describe('passesThinContentGate', () => {

@@ -7,6 +7,7 @@ import {
   isValidTweetId,
 } from '@/lib/media/proxy'
 import { mediaRateLimit } from '@/lib/rate-limit'
+import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
 /**
  * Video Download Endpoint - Streams video with Content-Disposition for instant browser download
@@ -39,10 +40,11 @@ export async function GET(request: NextRequest) {
 
   try {
     // Get video info to find the best MP4 URL
-    const infoResponse = await fetch(`https://api.fxtwitter.com/${author}/status/${tweetId}`, {
-      headers: { 'User-Agent': 'ADHX/1.0' },
-      signal: AbortSignal.timeout(10_000),
-    })
+    const infoResponse = await fetchWithTimeout(
+      `https://api.fxtwitter.com/${author}/status/${tweetId}`,
+      10_000,
+      { headers: { 'User-Agent': 'ADHX/1.0' } },
+    )
 
     if (!infoResponse.ok) {
       return NextResponse.json({ error: 'Failed to fetch video info' }, { status: 404 })
@@ -84,12 +86,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch the video with streaming (30s timeout for large files)
-    const videoResponse = await fetch(videoUrl, {
+    const videoResponse = await fetchWithTimeout(videoUrl, 30_000, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
         Referer: 'https://twitter.com/',
       },
-      signal: AbortSignal.timeout(30_000),
     })
 
     if (!videoResponse.ok || !videoResponse.body) {

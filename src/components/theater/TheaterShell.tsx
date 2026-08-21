@@ -20,7 +20,9 @@ import { DesktopStageChrome, DesktopDock } from './TheaterDesktopChrome'
 import { TheaterMobileChrome } from './TheaterMobileChrome'
 import { useTheaterFeed } from './useTheaterFeed'
 import { useSeenSet } from './useSeenSet'
-import { prefetchPlayback } from './usePlaybackSource'
+import { useTheaterKeyboard } from './useTheaterKeyboard'
+import { useTheaterPrefetch } from './useTheaterPrefetch'
+import { useTheaterDwell } from './useTheaterDwell'
 import { TheaterProgressLine, progressKindFor } from './TheaterProgressLine'
 import { feedItemToTheaterItem } from './collection-item'
 import { theaterItemKey } from './types'
@@ -58,54 +60,12 @@ function localToday(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-interface TriageKeyLike {
-  key: string
-  metaKey?: boolean
-  ctrlKey?: boolean
-  altKey?: boolean
-  target?: EventTarget | null
-}
-
-function isTriageTypingTarget(target: EventTarget | null | undefined): boolean {
-  if (!target || typeof HTMLElement === 'undefined') return false
-  if (!(target instanceof HTMLElement)) return false
-  if (target.isContentEditable) return true
-  return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA'
-}
-
-export type TriageKeyAction = 'done' | 'later' | 'delete' | 'back' | 'undo' | 'close'
-
-/**
- * Pure key → action mapping for triage mode's Collection tab
- * (docs/specs/unified-theater-triage.md §2). Preserves the deleted
- * `CollectionTheater.tsx`'s map VERBATIM — ArrowRight=Done, ArrowLeft=Later,
- * ArrowDown/Backspace/Delete=Delete, U=Undo, Escape=Close — and adds
- * ArrowUp=Back (step to the previous item without touching its read/delete
- * state; distinct from `U`, which reverses the *last* action).
- */
-export function triageKeyAction(e: TriageKeyLike): TriageKeyAction | null {
-  if (e.metaKey || e.ctrlKey || e.altKey) return null
-  if (isTriageTypingTarget(e.target)) return null
-  switch (e.key) {
-    case 'ArrowRight':
-      return 'done'
-    case 'ArrowLeft':
-      return 'later'
-    case 'ArrowDown':
-    case 'Backspace':
-    case 'Delete':
-      return 'delete'
-    case 'ArrowUp':
-      return 'back'
-    case 'u':
-    case 'U':
-      return 'undo'
-    case 'Escape':
-      return 'close'
-    default:
-      return null
-  }
-}
+// `triageKeyAction` and its `TriageKeyAction` type now live in
+// `useTheaterKeyboard.ts` (the keyboard-handling hook that's their only
+// caller) — re-exported here so existing imports (incl. theater-triage.test.ts)
+// keep working unchanged.
+export { triageKeyAction } from './useTheaterKeyboard'
+export type { TriageKeyAction } from './useTheaterKeyboard'
 
 /** Pure: does committing a pending delete-undo owe the server a DELETE call?
  * Only when the pending undo is itself a `'delete'` — an `'archive'`/`'keep'`
@@ -184,9 +144,6 @@ export interface TheaterShellProps {
   /** Triage mode only — closes the overlay (it lives over `/`, there is no page to navigate back to). */
   onClose?: () => void
 }
-
-/** How long a post must stay staged before it counts as "seen" (spec §4/§5). */
-const SEEN_DWELL_MS = 2_000
 
 /**
  * Pure: move the item matching `pinnedKey` to the front of `items`, order
@@ -718,13 +675,11 @@ export function TheaterShell({
       .catch(() => {})
   }, [isTriage, triageTab, displayItems])
 
-  // Kept in refs (rather than effect deps) so the seen/pulse timer below only
-  // resets when `currentKey` itself changes, not on every unrelated re-render
-  // (polling, seen-state updates, etc.).
+  // Kept in a ref (rather than effect deps) so goNext/goPrev/the dwell timer
+  // (useTheaterDwell) only reset when `currentKey` itself changes, not on
+  // every unrelated re-render (polling, seen-state updates, etc.).
   const itemsRef = useRef(displayItems)
   itemsRef.current = displayItems
-  const seenSetRef = useRef(seenSet)
-  seenSetRef.current = seenSet
   // Read fresh inside goNext/goPrev (empty-deps callbacks) without
   // re-registering them on every waiting/feed change.
   const waitingRef = useRef(waiting)
@@ -862,125 +817,26 @@ export function TheaterShell({
     }
   }, [])
 
-  // Keyboard nav: ↓/→/j next, ↑/←/k prev — the arrows double up because the
-  // desktop dock's filmstrip queue reads horizontally while mobile still
-  // scrolls vertically. Space toggles play/pause (delegated to Stage via a
-  // custom event, matching the repo's cross-component keyboard pattern), m
-  // toggles mute. Ignored while typing in an input/textarea/contentEditable
-  // element.
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      const target = e.target as HTMLElement | null
-      const tag = target?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return
-      if (e.metaKey || e.ctrlKey || e.altKey) return
-
-      // Triage mode's Collection tab uses an entirely different keymap
-      // (action-and-advance, not pure navigation) — see `triageKeyAction()`.
-      // The Live tab keeps the standard ↓/↑/space/m nav below (it's the same
-      // live pulse feed home mode uses), and Escape always closes the
-      // overlay regardless of which triage tab is active.
-      if (isTriage && triageTab === 'collection') {
-        const action = triageKeyAction(e)
-        if (!action) return
-        e.preventDefault()
-        switch (action) {
-          case 'done':
-            triageDone()
-            break
-          case 'later':
-            triageLater()
-            break
-          case 'delete':
-            triageDelete()
-            break
-          case 'back':
-            triageStepBack()
-            break
-          case 'undo':
-            triageDoUndo()
-            break
-          case 'close':
-            onClose?.()
-            break
-        }
-        return
-      }
-
-      if (isTriage && e.key === 'Escape') {
-        e.preventDefault()
-        onClose?.()
-        return
-      }
-
-      switch (e.key) {
-        case 'ArrowDown':
-        case 'ArrowRight':
-        case 'j':
-        case 'J':
-          e.preventDefault()
-          goNext()
-          break
-        case 'ArrowUp':
-        case 'ArrowLeft':
-        case 'k':
-        case 'K':
-          e.preventDefault()
-          goPrev()
-          break
-        case ' ':
-          e.preventDefault()
-          window.dispatchEvent(new CustomEvent('theater-toggle-play'))
-          break
-        case 'm':
-        case 'M':
-          e.preventDefault()
-          setMuted((m) => !m)
-          break
-        default:
-          break
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [
-    goNext,
-    goPrev,
+  // Keyboard nav (extracted to useTheaterKeyboard.ts — see its doc comment
+  // for the full ↓/→/j vs. triage-collection-tab keymap rationale).
+  useTheaterKeyboard({
     isTriage,
     triageTab,
+    goNext,
+    goPrev,
+    setMuted,
     triageDone,
     triageLater,
     triageDelete,
     triageStepBack,
     triageDoUndo,
     onClose,
-  ])
+  })
 
   // Mark seen + fire the preview pulse once the current post has been staged
-  // for SEEN_DWELL_MS. Resets only when `currentKey` changes. Collection mode
-  // is a curated surface, not the public pulse — it marks seen locally (so a
-  // loop doesn't visually re-highlight already-viewed cards as "fresh") but
-  // never records a `preview` activity event, matching the pre-theater
-  // `/t/{username}/{tag}` page's behavior.
-  useEffect(() => {
-    // Triage mode's overlay lives on top of `/` — it never records a
-    // `preview` pulse for the person's own queue, and its Collection tab
-    // isn't even displaying `currentKey`'s item (see `TriageStage` below).
-    if (!currentKey || isTriage) return
-    const timer = window.setTimeout(() => {
-      const item = itemsRef.current.find((it) => theaterItemKey(it) === currentKey)
-      if (!item) return
-      seenSetRef.current.markSeen(currentKey)
-      if (item.bookmarkId && !loop) {
-        fetch('/api/activity/preview', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ platform: item.platform, id: item.bookmarkId }),
-        }).catch(() => {})
-      }
-    }, SEEN_DWELL_MS)
-    return () => window.clearTimeout(timer)
-  }, [currentKey, loop, isTriage])
+  // (extracted to useTheaterDwell.ts — see its doc comment for the full
+  // collection/triage exemption rationale).
+  useTheaterDwell({ currentKey, isTriage, loop, itemsRef, seenSet })
 
   // Keep the address bar's path in lockstep with the item currently staged
   // (theater-first.md §7): a reload — or a URL someone copies mid-session —
@@ -1031,12 +887,8 @@ export function TheaterShell({
     return () => window.removeEventListener('theater-advance', handleAdvance)
   }, [goNext, isTriageCollection])
 
-  // Prefetch at most one item ahead.
-  useEffect(() => {
-    if (currentIndex === -1) return
-    const next = displayItems[currentIndex + 1]
-    if (next) prefetchPlayback(next)
-  }, [currentIndex, displayItems])
+  // Prefetch at most one item ahead (extracted to useTheaterPrefetch.ts).
+  useTheaterPrefetch(currentIndex, displayItems)
 
   // Auto-play into the waiting stage: the moment a genuinely fresh item shows
   // up (present in `freshKeys` but not in the baseline snapshotted when

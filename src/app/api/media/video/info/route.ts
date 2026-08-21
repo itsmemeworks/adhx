@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { captureException } from '@/lib/sentry'
 import { isValidTweetAuthor, isValidTweetId } from '@/lib/media/proxy'
+import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
 // Cache video info for 1 hour. Separate caches for with/without HEAD-measured sizes
 // so the fast playback path never pays for the slow size-measurement path.
@@ -64,10 +65,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch from FxTwitter
-    const response = await fetch(`https://api.fxtwitter.com/${author}/status/${tweetId}`, {
-      headers: { 'User-Agent': 'ADHX/1.0' },
-      signal: AbortSignal.timeout(10_000),
-    })
+    const response = await fetchWithTimeout(
+      `https://api.fxtwitter.com/${author}/status/${tweetId}`,
+      10_000,
+      { headers: { 'User-Agent': 'ADHX/1.0' } },
+    )
 
     if (!response.ok) {
       throw new Error(`FxTwitter API returned ${response.status}`)
@@ -98,13 +100,12 @@ export async function GET(request: NextRequest) {
     // adding 3 serial round trips to video.twimg.com on every playback.
     async function getActualSize(url: string): Promise<number> {
       try {
-        const headResponse = await fetch(url, {
+        const headResponse = await fetchWithTimeout(url, 10_000, {
           method: 'HEAD',
           headers: {
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
             Referer: 'https://twitter.com/',
           },
-          signal: AbortSignal.timeout(10_000),
         })
         if (headResponse.ok) {
           const contentLength = headResponse.headers.get('content-length')

@@ -17,14 +17,16 @@
  */
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { ArrowRight, FileText } from 'lucide-react'
+import { FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 import { previewPath } from '@/lib/activity/preview-path'
 import {
   parseArticleMarkdown,
   type ArticleMdBlock,
   type InlineNode,
 } from '@/lib/theater/article-markdown'
+import { StageCTA } from './stage-primitives'
 import type { TheaterItem } from './types'
 
 export interface StageArticleProps {
@@ -150,7 +152,7 @@ export function StageArticle({ item }: StageArticleProps) {
     }
 
     const url = `/api/share/tweet/${encodeURIComponent(item.author)}/${encodeURIComponent(item.bookmarkId)}`
-    fetch(url, { signal: AbortSignal.timeout(10_000) })
+    fetchWithTimeout(url, 10_000)
       .then((res) => (res.ok ? (res.json() as Promise<ShareTweetResponse>) : null))
       .then((data) => {
         if (cancelled) return
@@ -225,13 +227,7 @@ export function StageArticle({ item }: StageArticleProps) {
         {failed && !hasReader && (
           <div className="flex flex-col items-center gap-4 px-6 pb-16 pt-6 text-center">
             <p className="text-sm text-white/50">Couldn&apos;t load the full article here.</p>
-            <a
-              href={href}
-              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full bg-clay-grad px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-opacity hover:opacity-90"
-            >
-              Open preview
-              <ArrowRight size={15} />
-            </a>
+            <StageCTA href={href} />
           </div>
         )}
       </div>

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { isAllowedHlsUrl, isAllowedTwitterMediaUrl, makeHostAllowlist } from '@/lib/media/proxy'
+import {
+  isAllowedHlsUrl,
+  isAllowedTwitterMediaUrl,
+  makeHostAllowlist,
+  buildAllowlistedUrl,
+  TWITTER_HLS_HOSTS,
+} from '@/lib/media/proxy'
 
 describe('makeHostAllowlist', () => {
   it('allows an exact host match', () => {
@@ -61,5 +67,62 @@ describe('isAllowedHlsUrl', () => {
 
   it('rejects a non-https URL for an otherwise-trusted host', () => {
     expect(isAllowedHlsUrl('http://video.twimg.com/playlist.m3u8')).toBe(false)
+  })
+})
+
+describe('buildAllowlistedUrl', () => {
+  it('rebuilds an allowed URL from its parsed hostname/pathname/search', () => {
+    expect(
+      buildAllowlistedUrl(
+        'https://video.twimg.com/ext_tw_video/1/pu/vid/foo.m3u8?tag=12',
+        TWITTER_HLS_HOSTS,
+      ),
+    ).toBe('https://video.twimg.com/ext_tw_video/1/pu/vid/foo.m3u8?tag=12')
+    expect(buildAllowlistedUrl('https://api.twitter.com/segment.ts', TWITTER_HLS_HOSTS)).toBe(
+      'https://api.twitter.com/segment.ts',
+    )
+  })
+
+  it('rejects a subdomain-suffix attack (evil.com hosting a twimg.com-looking path)', () => {
+    expect(
+      buildAllowlistedUrl('https://twimg.com.evil.com/playlist.m3u8', TWITTER_HLS_HOSTS),
+    ).toBeNull()
+  })
+
+  it('rejects a host that merely ends with the trusted suffix without the dot boundary', () => {
+    expect(buildAllowlistedUrl('https://nottwimg.com/playlist.m3u8', TWITTER_HLS_HOSTS)).toBeNull()
+  })
+
+  it('rejects a non-https URL for an otherwise-trusted host', () => {
+    expect(
+      buildAllowlistedUrl('http://video.twimg.com/playlist.m3u8', TWITTER_HLS_HOSTS),
+    ).toBeNull()
+  })
+
+  it('rejects unparseable input instead of throwing', () => {
+    expect(buildAllowlistedUrl('not a url', TWITTER_HLS_HOSTS)).toBeNull()
+  })
+
+  it("uses the allowlist's own literal for an exact host match, not the parsed input", () => {
+    // Same value either way for a plain host, but this exercises the
+    // constant-host branch specifically (see the two-tier doc comment on
+    // buildAllowlistedUrl) rather than the wildcard-suffix branch.
+    expect(buildAllowlistedUrl('https://video.twimg.com/foo.mp4?a=1', ['video.twimg.com'])).toBe(
+      'https://video.twimg.com/foo.mp4?a=1',
+    )
+  })
+
+  it('rejects the bare suffix domain on a wildcard-only entry (no subdomain label)', () => {
+    // '.twimg.com' only matches a real subdomain (the bare host is shorter
+    // than the suffix, so `endsWith` is false) — the bare domain needs its
+    // own exact entry, as TWITTER_HLS_HOSTS lists both 'twitter.com' and
+    // '.twitter.com'.
+    expect(buildAllowlistedUrl('https://twimg.com/x', ['.twimg.com'])).toBeNull()
+  })
+
+  it('accepts a multi-label subdomain on the wildcard branch', () => {
+    expect(buildAllowlistedUrl('https://a.b.twimg.com/foo.mp4', ['.twimg.com'])).toBe(
+      'https://a.b.twimg.com/foo.mp4',
+    )
   })
 })

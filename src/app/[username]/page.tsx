@@ -8,6 +8,7 @@ import { ThemeToggle } from '@/components/ThemeToggle'
 import { getSession } from '@/lib/auth/session'
 import { formatRelativeTime } from '@/lib/utils/format'
 import { jsonLdScriptContent } from '@/lib/utils/structured-data'
+import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
 /**
  * `/{username}` — public author hub. Catches X handle-name search queries
@@ -24,7 +25,7 @@ interface Props {
   params: Promise<{ username: string }>
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://adhx.com'
+const BASE_URL = PUBLIC_BASE_URL
 
 async function loadProfile(usernameParam: string) {
   // Next may hand us a percent-encoded segment (e.g. a stray %40) — decode

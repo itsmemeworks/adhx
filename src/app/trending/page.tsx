@@ -4,6 +4,7 @@ import { TrendingRankedList } from '@/components/trending/TrendingRankedList'
 import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
 import { TrendingStaticList, itemHref } from '@/components/trending/TrendingStaticList'
 import type { TheaterFeedSeed } from '@/components/theater/types'
+import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
 /**
  * /trending — the crawlable, ISR-rendered public discovery hub.
@@ -26,7 +27,7 @@ import type { TheaterFeedSeed } from '@/components/theater/types'
 // client grid still keeps the live feel via its own 12s polling.
 export const dynamic = 'force-dynamic'
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://adhx.com'
+const BASE_URL = PUBLIC_BASE_URL
 
 export const metadata: Metadata = {
   title: 'Trending now — what people are sending',

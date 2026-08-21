@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { isReelPlayable } from '@/lib/trending/filter'
-import { reelVideoSrc } from '@/components/trending/ReelPlayer'
+import { reelVideoSrc } from '@/components/feed/video-src'
 import type { TrendingItem } from '@/lib/trending/query'
 
 /**

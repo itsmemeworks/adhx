@@ -11,6 +11,7 @@ import {
   passesThinContentGate,
   completedWeekSlugs,
 } from '@/lib/sitemap/queries'
+import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
 /**
  * Single sitemap served at /sitemap.xml (where robots.txt points).
@@ -38,7 +39,7 @@ import {
  */
 export const dynamic = 'force-dynamic'
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://adhx.com'
+const baseUrl = PUBLIC_BASE_URL
 
 /** The four content platforms whose saved/previewed posts map to preview URLs. */
 const PLATFORMS: PlatformId[] = ['twitter', 'instagram', 'tiktok', 'youtube']
@@ -108,7 +109,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })
   }
 
-  // Public tag-collection pages (`/t/{user}/{tag}`). Private tags are excluded.
+  // Public tag-collection pages (`/t/{user}/{tag}`) plus the bare curator
+  // profile (`/t/{user}`) for every distinct username behind at least one
+  // public tag. Private tags are excluded.
   try {
     const publicShares = db
       .select({ tag: tagShares.tag, username: users.username })
@@ -116,12 +119,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
       .innerJoin(users, eq(tagShares.userId, users.id))
       .where(eq(tagShares.isPublic, true))
       .all()
+    const curators = new Set<string>()
     for (const share of publicShares) {
       if (!share.username) continue
       entries.push({
         url: `${baseUrl}/t/${share.username}/${share.tag}`,
         changeFrequency: 'daily',
         priority: 0.7,
+      })
+      curators.add(share.username)
+    }
+    for (const username of curators) {
+      entries.push({
+        url: `${baseUrl}/t/${username}`,
+        changeFrequency: 'weekly',
+        priority: 0.6,
       })
     }
   } catch (error) {

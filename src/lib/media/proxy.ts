@@ -36,6 +36,66 @@ export function makeHostAllowlist(hosts: string[]): (url: string) => boolean {
 }
 
 /**
+ * Validate `input` against `hosts` (same rule as `makeHostAllowlist`: https
+ * only, exact host or dot-prefixed subdomain match) and, on success, return a
+ * URL string REBUILT from validated components — never the original input
+ * string.
+ *
+ * Two tiers, in order:
+ *
+ * 1. EXACT host match: the rebuilt URL's host is the matching *array element
+ *    of `hosts` itself* — a hardcoded string literal from the caller's
+ *    allowlist constant, never a value copied from `parsed.hostname`. This is
+ *    the barrier shape CodeQL's request-forgery query actually recognizes
+ *    (proven by the `fxembed.ts` `fetchTweetData` fix: a constant host with
+ *    only path/query built from validated input) — a boolean-returning
+ *    predicate like `makeHostAllowlist(...)` does NOT sever the taint on a
+ *    fetch URL built from `parsed.hostname`, because the check only gates
+ *    *whether* the fetch happens, not *what* string flows into it.
+ * 2. DOT-SUFFIX (wildcard subdomain) match: the leaf label truly is
+ *    caller-controlled (that's the point of a wildcard entry — the API
+ *    doesn't know every real subdomain in advance, e.g. `api.twitter.com`
+ *    under `.twitter.com`), so it can't be swapped for a constant. It's
+ *    instead validated with an anchored hostname-label regex and spliced in
+ *    front of the constant suffix. This narrows but does not fully eliminate
+ *    the taint a static analyzer will see on this branch — the label itself
+ *    is still derived from `input`. Prefer exact entries in `hosts` wherever
+ *    the real set of upstream hosts is small and enumerable.
+ *
+ * Returns `null` when the URL fails to parse, isn't `https:`, or its host
+ * isn't in the allowlist.
+ */
+export function buildAllowlistedUrl(input: string, hosts: string[]): string | null {
+  let parsed: URL
+  try {
+    parsed = new URL(input)
+  } catch {
+    return null
+  }
+  if (parsed.protocol !== 'https:') return null
+
+  const exactHost = hosts.find((host) => !host.startsWith('.') && host === parsed.hostname)
+  if (exactHost) {
+    return `https://${exactHost}${parsed.pathname}${parsed.search}`
+  }
+
+  const suffix = hosts.find((host) => host.startsWith('.') && parsed.hostname.endsWith(host))
+  if (suffix) {
+    const label = parsed.hostname.slice(0, parsed.hostname.length - suffix.length)
+    if (
+      label.length > 0 &&
+      /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/i.test(
+        label,
+      )
+    ) {
+      return `https://${label}${suffix}${parsed.pathname}${parsed.search}`
+    }
+  }
+
+  return null
+}
+
+/**
  * Twitter media CDN hosts (video + image). Each base host is listed in both its
  * exact and dot-prefixed-subdomain form, matching the `host === d || host
  * endsWith('.'+d)` checks the video proxies previously hand-rolled.

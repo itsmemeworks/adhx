@@ -17,6 +17,7 @@
 import { useMemo } from 'react'
 import { reelVideoSrc } from '@/components/feed/video-src'
 import { instagramVideoSrc } from '@/lib/media/instagram-playback'
+import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 import type { TheaterItem } from './types'
 
 export interface PlaybackSource {
@@ -73,9 +74,8 @@ export function prefetchPlayback(item: TheaterItem | null): void {
   const src = warmSrc ?? (source?.kind === 'video' ? source.src : null)
   if (!src) return
 
-  fetch(src, {
+  fetchWithTimeout(src, 10_000, {
     headers: { Range: 'bytes=0-1' },
-    signal: AbortSignal.timeout(10_000),
   }).catch(() => {
     // Best-effort warm — a failed prefetch just means the real request (on
     // play, or the probe) pays the cold-start cost instead.

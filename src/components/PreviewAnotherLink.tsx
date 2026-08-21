@@ -1,8 +1,13 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { parseShareUrl } from '@/lib/utils/parse-share-url'
+import {
+  parseShareUrl,
+  isSafeInternalPath,
+  matchTikTokShortLink,
+} from '@/lib/utils/parse-share-url'
 
 /**
  * The "Preview another link" field, shared by all four preview pages.
@@ -16,17 +21,28 @@ import { parseShareUrl } from '@/lib/utils/parse-share-url'
 export function PreviewAnotherLink({ className }: { className?: string }) {
   const [url, setUrl] = useState('')
   const [error, setError] = useState('')
+  const router = useRouter()
 
   const parseAndNavigate = (value: string): boolean => {
     const trimmed = value.trim()
-    const result = parseShareUrl(trimmed)
-    if (result) {
-      window.location.href = result.path
+
+    // TikTok short link (vm./vt.tiktok.com/{code} or /t/{code}) resolves via
+    // an /api route that 307s to the preview server-side — the client router
+    // can't follow that cross-route redirect, so this branch alone needs a
+    // hard navigation. Build the URL from a constant prefix/suffix with only
+    // the extracted link passed through `encodeURIComponent`, rather than
+    // assigning a pre-concatenated string straight to `location.href`.
+    const shortLink = matchTikTokShortLink(trimmed)
+    if (shortLink) {
+      window.location.href = `/api/tiktok/resolve?url=${encodeURIComponent(shortLink)}&go=1`
       return true
     }
-    // TikTok short link (vm./vt.tiktok.com/{code} or /t/{code}) — resolve server-side.
-    if (/(?:vm|vt)\.tiktok\.com\/[A-Za-z0-9]+|tiktok\.com\/t\/[A-Za-z0-9]+/i.test(trimmed)) {
-      window.location.href = `/api/tiktok/resolve?go=1&url=${encodeURIComponent(trimmed)}`
+
+    // Everything else is a real app route — use the client router, not a
+    // DOM navigation sink.
+    const result = parseShareUrl(trimmed)
+    if (result && isSafeInternalPath(result.path)) {
+      router.push(result.path)
       return true
     }
     return false

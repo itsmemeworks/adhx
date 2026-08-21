@@ -5,6 +5,7 @@ import { listArchiveWeeks } from '@/lib/trending/archive'
 import { MatterLogo } from '@/components/matter'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
+import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
 /**
  * /trending/archive — index of permanent weekly snapshots of the community
@@ -20,7 +21,7 @@ import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structur
 // build time) — must stay dynamic, matching /trending and /trending/[filter].
 export const dynamic = 'force-dynamic'
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://adhx.com'
+const BASE_URL = PUBLIC_BASE_URL
 
 export const metadata: Metadata = {
   // No brand in the string — the layout title template appends '| ADHX'.

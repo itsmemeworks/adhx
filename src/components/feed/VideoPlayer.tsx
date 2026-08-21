@@ -288,13 +288,12 @@ export function VideoPlayer({
   // src/components/feed/video-src.ts (twitterProxy / feedVideoSrc). Not
   // reconciled here because that module's exports take a full `FeedItem`
   // (item.author/item.id/item.media[0].url), while this component only has
-  // discrete author/tweetId/platform props from its callers
-  // (TweetPreviewLanding.tsx, InstagramPreviewLanding.tsx) — there's no
-  // FeedItem to pass. Safely de-duplicating would mean either exporting a
-  // raw (author, id, platform) => url builder from video-src.ts (out of
-  // this change's file scope) or reshaping this component's public props
-  // (risks the preview-page call sites and the /info→HLS flow above, which
-  // video-src.ts doesn't model at all). Left as-is pending that decision.
+  // discrete author/tweetId/platform props from its caller (TriageStage.tsx)
+  // — there's no FeedItem to pass. Safely de-duplicating would mean either
+  // exporting a raw (author, id, platform) => url builder from video-src.ts
+  // (out of this change's file scope) or reshaping this component's public
+  // props (risks the /info→HLS flow above, which video-src.ts doesn't model
+  // at all). Left as-is pending that decision.
   const videoSrc =
     ready && !useHls
       ? platform === 'instagram'

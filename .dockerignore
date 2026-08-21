@@ -19,6 +19,14 @@ data/
 *.swp
 *.swo
 
+# Claude Code / agent workspace (can be very large — never belongs in a build context)
+.claude
+.claude-plugin
+.cursor
+plans/
+todos/
+design_handoff_*/
+
 # Environment
 .env
 .env.*

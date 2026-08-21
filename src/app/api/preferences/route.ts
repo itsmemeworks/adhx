@@ -4,6 +4,7 @@ import { userPreferences } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { metrics } from '@/lib/sentry'
 import { withAuth } from '@/lib/api/with-auth'
+import { handleRouteError } from '@/lib/api/response'
 
 // GET /api/preferences - Get all user preferences
 export const GET = withAuth(async (_req, userId) => {
@@ -18,8 +19,11 @@ export const GET = withAuth(async (_req, userId) => {
 
     return NextResponse.json(preferences)
   } catch (error) {
-    console.error('Error fetching preferences:', error)
-    return NextResponse.json({ error: 'Failed to fetch preferences' }, { status: 500 })
+    return handleRouteError(error, {
+      endpoint: '/api/preferences',
+      userId,
+      message: 'Failed to fetch preferences',
+    })
   }
 })
 
@@ -64,7 +68,10 @@ export const PATCH = withAuth(async (request: NextRequest, userId) => {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error updating preferences:', error)
-    return NextResponse.json({ error: 'Failed to update preferences' }, { status: 500 })
+    return handleRouteError(error, {
+      endpoint: '/api/preferences',
+      userId,
+      message: 'Failed to update preferences',
+    })
   }
 })

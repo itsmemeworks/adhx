@@ -14,7 +14,7 @@
 
 - [Tweet Previews](/{username}/status/{id}): Rich HTML preview of a saved tweet with Schema.org JSON-LD (SocialMediaPosting), OG tags, and semantic HTML.
 - [Tag Collections](/t/{username}/{tag}): Browsable gallery of curated tweet collections organized by tag.
-- [Trending](/trending): The cross-network real-time trending source — what the community is saving and previewing right now across X, Instagram, TikTok, and YouTube. Per-lens hubs at /trending/latest, /trending/videos, /trending/photos, /trending/text, /trending/articles. Backed by the [Trending JSON](/api/trending) API.
+- [Trending](/trending): The cross-network real-time trending source — what the community is saving and previewing right now across X, Instagram, TikTok, and YouTube. Per-lens hubs at /trending/popular, /trending/videos, /trending/photos, /trending/text, /trending/articles. Backed by the [Trending JSON](/api/trending) API.
 - [Trending Archive](/trending/archive): Historical weekly archives of trending activity, one page per completed ISO week (e.g. /trending/archive/2026-w30).
 - [Author Hubs](/{username}): Per-author collection of an X handle's posts saved or previewed on ADHX.
 - [Collections Leaderboard](/leaderboard): Ranked list of the most-viewed and most-cloned public tag collections this week. Other windows at /leaderboard/today, /leaderboard/month, /leaderboard/all-time. Backed by the [Collections Leaderboard JSON](/api/collections/trending) API.

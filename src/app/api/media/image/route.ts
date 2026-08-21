@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { imageDownloadResponse, isValidTweetAuthor, isValidTweetId } from '@/lib/media/proxy'
 import { mediaRateLimit } from '@/lib/rate-limit'
+import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
 // GET /api/media/image?author=xxx&tweetId=xxx&index=1[&download=1]
 // Proxies images through the server to avoid CORS issues when downloading/sharing
@@ -38,14 +39,13 @@ export async function GET(request: NextRequest) {
     // Use FxTwitter's image CDN for reliable access
     const imageUrl = `https://d.fixupx.com/${author}/status/${tweetId}/photo/${photoIndex}`
 
-    const imageResponse = await fetch(imageUrl, {
+    // author/tweetId are validated above, so the only variable in this URL
+    // is a trusted, fixed FxTwitter host — but external fetches must always
+    // have a timeout per CLAUDE.md's Resilience Patterns.
+    const imageResponse = await fetchWithTimeout(imageUrl, 10_000, {
       headers: {
         'User-Agent': 'ADHX/1.0',
       },
-      // author/tweetId are validated above, so the only variable in this URL
-      // is a trusted, fixed FxTwitter host — but external fetches must always
-      // have a timeout per CLAUDE.md's Resilience Patterns.
-      signal: AbortSignal.timeout(10_000),
     })
 
     if (!imageResponse.ok) {

@@ -11,6 +11,8 @@
  *   embed:     https://www.youtube-nocookie.com/embed/{id}  (privacy-enhanced)
  */
 
+import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
+
 const ID_PATTERN = /^[A-Za-z0-9_-]{11}$/
 
 export interface YouTubeMetadata {
@@ -99,8 +101,7 @@ export async function fetchYouTubeMetadata(videoId: string): Promise<YouTubeMeta
   const oembed = `https://www.youtube.com/oembed?url=${encodeURIComponent(watchUrl)}&format=json`
 
   try {
-    const res = await fetch(oembed, {
-      signal: AbortSignal.timeout(8_000),
+    const res = await fetchWithTimeout(oembed, 8_000, {
       headers: { Accept: 'application/json' },
       // Next Data Cache: dedupe repeat crawler hits to the same Short for an
       // hour. Independent of full-route caching, so it works on the dynamic

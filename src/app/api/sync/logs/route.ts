@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { syncLogs } from '@/lib/db/schema'
 import { desc, eq, count } from 'drizzle-orm'
 import { withAuth } from '@/lib/api/with-auth'
+import { handleRouteError } from '@/lib/api/response'
 
 // GET /api/sync/logs - List sync logs with pagination
 export const GET = withAuth(async (request, userId) => {
@@ -50,7 +51,10 @@ export const GET = withAuth(async (request, userId) => {
       },
     })
   } catch (error) {
-    console.error('Failed to fetch sync logs:', error)
-    return NextResponse.json({ error: 'Failed to fetch sync logs' }, { status: 500 })
+    return handleRouteError(error, {
+      endpoint: '/api/sync/logs',
+      userId,
+      message: 'Failed to fetch sync logs',
+    })
   }
 })

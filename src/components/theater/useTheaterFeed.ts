@@ -17,6 +17,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { TheaterFeedSeed, TheaterItem } from './types'
 import { theaterItemKey } from './types'
+import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
 const POLL_MS = 12_000
 const FETCH_TIMEOUT_MS = 10_000
@@ -105,7 +106,7 @@ export function useTheaterFeed(
       // Pause while the tab isn't visible — no point spending the request.
       if (typeof document !== 'undefined' && document.hidden) return
       try {
-        const res = await fetch('/api/activity', { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+        const res = await fetchWithTimeout('/api/activity', FETCH_TIMEOUT_MS)
         if (!res.ok) return
         const data: ActivityResponse = await res.json()
         if (cancelled || !Array.isArray(data.items)) return

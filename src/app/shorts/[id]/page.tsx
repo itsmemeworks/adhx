@@ -23,6 +23,7 @@ import { buildSharedSeed, youtubeToTheaterItem } from '@/lib/theater/shared-seed
 import { metrics } from '@/lib/sentry'
 import { db } from '@/lib/db'
 import { bookmarks } from '@/lib/db/schema'
+import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 import { and, eq } from 'drizzle-orm'
 
 interface Props {
@@ -144,10 +145,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params
 
   if (!isValidVideoId(id)) {
-    return { title: 'ADHX — Save now. Read never. Find always.' }
+    return { title: 'ADHX - Save now. Read never. Find always.' }
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const baseUrl = PUBLIC_BASE_URL
   const canonicalUrl = `${baseUrl}/shorts/${id}`
   const meta = await fetchYouTubeMetadata(id)
 

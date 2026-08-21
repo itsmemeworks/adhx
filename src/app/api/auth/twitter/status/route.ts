@@ -12,6 +12,8 @@ import { oauthTokens, users } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { getSession } from '@/lib/auth/session'
 import { getAccount } from '@/lib/auth/account'
+import { captureException } from '@/lib/sentry'
+import { handleRouteError } from '@/lib/api/response'
 
 // GET /api/auth/twitter/status - Check auth status
 //
@@ -114,7 +116,11 @@ export async function GET() {
         }
       } catch (error) {
         console.error('Failed to fetch profile image:', error)
-        // Continue without profile image
+        // Continue without profile image — but this is a distinct failure from
+        // the documented refresh-error semantics above (transient refresh
+        // failures are intentionally not sent to Sentry to avoid noise), so it
+        // still deserves visibility if it's happening a lot.
+        captureException(error, { endpoint: '/api/auth/twitter/status', userId: tokens.userId })
       }
     }
 
@@ -131,7 +137,9 @@ export async function GET() {
       expiresAt: newExpiresAt,
     })
   } catch (error) {
-    console.error('Error checking auth status:', error)
-    return NextResponse.json({ error: 'Failed to check auth status' }, { status: 500 })
+    return handleRouteError(error, {
+      endpoint: '/api/auth/twitter/status',
+      message: 'Failed to check auth status',
+    })
   }
 }

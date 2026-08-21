@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { oauthState, oauthTokens } from '@/lib/db/schema'
 import { eq, lt } from 'drizzle-orm'
 import { encryptToken, safeDecryptToken } from './token-encryption'
+import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
 // Retry helper for idempotent Twitter API calls (GET only).
 // Non-idempotent operations (token exchange, refresh) must NOT retry
@@ -13,10 +14,7 @@ async function fetchWithRetry(url: string, options: RequestInit): Promise<Respon
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const response = await fetch(url, {
-        ...options,
-        signal: AbortSignal.timeout(10_000),
-      })
+      const response = await fetchWithTimeout(url, 10_000, options)
 
       if (response.ok || attempt === maxRetries || response.status < 500) {
         return response
@@ -162,14 +160,13 @@ export async function exchangeCodeForTokens(
 
   const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
 
-  const response = await fetch(TWITTER_TOKEN_URL, {
+  const response = await fetchWithTimeout(TWITTER_TOKEN_URL, 10_000, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       Authorization: `Basic ${credentials}`,
     },
     body: params.toString(),
-    signal: AbortSignal.timeout(10_000),
   })
 
   if (!response.ok) {
@@ -223,14 +220,13 @@ export async function refreshAccessToken(
 
   const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
 
-  const response = await fetch(TWITTER_TOKEN_URL, {
+  const response = await fetchWithTimeout(TWITTER_TOKEN_URL, 10_000, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       Authorization: `Basic ${credentials}`,
     },
     body: params.toString(),
-    signal: AbortSignal.timeout(10_000),
   })
 
   if (!response.ok) {

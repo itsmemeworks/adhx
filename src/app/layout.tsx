@@ -14,6 +14,7 @@ import { PreferencesProvider } from '@/lib/preferences-context'
 import { AppShell } from '@/components/AppShell'
 import { FontProvider } from '@/components/FontProvider'
 import { jsonLdScriptContent } from '@/lib/utils/structured-data'
+import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
 // Body fonts - user can choose in settings
 const ibmPlex = IBM_Plex_Sans({
@@ -59,7 +60,7 @@ const robotoMono = Roboto_Mono({
   variable: '--font-roboto-mono',
 })
 
-const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://adhx.com'
+const siteUrl = PUBLIC_BASE_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -152,11 +153,6 @@ const jsonLd = {
     price: '0',
     priceCurrency: 'USD',
   },
-  aggregateRating: {
-    '@type': 'AggregateRating',
-    ratingValue: '5',
-    ratingCount: '1',
-  },
   featureList: [
     'Sync hundreds of X/Twitter bookmarks',
     'Discover what people are watching and sending in real time',
@@ -166,6 +162,21 @@ const jsonLd = {
     'Save Reels, TikToks and Shorts alongside tweets',
     'Bionic reading and reader-friendly fonts',
   ],
+}
+
+// Sitewide WebSite schema (distinct from the SoftwareApplication block above).
+// No SearchAction: in-app search is authed-only, so a fake search URL here
+// would be worse than omitting the property.
+const websiteJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'ADHX',
+  url: 'https://adhx.com',
+  publisher: {
+    '@type': 'Organization',
+    name: 'ADHX',
+    logo: 'https://adhx.com/logo.png',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -212,6 +223,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: jsonLdScriptContent(jsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLdScriptContent(websiteJsonLd) }}
         />
       </head>
       <body

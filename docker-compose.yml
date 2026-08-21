@@ -1,0 +1,18 @@
+services:
+  adhx:
+    build: .
+    ports:
+      - '3000:3000'
+    environment:
+      # No X API keys needed to try it — magic-link sign-in logs the link to
+      # this container's stdout when RESEND_API_KEY is unset.
+      SESSION_SECRET: ${SESSION_SECRET:-dev-secret-change-me}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      TWITTER_CLIENT_ID: ${TWITTER_CLIENT_ID:-}
+      TWITTER_CLIENT_SECRET: ${TWITTER_CLIENT_SECRET:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+    volumes:
+      - adhx_data:/data
+
+volumes:
+  adhx_data:

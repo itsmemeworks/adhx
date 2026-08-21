@@ -4,6 +4,7 @@ import { collections, collectionTweets } from '@/lib/db/schema'
 import { eq, and, sql } from 'drizzle-orm'
 import { nanoid } from '@/lib/utils'
 import { withAuth } from '@/lib/api/with-auth'
+import { handleRouteError } from '@/lib/api/response'
 
 // GET /api/collections/[id] - Get a single collection
 export const GET = withAuth(
@@ -38,8 +39,11 @@ export const GET = withAuth(
 
       return NextResponse.json({ collection })
     } catch (error) {
-      console.error('Error fetching collection:', error)
-      return NextResponse.json({ error: 'Failed to fetch collection' }, { status: 500 })
+      return handleRouteError(error, {
+        endpoint: '/api/collections/[id]',
+        userId,
+        message: 'Failed to fetch collection',
+      })
     }
   },
 )
@@ -102,8 +106,11 @@ export const PATCH = withAuth(
 
       return NextResponse.json({ collection: updated })
     } catch (error) {
-      console.error('Error updating collection:', error)
-      return NextResponse.json({ error: 'Failed to update collection' }, { status: 500 })
+      return handleRouteError(error, {
+        endpoint: '/api/collections/[id]',
+        userId,
+        message: 'Failed to update collection',
+      })
     }
   },
 )
@@ -140,8 +147,11 @@ export const DELETE = withAuth(
 
       return NextResponse.json({ success: true })
     } catch (error) {
-      console.error('Error deleting collection:', error)
-      return NextResponse.json({ error: 'Failed to delete collection' }, { status: 500 })
+      return handleRouteError(error, {
+        endpoint: '/api/collections/[id]',
+        userId,
+        message: 'Failed to delete collection',
+      })
     }
   },
 )

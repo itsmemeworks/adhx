@@ -366,25 +366,26 @@ Users can also paste the **full** source URL after `adhx.com/` — `src/proxy.ts
 
 All work with or without protocol, browser path normalization (`//` → `/`), trailing path segments, and platform-specific subdomains (e.g. `vm.tiktok.com`, `m.tiktok.com`, `m.youtube.com`).
 
-**Tweet preview** (`src/components/TweetPreviewLanding.tsx`):
+All preview routes render the shared-mode theater (`SharedPostStatic` + `<TheaterShell mode="shared">` — see "Preview pages ARE the theater" under the Theater section). The per-platform media-resolution notes below still apply.
 
-- Authenticated: Shows the preview with a **"Save to collection"** button (no auto-add — verified against `TweetPreviewLanding.tsx:696-708` in the 2026-07-23 smoke test; an older version of this doc claimed auto-add + redirect to `/?open={id}`, which is stale)
-- Unauthenticated: Shows rich preview with engagement stats, expand/collapse, and **Share** button
-- "Preview another tweet" URL input — accepts X, Instagram, and TikTok URLs
+**Tweet preview**:
 
-**Reel preview** (`src/components/InstagramPreviewLanding.tsx`):
+- Authenticated: **Save** POSTs `/api/bookmarks/add` (no auto-add)
+- Unauthenticated: rich preview; saving opens `SignInModal` at save-intent
+
+**Reel preview** (media resolution):
 
 - Metadata (poster, caption, author) from Instagram's own OG tags (`src/lib/media/instafix.ts`). There is no `og:video`.
 - MP4 via vxinstagram (`src/lib/media/mirrors.ts`) proxied at `/api/media/instagram/video`. Cold cache 404s for ~10–20s — the resolver retries; **do not attach `<video src>` until a Range probe 200/206s** (`probeInstagramVideo` in `src/lib/media/instagram-playback.ts`). The preview page also warms the cache (Range 0-1, fire-and-forget) so the probe is usually already hot.
 - If the mirror never comes back: official Instagram iframe (`/reel/{id}/embed/`). Needs `https://www.instagram.com` in CSP `frame-src`.
 
-**TikTok preview** (`src/components/TikTokPreviewLanding.tsx`):
+**TikTok preview** (media resolution):
 
 - Resolves metadata via `tnktok.com` (fxTikTok). The mirror's `/generate/video/{id}.mp4` endpoint 302-redirects to the real TikTok CDN (`tiktokcdn-us.com` / `tiktokcdn-eu.com`) with proper signing — we stream straight through (`src/lib/media/tnktok.ts`).
 - Custom inline SVG glyph for the TikTok logo (lucide doesn't ship one).
 - Note: Next.js URL-encodes `@` in dynamic params, so `params.username` arrives as `%40user`. Decode before validation.
 
-**YouTube Shorts preview** (`src/components/YouTubePreviewLanding.tsx`):
+**YouTube Shorts preview** (media resolution):
 
 - Unlike TikTok/Instagram there's **no free MP4 mirror** — and stream extraction is fragile + against ToS. So YouTube uses the _official_ path: metadata via YouTube's free **oEmbed** API and playback via the official **iframe embed** (`src/lib/media/youtube.ts`).
   - oEmbed: `https://www.youtube.com/oembed?url=<watch url>&format=json` → title, channel name, channel handle (parsed from `author_url`'s `/@handle`).
@@ -395,18 +396,11 @@ All work with or without protocol, browser path normalization (`//` → `/`), tr
 - The gallery `FeedCard` shows the poster + a play overlay (no hover-autoplay; there's no MP4). The unified `MediaCard` (focus/triage view) renders the iframe directly for `platform === 'youtube'` — **give the iframe container a concrete height** (e.g. `h-[60vh] lg:h-[82vh] aspect-[9/16]`); an `aspect-[9/16]` box around an `absolute` iframe collapses to zero otherwise.
 - Saved Shorts store a poster as a `mediaType: 'video'` row (the embed is resolved from platform+id, so there's no MP4 to store).
 
-All three preview components share the same shell (hero + two-column grid + sidebar + footer). **Send** is the file (video or photo) — sticky on mobile so portrait videos don't bury it. **Share link** is this preview URL. The unlabeled overlay send is desktop-only (hover download). Touch **Send** prefetches the MP4 and shares `files` + `text: "via <canonical url>"` — never `url` alongside `files` (WhatsApp concatenates them into `via URL URL`). iOS needs the file ready before the tap so `navigator.share` stays a user gesture.
+**Send** is the file (video or photo); **Share link** is the preview URL. Touch **Send** prefetches the MP4 and shares `files` + `text: "via <canonical url>"` — never `url` alongside `files` (WhatsApp concatenates them into `via URL URL`). iOS needs the file ready before the tap so `navigator.share` stays a user gesture (implemented by `useSendFile` in the theater).
 
 **Save-to-collection**: when the visiting user is authenticated, all three preview pages show an "Add to Collection" button that POSTs to `/api/bookmarks/add` and redirects to `/?added=success&platform=...&id=...`. Saved Reels and TikToks land in the same feed as tweets, distinguished by the platform badge on the FeedCard.
 
 **AppShell** suppresses the global Header for these preview paths via the `isFullWidth` regex — see `src/components/AppShell.tsx`. Add new preview paths there to avoid the double-header issue.
-
-**Preview page layout** (`src/components/TweetPreviewLanding.tsx`):
-
-- Tweet card with engagement stats, expand/collapse, and **Share** button (clipboard copy / Web Share API)
-- CTA: "Save this tweet" (unauthenticated) or "Add to Collection" (authenticated)
-- "Preview another tweet" URL input (positioned right after CTA for discoverability)
-- Benefits list (One place for everything, Media at your fingertips, etc.)
 
 **OG Image Selection** (`getOgImage()` in `src/lib/utils/og-image.ts`):
 When generating Open Graph metadata for social unfurling, images are selected in priority order:
@@ -423,14 +417,9 @@ When generating Open Graph metadata for social unfurling, images are selected in
 - `summary_large_image` — tweets with rich media (photos, videos, article covers, external thumbnails)
 - `summary` — text-only tweets where OG image is the author's avatar (small square card fits avatars better than a stretched banner)
 
-**Preview Page Expand/Collapse** (`src/components/TweetPreviewLanding.tsx`):
-
-- Text-only tweets default to expanded on the preview page
-- User preference persisted via `localStorage` key `adhx-preview-collapsed`
-
 ### Trending & Activity Pulse (the SEO growth loop)
 
-`/trending` (`src/app/trending/page.tsx`) and the per-lens hubs `/trending/[filter]` (`videos` / `photos` / `text` / `articles` / `just-saved`) are public, **anonymous**, crawlable feeds of what the community is watching and sending right now — the SEO growth loop that turns user activity into indexable content. **`/discover` 308-redirects to `/trending`** (the old `/discover` page and the `LivePulse` marquee are gone). Each hub server-renders a real, crawlable `sr-only` item list (`src/components/trending/TrendingStaticList.tsx`) + `CollectionPage`/`ItemList` JSON-LD, then mounts the live `DiscoverFeed` grid (12s polling) seeded with the same items so there's no skeleton flash. The selected filter pill is reflected in the URL (tidy path, via `history.replaceState`) so a filtered view is shareable; loading `/trending/<filter>` seeds that filter server-side.
+`/trending` (`src/app/trending/page.tsx`) and the per-lens hubs `/trending/[filter]` (`popular` / `videos` / `photos` / `text` / `articles` — see `FILTER_SLUGS` in `src/lib/trending/filter.ts`) are public, **anonymous**, crawlable feeds of what the community is watching and sending right now — the SEO growth loop that turns user activity into indexable content. **`/discover` 308-redirects to `/trending`** (the old `/discover` page and the `LivePulse` marquee are gone). Each hub server-renders a real, crawlable `sr-only` item list (`src/components/trending/TrendingStaticList.tsx`) + `CollectionPage`/`ItemList` JSON-LD, then mounts the dark ranked list (`TrendingRankedList` — see the Theater section) seeded with the same items so there's no skeleton flash. The selected filter pill is reflected in the URL (tidy path, via `history.replaceState`) so a filtered view is shareable; loading `/trending/<filter>` seeds that filter server-side.
 
 **Runtime-render gotcha — do NOT make these static.** `/trending`, `/trending/[filter]`, the `/sitemap.xml` route, and the preview pages are `export const dynamic = 'force-dynamic'` (and the trending hubs deliberately have **no** `generateStaticParams`). They read the SQLite DB, which is **only migrated at container startup** — pre-rendering them at build queries a table-less DB (`no such table: activity`) and bakes empty HTML. Keep them dynamic. (The trending DB query is a cheap local read, so per-request rendering is fine.)
 
@@ -464,7 +453,7 @@ Other details:
 - Recording is fire-and-forget and synchronous (better-sqlite3); it swallows all errors so a pulse-write failure can never break a save/preview/read.
 - De-duped on write (same `action+platform+bookmarkId` within 60s) and again on read (same `action+platform+url`), so refreshes/prefetches/double-fires don't flood it.
 - Text/author are whitespace-collapsed and capped; thumbnails/avatars must be `http(s)` or an `/api/` proxy path (`safeThumb()`).
-- `DiscoverFeed` polls `/api/activity` (5s SWR cache on the API), de-dupes by `platform:bookmarkId`, and links each card to the **on-ADHX** preview path (`previewPath()`) to keep clicks on-site.
+- Pulse consumers (the theater's live tab; formerly `DiscoverFeed`, deleted 2026-08-21) poll `/api/activity` (5s SWR cache on the API), de-dupe by `platform:bookmarkId`, and link each card to the **on-ADHX** preview path (`previewPath()`) to keep clicks on-site.
 - Schema: standalone `activity` table. Append-only, no composite key — it's an event log, not user-owned content, so it's exempt from the `(userId, platform, id)` convention. The `author_avatar_url` column was added after the initial schema via a **guarded `ALTER TABLE` in `migrate.ts`** (SQLite has no `ADD COLUMN IF NOT EXISTS`, so it's wrapped in try/catch — not a Drizzle table-recreate). The in-memory test DB DDL (`src/__tests__/api/setup.ts`) must include new activity columns too.
 
 **`DiscoverCard`** (`src/components/discover/DiscoverCard.tsx`) renders per content type, mirroring the in-app `FeedCard`, with a **bottom-pinned footer on an equal-height grid** (media flex-fills so footers align across the row):
@@ -624,7 +613,7 @@ The UI is the **"Matter"** warm editorial direction (light + dark). Shared primi
 
 - `ThemeProvider` (`src/lib/theme/context.tsx`) wraps the whole app in `layout.tsx`. `theme` is `'light' | 'dark' | 'system'`; **defaults to `'system'`** when there's no stored preference, so a new visitor follows their device (`prefers-color-scheme`). The user's explicit toggle persists to `localStorage` key `theme`.
 - **No FOUC**: a blocking script in `layout.tsx` reads `localStorage.theme` (or `prefers-color-scheme` when unset) and paints the `light`/`dark` class on `<html>` before React hydrates. The provider defaults to `'system'` to match it.
-- `ThemeToggle` (`src/components/ThemeToggle.tsx`) is the Moon/Sun toggle for public + preview surfaces — mounted in the landing nav (`LandingPage.tsx`), the public Discover nav (`DiscoverFeed.tsx`), and all four preview pages (fixed top-right). It flips between explicit `light`/`dark` (persisted). The authed `Header` has its **own** inline toggle. ThemeToggle reads via `useThemeOptional()` (non-throwing) so isolated renders/tests that lack a provider degrade to `null` instead of crashing.
+- `ThemeToggle` (`src/components/ThemeToggle.tsx`) is the Moon/Sun toggle for public + preview surfaces — mounted in the landing nav (`LandingPage.tsx`) and other public chrome. It flips between explicit `light`/`dark` (persisted). The authed `Header` has its **own** inline toggle. ThemeToggle reads via `useThemeOptional()` (non-throwing) so isolated renders/tests that lack a provider degrade to `null` instead of crashing.
 
 ### Mobile Header (overflow-safe)
 
@@ -676,8 +665,8 @@ This avoids prop drilling and keeps keyboard logic centralized while allowing di
 - Playback: `usePlaybackSource` → `reelVideoSrc` (video-src SSOT). Twitter/TikTok play via `StageVideo`; **Instagram** via `StageInstagram` (Range-probe the mirror before attaching `<video src>` — cold cache; IG-embed fallback); **YouTube** via `StageYouTube` (nocookie iframe, concrete-height box); **articles** via `StageArticle` (body = `article.content` from `/api/share/tweet/{author}/{id}`, rendered by the dependency-free parser in `src/lib/theater/article-markdown.ts`). Muted autoplay; sound via the dock/peek-bar audio button (pulsing while muted) or tapping the stage. Playback state driven by media events (`onPlaying`/`onCanPlay`), never by racing `play()` promises against `autoPlay`.
 - Mobile (<lg) is the reel: full-viewport stage, swipe up/down (`swipeDirection` in `TheaterMobileChrome.tsx`), top/bottom scrims, 70dvh Up-next bottom sheet. `/trending/play` 307s into the theater.
 - Send-the-file: `useSendFile` (2s-delayed MP4 blob prefetch so `navigator.share` opens in-tap on iOS; `files` + `text: "via <url>"`, never a `url` key with `files`; desktop falls back to download). **It's mounted on both desktop dock and mobile chrome** — the module-level in-flight dedupe in `useSendFile.ts` is what stops every MP4 downloading twice; keep it.
-- **Preview pages ARE the theater** (Phase 3): the five preview page routes keep all their server-side SEO (generateMetadata, JSON-LD, `recordActivity('preview')`, bot filter) and render `SharedPostStatic` (the semantic `<article>` + engagement stats, now `sr-only`, with RelatedSaves) + `<TheaterShell mode="shared" sharedItem authed>`. `buildSharedSeed()` (`src/lib/theater/shared-seed.ts`) pins the shared post as the lead item. Shared-mode dock: "Shared post" chip, "More being sent right now" header, authed Save POSTs `/api/bookmarks/add` with a `sourceUrl()`-reconstructed canonical URL (NOT `item.url`, which for pulse items is the on-ADHX preview path). The `*PreviewLanding` components are no longer mounted (still in tree).
-- **/trending is the dark ranked list** (`src/components/trending/TrendingRankedList.tsx`): rank by `trendCount` desc, recency tiebreak — deliberately different from the theater dock's recency order. Hubs keep their sr-only list + JSON-LD untouched; `DiscoverFeed` is unmounted from the hubs but still in tree. Never import from `TrendingStaticList.tsx` into a client component — it transitively pulls better-sqlite3 into the client bundle.
+- **Preview pages ARE the theater** (Phase 3): the five preview page routes keep all their server-side SEO (generateMetadata, JSON-LD, `recordActivity('preview')`, bot filter) and render `SharedPostStatic` (the semantic `<article>` + engagement stats, now `sr-only`, with RelatedSaves) + `<TheaterShell mode="shared" sharedItem authed>`. `buildSharedSeed()` (`src/lib/theater/shared-seed.ts`) pins the shared post as the lead item. Shared-mode dock: "Shared post" chip, "More being sent right now" header, authed Save POSTs `/api/bookmarks/add` with a `sourceUrl()`-reconstructed canonical URL (NOT `item.url`, which for pulse items is the on-ADHX preview path). The `*PreviewLanding` components were unmounted then deleted (dead-code cleanup, 2026-08-21).
+- **/trending is the dark ranked list** (`src/components/trending/TrendingRankedList.tsx`): rank by `trendCount` desc, recency tiebreak — deliberately different from the theater dock's recency order. Hubs keep their sr-only list + JSON-LD untouched; `DiscoverFeed` was unmounted from the hubs then deleted (dead-code cleanup, 2026-08-21) — its `ActivityItem` type now lives in `src/components/discover/types.ts`. Never import from `TrendingStaticList.tsx` into a client component — it transitively pulls better-sqlite3 into the client bundle.
 - Theater-dark theme default (unset `localStorage.theme`) now covers `/`, `/trending`, and `/trending/*` — `resolveInitialTheme` + the layout FOUC script stay in lockstep.
 - Theme: unset `localStorage.theme` on `/` resolves **dark** (`resolveInitialTheme` in `src/lib/theme/context.tsx`, mirrored by the layout FOUC script). Explicit choices (incl. 'system') win everywhere.
 

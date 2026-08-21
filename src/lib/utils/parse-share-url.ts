@@ -45,10 +45,38 @@ export function parseShareUrl(url: string): { path: string } | null {
   const result = detectPlatformPost(url)
   if (result) return { path: result.previewPath }
 
-  const short = url.match(TIKTOK_SHORTLINK)
+  const short = matchTikTokShortLink(url)
   if (short) {
-    return { path: `/api/tiktok/resolve?url=${encodeURIComponent(short[0])}&go=1` }
+    return { path: `/api/tiktok/resolve?url=${encodeURIComponent(short)}&go=1` }
   }
 
   return null
+}
+
+/**
+ * Pull the TikTok short-link substring out of `url`, or `null` if it isn't
+ * one. Exposed separately (rather than only inside `parseShareUrl`'s
+ * pre-built `path` string) so a caller that needs a HARD navigation to the
+ * `/api/tiktok/resolve` route — because it can't be handled by the client
+ * router — can rebuild that URL itself from a constant prefix/suffix with
+ * only this extracted substring passed through `encodeURIComponent`, instead
+ * of assigning a pre-concatenated string to `location.href`.
+ */
+export function matchTikTokShortLink(url: string): string | null {
+  const short = url.match(TIKTOK_SHORTLINK)
+  return short ? short[0] : null
+}
+
+/**
+ * Guards a `window.location.href` (or router) assignment built from
+ * pasted/shared text against unsafe navigation targets. Blocks
+ * protocol-relative ("//evil.com") and scheme-based ("javascript:", "data:")
+ * strings — the way a "we only ever build internal `/paths`" assumption
+ * turns into a DOM-XSS/open-redirect sink if a caller's parsing ever slips.
+ * Internal preview/resolver paths are plain `/segment/segment` with any
+ * embedded link passed through `encodeURIComponent`, so a real one never
+ * contains a literal `:` or starts with `//`.
+ */
+export function isSafeInternalPath(path: string): boolean {
+  return path.startsWith('/') && !path.startsWith('//') && !path.includes(':')
 }

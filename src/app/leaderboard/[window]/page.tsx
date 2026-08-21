@@ -6,6 +6,7 @@ import { CollectionsStaticList } from '@/components/collections/CollectionsStati
 import { WINDOW_COPY } from '@/components/collections/copy'
 import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
 import { getCurrentUserId } from '@/lib/auth/session'
+import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
 /**
  * /leaderboard/[window] — the non-default Discovery leaderboard windows
@@ -23,7 +24,7 @@ import { getCurrentUserId } from '@/lib/auth/session'
  */
 export const dynamic = 'force-dynamic'
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://adhx.com'
+const BASE_URL = PUBLIC_BASE_URL
 
 interface Props {
   params: Promise<{ window: string }>

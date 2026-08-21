@@ -50,6 +50,7 @@ import { TheaterProgressLine, progressKindFor } from './TheaterProgressLine'
 import { UpNextList } from './UpNextList'
 import { SaveCollectionButton } from './SaveCollectionButton'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
+import { StageIconButton } from './stage-primitives'
 import type {
   SaveCollectionStatus,
   TheaterCollectionMeta,
@@ -529,15 +530,14 @@ export function TheaterMobileChrome({
                 if (!openUrl) return null
                 const platformLabel = PLATFORM_LABEL[current.platform] ?? current.platform
                 return (
-                  <a
+                  <StageIconButton
                     href={openUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`Open on ${platformLabel}`}
-                    className="inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 bg-white/[0.14] text-white"
                   >
                     <ExternalLink size={16} />
-                  </a>
+                  </StageIconButton>
                 )
               })()}
             </div>
@@ -586,18 +586,16 @@ export function TheaterMobileChrome({
                   )}
                   {triage?.tab === 'live' ? (
                     <>
-                      <button
-                        type="button"
+                      <StageIconButton
                         onClick={(e) => {
                           e.stopPropagation()
                           triage.onLiveTag?.(current)
                         }}
                         onTouchEnd={(e) => e.stopPropagation()}
-                        className="inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 bg-white/[0.14] text-white"
                         aria-label="Tag this post"
                       >
                         <TagIcon size={16} />
-                      </button>
+                      </StageIconButton>
                       <button
                         type="button"
                         onClick={() => {
@@ -626,14 +624,9 @@ export function TheaterMobileChrome({
                   )}
                 </>
               )}
-              <button
-                type="button"
-                onClick={() => void handleShare()}
-                aria-label="Share link"
-                className="inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 bg-white/[0.14] text-white"
-              >
+              <StageIconButton onClick={() => void handleShare()} aria-label="Share link">
                 {copied ? <Check size={16} className="text-done" /> : <Share2 size={16} />}
-              </button>
+              </StageIconButton>
               {(() => {
                 const openUrl = sourceUrl(
                   current.platform,
@@ -643,15 +636,14 @@ export function TheaterMobileChrome({
                 if (!openUrl) return null
                 const platformLabel = PLATFORM_LABEL[current.platform] ?? current.platform
                 return (
-                  <a
+                  <StageIconButton
                     href={openUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`Open on ${platformLabel}`}
-                    className="inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 bg-white/[0.14] text-white"
                   >
                     <ExternalLink size={16} />
-                  </a>
+                  </StageIconButton>
                 )
               })()}
             </div>

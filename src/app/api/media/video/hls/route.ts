@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { captureException } from '@/lib/sentry'
-import { isAllowedHlsUrl } from '@/lib/media/proxy'
+import { buildAllowlistedUrl, TWITTER_HLS_HOSTS } from '@/lib/media/proxy'
 import { mediaRateLimit } from '@/lib/rate-limit'
+import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
 /**
  * HLS Proxy - Fetches m3u8 playlists from Twitter and rewrites segment URLs
@@ -27,20 +28,22 @@ export async function GET(request: NextRequest) {
 
   try {
     // Validate URL is from Twitter's video CDN (strict domain check + https-only
-    // via the shared SSRF allowlist factory, to prevent SSRF)
-    if (!isAllowedHlsUrl(hlsUrl)) {
+    // via the shared SSRF allowlist factory, to prevent SSRF) and rebuild the
+    // fetch target from the validated URL's own parsed components — never the
+    // raw query-param string — so the fetched URL is provably safe.
+    const safeHlsUrl = buildAllowlistedUrl(hlsUrl, TWITTER_HLS_HOSTS)
+    if (!safeHlsUrl) {
       return NextResponse.json({ error: 'Invalid HLS URL' }, { status: 400 })
     }
 
     // Fetch the m3u8 playlist
-    const response = await fetch(hlsUrl, {
+    const response = await fetchWithTimeout(safeHlsUrl, 10_000, {
       headers: {
         'User-Agent':
           'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         Referer: 'https://twitter.com/',
         Origin: 'https://twitter.com',
       },
-      signal: AbortSignal.timeout(10_000),
     })
 
     if (!response.ok) {
