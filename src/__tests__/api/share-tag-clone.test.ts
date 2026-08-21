@@ -501,6 +501,64 @@ describe('API: /api/share/tag/by-name/[username]/[tag]/clone', () => {
     expect(clonedTags[0].tag).toBe('ig-tag')
   })
 
+  it('appends to a tag the cloner already uses, even on an already-owned bookmark', async () => {
+    // USER_B shares 'memes' containing tweet-1 + tweet-2
+    await testInstance.db.insert(schema.tagShares).values({
+      userId: USER_B,
+      tag: 'memes',
+      shareCode: 'memes-share',
+      isPublic: true,
+    })
+    await testInstance.db
+      .insert(schema.bookmarks)
+      .values([
+        createTestBookmark(USER_B, 'tweet-1', { text: 'Shared one' }),
+        createTestBookmark(USER_B, 'tweet-2', { text: 'Shared two' }),
+      ])
+    await testInstance.db.insert(schema.bookmarkTags).values([
+      { userId: USER_B, platform: 'twitter', bookmarkId: 'tweet-1', tag: 'memes' },
+      { userId: USER_B, platform: 'twitter', bookmarkId: 'tweet-2', tag: 'memes' },
+    ])
+
+    // USER_A independently already has a 'memes' tag: on their own unrelated
+    // bookmark AND on tweet-1, which is also in the shared collection — the
+    // maximal clash (same tag name + same bookmark + same tag row).
+    await testInstance.db
+      .insert(schema.bookmarks)
+      .values([
+        createTestBookmark(USER_A, 'own-1', { text: 'My own meme' }),
+        createTestBookmark(USER_A, 'tweet-1', { text: 'My copy of shared one' }),
+      ])
+    await testInstance.db.insert(schema.bookmarkTags).values([
+      { userId: USER_A, platform: 'twitter', bookmarkId: 'own-1', tag: 'memes' },
+      { userId: USER_A, platform: 'twitter', bookmarkId: 'tweet-1', tag: 'memes' },
+    ])
+
+    const { POST } = await import('@/app/api/share/tag/by-name/[username]/[tag]/clone/route')
+    const response = await POST(byNameRequest(), {
+      params: Promise.resolve({ username: SOURCE_USERNAME, tag: 'memes' }),
+    })
+
+    expect(response.status).toBe(200)
+    const data = await response.json()
+    expect(data.clonedCount).toBe(1) // only tweet-2 is new
+
+    // USER_A's 'memes' tag now covers own-1 + tweet-1 + tweet-2: appended,
+    // no duplicate rows, no clash error
+    const tagRows = await testInstance.db
+      .select()
+      .from(schema.bookmarkTags)
+      .where(and(eq(schema.bookmarkTags.userId, USER_A), eq(schema.bookmarkTags.tag, 'memes')))
+    expect(tagRows.map((t) => t.bookmarkId).sort()).toEqual(['own-1', 'tweet-1', 'tweet-2'])
+
+    // USER_A's pre-existing copy of tweet-1 is untouched
+    const [kept] = await testInstance.db
+      .select()
+      .from(schema.bookmarks)
+      .where(and(eq(schema.bookmarks.userId, USER_A), eq(schema.bookmarks.id, 'tweet-1')))
+    expect(kept.text).toBe('My copy of shared one')
+  })
+
   it('enforces the same size cap as the legacy clone route', async () => {
     await testInstance.db.insert(schema.tagShares).values({
       userId: USER_B,
