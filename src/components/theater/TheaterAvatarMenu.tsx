@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
-import { Bookmark, LogOut, Settings } from 'lucide-react'
+import { usePathname } from 'next/navigation'
+import { Bookmark, LogIn, LogOut, Menu, Radio, Settings, Trophy } from 'lucide-react'
 import { useAuthMe } from '@/components/auth'
 import { cn } from '@/lib/utils'
 
@@ -33,17 +34,42 @@ const THEATER_SHORTCUT_KEYS = new Set([
 
 export interface TheaterAvatarMenuProps {
   className?: string
+  /**
+   * Opens the theater's shared sign-in modal (the "save-post" intent — the
+   * same one the Save CTAs trigger) from the signed-out burger's "Sign in"
+   * entry. Only read when `allowSignedOut` is set and the visitor isn't
+   * authenticated.
+   */
+  onRequestSignIn?: () => void
+  /**
+   * Renders a burger-menu fallback (Theater / Leaderboard / Sign in) for
+   * signed-out visitors in this exact slot, instead of this component's
+   * default "render nothing" behavior — one menu implementation covering
+   * both auth states rather than a second component. Callers opt in per
+   * mode: the home theater and shared preview pages pass this (signed-out
+   * visitors there had no navigation at all); triage is always reached
+   * authed, and collection mode already has its own "Make your own"
+   * signed-out conversion CTA, so neither passes it.
+   */
+  allowSignedOut?: boolean
 }
 
 /**
- * Authed-only avatar button + dropdown for the theater chrome. Renders
- * nothing while auth is loading or when signed out — the theater's
- * Save-intent sign-in flow already covers that case.
+ * Avatar button + dropdown for the theater chrome. Signed in: the account
+ * menu (collection/settings/sign out). Signed out with `allowSignedOut`: a
+ * burger menu (Theater/Leaderboard/Sign in) in the same slot, so new mobile
+ * visitors have SOME way to reach the public surfaces. Signed out without
+ * `allowSignedOut` (or while auth is still loading): renders nothing.
  */
-export function TheaterAvatarMenu({ className }: TheaterAvatarMenuProps) {
+export function TheaterAvatarMenu({
+  className,
+  onRequestSignIn,
+  allowSignedOut = false,
+}: TheaterAvatarMenuProps) {
   const { me, loading } = useAuthMe()
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const pathname = usePathname()
 
   useEffect(() => {
     if (!open) return
@@ -77,7 +103,91 @@ export function TheaterAvatarMenu({ className }: TheaterAvatarMenuProps) {
     }
   }, [open])
 
-  if (loading || !me?.authenticated || !me.user) return null
+  if (loading) return null
+
+  if (!me?.authenticated || !me.user) {
+    if (!allowSignedOut) return null
+
+    // Already on the home theater: closing the menu is enough — a real
+    // navigation to `/` would restart the stage the visitor is already
+    // watching. From anywhere else (a shared preview page), it's a real link.
+    const isHome = pathname === '/'
+
+    return (
+      <div
+        ref={containerRef}
+        className={cn('relative', className)}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          aria-label="Menu"
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+          className="flex h-10 w-10 flex-none items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md transition-colors hover:bg-white/20"
+        >
+          <Menu size={18} />
+        </button>
+
+        {open && (
+          <div
+            role="menu"
+            className="absolute right-0 top-full z-50 mt-2 w-60 overflow-hidden rounded-2xl border shadow-2xl"
+            style={{ backgroundColor: PANEL, borderColor: BORDER }}
+          >
+            {isHome ? (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => setOpen(false)}
+                className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13px] transition-colors hover:bg-white/[.06]"
+                style={{ color: SUBTLE }}
+              >
+                <Radio size={15} />
+                Theater
+              </button>
+            ) : (
+              <a
+                href="/"
+                role="menuitem"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 px-4 py-2.5 text-[13px] transition-colors hover:bg-white/[.06]"
+                style={{ color: SUBTLE }}
+              >
+                <Radio size={15} />
+                Theater
+              </a>
+            )}
+            <a
+              href="/leaderboard"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-4 py-2.5 text-[13px] transition-colors hover:bg-white/[.06]"
+              style={{ color: SUBTLE }}
+            >
+              <Trophy size={15} />
+              Leaderboard
+            </a>
+            <div className="my-1 h-px" style={{ backgroundColor: BORDER }} />
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false)
+                onRequestSignIn?.()
+              }}
+              className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13px] transition-colors hover:bg-white/[.06]"
+              style={{ color: SUBTLE }}
+            >
+              <LogIn size={15} />
+              Sign in
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   const { user, identities } = me
   const initial = (user.displayName || user.username || '?').trim().charAt(0).toUpperCase() || '?'

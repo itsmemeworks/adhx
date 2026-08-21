@@ -6,6 +6,14 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { TheaterAvatarMenu } from '@/components/theater/TheaterAvatarMenu'
 import { invalidateAuthMe } from '@/components/auth'
 
+// Mutable so individual tests can simulate viewing the burger menu from
+// somewhere other than the home theater (a shared preview page) — real
+// usePathname() would return whatever route the component is mounted under.
+let mockPathname = '/'
+vi.mock('next/navigation', () => ({
+  usePathname: () => mockPathname,
+}))
+
 const AUTHED_ME = {
   authenticated: true,
   user: {
@@ -45,6 +53,7 @@ describe('TheaterAvatarMenu', () => {
     // useAuthMe caches module-level state across renders/tests, so force a
     // refetch for every test.
     invalidateAuthMe()
+    mockPathname = '/'
   })
 
   afterEach(() => {
@@ -53,7 +62,7 @@ describe('TheaterAvatarMenu', () => {
     invalidateAuthMe()
   })
 
-  it('renders nothing when signed out', async () => {
+  it('renders nothing when signed out and allowSignedOut is not set (triage/collection mounts)', async () => {
     mockAuthMe(SIGNED_OUT_ME)
     const { container } = render(<TheaterAvatarMenu />)
     await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/auth/me'))
@@ -126,5 +135,80 @@ describe('TheaterAvatarMenu', () => {
 
     fireEvent.mouseDown(document.body)
     expect(screen.queryByText('Your collection')).not.toBeInTheDocument()
+  })
+})
+
+describe('TheaterAvatarMenu — signed-out burger (allowSignedOut)', () => {
+  beforeEach(() => {
+    invalidateAuthMe()
+    mockPathname = '/'
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+    invalidateAuthMe()
+  })
+
+  it('renders a burger (not the avatar) with Theater/Leaderboard/Sign in', async () => {
+    mockAuthMe(SIGNED_OUT_ME)
+    render(<TheaterAvatarMenu allowSignedOut />)
+
+    const button = await screen.findByLabelText('Menu')
+    expect(screen.queryByLabelText('Account menu')).not.toBeInTheDocument()
+
+    fireEvent.click(button)
+    expect(screen.getByText('Theater')).toBeInTheDocument()
+    expect(screen.getByText('Leaderboard')).toBeInTheDocument()
+    expect(screen.getByText('Sign in')).toBeInTheDocument()
+  })
+
+  it('the Leaderboard entry links to /leaderboard', async () => {
+    mockAuthMe(SIGNED_OUT_ME)
+    render(<TheaterAvatarMenu allowSignedOut />)
+    fireEvent.click(await screen.findByLabelText('Menu'))
+
+    expect(screen.getByText('Leaderboard').closest('a')).toHaveAttribute('href', '/leaderboard')
+  })
+
+  it('on the home theater (pathname "/"), Theater is a close-the-menu button, not a link', async () => {
+    mockPathname = '/'
+    mockAuthMe(SIGNED_OUT_ME)
+    render(<TheaterAvatarMenu allowSignedOut />)
+    fireEvent.click(await screen.findByLabelText('Menu'))
+
+    const theaterEntry = screen.getByText('Theater').closest('button')
+    expect(theaterEntry).toBeInTheDocument()
+
+    fireEvent.click(theaterEntry!)
+    expect(screen.queryByText('Theater')).not.toBeInTheDocument()
+  })
+
+  it('from a shared preview page (pathname !== "/"), Theater is a link home', async () => {
+    mockPathname = '/naval/status/123'
+    mockAuthMe(SIGNED_OUT_ME)
+    render(<TheaterAvatarMenu allowSignedOut />)
+    fireEvent.click(await screen.findByLabelText('Menu'))
+
+    expect(screen.getByText('Theater').closest('a')).toHaveAttribute('href', '/')
+  })
+
+  it('the Sign in entry closes the menu and calls onRequestSignIn', async () => {
+    mockAuthMe(SIGNED_OUT_ME)
+    const onRequestSignIn = vi.fn()
+    render(<TheaterAvatarMenu allowSignedOut onRequestSignIn={onRequestSignIn} />)
+    fireEvent.click(await screen.findByLabelText('Menu'))
+
+    fireEvent.click(screen.getByText('Sign in'))
+    expect(onRequestSignIn).toHaveBeenCalledTimes(1)
+    expect(screen.queryByText('Sign in')).not.toBeInTheDocument()
+  })
+
+  it('signed in with allowSignedOut set still renders the normal avatar menu, not the burger', async () => {
+    mockAuthMe(AUTHED_ME)
+    render(<TheaterAvatarMenu allowSignedOut />)
+
+    expect(await screen.findByLabelText('Account menu')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Menu')).not.toBeInTheDocument()
   })
 })

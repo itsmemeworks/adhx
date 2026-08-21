@@ -3,11 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import {
-  parseShareUrl,
-  isSafeInternalPath,
-  matchTikTokShortLink,
-} from '@/lib/utils/parse-share-url'
+import { navigateToPastedLink } from '@/lib/utils/parse-share-url'
 
 /**
  * The "Preview another link" field, shared by all four preview pages.
@@ -23,31 +19,6 @@ export function PreviewAnotherLink({ className }: { className?: string }) {
   const [error, setError] = useState('')
   const router = useRouter()
 
-  const parseAndNavigate = (value: string): boolean => {
-    const trimmed = value.trim()
-
-    // TikTok short link (vm./vt.tiktok.com/{code} or /t/{code}) resolves via
-    // an /api route that 307s to the preview server-side — the client router
-    // can't follow that cross-route redirect, so this branch alone needs a
-    // hard navigation. Build the URL from a constant prefix/suffix with only
-    // the extracted link passed through `encodeURIComponent`, rather than
-    // assigning a pre-concatenated string straight to `location.href`.
-    const shortLink = matchTikTokShortLink(trimmed)
-    if (shortLink) {
-      window.location.href = `/api/tiktok/resolve?url=${encodeURIComponent(shortLink)}&go=1`
-      return true
-    }
-
-    // Everything else is a real app route — use the client router, not a
-    // DOM navigation sink.
-    const result = parseShareUrl(trimmed)
-    if (result && isSafeInternalPath(result.path)) {
-      router.push(result.path)
-      return true
-    }
-    return false
-  }
-
   const onChange = (value: string) => {
     setUrl(value)
     setError('')
@@ -55,14 +26,14 @@ export function PreviewAnotherLink({ className }: { className?: string }) {
     if (
       /(?:x\.com|twitter\.com|instagram\.com|tiktok\.com|youtube\.com|youtu\.be)\//i.test(value)
     ) {
-      parseAndNavigate(value)
+      navigateToPastedLink(router, value)
     }
   }
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    if (!parseAndNavigate(url)) {
+    if (!navigateToPastedLink(router, url)) {
       setError("That's not a link we recognize. Try X, Instagram, TikTok or YouTube.")
     }
   }

@@ -40,6 +40,7 @@ import { cn } from '@/lib/utils'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
 import { MatterLogo, PlatformGlyph } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
+import { PasteLinkButton } from '@/components/PasteLinkButton'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { inferType } from '@/lib/trending/filter'
 import { useSendFile } from './useSendFile'
@@ -398,7 +399,19 @@ export function TheaterMobileChrome({
                 })()}
               </div>
             )}
-            <TheaterAvatarMenu />
+            {/* Mobile equivalent of the desktop top bar's ⌘V paste-to-preview
+                input (spec §8/DesktopStageChrome) — touch Safari has no
+                paste gesture, so this covers the signed-out home theater and
+                shared preview pages (triage/collection top scrims above
+                have their own chrome and skip this). */}
+            <PasteLinkButton iconOnly />
+            {/* Signed-out visitors here (the home theater + shared preview
+                pages) get a burger fallback in this same slot — Theater /
+                Leaderboard / Sign in — instead of no navigation at all.
+                Triage above never passes this (always reached authed);
+                collection mode's top scrim doesn't mount this component at
+                all (its own "Make your own" CTA is the signed-out path). */}
+            <TheaterAvatarMenu onRequestSignIn={onRequestSignIn} allowSignedOut />
           </div>
         </div>
       )}
