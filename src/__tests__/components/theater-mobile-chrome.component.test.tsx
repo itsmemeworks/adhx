@@ -196,25 +196,60 @@ describe('TheaterMobileChrome: de-clutter icon', () => {
   })
 })
 
-describe('TheaterMobileChrome: collection mode "Make your own"', () => {
-  it('non-owner: the brand link opens the sign-in modal in place instead of navigating', () => {
-    const onRequestMakeYourOwn = vi.fn()
+// The drag mechanics themselves (live-follow, snap thresholds, flick
+// velocity, tap classification) are unit-tested against the hook directly in
+// use-sheet-drag.component.test.tsx — jsdom pointer-event sequences are
+// flaky to simulate reliably through a full component render. This just
+// confirms the handle is wired to the hook end to end: it toggles via the
+// tap/click path and carries `touch-action: none` so the browser doesn't
+// claim the gesture for scrolling.
+describe('TheaterMobileChrome: Up-next sheet drag handle wiring', () => {
+  it("the handle toggles the sheet via click (the hook's tap/keyboard path) and is touch-action: none", () => {
+    render(<TheaterMobileChrome {...base} current={videoItem()} />)
+    // Both the drag handle and the center "Up next" label button share this
+    // aria-label — find the handle specifically by its drag-pill child.
+    const findHandle = () =>
+      screen
+        .getAllByLabelText(/(Expand|Collapse) up next/)
+        .find((el) => el.querySelector('span[aria-hidden]'))!
+
+    const handle = findHandle()
+    expect(handle).toHaveAttribute('aria-label', 'Expand up next')
+    expect(handle.className).toContain('touch-none')
+
+    fireEvent.click(handle)
+    expect(findHandle()).toHaveAttribute('aria-label', 'Collapse up next')
+
+    fireEvent.click(findHandle())
+    expect(findHandle()).toHaveAttribute('aria-label', 'Expand up next')
+  })
+})
+
+// The brand logo in the collection top scrim is ALWAYS a plain home link,
+// for owners and non-owners alike — it used to open the "Make your own"
+// modal for non-owners instead, which left a visitor viewing a shared tag
+// with no way back to the main theater (owner override). Conversion for
+// signed-out non-owner viewers is carried entirely by the Save-collection
+// CTA in the bottom scrim, not the logo.
+describe('TheaterMobileChrome: collection mode brand logo is always home', () => {
+  it('non-owner: the brand logo is a home link, not a make-your-own trigger', () => {
     render(
       <TheaterMobileChrome
         {...base}
         current={videoItem()}
         collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
         isCollectionOwner={false}
-        onRequestMakeYourOwn={onRequestMakeYourOwn}
       />,
     )
-    const trigger = screen.getByLabelText('Make your own collection')
-    expect(trigger.tagName).toBe('BUTTON')
-    fireEvent.click(trigger)
-    expect(onRequestMakeYourOwn).toHaveBeenCalledTimes(1)
+    // The make-your-own affordance is gone from this component entirely —
+    // the prop no longer exists, so there is nothing the logo could fire.
+    expect(screen.queryByLabelText('Make your own collection')).not.toBeInTheDocument()
+    const home = screen.getByLabelText('ADHX home')
+    expect(home.tagName).toBe('A')
+    expect(home).toHaveAttribute('href', '/')
   })
 
-  it('owner: the brand link is a plain home link, not the make-your-own trigger', () => {
+  it('owner: the brand logo is also a plain home link', () => {
     render(
       <TheaterMobileChrome
         {...base}
@@ -225,5 +260,17 @@ describe('TheaterMobileChrome: collection mode "Make your own"', () => {
     )
     expect(screen.queryByLabelText('Make your own collection')).not.toBeInTheDocument()
     expect(screen.getByLabelText('ADHX home')).toHaveAttribute('href', '/')
+  })
+
+  it('non-owner: the Save-collection CTA is still present, carrying signed-out conversion', () => {
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={videoItem()}
+        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        isCollectionOwner={false}
+      />,
+    )
+    expect(screen.getByText('Save collection · 12')).toBeInTheDocument()
   })
 })

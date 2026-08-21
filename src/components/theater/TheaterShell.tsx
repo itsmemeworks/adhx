@@ -23,7 +23,7 @@ import { useSeenSet } from './useSeenSet'
 import { useTheaterKeyboard } from './useTheaterKeyboard'
 import { useTheaterPrefetch } from './useTheaterPrefetch'
 import { useTheaterDwell } from './useTheaterDwell'
-import { TheaterProgressLine, progressKindFor } from './TheaterProgressLine'
+import { TheaterProgressLine, progressKindFor, progressKindForPin } from './TheaterProgressLine'
 import { feedItemToTheaterItem } from './collection-item'
 import { theaterItemKey } from './types'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
@@ -263,6 +263,27 @@ export function computeLoopedPrev(length: number, index: number, loop: boolean):
   if (index === -1 || length === 0) return null
   if (index === 0) return loop ? length - 1 : null
   return index - 1
+}
+
+/**
+ * Pure: does the shared-post-repeat pin currently apply? True only in shared
+ * mode (a preview page's `TheaterShell mode="shared"`), only while `pinned`
+ * (shared-post-repeat: starts true on landing, cleared for the rest of the
+ * session the moment the visitor deliberately navigates — see the
+ * `goNextUser`/`goPrevUser`/`onSelectUser` wrappers below), and only while
+ * the item actually on stage IS the shared post. That last check matters
+ * because the pin outliving a navigation away would otherwise be
+ * indistinguishable from a bug — if `pinned` is somehow still true but
+ * `currentKey` has moved on, nothing should behave differently for whatever
+ * is now playing.
+ */
+export function isSharedPostPinned(
+  mode: TheaterMode,
+  sharedItemKey: string | null,
+  pinned: boolean,
+  currentKey: string | null,
+): boolean {
+  return mode === 'shared' && pinned && sharedItemKey !== null && currentKey === sharedItemKey
 }
 
 export function TheaterShell({
@@ -697,6 +718,22 @@ export function TheaterShell({
     sharedItem ? theaterItemKey(sharedItem) : null,
   )
 
+  // shared-post-repeat: a SEPARATE pin from `pinnedKey` above (that one only
+  // controls display ORDER; this one controls whether the shared post
+  // REPEATS instead of letting auto-advance carry the visitor into the live
+  // pulse). Starts true in shared mode — the meme/post the visitor followed
+  // a link for is why they're here, and a 5s auto-advance would carry them
+  // past it before they can Save/tag/copy the link. Cleared for the rest of
+  // the session (never re-armed) the moment the visitor deliberately
+  // navigates — see `goNextUser`/`goPrevUser`/`onSelectUser` below, which are
+  // the ONLY call sites that clear it. Auto-advance itself (`goNext` called
+  // from Stage's `onEnded`, the 'timed' `theater-advance` listener, or the
+  // waiting-stage auto-arrival effect) must never clear it — that's the
+  // entire point of the pin.
+  const [sharedPinned, setSharedPinned] = useState(mode === 'shared')
+  const clearSharedPin = useCallback(() => setSharedPinned(false), [])
+  const sharedItemKey = mode === 'shared' && sharedItem ? theaterItemKey(sharedItem) : null
+
   // Set once a user has navigated (keyboard/rail click) — after that, the
   // "lead item = max trendCount among unseen" pick below never overrides
   // their choice.
@@ -792,6 +829,15 @@ export function TheaterShell({
     [displayItems, currentKey],
   )
   const current: TheaterItem | null = currentIndex === -1 ? null : displayItems[currentIndex]
+  // shared-post-repeat: is the shared post BOTH pinned AND actually on stage
+  // right now? Gates the player-level repeat (Stage's `repeat` prop) and the
+  // 'timed' auto-advance suppression below — see `isSharedPostPinned`'s doc
+  // comment for why the "actually current" half matters.
+  const isSharedPinnedOnCurrent = isSharedPostPinned(mode, sharedItemKey, sharedPinned, currentKey)
+  // Read fresh inside the `theater-advance` listener (empty-deps-registered
+  // below) without re-registering that listener on every render.
+  const isSharedPinnedOnCurrentRef = useRef(isSharedPinnedOnCurrent)
+  isSharedPinnedOnCurrentRef.current = isSharedPinnedOnCurrent
   // End-states for the peek bar's prev/next chevrons (tester feedback: at the
   // first post, pressing "back" silently did nothing). `currentIndex === -1`
   // (nothing current, e.g. an empty list) always reads as "can't navigate".
@@ -852,6 +898,30 @@ export function TheaterShell({
     setCurrentKey(key)
   }, [])
 
+  // shared-post-repeat: USER-INITIATED navigation only — keyboard, the
+  // chevron buttons, and dock/queue card selection all funnel through these
+  // three, and only these three ever clear `sharedPinned`. `goNext`/`goPrev`/
+  // `onSelect` themselves stay untouched because auto-advance (Stage's
+  // `onEnded`, the 'timed' `theater-advance` listener, the waiting-stage
+  // auto-arrival effect) calls them directly and must NEVER clear the pin.
+  const goNextUser = useCallback(() => {
+    clearSharedPin()
+    goNext()
+  }, [clearSharedPin, goNext])
+
+  const goPrevUser = useCallback(() => {
+    clearSharedPin()
+    goPrev()
+  }, [clearSharedPin, goPrev])
+
+  const onSelectUser = useCallback(
+    (key: string) => {
+      clearSharedPin()
+      onSelect(key)
+    },
+    [clearSharedPin, onSelect],
+  )
+
   const onRequestUnmute = useCallback(() => setMuted(false), [])
   const onToggleMute = useCallback(() => setMuted((m) => !m), [])
 
@@ -883,8 +953,8 @@ export function TheaterShell({
   useTheaterKeyboard({
     isTriage,
     triageTab,
-    goNext,
-    goPrev,
+    goNext: goNextUser,
+    goPrev: goPrevUser,
     setMuted,
     triageDone,
     triageLater,
@@ -941,6 +1011,12 @@ export function TheaterShell({
       // from the same content type would otherwise fire this and silently
       // step the (unrelated, unrendered) live-feed cursor underneath it.
       if (isTriageCollection) return
+      // shared-post-repeat: belt-and-suspenders — TheaterProgressLine's
+      // 'timed' kind is already suppressed to 'none' while pinned (so this
+      // event is never actually dispatched for a pinned item), but a
+      // stray/late-arriving dispatch from a since-superseded timer must
+      // still be a no-op rather than advancing past the shared post.
+      if (isSharedPinnedOnCurrentRef.current) return
       if (progressKindFor(currentRef.current) !== 'timed') return
       goNext()
     }
@@ -1162,15 +1238,17 @@ export function TheaterShell({
   const chromeCanNext = isTriageCollection ? !triageFinished : canNext
   // The transport chevrons in triage's Collection tab are pure skip/back —
   // "next" is exactly "Later" (advance without changing read state); the
-  // dedicated Done/Tag/Delete buttons handle actual actions.
-  const chromeOnPrev = isTriageCollection ? triageStepBack : goPrev
-  const chromeOnNext = isTriageCollection ? triageLater : goNext
+  // dedicated Done/Tag/Delete buttons handle actual actions. Home/shared/
+  // collection use the User-wrapped nav (shared-post-repeat: these are the
+  // deliberate-navigation call sites that clear the pin).
+  const chromeOnPrev = isTriageCollection ? triageStepBack : goPrevUser
+  const chromeOnNext = isTriageCollection ? triageLater : goNextUser
   const chromeOnSelect = isTriageCollection
     ? (key: string) => {
         const idx = triageQueue.findIndex((fi) => theaterItemKey(feedItemToTheaterItem(fi)) === key)
         if (idx !== -1) setTriageIndex(idx)
       }
-    : onSelect
+    : onSelectUser
 
   const triageChrome: TheaterTriageChrome | undefined = isTriage
     ? {
@@ -1238,6 +1316,7 @@ export function TheaterShell({
                 if (!showSignInRef.current) goNext()
               }}
               photoCaption={false}
+              repeat={isSharedPinnedOnCurrent}
             />
           )}
         </div>
@@ -1253,7 +1332,13 @@ export function TheaterShell({
             above), so its progress line is always suppressed. */}
         <TheaterProgressLine
           itemKey={chromeCurrentKey}
-          kind={isTriageCollection ? 'none' : isDesktop ? progressKindFor(chromeCurrent) : 'none'}
+          kind={
+            isTriageCollection
+              ? 'none'
+              : isDesktop
+                ? progressKindForPin(progressKindFor(chromeCurrent), isSharedPinnedOnCurrent)
+                : 'none'
+          }
         />
         {desktopDeclutter && (
           <button
@@ -1286,7 +1371,7 @@ export function TheaterShell({
           saveStatus={saveStatus}
           onSaveCollection={handleSaveCollection}
           onRequestSignIn={openSignIn}
-          onRequestMakeYourOwn={handleMakeYourOwn}
+          repeatCurrent={isSharedPinnedOnCurrent}
           triage={triageChrome}
         />
         <DesktopStageChrome

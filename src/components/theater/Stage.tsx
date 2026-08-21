@@ -33,9 +33,18 @@ export interface StageProps {
    * author + caption, so the stage's own scrim would be a duplicate.
    */
   photoCaption?: boolean
+  /**
+   * shared-post-repeat: while the pinned shared post is on stage, the
+   * player-level loop path (StageVideo's `loop` attribute / StageYouTube's
+   * seek-to-0 replay) takes over instead of ever firing `onEnded` — see
+   * TheaterShell's `isSharedPostPinned`. Ignored for non-video stages (their
+   * own 'timed' auto-advance is suppressed one level up, at the progress-line
+   * kind, since they have no player to loop).
+   */
+  repeat?: boolean
 }
 
-export function Stage({ item, muted, onRequestUnmute, onEnded, photoCaption }: StageProps) {
+export function Stage({ item, muted, onRequestUnmute, onEnded, photoCaption, repeat }: StageProps) {
   const playback = usePlaybackSource(item)
 
   if (!item) {
@@ -55,6 +64,7 @@ export function Stage({ item, muted, onRequestUnmute, onEnded, photoCaption }: S
         muted={muted}
         onRequestUnmute={onRequestUnmute}
         onEnded={onEnded}
+        repeat={repeat}
       />
     )
   }
@@ -63,7 +73,13 @@ export function Stage({ item, muted, onRequestUnmute, onEnded, photoCaption }: S
   // the raw postMessage protocol for autoplay/ended/transport (StageYouTube).
   if (item.platform === 'youtube') {
     return (
-      <StageYouTube item={item} muted={muted} onRequestUnmute={onRequestUnmute} onEnded={onEnded} />
+      <StageYouTube
+        item={item}
+        muted={muted}
+        onRequestUnmute={onRequestUnmute}
+        onEnded={onEnded}
+        repeat={repeat}
+      />
     )
   }
 
@@ -76,6 +92,7 @@ export function Stage({ item, muted, onRequestUnmute, onEnded, photoCaption }: S
         muted={muted}
         onRequestUnmute={onRequestUnmute}
         onEnded={onEnded}
+        repeat={repeat}
       />
     )
   }

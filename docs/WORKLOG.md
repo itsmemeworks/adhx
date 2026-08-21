@@ -4,6 +4,16 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-21 — Mobile theater round 2: shared repeat, sheet drag, logo home, paste rework, autoplay continuity
+
+- **Why**: owner's live phone testing of staging surfaced 5 issues in quick succession; fixed by 4 parallel agents on one tree (disjoint-file fences held after one earlier branch-collision lesson).
+- **Shared posts repeat until deliberate nav**: `sharedPinned` in TheaterShell (cleared only by user-intent goNext/goPrev/onSelect wrappers, never by auto-advance); videos loop natively (`repeat` prop → `<video loop>`), YouTube seekTo(0)-replays on ended, timed items' 10s advance suppressed via `progressKindForPin` (both viewports). A 5s pasted meme no longer escapes before Save/Tag/Copy.
+- **Up-next sheet drags for real**: new `useSheetDrag` (pointer events on the handle only; 8px tap threshold, 28% travel hysteresis, 0.5px/ms flick override, ghost-click swallow, touch-action none). Tap still toggles.
+- **Brand logo is ALWAYS home**: collection-mode non-owner logo was the Make-your-own trigger (couldn't leave a shared tag!) — now a plain `/` link; conversion carried by the Save-collection CTA (verified intact).
+- **Paste UX reworked** (owner hit iOS "Paste|Speak" + a stuck panel): root cause = autoFocus on the fallback input. Now: in-gesture readText → instant navigate on supported link; otherwise a dismissible (outside-tap/Esc/X) helper overlay w/ platform glyphs + Paste retry + non-autofocused manual input; errors only after a real attempt.
+- **Playlist never dead-ends on iOS**: StageYouTube unmutes ONLY after confirmed playing (state 1), falls back to muted+playVideo (1.5s settle timer) if iOS rejects — the unmuted-from-TikTok → YouTube-stall → watchdog-skip chain is gone. StageInstagram advances 8s after landing in the terminal IG-embed fallback and has a 20s never-started ceiling (probe budget is ~70s); both guards no-op when pinned/repeat or no onEnded.
+- **State**: 2006 tests green (167 files), typecheck/format/build clean. On-device iOS verification of the autoplay chain still needed (env can't play YT embeds).
+
 ## 2026-08-21 — Starter collections onboarding + YouTube stage native-controls fix
 
 - **Starter collections** (owner-picked activation feature pre-promo): new `StarterCollections` component — top-3 all-time public collections from `/api/collections/trending`, self-excluded, rendered as canonical `CollectionPosterCard`s with one-tap clone (existing clone endpoint) → "Added · N posts". Collapses to nothing on empty/error/all-own. Mounted: `/welcome` step 2 after username claim (modal widens 420→720px) + `EmptyAccountOnboarding` compact block. Feed refresh reuses the `tweet-added` event → useSyncListener.

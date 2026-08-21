@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { instagramStagePhase } from '@/components/theater/StageInstagram'
+import {
+  instagramStagePhase,
+  shouldAdvanceInstagramStage,
+} from '@/components/theater/StageInstagram'
 
 /**
  * Pure probe-status → render-phase mapping for the Instagram stage (spec
@@ -24,5 +27,25 @@ describe('instagramStagePhase', () => {
   it('falls back to the official embed on a persistent miss', () => {
     expect(instagramStagePhase('failed', false)).toBe('embed')
     expect(instagramStagePhase('failed', true)).toBe('embed')
+  })
+})
+
+/**
+ * `shouldAdvanceInstagramStage` gates the two auto-advance guards
+ * (embed-fallback timer + never-started ceiling, see StageInstagram.tsx):
+ * once the mirror is confirmed ready, StageVideo owns `onEnded` and the
+ * guards must never fire.
+ */
+describe('shouldAdvanceInstagramStage', () => {
+  it('never advances once the probe is ready — StageVideo owns onEnded from there', () => {
+    expect(shouldAdvanceInstagramStage('ready')).toBe(false)
+  })
+
+  it('advances while still probing (never-started guard, probe past its warm-up window)', () => {
+    expect(shouldAdvanceInstagramStage('probing')).toBe(true)
+  })
+
+  it('advances on a persistent failure (embed-fallback guard)', () => {
+    expect(shouldAdvanceInstagramStage('failed')).toBe(true)
   })
 })
