@@ -84,19 +84,22 @@ export function resolveYouTubeVideoId(item: Pick<TheaterItem, 'bookmarkId'>): st
   return isValidVideoId(id) ? id : null
 }
 
-/** The app's own canonical origin, baked at build time — used for the
- * embed's `origin` param instead of `window.location.origin` so server and
- * client render the identical `src` (no hydration mismatch). */
-const APP_ORIGIN = process.env.NEXT_PUBLIC_APP_URL || ''
-
-function buildEmbedSrc(videoId: string): string {
+/** YouTube hard-requires a valid `origin` param whenever `enablejsapi=1` is
+ * set — omitting it is "Error 153: video player configuration error" and the
+ * player never loads. `NEXT_PUBLIC_APP_URL` can't provide it: it's a runtime
+ * Fly secret, not a Docker build arg, so the baked client value is empty in
+ * deploys. Use `window.location.origin` instead, resolved in an effect, and
+ * gate the iframe on it — SSR and the client's first render both emit no
+ * iframe, so there's no hydration mismatch and the origin is always the host
+ * actually serving the page. */
+function buildEmbedSrc(videoId: string, origin: string): string {
   const url = new URL(youtubeEmbedUrl(videoId))
   url.searchParams.set('enablejsapi', '1')
   url.searchParams.set('autoplay', '1')
   url.searchParams.set('mute', '1')
   url.searchParams.set('playsinline', '1')
   url.searchParams.set('rel', '0')
-  if (APP_ORIGIN) url.searchParams.set('origin', APP_ORIGIN)
+  url.searchParams.set('origin', origin)
   return url.toString()
 }
 
@@ -118,6 +121,11 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded }: StageYou
   const onRequestUnmuteRef = useRef(onRequestUnmute)
   const [playing, setPlaying] = useState(false)
   const [effectiveMuted, setEffectiveMuted] = useState(muted)
+  const [clientOrigin, setClientOrigin] = useState<string | null>(null)
+
+  useEffect(() => {
+    setClientOrigin(window.location.origin)
+  }, [])
   // Stable id for the `listening` handshake, mirrored onto the iframe's own
   // `id` attribute (the protocol's documented convention).
   const playerId = `yt-player-${useId().replace(/[^a-zA-Z0-9]/g, '')}`
@@ -312,18 +320,20 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded }: StageYou
     <div className="flex h-full w-full flex-col bg-[#08070a]">
       <div className="flex min-h-0 flex-1 items-center justify-center p-4 sm:p-8">
         <div className="relative aspect-[9/16] h-[min(82vh,100%)] max-w-full overflow-hidden rounded-2xl bg-black shadow-2xl">
-          <iframe
-            key={videoId}
-            id={playerId}
-            ref={iframeRef}
-            src={buildEmbedSrc(videoId)}
-            title={text || 'YouTube Short'}
-            className="absolute inset-0 h-full w-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            referrerPolicy="strict-origin-when-cross-origin"
-            allowFullScreen
-            onLoad={handleLoad}
-          />
+          {clientOrigin && (
+            <iframe
+              key={videoId}
+              id={playerId}
+              ref={iframeRef}
+              src={buildEmbedSrc(videoId, clientOrigin)}
+              title={text || 'YouTube Short'}
+              className="absolute inset-0 h-full w-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allowFullScreen
+              onLoad={handleLoad}
+            />
+          )}
         </div>
       </div>
       {text && (
