@@ -12,6 +12,7 @@ import { describe, it, expect } from 'vitest'
 import {
   triageKeyAction,
   shouldCommitDelete,
+  shouldDismissUndo,
   triageAdvance,
   triageStepBackIndex,
   type TriageUndoAction,
@@ -74,6 +75,30 @@ describe('shouldCommitDelete', () => {
     expect(shouldCommitDelete(archive)).toBe(false)
     expect(shouldCommitDelete(keep)).toBe(false)
     expect(shouldCommitDelete(null)).toBe(false)
+  })
+})
+
+describe('shouldDismissUndo', () => {
+  it('dismisses when the timer is still the current undo (identity match)', () => {
+    const action: TriageUndoAction = { type: 'archive', item: feedItem('1'), index: 0 }
+    expect(shouldDismissUndo(action, action)).toBe(true)
+  })
+
+  it('does NOT dismiss a stale timer once a newer action has replaced it', () => {
+    const stale: TriageUndoAction = { type: 'archive', item: feedItem('1'), index: 0 }
+    const fresh: TriageUndoAction = { type: 'keep', item: feedItem('2'), index: 1 }
+    expect(shouldDismissUndo(fresh, stale)).toBe(false)
+  })
+
+  it('does not dismiss when the toast has already been cleared (null)', () => {
+    const stale: TriageUndoAction = { type: 'archive', item: feedItem('1'), index: 0 }
+    expect(shouldDismissUndo(null, stale)).toBe(false)
+  })
+
+  it('treats two value-equal but distinct actions as different (identity, not deep equality)', () => {
+    const a: TriageUndoAction = { type: 'keep', item: feedItem('1'), index: 0 }
+    const b: TriageUndoAction = { type: 'keep', item: feedItem('1'), index: 0 }
+    expect(shouldDismissUndo(b, a)).toBe(false)
   })
 })
 

@@ -11,6 +11,11 @@ import { NextRequest } from 'next/server'
 const mockFetch = vi.fn()
 global.fetch = mockFetch
 
+vi.mock('@/lib/sentry', () => ({
+  metrics: { mediaUnavailable: vi.fn() },
+  captureException: vi.fn(),
+}))
+
 function createRequest(params: Record<string, string>): NextRequest {
   const url = new URL('http://localhost:3000/api/media/video/download')
   Object.entries(params).forEach(([key, value]) => {
@@ -256,6 +261,66 @@ describe('API: /api/media/video/download', () => {
       expect(response.status).toBe(502)
       const data = await response.json()
       expect(data.error).toContain('Failed to fetch video')
+    })
+  })
+
+  describe('Gone tweet (deleted/private/suspended)', () => {
+    it('returns 410 with a reason when FxTwitter returns 401', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 401 })
+
+      const { GET } = await import('@/app/api/media/video/download/route')
+      const response = await GET(createRequest({ author: 'user', tweetId: '123' }))
+
+      expect(response.status).toBe(410)
+      const data = await response.json()
+      expect(data.error).toBe('unavailable')
+      expect(data.reason).toMatch(/no longer available/i)
+    })
+
+    it('returns 410 with a reason when FxTwitter returns 404', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 404 })
+
+      const { GET } = await import('@/app/api/media/video/download/route')
+      const response = await GET(createRequest({ author: 'user', tweetId: '123' }))
+
+      expect(response.status).toBe(410)
+      const data = await response.json()
+      expect(data.error).toBe('unavailable')
+    })
+
+    it('does not report a gone tweet to Sentry as an exception', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 401 })
+
+      const { GET } = await import('@/app/api/media/video/download/route')
+      const { captureException } = await import('@/lib/sentry')
+      await GET(createRequest({ author: 'user', tweetId: '123' }))
+
+      expect(captureException).not.toHaveBeenCalled()
+    })
+
+    it('caches the gone result so a second request skips FxTwitter entirely', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 401 })
+
+      const { GET } = await import('@/app/api/media/video/download/route')
+      const first = await GET(createRequest({ author: 'user', tweetId: '123' }))
+      expect(first.status).toBe(410)
+
+      mockFetch.mockClear()
+
+      const second = await GET(createRequest({ author: 'user', tweetId: '123', quality: 'full' }))
+      expect(second.status).toBe(410)
+      expect(mockFetch).not.toHaveBeenCalled()
+    })
+
+    it('keeps the existing 404 behavior for a genuine FxTwitter outage', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 500 })
+
+      const { GET } = await import('@/app/api/media/video/download/route')
+      const response = await GET(createRequest({ author: 'user', tweetId: '123' }))
+
+      expect(response.status).toBe(404)
+      const data = await response.json()
+      expect(data.error).toContain('Failed to fetch video info')
     })
   })
 })

@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { captureException } from '@/lib/sentry'
-import { isValidTweetAuthor, isValidTweetId } from '@/lib/media/proxy'
+import { captureException, metrics } from '@/lib/sentry'
+import {
+  goneResponse,
+  isFxTwitterGoneStatus,
+  isTweetGoneCached,
+  isValidTweetAuthor,
+  isValidTweetId,
+  markTweetGone,
+} from '@/lib/media/proxy'
 import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
 // Cache video info for 1 hour. Separate caches for with/without HEAD-measured sizes
@@ -64,6 +71,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(cached.data)
     }
 
+    if (isTweetGoneCached(cacheKey)) {
+      return goneResponse()
+    }
+
     // Fetch from FxTwitter
     const response = await fetchWithTimeout(
       `https://api.fxtwitter.com/${author}/status/${tweetId}`,
@@ -72,6 +83,14 @@ export async function GET(request: NextRequest) {
     )
 
     if (!response.ok) {
+      if (isFxTwitterGoneStatus(response.status)) {
+        // Deleted/private/suspended — not a proxy error, and it won't come
+        // back on a retry. Cache it so repeat plays/HLS-threshold checks for
+        // this tweet don't keep re-hitting FxTwitter.
+        markTweetGone(cacheKey)
+        metrics.mediaUnavailable('video-info', response.status)
+        return goneResponse()
+      }
       throw new Error(`FxTwitter API returned ${response.status}`)
     }
 

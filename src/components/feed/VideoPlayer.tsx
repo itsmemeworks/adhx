@@ -78,6 +78,11 @@ export function VideoPlayer({
   )
   const [loading, setLoading] = useState(!canSkipPreflight || waitForInstagram)
   const [error, setError] = useState<string | null>(null)
+  // Set once a follow-up probe (or the /info preflight itself) confirms the
+  // post is gone for good (FxTwitter 410 — deleted/private/suspended), as
+  // opposed to a generic/transient load failure. Suppresses the "Watch on
+  // X" link, which would otherwise point at a dead end.
+  const [gone, setGone] = useState(false)
   const [ready, setReady] = useState(canSkipPreflight && !waitForInstagram)
   const [useHls, setUseHls] = useState(false)
   const [hlsUrl, setHlsUrl] = useState<string | null>(null)
@@ -95,6 +100,18 @@ export function VideoPlayer({
       try {
         // Fetch video info to determine playback strategy
         const response = await fetch(`/api/media/video/info?author=${author}&tweetId=${tweetId}`)
+
+        if (response.status === 410) {
+          // Deleted/private/suspended on X — not worth falling back to the
+          // direct MP4 proxy (it will 410 too), and not a transient error.
+          const body = await response.json().catch(() => null)
+          if (mounted) {
+            setGone(true)
+            setError(body?.reason || 'This post is no longer available on X')
+            setLoading(false)
+          }
+          return
+        }
 
         if (!response.ok) {
           throw new Error('Failed to fetch video info')
@@ -235,7 +252,9 @@ export function VideoPlayer({
       >
         <AlertCircle className="w-12 h-12 text-gray-400" />
         <p className="text-gray-400 text-center">{error}</p>
-        {tweetUrl && (
+        {/* Gone for good (deleted/private/suspended) — a link "out to the
+            source" would just be a second dead end, so it's suppressed. */}
+        {!gone && tweetUrl && (
           <a
             href={tweetUrl}
             target="_blank"
@@ -326,8 +345,28 @@ export function VideoPlayer({
             setIgPlayback('embed')
             return
           }
-          if (!useHls) {
-            setError('Failed to load video')
+          if (useHls) return
+
+          setError('Failed to load video')
+
+          // A <video> error event carries no HTTP status. This path is only
+          // reached when the /info preflight was skipped (known-short
+          // duration) or already fell back past it, so a direct 410 hasn't
+          // been checked yet — probe the same src with a tiny Range request
+          // (our video routes only serve GET, no HEAD) to tell "gone for
+          // good" from a generic failure.
+          if (videoSrc) {
+            fetch(videoSrc, { headers: { Range: 'bytes=0-1' } })
+              .then((res) => (res.status === 410 ? res.json() : null))
+              .then((body) => {
+                if (body && typeof body.reason === 'string') {
+                  setGone(true)
+                  setError(body.reason)
+                }
+              })
+              .catch(() => {
+                // Probe failed — stay in the generic load-failure state.
+              })
           }
         }}
       />

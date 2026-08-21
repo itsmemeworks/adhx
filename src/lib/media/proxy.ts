@@ -204,3 +204,59 @@ export function imageDownloadResponse(
 
   return new Response(upstream.body, { headers })
 }
+
+/**
+ * A tweet FxTwitter reports as gone (401 for a deleted/suspended/private
+ * account, 404 for a deleted tweet) is gone for everyone, not a transient
+ * proxy error — that's the distinction from a 5xx/429 FxTwitter hiccup, which
+ * keeps the existing throw-and-500 behavior. Cached negatively (separately
+ * from each route's positive URL/info cache) so retries and repeat viewers of
+ * a dead tweet across the three FxTwitter-resolving video routes (video,
+ * video/info, video/download) don't keep re-hitting FxTwitter for content
+ * that will never come back. Shorter TTL than the positive caches (1h) since
+ * a suspended account or a mistaken removal can be reversed.
+ */
+const GONE_TWEET_CACHE_TTL = 10 * 60 * 1000 // 10 minutes
+const goneTweetCache = new Map<string, number>()
+
+/** FxTwitter's "this content is gone" statuses. */
+export function isFxTwitterGoneStatus(status: number): boolean {
+  return status === 401 || status === 404
+}
+
+/** Has `key` (`${author}/${tweetId}`) been recently marked gone? */
+export function isTweetGoneCached(key: string): boolean {
+  const ts = goneTweetCache.get(key)
+  if (ts === undefined) return false
+  if (Date.now() - ts > GONE_TWEET_CACHE_TTL) {
+    goneTweetCache.delete(key)
+    return false
+  }
+  return true
+}
+
+/** Record that FxTwitter reported `key` (`${author}/${tweetId}`) as gone. */
+export function markTweetGone(key: string): void {
+  goneTweetCache.set(key, Date.now())
+
+  if (goneTweetCache.size > 1000) {
+    const now = Date.now()
+    for (const [k, ts] of goneTweetCache.entries()) {
+      if (now - ts > GONE_TWEET_CACHE_TTL) {
+        goneTweetCache.delete(k)
+      }
+    }
+  }
+}
+
+/**
+ * 410 Gone response for a tweet FxTwitter reports as deleted/private/
+ * suspended — distinct from the generic 500 thrown for an actual proxy
+ * error, so clients (and Sentry) can tell "will never load" from "broken".
+ */
+export function goneResponse(reason: string = 'This post is no longer available on X'): Response {
+  return new Response(JSON.stringify({ error: 'unavailable', reason }), {
+    status: 410,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
