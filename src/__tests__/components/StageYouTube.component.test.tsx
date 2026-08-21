@@ -81,6 +81,16 @@ describe('StageYouTube', () => {
     expect(src.searchParams.get('playsinline')).toBe('1')
   })
 
+  it('suppresses YouTube native chrome (controls/keyboard/fullscreen/annotations)', () => {
+    const { container } = render(<StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />)
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const src = new URL(iframe.src)
+    expect(src.searchParams.get('controls')).toBe('0')
+    expect(src.searchParams.get('disablekb')).toBe('1')
+    expect(src.searchParams.get('fs')).toBe('0')
+    expect(src.searchParams.get('iv_load_policy')).toBe('3')
+  })
+
   it('sends the listening handshake to the embed origin on iframe load', () => {
     const { container } = render(<StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />)
     const iframe = container.querySelector('iframe') as HTMLIFrameElement
