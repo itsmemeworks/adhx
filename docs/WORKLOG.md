@@ -4,6 +4,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-21 — Spec: Discovery — collection view stats + leaderboards (docs only)
+
+- **Why**: User wants a Discovery feature — view tracking on public tagged collections, day/week/month/all-time leaderboards (gamification for curators, browse-first entry for new users), with plumbing reserved for future Reddit-style theater sorts (hot/rising/new).
+- **What**: `docs/specs/discovery-leaderboards.md`. Key decisions: new append-only `collection_events` table keyed `(ownerUserId, tag)` (NOT bolted onto `activity` — keeps the anonymity choke point untouched); events = `view` (/t page, bot-filtered, self-views excluded, public-only) + `clone` (weight ×5); single ranking choke point `src/lib/discovery/rank.ts` with mode-aware signature (`top` implemented, hot/rising/new defined but deferred); surfaces = `/collections/{window}` leaderboard page + `/api/collections/trending` + /tags stat line; `hidden` moderation lever mirrors activity.
+- **Verified en route**: collection theater, /t page, and clone endpoint currently record ZERO events (collection views are invisible today).
+- **State**: spec only, nothing built. Follow-up: user to review spec, then build MVP per §10 cut-line.
+
 ## 2026-08-21 — Review round: usernames w/ redirects, Save-primary, YouTube fixed, profile + journey (PRs #356–#362)
 
 - **Why**: Live owner review after the launch-blocker round: admin list needed real usernames, Download outweighed Save (conversion CTA), YouTube stalled the theater, /t profile looked bare, "Make your own" was a dead-end journey.
