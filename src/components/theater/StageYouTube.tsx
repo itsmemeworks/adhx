@@ -36,6 +36,17 @@
  * absolutely-positioned iframe collapses to zero height. The fix is a
  * concrete height on the box itself, derived from the stage's own `h-full`
  * ancestor via a `flex-1 min-h-0` wrapper.
+ *
+ * NATIVE CHROME: `buildEmbedSrc()` sets `controls=0`/`disablekb=1`/`fs=0`/
+ * `iv_load_policy=3` so YouTube's own seek bar, volume/CC/settings row,
+ * keyboard shortcuts, and annotation cards never render — that surface
+ * belongs to the theater's dock/peek-bar, not the embed (was showing through
+ * on mobile, where unlike desktop hover-to-hide, native controls stay
+ * persistent). None of this touches `enablejsapi` — the postMessage
+ * protocol above is independent of `controls`. KNOWN LIMITATION: YouTube
+ * still overlays its own title/channel card on load and on pause even with
+ * `controls=0` — that's baked into the embed, and complying with YouTube's
+ * ToS means leaving it; the fix here only removes the *interactive* chrome.
  */
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
@@ -99,6 +110,15 @@ function buildEmbedSrc(videoId: string, origin: string): string {
   url.searchParams.set('mute', '1')
   url.searchParams.set('playsinline', '1')
   url.searchParams.set('rel', '0')
+  // Suppress YouTube's own interactive chrome — ADHX's transport (dock/
+  // peek-bar buttons driving the postMessage `command` protocol above) is
+  // the only control surface; native controls/keyboard/fullscreen would
+  // collide with the theater's own overlays (worst on touch, where YouTube's
+  // chrome doesn't auto-hide the way it does on desktop hover).
+  url.searchParams.set('controls', '0')
+  url.searchParams.set('disablekb', '1')
+  url.searchParams.set('fs', '0')
+  url.searchParams.set('iv_load_policy', '3')
   url.searchParams.set('origin', origin)
   return url.toString()
 }
