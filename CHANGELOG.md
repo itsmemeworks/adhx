@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.54.0](https://github.com/itsmemeworks/adhx/compare/v1.53.0...v1.54.0) (2026-08-21)
+
+
+### Features
+
+* collection playlist flow, ig catch-up unmute, yt progress bar, deleted-tweet tombstone ([#385](https://github.com/itsmemeworks/adhx/issues/385)) ([9beaf4b](https://github.com/itsmemeworks/adhx/commit/9beaf4b479076b8cda2cc49c8a2e981737ef20f4))
+
+
+### Bug Fixes
+
+* gesture-context unmute for the audio button, widened debug overlay ([#387](https://github.com/itsmemeworks/adhx/issues/387)) ([57119e3](https://github.com/itsmemeworks/adhx/commit/57119e3364a7bc4c4ab8d6a7fd36ab29d34b4f2a))
+* trust commanded mute state over stale heartbeats + on-screen ytdebug overlay ([#386](https://github.com/itsmemeworks/adhx/issues/386)) ([615ef09](https://github.com/itsmemeworks/adhx/commit/615ef09b16d543a5c33cae3efa7b9350bf38d44e))
+* trust unmutes, desktop repeat tag, full theater nav menu ([#383](https://github.com/itsmemeworks/adhx/issues/383)) ([c4cfb99](https://github.com/itsmemeworks/adhx/commit/c4cfb990eab17cac76de4f9b2bae47c61289e384))
+
 ## [1.53.0](https://github.com/itsmemeworks/adhx/compare/v1.52.0...v1.53.0) (2026-08-21)
 
 
