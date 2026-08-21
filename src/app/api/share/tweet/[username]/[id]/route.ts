@@ -5,6 +5,7 @@ import { articleBlocksToMarkdown, normalizeEntityMap } from '@/lib/utils/article
 import { db } from '@/lib/db'
 import { bookmarks, bookmarkTags, tagShares, users } from '@/lib/db/schema'
 import { eq, and, sql } from 'drizzle-orm'
+import { mediaRateLimit } from '@/lib/rate-limit'
 
 type FxTweet = NonNullable<FxTwitterResponse['tweet']>
 
@@ -179,11 +180,19 @@ function buildAdhxContext(tweetId: string) {
  *
  * Public endpoint returning clean JSON for a tweet.
  * No authentication required. Data sourced from FxTwitter API.
+ *
+ * Rate-limited generously (120 req/min/IP) — this is the public tweet JSON
+ * API advertised to AI agents in llms.txt, so it's the surface most likely
+ * to get scraped hard. The limit is a backstop against hammering, not a
+ * throttle on legitimate crawler/agent traffic; responses are cached 5 min.
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ username: string; id: string }> },
 ) {
+  const limited = mediaRateLimit(request, { windowMs: 60_000, max: 120 })
+  if (limited) return limited
+
   const { username, id } = await params
 
   // Validate username (Twitter handles: 1-15 alphanumeric + underscore)
