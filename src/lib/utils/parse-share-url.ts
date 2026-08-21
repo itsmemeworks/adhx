@@ -52,3 +52,17 @@ export function parseShareUrl(url: string): { path: string } | null {
 
   return null
 }
+
+/**
+ * Guards a `window.location.href` (or router) assignment built from
+ * pasted/shared text against unsafe navigation targets. Blocks
+ * protocol-relative ("//evil.com") and scheme-based ("javascript:", "data:")
+ * strings — the way a "we only ever build internal `/paths`" assumption
+ * turns into a DOM-XSS/open-redirect sink if a caller's parsing ever slips.
+ * Internal preview/resolver paths are plain `/segment/segment` with any
+ * embedded link passed through `encodeURIComponent`, so a real one never
+ * contains a literal `:` or starts with `//`.
+ */
+export function isSafeInternalPath(path: string): boolean {
+  return path.startsWith('/') && !path.startsWith('//') && !path.includes(':')
+}

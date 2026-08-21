@@ -15,12 +15,12 @@ import {
   Send,
   Link2,
 } from 'lucide-react'
-import { extractYouTubeId } from '@/lib/media/youtube'
+import { parseShareUrl, isSafeInternalPath } from '@/lib/utils/parse-share-url'
 import { getPlatformType, type PlatformType } from '@/lib/platform'
 import { LiveDot, ConnectWithX } from '@/components/matter'
 import { PublicNav } from '@/components/PublicNav'
 import { DiscoverCard } from '@/components/discover/DiscoverCard'
-import type { ActivityItem } from '@/components/discover/DiscoverFeed'
+import type { ActivityItem } from '@/components/discover/types'
 import { IosShortcutHow, IosShortcutInstallButton } from '@/components/IosShortcutInstall'
 import { BOOKMARKLET_CODE } from '@/lib/share/ios'
 
@@ -75,50 +75,18 @@ export function LandingPage() {
     window.location.href = '/api/auth/twitter'
   }
 
-  // Patterns for all supported sources
-  const tweetUrlPattern =
-    /(?:https?:\/\/)?(?:www\.)?(?:x\.com|twitter\.com)\/(\w{1,15})\/status\/(\d+)/i
-  const reelUrlPattern = /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:reels?|p)\/([A-Za-z0-9_-]+)/i
-  const tiktokUrlPattern =
-    /(?:https?:\/\/)?(?:www\.|vm\.|m\.)?tiktok\.com\/@([A-Za-z0-9._]{1,30})\/video\/(\d{6,25})/i
-
+  // URL detection + the on-ADHX preview path are owned by the shared
+  // detectPlatformPost/parseShareUrl helpers (src/lib/platform/url.ts,
+  // src/lib/utils/parse-share-url.ts) — same source of truth as
+  // PreviewAnotherLink and the PWA share target, so X/Instagram/TikTok/
+  // YouTube (incl. TikTok short links) all resolve identically here.
   const parseAndNavigate = (url: string): boolean => {
     const trimmed = url.trim()
-
-    const tweetMatch = trimmed.match(tweetUrlPattern)
-    if (tweetMatch) {
-      const [, username, tweetId] = tweetMatch
-      window.location.href = `/${username}/status/${tweetId}`
+    const result = parseShareUrl(trimmed)
+    if (result && isSafeInternalPath(result.path)) {
+      window.location.href = result.path
       return true
     }
-
-    const reelMatch = trimmed.match(reelUrlPattern)
-    if (reelMatch) {
-      window.location.href = `/reels/${reelMatch[1]}`
-      return true
-    }
-
-    const tiktokMatch = trimmed.match(tiktokUrlPattern)
-    if (tiktokMatch) {
-      window.location.href = `/@${tiktokMatch[1]}/video/${tiktokMatch[2]}`
-      return true
-    }
-
-    if (/(?:youtube\.com|youtu\.be)/i.test(trimmed)) {
-      const ytId = extractYouTubeId(trimmed)
-      if (ytId) {
-        window.location.href = `/shorts/${ytId}`
-        return true
-      }
-    }
-
-    // TikTok short link (vm./vt.tiktok.com/{code} or /t/{code}) — no video id
-    // in the URL, so let the server follow the redirect and bounce us back.
-    if (/(?:vm|vt)\.tiktok\.com\/[A-Za-z0-9]+|tiktok\.com\/t\/[A-Za-z0-9]+/i.test(trimmed)) {
-      window.location.href = `/api/tiktok/resolve?go=1&url=${encodeURIComponent(trimmed)}`
-      return true
-    }
-
     return false
   }
 
@@ -126,15 +94,8 @@ export function LandingPage() {
     setTweetUrl(value)
     setUrlError('')
 
-    // Auto-navigate as soon as a known host appears in the input
-    if (
-      value.includes('x.com/') ||
-      value.includes('twitter.com/') ||
-      value.includes('instagram.com/') ||
-      value.includes('tiktok.com/') ||
-      value.includes('youtube.com/') ||
-      value.includes('youtu.be/')
-    ) {
+    // Auto-navigate as soon as the pasted text resolves to a known post/video.
+    if (parseShareUrl(value)) {
       parseAndNavigate(value)
     }
   }

@@ -20,6 +20,7 @@
 
 import { unstable_cache } from 'next/cache'
 import { makeHostAllowlist } from '@/lib/media/proxy'
+import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
 // Hosts we trust to serve a Reel thumbnail (SSRF allowlist for the proxy).
 const ALLOWED_IMAGE_HOSTS = ['cdninstagram.com', 'fbcdn.net'] as const
@@ -78,8 +79,7 @@ export const fetchReelMetadata = unstable_cache(
 
 async function fetchFromInstagram(path: string): Promise<ReelMetadata | null> {
   try {
-    const response = await fetch(`https://www.instagram.com${path}`, {
-      signal: AbortSignal.timeout(8_000),
+    const response = await fetchWithTimeout(`https://www.instagram.com${path}`, 8_000, {
       // Instagram serves OG tags to recognised crawlers, not to plain browsers.
       headers: { 'User-Agent': 'Twitterbot/1.0', Accept: 'text/html' },
       redirect: 'follow',

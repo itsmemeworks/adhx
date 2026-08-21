@@ -6,6 +6,7 @@ import { db } from '@/lib/db'
 import { bookmarks, bookmarkTags, tagShares, users } from '@/lib/db/schema'
 import { eq, and, sql } from 'drizzle-orm'
 import { mediaRateLimit } from '@/lib/rate-limit'
+import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
 type FxTweet = NonNullable<FxTwitterResponse['tweet']>
 
@@ -239,7 +240,7 @@ export async function GET(
     if (adhxContext) {
       response.adhxContext = {
         ...adhxContext,
-        previewUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://adhx.com'}/${username}/status/${id}`,
+        previewUrl: `${PUBLIC_BASE_URL}/${username}/status/${id}`,
       }
     }
 

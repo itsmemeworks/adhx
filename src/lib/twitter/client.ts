@@ -144,11 +144,11 @@ export async function fetchBookmarks(
       mediaMap.set(media.media_key, {
         mediaKey: media.media_key,
         type: media.type as 'photo' | 'video' | 'animated_gif',
-        url: media.url || (media as any).preview_image_url,
-        previewUrl: (media as any).preview_image_url,
+        url: media.url || media.preview_image_url,
+        previewUrl: media.preview_image_url,
         width: media.width,
         height: media.height,
-        durationMs: (media as any).duration_ms,
+        durationMs: media.duration_ms,
       })
     }
   }
@@ -158,13 +158,13 @@ export async function fetchBookmarks(
     const author = users.get(tweet.author_id || '')
 
     // Get media for this tweet
-    const mediaKeys = (tweet.attachments as any)?.media_keys as string[] | undefined
+    const mediaKeys = tweet.attachments?.media_keys
     const tweetMedia = mediaKeys
       ?.map((key) => mediaMap.get(key))
       .filter((m): m is TwitterMedia => m !== undefined)
 
     // For long tweets (>280 chars), Twitter returns full text in note_tweet
-    const fullText = (tweet as any).note_tweet?.text || tweet.text
+    const fullText = tweet.note_tweet?.text || tweet.text
 
     return {
       id: tweet.id,
@@ -241,8 +241,6 @@ export async function fetchAllBookmarks(
       onProgress(allBookmarks.length, allBookmarks.length)
     }
 
-    console.log(`Fetched page ${pageCount}: ${result.bookmarks.length} bookmarks`)
-
     // Small delay to avoid rate limiting
     if (paginationToken && pageCount < maxPages) {
       await new Promise((resolve) => setTimeout(resolve, 100))
@@ -267,7 +265,7 @@ export async function fetchTweet(userId: string, tweetId: string): Promise<Twitt
     const author = response.includes?.users?.[0]
 
     // For long tweets (>280 chars), Twitter returns full text in note_tweet
-    const fullText = (tweet as any).note_tweet?.text || tweet.text
+    const fullText = tweet.note_tweet?.text || tweet.text
 
     return {
       id: tweet.id,

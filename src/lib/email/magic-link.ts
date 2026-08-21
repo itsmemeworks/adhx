@@ -1,4 +1,5 @@
 import { captureException } from '@/lib/sentry'
+import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
 export interface SendMagicLinkResult {
   ok: boolean
@@ -31,14 +32,13 @@ export async function sendMagicLinkEmail(params: {
   const html = buildMagicLinkHtml({ url, intent })
 
   try {
-    const response = await fetch('https://api.resend.com/emails', {
+    const response = await fetchWithTimeout('https://api.resend.com/emails', 10_000, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ from, to: email, subject, html }),
-      signal: AbortSignal.timeout(10_000),
     })
 
     if (!response.ok) {

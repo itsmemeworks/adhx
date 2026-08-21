@@ -2,6 +2,7 @@ import { db } from '@/lib/db'
 import { activity, bookmarks, bookmarkMedia, bookmarkLinks } from '@/lib/db/schema'
 import { and, desc, eq, inArray, sql } from 'drizzle-orm'
 import { previewPath } from '@/lib/activity/preview-path'
+import { isReservedTopLevelSegment } from '@/lib/routes/reserved'
 
 /**
  * Author hub query — the anonymity-safe data layer for the public `/{username}`
@@ -30,7 +31,7 @@ function asContentType(v: string | null | undefined): ContentType | undefined {
 /** X handle validation: 1-15 alphanumeric/underscore chars, same rule the status route uses. */
 const HANDLE_RE = /^\w{1,15}$/
 export function isValidHandle(handle: string): boolean {
-  return HANDLE_RE.test(handle)
+  return HANDLE_RE.test(handle) && !isReservedTopLevelSegment(handle)
 }
 
 /** Public per-post item shown on the author hub. No `userId` anywhere. */

@@ -3,6 +3,7 @@ import { db, runInTransaction } from '@/lib/db'
 import { collections, collectionTweets, bookmarks } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { withAuth } from '@/lib/api/with-auth'
+import { handleRouteError } from '@/lib/api/response'
 
 function parsePlatform(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined
@@ -113,8 +114,11 @@ export const POST = withAuth(
 
       return NextResponse.json({ success: true })
     } catch (error) {
-      console.error('Error adding tweet to collection:', error)
-      return NextResponse.json({ error: 'Failed to add tweet to collection' }, { status: 500 })
+      return handleRouteError(error, {
+        endpoint: '/api/collections/[id]/tweets',
+        userId,
+        message: 'Failed to add tweet to collection',
+      })
     }
   },
 )
@@ -202,8 +206,11 @@ export const DELETE = withAuth(
 
       return NextResponse.json({ success: true })
     } catch (error) {
-      console.error('Error removing tweet from collection:', error)
-      return NextResponse.json({ error: 'Failed to remove tweet from collection' }, { status: 500 })
+      return handleRouteError(error, {
+        endpoint: '/api/collections/[id]/tweets',
+        userId,
+        message: 'Failed to remove tweet from collection',
+      })
     }
   },
 )
@@ -255,8 +262,11 @@ export const GET = withAuth(
 
       return NextResponse.json({ tweets })
     } catch (error) {
-      console.error('Error fetching collection tweets:', error)
-      return NextResponse.json({ error: 'Failed to fetch collection tweets' }, { status: 500 })
+      return handleRouteError(error, {
+        endpoint: '/api/collections/[id]/tweets',
+        userId,
+        message: 'Failed to fetch collection tweets',
+      })
     }
   },
 )

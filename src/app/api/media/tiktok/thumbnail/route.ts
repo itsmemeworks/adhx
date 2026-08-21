@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { captureException } from '@/lib/sentry'
 import { isValidUsername, isValidVideoId } from '@/lib/media/tnktok'
+import { buildAllowlistedUrl } from '@/lib/media/proxy'
+import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
 /**
  * TikTok thumbnail proxy.
@@ -23,6 +25,19 @@ const thumbnailUrlCache = new Map<string, { url: string; ts: number }>()
 const CACHE_TTL = 60 * 60 * 1000
 
 const OG_IMAGE_RE = /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i
+
+/**
+ * The og:image URL is scraped from tiktxk.com's HTML — untrusted content, not
+ * something we control. Unlike every sibling proxy (video/route.ts, the HLS
+ * routes, the Instagram routes), this route had no host allowlist on the
+ * resolved CDN URL before fetching it — a classic SSRF gap. Same CDN hosts
+ * the TikTok video proxy allows (`src/lib/media/tnktok.ts`'s
+ * ALLOWED_VIDEO_HOSTS), minus the mirror's own host (tnktok.com — not
+ * relevant here, this route talks to tiktxk.com for metadata only).
+ */
+const TIKTOK_IMAGE_CDN_HOSTS = ['tiktokcdn.com', 'tiktokcdn-us.com', 'tiktokcdn-eu.com'].flatMap(
+  (host) => [host, `.${host}`],
+)
 
 // HTML entities that appear in og:image URLs (mostly `&amp;` between query
 // params, occasionally an escaped apostrophe).
@@ -67,11 +82,14 @@ export async function GET(request: NextRequest) {
     }
 
     if (!cdnUrl) {
-      const mirrorResponse = await fetch(`https://tiktxk.com/@${handle}/video/${videoId}`, {
-        signal: AbortSignal.timeout(8_000),
-        headers: { 'User-Agent': 'Twitterbot/1.0', Accept: 'text/html' },
-        redirect: 'follow',
-      })
+      const mirrorResponse = await fetchWithTimeout(
+        `https://tiktxk.com/@${handle}/video/${videoId}`,
+        8_000,
+        {
+          headers: { 'User-Agent': 'Twitterbot/1.0', Accept: 'text/html' },
+          redirect: 'follow',
+        },
+      )
 
       if (!mirrorResponse.ok) {
         return NextResponse.json({ error: 'Mirror unavailable' }, { status: 502 })
@@ -83,7 +101,16 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'No thumbnail in mirror response' }, { status: 404 })
       }
 
-      cdnUrl = decodeHtmlEntities(match[1])
+      // Validate the resolved host against the CDN allowlist and rebuild the
+      // URL from the validated parsed components (never the raw scraped
+      // string) before it's cached or fetched — this is the SSRF gate.
+      const decoded = decodeHtmlEntities(match[1])
+      const safeCdnUrl = buildAllowlistedUrl(decoded, TIKTOK_IMAGE_CDN_HOSTS)
+      if (!safeCdnUrl) {
+        return NextResponse.json({ error: 'Untrusted thumbnail CDN host' }, { status: 502 })
+      }
+
+      cdnUrl = safeCdnUrl
       thumbnailUrlCache.set(cacheKey, { url: cdnUrl, ts: Date.now() })
 
       // Trim cache if it grows
@@ -96,8 +123,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Step 2 — fetch the JPEG with browser-grade headers
-    const imageResponse = await fetch(cdnUrl, {
-      signal: AbortSignal.timeout(10_000),
+    const imageResponse = await fetchWithTimeout(cdnUrl, 10_000, {
       redirect: 'follow',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',

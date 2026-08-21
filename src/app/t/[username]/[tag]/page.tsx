@@ -14,6 +14,7 @@ import { TheaterShell } from '@/components/theater/TheaterShell'
 import { buildCollectionSeed } from '@/lib/theater/tag-seed'
 import { recordCollectionEvent } from '@/lib/discovery/record'
 import { isLikelyBot } from '@/lib/activity/bot'
+import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
 /**
  * `/t/{username}/{tag}` — public shared-tag collection page.
@@ -36,7 +37,7 @@ interface Props {
   params: Promise<{ username: string; tag: string }>
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://adhx.com'
+const BASE_URL = PUBLIC_BASE_URL
 
 function toAbsolute(url: string): string {
   if (/^https?:\/\//.test(url)) return url

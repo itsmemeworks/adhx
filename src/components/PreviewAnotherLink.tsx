@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
-import { parseShareUrl } from '@/lib/utils/parse-share-url'
+import { parseShareUrl, isSafeInternalPath } from '@/lib/utils/parse-share-url'
 
 /**
  * The "Preview another link" field, shared by all four preview pages.
@@ -20,7 +20,7 @@ export function PreviewAnotherLink({ className }: { className?: string }) {
   const parseAndNavigate = (value: string): boolean => {
     const trimmed = value.trim()
     const result = parseShareUrl(trimmed)
-    if (result) {
+    if (result && isSafeInternalPath(result.path)) {
       window.location.href = result.path
       return true
     }

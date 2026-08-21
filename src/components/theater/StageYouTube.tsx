@@ -39,10 +39,10 @@
  */
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
-import { ArrowRight } from 'lucide-react'
 import { PlatformChip } from '@/components/matter'
 import { isValidVideoId, youtubeEmbedUrl } from '@/lib/media/youtube'
 import { previewPath } from '@/lib/activity/preview-path'
+import { StageFrame, StageHeadline, StageCTA } from './stage-primitives'
 import type { TheaterItem } from './types'
 
 /** The embed's own origin — every inbound message is filtered to this, and
@@ -304,7 +304,7 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded }: StageYou
   if (!videoId) {
     const href = previewPath(item.platform, item.author, item.bookmarkId || '')
     return (
-      <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-[#08070a]">
+      <StageFrame>
         {item.thumbnailUrl ? (
           <>
             <img
@@ -318,18 +318,10 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded }: StageYou
         ) : null}
         <div className="relative flex max-w-xl flex-col items-center gap-4 px-6 text-center">
           <PlatformChip platform="youtube" />
-          {text && (
-            <h2 className="font-serif text-2xl leading-tight text-white sm:text-3xl">{text}</h2>
-          )}
-          <a
-            href={href}
-            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full bg-clay-grad px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-opacity hover:opacity-90"
-          >
-            Open preview
-            <ArrowRight size={15} />
-          </a>
+          {text && <StageHeadline>{text}</StageHeadline>}
+          <StageCTA href={href} />
         </div>
-      </div>
+      </StageFrame>
     )
   }
 

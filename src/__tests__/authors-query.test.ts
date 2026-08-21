@@ -59,6 +59,17 @@ describe('isValidHandle', () => {
     expect(isValidHandle('émoji')).toBe(false)
     expect(isValidHandle('../../etc')).toBe(false)
   })
+
+  it('rejects reserved top-level route segments, case-insensitively', () => {
+    expect(isValidHandle('trending')).toBe(false)
+    expect(isValidHandle('Trending')).toBe(false)
+    expect(isValidHandle('shorts')).toBe(false)
+    expect(isValidHandle('settings')).toBe(false)
+  })
+
+  it('still accepts an ordinary handle that is not reserved', () => {
+    expect(isValidHandle('elonmusk')).toBe(true)
+  })
 })
 
 describe('getAuthorProfile', () => {

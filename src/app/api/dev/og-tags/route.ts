@@ -6,6 +6,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { decodeHtmlEntities } from '@/lib/utils/html-entities'
+import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
 interface OgTags {
   title: string | null
@@ -19,21 +21,6 @@ interface OgTags {
   twitterDescription: string | null
   twitterImage: string | null
   twitterCreator: string | null
-}
-
-// Decode common HTML entities
-function decodeHtmlEntities(text: string): string {
-  return text
-    .replace(/&#x27;/g, "'")
-    .replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'")
-    .replace(/&#x22;/g, '"')
-    .replace(/&#34;/g, '"')
-    .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&nbsp;/g, ' ')
 }
 
 export async function GET(request: NextRequest) {
@@ -52,12 +39,11 @@ export async function GET(request: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     const url = `${baseUrl}${path}`
 
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, 10_000, {
       headers: {
         // Pretend to be a social crawler to get full OG tags
         'User-Agent': 'Twitterbot/1.0',
       },
-      signal: AbortSignal.timeout(10_000),
     })
 
     if (!response.ok) {

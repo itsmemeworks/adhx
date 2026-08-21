@@ -2,6 +2,7 @@ import type { TheaterItem } from './types'
 import { PlatformGlyph, TypeBadge, type ContentType } from '@/components/matter'
 import { previewPath } from '@/lib/activity/preview-path'
 import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
+import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
 /**
  * Server-rendered, crawlable content behind the signed-out `/` theater
@@ -30,7 +31,7 @@ const PLATFORM_LABEL: Record<string, string> = {
   youtube: 'YouTube',
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://adhx.com'
+const BASE_URL = PUBLIC_BASE_URL
 
 function itemHref(item: TheaterItem): string {
   if (item.bookmarkId) return previewPath(item.platform, item.author, item.bookmarkId)

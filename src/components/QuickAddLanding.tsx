@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { ArrowRight, Bookmark, Loader2 } from 'lucide-react'
 import { ADHX_PURPLE } from '@/lib/gestalt/theme'
 import { XIcon } from '@/components/icons'
@@ -59,7 +60,13 @@ export function QuickAddLanding({ username, tweetId }: QuickAddLandingProps) {
       {/* Header */}
       <header className="p-4">
         <a href="/" className="flex items-center gap-2 w-fit">
-          <img src="/logo.png" alt="ADHX Logo" className="w-8 h-8 object-contain" />
+          <Image
+            src="/logo.png"
+            alt="ADHX Logo"
+            width={32}
+            height={32}
+            className="w-8 h-8 object-contain"
+          />
           <span className="text-2xl font-indie-flower text-ink">ADHX</span>
         </a>
       </header>

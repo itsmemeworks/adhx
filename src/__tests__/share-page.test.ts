@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseShareUrl, extractSharedUrl } from '@/lib/utils/parse-share-url'
+import { parseShareUrl, extractSharedUrl, isSafeInternalPath } from '@/lib/utils/parse-share-url'
 
 /**
  * Share Page URL Parsing Tests
@@ -116,5 +116,32 @@ describe('parseShareUrl — rejections', () => {
     expect(parseShareUrl('https://youtube.com/feed/subscriptions')).toBeNull()
     expect(parseShareUrl('not a url at all')).toBeNull()
     expect(parseShareUrl('')).toBeNull()
+  })
+})
+
+describe('isSafeInternalPath — guards window.location assignment', () => {
+  it('accepts real preview/resolver paths', () => {
+    expect(isSafeInternalPath('/elonmusk/status/1234567890')).toBe(true)
+    expect(isSafeInternalPath('/reels/DXVsqQ7CSXw')).toBe(true)
+    expect(isSafeInternalPath('/@sophieraiin/video/7619017281691045134')).toBe(true)
+    expect(
+      isSafeInternalPath('/api/tiktok/resolve?url=https%3A%2F%2Fvm.tiktok.com%2Fabc&go=1'),
+    ).toBe(true)
+  })
+
+  it('rejects a javascript: scheme smuggled into the "path"', () => {
+    expect(isSafeInternalPath('javascript:alert(1)')).toBe(false)
+  })
+
+  it('rejects a protocol-relative URL (silent redirect off-site)', () => {
+    expect(isSafeInternalPath('//evil.com/phish')).toBe(false)
+  })
+
+  it('rejects an absolute URL to another host', () => {
+    expect(isSafeInternalPath('https://evil.com/phish')).toBe(false)
+  })
+
+  it('rejects a path that is missing the leading slash', () => {
+    expect(isSafeInternalPath('elonmusk/status/1')).toBe(false)
   })
 })

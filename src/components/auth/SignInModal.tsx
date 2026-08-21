@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import Image from 'next/image'
 import { isValidEmail } from '@/lib/utils/email'
 import { Mail } from 'lucide-react'
 import { PlatformGlyph } from '@/components/matter'
@@ -154,7 +155,14 @@ export function SignInModal({
       >
         {/* Brand row */}
         <div className="mb-6 flex items-center gap-2">
-          <img src="/adhx-cloud.png" alt="" aria-hidden style={{ height: 26 }} className="w-auto" />
+          <Image
+            src="/adhx-cloud.png"
+            alt=""
+            aria-hidden
+            width={23}
+            height={26}
+            style={{ height: 26, width: 'auto' }}
+          />
           <span className="font-indie-flower leading-none" style={{ fontSize: 22, color: INK }}>
             ADHX
           </span>

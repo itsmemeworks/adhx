@@ -8,6 +8,7 @@ import { CollectionPosterCard } from '@/components/tags'
 import { MakeYourOwnButton } from '@/components/auth/MakeYourOwnButton'
 import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
 import { Bookmark, Eye, Flame } from 'lucide-react'
+import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
 /** Ghost-pill styling shared by the top-right "Make your own"/"Manage
  * collections" CTA, whichever of the two renders. */
@@ -34,7 +35,7 @@ interface Props {
   params: Promise<{ username: string }>
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://adhx.com'
+const BASE_URL = PUBLIC_BASE_URL
 
 type ProfileLoadResult = PublicProfileResult | { status: 'redirect'; username: string }
 

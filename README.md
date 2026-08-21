@@ -77,7 +77,15 @@ docker run -d -p 3000:3000 -v adhx_data:/data \
   adhx
 ```
 
-Add `TWITTER_CLIENT_ID`/`TWITTER_CLIENT_SECRET` for X sync (callback: `<your-url>/api/auth/twitter/callback`) and `RESEND_API_KEY` for real magic-link emails. A ready-to-use Fly.io config ships in `fly.toml`:
+Add `TWITTER_CLIENT_ID`/`TWITTER_CLIENT_SECRET` for X sync (callback: `<your-url>/api/auth/twitter/callback`) and `RESEND_API_KEY` for real magic-link emails. `DATABASE_PATH` defaults to `/data/adhx.db` inside the image, so the bare command above works without setting it — the `-v` flag is what makes the SQLite file persist across container restarts.
+
+Prefer one command? `docker-compose.yml` builds the image and wires up the same volume:
+
+```bash
+docker compose up --build
+```
+
+A ready-to-use Fly.io config ships in `fly.toml`:
 
 ```bash
 fly apps create your-app && fly volumes create adhx_data --region lhr --size 1

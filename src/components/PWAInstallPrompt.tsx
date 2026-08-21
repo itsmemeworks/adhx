@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { Plus, X } from 'lucide-react'
 import { getPlatformType, type PlatformType } from '@/lib/platform'
 import { IosShortcutInstallButton, SHORTCUT_DISMISS_KEY } from '@/components/IosShortcutInstall'
@@ -94,7 +95,13 @@ export function PWAInstallPrompt() {
     return (
       <div className="fixed bottom-3 inset-x-3 z-[60] sm:hidden">
         <div className="mx-auto max-w-md flex items-center gap-3 rounded-2xl bg-surface border border-hairline shadow-2xl px-4 py-3">
-          <img src="/icon-192.png" alt="" className="w-10 h-10 rounded-xl flex-shrink-0" />
+          <Image
+            src="/icon-192.png"
+            alt=""
+            width={40}
+            height={40}
+            className="w-10 h-10 rounded-xl flex-shrink-0"
+          />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-ink">Add ADHX to Share</p>
             <p className="text-xs text-ink-3">In X: Share → ADHX. Skip rewriting the URL.</p>
@@ -117,7 +124,13 @@ export function PWAInstallPrompt() {
   return (
     <div className="fixed bottom-3 inset-x-3 z-[60] sm:hidden">
       <div className="mx-auto max-w-md flex items-center gap-3 rounded-2xl bg-surface border border-hairline shadow-2xl px-4 py-3">
-        <img src="/icon-192.png" alt="" className="w-10 h-10 rounded-xl flex-shrink-0" />
+        <Image
+          src="/icon-192.png"
+          alt=""
+          width={40}
+          height={40}
+          className="w-10 h-10 rounded-xl flex-shrink-0"
+        />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-ink">Add ADHX to your home screen</p>
           <p className="text-xs text-ink-3">One tap — open it like an app, no app store needed.</p>

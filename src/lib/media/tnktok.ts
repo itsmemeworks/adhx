@@ -12,7 +12,9 @@
  */
 
 import { unstable_cache } from 'next/cache'
-import { makeHostAllowlist } from '@/lib/media/proxy'
+import { makeHostAllowlist, buildAllowlistedUrl } from '@/lib/media/proxy'
+import { decodeHtmlEntities } from '@/lib/utils/html-entities'
+import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
 const MIRRORS = ['https://tnktok.com'] as const
 
@@ -51,6 +53,9 @@ function isTikTokHost(hostname: string): boolean {
   return hostname === 'tiktok.com' || hostname.endsWith('.tiktok.com')
 }
 
+/** Allowlist hosts for `resolveTikTokUrl`'s redirect-following fetches. */
+const TIKTOK_HOSTS = ['tiktok.com', '.tiktok.com']
+
 /** Canonical `@handle/video/{id}` anywhere in a string. */
 const CANONICAL_RE = /tiktok\.com\/@([A-Za-z0-9._]{1,30})\/video\/(\d{6,25})/i
 
@@ -82,22 +87,22 @@ export async function resolveTikTokUrl(
   const direct = input.match(CANONICAL_RE)
   if (direct) return { handle: direct[1], videoId: direct[2] }
 
-  let current: string
-  try {
-    const u = new URL(input.startsWith('http') ? input : `https://${input}`)
-    if (!isTikTokHost(u.hostname)) return null
-    current = u.toString()
-  } catch {
-    return null
-  }
+  // `buildAllowlistedUrl` parses the input, validates the host against
+  // `TIKTOK_HOSTS`, and returns a URL string REBUILT from the validated
+  // parsed components — not the raw input — so every fetch target below is
+  // provably derived from a checked host, never straight from user input.
+  let current = buildAllowlistedUrl(
+    input.startsWith('http') ? input : `https://${input}`,
+    TIKTOK_HOSTS,
+  )
+  if (!current) return null
 
   for (let hop = 0; hop < 5; hop++) {
     let res: Response
     try {
-      res = await fetch(current, {
+      res = await fetchWithTimeout(current, 8_000, {
         method: 'GET',
         redirect: 'manual',
-        signal: AbortSignal.timeout(8_000),
         // A browser-ish UA — TikTok serves a bot challenge to obvious crawlers.
         headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ADHXBot/1.0)' },
       })
@@ -108,16 +113,18 @@ export async function resolveTikTokUrl(
     if (res.status >= 300 && res.status < 400) {
       const loc = res.headers.get('location')
       if (!loc) return null
-      let next: URL
+      let nextAbsolute: string
       try {
-        next = new URL(loc, current)
+        nextAbsolute = new URL(loc, current).toString()
       } catch {
         return null
       }
-      if (!isTikTokHost(next.hostname)) return null // don't follow off-platform
-      const m = next.toString().match(CANONICAL_RE)
+      // don't follow off-platform — same validate-then-rebuild as above
+      const safeNext = buildAllowlistedUrl(nextAbsolute, TIKTOK_HOSTS)
+      if (!safeNext) return null
+      const m = safeNext.match(CANONICAL_RE)
       if (m) return { handle: m[1], videoId: m[2] }
-      current = next.toString()
+      current = safeNext
       continue
     }
 
@@ -164,8 +171,7 @@ export const fetchTikTokMetadata = unstable_cache(
 
 async function tryMirror(url: string): Promise<TikTokMetadata | null> {
   try {
-    const response = await fetch(url, {
-      signal: AbortSignal.timeout(8_000),
+    const response = await fetchWithTimeout(url, 8_000, {
       headers: { 'User-Agent': 'Twitterbot/1.0', Accept: 'text/html' },
       redirect: 'follow',
     })
@@ -240,15 +246,4 @@ function getMeta(html: string, property: string): string | undefined {
   const match = html.match(pattern)
   if (!match) return undefined
   return decodeHtmlEntities(match[1] || match[2])
-}
-
-function decodeHtmlEntities(str: string): string {
-  return str
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&#x27;/g, "'")
-    .replace(/&#x2F;/g, '/')
 }

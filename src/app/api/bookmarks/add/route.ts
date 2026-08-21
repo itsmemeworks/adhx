@@ -10,6 +10,7 @@ import { fetchTikTokMetadata, resolveTikTokUrl, isTikTokShortLink } from '@/lib/
 import { fetchYouTubeMetadata, youtubeThumbnail, youtubeShortUrl } from '@/lib/media/youtube'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 import { detectPlatformPost } from '@/lib/platform/url'
+import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
 /**
  * Platform-agnostic bookmark add endpoint.
@@ -50,14 +51,13 @@ export const POST = withAuth(async (request: NextRequest, userId: string) => {
       const delegateUrl = new URL('/api/tweets/add', request.url)
       delegateUrl.protocol = 'http:'
       delegateUrl.host = `127.0.0.1:${process.env.PORT || delegateUrl.port || '3000'}`
-      const tweetResponse = await fetch(delegateUrl.toString(), {
+      const tweetResponse = await fetchWithTimeout(delegateUrl.toString(), 10_000, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           cookie: request.headers.get('cookie') || '',
         },
         body: JSON.stringify({ url, source }),
-        signal: AbortSignal.timeout(10_000),
       })
       const tweetData = await tweetResponse.json()
       return NextResponse.json(

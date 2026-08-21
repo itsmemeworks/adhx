@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   getVideoUrl,
   getPhotoUrl,
@@ -9,8 +9,61 @@ import {
   getDownloadUrl,
   getThumbnailUrl,
   extractUrlsFromFacets,
+  fetchTweetData,
   type FxTwitterResponse,
 } from '@/lib/media/fxembed'
+
+describe('fetchTweetData', () => {
+  const mockFetch = vi.fn()
+  beforeEach(() => {
+    mockFetch.mockReset()
+    global.fetch = mockFetch as unknown as typeof fetch
+  })
+
+  /**
+   * The author/tweetId flow straight from Next.js route params in several
+   * callers (preview pages, /api/share/tweet, /api/og/tweet) with no
+   * validation of their own — fetchTweetData is the only choke point, so it
+   * must reject anything outside the expected charset before it can reach
+   * the request URL (js/request-forgery).
+   */
+  it('rejects an invalid author without making a request', async () => {
+    const result = await fetchTweetData('../../evil', '123')
+    expect(result).toBeNull()
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('rejects an invalid tweetId without making a request', async () => {
+    const result = await fetchTweetData('user', 'not-a-number')
+    expect(result).toBeNull()
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('rejects an author string long enough to try smuggling a host', async () => {
+    const result = await fetchTweetData('user@evil.com', '123')
+    expect(result).toBeNull()
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('fetches the exact FxTwitter URL for valid author/tweetId', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ tweet: null }),
+    })
+    await fetchTweetData('testuser', '1234567890')
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    const [calledUrl] = mockFetch.mock.calls[0]
+    expect(calledUrl).toBe('https://api.fxtwitter.com/testuser/status/1234567890')
+  })
+
+  it('accepts the special "i" author used for retweet/quote lookups', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ tweet: null }) })
+    await fetchTweetData('i', '999')
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    const [calledUrl] = mockFetch.mock.calls[0]
+    expect(calledUrl).toBe('https://api.fxtwitter.com/i/status/999')
+  })
+})
 
 describe('FxEmbed URL utilities', () => {
   const author = 'testuser'

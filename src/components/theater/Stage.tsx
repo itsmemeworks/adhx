@@ -6,11 +6,11 @@
  * themes — hardcoded, does not follow theme tokens.
  */
 
-import { ArrowRight } from 'lucide-react'
 import { PlatformGlyph } from '@/components/matter'
 import { inferType } from '@/lib/trending/filter'
 import { previewPath } from '@/lib/activity/preview-path'
 import { usePlaybackSource } from './usePlaybackSource'
+import { StageFrame, StageHeadline, StageCTA } from './stage-primitives'
 import { StageVideo } from './StageVideo'
 import { StageText } from './StageText'
 import { StageInstagram } from './StageInstagram'
@@ -104,7 +104,7 @@ function StagePoster({ item, poster }: { item: TheaterItem; poster: string | nul
   const href = previewPath(item.platform, item.author, item.bookmarkId || '')
 
   return (
-    <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-[#08070a]">
+    <StageFrame>
       {thumb ? (
         <>
           <img
@@ -121,17 +121,9 @@ function StagePoster({ item, poster }: { item: TheaterItem; poster: string | nul
         <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md">
           <PlatformGlyph platform={item.platform} size={20} />
         </span>
-        {title && (
-          <h2 className="font-serif text-2xl leading-tight text-white sm:text-3xl">{title}</h2>
-        )}
-        <a
-          href={href}
-          className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full bg-clay-grad px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-opacity hover:opacity-90"
-        >
-          Open preview
-          <ArrowRight size={15} />
-        </a>
+        {title && <StageHeadline>{title}</StageHeadline>}
+        <StageCTA href={href} />
       </div>
-    </div>
+    </StageFrame>
   )
 }

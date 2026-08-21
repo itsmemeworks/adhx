@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
-import { notFound, redirect } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { getTrendingItems, type TrendingItem } from '@/lib/trending/query'
 import { applyFilter, filterLabel, slugToFilter } from '@/lib/trending/filter'
 import { TrendingRankedList } from '@/components/trending/TrendingRankedList'
 import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
 import { TrendingStaticList, itemHref } from '@/components/trending/TrendingStaticList'
 import type { TheaterFeedSeed } from '@/components/theater/types'
+import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
 /**
  * /trending/[filter] — a crawlable hub for a single lens (videos / photos /
@@ -26,7 +27,7 @@ import type { TheaterFeedSeed } from '@/components/theater/types'
 // The query is a cheap local SQLite read, so per-request rendering is fine.
 export const dynamic = 'force-dynamic'
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://adhx.com'
+const BASE_URL = PUBLIC_BASE_URL
 
 interface Props {
   params: Promise<{ filter: string }>
@@ -66,7 +67,7 @@ export default async function TrendingFilterPage({ params }: Props) {
   const { filter: slug } = await params
   // "latest" is the default lens at the bare /trending now — keep the old
   // /trending/latest URL working by sending it there.
-  if (slug === 'latest') redirect('/trending')
+  if (slug === 'latest') permanentRedirect('/trending')
   const filter = slugToFilter(slug)
   if (!filter) notFound()
 

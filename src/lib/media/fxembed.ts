@@ -11,6 +11,7 @@
  */
 
 import { normalizeEntityMap } from '@/lib/utils/article-text'
+import { isValidTweetAuthor, isValidTweetId } from '@/lib/media/proxy'
 
 export interface MediaUrlOptions {
   tweetId: string
@@ -330,6 +331,17 @@ export async function fetchTweetData(
   tweetId: string,
   opts: { timeoutMs?: number } = {},
 ): Promise<FxTwitterResponse | null> {
+  // Callers pass author/tweetId straight from route params in several places
+  // (preview pages, /api/share/tweet, /api/og/tweet) without validating them
+  // first — reject anything outside the expected charset before it can reach
+  // the request URL, and build that URL from a `URL` object (validated,
+  // encoded path segments) rather than raw template-literal interpolation of
+  // the caller-supplied strings.
+  if (!isValidTweetAuthor(author) || !isValidTweetId(tweetId)) {
+    console.error(`Invalid tweet author/id for FxTwitter fetch: ${author}/${tweetId}`)
+    return null
+  }
+
   try {
     // Timeout to prevent hanging when FxTwitter is slow/down. Defaults to 5s for
     // latency-sensitive preview pages; background sync passes a longer value
@@ -339,7 +351,10 @@ export async function fetchTweetData(
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), opts.timeoutMs ?? 5000)
 
-    const response = await fetch(`https://api.fxtwitter.com/${author}/status/${tweetId}`, {
+    const fxUrl = new URL('https://api.fxtwitter.com')
+    fxUrl.pathname = `/${encodeURIComponent(author)}/status/${encodeURIComponent(tweetId)}`
+
+    const response = await fetch(fxUrl.toString(), {
       headers: {
         'User-Agent': 'ADHX/1.0',
       },

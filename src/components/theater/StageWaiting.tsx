@@ -13,6 +13,7 @@
  */
 
 import { LiveDot } from '@/components/matter'
+import { StageHeadline } from './stage-primitives'
 
 export interface StageWaitingProps {
   /** Ambient stat shown in quiet mono — omitted entirely when zero/absent. */
@@ -23,9 +24,7 @@ export function StageWaiting({ savedToday }: StageWaitingProps) {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-[#08070a] px-6 text-center">
       <LiveDot />
-      <h2 className="font-serif text-2xl leading-tight text-white sm:text-3xl">
-        You&rsquo;re all caught up
-      </h2>
+      <StageHeadline>You&rsquo;re all caught up</StageHeadline>
       <p className="text-sm text-white/50">waiting for new sends&hellip;</p>
       {!!savedToday && (
         <p className="font-mono text-[11px] text-white/30">{savedToday} saved today</p>

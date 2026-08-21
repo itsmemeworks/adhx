@@ -8,6 +8,7 @@ import {
 } from '@/lib/media/tnktok'
 import { streamingResponse } from '@/lib/media/proxy'
 import { mediaRateLimit } from '@/lib/rate-limit'
+import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
 /**
  * TikTok video proxy — streams the MP4 through the server for inline playback
@@ -39,8 +40,7 @@ export async function GET(request: NextRequest) {
     }
 
     const rangeHeader = request.headers.get('range')
-    const videoResponse = await fetch(meta.videoUrl, {
-      signal: AbortSignal.timeout(30_000),
+    const videoResponse = await fetchWithTimeout(meta.videoUrl, 30_000, {
       redirect: 'follow',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',

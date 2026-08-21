@@ -21,6 +21,7 @@ import {
 } from '@/lib/media/instagram-playback'
 import { previewPath } from '@/lib/activity/preview-path'
 import { StageVideo } from './StageVideo'
+import { StageFrame } from './stage-primitives'
 import type { TheaterItem } from './types'
 
 export interface StageInstagramProps {
@@ -131,7 +132,7 @@ export function StageInstagram({ item, muted, onRequestUnmute, onEnded }: StageI
   // Probing: poster + spinner (≤3s), then poster + a quiet status line.
   const phase = instagramStagePhase(status, slow)
   return (
-    <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-[#08070a]">
+    <StageFrame>
       {poster && (
         <img
           src={poster}
@@ -151,6 +152,6 @@ export function StageInstagram({ item, muted, onRequestUnmute, onEnded }: StageI
         )}
       </div>
       <span className="sr-only">{item.text || 'Instagram reel'}</span>
-    </div>
+    </StageFrame>
   )
 }

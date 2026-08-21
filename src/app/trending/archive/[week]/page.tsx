@@ -14,6 +14,7 @@ import { itemHref } from '@/components/trending/TrendingStaticList'
 import { MatterLogo, PlatformGlyph, TypeBadge, type ContentType } from '@/components/matter'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
+import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
 /**
  * /trending/archive/[week] — a permanent snapshot of what the community
@@ -31,7 +32,7 @@ import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structur
 // slugs are validated at request time via parseIsoWeekSlug + notFound.
 export const dynamic = 'force-dynamic'
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://adhx.com'
+const BASE_URL = PUBLIC_BASE_URL
 
 interface Props {
   params: Promise<{ week: string }>

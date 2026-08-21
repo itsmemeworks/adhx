@@ -19,6 +19,7 @@ import { metrics } from '@/lib/sentry'
 import { db } from '@/lib/db'
 import { bookmarks } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
+import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
 interface Props {
   params: Promise<{ username: string; id: string }>
@@ -108,7 +109,7 @@ export default async function TikTokPreviewPage({ params }: Props) {
   })
   const { seed } = await buildSharedSeed(sharedItem)
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const baseUrl = PUBLIC_BASE_URL
   const jsonLd = buildVideoObjectLd({
     name: meta?.title || description || `@${handle} on TikTok`,
     description: description || undefined,
@@ -156,10 +157,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const handle = normalizeHandle(username)
 
   if (!isValidUsername(handle) || !isValidVideoId(id)) {
-    return { title: 'ADHX — Save now. Read never. Find always.' }
+    return { title: 'ADHX - Save now. Read never. Find always.' }
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const baseUrl = PUBLIC_BASE_URL
   const canonicalUrl = `${baseUrl}/@${handle}/video/${id}`
   const meta = await fetchTikTokMetadata(handle, id)
 

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { captureException } from '@/lib/sentry'
-import { isAllowedHlsUrl } from '@/lib/media/proxy'
+import { buildAllowlistedUrl, TWITTER_HLS_HOSTS } from '@/lib/media/proxy'
 import { mediaRateLimit } from '@/lib/rate-limit'
+import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
 /**
  * HLS Segment Proxy - Fetches individual video segments from Twitter's CDN
@@ -27,20 +28,22 @@ export async function GET(request: NextRequest) {
 
   try {
     // Validate URL is from Twitter's video CDN (strict domain check + https-only
-    // via the shared SSRF allowlist factory, to prevent SSRF)
-    if (!isAllowedHlsUrl(segmentUrl)) {
+    // via the shared SSRF allowlist factory, to prevent SSRF) and rebuild the
+    // fetch target from the validated URL's own parsed components — never the
+    // raw query-param string — so the fetched URL is provably safe.
+    const safeSegmentUrl = buildAllowlistedUrl(segmentUrl, TWITTER_HLS_HOSTS)
+    if (!safeSegmentUrl) {
       return NextResponse.json({ error: 'Invalid segment URL' }, { status: 400 })
     }
 
     // Fetch the segment
-    const response = await fetch(segmentUrl, {
+    const response = await fetchWithTimeout(safeSegmentUrl, 10_000, {
       headers: {
         'User-Agent':
           'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         Referer: 'https://twitter.com/',
         Origin: 'https://twitter.com',
       },
-      signal: AbortSignal.timeout(10_000),
     })
 
     if (!response.ok) {

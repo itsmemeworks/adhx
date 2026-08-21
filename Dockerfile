@@ -49,6 +49,13 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 # Pass Sentry release version to runtime
 ENV SENTRY_RELEASE=${SENTRY_RELEASE}
+# Default DB location inside the container. The app's own default
+# (./data/adhdone.db, relative to /app) lives under a root-owned directory the
+# non-root `nextjs` user below can't mkdir into — omitting DATABASE_PATH would
+# crash-loop with EACCES. /data is created and chowned for nextjs below, and
+# doubles as the mount point for a persistent volume. Override to point
+# elsewhere (e.g. a different volume path).
+ENV DATABASE_PATH=/data/adhx.db
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs && \

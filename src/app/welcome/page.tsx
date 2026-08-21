@@ -1,8 +1,14 @@
 import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
 import { getSession } from '@/lib/auth/session'
 import { getAccount } from '@/lib/auth/account'
 import { isSafeReturnUrl } from '@/lib/auth/return-url'
 import { WelcomeClient } from './WelcomeClient'
+
+// One-shot, authed-only utility page — nothing here is meant to be indexed.
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+}
 
 // The one-shot username-choice prompt shown right after a brand-new email
 // signup (see the redirect in /api/auth/email/callback). Strictly one-shot:

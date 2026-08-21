@@ -24,6 +24,8 @@ import { PasteToPreview } from '@/components/PasteToPreview'
 import { useTheme } from '@/lib/theme/context'
 import { ConnectWithX } from '@/components/matter'
 import { parseSyncErrorEvent, type SyncErrorCode } from '@/lib/sync/messages'
+import { useSyncListener } from './useSyncListener'
+import { useTriageQueue } from './useTriageQueue'
 
 /**
  * Seed for triage's Live sub-tab (unified-theater-triage.md §2) — the same
@@ -513,27 +515,9 @@ function FeedPageContent(): React.ReactElement {
     if (page > 1) fetchFeed(false)
   }, [page])
 
-  // Listen for sync-complete events from Header's SyncProgress component
-  // This is needed because Header-triggered syncs don't set isSyncing in this component
-  useEffect(() => {
-    const handleSyncComplete = () => {
-      // Only refetch if we're not currently syncing via our own startSync
-      // (which already handles the state update)
-      if (!isSyncing) {
-        fetchFeed(true)
-        fetchTags()
-      }
-    }
-
-    window.addEventListener('sync-complete', handleSyncComplete)
-    return () => window.removeEventListener('sync-complete', handleSyncComplete)
-  }, [fetchFeed, fetchTags, isSyncing])
-
-  useEffect(() => {
-    const handleTweetAdded = () => fetchFeed(true)
-    window.addEventListener('tweet-added', handleTweetAdded)
-    return () => window.removeEventListener('tweet-added', handleTweetAdded)
-  }, [fetchFeed])
+  // Listen for sync-complete (Header's SyncProgress component) and
+  // tweet-added (URL-prefix add flow) events and refresh the feed/tags.
+  useSyncListener({ isSyncing, fetchFeed, fetchTags })
 
   // Handle pending navigation after filter change and items reload
   // Only navigate when loading transitions from true to false (fetch completed)
@@ -709,31 +693,12 @@ function FeedPageContent(): React.ReactElement {
     startTriageAll('live')
   }, [pendingLive, isAuthenticated, startTriageAll])
 
-  // Drop/mark items the triage mode resolved, keeping the feed in sync.
-  const handleTriageResolved = useCallback(
-    (id: string, action: 'archive' | 'delete') => {
-      if (action === 'delete' || unreadOnly) {
-        setItems((prev) => prev.filter((i) => i.id !== id))
-      } else {
-        setItems((prev) => prev.map((i) => (i.id === id ? { ...i, isRead: true } : i)))
-      }
-      // Triage queue items are always unread, so both archiving and deleting
-      // one drops the unread count.
-      setStats((prev) => ({ ...prev, unread: Math.max(0, prev.unread - 1) }))
-    },
-    [unreadOnly],
-  )
-
-  // Undo of a triage archive: restore the item to unread + bump the count back.
-  const handleTriageRestored = useCallback((item: FeedItem) => {
-    setItems(
-      (prev) =>
-        prev.some((i) => i.id === item.id)
-          ? prev.map((i) => (i.id === item.id ? { ...i, isRead: false } : i))
-          : [{ ...item, isRead: false }, ...prev], // was dropped under unreadOnly — re-add it
-    )
-    setStats((prev) => ({ ...prev, unread: prev.unread + 1 }))
-  }, [])
+  // Reconcile the feed's items/stats with actions taken inside the triage theater.
+  const { handleTriageResolved, handleTriageRestored } = useTriageQueue({
+    unreadOnly,
+    setItems,
+    setStats,
+  })
 
   // Global keyboard shortcuts (when lightbox is NOT open)
   useEffect(() => {

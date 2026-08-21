@@ -17,6 +17,10 @@ Allow: /api/media/
 # Everything else under /api/ is session-gated (feed, sync, auth, bookmarks)
 Disallow: /api/
 Disallow: /settings
+Disallow: /dev/
+Disallow: /tags
+Disallow: /welcome
+Disallow: /share
 
 # Sitemap location
 Sitemap: https://adhx.com/sitemap.xml

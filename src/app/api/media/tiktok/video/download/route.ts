@@ -7,6 +7,7 @@ import {
   isValidVideoId,
 } from '@/lib/media/tnktok'
 import { downloadResponse } from '@/lib/media/proxy'
+import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
 /**
  * TikTok video download — streams the MP4 through the server with
@@ -32,8 +33,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid video source' }, { status: 403 })
     }
 
-    const videoResponse = await fetch(meta.videoUrl, {
-      signal: AbortSignal.timeout(30_000),
+    const videoResponse = await fetchWithTimeout(meta.videoUrl, 30_000, {
       redirect: 'follow',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',

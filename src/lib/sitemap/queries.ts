@@ -4,12 +4,18 @@
  * testable in isolation from SQLite.
  */
 
+import { isReservedTopLevelSegment } from '@/lib/routes/reserved'
+
 /** Valid X/Twitter handle: 1-15 word characters, no leading "@". */
 const TWITTER_HANDLE_RE = /^[A-Za-z0-9_]{1,15}$/
 
-/** Whether a string is a syntactically valid X/Twitter handle. */
+/**
+ * Whether a string is a syntactically valid X/Twitter handle AND not a
+ * reserved top-level route segment (e.g. "trending", "settings") that would
+ * collide with a real app page if emitted as an author hub URL.
+ */
 export function isValidTwitterHandle(handle: string | null | undefined): handle is string {
-  return !!handle && TWITTER_HANDLE_RE.test(handle)
+  return !!handle && TWITTER_HANDLE_RE.test(handle) && !isReservedTopLevelSegment(handle)
 }
 
 export interface ThinContentInput {

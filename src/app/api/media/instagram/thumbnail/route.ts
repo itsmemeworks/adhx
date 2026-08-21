@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { captureException } from '@/lib/sentry'
 import { fetchReelMetadata, isAllowedImageUrl, isValidReelId } from '@/lib/media/instafix'
+import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
 /**
  * Instagram Reel thumbnail proxy.
@@ -55,8 +56,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Untrusted thumbnail source' }, { status: 403 })
     }
 
-    const imageResponse = await fetch(cdnUrl, {
-      signal: AbortSignal.timeout(10_000),
+    const imageResponse = await fetchWithTimeout(cdnUrl, 10_000, {
       redirect: 'follow',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',

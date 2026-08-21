@@ -36,6 +36,38 @@ export function makeHostAllowlist(hosts: string[]): (url: string) => boolean {
 }
 
 /**
+ * Validate `input` against `hosts` (same rule as `makeHostAllowlist`: https
+ * only, exact host or dot-prefixed subdomain match) and, on success, return a
+ * URL string REBUILT from the parsed, validated components — never the
+ * original input string.
+ *
+ * Static analysis (CodeQL's request-forgery query) can't prove that a
+ * boolean-returning predicate like `makeHostAllowlist(...)` sanitizes the raw
+ * string that still flows unchanged into `fetch()`; the check only gates
+ * *whether* the fetch happens, it doesn't sever the taint on *what's*
+ * fetched. Rebuilding the URL from `parsed.hostname`/`pathname`/`search`
+ * after validating the hostname makes the fetched string provably derived
+ * from the validated `URL` object instead of the untrusted input.
+ *
+ * Returns `null` when the URL fails to parse, isn't `https:`, or its host
+ * isn't in the allowlist.
+ */
+export function buildAllowlistedUrl(input: string, hosts: string[]): string | null {
+  let parsed: URL
+  try {
+    parsed = new URL(input)
+  } catch {
+    return null
+  }
+  if (parsed.protocol !== 'https:') return null
+  const allowed = hosts.some((host) =>
+    host.startsWith('.') ? parsed.hostname.endsWith(host) : parsed.hostname === host,
+  )
+  if (!allowed) return null
+  return `https://${parsed.hostname}${parsed.pathname}${parsed.search}`
+}
+
+/**
  * Twitter media CDN hosts (video + image). Each base host is listed in both its
  * exact and dot-prefixed-subdomain form, matching the `host === d || host
  * endsWith('.'+d)` checks the video proxies previously hand-rolled.

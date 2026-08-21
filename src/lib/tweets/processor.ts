@@ -15,6 +15,7 @@
 import { fetchTweetData, type FxTwitterResponse } from '@/lib/media/fxembed'
 import { detectPlatformPost } from '@/lib/platform/url'
 import { normalizeEntityMap } from '@/lib/utils/article-text'
+import { isHostOrSubdomainOf } from '@/lib/utils/url-host'
 
 // ============================================================================
 // Types
@@ -453,8 +454,8 @@ export function extractDomain(url: string): string {
 export function determineLinkType(url: string): string {
   const lower = url.toLowerCase()
 
-  if (lower.includes('twitter.com') || lower.includes('x.com')) return 'tweet'
-  if (lower.includes('youtube.com') || lower.includes('youtu.be')) return 'video'
+  if (isHostOrSubdomainOf(url, ['twitter.com', 'x.com'])) return 'tweet'
+  if (isHostOrSubdomainOf(url, ['youtube.com', 'youtu.be'])) return 'video'
   if (/\.(jpg|jpeg|png|gif|webp)$/i.test(lower)) return 'image'
   if (/\.(mp4|webm|mov)$/i.test(lower)) return 'media'
 

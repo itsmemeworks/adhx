@@ -136,7 +136,7 @@ saving and previewing right now, with per-lens hubs at `/trending/[filter]`
   "save count" that powers the Trending badge. `getTrendingItems()`
   (`src/lib/trending/query.ts`) is the shared anonymity-safe read path for the
   server-rendered hubs and the public `/api/trending` JSON endpoint.
-- The `DiscoverFeed` component polls `/api/activity`, de-dupes, and links each
+- The theater's live tab polls `/api/activity`, de-dupes, and links each
   card to the on-ADHX preview path to keep clicks on-site. Each hub also
   server-renders a crawlable item list + JSON-LD, so the community feed doubles
   as indexable content (the SEO growth loop).

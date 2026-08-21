@@ -3,6 +3,9 @@
  * Used as fallback when FxTwitter doesn't return external link data
  */
 
+import { decodeHtmlEntities } from '@/lib/utils/html-entities'
+import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
+
 export interface OgMetadata {
   title?: string
   description?: string
@@ -16,8 +19,7 @@ export interface OgMetadata {
  */
 export async function fetchOgMetadata(url: string): Promise<OgMetadata | null> {
   try {
-    const response = await fetch(url, {
-      signal: AbortSignal.timeout(10_000),
+    const response = await fetchWithTimeout(url, 10_000, {
       headers: {
         // Use Twitterbot UA — sites whitelist social crawlers for OG tag serving,
         // while blocking generic bots with Cloudflare etc.
@@ -92,15 +94,4 @@ function parseOgTags(html: string): OgMetadata | null {
   if (!title && !description && !image) return null
 
   return { title, description, image, siteName }
-}
-
-function decodeHtmlEntities(str: string): string {
-  return str
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&#x27;/g, "'")
-    .replace(/&#x2F;/g, '/')
 }

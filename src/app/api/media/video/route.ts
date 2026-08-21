@@ -7,6 +7,7 @@ import {
   streamingResponse,
 } from '@/lib/media/proxy'
 import { mediaRateLimit } from '@/lib/rate-limit'
+import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
 // Simple in-memory cache for video URLs (survives for 1 hour)
 // Cache key includes quality for different variants
@@ -58,12 +59,15 @@ export async function GET(request: NextRequest) {
 
     // If not cached, resolve from FxTwitter API
     if (!videoUrl) {
-      const response = await fetch(`https://api.fxtwitter.com/${author}/status/${tweetId}`, {
-        headers: {
-          'User-Agent': 'ADHX/1.0',
+      const response = await fetchWithTimeout(
+        `https://api.fxtwitter.com/${author}/status/${tweetId}`,
+        10_000,
+        {
+          headers: {
+            'User-Agent': 'ADHX/1.0',
+          },
         },
-        signal: AbortSignal.timeout(10_000),
-      })
+      )
 
       if (!response.ok) {
         throw new Error(`fxtwitter API returned ${response.status}`)
@@ -139,13 +143,12 @@ export async function GET(request: NextRequest) {
     // Stream video through server instead of redirecting
     // This avoids 403 errors from direct browser requests to video.twimg.com
     const rangeHeader = request.headers.get('range')
-    const videoResponse = await fetch(videoUrl, {
+    // Large file download — if the upstream CDN hangs, don't tie up the proxy forever
+    const videoResponse = await fetchWithTimeout(videoUrl, 30_000, {
       headers: {
         'User-Agent': 'ADHX/1.0',
         ...(rangeHeader && { Range: rangeHeader }),
       },
-      // Large file download — if the upstream CDN hangs, don't tie up the proxy forever
-      signal: AbortSignal.timeout(30_000),
     })
 
     if (!videoResponse.ok && videoResponse.status !== 206) {
