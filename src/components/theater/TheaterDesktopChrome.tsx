@@ -122,6 +122,12 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 const GLASS =
   'inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-4 text-[12.5px] font-semibold text-white backdrop-blur-md transition-colors hover:bg-white/20 disabled:opacity-60'
+/**
+ * Save drives account signups, so it's ALWAYS the visually primary action —
+ * every Save variant (sign-in prompt, SavePostButton, TriageLiveSaveButton,
+ * SaveCollectionButton) uses this class. Download is a power-user affordance,
+ * not a headline feature, so it stays on GLASS alongside Link/Open.
+ */
 const PRIMARY =
   'inline-flex h-11 items-center justify-center gap-1.5 rounded-full bg-clay-grad px-5 text-[12.5px] font-semibold text-white shadow-glow transition-opacity hover:opacity-90 disabled:opacity-60'
 
@@ -710,10 +716,10 @@ export function DesktopStageChrome({
               disabled={sendFile.sending}
               title={
                 sendFile.mode === 'share'
-                  ? 'Opens your share sheet with the video file'
-                  : 'Download the video file'
+                  ? 'Opens your share sheet with the file'
+                  : 'Download the file'
               }
-              className={PRIMARY}
+              className={GLASS}
             >
               {sendFile.sending ? (
                 <Loader2 size={14} className="animate-spin" />
@@ -753,17 +759,13 @@ export function DesktopStageChrome({
                   <TagIcon size={14} />
                   Tag
                 </button>
-                <TriageLiveSaveButton current={current} triage={triage} className={GLASS} />
+                <TriageLiveSaveButton current={current} triage={triage} className={PRIMARY} />
               </>
             ) : (
-              <SavePostButton current={current} className={GLASS} />
+              <SavePostButton current={current} className={PRIMARY} />
             )
           ) : (
-            <button
-              type="button"
-              onClick={() => onRequestSignIn?.()}
-              className={mode === 'home' && !sendFile.supported ? PRIMARY : GLASS}
-            >
+            <button type="button" onClick={() => onRequestSignIn?.()} className={PRIMARY}>
               <LogIn size={14} />
               Save
             </button>

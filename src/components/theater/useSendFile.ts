@@ -2,11 +2,12 @@
 
 /**
  * Send-the-file flow for the theater (spec §2/§8): prefetches the current
- * item's MP4 into a blob so `navigator.share` runs inside the user's tap
- * (iOS drops user-activation across an `await fetch()` — the first tap fails,
- * the second works once the video is cached; see the 2026-08-14 WORKLOG
- * entries), then shares `{ files, text: "via <canonical url>" }` — NEVER
- * `url` alongside `files` (WhatsApp concatenates them into "via URL URL").
+ * item's file (video MP4 or, for Twitter photo posts, the primary image)
+ * into a blob so `navigator.share` runs inside the user's tap (iOS drops
+ * user-activation across an `await fetch()` — the first tap fails, the
+ * second works once the file is cached; see the 2026-08-14 WORKLOG entries),
+ * then shares `{ files, text: "via <canonical url>" }` — NEVER `url`
+ * alongside `files` (WhatsApp concatenates them into "via URL URL").
  *
  * Desktop behavior (deliberately chosen, see `send()`): `supported` is driven
  * purely by whether the item HAS a sendable file (`resolveSendSource`), and on
@@ -46,7 +47,7 @@ export interface SendFile {
 }
 
 /** Delay before prefetching starts — aligned with the seen-dwell threshold so
- * skimming past items doesn't download an MP4 per item (spec §5/§6). */
+ * skimming past items doesn't download a file per item (spec §5/§6). */
 const PREFETCH_DELAY_MS = 2_000
 const FETCH_TIMEOUT_MS = 30_000
 
@@ -102,16 +103,26 @@ function prefetchBlob(key: string, mp4: string): Promise<Blob> {
 
 type SendableItem = Pick<TheaterItem, 'platform' | 'bookmarkId' | 'author' | 'contentType'>
 
+export interface SendSource {
+  /** The file's proxy/CDN URL — fetched into a blob for share/download. */
+  src: string
+  filename: string
+  /** Drives the fallback MIME (when the fetched blob carries no usable
+   * Content-Type) and the button's title copy. */
+  kind: 'video' | 'photo'
+}
+
 /**
- * Resolve the sendable MP4 for an item, or null when there's nothing to send
- * (PR 2 scope: video only — photo/text/article are a later PR). Pure, no
- * fetch — always goes through the video-src SSOT (`reelVideoSrc`), never an
- * inline per-platform URL (the regression that made Instagram fall through
- * to the Twitter proxy repeatedly).
+ * Resolve the sendable file for an item, or null when there's nothing to send
+ * (text/article/quote posts, YouTube — no free MP4 mirror exists there).
+ * Pure, no fetch — video always goes through the video-src SSOT
+ * (`reelVideoSrc`), never an inline per-platform URL (the regression that
+ * made Instagram fall through to the Twitter proxy repeatedly). Twitter
+ * photo posts go through the `/api/media/image` proxy's `download=1`
+ * variant, downloading the FIRST/primary photo only (multi-photo posts keep
+ * it simple — no photo picker in the Send button).
  */
-export function resolveSendSource(
-  item: SendableItem | null,
-): { mp4: string; filename: string } | null {
+export function resolveSendSource(item: SendableItem | null): SendSource | null {
   if (!item || !item.bookmarkId) return null
 
   // YouTube has no MP4 mirror at all — official iframe embed only, a
@@ -121,16 +132,25 @@ export function resolveSendSource(
   // TikTok and Instagram are single-format platforms: always video.
   if (item.platform === 'tiktok' || item.platform === 'instagram') {
     return {
-      mp4: reelVideoSrc(item as TheaterItem),
+      src: reelVideoSrc(item as TheaterItem),
       filename: `adhx-${item.platform}-${item.bookmarkId}.mp4`,
+      kind: 'video',
     }
   }
 
-  // Twitter carries text/photo/video/article — only send when it's actually a video.
+  // Twitter carries text/photo/video/article.
   if (item.platform === 'twitter' && item.contentType === 'video') {
     return {
-      mp4: reelVideoSrc(item as TheaterItem),
+      src: reelVideoSrc(item as TheaterItem),
       filename: `adhx-twitter-${item.bookmarkId}.mp4`,
+      kind: 'video',
+    }
+  }
+  if (item.platform === 'twitter' && item.contentType === 'photo' && item.author) {
+    return {
+      src: `/api/media/image?author=${encodeURIComponent(item.author)}&tweetId=${encodeURIComponent(item.bookmarkId)}&index=1&download=1`,
+      filename: `adhx-twitter-${item.bookmarkId}.jpg`,
+      kind: 'photo',
     }
   }
 
@@ -229,7 +249,7 @@ export function useSendFile(item: TheaterItem | null): SendFile {
     let cancelled = false
     const delayTimer = setTimeout(() => {
       if (cancelled) return
-      prefetchBlob(key, source.mp4)
+      prefetchBlob(key, source.src)
         .then((blob) => {
           if (cancelled) return
           blobRef.current = blob
@@ -245,7 +265,7 @@ export function useSendFile(item: TheaterItem | null): SendFile {
       cancelled = true
       clearTimeout(delayTimer)
     }
-  }, [key, source?.mp4])
+  }, [key, source?.src])
 
   const send = useCallback(async () => {
     if (!item || !source) return
@@ -259,7 +279,8 @@ export function useSendFile(item: TheaterItem | null): SendFile {
       const wantsShare = mode === 'share' && hasShare
 
       if (blob && wantsShare) {
-        const file = new File([blob], source.filename, { type: blob.type || 'video/mp4' })
+        const fallbackType = source.kind === 'photo' ? 'image/jpeg' : 'video/mp4'
+        const file = new File([blob], source.filename, { type: blob.type || fallbackType })
         const payload = buildSharePayload(file, canonicalUrl)
         if (!navigator.canShare || navigator.canShare(payload)) {
           try {
@@ -308,7 +329,7 @@ export function useSendFile(item: TheaterItem | null): SendFile {
       // dead — the browser saves the file as it streams.
       if (!wantsShare) {
         const link = document.createElement('a')
-        link.href = source.mp4
+        link.href = source.src
         link.download = source.filename
         document.body.appendChild(link)
         link.click()
