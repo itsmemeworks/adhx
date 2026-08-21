@@ -4,6 +4,7 @@ import { getUserIdForUsername, resolveUsernameAlias } from '@/lib/users/lookup'
 import { tagShares, bookmarkTags, bookmarks, bookmarkMedia, bookmarkLinks } from '@/lib/db/schema'
 import { eq, and, inArray } from 'drizzle-orm'
 import { withAuth } from '@/lib/api/with-auth'
+import { recordCollectionEvent } from '@/lib/discovery/record'
 
 const MAX_CLONE_SIZE = 100
 
@@ -214,6 +215,16 @@ export const POST = withAuth(
           )
           .onConflictDoNothing()
           .run()
+      })
+
+      // Discovery leaderboard signal (docs/specs/discovery-leaderboards.md §4)
+      // — the strongest signal a collection has: someone saved the whole
+      // thing. Fire-and-forget; a stats-write failure must never fail a clone.
+      recordCollectionEvent({
+        action: 'clone',
+        ownerUserId: sourceUserId,
+        tag: tagName,
+        viewerId: currentUserId,
       })
 
       return NextResponse.json({
