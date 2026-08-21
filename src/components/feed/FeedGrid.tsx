@@ -182,9 +182,21 @@ export function FeedGrid({
       {view === 'list' && (
         // List / Inbox — dense rows in a bordered surface.
         <div className="rounded-card border border-hairline bg-surface shadow-m-sm overflow-hidden [&>*:last-child]:border-b-0">
-          {items.map((item, index) => (
-            <FeedListRow key={item.id} item={item} onClick={() => onExpand(index)} />
-          ))}
+          {items.map((item, index) => {
+            const selected = tagSelectTag
+              ? (tagOverlay.get(tagOverlayKey(item)) ?? item.tags.includes(tagSelectTag))
+              : false
+            return (
+              <FeedListRow
+                key={item.id}
+                item={item}
+                onClick={() => onExpand(index)}
+                selectionMode={!!tagSelectTag}
+                selected={selected}
+                onToggleSelect={() => toggleTagMembership(item)}
+              />
+            )
+          })}
         </div>
       )}
 
@@ -193,6 +205,9 @@ export function FeedGrid({
         <div className="grid grid-cols-2 [@media(min-width:820px)]:grid-cols-4 gap-3 sm:gap-4 [grid-auto-rows:108px] sm:[grid-auto-rows:168px]">
           {items.map((item, index) => {
             const [cs, rs] = BENTO_SPANS[index % BENTO_SPANS.length]
+            const selected = tagSelectTag
+              ? (tagOverlay.get(tagOverlayKey(item)) ?? item.tags.includes(tagSelectTag))
+              : false
             return (
               <FeedBentoTile
                 key={item.id}
@@ -200,6 +215,9 @@ export function FeedGrid({
                 cs={cs}
                 rs={rs}
                 onClick={() => onExpand(index)}
+                selectionMode={!!tagSelectTag}
+                selected={selected}
+                onToggleSelect={() => toggleTagMembership(item)}
               />
             )
           })}
