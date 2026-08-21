@@ -25,7 +25,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { Play, RotateCcw, Volume2, ArrowDown } from 'lucide-react'
+import { Play, RotateCcw, ArrowDown } from 'lucide-react'
 import type { TheaterItem } from './types'
 
 export interface StageVideoProps {
@@ -264,13 +264,6 @@ export function StageVideo({
         onError={() => setErrored(true)}
         className="h-full w-full object-contain"
       />
-
-      {/* Small unmuted-state indicator (bottom-left), unchanged. */}
-      {!effectiveMuted && playing && (
-        <div className="pointer-events-none absolute bottom-6 left-4 inline-flex items-center gap-2 rounded-full bg-black/40 px-3 py-1.5 text-xs font-medium text-white/80 backdrop-blur-sm">
-          <Volume2 size={14} />
-        </div>
-      )}
 
       {/* Tap-to-play fallback (autoplay rejected even muted). */}
       {needsGesture && !ended && !errored && (
