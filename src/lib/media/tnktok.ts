@@ -53,8 +53,24 @@ function isTikTokHost(hostname: string): boolean {
   return hostname === 'tiktok.com' || hostname.endsWith('.tiktok.com')
 }
 
-/** Allowlist hosts for `resolveTikTokUrl`'s redirect-following fetches. */
-const TIKTOK_HOSTS = ['tiktok.com', '.tiktok.com']
+/**
+ * Allowlist hosts for `resolveTikTokUrl`'s redirect-following fetches.
+ *
+ * All EXACT hosts, deliberately — the short-link resolver only ever deals
+ * with the small, known TikTok share-link family (bare domain, `www.`, `m.`,
+ * and the `vm.`/`vt.` short-link hosts), so every one of these can be
+ * enumerated instead of falling back to a `.tiktok.com` wildcard. That keeps
+ * `buildAllowlistedUrl` on its exact-match branch, where the rebuilt fetch
+ * URL's host is one of these string literals rather than anything derived
+ * from the input — the barrier shape static analysis actually recognizes.
+ */
+const TIKTOK_HOSTS = [
+  'tiktok.com',
+  'www.tiktok.com',
+  'm.tiktok.com',
+  'vm.tiktok.com',
+  'vt.tiktok.com',
+]
 
 /** Canonical `@handle/video/{id}` anywhere in a string. */
 const CANONICAL_RE = /tiktok\.com\/@([A-Za-z0-9._]{1,30})\/video\/(\d{6,25})/i

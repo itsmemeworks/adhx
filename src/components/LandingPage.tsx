@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Bookmark,
   Search,
@@ -15,7 +16,11 @@ import {
   Send,
   Link2,
 } from 'lucide-react'
-import { parseShareUrl, isSafeInternalPath } from '@/lib/utils/parse-share-url'
+import {
+  parseShareUrl,
+  isSafeInternalPath,
+  matchTikTokShortLink,
+} from '@/lib/utils/parse-share-url'
 import { getPlatformType, type PlatformType } from '@/lib/platform'
 import { LiveDot, ConnectWithX } from '@/components/matter'
 import { PublicNav } from '@/components/PublicNav'
@@ -69,6 +74,7 @@ export function LandingPage() {
   const [tweetUrl, setTweetUrl] = useState('')
   const [urlError, setUrlError] = useState('')
   const live = useLiveActivity()
+  const router = useRouter()
 
   const handleLogin = () => {
     setIsLoading(true)
@@ -82,9 +88,24 @@ export function LandingPage() {
   // YouTube (incl. TikTok short links) all resolve identically here.
   const parseAndNavigate = (url: string): boolean => {
     const trimmed = url.trim()
+
+    // TikTok short links resolve via an /api route that 307s to the preview
+    // server-side — the client router can't follow that cross-route redirect,
+    // so this branch alone needs a hard navigation. Build the URL from a
+    // constant prefix/suffix with only the extracted link passed through
+    // `encodeURIComponent`, rather than assigning a pre-concatenated string
+    // (threaded in from another module) straight to `location.href`.
+    const shortLink = matchTikTokShortLink(trimmed)
+    if (shortLink) {
+      window.location.href = `/api/tiktok/resolve?url=${encodeURIComponent(shortLink)}&go=1`
+      return true
+    }
+
+    // Everything else is a real app route — use the client router, not a
+    // DOM navigation sink.
     const result = parseShareUrl(trimmed)
     if (result && isSafeInternalPath(result.path)) {
-      window.location.href = result.path
+      router.push(result.path)
       return true
     }
     return false

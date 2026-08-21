@@ -45,12 +45,26 @@ export function parseShareUrl(url: string): { path: string } | null {
   const result = detectPlatformPost(url)
   if (result) return { path: result.previewPath }
 
-  const short = url.match(TIKTOK_SHORTLINK)
+  const short = matchTikTokShortLink(url)
   if (short) {
-    return { path: `/api/tiktok/resolve?url=${encodeURIComponent(short[0])}&go=1` }
+    return { path: `/api/tiktok/resolve?url=${encodeURIComponent(short)}&go=1` }
   }
 
   return null
+}
+
+/**
+ * Pull the TikTok short-link substring out of `url`, or `null` if it isn't
+ * one. Exposed separately (rather than only inside `parseShareUrl`'s
+ * pre-built `path` string) so a caller that needs a HARD navigation to the
+ * `/api/tiktok/resolve` route — because it can't be handled by the client
+ * router — can rebuild that URL itself from a constant prefix/suffix with
+ * only this extracted substring passed through `encodeURIComponent`, instead
+ * of assigning a pre-concatenated string to `location.href`.
+ */
+export function matchTikTokShortLink(url: string): string | null {
+  const short = url.match(TIKTOK_SHORTLINK)
+  return short ? short[0] : null
 }
 
 /**
