@@ -4,7 +4,6 @@ import { Metadata } from 'next'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 import { isLikelyBot } from '@/lib/activity/bot'
-import { QuickAddLanding } from '@/components/QuickAddLanding'
 import { fetchTweetData, extractUrlsFromFacets, type FxTwitterResponse } from '@/lib/media/fxembed'
 import { fetchOgMetadata } from '@/lib/utils/og-fetch'
 import { truncate } from '@/lib/utils/format'
@@ -244,8 +243,34 @@ export default async function QuickAddPage({ params }: Props) {
     )
   }
 
-  // Fallback: Show minimal landing page if FxTwitter API failed
-  return <QuickAddLanding username={username} tweetId={id} />
+  // FxTwitter couldn't resolve this tweet (401/404 — deleted, private, or
+  // suspended). TASK 3 (owner screenshot report): render the SAME shared
+  // theater every resolvable tweet gets, with a minimal stub lead so
+  // `TheaterShell` shows the graceful `StageUnavailable` treatment (no
+  // retry, no save CTA, no X-connect CTA) and auto-advances into the live
+  // pulse after its normal 10s dwell — never the legacy off-brand
+  // `QuickAddLanding` "Connect with X to save" dead end (X isn't required to
+  // use ADHX at all; that page has been deleted). No `SharedPostStatic`/
+  // JSON-LD/`recordActivity` here — there is no real content to describe or
+  // record into the public pulse.
+  const unavailableAuthor = username
+  const unavailableItem = tweetToTheaterItem({
+    id,
+    author: unavailableAuthor,
+    contentType: 'text',
+    createdAt: new Date().toISOString(),
+  })
+  const { seed } = await buildSharedSeed(unavailableItem)
+
+  return (
+    <TheaterShell
+      seed={seed}
+      mode="shared"
+      sharedItem={unavailableItem}
+      sharedUnavailable
+      authed={!!userId}
+    />
+  )
 }
 
 /**
@@ -287,11 +312,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // Fetch tweet data for rich metadata
   const tweet = await getTweetData(username, id)
 
-  // Fallback metadata if tweet fetch fails
+  // Unresolvable tweet (deleted/private/suspended — TASK 3): a minimal
+  // tombstone title, never indexed (there's nothing here worth a SERP
+  // result, and it would only get staler), no fabricated OG image/video.
   if (!tweet) {
     return {
-      title: `Preview @${username}'s tweet`,
-      description: 'Preview this tweet on ADHX',
+      title: 'Post unavailable - ADHX',
+      description: 'This post is no longer available on X.',
+      robots: { index: false },
     }
   }
 

@@ -7,6 +7,7 @@ import {
   computeCanNext,
   findFreshArrival,
   isSharedPostPinned,
+  isSharedItemUnavailable,
 } from '@/components/theater/TheaterShell'
 import { theaterItemKey } from '@/components/theater/types'
 
@@ -184,6 +185,46 @@ describe('isSharedPostPinned', () => {
 
   it('is false when nothing is current yet (currentKey null)', () => {
     expect(isSharedPostPinned('shared', sharedKey, true, null)).toBe(false)
+  })
+})
+
+/**
+ * TASK 3 (owner screenshot report): a shared-mode preview page whose source
+ * tweet couldn't be resolved (deleted/private/suspended) renders a graceful
+ * `StageUnavailable` lead instead of the real post. `isSharedItemUnavailable`
+ * is the pure gate deciding when — same identity discipline as
+ * `isSharedPostPinned` (mode + key match), but independent of the pin (an
+ * unavailable lead is never pinned in the first place — see the shell's
+ * `sharedPinned` init).
+ */
+describe('isSharedItemUnavailable', () => {
+  const sharedKey = 'twitter:123'
+  const otherKey = 'twitter:456'
+
+  it('is true when the current item IS the shared lead and it was flagged unavailable', () => {
+    expect(isSharedItemUnavailable('shared', true, sharedKey, sharedKey)).toBe(true)
+  })
+
+  it('is false when the lead resolved fine (not flagged unavailable)', () => {
+    expect(isSharedItemUnavailable('shared', false, sharedKey, sharedKey)).toBe(false)
+  })
+
+  it('is false for every other mode, even if flagged unavailable and the keys match', () => {
+    expect(isSharedItemUnavailable('home', true, sharedKey, sharedKey)).toBe(false)
+    expect(isSharedItemUnavailable('collection', true, sharedKey, sharedKey)).toBe(false)
+    expect(isSharedItemUnavailable('triage', true, sharedKey, sharedKey)).toBe(false)
+  })
+
+  it('is false once the queue has auto-advanced (or the visitor navigated) past the unavailable lead', () => {
+    expect(isSharedItemUnavailable('shared', true, sharedKey, otherKey)).toBe(false)
+  })
+
+  it('is false when there is no shared item (home mode has none)', () => {
+    expect(isSharedItemUnavailable('shared', true, null, sharedKey)).toBe(false)
+  })
+
+  it('is false when nothing is current yet (currentKey null)', () => {
+    expect(isSharedItemUnavailable('shared', true, sharedKey, null)).toBe(false)
   })
 })
 

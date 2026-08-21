@@ -7,18 +7,21 @@
  *   `theater-video-progress` window CustomEvents (detail: { progress: 0..1 })
  *   dispatched by StageVideo on timeupdate. YouTube also gets this kind
  *   (StageYouTube drives real play/pause/ended/mute via the raw postMessage
- *   protocol — see that file) so the dock/peek-bar transport + audio buttons
- *   render and work, but it never dispatches `theater-video-progress` (the
- *   protocol's periodic position payload isn't documented/stable enough to
- *   trust for a scrub bar), so the fill just stays an empty track.
+ *   protocol — see that file) and, since round 5, dispatches the same event
+ *   itself from the protocol's `infoDelivery` `currentTime`/`duration`
+ *   fields, so the fill tracks YouTube playback too.
  * - kind 'timed': a 10s countdown fill; when it completes, dispatches a
  *   `theater-advance` window CustomEvent (the shell listens and goes next).
  *   Pauses while a `theater-pause` event is active and resumes (from the same
  *   progress) on `theater-resume` — dispatched by the mobile chrome's
  *   explicit pause/play button (TheaterMobileChrome). There is no longer a
  *   hold-to-pause gesture — it interfered with text selection on long posts.
- * - kind 'none': no item, or triage's Collection tab (Done/Later/Delete are
- *   the only ways forward there — see TheaterShell's `handleAdvance`).
+ * - kind 'none': no item, or a 'timed' item (photo/text/quote/article) in
+ *   triage's Collection tab — those still wait on a deliberate Done/Later/
+ *   Delete, never a 10s dwell auto-advance (see `collectionTabProgressKind`
+ *   and TheaterShell's `handleAdvance`). Videos in the Collection tab keep
+ *   their real 'video' kind and auto-advance on end like every other
+ *   playlist — see `TriageStage`'s `onEnded` wiring.
  *
  * Progress state lives entirely inside this component (rAF/event driven) so
  * ticks never re-render the shell/stage tree — the fill's width is mutated
@@ -61,6 +64,24 @@ export function progressKindFor(item: TheaterItem | null): ProgressKind {
  */
 export function progressKindForPin(kind: ProgressKind, pinned: boolean): ProgressKind {
   return pinned && kind === 'timed' ? 'none' : kind
+}
+
+/**
+ * Pure: the progress-line kind for triage's Collection tab (unified-theater-
+ * triage.md §2 — "My Collection is just a different playlist in that same
+ * theater," the owner's standing directive). Videos now flow through the
+ * Collection tab exactly like every other playlist — auto-advance on end —
+ * so they keep whatever `progressKindFor` already gave them (typically
+ * 'video'). Only 'timed' items (photo/text/quote/article) still wait on a
+ * deliberate Done/Later/Delete, with no 10s dwell auto-advance, so 'timed'
+ * alone is demoted to 'none' there. Composes with `progressKindForPin`
+ * (apply this first, then that) for the shared-post-pin case.
+ */
+export function collectionTabProgressKind(
+  baseKind: ProgressKind,
+  isCollectionTab: boolean,
+): ProgressKind {
+  return isCollectionTab && baseKind === 'timed' ? 'none' : baseKind
 }
 
 export interface TheaterProgressLineProps {

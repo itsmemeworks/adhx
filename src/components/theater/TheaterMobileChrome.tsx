@@ -48,7 +48,12 @@ import { useSendFile } from './useSendFile'
 import { useClampExpand } from './useClampExpand'
 import { theaterItemKey, PLATFORM_LABEL, TRIAGE_TAB_ORDER, TRIAGE_TAB_LABEL } from './types'
 import { TheaterLinkedText } from './TheaterText'
-import { TheaterProgressLine, progressKindFor, progressKindForPin } from './TheaterProgressLine'
+import {
+  TheaterProgressLine,
+  progressKindFor,
+  progressKindForPin,
+  collectionTabProgressKind,
+} from './TheaterProgressLine'
 import { UpNextList } from './UpNextList'
 import { SaveCollectionButton } from './SaveCollectionButton'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
@@ -157,14 +162,17 @@ export function TheaterMobileChrome({
 
   // `mediaKind` is the REAL content kind — drives the audio/pause buttons,
   // `paused`/`soundPulse` state, and the pause/resume handler in every tab.
-  // `progressKind` additionally forces 'none' in triage's Collection tab
-  // (Done/Later/Delete are the only ways forward there) and feeds ONLY
+  // `progressKind` additionally demotes 'timed' to 'none' in triage's
+  // Collection tab (photo/text/quote/article still wait on a deliberate
+  // Done/Later/Delete there — no 10s dwell auto-advance) and feeds ONLY
   // <TheaterProgressLine/> — the two must not be conflated, or forcing off
-  // the 10s dwell line also silently hides/breaks the audio and pause
-  // controls for collection-tab videos (which still play via StageVideo).
+  // the dwell line for those items also silently hides/breaks the audio and
+  // pause controls for collection-tab videos (which still play via
+  // StageVideo/StageInstagram/StageYouTube and DO keep the 'video' kind —
+  // "My Collection is just a different playlist in that same theater").
   const mediaKind = progressKindFor(current)
   const progressKind = progressKindForPin(
-    triage && triage.tab === 'collection' ? 'none' : mediaKind,
+    collectionTabProgressKind(mediaKind, triage?.tab === 'collection'),
     repeatCurrent,
   )
 

@@ -43,13 +43,11 @@ vi.mock('@/lib/utils/og-fetch', () => ({
   fetchOgMetadata: vi.fn().mockResolvedValue(null),
 }))
 
-// Mock React components
-vi.mock('@/components/QuickAddLanding', () => ({
-  QuickAddLanding: () => null,
-}))
-
 // The page now renders the theater instead of TweetPreviewLanding (Phase 3,
-// docs/specs/theater-first.md §3) — mock its replacements instead.
+// docs/specs/theater-first.md §3) — mock its replacements instead. TASK 3:
+// the legacy `QuickAddLanding` "Connect with X to save" fallback (for an
+// unresolvable tweet) is gone too — that case now renders TheaterShell with
+// `sharedUnavailable`, same as every other case (see "Page rendering" below).
 vi.mock('@/components/theater/SharedPostStatic', () => ({
   SharedPostStatic: () => null,
 }))
@@ -145,7 +143,7 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
       expect(metadata.title).toBe('ADHX - Save now. Read never. Find always.')
     })
 
-    it('returns user-specific fallback when FxTwitter fails', async () => {
+    it('returns a minimal noindex tombstone when FxTwitter cannot resolve the tweet (deleted/private/suspended)', async () => {
       const { fetchTweetData } = await import('@/lib/media/fxembed')
       vi.mocked(fetchTweetData).mockResolvedValue(null)
 
@@ -155,8 +153,13 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
         params: Promise.resolve({ username: 'testuser', id: '123456789' }),
       })
 
-      expect(metadata.title).toBe("Preview @testuser's tweet")
-      expect(metadata.description).toBe('Preview this tweet on ADHX')
+      expect(metadata.title).toBe('Post unavailable - ADHX')
+      expect(metadata.description).toBe('This post is no longer available on X.')
+      // Never indexed — there's nothing here worth a SERP result, and it
+      // would only get staler.
+      expect(metadata.robots).toEqual({ index: false })
+      // No fabricated OG image/video for content we don't have.
+      expect(metadata.openGraph).toBeUndefined()
     })
 
     it('generates rich metadata when tweet data is available', async () => {
@@ -273,6 +276,33 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
       })
 
       expect(result).not.toBeNull()
+    })
+
+    // TASK 3 (owner screenshot report): a tweet FxTwitter can't resolve
+    // (deleted/private/suspended) used to render the legacy off-brand
+    // `QuickAddLanding` "Connect with X to save" dead end. Now it renders the
+    // SAME shared theater every resolvable tweet gets, with a minimal stub
+    // lead flagged `sharedUnavailable` so TheaterShell shows the graceful
+    // "no longer available" stage and auto-advances into the live pulse —
+    // never a bespoke landing page.
+    it('renders the shared theater with sharedUnavailable when FxTwitter cannot resolve the tweet', async () => {
+      const { fetchTweetData } = await import('@/lib/media/fxembed')
+      vi.mocked(fetchTweetData).mockResolvedValue(null)
+
+      const QuickAddPage = (await import('@/app/[username]/status/[id]/page')).default
+
+      const result = await QuickAddPage({
+        params: Promise.resolve({ username: 'deleteduser', id: '2090044905120751760' }),
+      })
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const element = result as React.ReactElement<any>
+      expect((element.type as { name?: string })?.name).toBe('TheaterShell')
+      expect(element.props.mode).toBe('shared')
+      expect(element.props.sharedUnavailable).toBe(true)
+      expect(element.props.sharedItem.author).toBe('deleteduser')
+      expect(element.props.sharedItem.bookmarkId).toBe('2090044905120751760')
+      expect(element.props.sharedItem.contentType).toBe('text')
     })
 
     // Regression coverage carried over from the pre-theater version of this

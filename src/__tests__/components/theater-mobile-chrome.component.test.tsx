@@ -315,3 +315,63 @@ describe('TheaterMobileChrome: shared-post-repeat cue', () => {
     expect(screen.getByLabelText('Next post').className).not.toContain('text-clay')
   })
 })
+
+/**
+ * "My Collection is just a different playlist in that same theater" (owner
+ * directive): the Collection tab used to force the top progress line to
+ * 'none' for every item. Now only 'timed' items (photo/text/quote/article)
+ * — which still wait on Done/Later/Delete, never a 10s dwell auto-advance —
+ * get suppressed there; 'video' items keep the real line, since they now
+ * auto-advance on end just like every other playlist. The line's fill node
+ * (`.bg-clay`) only renders when `<TheaterProgressLine/>`'s `kind` isn't
+ * 'none'.
+ */
+function collectionTriage(overrides: Partial<TheaterTriageChrome> = {}): TheaterTriageChrome {
+  return {
+    tab: 'collection',
+    onTabChange: vi.fn(),
+    onDone: vi.fn(),
+    onLater: vi.fn(),
+    onDelete: vi.fn(),
+    onTag: vi.fn(),
+    onSave: vi.fn(),
+    onLiveTag: vi.fn(),
+    savedKeys: new Set<string>(),
+    remaining: 0,
+    streak: { current: 0, longest: 0 },
+    onClose: vi.fn(),
+    ...overrides,
+  }
+}
+
+describe('TheaterMobileChrome: Collection-tab progress line (video flows, timed still waits)', () => {
+  it('keeps the progress line for a video item in the Collection tab', () => {
+    const { container } = render(
+      <TheaterMobileChrome {...base} current={videoItem()} triage={collectionTriage()} />,
+    )
+    expect(container.querySelector('.bg-clay')).not.toBeNull()
+  })
+
+  it('suppresses the progress line for a timed (text) item in the Collection tab', () => {
+    const { container } = render(
+      <TheaterMobileChrome {...base} current={textItem()} triage={collectionTriage()} />,
+    )
+    expect(container.querySelector('.bg-clay')).toBeNull()
+  })
+
+  it('a timed item still shows the progress line in the Live tab (unaffected by the Collection-tab demotion)', () => {
+    const { container } = render(
+      <TheaterMobileChrome
+        {...base}
+        current={textItem()}
+        triage={collectionTriage({ tab: 'live' })}
+      />,
+    )
+    expect(container.querySelector('.bg-clay')).not.toBeNull()
+  })
+
+  it('a video item shows the progress line outside triage entirely (home/shared/collection-mode theaters)', () => {
+    const { container } = render(<TheaterMobileChrome {...base} current={videoItem()} />)
+    expect(container.querySelector('.bg-clay')).not.toBeNull()
+  })
+})

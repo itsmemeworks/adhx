@@ -15,6 +15,7 @@ import type { FeedItem } from '@/components/feed/types'
 import { Stage } from './Stage'
 import { TriageStage } from './TriageStage'
 import { StageWaiting } from './StageWaiting'
+import { StageUnavailable } from './StageUnavailable'
 import { TriageAllClear } from './TriageAllClear'
 import { DesktopStageChrome, DesktopDock } from './TheaterDesktopChrome'
 import { TheaterMobileChrome } from './TheaterMobileChrome'
@@ -23,7 +24,12 @@ import { useSeenSet } from './useSeenSet'
 import { useTheaterKeyboard } from './useTheaterKeyboard'
 import { useTheaterPrefetch } from './useTheaterPrefetch'
 import { useTheaterDwell } from './useTheaterDwell'
-import { TheaterProgressLine, progressKindFor, progressKindForPin } from './TheaterProgressLine'
+import {
+  TheaterProgressLine,
+  progressKindFor,
+  progressKindForPin,
+  collectionTabProgressKind,
+} from './TheaterProgressLine'
 import { feedItemToTheaterItem } from './collection-item'
 import { theaterItemKey } from './types'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
@@ -129,6 +135,19 @@ export interface TheaterShellProps {
   mode?: TheaterMode
   /** Shared mode (PR 3): the post the visitor landed on — always the initial current item. */
   sharedItem?: TheaterItem
+  /**
+   * Shared mode, TASK 3 (owner report): the source post couldn't be resolved
+   * (FxTwitter 401/404 — deleted, private, or suspended). `sharedItem` is
+   * then a minimal stub (author/platform only, `contentType: 'text'`) built
+   * by the page so the lead renders a graceful "no longer available"
+   * treatment (`StageUnavailable`) instead of the real post — no retry, no
+   * save CTA, no X-connect CTA, since there's nothing behind it to act on.
+   * Also un-pins the shared-post-repeat pin (see `sharedPinned` below) —
+   * there's nothing to repeat, so the stub's 'timed' progress kind is left
+   * free to auto-advance the queue into the live pulse after its normal 10s
+   * dwell, exactly like any other timed item.
+   */
+  sharedUnavailable?: boolean
   /**
    * Whether the visiting user is signed in. Shared mode: swaps Connect for a
    * direct Save. Collection mode: initial SSR hint for the Save-collection
@@ -286,10 +305,32 @@ export function isSharedPostPinned(
   return mode === 'shared' && pinned && sharedItemKey !== null && currentKey === sharedItemKey
 }
 
+/**
+ * Pure: is the item currently on stage the shared lead post AND was it
+ * resolved as unavailable (TASK 3 — deleted/private/suspended source)? Same
+ * identity discipline as `isSharedPostPinned` (mode + key match) — once a
+ * deliberate nav or the stub's own 10s auto-advance moves the current item
+ * on, this flips false and the normal `<Stage/>` dispatch takes back over
+ * for whatever comes next. Deliberately independent of the pin: an
+ * unavailable lead is never pinned (see `sharedPinned`'s init) precisely so
+ * this state doesn't linger.
+ */
+export function isSharedItemUnavailable(
+  mode: TheaterMode,
+  sharedUnavailable: boolean,
+  sharedItemKey: string | null,
+  currentKey: string | null,
+): boolean {
+  return (
+    mode === 'shared' && sharedUnavailable && sharedItemKey !== null && currentKey === sharedItemKey
+  )
+}
+
 export function TheaterShell({
   seed,
   mode = 'home',
   sharedItem,
+  sharedUnavailable = false,
   authed = false,
   collection,
   triageItems,
@@ -539,6 +580,23 @@ export function TheaterShell({
     setTriageIndex(triageStepBackIndex)
   }, [])
 
+  // A video finished playing in triage's Collection tab ("My Collection is
+  // just a different playlist in that same theater" — the owner's standing
+  // directive, reversing the earlier "videos never auto-advance there"
+  // rule). Deliberately NOT `triageLater`: finishing a video isn't a
+  // decision the way tapping Later is — `triageLater` also records a streak
+  // beat and pops the "Later · Undo" toast, both of which would misrepresent
+  // a post the viewer simply watched to the end as one they consciously
+  // deferred. This is pure navigation, exactly like `triageStepBack` but
+  // forward — Done/Later/Delete remain the only ways to actually resolve an
+  // item's read state; finishing playback just moves the queue along.
+  // Landing past the last item is already handled for free: `triageFinished`
+  // (`triageIndex >= triageQueue.length`) flips true and the Collection tab
+  // renders `TriageAllClear`, same as after a real Done/Later/Delete.
+  const triageAdvanceOnEnded = useCallback(() => {
+    setTriageIndex(triageAdvance)
+  }, [])
+
   // Flush any pending delete, and cancel the undo-toast dismiss timer, when
   // the shell unmounts (AuthedHome closes triage by conditionally unmounting
   // the whole `<TheaterShell/>`).
@@ -730,7 +788,10 @@ export function TheaterShell({
   // from Stage's `onEnded`, the 'timed' `theater-advance` listener, or the
   // waiting-stage auto-arrival effect) must never clear it — that's the
   // entire point of the pin.
-  const [sharedPinned, setSharedPinned] = useState(mode === 'shared')
+  // TASK 3: an unavailable lead is never pinned — there's nothing behind it
+  // to repeat/protect the viewer from auto-advancing past, unlike a real
+  // shared post.
+  const [sharedPinned, setSharedPinned] = useState(mode === 'shared' && !sharedUnavailable)
   const clearSharedPin = useCallback(() => setSharedPinned(false), [])
   const sharedItemKey = mode === 'shared' && sharedItem ? theaterItemKey(sharedItem) : null
 
@@ -838,6 +899,15 @@ export function TheaterShell({
   // below) without re-registering that listener on every render.
   const isSharedPinnedOnCurrentRef = useRef(isSharedPinnedOnCurrent)
   isSharedPinnedOnCurrentRef.current = isSharedPinnedOnCurrent
+  // TASK 3: the current stage item is the shared lead AND it's an
+  // unavailable (deleted/private/suspended) source — swaps in
+  // `StageUnavailable` below instead of the normal `<Stage/>` dispatch.
+  const isSharedUnavailableOnCurrent = isSharedItemUnavailable(
+    mode,
+    sharedUnavailable,
+    sharedItemKey,
+    currentKey,
+  )
   // End-states for the peek bar's prev/next chevrons (tester feedback: at the
   // first post, pressing "back" silently did nothing). `currentIndex === -1`
   // (nothing current, e.g. an empty list) always reads as "can't navigate".
@@ -1006,10 +1076,17 @@ export function TheaterShell({
   useEffect(() => {
     function handleAdvance() {
       if (showSignInRef.current) return
-      // Triage's Collection tab never auto-advances — Done/Later/Delete are
-      // the only ways forward there. A leftover mobile progress-line timer
-      // from the same content type would otherwise fire this and silently
-      // step the (unrelated, unrendered) live-feed cursor underneath it.
+      // This is the 'timed' 10s-dwell advance ONLY (see
+      // TheaterProgressLine's kind 'timed') — triage's Collection tab's
+      // timed items (photo/text/quote/article) still never auto-advance
+      // this way, waiting instead on a deliberate Done/Later/Delete. Videos
+      // in the Collection tab DO now auto-advance on end ("My Collection is
+      // just a different playlist in that same theater"), but through
+      // StageVideo/StageInstagram/StageYouTube's own `onEnded` callback (see
+      // `triageAdvanceOnEnded` below) — never through this event. A
+      // leftover mobile progress-line timer from the same content type
+      // would otherwise fire this and silently step the (unrelated,
+      // unrendered) live-feed cursor underneath it.
       if (isTriageCollection) return
       // shared-post-repeat: belt-and-suspenders — TheaterProgressLine's
       // 'timed' kind is already suppressed to 'none' while pinned (so this
@@ -1302,9 +1379,12 @@ export function TheaterShell({
                 feedItem={triageCurrentFeedItem}
                 muted={muted}
                 onRequestUnmute={onRequestUnmute}
+                onEnded={triageAdvanceOnEnded}
                 tags={triageCurrentFeedItem.tags}
               />
             ) : null
+          ) : isSharedUnavailableOnCurrent && current ? (
+            <StageUnavailable item={current} />
           ) : waiting ? (
             <StageWaiting savedToday={feed.savedToday} />
           ) : (
@@ -1328,16 +1408,20 @@ export function TheaterShell({
             so without this gate — and the matching gate on the chrome's
             `current` prop below — two independent 'timed' timers would both
             be alive on desktop and double-dispatch `theater-advance`.
-            Triage's Collection tab never auto-advances (see `handleAdvance`
-            above), so its progress line is always suppressed. */}
+            Triage's Collection tab's 'timed' items (photo/text/quote/
+            article) still never auto-advance this way (see `handleAdvance`
+            above) — `collectionTabProgressKind` demotes only THAT kind to
+            'none' there; 'video' items keep the real line and auto-advance
+            on end through `TriageStage`'s own `onEnded` wiring instead. */}
         <TheaterProgressLine
           itemKey={chromeCurrentKey}
           kind={
-            isTriageCollection
-              ? 'none'
-              : isDesktop
-                ? progressKindForPin(progressKindFor(chromeCurrent), isSharedPinnedOnCurrent)
-                : 'none'
+            isDesktop
+              ? progressKindForPin(
+                  collectionTabProgressKind(progressKindFor(chromeCurrent), isTriageCollection),
+                  isSharedPinnedOnCurrent,
+                )
+              : 'none'
           }
         />
         {desktopDeclutter && (

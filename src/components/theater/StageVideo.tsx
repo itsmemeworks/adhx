@@ -70,6 +70,23 @@ export function StageVideo({
   // (or a fallback below) changes the element's mute state directly, this is
   // what the rest of the component reads, never the prop again.
   const [effectiveMuted, setEffectiveMuted] = useState(muted)
+  // Instagram catch-up unmute: every Instagram item is a genuinely FRESH
+  // mount of this component (StageInstagram swaps a brand-new StageVideo in
+  // the moment its mirror probe succeeds — unlike twitter/tiktok, which
+  // reuse ONE persistent instance across items, see the top-of-file
+  // comment). A fresh element carries no user-gesture history, so when the
+  // shell already wants sound (`muted` prop false) the initial unmuted
+  // play() attempt above is routinely rejected and falls back to muted —
+  // and previously nothing ever asked for sound again, leaving a viewer who
+  // already had sound on stuck muted the moment an Instagram item came up.
+  // `catchUpAttemptedRef` bounds this to one attempt per item (no retries —
+  // round-4 lesson elsewhere in this file's sibling stages: silence never
+  // means rejection, only an OBSERVED signal does); `catchUpPendingRef`
+  // marks that attempt as in flight so an unexpected `pause` right after it
+  // (the only signal a platform gives for vetoing a gesture-less unmute) can
+  // be told apart from a deliberate pause action, which clears this first.
+  const catchUpAttemptedRef = useRef(false)
+  const catchUpPendingRef = useRef(false)
 
   // Reconcile the shell's `muted` signal onto the persistent element — but
   // only on an actual prop transition (this effect's dependency array), so
@@ -95,6 +112,8 @@ export function StageVideo({
     setErrored(false)
     setUnavailableReason(null)
     setPlaying(false)
+    catchUpAttemptedRef.current = false
+    catchUpPendingRef.current = false
 
     const video = videoRef.current
     if (!video) return
@@ -157,6 +176,10 @@ export function StageVideo({
           () => setNeedsGesture(true),
         )
       } else {
+        // A deliberate pause — disarm the catch-up watch first so the
+        // `onPause` this triggers is never misread as the platform vetoing
+        // the automatic unmute.
+        catchUpPendingRef.current = false
         video.pause()
         setPlaying(false)
       }
@@ -175,6 +198,9 @@ export function StageVideo({
     const handlePause = () => {
       const video = videoRef.current
       if (!video || ended) return
+      // A deliberate pause — see the identical note in the toggle handler
+      // above.
+      catchUpPendingRef.current = false
       video.pause()
       setPlaying(false)
     }
@@ -225,10 +251,68 @@ export function StageVideo({
   }
 
   const handleEnded = () => {
+    // Some browsers fire `pause` immediately before `ended` as part of
+    // reaching the end of the media — never a catch-up rejection.
+    catchUpPendingRef.current = false
     setEnded(true)
     setPlaying(false)
     window.dispatchEvent(new CustomEvent('theater-video-progress', { detail: { progress: 1 } }))
     onEnded?.()
+  }
+
+  // A confirmed rejection of the automatic catch-up unmute (see
+  // `handleVideoPlaying` below): the platform accepted playback continuing
+  // but vetoed going unmuted without a gesture, signalled ONLY by an
+  // unexpected `pause` while `catchUpPendingRef` is armed — never a timer
+  // (the same evidence-only discipline as this file's `theater-pause`
+  // handlers and StageYouTube's `fallBackToMuted`: a successful, silent
+  // unmute produces no event at all, so silence can never mean rejection).
+  // Drops back to muted and resumes, exactly like the mount effect's own
+  // rejected-unmuted-continuation fallback above.
+  const revertCatchUpUnmute = () => {
+    catchUpPendingRef.current = false
+    const video = videoRef.current
+    if (!video) return
+    video.muted = true
+    setEffectiveMuted(true)
+    video.play().then(
+      () => setPlaying(true),
+      () => setNeedsGesture(true),
+    )
+  }
+
+  // The media element is the source of truth — a successful start (initial
+  // play() or any later play() path) clears the gesture overlay.
+  const handleVideoPlaying = () => {
+    setPlaying(true)
+    setNeedsGesture(false)
+    // Instagram catch-up unmute (see `catchUpAttemptedRef`'s doc comment
+    // above): only once playback is CONFIRMED — never before, that's
+    // exactly the gesture-less-unmuted-autoplay rejection this whole file
+    // works around — retry sound if the shell wants it but this fresh
+    // element fell back to muted. An already-playing element can often go
+    // unmuted without a fresh gesture even where starting unmuted from cold
+    // couldn't.
+    if (!muted && effectiveMuted && !catchUpAttemptedRef.current) {
+      catchUpAttemptedRef.current = true
+      catchUpPendingRef.current = true
+      const video = videoRef.current
+      if (video) video.muted = false
+      setEffectiveMuted(false)
+    }
+  }
+
+  const handleVideoPause = () => {
+    const video = videoRef.current
+    // A pause synthesized by reaching the end fires just before `ended` —
+    // `handleEnded` (and its own `catchUpPendingRef` clear) owns that
+    // transition, never a rejection.
+    if (catchUpPendingRef.current && !(video && video.ended)) {
+      revertCatchUpUnmute()
+      return
+    }
+    catchUpPendingRef.current = false
+    setPlaying(false)
   }
 
   const handleReplay = () => {
@@ -296,6 +380,9 @@ export function StageVideo({
         () => setNeedsGesture(true),
       )
     } else {
+      // A deliberate pause — see the identical note on the transport
+      // handlers above.
+      catchUpPendingRef.current = false
       video.pause()
       setPlaying(false)
     }
@@ -320,14 +407,8 @@ export function StageVideo({
         muted={effectiveMuted}
         loop={repeat}
         playsInline
-        onPlaying={() => {
-          // The media element is the source of truth — a successful start
-          // (initial play() or any later play() path) clears the gesture
-          // overlay.
-          setPlaying(true)
-          setNeedsGesture(false)
-        }}
-        onPause={() => setPlaying(false)}
+        onPlaying={handleVideoPlaying}
+        onPause={handleVideoPause}
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}
         onError={handleVideoError}
