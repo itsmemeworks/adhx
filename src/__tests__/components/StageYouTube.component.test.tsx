@@ -692,12 +692,87 @@ describe('StageYouTube', () => {
       expect(funcs).not.toContain('mute')
     })
 
-    // Round 4: there's no timer left to "disarm" — the value of clearing
-    // `unmuteAwaitingConfirmRef` on confirmation is now purely protective:
-    // without it, a LATER, unrelated pause (e.g. the user's own pause
-    // button, or buffering) would be misread as a rejection of an unmute
-    // that had already genuinely succeeded, and incorrectly re-mute it.
-    it('does not fall back on a later, unrelated pause once infoDelivery already confirmed the unmute', () => {
+    // Round 4 originally treated the `muted:false` confirmation itself as
+    // enough to protect against a later, unrelated pause. Round 7's
+    // on-device trace overturned that FOR THE CATCH-UP PATH specifically:
+    // iOS's real enforcement pattern is confirm-then-pause — `infoDelivery`
+    // reports `muted:false`, then a pause follows within about a second,
+    // and that pause IS the rejection, not something unrelated. A `user`
+    // gesture still isn't policed this way (see the top of this describe
+    // block) — this test (`muted={false}` from mount, so onReady's `if
+    // (!mutedRef.current) requestUnmute('catchup')` branch fires) is
+    // specifically the catch-up path.
+    it('DOES fall back on a pause shortly after a catch-up confirmation, absent sustained playback evidence (round 7: iOS confirm-then-pause)', () => {
+      const mutedEvents: boolean[] = []
+      const handler = (e: Event) =>
+        mutedEvents.push((e as CustomEvent<{ muted: boolean }>).detail.muted)
+      window.addEventListener('theater-muted-state', handler)
+
+      try {
+        const { container } = render(
+          <StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />,
+        )
+        const iframe = container.querySelector('iframe') as HTMLIFrameElement
+        const { postMessage, fakeWindow } = stubContentWindow(iframe)
+        fireEvent.load(iframe)
+        postFromPlayer(fakeWindow, { event: 'onReady' })
+        postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 }) // deferred catch-up unmute fires
+        postFromPlayer(fakeWindow, {
+          event: 'infoDelivery',
+          info: { playerState: 1, muted: false },
+        })
+        postMessage.mockClear()
+
+        // The exact device-trace shape: the pause follows the confirmation
+        // with no intervening sustained-progress evidence.
+        postFromPlayer(fakeWindow, { event: 'onStateChange', info: 2 })
+
+        const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+        expect(funcs).toContain('mute')
+        expect(funcs).toContain('playVideo')
+        // effectiveMuted reflects the fallback, not the earlier (real, but
+        // ultimately policed) confirmation.
+        expect(mutedEvents.at(-1)).toBe(true)
+      } finally {
+        window.removeEventListener('theater-muted-state', handler)
+      }
+    })
+
+    it('does NOT fall back on a later pause once sustained currentTime progress has cleared the catch-up attribution', () => {
+      const { container } = render(
+        <StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { postMessage, fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+      postFromPlayer(fakeWindow, { event: 'onReady' })
+      postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 }) // deferred catch-up unmute fires, baseline currentTime=0
+      postFromPlayer(fakeWindow, { event: 'infoDelivery', info: { playerState: 1, muted: false } })
+
+      // Sustained evidence: currentTime has advanced well past the >1.5s
+      // threshold from the (defaulted-to-0) baseline, while still playing.
+      postFromPlayer(fakeWindow, {
+        event: 'infoDelivery',
+        info: { playerState: 1, currentTime: 3, duration: 30 },
+      })
+      postMessage.mockClear()
+
+      // Now a later pause really is unrelated (e.g. the user's own pause
+      // button, or buffering) — round 4's original protective intent, just
+      // gated on real evidence instead of an unconditional confirmation.
+      postFromPlayer(fakeWindow, { event: 'onStateChange', info: 2 })
+
+      const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+      expect(funcs).not.toContain('mute')
+    })
+
+    // Closes a second instance of the same premature-clear bug class: state 1
+    // (`applyPlayerState`'s OWN "kept playing, it took" branch) used to clear
+    // `unmuteAwaitingConfirmRef` unconditionally, exactly like the
+    // `muted:false` confirmation did. A stray state-1 heartbeat landing
+    // between the catch-up unmute and iOS's enforcement pause is no more
+    // trustworthy than the confirmation is for that path.
+    it('a bare state-1 heartbeat does not clear catch-up attribution either — still falls back without sustained progress', () => {
       const { container } = render(
         <StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />,
       )
@@ -707,14 +782,15 @@ describe('StageYouTube', () => {
       postFromPlayer(fakeWindow, { event: 'onReady' })
       postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 }) // deferred catch-up unmute fires
       postFromPlayer(fakeWindow, { event: 'infoDelivery', info: { playerState: 1, muted: false } })
+      // A redundant state-1 heartbeat, no currentTime attached — must not be
+      // treated as proof either.
+      postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
       postMessage.mockClear()
 
-      // A later pause — the user pausing playback themselves, unrelated to
-      // the (already-confirmed) unmute.
       postFromPlayer(fakeWindow, { event: 'onStateChange', info: 2 })
 
       const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
-      expect(funcs).not.toContain('mute')
+      expect(funcs).toContain('mute')
     })
 
     it('treats infoDelivery volume>0 as immediate confirmation when no muted field is present', () => {
