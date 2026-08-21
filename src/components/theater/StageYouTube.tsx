@@ -211,6 +211,19 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded }: StageYou
       }
       if (!data || typeof data !== 'object') return
 
+      const applyPlayerState = (state: number | null) => {
+        if (state === 1) {
+          hasPlayedRef.current = true
+          clearStallTimer()
+          setPlaying(true)
+        } else if (state === 2) {
+          setPlaying(false)
+        } else if (state === 0) {
+          setPlaying(false)
+          advance()
+        }
+      }
+
       switch (data.event) {
         case 'onReady':
           readyRef.current = true
@@ -221,20 +234,24 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded }: StageYou
           if (!mutedRef.current) postCommand('unMute')
           postCommand('playVideo')
           break
-        case 'onStateChange': {
-          const state = typeof data.info === 'number' ? data.info : null
-          if (state === 1) {
-            hasPlayedRef.current = true
-            clearStallTimer()
-            setPlaying(true)
-          } else if (state === 2) {
-            setPlaying(false)
-          } else if (state === 0) {
-            setPlaying(false)
-            advance()
+        // The raw postMessage protocol streams player state inside
+        // `infoDelivery` payloads ({info:{playerState, muted, ...}}) — the
+        // discrete `onStateChange` event below is something the official
+        // iframe_api SCRIPT synthesizes from these, so a bare-protocol
+        // integration that only listens for onStateChange never sees state
+        // 1 and the stall watchdog skips a video that is playing fine
+        // (bitten on staging, 2026-08-21). Handle both shapes.
+        case 'infoDelivery': {
+          const info = data.info as { playerState?: unknown; muted?: unknown } | null | undefined
+          if (info && typeof info === 'object') {
+            if (typeof info.playerState === 'number') applyPlayerState(info.playerState)
+            if (typeof info.muted === 'boolean') setEffectiveMuted(info.muted)
           }
           break
         }
+        case 'onStateChange':
+          applyPlayerState(typeof data.info === 'number' ? data.info : null)
+          break
         case 'onError':
           // 101/150 = embedding disabled by the uploader; other codes cover
           // invalid/removed/private videos. None of them are recoverable

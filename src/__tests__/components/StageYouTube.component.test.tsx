@@ -150,6 +150,46 @@ describe('StageYouTube', () => {
     expect(onEnded).not.toHaveBeenCalled()
   })
 
+  // The raw postMessage protocol streams player state inside `infoDelivery`
+  // payloads — the discrete `onStateChange` event is synthesized by the
+  // official iframe_api script, which we don't load. Regression coverage for
+  // the staging bug where only onStateChange was handled and the watchdog
+  // skipped videos that were playing fine.
+  it('treats infoDelivery playerState 1 as playing — watchdog disarmed', () => {
+    const onEnded = vi.fn()
+    const { container } = render(
+      <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} onEnded={onEnded} />,
+    )
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+
+    postFromPlayer(fakeWindow, {
+      event: 'infoDelivery',
+      info: { playerState: 1, currentTime: 0.4 },
+    })
+    act(() => {
+      vi.advanceTimersByTime(8_000)
+    })
+
+    expect(onEnded).not.toHaveBeenCalled()
+  })
+
+  it('advances (onEnded) when infoDelivery reports playerState 0 (ended)', () => {
+    const onEnded = vi.fn()
+    const { container } = render(
+      <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} onEnded={onEnded} />,
+    )
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+
+    postFromPlayer(fakeWindow, { event: 'infoDelivery', info: { playerState: 1 } })
+    postFromPlayer(fakeWindow, { event: 'infoDelivery', info: { playerState: 0 } })
+
+    expect(onEnded).toHaveBeenCalledTimes(1)
+  })
+
   it('does nothing without an onEnded callback (triage never auto-advances)', () => {
     // No onEnded passed at all — every internal advance path must be a
     // silent no-op, matching StageVideo's triage call sites.
