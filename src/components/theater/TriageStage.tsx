@@ -11,6 +11,7 @@
  * that avoids Fly.io's 60s timeout) and drop quote cards entirely.
  */
 
+import { useEffect, useRef } from 'react'
 import type { FeedItem } from '@/components/feed/types'
 import { VideoPlayer } from '@/components/feed/VideoPlayer'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
@@ -80,6 +81,101 @@ function TriageQuoteCard({ item }: { item: FeedItem }) {
   )
 }
 
+/**
+ * Wires the theater's shared play/pause transport (`theater-toggle-play` /
+ * `theater-pause` / `theater-resume`, dispatched by the keyboard handler and
+ * the dock/peek-bar buttons — see TheaterShell.tsx and StageVideo.tsx for the
+ * established pattern) onto `VideoPlayer`'s native `<video>` element, and
+ * broadcasts its real playing state back (`theater-playing-state`) so the
+ * transport button doesn't drift out of sync with the native controls
+ * `VideoPlayer` also renders. Mute wiring is handled by passing `muted` /
+ * `onUserUnmute` straight through to `VideoPlayer` (its own effect syncs the
+ * element; no event plumbing needed since the shell re-renders this
+ * component on every `muted` change already).
+ *
+ * The `<video>` element is resolved from the container at event time via
+ * `querySelector` rather than a ref forwarded out of `VideoPlayer` (which
+ * exposes none) — `VideoPlayer` can swap between its MP4 and HLS.js
+ * attachment paths, so caching the element risks holding a stale reference.
+ */
+function TriageTwitterVideoStage({
+  feedItem,
+  muted,
+  onRequestUnmute,
+}: {
+  feedItem: FeedItem
+  muted: boolean
+  onRequestUnmute: () => void
+}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const primary = feedItem.media?.[0]
+
+  // Native media events (`playing`/`pause`/`ended`) don't bubble, but a
+  // capture-phase listener on an ancestor still sees them on the way down —
+  // no ref into VideoPlayer required.
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    const announcePlaying = () =>
+      window.dispatchEvent(new CustomEvent('theater-playing-state', { detail: { playing: true } }))
+    const announcePaused = () =>
+      window.dispatchEvent(new CustomEvent('theater-playing-state', { detail: { playing: false } }))
+    container.addEventListener('playing', announcePlaying, true)
+    container.addEventListener('pause', announcePaused, true)
+    container.addEventListener('ended', announcePaused, true)
+    return () => {
+      container.removeEventListener('playing', announcePlaying, true)
+      container.removeEventListener('pause', announcePaused, true)
+      container.removeEventListener('ended', announcePaused, true)
+    }
+  }, [])
+
+  useEffect(() => {
+    const resolveVideo = () => containerRef.current?.querySelector('video') ?? null
+    const handleToggle = () => {
+      const video = resolveVideo()
+      if (!video) return
+      if (video.paused) video.play().catch(() => {})
+      else video.pause()
+    }
+    const handlePause = () => resolveVideo()?.pause()
+    const handleResume = () =>
+      resolveVideo()
+        ?.play()
+        .catch(() => {})
+    window.addEventListener('theater-toggle-play', handleToggle)
+    window.addEventListener('theater-pause', handlePause)
+    window.addEventListener('theater-resume', handleResume)
+    return () => {
+      window.removeEventListener('theater-toggle-play', handleToggle)
+      window.removeEventListener('theater-pause', handlePause)
+      window.removeEventListener('theater-resume', handleResume)
+    }
+  }, [])
+
+  return (
+    <div ref={containerRef} className="flex h-full w-full items-center justify-center bg-[#08070a]">
+      <VideoPlayer
+        author={feedItem.author}
+        tweetId={feedItem.id}
+        tweetUrl={feedItem.tweetUrl}
+        poster={primary?.thumbnailUrl}
+        duration={durationSecondsOf(feedItem)}
+        platform="twitter"
+        loop
+        autoPlay
+        muted={muted}
+        onUserUnmute={onRequestUnmute}
+        // Viewport-based height: VideoPlayer wraps the <video> in a plain
+        // `div.relative` with no height, so percentage heights collapse to
+        // the intrinsic (tiny) size — dvh sidesteps the broken chain. The
+        // offsets clear the mobile peek bar (~84px) / desktop dock (~160px).
+        className="mx-auto h-[calc(100dvh-84px)] w-auto max-w-full object-contain lg:h-[calc(100dvh-160px)]"
+      />
+    </div>
+  )
+}
+
 export interface TriageStageProps {
   feedItem: FeedItem
   muted: boolean
@@ -112,23 +208,11 @@ export function TriageStage({ feedItem, muted, onRequestUnmute, tags }: TriageSt
 
   if (platform === 'twitter' && isVideo) {
     return (
-      <div className="flex h-full w-full items-center justify-center bg-[#08070a]">
-        <VideoPlayer
-          author={feedItem.author}
-          tweetId={feedItem.id}
-          tweetUrl={feedItem.tweetUrl}
-          poster={primary?.thumbnailUrl}
-          duration={durationSecondsOf(feedItem)}
-          platform="twitter"
-          loop
-          autoPlay
-          // Viewport-based height: VideoPlayer wraps the <video> in a plain
-          // `div.relative` with no height, so percentage heights collapse to
-          // the intrinsic (tiny) size — dvh sidesteps the broken chain. The
-          // offsets clear the mobile peek bar (~84px) / desktop dock (~160px).
-          className="mx-auto h-[calc(100dvh-84px)] w-auto max-w-full object-contain lg:h-[calc(100dvh-160px)]"
-        />
-      </div>
+      <TriageTwitterVideoStage
+        feedItem={feedItem}
+        muted={muted}
+        onRequestUnmute={onRequestUnmute}
+      />
     )
   }
 

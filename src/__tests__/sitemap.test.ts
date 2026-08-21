@@ -23,7 +23,7 @@ vi.mock('@/lib/db', () => ({
 }))
 
 // homepage + /trending + /trending/archive + 5 per-lens hubs (latest/videos/photos/text/articles)
-// + /collections + 3 non-default collections windows (today/month/all-time)
+// + /leaderboard + 3 non-default leaderboard windows (today/month/all-time)
 const HUB_COUNT = 12
 
 describe('Dynamic Sitemap', () => {
@@ -45,7 +45,7 @@ describe('Dynamic Sitemap', () => {
     expect(entries[0].priority).toBe(1)
     expect(entries.find((e) => e.url === 'https://adhx.com/trending')).toBeDefined()
     expect(entries.find((e) => e.url === 'https://adhx.com/trending/videos')).toBeDefined()
-    expect(entries.find((e) => e.url === 'https://adhx.com/collections')).toBeDefined()
+    expect(entries.find((e) => e.url === 'https://adhx.com/leaderboard')).toBeDefined()
     // No tag pages
     expect(entries.find((e) => e.url.includes('/t/'))).toBeUndefined()
   })
@@ -63,18 +63,20 @@ describe('Dynamic Sitemap', () => {
     }
   })
 
-  it('includes the /collections leaderboard hub + its non-default window paths', async () => {
+  it('includes the /leaderboard hub + its non-default window paths', async () => {
     const { default: sitemap } = await import('@/app/sitemap')
     const entries = sitemap()
 
-    // "week" is the bare /collections hub now (the default window); the
+    // "week" is the bare /leaderboard hub now (the default window); the
     // other three windows get their own tidy path.
-    expect(entries.find((e) => e.url === 'https://adhx.com/collections')).toBeDefined()
+    expect(entries.find((e) => e.url === 'https://adhx.com/leaderboard')).toBeDefined()
     for (const slug of ['today', 'month', 'all-time']) {
-      expect(entries.find((e) => e.url === `https://adhx.com/collections/${slug}`)).toBeDefined()
+      expect(entries.find((e) => e.url === `https://adhx.com/leaderboard/${slug}`)).toBeDefined()
     }
     // "week" itself must not also get its own sub-path (it's the bare hub).
-    expect(entries.find((e) => e.url === 'https://adhx.com/collections/week')).toBeUndefined()
+    expect(entries.find((e) => e.url === 'https://adhx.com/leaderboard/week')).toBeUndefined()
+    // The old /collections URLs must NOT appear in the sitemap going forward.
+    expect(entries.find((e) => e.url === 'https://adhx.com/collections')).toBeUndefined()
   })
 
   it('includes tag page URLs for public tags', async () => {

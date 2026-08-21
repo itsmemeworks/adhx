@@ -200,7 +200,7 @@ export default async function CuratorProfilePage({ params }: Props) {
               </span>
               {profile.stats.bestRank != null && (
                 <Link
-                  href="/collections"
+                  href="/leaderboard"
                   className="flex items-center gap-1.5 text-[#e88a5e] transition-opacity hover:opacity-80"
                 >
                   <Flame size={13} fill="currentColor" />#{profile.stats.bestRank} on the

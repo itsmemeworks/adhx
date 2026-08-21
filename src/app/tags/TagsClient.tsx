@@ -341,7 +341,7 @@ function LeaderboardCrossPromo({ bestRank, tags }: { bestRank: number; tags: Tag
         </div>
       </div>
       <Link
-        href="/collections"
+        href="/leaderboard"
         className="inline-flex flex-none items-center rounded-full border border-hairline px-3.5 py-1.5 text-[12.5px] font-medium text-ink-2 transition-colors hover:text-ink"
       >
         See the leaderboard →

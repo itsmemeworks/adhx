@@ -57,7 +57,7 @@ import { inferType } from '@/lib/trending/filter'
 import { resolvePastedLink } from '@/lib/theater/paste-preview'
 import { useSendFile } from './useSendFile'
 import { useClampExpand } from './useClampExpand'
-import { theaterItemKey, PLATFORM_LABEL } from './types'
+import { theaterItemKey, PLATFORM_LABEL, TRIAGE_TAB_ORDER, TRIAGE_TAB_LABEL } from './types'
 import { TheaterLinkedText, stripShortLinksForPreview } from './TheaterText'
 import { progressKindFor } from './TheaterProgressLine'
 import { UpNextList, TYPE_TILE, warmOnHover } from './UpNextList'
@@ -449,21 +449,21 @@ export function DesktopStageChrome({
             <>
               <span className="h-5 w-px flex-none bg-white/20" aria-hidden />
               <div className="inline-flex flex-none rounded-full bg-white/10 p-1 text-[12.5px] font-semibold">
-                {(['collection', 'live'] as const).map((t) => (
+                {TRIAGE_TAB_ORDER.map((t) => (
                   <button
                     key={t}
                     type="button"
                     onClick={() => triage.onTabChange(t)}
                     aria-current={triage.tab === t ? 'true' : undefined}
                     className={cn(
-                      'rounded-full px-4 py-1.5 capitalize transition-colors',
+                      'rounded-full px-4 py-1.5 whitespace-nowrap transition-colors',
                       // Hardcoded dark ink: `text-ink` flips light in dark theme and vanishes on the white pill.
                       triage.tab === t
                         ? 'bg-white text-[#1c1917]'
                         : 'text-white/60 hover:text-white',
                     )}
                   >
-                    {t}
+                    {TRIAGE_TAB_LABEL[t]}
                   </button>
                 ))}
               </div>

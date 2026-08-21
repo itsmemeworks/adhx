@@ -137,13 +137,15 @@ export function getCollectionLeaderboard(opts: {
 
 ## 6. Surfaces (MVP)
 
-**`/collections` — the leaderboard page** (public, anonymous, crawlable). Design settled
+**`/leaderboard`** (shipped at `/collections`, renamed post-launch — that path collided with the
+unrelated `/api/collections` custom-collections API; old URLs redirect) **— the leaderboard
+page** (public, anonymous, crawlable). Design settled
 2026-08-21 on the "Collection Leaderboard" design canvas: **direction A — Podium**:
 
 - `export const dynamic = 'force-dynamic'` (reads SQLite — same runtime-render rule as
   `/trending`; no `generateStaticParams`).
-- Window tabs **Today · This week · Month · All-time** as tidy paths `/collections/{window}`
-  (`/collections` = week, the default — day is too jumpy pre-scale, all-time too static),
+- Window tabs **Today · This week · Month · All-time** as tidy paths `/leaderboard/{window}`
+  (`/leaderboard` = week, the default — day is too jumpy pre-scale, all-time too static),
   reflected via `history.replaceState` exactly like `/trending/[filter]`.
 - **Podium layout**: centered hero of the top 3 as large `CollectionPosterCard`s (#1 biggest,
   clay-grad rank medallion + flame + glow; #2/#3 flanking with clay medallions), then a
@@ -221,7 +223,7 @@ The ask: theater sort modes like Reddit's. What must exist _now_ so that's a sma
 ## 10. MVP cut-line
 
 **In**: `collection_events` table + migration + test DDL, recorder with view/clone hooks,
-`rank.ts` with `top` × 4 windows, `/collections/{window}` page (podium direction A) + JSON-LD
+`rank.ts` with `top` × 4 windows, `/leaderboard/{window}` page (podium direction A) + JSON-LD
 
 - sitemap, `/api/collections/trending`, the /tags owner upgrade + profile stat strip (§6),
   moderation hide, tests.

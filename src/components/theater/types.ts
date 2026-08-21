@@ -33,8 +33,26 @@ export function theaterItemKey(item: Pick<TheaterItem, 'platform' | 'bookmarkId'
  */
 export type TheaterMode = 'home' | 'shared' | 'collection' | 'triage'
 
-/** Triage mode's Collection ↔ Live sub-tab (unified-theater-triage.md §2). */
+/** Triage mode's Collection ↔ Live sub-tab (unified-theater-triage.md §2).
+ * Internal values are unchanged (plumbed through TheaterShell, AuthedHome,
+ * and the Header's `open-theater` dispatches) — only display order/label
+ * changed: Live reads first and is the default landing tab, "Collection" is
+ * labeled "My Collection" so it's clear it's the viewer's own, not a shared
+ * one. See `TRIAGE_TAB_ORDER`/`TRIAGE_TAB_LABEL` below for the chrome's
+ * single source of truth for both. */
 export type TriageTab = 'collection' | 'live'
+
+/** Left-to-right render order for the Live/My-Collection tab switcher —
+ * Live first, matching the default in TheaterShell's `useState`. */
+export const TRIAGE_TAB_ORDER: readonly TriageTab[] = ['live', 'collection']
+
+/** Display labels for the tab switcher (desktop top bar + mobile peek bar) —
+ * "My Collection" rather than a bare "Collection" so it reads as the
+ * viewer's own saved posts, not a shared/public one. */
+export const TRIAGE_TAB_LABEL: Record<TriageTab, string> = {
+  live: 'Live',
+  collection: 'My Collection',
+}
 
 /** Identity + loop metadata for a public tag collection theater (mode `'collection'`). */
 export interface TheaterCollectionMeta {
