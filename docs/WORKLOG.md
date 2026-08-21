@@ -4,6 +4,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-21 — Review round 4: ONE theater player, glow radius, standardized toggle
+
+- **Legacy player OUT of the theater** (owner: "My Collection is just a different playlist in that same theater"): TriageStage's twitter-video branch now uses the SAME StageVideo as live/tag theaters (merged with the tiktok branch) — the round-2 VideoPlayer bolt-on (controlled muted/onUserUnmute props, transport-event wrapper) is fully REVERTED from VideoPlayer.tsx (which stays the feed/lightbox/preview player only). Fixes native controls leaking into fullscreen + the mute-icon desync. Accepted trade-off (commented in TriageStage): >5min twitter videos stream plain MP4 proxy, identical to the live theater's existing behavior for the same post — the HLS path only ever existed in the legacy player.
+- **#1 podium glow**: the shadow-glow wrapper div lacked border-radius → square glow corners past the 14px card. Wrapper now rounded-[14px].
+- **/tags visibility toggle standardized**: both states use the cards' glass-button recipe (bg-white/10 border-white/14, same size as copy/open); state = Globe/Lock icon + green live-dot when Public — no more one-off green pill.
+- **State**: 1865 tests green. Follow-up consideration: if long-video MP4 stalls surface in My Collection, teach StageVideo HLS rather than resurrecting VideoPlayer there.
+
 ## 2026-08-21 — Review rounds 2–3: /leaderboard, theater controls, card de-dup, make-your-own journey (PRs #369 + this)
 
 - **#369 (merged)**: theater My-Collection tab Twitter videos obey shared mute/pause (controlled `muted` on VideoPlayer + transport events, event-time element resolution — HLS untouched); tabs = Live · My Collection (Live default); leaderboard page moved /collections→**/leaderboard** (all old URLs 308; /api/collections/* machine endpoints unchanged); Header renders nothing on leaderboard routes until auth resolves (kills signed-out flash).

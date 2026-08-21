@@ -63,7 +63,9 @@ function LeaderboardCard({
   size: LeaderboardCardSize
 }) {
   return (
-    <div className={cn(rank === 1 && 'shadow-glow')}>
+    // rounded-[14px] matches the card's own radius so the #1 glow hugs the
+    // curve — a square-cornered shadow box peeks past rounded corners.
+    <div className={cn(rank === 1 && 'rounded-[14px] shadow-glow')}>
       <CollectionPosterCard
         tag={entry.tag}
         count={entry.itemCount}
