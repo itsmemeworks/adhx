@@ -86,6 +86,14 @@ function FeedPageContent(): React.ReactElement {
   const [isSyncing, setIsSyncing] = useState(false)
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [availableTags, setAvailableTags] = useState<TagItem[]>([])
+
+  // "Add posts" mode is meaningless without its tag active as the filter —
+  // clearing the tag (the toolbar ×, or deselecting via the Tags dropdown)
+  // must also exit selection mode, or the grid keeps offering "Adding to
+  // #tag" for a tag that's no longer on screen.
+  useEffect(() => {
+    if (tagSelectTag && selectedTags[0] !== tagSelectTag) setTagSelectTag(null)
+  }, [tagSelectTag, selectedTags])
   const [syncProgress, setSyncProgress] = useState<{
     current: number
     total: number
