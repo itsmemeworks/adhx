@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
+import { RefreshCw, TriangleAlert } from 'lucide-react'
 import Link from 'next/link'
 
 export default function Error({
@@ -18,34 +18,36 @@ export default function Error({
   }, [error])
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-8">
-      <div className="max-w-md text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-destructive/10 rounded-full mb-6">
-          <AlertTriangle className="w-8 h-8 text-destructive" />
+    <div className="min-h-screen bg-paper flex items-center justify-center p-8">
+      <div className="max-w-md w-full text-center">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-surface border border-hairline mb-6">
+          <TriangleAlert className="w-7 h-7 text-clay" />
         </div>
-        <h1 className="text-2xl font-bold mb-2">Something went wrong</h1>
-        <p className="text-muted-foreground mb-6">
-          An unexpected error occurred. Please try again or return to the dashboard.
+
+        <h1 className="font-serif text-[30px] sm:text-[38px] font-semibold tracking-tight text-ink mb-2">
+          Something slipped
+        </h1>
+        <p className="text-[15px] text-ink-2 mb-8">
+          An unexpected error occurred. Give it another try, or head back to your collection.
         </p>
-        <div className="flex items-center justify-center gap-4">
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <button
             onClick={reset}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-secondary rounded-lg hover:bg-secondary/80 transition-colors"
+            className="inline-flex min-h-[44px] w-full sm:w-auto items-center justify-center gap-1.5 rounded-full bg-clay-grad px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-opacity hover:opacity-90"
           >
             <RefreshCw className="w-4 h-4" />
-            Try Again
+            Try again
           </button>
           <Link
             href="/"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            className="inline-flex min-h-[44px] w-full sm:w-auto items-center justify-center gap-1.5 rounded-full border border-hairline bg-surface px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-inset"
           >
-            <Home className="w-4 h-4" />
-            Dashboard
+            Back to your collection
           </Link>
         </div>
-        {error.digest && (
-          <p className="text-xs text-muted-foreground mt-6">Error ID: {error.digest}</p>
-        )}
+
+        {error.digest && <p className="text-xs text-ink-3 mt-6">Error ID: {error.digest}</p>}
       </div>
     </div>
   )
