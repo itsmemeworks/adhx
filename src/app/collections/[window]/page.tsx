@@ -5,6 +5,7 @@ import { CollectionsBoard } from '@/components/collections/CollectionsBoard'
 import { CollectionsStaticList } from '@/components/collections/CollectionsStaticList'
 import { WINDOW_COPY } from '@/components/collections/copy'
 import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
+import { getCurrentUserId } from '@/lib/auth/session'
 
 /**
  * /collections/[window] — the non-default Discovery leaderboard windows
@@ -45,6 +46,11 @@ export default async function CollectionsWindowPage({ params }: Props) {
   // The default window's canonical URL is the bare /collections.
   if (window === 'week') permanentRedirect('/collections')
 
+  // Signed-in visitors already have the global app Header as their chrome —
+  // CollectionsBoard skips its own internal dark header for them so the page
+  // doesn't stack two headers (see CollectionsBoard's `authed` prop).
+  const authed = Boolean(await getCurrentUserId())
+
   // Resilience: a DB failure degrades to an empty board (matching /trending
   // + sitemap.ts) instead of a 500.
   let entries: LeaderboardEntry[] = []
@@ -74,7 +80,7 @@ export default async function CollectionsWindowPage({ params }: Props) {
       />
       <h1 className="sr-only">{title}</h1>
       <CollectionsStaticList entries={entries} heading={title} />
-      <CollectionsBoard window={window} entries={entries} />
+      <CollectionsBoard window={window} entries={entries} authed={authed} />
     </>
   )
 }

@@ -3,7 +3,7 @@
 import { useState, useRef, forwardRef, useImperativeHandle, useEffect } from 'react'
 import { X, Plus, Tag } from 'lucide-react'
 import type { TagItem } from './types'
-import { sanitizeTag } from '@/lib/utils/tag'
+import { kebabTagInput, sanitizeTag } from '@/lib/utils/tag'
 
 export interface TagInputHandle {
   focus: () => void
@@ -132,7 +132,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
               type="text"
               value={newTag}
               onChange={(e) => {
-                setNewTag(e.target.value)
+                setNewTag(kebabTagInput(e.target.value))
                 setTagError(null)
                 setShowSuggestions(true)
               }}

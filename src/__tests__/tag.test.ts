@@ -42,3 +42,15 @@ describe('isValidTag', () => {
     expect(isValidTag('Claude Code')).toBe(true)
   })
 })
+
+describe('kebabTagInput (live keystroke variant)', () => {
+  it('kebabs spaces as the user types, keeping the trailing hyphen visible', async () => {
+    const { kebabTagInput } = await import('@/lib/utils/tag')
+    expect(kebabTagInput('hello ')).toBe('hello-')
+    expect(kebabTagInput('hello world')).toBe('hello-world')
+    expect(kebabTagInput('Hello  World!')).toBe('hello-world-')
+    expect(kebabTagInput('-lead')).toBe('lead')
+    expect(kebabTagInput('a_b c')).toBe('a-b-c')
+    expect(kebabTagInput('averyverylongtagname')).toBe('averyverylongta')
+  })
+})

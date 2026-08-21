@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { createTestDb, type TestDbInstance } from './api/setup'
 import { collectionEvents, tagShares, users, type NewCollectionEvent } from '@/lib/db/schema'
+import { getCurrentUserId } from '@/lib/auth/session'
 
 /**
  * /collections leaderboard page tests — `src/app/collections/page.tsx` and
@@ -22,6 +23,16 @@ vi.mock('@/lib/db', () => ({
   get db() {
     return testInstance.db
   },
+}))
+
+// These pages now check auth (getCurrentUserId) to decide whether
+// CollectionsBoard renders its own internal header (signed-out) or defers to
+// the global app Header (signed-in). Default to signed-out here — same as a
+// real anonymous visitor to this public, crawlable page — since these tests
+// exercise the SEO/ranking rendering, not the auth-chrome behavior (that's
+// covered by CollectionsBoard's own component test).
+vi.mock('@/lib/auth/session', () => ({
+  getCurrentUserId: vi.fn(() => Promise.resolve(null)),
 }))
 
 vi.mock('next/navigation', () => ({
@@ -183,6 +194,33 @@ describe('/collections leaderboard pages', () => {
       const ld = extractJsonLd(html)
       const mainEntity = ld.mainEntity as { itemListElement: unknown[] }
       expect(mainEntity.itemListElement).toHaveLength(2)
+    })
+  })
+
+  describe('CollectionsBoard header chrome', () => {
+    afterEach(() => {
+      // Restore the file-wide signed-out default so later test files that
+      // import this module in the same run aren't affected by these two
+      // tests' explicit mockResolvedValue calls.
+      vi.mocked(getCurrentUserId).mockResolvedValue(null)
+    })
+
+    it('signed-out: keeps its own dark header, with no "Trending posts" link', async () => {
+      vi.mocked(getCurrentUserId).mockResolvedValue(null)
+      const CollectionsPage = (await import('@/app/collections/page')).default
+      const html = renderToStaticMarkup(await CollectionsPage())
+
+      expect(html).toContain('ADHX home')
+      expect(html).not.toContain('Trending posts')
+    })
+
+    it('signed-in: renders no internal header at all (the global app Header is the chrome)', async () => {
+      vi.mocked(getCurrentUserId).mockResolvedValue('u1')
+      const CollectionsPage = (await import('@/app/collections/page')).default
+      const html = renderToStaticMarkup(await CollectionsPage())
+
+      expect(html).not.toContain('ADHX home')
+      expect(html).not.toContain('Trending posts')
     })
   })
 })

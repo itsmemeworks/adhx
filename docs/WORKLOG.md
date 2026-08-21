@@ -4,7 +4,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
-## 2026-08-21 — Discovery MVP built: /collections podium leaderboard + curator stats
+## 2026-08-21 — Discovery polish round: card unification, nav rework, grammar fixes (live owner review)
+
+- **Why**: Owner reviewed staging — cards inconsistent across /tags, /t/{u}, /collections; tag title shifted with stat-line presence; wordy overlays losing legibility; double header on authed /collections; nav confusion; triage drifted from "mark read"; /tags search dead; alias redirect missed their own rename.
+- **Cards**: ONE CollectionPosterCard everywhere (leaderboard's bespoke CollectionCard DELETED). Adaptive mosaic (1=full, 2=columns, 3=2+span-bottom, 4+=2×2+overflow), fixed footer geometry (#tag NEVER moves — badge row always rendered), icon badges w/ bg-black/45 backing instead of words, text-shadow on all overlay text, rank medallions (clay top-3/glass), default height 240px. `subtitle` prop removed.
+- **Nav**: Collection · **Theater** (renamed Live — the theater holds both tabs) · Tags · **Leaderboard** (→/collections). Authed /collections renders NO internal header ("Trending posts →" link removed everywhere). Triage REVERSED #342: always seeds the full unread queue, filters ignored (grid-tap on a read item prepends it). Header search on /tags now searches tags via `tags-search` event (+ guard: the URL-push debounce would've navigated off /tags per keystroke).
+- **Grammar** (owner-specified): tags = `[a-z0-9-]`≤15 (underscore now kebabs), usernames = `[a-z0-9_]`≤15 (hyphen dropped; old names still resolve — grammar gates new claims only). Tag inputs kebab spaces LIVE while typing (`kebabTagInput`, keeps trailing hyphen mid-word).
+- **Alias bug**: owner's pigeontechgovai→peteypie rename didn't redirect — first free claim skipped alias creation by design; wrong for names already public. NOW every rename aliases the old name. Staging needs a one-off backfill row for pigeontechgovai (fix isn't retroactive).
+- **Also**: theater curator "@name" links to /t/{name} (desktop; mobile never shows curator).
+- **State**: 1855 tests green, build clean. Follow-ups: featured-card badge sizes don't scale (visual check), rank medallion + footer rank chip are separate props (deliberate).
 
 - **Why**: User greenlit the spec + design canvas (direction A "Podium" selected) — built by 4 parallel sonnet agents on disjoint files, 2 waves (recorder+rank, then leaderboard-page+curator-surfaces).
 - **Write path**: `collection_events` (guarded CREATE in migrate.ts + test DDL); `recordCollectionEvent()` in `src/lib/discovery/record.ts` — self-view no-op, public-only, 30min signed-in / 60s anon dedupe, errors swallowed. Hooked: `/t/{u}/{tag}` page (bot-filtered, whole hook try/caught — headers() throws in direct-render tests) + clone route. Admin `/api/admin/collections/hide`.

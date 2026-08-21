@@ -20,7 +20,13 @@ import {
  *
  * Header chrome (MatterLogo + LiveDot + brand label, dark stage) matches
  * `src/components/trending/TrendingRankedList.tsx` on purpose — same Matter
- * dark vocabulary, different content.
+ * dark vocabulary, different content. Signed-in visitors already have the
+ * global app Header as their chrome (AppShell doesn't suppress it for
+ * `/collections`), so this internal header is skipped entirely for them via
+ * the `authed` prop — otherwise the page stacks two headers. Signed-out
+ * visitors keep it (it's their only nav on this public page). Per the owner's
+ * review, the "Trending posts →" link is gone from this header in both
+ * states — /trending is SEO-only infrastructure, not a user-facing surface.
  *
  * Cards are the canonical `CollectionPosterCard` (`@/components/tags`) — the
  * leaderboard used to have its own bespoke `CollectionCard`, now deleted, so
@@ -77,30 +83,28 @@ function LeaderboardCard({
 export function CollectionsBoard({
   window,
   entries,
+  authed = false,
 }: {
   window: RankWindow
   entries: LeaderboardEntry[]
+  authed?: boolean
 }) {
   const [first, second, third] = entries
   const rest = entries.slice(3)
 
   return (
     <div className="min-h-screen bg-[#08070a] text-white/90">
-      <header className="flex items-center gap-3 border-b border-white/[0.08] px-4 py-4 sm:px-6">
-        <Link href="/" aria-label="ADHX home" className="[&_span]:text-white">
-          <MatterLogo size={19} />
-        </Link>
-        <span className="ml-2 inline-flex items-center gap-2">
-          <LiveDot />
-          <span className="text-[12.5px] font-semibold text-white/60">Collections</span>
-        </span>
-        <Link
-          href="/trending"
-          className="ml-auto text-[13px] font-semibold text-white/60 underline decoration-white/20 underline-offset-4 transition-colors hover:text-white"
-        >
-          Trending posts →
-        </Link>
-      </header>
+      {!authed && (
+        <header className="flex items-center gap-3 border-b border-white/[0.08] px-4 py-4 sm:px-6">
+          <Link href="/" aria-label="ADHX home" className="[&_span]:text-white">
+            <MatterLogo size={19} />
+          </Link>
+          <span className="ml-2 inline-flex items-center gap-2">
+            <LiveDot />
+            <span className="text-[12.5px] font-semibold text-white/60">Collections</span>
+          </span>
+        </header>
+      )}
 
       <div className="mx-auto max-w-5xl px-4 pb-20 pt-10 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">

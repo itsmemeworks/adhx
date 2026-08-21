@@ -92,10 +92,12 @@ describe('API: /api/auth/username', () => {
       expect(user.usernameChosen).toBe(true)
       expect(user.usernameChangeCount).toBe(0) // first claim never counts
 
-      // The first claim never creates a redirect alias for the old,
-      // auto-derived name — it was never really "chosen".
+      // Even the free first claim aliases the old name — auto-derived
+      // usernames can already live in shared /t/... URLs, and those links
+      // must keep redirecting after the claim.
       const aliases = await testInstance.db.select().from(schema.usernameAliases)
-      expect(aliases).toHaveLength(0)
+      expect(aliases).toHaveLength(1)
+      expect(aliases[0].userId).toBe('user-1')
     })
 
     it('a second change (after the first claim) costs a change and aliases the old name', async () => {
@@ -237,12 +239,12 @@ describe('API: /api/auth/username', () => {
 
       const { POST } = await import('@/app/api/auth/username/route')
       const response = await POST(
-        postRequest('/api/auth/username', { username: 'a-very-long-username-indeed' }),
+        postRequest('/api/auth/username', { username: 'a_very_long_username_indeed' }),
       )
       expect(response.status).toBe(200)
       const data = await response.json()
       expect(data.username).toHaveLength(15)
-      expect(data.username).toBe('a-very-long-use')
+      expect(data.username).toBe('a_very_long_use')
     })
   })
 
@@ -266,12 +268,12 @@ describe('API: /api/auth/username', () => {
     it('reports available: false when another account already has it', async () => {
       await testInstance.db.insert(schema.users).values([
         { id: 'user-1', username: 'reader1' },
-        { id: 'user-2', username: 'taken-name' },
+        { id: 'user-2', username: 'taken_name' },
       ])
       mockUserId = 'user-1'
 
       const { GET } = await import('@/app/api/auth/username/route')
-      const response = await GET(getRequest('/api/auth/username?check=taken-name'))
+      const response = await GET(getRequest('/api/auth/username?check=taken_name'))
       expect((await response.json()).available).toBe(false)
     })
 

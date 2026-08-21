@@ -257,6 +257,50 @@ describe('TagsClient', () => {
     expect(screen.getByText('+3')).toBeInTheDocument()
   })
 
+  it('filters the tag list on a "tags-search" window event (case-insensitive substring match)', async () => {
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/tags') {
+        return jsonResponse({
+          tags: [
+            { tag: 'work', count: 5, isPublic: false, shareUrl: null },
+            { tag: 'reading', count: 1, isPublic: false, shareUrl: null },
+          ],
+        })
+      }
+      return jsonResponse({})
+    }) as unknown as typeof fetch
+
+    render(<TagsClient />)
+
+    await waitFor(() => expect(screen.getByText('#work')).toBeInTheDocument())
+    expect(screen.getByText('#reading')).toBeInTheDocument()
+
+    fireEvent(window, new CustomEvent('tags-search', { detail: 'WOR' }))
+
+    await waitFor(() => expect(screen.queryByText('#reading')).not.toBeInTheDocument())
+    expect(screen.getByText('#work')).toBeInTheDocument()
+  })
+
+  it('shows a "No tags match" empty state when the search term matches nothing', async () => {
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/tags') {
+        return jsonResponse({
+          tags: [{ tag: 'work', count: 5, isPublic: false, shareUrl: null }],
+        })
+      }
+      return jsonResponse({})
+    }) as unknown as typeof fetch
+
+    render(<TagsClient />)
+
+    await waitFor(() => expect(screen.getByText('#work')).toBeInTheDocument())
+
+    fireEvent(window, new CustomEvent('tags-search', { detail: 'nonexistent' }))
+
+    await waitFor(() => expect(screen.getByText("No tags match 'nonexistent'")).toBeInTheDocument())
+    expect(screen.queryByText('#work')).not.toBeInTheDocument()
+  })
+
   it('"Make private" PATCHes isPublic: false and drops the Public chip', async () => {
     global.fetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
       if (url === '/api/tags' && !init) {

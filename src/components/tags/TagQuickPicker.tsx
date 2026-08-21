@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Check, Loader2, Plus, Tag as TagIcon, X } from 'lucide-react'
-import { sanitizeTag } from '@/lib/utils/tag'
+import { kebabTagInput, sanitizeTag } from '@/lib/utils/tag'
 import type { TagItem } from '@/components/feed/types'
 
 export interface TagQuickPickerProps {
@@ -268,7 +268,7 @@ export function TagQuickPicker({
             type="text"
             value={newTagValue}
             onChange={(e) => {
-              setNewTagValue(e.target.value)
+              setNewTagValue(kebabTagInput(e.target.value))
               setError(null)
             }}
             placeholder="New tag"
