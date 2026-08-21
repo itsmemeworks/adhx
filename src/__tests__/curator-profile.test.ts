@@ -64,14 +64,17 @@ const SAMPLE_PROFILE = {
         count: 2,
         tiles: [{ thumbnailUrl: 'https://example.com/thumb.jpg', text: 'a post' }],
         href: '/t/curator/cool-stuff',
+        stats: { viewCount: 42, cloneCount: 5, rank: 3 },
       },
       {
         tag: 'more-stuff',
         count: 1,
         tiles: [],
         href: '/t/curator/more-stuff',
+        stats: null,
       },
     ],
+    stats: { viewCount: 42, cloneCount: 5, bestRank: 3 },
   },
 }
 
@@ -143,10 +146,44 @@ describe('Curator profile route: /t/[username]', () => {
         tag: string
         count: number
         href: string
+        stats: unknown
       }
       expect(firstProps.tag).toBe('cool-stuff')
       expect(firstProps.count).toBe(2)
       expect(firstProps.href).toBe('/t/curator/cool-stuff')
+
+      // Discovery stats are forwarded through to the poster card (docs/specs/
+      // discovery-leaderboards.md §6) — the rank chip renders inside the
+      // card's own stat line, not as a top-right `badge` (which the
+      // component docs say isn't safe to combine with `wholeCardLink`).
+      expect(firstProps.stats).toEqual({ viewCount: 42, cloneCount: 5, rank: 3 })
+      const secondProps = posterCardSpy.mock.calls[1][0] as { stats: unknown }
+      expect(secondProps.stats).toBeNull()
+
+      // Curator stat strip under the handle.
+      expect(html).toContain('42 views this week')
+      expect(html).toContain('5 saves')
+      expect(html).toContain('#3 on the')
+    })
+
+    it('omits the curator stat strip when there is no view/save activity yet', async () => {
+      const { getPublicProfile: mocked } = await import('@/lib/users/profile')
+      vi.mocked(mocked).mockResolvedValue({
+        ...SAMPLE_PROFILE,
+        profile: {
+          ...SAMPLE_PROFILE.profile,
+          collections: SAMPLE_PROFILE.profile.collections.map((c) => ({ ...c, stats: null })),
+          stats: { viewCount: 0, cloneCount: 0, bestRank: null },
+        },
+      })
+
+      const CuratorProfilePage = (await import('@/app/t/[username]/page')).default
+      const result = await CuratorProfilePage({
+        params: Promise.resolve({ username: 'curator' }),
+      })
+      const html = renderToStaticMarkup(result as React.ReactElement)
+
+      expect(html).not.toContain('views this week')
     })
 
     it('decodes a percent-encoded username before querying', async () => {

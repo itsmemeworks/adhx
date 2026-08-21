@@ -1,6 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createTestDb, type TestDbInstance, createTestBookmark } from './api/setup'
-import { oauthTokens, tagShares, bookmarkTags, bookmarks, users } from '@/lib/db/schema'
+import {
+  oauthTokens,
+  tagShares,
+  bookmarkTags,
+  bookmarks,
+  users,
+  collectionEvents,
+} from '@/lib/db/schema'
 
 /**
  * Curator-profile data-layer tests — `src/lib/users/profile.ts`.
@@ -226,8 +233,75 @@ describe('getPublicProfile', () => {
     expect(result.status).toBe('ok')
     if (result.status !== 'ok') throw new Error('expected ok')
     expect(result.profile.collections).toEqual([
-      { tag: 'empty-tag', count: 0, tiles: [], href: `/t/${OWNER_USERNAME}/empty-tag` },
+      {
+        tag: 'empty-tag',
+        count: 0,
+        tiles: [],
+        href: `/t/${OWNER_USERNAME}/empty-tag`,
+        stats: null,
+      },
     ])
     expect(result.profile.postCount).toBe(0)
+    expect(result.profile.stats).toEqual({ viewCount: 0, cloneCount: 0, bestRank: null })
+  })
+
+  describe('Discovery stats (docs/specs/discovery-leaderboards.md §6)', () => {
+    it('attaches per-tag view/clone/rank stats and owner totals, summed over public tags only', async () => {
+      await seedOwnerViaUsersTable()
+      await testInstance.db.insert(tagShares).values({
+        userId: OWNER_ID,
+        tag: 'popular',
+        shareCode: 'code-11',
+        isPublic: true,
+      })
+      await testInstance.db
+        .insert(bookmarks)
+        .values(createTestBookmark(OWNER_ID, 'pop-1', { text: 'a popular post' }))
+      await testInstance.db.insert(bookmarkTags).values({
+        userId: OWNER_ID,
+        bookmarkId: 'pop-1',
+        tag: 'popular',
+      })
+      const now = new Date().toISOString()
+      await testInstance.db.insert(collectionEvents).values([
+        { action: 'view', ownerUserId: OWNER_ID, tag: 'popular', createdAt: now },
+        { action: 'view', ownerUserId: OWNER_ID, tag: 'popular', createdAt: now },
+        { action: 'clone', ownerUserId: OWNER_ID, tag: 'popular', createdAt: now },
+      ])
+
+      const result = await getPublicProfile(OWNER_USERNAME)
+      expect(result.status).toBe('ok')
+      if (result.status !== 'ok') throw new Error('expected ok')
+
+      const collection = result.profile.collections.find((c) => c.tag === 'popular')
+      expect(collection?.stats).toEqual({ viewCount: 2, cloneCount: 1, rank: 1 })
+      expect(result.profile.stats).toEqual({ viewCount: 2, cloneCount: 1, bestRank: 1 })
+    })
+
+    it("excludes a tag's historical view/clone totals from the public totals once it's private", async () => {
+      await seedOwnerViaUsersTable()
+      // 'still-public' stays public; 'went-private' has historical events but
+      // is no longer shared — it must not appear in `collections` at all, and
+      // its history must not inflate the profile-level totals either.
+      await testInstance.db.insert(tagShares).values([
+        { userId: OWNER_ID, tag: 'still-public', shareCode: 'code-12', isPublic: true },
+        { userId: OWNER_ID, tag: 'went-private', shareCode: 'code-13', isPublic: false },
+      ])
+      const now = new Date().toISOString()
+      await testInstance.db.insert(collectionEvents).values([
+        { action: 'view', ownerUserId: OWNER_ID, tag: 'still-public', createdAt: now },
+        { action: 'view', ownerUserId: OWNER_ID, tag: 'went-private', createdAt: now },
+        { action: 'view', ownerUserId: OWNER_ID, tag: 'went-private', createdAt: now },
+        { action: 'clone', ownerUserId: OWNER_ID, tag: 'went-private', createdAt: now },
+      ])
+
+      const result = await getPublicProfile(OWNER_USERNAME)
+      expect(result.status).toBe('ok')
+      if (result.status !== 'ok') throw new Error('expected ok')
+
+      expect(result.profile.collections.map((c) => c.tag)).toEqual(['still-public'])
+      expect(result.profile.stats).toEqual({ viewCount: 1, cloneCount: 0, bestRank: 1 })
+      expect(JSON.stringify(result)).not.toContain('went-private')
+    })
   })
 })

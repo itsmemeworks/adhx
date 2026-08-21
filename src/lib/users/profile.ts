@@ -11,6 +11,7 @@ import {
 import { eq, and, inArray, desc } from 'drizzle-orm'
 import { getUserIdForUsername } from '@/lib/users/lookup'
 import { getThumbnailUrl } from '@/lib/media/fxembed'
+import { getOwnerCollectionStats } from '@/lib/discovery/rank'
 
 /**
  * Public curator-profile query — the data layer for `/t/{username}`.
@@ -35,12 +36,29 @@ export interface ProfileTile {
   text?: string
 }
 
+/** Discovery view/save stats for one public tag (docs/specs/discovery-leaderboards.md §6) —
+ * `null` when the tag has no events this week. `rank` is `null` when it isn't charting on
+ * the public week leaderboard. */
+export interface ProfileCollectionStats {
+  viewCount: number
+  cloneCount: number
+  rank: number | null
+}
+
 export interface ProfileCollection {
   tag: string
   /** Number of distinct posts tagged with this public tag. */
   count: number
   tiles: ProfileTile[]
   href: string
+  stats: ProfileCollectionStats | null
+}
+
+/** Curator's Discovery totals across all public tags, week window. */
+export interface ProfileStats {
+  viewCount: number
+  cloneCount: number
+  bestRank: number | null
 }
 
 export interface PublicProfile {
@@ -54,6 +72,7 @@ export interface PublicProfile {
   /** Distinct posts across ALL public tags (a post in two tags counts once). */
   postCount: number
   collections: ProfileCollection[]
+  stats: ProfileStats
 }
 
 export type PublicProfileResult = { status: 'ok'; profile: PublicProfile } | { status: 'not_found' }
@@ -165,6 +184,27 @@ async function fetchPublicProfile(usernameParam: string): Promise<PublicProfileR
 
   const tagNames = shares.map((s) => s.tag)
 
+  // Discovery view/save stats (docs/specs/discovery-leaderboards.md §6). This
+  // is a PUBLIC page, so unlike the owner-only `/api/tags` dashboard we can't
+  // forward `getOwnerCollectionStats().totals` as-is: `byTag` there carries
+  // historical events for tags this owner has since made private (recording
+  // happened while they were public), and summing across all of it would
+  // leak "this curator has more activity than their visible collections
+  // show." Instead, sum only over `tagNames` — the shares already filtered
+  // to `isPublic = true` above. `bestRank` needs no such filtering: it's
+  // derived from the public week leaderboard, which excludes private tags by
+  // construction (the leaderboard query inner-joins on `isPublic = 1`).
+  const ownerStats = getOwnerCollectionStats(userId)
+  const statsForTag = (tag: string): ProfileCollectionStats | null => {
+    const s = ownerStats.byTag[tag]
+    return s ? { viewCount: s.viewCount, cloneCount: s.cloneCount, rank: s.rank } : null
+  }
+  const profileStats: ProfileStats = {
+    viewCount: tagNames.reduce((sum, tag) => sum + (ownerStats.byTag[tag]?.viewCount ?? 0), 0),
+    cloneCount: tagNames.reduce((sum, tag) => sum + (ownerStats.byTag[tag]?.cloneCount ?? 0), 0),
+    bestRank: ownerStats.totals.bestRank,
+  }
+
   const taggedRows = db
     .select({
       tag: bookmarkTags.tag,
@@ -190,7 +230,9 @@ async function fetchPublicProfile(usernameParam: string): Promise<PublicProfileR
           count: 0,
           tiles: [],
           href: `/t/${username}/${tag}`,
+          stats: statsForTag(tag),
         })),
+        stats: profileStats,
       },
     }
   }
@@ -275,7 +317,7 @@ async function fetchPublicProfile(usernameParam: string): Promise<PublicProfileR
       if (b.text) tile.text = b.text.slice(0, TEXT_FALLBACK_LENGTH)
       return tile
     })
-    return { tag, count: arr.length, tiles, href: `/t/${username}/${tag}` }
+    return { tag, count: arr.length, tiles, href: `/t/${username}/${tag}`, stats: statsForTag(tag) }
   })
 
   // Distinct posts across public tags only — a post tagged with two public
@@ -296,6 +338,7 @@ async function fetchPublicProfile(usernameParam: string): Promise<PublicProfileR
       publicTagCount: tagNames.length,
       postCount: distinctPublicPostKeys.size,
       collections,
+      stats: profileStats,
     },
   }
 }

@@ -5,6 +5,7 @@ import { getPublicProfile, type PublicProfileResult } from '@/lib/users/profile'
 import { resolveUsernameAlias } from '@/lib/users/lookup'
 import { CollectionPosterCard } from '@/components/tags'
 import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
+import { Bookmark, Eye, Flame } from 'lucide-react'
 
 /**
  * `/t/{username}` — public curator profile page.
@@ -186,6 +187,28 @@ export default async function CuratorProfilePage({ params }: Props) {
           <p className="font-mono text-xs uppercase tracking-wide text-white/50">
             {stats.join(' · ')}
           </p>
+
+          {profile.stats.viewCount + profile.stats.cloneCount > 0 && (
+            <div className="flex items-center gap-5 rounded-full border border-white/10 bg-white/[0.03] px-5 py-2.5 font-mono text-[12.5px] text-white/75">
+              <span className="flex items-center gap-1.5">
+                <Eye size={13} />
+                {profile.stats.viewCount} views this week
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Bookmark size={13} />
+                {profile.stats.cloneCount} saves
+              </span>
+              {profile.stats.bestRank != null && (
+                <Link
+                  href="/collections"
+                  className="flex items-center gap-1.5 text-[#e88a5e] transition-opacity hover:opacity-80"
+                >
+                  <Flame size={13} fill="currentColor" />#{profile.stats.bestRank} on the
+                  leaderboard
+                </Link>
+              )}
+            </div>
+          )}
         </header>
 
         {profile.collections.length === 1 ? (
@@ -202,6 +225,7 @@ export default async function CuratorProfilePage({ params }: Props) {
               featured
               heightClass="h-[320px] sm:h-[420px] lg:h-[480px]"
               className="w-full"
+              stats={profile.collections[0].stats}
             />
           </div>
         ) : (
@@ -218,6 +242,7 @@ export default async function CuratorProfilePage({ params }: Props) {
                 href={c.href}
                 wholeCardLink
                 className="w-full sm:w-[calc(50%-10px)] lg:w-[calc(25%-15px)]"
+                stats={c.stats}
               />
             ))}
           </div>

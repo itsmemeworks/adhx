@@ -4,6 +4,7 @@ import { getUsernameForUserId } from '@/lib/users/lookup'
 import { bookmarkTags, tagShares } from '@/lib/db/schema'
 import { eq, sql, and } from 'drizzle-orm'
 import { withAuth } from '@/lib/api/with-auth'
+import { getOwnerCollectionStats } from '@/lib/discovery/rank'
 
 // Username for friendly share URLs — users-table-first (email-only accounts
 // have no oauth_tokens row; reading only that table 404'd their shares).
@@ -40,19 +41,38 @@ export const GET = withAuth(async (_request, userId) => {
   // Get all tag shares for this user
   const shares = await db.select().from(tagShares).where(eq(tagShares.userId, userId))
 
+  // Discovery view/save stats (docs/specs/discovery-leaderboards.md §6) —
+  // one call for the whole page, week window. Private tags never accrue
+  // events (recording is public-only, see `record.ts`), but we still gate
+  // on `isPublic` explicitly here so a tag's stats disappear the moment it's
+  // made private rather than lingering from before it was unshared.
+  const collectionStats = getOwnerCollectionStats(userId)
+
   // Merge tags with share info, using friendly URLs
   const tagsWithShares = tags.map((t) => {
     const share = shares.find((s) => s.tag === t.tag)
+    const isPublic = share?.isPublic ?? false
+    const tagStats = isPublic ? collectionStats.byTag[t.tag] : undefined
     return {
       tag: t.tag,
       count: t.count,
-      isPublic: share?.isPublic ?? false,
+      isPublic,
       // Friendly URL format: /t/{username}/{tag}
       shareUrl: share && username ? `/t/${username}/${t.tag}` : null,
+      viewCount: tagStats?.viewCount ?? 0,
+      cloneCount: tagStats?.cloneCount ?? 0,
+      rank: tagStats?.rank ?? null,
     }
   })
 
-  return NextResponse.json({ tags: tagsWithShares })
+  return NextResponse.json({
+    tags: tagsWithShares,
+    stats: {
+      viewCount: collectionStats.totals.viewCount,
+      cloneCount: collectionStats.totals.cloneCount,
+      bestRank: collectionStats.totals.bestRank,
+    },
+  })
 })
 
 // PATCH /api/tags - Toggle public sharing for a tag

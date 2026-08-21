@@ -200,8 +200,14 @@ export function TrendingRankedList({
           </span>
         </span>
         <Link
-          href="/"
+          href="/collections"
           className="ml-auto text-[13px] font-semibold text-white/60 underline decoration-white/20 underline-offset-4 transition-colors hover:text-white"
+        >
+          Top collections →
+        </Link>
+        <Link
+          href="/"
+          className="text-[13px] font-semibold text-white/60 underline decoration-white/20 underline-offset-4 transition-colors hover:text-white"
         >
           Watch as theater →
         </Link>

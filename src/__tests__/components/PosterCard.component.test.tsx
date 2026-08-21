@@ -86,4 +86,60 @@ describe('CollectionPosterCard', () => {
     const title = screen.getByText('#solo')
     expect(title.className).toContain('text-[30px]')
   })
+
+  describe('Discovery stats (docs/specs/discovery-leaderboards.md §6)', () => {
+    it('renders the view/save counts and a "#N this week" rank chip when charting', () => {
+      render(
+        <CollectionPosterCard
+          tag="cool-stuff"
+          count={2}
+          tiles={TILES}
+          href="/?tag=cool-stuff"
+          stats={{ viewCount: 42, cloneCount: 5, rank: 3 }}
+        />,
+      )
+
+      expect(screen.getByText('42')).toBeInTheDocument()
+      expect(screen.getByText('5')).toBeInTheDocument()
+      expect(screen.getByText('#3 this week')).toBeInTheDocument()
+    })
+
+    it('omits the rank chip when stats has no rank (not charting)', () => {
+      render(
+        <CollectionPosterCard
+          tag="cool-stuff"
+          count={2}
+          tiles={TILES}
+          href="/?tag=cool-stuff"
+          stats={{ viewCount: 42, cloneCount: 5, rank: null }}
+        />,
+      )
+
+      expect(screen.getByText('42')).toBeInTheDocument()
+      expect(screen.queryByText(/this week/)).not.toBeInTheDocument()
+    })
+
+    it('renders the private-stats note in place of the stat line when stats is absent', () => {
+      render(
+        <CollectionPosterCard
+          tag="cool-stuff"
+          count={2}
+          tiles={TILES}
+          href="/?tag=cool-stuff"
+          privateStatsNote
+        />,
+      )
+
+      expect(screen.getByText('Private · no public stats')).toBeInTheDocument()
+    })
+
+    it('renders neither the stat line nor the private note by default (byte-compatible with existing callers)', () => {
+      render(
+        <CollectionPosterCard tag="cool-stuff" count={2} tiles={TILES} href="/?tag=cool-stuff" />,
+      )
+
+      expect(screen.queryByText('Private · no public stats')).not.toBeInTheDocument()
+      expect(screen.queryByText(/this week/)).not.toBeInTheDocument()
+    })
+  })
 })

@@ -23,7 +23,8 @@ vi.mock('@/lib/db', () => ({
 }))
 
 // homepage + /trending + /trending/archive + 5 per-lens hubs (latest/videos/photos/text/articles)
-const HUB_COUNT = 8
+// + /collections + 3 non-default collections windows (today/month/all-time)
+const HUB_COUNT = 12
 
 describe('Dynamic Sitemap', () => {
   beforeEach(() => {
@@ -44,6 +45,7 @@ describe('Dynamic Sitemap', () => {
     expect(entries[0].priority).toBe(1)
     expect(entries.find((e) => e.url === 'https://adhx.com/trending')).toBeDefined()
     expect(entries.find((e) => e.url === 'https://adhx.com/trending/videos')).toBeDefined()
+    expect(entries.find((e) => e.url === 'https://adhx.com/collections')).toBeDefined()
     // No tag pages
     expect(entries.find((e) => e.url.includes('/t/'))).toBeUndefined()
   })
@@ -59,6 +61,20 @@ describe('Dynamic Sitemap', () => {
     for (const slug of ['popular', 'videos', 'photos', 'text', 'articles']) {
       expect(entries.find((e) => e.url === `https://adhx.com/trending/${slug}`)).toBeDefined()
     }
+  })
+
+  it('includes the /collections leaderboard hub + its non-default window paths', async () => {
+    const { default: sitemap } = await import('@/app/sitemap')
+    const entries = sitemap()
+
+    // "week" is the bare /collections hub now (the default window); the
+    // other three windows get their own tidy path.
+    expect(entries.find((e) => e.url === 'https://adhx.com/collections')).toBeDefined()
+    for (const slug of ['today', 'month', 'all-time']) {
+      expect(entries.find((e) => e.url === `https://adhx.com/collections/${slug}`)).toBeDefined()
+    }
+    // "week" itself must not also get its own sub-path (it's the bare hub).
+    expect(entries.find((e) => e.url === 'https://adhx.com/collections/week')).toBeUndefined()
   })
 
   it('includes tag page URLs for public tags', async () => {

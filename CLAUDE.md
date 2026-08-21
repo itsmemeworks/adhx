@@ -872,6 +872,7 @@ Database location: `./data/adhdone.db`
 | `collection_tweets` | `(userId, collectionId, platform, bookmarkId)` | Bookmarks in collections                                                                                                                                                                                                      |
 | `tag_shares`        | `(userId, tag)`                                | Public tag sharing settings                                                                                                                                                                                                   |
 | `activity`          | `id` (auto)                                    | Append-only public activity pulse — anonymous event log (`userId` stored but never exposed; `author_avatar_url` added via guarded ALTER in `migrate.ts`). Not user-owned content, so exempt from the composite-key convention |
+| `collection_events` | `id` (auto)                                    | Append-only collection view/clone log behind the `/collections` leaderboards (`viewer_id` stored but never exposed; read only via `src/lib/discovery/rank.ts`). Same event-log exemptions as `activity`                       |
 
 **Why composite keys with `platform`**: Allows User A and User B to both bookmark tweet X independently (multi-user), AND lets the same numeric id exist across platforms without collision (a TikTok video id and a tweet id can both be 19 digits). `platform` is one of `twitter` | `instagram` | `tiktok`, default `twitter`. Every query that filters by `bookmarkId` must also filter by `platform`.
 
@@ -945,6 +946,24 @@ export async function GET() {
 | `/api/media/tiktok/thumbnail`                   | GET         | No   | Resolve + proxy a TikTok poster JPEG from `username`+`id` (via tiktxk → CDN); used by feed + Discover                  |
 | `/api/media/instagram/thumbnail`                | GET         | No   | Resolve + proxy an Instagram poster from `id`                                                                          |
 | `/api/triage/streak`                            | GET         | Yes  | Triage streak stats (current streak, total/this-week triaged) for the Settings streak card                             |
+| `/api/collections/trending`                     | GET         | No   | Public anonymous collection leaderboard JSON (`?window=today\|week\|month\|all-time`, wraps `getCollectionLeaderboard`)  |
+| `/api/admin/collections/hide`                   | POST        | Yes  | Admin-only (`ADMIN_USERNAMES`): hide/unhide a collection from leaderboards (`{ username, tag, hidden? }`)               |
+
+### Discovery leaderboards (`/collections`)
+
+Public tagged collections are ranked on `/collections` (+ `/collections/{today|month|all-time}`;
+week is the default at the bare path) — the "podium" leaderboard per
+`docs/specs/discovery-leaderboards.md`. Data model: append-only `collection_events`
+(`view` from the `/t/{username}/{tag}` page — bot-filtered, self-views excluded, public tags
+only; `clone` ×5 from the clone endpoint), read exclusively through
+`src/lib/discovery/rank.ts` (the anonymity choke point — `viewerId` is never selected; 60s
+in-process cache; `RankMode` plumbing reserved for hot/rising/new). Recording is
+`recordCollectionEvent()` in `src/lib/discovery/record.ts` (fire-and-forget, deduped
+30min/signed-in + 60s/anon). Curator surfaces: `/api/tags` GET includes per-tag
+`viewCount/cloneCount/rank` + totals; `/tags` shows a This-week summary + leaderboard promo
+band; the public profile `/t/{username}` shows a stat strip + per-card stats (public-tag
+aggregates only — a since-privated tag's history never leaks). The leaderboard pages are
+`force-dynamic` like `/trending` — do not make them static.
 
 ## Environment Variables
 

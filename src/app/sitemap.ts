@@ -5,6 +5,7 @@ import { and, eq, desc, sql } from 'drizzle-orm'
 import { previewPath } from '@/lib/activity/record'
 import type { PlatformId } from '@/lib/platform/url'
 import { FILTER_SLUGS } from '@/lib/trending/filter'
+import { RANK_WINDOWS, windowToPath } from '@/lib/discovery/rank'
 import {
   isValidTwitterHandle,
   passesThinContentGate,
@@ -30,6 +31,7 @@ import {
  * Widened inventory (on top of hubs + public tags + saved/previewed content):
  *  - Author hubs (`/{username}`) for every X handle behind a sitemap-eligible post.
  *  - Trending archive (`/trending/archive` + one URL per completed ISO week).
+ *  - Collections leaderboard (`/collections` + the 3 non-default window paths).
  * Activity-derived (never-saved) preview URLs pass through a thin-content gate
  * (`passesThinContentGate`) so a flood of low-effort previewed-but-unsaved posts
  * can't dilute site-wide quality signals — see `src/lib/sitemap/queries.ts`.
@@ -84,6 +86,25 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: now,
       changeFrequency: 'hourly',
       priority: 0.8,
+    })
+  }
+
+  // /collections — the Discovery leaderboard hub (week, the default window)
+  // plus the three non-default window paths. Renders fine with an empty
+  // board, so unconditional like the other static hubs above.
+  entries.push({
+    url: `${baseUrl}/collections`,
+    lastModified: now,
+    changeFrequency: 'weekly',
+    priority: 0.6,
+  })
+  for (const w of RANK_WINDOWS) {
+    if (w.id === 'week') continue // already the bare /collections above
+    entries.push({
+      url: `${baseUrl}${windowToPath(w.id)}`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.6,
     })
   }
 
