@@ -22,6 +22,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import {
   Bookmark,
   Check,
@@ -474,8 +475,15 @@ export function DesktopStageChrome({
                 #{collection.tag}
               </span>
               <span className="min-w-0 truncate font-mono text-[11px] leading-none text-white/55">
-                curated by @{collection.curator} · {collection.count}{' '}
-                {collection.count === 1 ? 'post' : 'posts'} ·{' '}
+                curated by{' '}
+                <Link
+                  href={`/t/${encodeURIComponent(collection.curator)}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="underline decoration-white/30 underline-offset-2 transition-colors hover:text-white"
+                >
+                  @{collection.curator}
+                </Link>{' '}
+                · {collection.count} {collection.count === 1 ? 'post' : 'posts'} ·{' '}
                 <Repeat size={10} className="inline" aria-hidden /> loops
               </span>
             </>

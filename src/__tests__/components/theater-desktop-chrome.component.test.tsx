@@ -216,6 +216,19 @@ describe('DesktopStageChrome', () => {
     )
   })
 
+  it('collection mode links the curator handle to their public profile', () => {
+    render(
+      <DesktopStageChrome
+        {...stageBase}
+        mode="collection"
+        current={videoItem()}
+        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+      />,
+    )
+    const curatorLink = screen.getByText('@weedauwl').closest('a')!
+    expect(curatorLink).toHaveAttribute('href', '/t/weedauwl')
+  })
+
   it('navigateToAppPath only navigates to same-origin app paths', () => {
     const assignSpy = vi.fn()
     Object.defineProperty(window, 'location', {

@@ -146,80 +146,67 @@ function FeedPageContent(): React.ReactElement {
     [],
   )
 
-  // Open triage over the FULL unread queue (not just the loaded page), so the
-  // progress count matches the unread total shown on the Triage pill. The feed
-  // API caps at 100/request, which covers a typical backlog.
-  // Build the triage-queue query from the CURRENT view state — the theater's
-  // Collection tab shows what the grid shows. Hard-coding unreadOnly=true here
-  // hid read posts from users who had explicitly turned the unread filter off
-  // ("only seeing 1 post in my collection, but there's 2").
-  const buildTriageQuery = useCallback(() => {
-    const params = new URLSearchParams({
-      filter,
-      unreadOnly: unreadOnly.toString(),
-      limit: '100',
-    })
-    if (platformFilter !== 'all') params.set('platform', platformFilter)
-    if (search) params.set('search', search)
-    selectedTags.forEach((tag) => params.append('tag', tag))
-    // Tag views ignore read state entirely (see fetchFeed) — keep the queue
-    // consistent with that.
-    if (selectedTags.length > 0) params.set('unreadOnly', 'false')
-    return params
-  }, [filter, unreadOnly, platformFilter, search, selectedTags])
+  // PRODUCT DECISION REVERSAL — do not "fix" this back to reading current
+  // view state. A previous iteration (#342) seeded the triage queue from the
+  // CURRENT filter/platform/tag/search state, so the theater's Collection tab
+  // always matched whatever the grid happened to be showing. The owner
+  // reversed that: "Triage is just about marking a post as read or not read."
+  // Triage is now strictly the full unread backlog, every time, regardless of
+  // what's active in the grid behind it — a consistent queue instead of a
+  // filtered snapshot. So the query below is fixed (unreadOnly=true, no
+  // filter/platform/tag/search) rather than derived from component state.
+  // The feed API caps at 100/request, which covers a typical backlog.
+  const buildUnreadTriageQuery = useCallback(
+    () => new URLSearchParams({ filter: 'all', unreadOnly: 'true', limit: '100' }),
+    [],
+  )
+
+  const fetchUnreadQueue = useCallback(async (): Promise<FeedItem[]> => {
+    let queue: FeedItem[] = items.filter((i) => !i.isRead)
+    try {
+      const res = await fetch(`/api/feed?${buildUnreadTriageQuery()}`)
+      if (res.ok) {
+        const data = await res.json()
+        const fetched: FeedItem[] = (data.items || []).filter((i: FeedItem) => !i.isRead)
+        if (fetched.length) queue = fetched
+      }
+    } catch {
+      /* fall back to the loaded items, filtered to unread */
+    }
+    return queue
+  }, [items, buildUnreadTriageQuery])
 
   const startTriageAll = useCallback(
     async (tab: TriageTab = 'collection') => {
-      const respectUnread = unreadOnly && selectedTags.length === 0
-      let queue: FeedItem[] = respectUnread ? items.filter((i) => !i.isRead) : items
-      try {
-        const res = await fetch(`/api/feed?${buildTriageQuery()}`)
-        if (res.ok) {
-          const data = await res.json()
-          const fetched: FeedItem[] = data.items || []
-          const all = respectUnread ? fetched.filter((i: FeedItem) => !i.isRead) : fetched
-          if (all.length) queue = all
-        }
-      } catch {
-        /* fall back to the loaded items */
-      }
+      const queue = await fetchUnreadQueue()
       openTriage(queue, 0, tab)
     },
-    [items, openTriage, buildTriageQuery, unreadOnly, selectedTags],
+    [fetchUnreadQueue, openTriage],
   )
 
-  // Open triage from a tapped gallery item: triage the FULL unread backlog (not
-  // just the loaded page) so the progress count reflects everything, but start
-  // on the item the user tapped.
+  // Open triage from a tapped gallery item: always the full unread backlog
+  // (see the decision-reversal note above), starting on the item the user
+  // tapped — which may live outside that backlog (e.g. it's already read, or
+  // the grid is showing a tag/category view that mixes read + unread). Of the
+  // two reasonable fallbacks (prepend it, or just open at the front of the
+  // unread queue and ignore the tap), prepending is the least surprising:
+  // tapping a specific card should always open ON that card, with the rest of
+  // the unread backlog queued up right behind it.
   const openTriageFromItem = useCallback(
     async (idx: number) => {
       const clicked = items[idx]
-      const respectUnread = unreadOnly && selectedTags.length === 0
-      let queue: FeedItem[] = respectUnread ? items.filter((i) => !i.isRead) : items
-      try {
-        const res = await fetch(`/api/feed?${buildTriageQuery()}`)
-        if (res.ok) {
-          const data = await res.json()
-          const fetched: FeedItem[] = data.items || []
-          const all = respectUnread ? fetched.filter((i: FeedItem) => !i.isRead) : fetched
-          if (all.length) queue = all
-        }
-      } catch {
-        /* fall back to the loaded items */
-      }
+      let queue = await fetchUnreadQueue()
       const plat = (i: FeedItem) => i.platform ?? 'twitter'
       let start = clicked
         ? queue.findIndex((i) => i.id === clicked.id && plat(i) === plat(clicked))
         : 0
-      if (start === -1) {
-        // Tapped item isn't in the queue (e.g. read while unread-only is on) —
-        // open it alone.
-        queue = clicked ? [clicked] : queue
+      if (start === -1 && clicked) {
+        queue = [clicked, ...queue]
         start = 0
       }
       openTriage(queue, Math.max(0, start))
     },
-    [items, openTriage, buildTriageQuery, unreadOnly, selectedTags],
+    [items, fetchUnreadQueue, openTriage],
   )
 
   const startSync = useCallback(

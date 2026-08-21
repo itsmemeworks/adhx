@@ -97,7 +97,7 @@ describe('Header', () => {
     expect(screen.queryByText(/view on github/i)).not.toBeInTheDocument()
   })
 
-  it('shows Collection · Live nav, with no Trending tab and no Add button', async () => {
+  it('shows Collection · Theater · Tags · Leaderboard nav, with no Add button', async () => {
     mockFetch(true)
     render(<Header />)
 
@@ -105,23 +105,28 @@ describe('Header', () => {
 
     // Desktop primary nav
     expect(screen.getByRole('link', { name: 'Collection' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Live' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Theater' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Tags' })).toHaveAttribute('href', '/tags')
+    expect(screen.getByRole('link', { name: 'Leaderboard' })).toHaveAttribute(
+      'href',
+      '/collections',
+    )
 
-    // Trending is gone everywhere (top nav + avatar menu)
-    expect(screen.queryByRole('link', { name: /trending/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /trending/i })).not.toBeInTheDocument()
+    // "Live" is gone — renamed to "Theater" (the mode contains both the live
+    // pulse and the collection-as-theater tabs, so it's not just "Live").
+    expect(screen.queryByRole('button', { name: 'Live' })).not.toBeInTheDocument()
 
     // The `+` Add button and its modal trigger are removed
     expect(screen.queryByRole('button', { name: /add link/i })).not.toBeInTheDocument()
   })
 
-  it('dispatches open-theater with tab "live" when Live is clicked', async () => {
+  it('dispatches open-theater with tab "live" when Theater is clicked', async () => {
     mockFetch(true)
     render(<Header />)
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
-    screen.getByRole('button', { name: 'Live' }).click()
+    screen.getByRole('button', { name: 'Theater' }).click()
 
     const liveEvent = dispatchSpy.mock.calls
       .map((call) => call[0] as CustomEvent)
@@ -143,13 +148,26 @@ describe('Header', () => {
     avatarButton!.click()
 
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
-    const menuLiveButton = screen.getAllByRole('button', { name: 'Live' })[0]
+    const menuLiveButton = screen.getAllByRole('button', { name: 'Theater' })[0]
     menuLiveButton.click()
 
     const liveEvent = dispatchSpy.mock.calls
       .map((call) => call[0] as CustomEvent)
       .find((e) => e.type === 'open-theater')
     expect(liveEvent?.detail).toEqual({ tab: 'live' })
+  })
+
+  it('shows a Leaderboard link in the avatar menu too, pointing at /collections', async () => {
+    mockFetch(true)
+    render(<Header />)
+    await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
+
+    const avatarButtons = screen.getAllByRole('button')
+    const avatarButton = avatarButtons.find((btn) => btn.className.includes('w-[33px]'))
+    fireEvent.click(avatarButton!)
+
+    const menuLeaderboardLinks = screen.getAllByRole('link', { name: 'Leaderboard' })
+    expect(menuLeaderboardLinks.some((l) => l.getAttribute('href') === '/collections')).toBe(true)
   })
 
   it('shows a Tags nav link (top bar + avatar menu)', async () => {
@@ -191,14 +209,14 @@ describe('Header', () => {
     expect(theaterEvent?.detail).toEqual({ tab: 'triage' })
   })
 
-  it('navigates to /?live=1 instead of dispatching when Live is clicked off the feed page', async () => {
+  it('navigates to /?live=1 instead of dispatching when Theater is clicked off the feed page', async () => {
     mockPathname = '/tags'
     mockFetch(true)
     render(<Header />)
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
-    screen.getByRole('button', { name: 'Live' }).click()
+    screen.getByRole('button', { name: 'Theater' }).click()
 
     expect(pushSpy).toHaveBeenCalledWith('/?live=1')
     const liveEvent = dispatchSpy.mock.calls
@@ -221,10 +239,40 @@ describe('Header', () => {
     const avatarButton = avatarButtons.find((btn) => btn.className.includes('w-[33px]'))
     fireEvent.click(avatarButton!)
 
-    const menuLiveButton = screen.getAllByRole('button', { name: 'Live' })[0]
+    const menuLiveButton = screen.getAllByRole('button', { name: 'Theater' })[0]
     menuLiveButton.click()
 
     expect(pushSpy).toHaveBeenCalledWith('/?live=1')
+  })
+
+  it('on /tags: search placeholder changes and typing dispatches "tags-search" instead of navigating', async () => {
+    mockPathname = '/tags'
+    mockFetch(true)
+    render(<Header />)
+    await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
+
+    const input = screen.getByPlaceholderText('Search your tags…')
+    expect(screen.queryByPlaceholderText('Search your collection…')).not.toBeInTheDocument()
+
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+    fireEvent.change(input, { target: { value: 'work' } })
+
+    const tagsSearchEvent = dispatchSpy.mock.calls
+      .map((call) => call[0] as CustomEvent)
+      .find((e) => e.type === 'tags-search')
+    expect(tagsSearchEvent?.detail).toBe('work')
+
+    // No navigation should follow — /tags search never touches the URL.
+    await new Promise((r) => setTimeout(r, 350))
+    expect(pushSpy).not.toHaveBeenCalled()
+  })
+
+  it('on other pages: search placeholder stays "Search your collection…"', async () => {
+    mockFetch(true)
+    render(<Header />)
+    await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
+
+    expect(screen.getByPlaceholderText('Search your collection…')).toBeInTheDocument()
   })
 
   it('hides "Sync bookmarks" in the avatar menu for an email-only account (no X connected)', async () => {

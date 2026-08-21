@@ -226,6 +226,7 @@ export default async function CuratorProfilePage({ params }: Props) {
               heightClass="h-[320px] sm:h-[420px] lg:h-[480px]"
               className="w-full"
               stats={profile.collections[0].stats}
+              rank={profile.collections[0].stats?.rank ?? null}
             />
           </div>
         ) : (
@@ -243,6 +244,7 @@ export default async function CuratorProfilePage({ params }: Props) {
                 wholeCardLink
                 className="w-full sm:w-[calc(50%-10px)] lg:w-[calc(25%-15px)]"
                 stats={c.stats}
+                rank={c.stats?.rank ?? null}
               />
             ))}
           </div>

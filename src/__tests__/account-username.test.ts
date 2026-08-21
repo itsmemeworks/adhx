@@ -51,8 +51,8 @@ describe('chooseUsername', () => {
     testInstance.close()
   })
 
-  it('the first claim is free: no alias, change count stays 0', async () => {
-    await testInstance.db.insert(schema.users).values({ id: 'u1', username: 'derived-name' })
+  it('the first claim is free (no change spent) but STILL aliases the old name', async () => {
+    await testInstance.db.insert(schema.users).values({ id: 'u1', username: 'derived_name' })
 
     const result = await chooseUsername('u1', 'chosen')
     expect(result).toEqual({ ok: true, username: 'chosen', changesRemaining: MAX_USERNAME_CHANGES })
@@ -61,7 +61,11 @@ describe('chooseUsername', () => {
     expect(user.username).toBe('chosen')
     expect(user.usernameChosen).toBe(true)
     expect(user.usernameChangeCount).toBe(0)
-    expect(await aliasRows()).toHaveLength(0)
+    // The derived name may already live in shared /t/... URLs (e.g. an
+    // X-backfilled username on the leaderboard) — it must keep redirecting.
+    const aliases = await aliasRows()
+    expect(aliases).toHaveLength(1)
+    expect(aliases[0]).toMatchObject({ username: 'derived_name', userId: 'u1' })
   })
 
   it('spends changes one at a time and aliases the name left behind', async () => {
@@ -122,12 +126,12 @@ describe('chooseUsername', () => {
     ])
     await testInstance.db
       .insert(schema.usernameAliases)
-      .values({ username: 'held-by-u2', userId: 'u2', createdAt: Date.now() })
+      .values({ username: 'held_by_u2', userId: 'u2', createdAt: Date.now() })
 
-    const result = await chooseUsername('u1', 'held-by-u2')
+    const result = await chooseUsername('u1', 'held_by_u2')
     expect(result).toEqual({ error: 'taken' })
-    expect(await isUsernameTaken('held-by-u2', 'u1')).toBe(true)
-    expect(await isUsernameTaken('held-by-u2', 'u2')).toBe(false)
+    expect(await isUsernameTaken('held_by_u2', 'u1')).toBe(true)
+    expect(await isUsernameTaken('held_by_u2', 'u2')).toBe(false)
   })
 
   it('reclaiming your own past username is never blocked as "taken", and frees the alias', async () => {
@@ -139,12 +143,12 @@ describe('chooseUsername', () => {
     })
     await testInstance.db
       .insert(schema.usernameAliases)
-      .values({ username: 'my-old-name', userId: 'u1', createdAt: Date.now() })
+      .values({ username: 'my_old_name', userId: 'u1', createdAt: Date.now() })
 
     // Reclaiming still costs a change like any other — it's just never
     // rejected as "taken" for an alias the caller already owns.
-    const result = await chooseUsername('u1', 'my-old-name')
-    expect(result).toEqual({ ok: true, username: 'my-old-name', changesRemaining: 0 })
+    const result = await chooseUsername('u1', 'my_old_name')
+    expect(result).toEqual({ ok: true, username: 'my_old_name', changesRemaining: 0 })
 
     const aliases = await aliasRows()
     // The reclaimed alias is freed; the name just vacated becomes the new alias.
@@ -152,7 +156,7 @@ describe('chooseUsername', () => {
     expect(aliases[0].userId).toBe('u1')
 
     const user = await userRow('u1')
-    expect(user.username).toBe('my-old-name')
+    expect(user.username).toBe('my_old_name')
   })
 
   it('the cap still applies to reclaiming your own past username once spent', async () => {
@@ -164,9 +168,9 @@ describe('chooseUsername', () => {
     })
     await testInstance.db
       .insert(schema.usernameAliases)
-      .values({ username: 'my-old-name', userId: 'u1', createdAt: Date.now() })
+      .values({ username: 'my_old_name', userId: 'u1', createdAt: Date.now() })
 
-    const result = await chooseUsername('u1', 'my-old-name')
+    const result = await chooseUsername('u1', 'my_old_name')
     expect(result).toEqual({ error: 'change_limit_reached' })
   })
 

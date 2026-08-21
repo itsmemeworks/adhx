@@ -3,7 +3,7 @@
 import { useState, useRef, forwardRef, useImperativeHandle, useEffect } from 'react'
 import { X, Plus, Tag } from 'lucide-react'
 import type { TagItem } from './types'
-import { sanitizeTag } from '@/lib/utils/tag'
+import { kebabTagInput, sanitizeTag } from '@/lib/utils/tag'
 
 export interface TagInputHandle {
   focus: () => void
@@ -132,7 +132,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
               type="text"
               value={newTag}
               onChange={(e) => {
-                setNewTag(e.target.value)
+                setNewTag(kebabTagInput(e.target.value))
                 setTagError(null)
                 setShowSuggestions(true)
               }}
@@ -140,8 +140,8 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
               onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
               onKeyDown={handleKeyDown}
               placeholder="add tag"
-              maxLength={10}
-              className="w-12 bg-transparent text-base sm:text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
+              maxLength={15}
+              className="w-16 bg-transparent text-base sm:text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
             />
             {newTag.trim() ? (
               <button

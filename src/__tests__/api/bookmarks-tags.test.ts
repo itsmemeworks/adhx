@@ -136,7 +136,7 @@ describe('API: /api/bookmarks/[id]/tags', () => {
 
     it('truncates tags that exceed max length', async () => {
       const { POST } = await import('@/app/api/bookmarks/[id]/tags/route')
-      const response = await POST(createRequest('POST', { tag: 'verylongtag' }), {
+      const response = await POST(createRequest('POST', { tag: 'averyverylongtagname' }), {
         params: Promise.resolve({ id: 'tweet-1' }),
       })
 
@@ -144,7 +144,7 @@ describe('API: /api/bookmarks/[id]/tags', () => {
       expect(response.status).toBe(200)
       const data = await response.json()
       expect(data.success).toBe(true)
-      expect(data.tag).toBe('verylongta') // Truncated to 10 chars
+      expect(data.tag).toBe('averyverylongta') // Truncated to 15 chars
     })
 
     it('adds tag to bookmark', async () => {

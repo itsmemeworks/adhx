@@ -35,6 +35,11 @@ const PREVIEW_LIMIT = 4
  */
 export function TagsClient() {
   const [tags, setTags] = useState<TagItem[] | null>(null)
+  // The header search box has no collection to filter on /tags — it filters
+  // this tag list instead, via the cross-component custom-event pattern
+  // documented in CLAUDE.md ("Cross-Component Keyboard Feedback"). Header
+  // dispatches `tags-search` on every keystroke; we just listen.
+  const [searchQuery, setSearchQuery] = useState('')
   const [ownerStats, setOwnerStats] = useState<OwnerStats | null>(null)
   const [busyTag, setBusyTag] = useState<string | null>(null)
   const [copiedTag, setCopiedTag] = useState<string | null>(null)
@@ -99,6 +104,12 @@ export function TagsClient() {
     },
     [],
   )
+
+  useEffect(() => {
+    const handler = (e: Event) => setSearchQuery((e as CustomEvent<string>).detail ?? '')
+    window.addEventListener('tags-search', handler)
+    return () => window.removeEventListener('tags-search', handler)
+  }, [])
 
   function flashCopied(tag: string) {
     setCopiedTag(tag)
@@ -208,6 +219,11 @@ export function TagsClient() {
     }
   }
 
+  const trimmedQuery = searchQuery.trim().toLowerCase()
+  const visibleTags = trimmedQuery
+    ? (tags ?? []).filter((t) => t.tag.toLowerCase().includes(trimmedQuery))
+    : (tags ?? [])
+
   return (
     <div className="min-h-screen bg-paper">
       <div className="max-w-[920px] mx-auto px-4 sm:px-8 py-8 sm:py-10 flex flex-col gap-6">
@@ -257,7 +273,7 @@ export function TagsClient() {
         {tags === null ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="h-[200px] rounded-[14px] bg-inset animate-pulse" />
+              <div key={i} className="h-[240px] rounded-[14px] bg-inset animate-pulse" />
             ))}
           </div>
         ) : tags.length === 0 ? (
@@ -267,9 +283,14 @@ export function TagsClient() {
               No tags yet — create one from the Collection filter bar.
             </p>
           </div>
+        ) : visibleTags.length === 0 ? (
+          <div className="rounded-card border border-hairline bg-surface p-8 text-center">
+            <TagIcon className="h-8 w-8 mx-auto mb-3 text-ink-3" />
+            <p className="text-[14.5px] text-ink-2">{`No tags match '${searchQuery}'`}</p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {tags.map((t) => (
+            {visibleTags.map((t) => (
               <TagPosterCard
                 key={t.tag}
                 tag={t}
@@ -410,14 +431,6 @@ function TagPosterCard({
     <PrivateBadge />
   )
 
-  const subtitle =
-    tag.isPublic && tag.shareUrl ? (
-      <>
-        <span aria-hidden>·</span>
-        <span className="truncate">{`adhx.com${tag.shareUrl}`}</span>
-      </>
-    ) : undefined
-
   return (
     <div className="flex flex-col gap-2">
       <CollectionPosterCard
@@ -427,7 +440,6 @@ function TagPosterCard({
         tilesLoading={tilesLoading}
         href={`/?tag=${encodeURIComponent(tag.tag)}`}
         badge={badge}
-        subtitle={subtitle}
         stats={
           tag.isPublic
             ? { viewCount: tag.viewCount ?? 0, cloneCount: tag.cloneCount ?? 0, rank: tag.rank }

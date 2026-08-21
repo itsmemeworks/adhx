@@ -1,12 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { Bookmark, Eye, Flame } from 'lucide-react'
+import { Bookmark, Eye, Flame, Layers, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 /** Discovery view/save stats for this collection (docs/specs/discovery-leaderboards.md §6).
  * `rank` is the 1-based position on this week's leaderboard, or `null`/absent when it isn't
- * charting. Omit the whole prop (or pass `null`) for a card with nothing to show. */
+ * charting — it renders as the small clay "#N" chip in the footer badge row. Omit the whole
+ * prop (or pass `null`) for a card with nothing to show. */
 export interface PosterCardStats {
   viewCount: number
   cloneCount: number
@@ -28,16 +29,15 @@ export interface CollectionPosterCardProps {
   href: string
   /** Top-right overlay (e.g. a PUBLIC/Private badge, optionally with a
    * secondary action stacked under it). Rendered outside the card's Link so
-   * its own interactive children never trigger card navigation. Must not be
-   * combined with `wholeCardLink` — that variant has no room for a second
-   * interactive element nested inside the anchor. */
+   * its own interactive children never trigger card navigation. INTERACTIVE
+   * — must not be combined with `wholeCardLink` (nesting a button/anchor
+   * inside an `<a>` is invalid HTML). `rank` below is the non-interactive
+   * alternative that IS safe with `wholeCardLink`. */
   badge?: React.ReactNode
   /** Bottom-right actions (make-public pill, copy/open glass buttons, …).
-   * Must not be combined with `wholeCardLink` — see above. */
+   * INTERACTIVE — must not be combined with `wholeCardLink`, same reason as
+   * `badge` above. */
   children?: React.ReactNode
-  /** Rendered right after the post count on the meta line — e.g. a
-   * truncated public share URL. Optional; omit for a bare count. */
-  subtitle?: React.ReactNode
   heightClass?: string
   /** Shows a pulsing placeholder mosaic instead of `tiles` — for the window
    * between the tag list resolving and its content preview arriving. */
@@ -47,25 +47,48 @@ export interface CollectionPosterCardProps {
    * instead of just the mosaic. Use only when the card carries no `badge`/
    * `children` interactive controls — nesting a button/anchor inside a
    * `<Link>` is invalid HTML. This is the public profile page's variant;
-   * `/tags` keeps the default (mosaic-only link + interactive footer). */
+   * `/tags` keeps the default (mosaic-only link + interactive footer).
+   * `rank`'s medallion is non-interactive and safe to combine with this. */
   wholeCardLink?: boolean
   /** Showcase scale for a single-collection profile: bigger tag title,
    * roomier footer padding, larger overflow-count type. */
   featured?: boolean
-  /** Discovery view/save stats, rendered as a mono line under the meta row
-   * (eye + views, bookmark + saves, and a clay "#N this week" chip when
+  /** Discovery view/save stats, rendered as icon badges in the fixed footer
+   * badge row (eye + views, bookmark + saves, and a clay "#N" chip when
    * `rank` is a number). Omit or pass `null` when there's nothing to show —
    * existing callers are unaffected. Mutually exclusive with
    * `privateStatsNote` (stats wins if both are somehow passed). */
   stats?: PosterCardStats | null
-  /** When `stats` is absent, renders "Private · no public stats" in the same
-   * slot the stat line would occupy — for a private collection with no
-   * public numbers to show. */
+  /** When `stats` is absent, renders a "Private" icon badge in the same
+   * footer row the stat badges would occupy — for a private collection with
+   * no public numbers to show. */
   privateStatsNote?: boolean
+  /** 1-based leaderboard position. Renders a NON-interactive top-left rank
+   * medallion — a gold clay-grad pill for #1, a clay-grad circle for #2-3,
+   * and a glass circle for #4+ (mirrors the old leaderboard-only
+   * `CollectionCard`'s `RankMedallion`). Safe to combine with
+   * `wholeCardLink`, unlike `badge`/`children`. Omit or pass `null` for no
+   * medallion. */
+  rank?: number | null
 }
 
 const TILE_BG = '#171219'
 const BORDER = '#322b23'
+/** Every footer/overlay text element gets this so it stays legible over
+ * light content — badges already carry their own backing, so this is only
+ * needed on the bare title. */
+const TEXT_SHADOW = '0 1px 2px rgba(0,0,0,0.8)'
+/** Shared recipe for every footer badge — icon-first, backed pill so text
+ * never floats bare over the mosaic. */
+const BADGE_CLASS =
+  'inline-flex items-center gap-1 rounded-full bg-black/45 px-2 py-0.5 font-mono text-[10.5px] text-white/85 backdrop-blur-md'
+/** The one badge that keeps its own warm coloring instead of the neutral
+ * `BADGE_CLASS` recipe — carried over from the original "#N this week" chip. */
+const CLAY_BADGE_STYLE: React.CSSProperties = {
+  backgroundColor: 'rgba(227,124,84,0.16)',
+  border: '1px solid rgba(227,124,84,0.4)',
+  color: '#e88a5e',
+}
 
 /**
  * Reusable "poster" card (Option C): the content mosaic IS the card, with a
@@ -74,8 +97,10 @@ const BORDER = '#322b23'
  * site's light/dark theme; the page around it stays on Matter tokens.
  *
  * Consumed by `/tags` (`TagsClient.tsx`, mosaic-only link + interactive
- * footer controls) and the public profile page `/t/{username}`
- * (`wholeCardLink`, no controls — the whole card is one clickable unit).
+ * footer controls), the public profile page `/t/{username}` (`wholeCardLink`,
+ * no interactive controls — the whole card is one clickable unit), and the
+ * `/collections` leaderboard (`CollectionsBoard.tsx`, `wholeCardLink` +
+ * `rank` medallion).
  */
 export function CollectionPosterCard({
   tag,
@@ -84,51 +109,17 @@ export function CollectionPosterCard({
   href,
   badge,
   children,
-  subtitle,
-  heightClass = 'h-[200px]',
+  heightClass = 'h-[240px]',
   tilesLoading = false,
   className,
   wholeCardLink = false,
   featured = false,
   stats = null,
   privateStatsNote = false,
+  rank = null,
 }: CollectionPosterCardProps): React.ReactElement {
-  const showOverflow = !tilesLoading && count > tiles.length && tiles.length > 0
-  const visibleTiles = showOverflow ? tiles.slice(0, 3) : tiles.slice(0, 4)
-  const overflowCount = count - visibleTiles.length
-
   const mosaic = (
-    <div
-      className={cn('grid h-full w-full grid-cols-2 grid-rows-2', featured ? 'gap-1' : 'gap-[2px]')}
-    >
-      {[0, 1, 2, 3].map((i) => {
-        if (tilesLoading) {
-          return (
-            <div
-              key={i}
-              className="animate-pulse"
-              style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}
-              aria-hidden
-            />
-          )
-        }
-        if (showOverflow && i === 3) {
-          return (
-            <div
-              key={i}
-              className={cn(
-                'flex items-center justify-center font-mono font-semibold text-white/60',
-                featured ? 'text-[18px] sm:text-[22px]' : 'text-[13px]',
-              )}
-              style={{ backgroundColor: TILE_BG }}
-            >
-              +{overflowCount}
-            </div>
-          )
-        }
-        return <PosterTileView key={i} tile={visibleTiles[i] ?? null} />
-      })}
-    </div>
+    <PosterMosaic tiles={tiles} count={count} tilesLoading={tilesLoading} featured={featured} />
   )
 
   const scrim = (
@@ -146,56 +137,67 @@ export function CollectionPosterCard({
         featured ? 'p-6 sm:p-8' : 'p-4',
       )}
     >
-      <div className="pointer-events-none min-w-0">
+      <div className="pointer-events-none min-w-0 flex-1">
+        {/* Row 1: the tag title — ALWAYS in this exact spot, never shifted by
+            whether row 2 below has one badge or three. */}
         <div
           className={cn(
             'truncate font-serif font-semibold text-white',
             featured ? 'text-[30px] sm:text-[40px]' : 'text-[22px] sm:text-[24px]',
           )}
+          style={{ textShadow: TEXT_SHADOW }}
         >
           #{tag}
         </div>
-        <div
-          className={cn(
-            'mt-0.5 flex items-center gap-1.5 overflow-hidden font-mono text-white/55',
-            featured ? 'text-[12px] sm:text-[13px]' : 'text-[10.5px]',
-          )}
-        >
-          <span className="flex-none whitespace-nowrap">
-            {count} post{count === 1 ? '' : 's'}
+        {/* Row 2: fixed-height icon-badge row. Always rendered (even with just
+            the post count) so row 1 above never moves depending on what else
+            is available for this card. */}
+        <div className="mt-1.5 flex h-[21px] items-center gap-1.5 overflow-hidden">
+          <span
+            className={BADGE_CLASS}
+            title={`${count} post${count === 1 ? '' : 's'}`}
+            aria-label={`${count} post${count === 1 ? '' : 's'}`}
+          >
+            <Layers size={10.5} aria-hidden="true" />
+            {count}
           </span>
-          {subtitle}
-        </div>
-        {stats ? (
-          <div className="mt-1 flex items-center gap-2.5 font-mono text-[11px] text-white/72">
-            <span className="flex items-center gap-1">
-              <Eye size={11} />
-              {stats.viewCount}
-            </span>
-            <span className="flex items-center gap-1">
-              <Bookmark size={11} />
-              {stats.cloneCount}
-            </span>
-            {typeof stats.rank === 'number' && (
+          {stats ? (
+            <>
               <span
-                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] font-semibold"
-                style={{
-                  backgroundColor: 'rgba(227,124,84,0.16)',
-                  border: '1px solid rgba(227,124,84,0.4)',
-                  color: '#e88a5e',
-                }}
+                className={BADGE_CLASS}
+                title={`${stats.viewCount} views`}
+                aria-label={`${stats.viewCount} views`}
               >
-                <Flame size={10} fill="currentColor" />#{stats.rank} this week
+                <Eye size={10.5} aria-hidden="true" />
+                {stats.viewCount}
               </span>
-            )}
-          </div>
-        ) : (
-          privateStatsNote && (
-            <div className="mt-1 font-mono text-[11px] text-white/40">
-              Private · no public stats
-            </div>
-          )
-        )}
+              <span
+                className={BADGE_CLASS}
+                title={`${stats.cloneCount} saves`}
+                aria-label={`${stats.cloneCount} saves`}
+              >
+                <Bookmark size={10.5} aria-hidden="true" />
+                {stats.cloneCount}
+              </span>
+              {typeof stats.rank === 'number' && (
+                <span
+                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10.5px] font-semibold backdrop-blur-md"
+                  style={CLAY_BADGE_STYLE}
+                  title={`#${stats.rank} this week`}
+                >
+                  <Flame size={10} fill="currentColor" aria-hidden="true" />#{stats.rank}
+                </span>
+              )}
+            </>
+          ) : (
+            privateStatsNote && (
+              <span className={BADGE_CLASS}>
+                <Lock size={10.5} aria-hidden="true" />
+                Private
+              </span>
+            )
+          )}
+        </div>
       </div>
       {children && (
         <div className="flex flex-none items-center gap-2" onClick={(e) => e.stopPropagation()}>
@@ -219,6 +221,7 @@ export function CollectionPosterCard({
       >
         {mosaic}
         {scrim}
+        {typeof rank === 'number' && <RankMedallion rank={rank} />}
         {badge && <div className="absolute right-3 top-3 z-10">{badge}</div>}
         {footer}
       </Link>
@@ -235,6 +238,7 @@ export function CollectionPosterCard({
         {scrim}
       </Link>
 
+      {typeof rank === 'number' && <RankMedallion rank={rank} />}
       {badge && <div className="absolute right-3 top-3 z-10">{badge}</div>}
 
       {footer}
@@ -242,9 +246,79 @@ export function CollectionPosterCard({
   )
 }
 
-function PosterTileView({ tile }: { tile: PosterTile | null }) {
+/**
+ * Adaptive content mosaic — the number of real tiles (capped at 4 by every
+ * caller) decides the layout, so a 1- or 3-post collection doesn't leave a
+ * dead cell or shrink into a quarter of the card:
+ * - 0 tiles: one placeholder cell fills the card.
+ * - 1 tile: fills the whole card.
+ * - 2 tiles: two full-height columns.
+ * - 3 tiles: 2×2, with the 3rd tile spanning both columns on the bottom row.
+ * - 4 tiles: standard 2×2 — the 4th cell becomes a "+N" overflow ONLY when
+ *   `count` (the collection's real total) is more than the 3 tiles otherwise
+ *   shown alongside it.
+ */
+function PosterMosaic({
+  tiles,
+  count,
+  tilesLoading,
+  featured,
+}: {
+  tiles: PosterTile[]
+  count: number
+  tilesLoading: boolean
+  featured: boolean
+}) {
+  const tileCount = tilesLoading ? 4 : Math.min(tiles.length, 4)
+  const showOverflow = !tilesLoading && tileCount === 4 && count > 4
+  const overflowCount = count - 3
+  const gridClass =
+    tileCount <= 1
+      ? 'grid-cols-1 grid-rows-1'
+      : tileCount === 2
+        ? 'grid-cols-2 grid-rows-1'
+        : 'grid-cols-2 grid-rows-2'
+
+  return (
+    <div className={cn('grid h-full w-full', gridClass, featured ? 'gap-1' : 'gap-[2px]')}>
+      {tilesLoading ? (
+        [0, 1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="animate-pulse"
+            style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}
+            aria-hidden
+          />
+        ))
+      ) : tileCount === 0 ? (
+        <PosterTileView tile={null} />
+      ) : (
+        Array.from({ length: tileCount }, (_, i) => {
+          if (showOverflow && i === 3) {
+            return (
+              <div
+                key="overflow"
+                className={cn(
+                  'flex items-center justify-center font-mono font-semibold text-white/60',
+                  featured ? 'text-[18px] sm:text-[22px]' : 'text-[13px]',
+                )}
+                style={{ backgroundColor: TILE_BG }}
+              >
+                +{overflowCount}
+              </div>
+            )
+          }
+          const spanClass = tileCount === 3 && i === 2 ? 'col-span-2' : undefined
+          return <PosterTileView key={i} tile={tiles[i] ?? null} className={spanClass} />
+        })
+      )}
+    </div>
+  )
+}
+
+function PosterTileView({ tile, className }: { tile: PosterTile | null; className?: string }) {
   if (!tile) {
-    return <div style={{ backgroundColor: TILE_BG }} aria-hidden />
+    return <div className={className} style={{ backgroundColor: TILE_BG }} aria-hidden />
   }
 
   if (tile.thumbnailUrl) {
@@ -253,7 +327,7 @@ function PosterTileView({ tile }: { tile: PosterTile | null }) {
         src={tile.thumbnailUrl}
         alt=""
         referrerPolicy="no-referrer"
-        className="h-full w-full object-cover"
+        className={cn('h-full w-full object-cover', className)}
       />
     )
   }
@@ -261,10 +335,39 @@ function PosterTileView({ tile }: { tile: PosterTile | null }) {
   const excerpt = (tile.text || '').slice(0, 60).trim()
 
   return (
-    <div className="flex items-center justify-center p-2" style={{ backgroundColor: TILE_BG }}>
+    <div
+      className={cn('flex items-center justify-center p-2', className)}
+      style={{ backgroundColor: TILE_BG }}
+    >
       <span className="line-clamp-4 text-center text-[9px] leading-tight text-white/70">
         {excerpt || '—'}
       </span>
+    </div>
+  )
+}
+
+/** Top-left, non-interactive leaderboard-position medallion. Tiered by rank:
+ * #1 gets the warm gold treatment, #2-3 a plain clay circle, #4+ a glass
+ * circle. Lifted from the old leaderboard-only `CollectionCard`. */
+function RankMedallion({ rank }: { rank: number }) {
+  if (rank === 1) {
+    return (
+      <div className="absolute left-3 top-3 z-10 flex items-center gap-1 rounded-full bg-clay-grad px-2.5 py-1 shadow-glow">
+        <Flame size={13} className="text-white" fill="currentColor" />
+        <span className="font-mono text-[12px] font-bold text-white">1</span>
+      </div>
+    )
+  }
+  if (rank === 2 || rank === 3) {
+    return (
+      <div className="absolute left-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-clay-grad font-mono text-[13px] font-bold text-white">
+        {rank}
+      </div>
+    )
+  }
+  return (
+    <div className="absolute left-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-white/15 bg-black/55 font-mono text-[12px] text-white/70">
+      {rank}
     </div>
   )
 }

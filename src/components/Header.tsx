@@ -16,6 +16,7 @@ import {
   Radio,
   LogOut,
   Tag,
+  Trophy,
 } from 'lucide-react'
 import { useTheme } from '@/lib/theme/context'
 import { cn } from '@/lib/utils'
@@ -61,6 +62,13 @@ export function Header() {
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const { resolvedTheme, setTheme } = useTheme()
+  // On /tags the header search has no collection to filter — it filters the
+  // tag list instead, via the same cross-component custom-event pattern
+  // documented in CLAUDE.md ("Cross-Component Keyboard Feedback"). TagsClient
+  // owns the actual filtering; Header just re-broadcasts every keystroke and
+  // skips writing `search` into the URL (there's nothing on /tags to read it).
+  const onTagsPage = pathname === '/tags'
+  const searchPlaceholder = onTagsPage ? 'Search your tags…' : 'Search your collection…'
   const [searchValue, setSearchValue] = useState(searchParams.get('search') || '')
   const [showSync, setShowSync] = useState(false)
   const [silentSync, setSilentSync] = useState(false)
@@ -212,7 +220,13 @@ export function Header() {
   // of those unrelated navigations would reset this debounce timer mid-keystroke,
   // delaying or dropping the search push. `window.location.search` is read fresh
   // inside the timeout callback, so the comparison still reflects the current URL.
+  //
+  // On /tags, search doesn't touch the URL at all — it's routed to TagsClient
+  // via the `tags-search` event above — so this effect is skipped there,
+  // otherwise it would `router.push('/?search=...')` and navigate the user
+  // off /tags on every keystroke.
   useEffect(() => {
+    if (onTagsPage) return
     const debounceTimer = setTimeout(() => {
       const currentParams = new URLSearchParams(window.location.search)
       const currentSearch = currentParams.get('search') || ''
@@ -231,7 +245,7 @@ export function Header() {
     }, 300) // 300ms debounce
 
     return () => clearTimeout(debounceTimer)
-  }, [searchValue, router])
+  }, [searchValue, router, onTagsPage])
 
   async function fetchAuthStatus() {
     try {
@@ -325,8 +339,15 @@ export function Header() {
     return () => clearInterval(interval)
   }, [cooldown.canSync, cooldown.cooldownRemaining, cooldown.fetchedAt])
 
+  const handleSearchChange = (value: string) => {
+    setSearchValue(value)
+    if (onTagsPage) {
+      window.dispatchEvent(new CustomEvent('tags-search', { detail: value }))
+    }
+  }
+
   const clearSearch = () => {
-    setSearchValue('')
+    handleSearchChange('')
   }
 
   const handleSyncComplete = () => {
@@ -398,8 +419,11 @@ export function Header() {
               <MatterLogo size={20} />
             </Link>
 
-            {/* Primary nav — Collection stays a link; Live opens the theater
-                overlay on the community pulse instead of navigating.
+            {/* Primary nav — Collection/Tags/Leaderboard stay links; Theater
+                opens the theater overlay instead of navigating. "Theater" is
+                the mode's actual name, not "Live": the theater contains BOTH
+                the live community pulse and your own collection-as-theater as
+                internal tabs, so the nav entry names the surface, not one tab.
                 Only when authenticated, hidden on mobile (mobile uses the menu). */}
             {authStatus?.authenticated && (
               <nav className="hidden lg:flex items-center gap-1 text-[13.5px]">
@@ -417,7 +441,7 @@ export function Header() {
                   onClick={openLive}
                   className="rounded-full px-3 py-1.5 font-semibold text-ink-2 hover:text-ink transition-colors"
                 >
-                  Live
+                  Theater
                 </button>
                 <Link
                   href="/tags"
@@ -427,6 +451,17 @@ export function Header() {
                   )}
                 >
                   Tags
+                </Link>
+                <Link
+                  href="/collections"
+                  className={cn(
+                    'rounded-full px-3 py-1.5 font-semibold transition-colors',
+                    pathname === '/collections'
+                      ? 'bg-clay/[0.12] text-clay'
+                      : 'text-ink-2 hover:text-ink',
+                  )}
+                >
+                  Leaderboard
                 </Link>
               </nav>
             )}
@@ -441,8 +476,8 @@ export function Header() {
                   ref={searchInputRef}
                   type="text"
                   value={searchValue}
-                  onChange={(e) => setSearchValue(e.target.value)}
-                  placeholder="Search your collection…"
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  placeholder={searchPlaceholder}
                   aria-label="Search bookmarks"
                   className="w-full h-11 pl-11 pr-10 bg-inset rounded-full text-[13.5px] text-ink placeholder-ink-3 focus:outline-none focus:ring-2 focus:ring-clay/40"
                 />
@@ -590,7 +625,7 @@ export function Header() {
                           className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset text-ink-2 hover:text-ink transition-colors"
                         >
                           <Radio className="w-4 h-4" />
-                          Live
+                          Theater
                         </button>
                         <Link
                           href="/tags"
@@ -604,6 +639,19 @@ export function Header() {
                         >
                           <Tag className="w-4 h-4" />
                           Tags
+                        </Link>
+                        <Link
+                          href="/collections"
+                          onClick={() => setShowUserMenu(false)}
+                          className={cn(
+                            'flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset transition-colors',
+                            pathname === '/collections'
+                              ? 'font-semibold text-clay'
+                              : 'text-ink-2 hover:text-ink',
+                          )}
+                        >
+                          <Trophy className="w-4 h-4" />
+                          Leaderboard
                         </Link>
                         <Link
                           href="/settings"
@@ -683,8 +731,8 @@ export function Header() {
                 type="text"
                 autoFocus
                 value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                placeholder="Search your collection…"
+                onChange={(e) => handleSearchChange(e.target.value)}
+                placeholder={searchPlaceholder}
                 aria-label="Search bookmarks"
                 className="w-full h-10 pl-9 pr-9 bg-inset rounded-full text-base sm:text-sm text-ink placeholder-ink-3 focus:outline-none focus:ring-2 focus:ring-clay/40"
               />

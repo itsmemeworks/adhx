@@ -114,11 +114,11 @@ describe('TagQuickPicker Component', () => {
         '/api/bookmarks/tw1/tags?platform=twitter',
         expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify({ tag: 'claude-cod' }),
+          body: JSON.stringify({ tag: 'claude-code' }),
         }),
       ),
     )
-    await waitFor(() => expect(screen.getByText('#claude-cod')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('#claude-code')).toBeTruthy())
   })
 
   it('dispatches bookmark-tags-changed with the full updated tag list on toggle', async () => {

@@ -147,6 +147,7 @@ describe('Curator profile route: /t/[username]', () => {
         count: number
         href: string
         stats: unknown
+        rank: number | null
       }
       expect(firstProps.tag).toBe('cool-stuff')
       expect(firstProps.count).toBe(2)
@@ -157,8 +158,12 @@ describe('Curator profile route: /t/[username]', () => {
       // card's own stat line, not as a top-right `badge` (which the
       // component docs say isn't safe to combine with `wholeCardLink`).
       expect(firstProps.stats).toEqual({ viewCount: 42, cloneCount: 5, rank: 3 })
-      const secondProps = posterCardSpy.mock.calls[1][0] as { stats: unknown }
+      // The same rank is also forwarded as the top-level `rank` prop, which
+      // drives the non-interactive medallion now allowed with `wholeCardLink`.
+      expect(firstProps.rank).toBe(3)
+      const secondProps = posterCardSpy.mock.calls[1][0] as { stats: unknown; rank: number | null }
       expect(secondProps.stats).toBeNull()
+      expect(secondProps.rank).toBeNull()
 
       // Curator stat strip under the handle.
       expect(html).toContain('42 views this week')

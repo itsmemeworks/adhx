@@ -28,7 +28,7 @@ import {
 import type { FeedView } from './FeedGrid'
 import { PlatformGlyph } from '@/components/matter'
 import { cn } from '@/lib/utils'
-import { sanitizeTag } from '@/lib/utils/tag'
+import { kebabTagInput, sanitizeTag } from '@/lib/utils/tag'
 
 interface FilterBarProps {
   filter: FilterType
@@ -455,7 +455,7 @@ export function FilterBar({
                       ref={newTagInputRef}
                       type="text"
                       value={newTagValue}
-                      onChange={(e) => setNewTagValue(e.target.value)}
+                      onChange={(e) => setNewTagValue(kebabTagInput(e.target.value))}
                       onKeyDown={(e) => {
                         if (e.key === 'Escape') {
                           e.stopPropagation()
@@ -464,7 +464,7 @@ export function FilterBar({
                         }
                       }}
                       placeholder="tag name"
-                      maxLength={10}
+                      maxLength={15}
                       className="min-w-0 flex-1 rounded-md border border-hairline bg-paper px-2 py-1 text-sm text-ink outline-none focus:border-clay"
                     />
                     <button

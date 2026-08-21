@@ -35,9 +35,11 @@ describe('TagsClient', () => {
     render(<TagsClient />)
 
     await waitFor(() => expect(screen.getByText('#work')).toBeInTheDocument())
-    expect(screen.getByText('5 posts')).toBeInTheDocument()
+    // The post count is now an icon badge showing just the number — the
+    // word "posts"/"post" only lives in its title/aria-label for a11y.
+    expect(screen.getByTitle('5 posts')).toBeInTheDocument()
     expect(screen.getByText('#reading')).toBeInTheDocument()
-    expect(screen.getByText('1 post')).toBeInTheDocument()
+    expect(screen.getByTitle('1 post')).toBeInTheDocument()
   })
 
   it('shows the empty state when there are no tags', async () => {
@@ -64,7 +66,6 @@ describe('TagsClient', () => {
 
     await waitFor(() => expect(screen.getByText('#work')).toBeInTheDocument())
     expect(screen.getByText('Public')).toBeInTheDocument()
-    expect(screen.getByText('adhx.com/t/tester/work')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /open/i })).toHaveAttribute('href', '/t/tester/work')
   })
 
@@ -168,7 +169,6 @@ describe('TagsClient', () => {
 
     // The card flips public regardless of the clipboard outcome.
     await waitFor(() => expect(screen.getByText('Public')).toBeInTheDocument())
-    expect(screen.getByText('adhx.com/t/tester/work')).toBeInTheDocument()
     await waitFor(() =>
       expect(screen.getByText(/couldn't copy automatically/i)).toBeInTheDocument(),
     )
@@ -216,6 +216,30 @@ describe('TagsClient', () => {
               links: null,
               tags: ['work'],
             },
+            {
+              id: '3',
+              platform: 'twitter',
+              author: 'carol',
+              text: 'third post',
+              tweetUrl: 'https://x.com/carol/status/3',
+              processedAt: '2026-01-01T00:00:00.000Z',
+              isRead: false,
+              media: null,
+              links: null,
+              tags: ['work'],
+            },
+            {
+              id: '4',
+              platform: 'twitter',
+              author: 'dave',
+              text: 'fourth post',
+              tweetUrl: 'https://x.com/dave/status/4',
+              processedAt: '2026-01-01T00:00:00.000Z',
+              isRead: false,
+              media: null,
+              links: null,
+              tags: ['work'],
+            },
           ],
         })
       }
@@ -228,8 +252,53 @@ describe('TagsClient', () => {
     await waitFor(() => expect(screen.getByAltText('')).toBeInTheDocument())
     expect(screen.getByAltText('')).toHaveAttribute('src', 'https://example.com/thumb.jpg')
     expect(screen.getByText(/a text-only post/i)).toBeInTheDocument()
-    // 6 posts in the tag, only 2 fetched → overflow tile shows the remainder.
-    expect(screen.getByText('+4')).toBeInTheDocument()
+    // 6 posts in the tag, all 4 (PREVIEW_LIMIT) tiles fetched → the 4th cell
+    // becomes the overflow tile: N = count - 3 = 3.
+    expect(screen.getByText('+3')).toBeInTheDocument()
+  })
+
+  it('filters the tag list on a "tags-search" window event (case-insensitive substring match)', async () => {
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/tags') {
+        return jsonResponse({
+          tags: [
+            { tag: 'work', count: 5, isPublic: false, shareUrl: null },
+            { tag: 'reading', count: 1, isPublic: false, shareUrl: null },
+          ],
+        })
+      }
+      return jsonResponse({})
+    }) as unknown as typeof fetch
+
+    render(<TagsClient />)
+
+    await waitFor(() => expect(screen.getByText('#work')).toBeInTheDocument())
+    expect(screen.getByText('#reading')).toBeInTheDocument()
+
+    fireEvent(window, new CustomEvent('tags-search', { detail: 'WOR' }))
+
+    await waitFor(() => expect(screen.queryByText('#reading')).not.toBeInTheDocument())
+    expect(screen.getByText('#work')).toBeInTheDocument()
+  })
+
+  it('shows a "No tags match" empty state when the search term matches nothing', async () => {
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/tags') {
+        return jsonResponse({
+          tags: [{ tag: 'work', count: 5, isPublic: false, shareUrl: null }],
+        })
+      }
+      return jsonResponse({})
+    }) as unknown as typeof fetch
+
+    render(<TagsClient />)
+
+    await waitFor(() => expect(screen.getByText('#work')).toBeInTheDocument())
+
+    fireEvent(window, new CustomEvent('tags-search', { detail: 'nonexistent' }))
+
+    await waitFor(() => expect(screen.getByText("No tags match 'nonexistent'")).toBeInTheDocument())
+    expect(screen.queryByText('#work')).not.toBeInTheDocument()
   })
 
   it('"Make private" PATCHes isPublic: false and drops the Public chip', async () => {

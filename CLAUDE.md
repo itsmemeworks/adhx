@@ -632,7 +632,7 @@ The authed `Header` (`src/components/Header.tsx`) packs many controls. On phones
 
 - Secondary actions (theme toggle + sync) are hidden in the bar (`hidden sm:*`) and moved into the **avatar dropdown menu** (`sm:hidden` section there).
 - The Triage pill hides its streak segment below `sm`.
-- There is **no** separate mobile hamburger — the avatar menu already has Collection / Live / Settings.
+- There is **no** separate mobile hamburger — the avatar menu already has Collection / Theater / Tags / Leaderboard / Settings.
 
 When adding header controls, verify the cluster's minimum width still fits ~360px (macOS Chrome won't render below ~500px, so measure item widths in the DOM rather than trusting a visual check).
 
@@ -688,7 +688,7 @@ The authed Collection (moved verbatim from the old client `page.tsx`). Client co
 - **FeedGrid** (`src/components/feed/FeedGrid.tsx`): three view modes toggled in the FilterBar — **grid** (masonry via CSS columns, `FeedCard`), **list** (dense rows, `FeedListRow`), **bento** (mixed-size mosaic, `FeedBentoTile`). Infinite scroll via an `IntersectionObserver` sentinel.
 - **Focus / Triage**: `TheaterShell mode="triage"` (spec: `docs/specs/unified-theater-triage.md`) — the SAME filmstrip theater as everywhere else, seeded from the current filtered feed. Actions: Done (POST `/api/bookmarks/[id]/read?platform=` + advance) / Later / Tag (`TagQuickPicker`) / Delete (5s undo). Keyboard: `→` Done, `←` Later, `↓`/Backspace/Delete = Delete, `U` undo, `↑` back, Esc close — gated on triage mode so other modes keep ↓↑/jk. **Collection ↔ Live** tabs live in the theater top bar/peek bar (Live = the pulse feed with an authed Save). Twitter video plays via the HLS-aware `VideoPlayer` inside `TriageStage.tsx`; end-of-queue shows `TriagePileClear`. Opened via `CustomEvent('open-theater', { detail: { tab: 'live' | 'triage' } })` (Header dispatches; AuthedHome listens). The old `CollectionTheater`/`CollectionRail`/`TriageMode`/`AddTweetModal` are DELETED.
 - **FilterBar**: category filters + **platform filter** (All / X / Instagram / TikTok) + view toggles + tags + search.
-- **Nav**: the top bar carries **Collection · Live** (Live opens the theater via the `open-theater` event; Trending was removed from the authed nav — the public `/trending` SEO routes are untouched). The `+` Add button is gone: adding by URL is paste-first via `PasteToPreview` (global paste listener → `resolvePastedLink()` → preview page). Mobile collapses search to an icon.
+- **Nav**: the top bar carries **Collection · Theater · Tags · Leaderboard** (Theater — a rename of the former "Live" entry, same behavior — opens the theater via the `open-theater` event; it's named for the mode, not one tab, since the theater holds both the live community pulse and your own collection-as-theater as internal tabs. Leaderboard links to `/collections`. Trending was removed from the authed nav — the public `/trending` SEO routes are untouched). The `+` Add button is gone: adding by URL is paste-first via `PasteToPreview` (global paste listener → `resolvePastedLink()` → preview page). Mobile collapses search to an icon.
 - **FeedCard**: tweet-style per-type cards with a `PlatformChip` + `TimePill`; non-Twitter items show their platform glyph.
 - **Settings** has a gamification **Streak card** (current streak, 7-day dot row, longest/triaged/this-week) fed by `/api/triage/streak`.
 
@@ -737,13 +737,13 @@ Tags are sanitized before storage to ensure URL-safe, consistent naming:
 - Invalid characters replaced with hyphens
 - Multiple hyphens collapsed
 - Leading/trailing hyphens removed
-- Maximum 10 characters (truncated, not rejected)
+- Maximum 15 characters (truncated, not rejected)
 
 ```typescript
 import { sanitizeTag } from '@/lib/utils/tag'
 
 sanitizeTag('Test Tag!') // → 'test-tag'
-sanitizeTag('Claude Code') // → 'claude-cod' (truncated to 10)
+sanitizeTag('Claude Code') // → 'claude-code'
 sanitizeTag('AI/ML') // → 'ai-ml'
 ```
 
@@ -963,7 +963,10 @@ in-process cache; `RankMode` plumbing reserved for hot/rising/new). Recording is
 `viewCount/cloneCount/rank` + totals; `/tags` shows a This-week summary + leaderboard promo
 band; the public profile `/t/{username}` shows a stat strip + per-card stats (public-tag
 aggregates only — a since-privated tag's history never leaks). The leaderboard pages are
-`force-dynamic` like `/trending` — do not make them static.
+`force-dynamic` like `/trending` — do not make them static. Signed-in visitors get the global
+app Header as their chrome instead of `CollectionsBoard`'s own internal dark header (which
+signed-out visitors still see, minus the "Trending posts →" link, removed in both states) —
+the page checks `getCurrentUserId()` server-side and passes `authed` down.
 
 ## Environment Variables
 

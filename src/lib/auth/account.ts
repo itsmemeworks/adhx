@@ -113,9 +113,9 @@ function sanitizeLocalPart(email: string): string {
   const localPart = email.split('@')[0] ?? ''
   const cleaned = localPart
     .toLowerCase()
-    .replace(/[^a-z0-9-]/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
+    .replace(/[^a-z0-9_]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '')
     .slice(0, 15)
   return cleaned || 'reader'
 }
@@ -184,9 +184,14 @@ export async function chooseUsername(userId: string, raw: string): Promise<Choos
       .where(and(eq(usernameAliases.username, username), eq(usernameAliases.userId, userId)))
       .run()
 
-    if (!isFirstClaim) {
-      // The name being left behind keeps resolving via redirect. A first
-      // claim never creates an alias — see the doc comment above.
+    if (oldUsername && oldUsername !== username) {
+      // The name being left behind keeps resolving via redirect — on EVERY
+      // change, first claim included. (Originally first claims skipped the
+      // alias on the theory that the auto-derived name was never seen, but
+      // an account can have public /t/{username}/... URLs in the wild before
+      // ever spending its claim — e.g. an X-backfilled username shared on the
+      // leaderboard — and those links must not die. A stale alias for a name
+      // nobody ever saw is harmless.)
       db.insert(usernameAliases)
         .values({ username: oldUsername, userId, createdAt: Date.now() })
         .run()
