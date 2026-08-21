@@ -29,26 +29,6 @@ interface VideoPlayerProps {
    * no HLS branch (mirror videos are short).
    */
   platform?: 'twitter' | 'instagram' | 'tiktok'
-  /**
-   * Controlled mute state for a shared external transport control (e.g. the
-   * theater's mute button). When provided, an effect below imperatively
-   * syncs it onto the underlying `<video>` element's `.muted` property on
-   * every change — React does not keep the `muted` DOM property in sync
-   * with the `muted` JSX attribute across re-renders (only on initial
-   * mount), so this can't be a plain controlled prop. The same effect
-   * covers both the MP4 and HLS paths since they share one persistent
-   * element. Leave undefined for byte-identical behavior to callers that
-   * don't drive mute externally (feed/lightbox) — nothing runs.
-   */
-  muted?: boolean
-  /**
-   * Fired whenever the element ends up unmuted (a user tapping the native
-   * controls, most likely) so external `muted` state — and the transport
-   * button reading it — stays honest. Also fires as a side effect of our
-   * own sync effect below settling on `muted: false`; calling it when the
-   * caller's state is already unmuted is a harmless no-op.
-   */
-  onUserUnmute?: () => void
 }
 
 interface VideoInfo {
@@ -81,8 +61,6 @@ export function VideoPlayer({
   duration,
   poster,
   platform = 'twitter',
-  muted,
-  onUserUnmute,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const hlsRef = useRef<Hls | null>(null)
@@ -247,29 +225,6 @@ export function VideoPlayer({
   // Controlled mute (optional): imperatively sync onto the persistent
   // `<video>` element every time the prop changes, including its initial
   // value — this covers both the MP4 and HLS paths since they attach to the
-  // same element, and running before the browser's autoplay-muted check has
-  // a chance to fire matters more than a one-time JSX attribute would give.
-  useEffect(() => {
-    if (muted === undefined) return
-    const video = videoRef.current
-    if (!video) return
-    video.muted = muted
-  }, [muted])
-
-  // Report the element ending up unmuted (almost always the user tapping the
-  // native controls) so external `muted` state stays honest. No-op cleanup
-  // path when the caller doesn't drive mute externally.
-  useEffect(() => {
-    if (muted === undefined || !onUserUnmute) return
-    const video = videoRef.current
-    if (!video) return
-    const handleVolumeChange = () => {
-      if (!video.muted) onUserUnmute()
-    }
-    video.addEventListener('volumechange', handleVolumeChange)
-    return () => video.removeEventListener('volumechange', handleVolumeChange)
-  }, [muted, onUserUnmute])
-
   // Show error state with a platform-aware link out to the source.
   if (error) {
     const platformName =
@@ -364,7 +319,6 @@ export function VideoPlayer({
         playsInline
         loop={loop}
         autoPlay={autoPlay}
-        muted={muted}
         preload="auto"
         className={className}
         onLoadedData={() => setLoading(false)}

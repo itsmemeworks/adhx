@@ -380,39 +380,28 @@ function VisibilityToggle({
   onMakePublic: () => void
   onMakePrivate: () => void
 }) {
-  if (isPublic) {
-    return (
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation()
-          onMakePrivate()
-        }}
-        disabled={busy}
-        aria-label="Make private"
-        title="Make private"
-        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide transition-opacity hover:opacity-80 disabled:opacity-60"
-        style={{ backgroundColor: 'rgba(74,168,120,.28)', color: '#8fd9b0' }}
-      >
-        <Globe size={10} />
-        Public
-      </button>
-    )
-  }
+  // Both states share the card's standard glass-button recipe (the same one
+  // the copy/open buttons use) so the toggle reads as "a button like any
+  // other on the dash" — the STATE is carried by the icon plus the green
+  // live-dot on Public, never by a differently-styled pill.
+  const toggle = isPublic
+    ? { label: 'Public', aria: 'Make private', action: onMakePrivate, Icon: Globe }
+    : { label: 'Private', aria: 'Make public', action: onMakePublic, Icon: Lock }
   return (
     <button
       type="button"
       onClick={(e) => {
         e.stopPropagation()
-        onMakePublic()
+        toggle.action()
       }}
       disabled={busy}
-      aria-label="Make public"
-      title="Make public"
-      className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/50 px-2 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide text-white/70 backdrop-blur-md transition-colors hover:text-white disabled:opacity-60"
+      aria-label={toggle.aria}
+      title={toggle.aria}
+      className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.14] bg-white/10 px-2.5 py-1 text-[10.5px] font-semibold text-white/85 backdrop-blur-md transition-colors hover:bg-white/15 disabled:opacity-60"
     >
-      <Lock size={10} />
-      Private
+      {isPublic && <span className="h-1.5 w-1.5 flex-none rounded-full bg-live" aria-hidden />}
+      <toggle.Icon size={11} />
+      {toggle.label}
     </button>
   )
 }
