@@ -1,7 +1,17 @@
 'use client'
 
 import Link from 'next/link'
+import { Bookmark, Eye, Flame } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+/** Discovery view/save stats for this collection (docs/specs/discovery-leaderboards.md §6).
+ * `rank` is the 1-based position on this week's leaderboard, or `null`/absent when it isn't
+ * charting. Omit the whole prop (or pass `null`) for a card with nothing to show. */
+export interface PosterCardStats {
+  viewCount: number
+  cloneCount: number
+  rank?: number | null
+}
 
 /** A single content-mosaic tile: a thumbnail image, or a short text excerpt. */
 export interface PosterTile {
@@ -42,6 +52,16 @@ export interface CollectionPosterCardProps {
   /** Showcase scale for a single-collection profile: bigger tag title,
    * roomier footer padding, larger overflow-count type. */
   featured?: boolean
+  /** Discovery view/save stats, rendered as a mono line under the meta row
+   * (eye + views, bookmark + saves, and a clay "#N this week" chip when
+   * `rank` is a number). Omit or pass `null` when there's nothing to show —
+   * existing callers are unaffected. Mutually exclusive with
+   * `privateStatsNote` (stats wins if both are somehow passed). */
+  stats?: PosterCardStats | null
+  /** When `stats` is absent, renders "Private · no public stats" in the same
+   * slot the stat line would occupy — for a private collection with no
+   * public numbers to show. */
+  privateStatsNote?: boolean
 }
 
 const TILE_BG = '#171219'
@@ -70,6 +90,8 @@ export function CollectionPosterCard({
   className,
   wholeCardLink = false,
   featured = false,
+  stats = null,
+  privateStatsNote = false,
 }: CollectionPosterCardProps): React.ReactElement {
   const showOverflow = !tilesLoading && count > tiles.length && tiles.length > 0
   const visibleTiles = showOverflow ? tiles.slice(0, 3) : tiles.slice(0, 4)
@@ -144,6 +166,36 @@ export function CollectionPosterCard({
           </span>
           {subtitle}
         </div>
+        {stats ? (
+          <div className="mt-1 flex items-center gap-2.5 font-mono text-[11px] text-white/72">
+            <span className="flex items-center gap-1">
+              <Eye size={11} />
+              {stats.viewCount}
+            </span>
+            <span className="flex items-center gap-1">
+              <Bookmark size={11} />
+              {stats.cloneCount}
+            </span>
+            {typeof stats.rank === 'number' && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] font-semibold"
+                style={{
+                  backgroundColor: 'rgba(227,124,84,0.16)',
+                  border: '1px solid rgba(227,124,84,0.4)',
+                  color: '#e88a5e',
+                }}
+              >
+                <Flame size={10} fill="currentColor" />#{stats.rank} this week
+              </span>
+            )}
+          </div>
+        ) : (
+          privateStatsNote && (
+            <div className="mt-1 font-mono text-[11px] text-white/40">
+              Private · no public stats
+            </div>
+          )
+        )}
       </div>
       {children && (
         <div className="flex flex-none items-center gap-2" onClick={(e) => e.stopPropagation()}>

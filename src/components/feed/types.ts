@@ -158,6 +158,11 @@ export interface TagItem {
   count: number
   isPublic?: boolean
   shareUrl?: string | null
+  /** Discovery view/save stats for this tag (docs/specs/discovery-leaderboards.md §6) —
+   * zero/null when private or not charting on this week's leaderboard. */
+  viewCount?: number
+  cloneCount?: number
+  rank?: number | null
 }
 
 export const FILTER_OPTIONS: { value: FilterType; label: string }[] = [

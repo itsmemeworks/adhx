@@ -2,8 +2,9 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { Lock, Tag as TagIcon } from 'lucide-react'
+import { headers } from 'next/headers'
 import { getPublicTagCollection, type TagCollectionResult } from '@/lib/tags/query'
-import { resolveUsernameAlias } from '@/lib/users/lookup'
+import { getUserIdForUsername, resolveUsernameAlias } from '@/lib/users/lookup'
 import { MatterLogo } from '@/components/matter'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { getSession } from '@/lib/auth/session'
@@ -11,6 +12,8 @@ import { truncate } from '@/lib/utils/format'
 import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
 import { TheaterShell } from '@/components/theater/TheaterShell'
 import { buildCollectionSeed } from '@/lib/theater/tag-seed'
+import { recordCollectionEvent } from '@/lib/discovery/record'
+import { isLikelyBot } from '@/lib/activity/bot'
 
 /**
  * `/t/{username}/{tag}` — public shared-tag collection page.
@@ -192,6 +195,30 @@ export default async function SharedTagPage({ params }: Props) {
   }
 
   const { data } = result
+
+  // Discovery leaderboard signal (docs/specs/discovery-leaderboards.md §4) —
+  // record a human view of this public collection. Bot/crawler UAs are
+  // skipped (same isLikelyBot() gate the pulse uses) so OG-unfurl requests
+  // never inflate the leaderboard. Fire-and-forget; never affects rendering —
+  // the try/catch also covers headers() outside a request scope (direct
+  // renders in tests).
+  try {
+    const ua = (await headers()).get('user-agent')
+    if (!isLikelyBot(ua)) {
+      const ownerUserId = await getUserIdForUsername(data.username)
+      if (ownerUserId) {
+        recordCollectionEvent({
+          action: 'view',
+          ownerUserId,
+          tag: data.tag,
+          viewerId: session?.userId ?? null,
+        })
+      }
+    }
+  } catch {
+    // Stats must never break the page.
+  }
+
   const canonicalUrl = `${BASE_URL}/t/${data.username}/${data.tag}`
 
   const jsonLd = buildCollectionPageLd({

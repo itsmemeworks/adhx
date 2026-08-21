@@ -1,10 +1,14 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import {
   AlertCircle,
+  Bookmark,
   Check,
   ExternalLink,
+  Eye,
+  Flame,
   Globe,
   Link as LinkIcon,
   Lock,
@@ -12,6 +16,13 @@ import {
 } from 'lucide-react'
 import type { FeedItem, TagItem } from '@/components/feed/types'
 import { CollectionPosterCard, type PosterTile } from '@/components/tags'
+
+/** Owner-level Discovery totals for the "This week" summary card (docs/specs/discovery-leaderboards.md §6). */
+interface OwnerStats {
+  viewCount: number
+  cloneCount: number
+  bestRank: number | null
+}
 
 const PREVIEW_LIMIT = 4
 
@@ -24,6 +35,7 @@ const PREVIEW_LIMIT = 4
  */
 export function TagsClient() {
   const [tags, setTags] = useState<TagItem[] | null>(null)
+  const [ownerStats, setOwnerStats] = useState<OwnerStats | null>(null)
   const [busyTag, setBusyTag] = useState<string | null>(null)
   const [copiedTag, setCopiedTag] = useState<string | null>(null)
   const [copyHintTag, setCopyHintTag] = useState<string | null>(null)
@@ -37,7 +49,11 @@ export function TagsClient() {
     let cancelled = false
     fetch('/api/tags')
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => !cancelled && setTags(d?.tags ?? []))
+      .then((d) => {
+        if (cancelled) return
+        setTags(d?.tags ?? [])
+        setOwnerStats(d?.stats ?? null)
+      })
       .catch(() => !cancelled && setTags([]))
     return () => {
       cancelled = true
@@ -195,13 +211,47 @@ export function TagsClient() {
   return (
     <div className="min-h-screen bg-paper">
       <div className="max-w-[920px] mx-auto px-4 sm:px-8 py-8 sm:py-10 flex flex-col gap-6">
-        <div>
-          <h1 className="font-serif text-[30px] sm:text-[38px] font-semibold tracking-tight text-ink mb-1">
-            Tags
-          </h1>
-          <p className="text-[15px] text-ink-2">
-            Your collections — share any of them as a looping theater
-          </p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="font-serif text-[30px] sm:text-[38px] font-semibold tracking-tight text-ink mb-1">
+              Tags
+            </h1>
+            <p className="text-[15px] text-ink-2">
+              Your collections — share any of them as a looping theater
+            </p>
+          </div>
+
+          {ownerStats && tags?.some((t) => t.isPublic) && (
+            <div className="flex-none rounded-xl border border-hairline bg-surface px-4 py-2.5">
+              <div className="font-mono text-[9.5px] uppercase tracking-wide text-ink-3">
+                This week
+              </div>
+              <div className="mt-1 flex items-center gap-2 font-mono text-[12.5px] text-ink">
+                <span className="flex items-center gap-1">
+                  <Eye size={12} />
+                  {ownerStats.viewCount} views
+                </span>
+                <span aria-hidden className="text-ink-3">
+                  ·
+                </span>
+                <span className="flex items-center gap-1">
+                  <Bookmark size={12} />
+                  {ownerStats.cloneCount} saves
+                </span>
+                {ownerStats.bestRank != null && (
+                  <>
+                    <span aria-hidden className="text-ink-3">
+                      ·
+                    </span>
+                    <span className="flex items-center gap-1 text-[#e88a5e]">
+                      <Flame size={12} fill="currentColor" />
+                      best rank #{ownerStats.bestRank}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {tags === null ? (
@@ -236,7 +286,45 @@ export function TagsClient() {
             ))}
           </div>
         )}
+
+        {ownerStats?.bestRank != null && (
+          <LeaderboardCrossPromo bestRank={ownerStats.bestRank} tags={tags} />
+        )}
       </div>
+    </div>
+  )
+}
+
+/** "#tag is #N on this week's leaderboard" cross-promo — only rendered when
+ * the owner has at least one tag charting (see `ownerStats.bestRank`). */
+function LeaderboardCrossPromo({ bestRank, tags }: { bestRank: number; tags: TagItem[] | null }) {
+  const bestTag = tags?.find((t) => t.rank === bestRank)?.tag
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-4 rounded-[14px] border border-hairline bg-surface px-4 py-3">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-clay-grad">
+          <Flame size={18} className="text-white" fill="currentColor" />
+        </div>
+        <div>
+          <p className="font-serif text-[15px] text-ink">
+            {bestTag ? (
+              <>
+                #{bestTag} is #{bestRank} on this week&apos;s leaderboard
+              </>
+            ) : (
+              <>You&apos;re #{bestRank} on this week&apos;s leaderboard</>
+            )}
+          </p>
+          <p className="font-mono text-[11px] text-ink-3">sharing the link counts</p>
+        </div>
+      </div>
+      <Link
+        href="/collections"
+        className="inline-flex flex-none items-center rounded-full border border-hairline px-3.5 py-1.5 text-[12.5px] font-medium text-ink-2 transition-colors hover:text-ink"
+      >
+        See the leaderboard →
+      </Link>
     </div>
   )
 }
@@ -340,6 +428,12 @@ function TagPosterCard({
         href={`/?tag=${encodeURIComponent(tag.tag)}`}
         badge={badge}
         subtitle={subtitle}
+        stats={
+          tag.isPublic
+            ? { viewCount: tag.viewCount ?? 0, cloneCount: tag.cloneCount ?? 0, rank: tag.rank }
+            : null
+        }
+        privateStatsNote={!tag.isPublic}
       >
         {tag.isPublic ? (
           <>

@@ -4,6 +4,22 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-21 — Discovery MVP built: /collections podium leaderboard + curator stats
+
+- **Why**: User greenlit the spec + design canvas (direction A "Podium" selected) — built by 4 parallel sonnet agents on disjoint files, 2 waves (recorder+rank, then leaderboard-page+curator-surfaces).
+- **Write path**: `collection_events` (guarded CREATE in migrate.ts + test DDL); `recordCollectionEvent()` in `src/lib/discovery/record.ts` — self-view no-op, public-only, 30min signed-in / 60s anon dedupe, errors swallowed. Hooked: `/t/{u}/{tag}` page (bot-filtered, whole hook try/caught — headers() throws in direct-render tests) + clone route. Admin `/api/admin/collections/hide`.
+- **Read path**: `src/lib/discovery/rank.ts` — the anonymity choke point (viewerId never selected), score = views + 5×clones, ROLLING windows (24h/7d/30d/all), RankMode plumbing (`top` live, hot/rising throw, `new` = recency), 60s cache keyed per-db (tests get fresh cache free), `getOwnerCollectionStats()`.
+- **Surfaces**: `/collections` (+ `/collections/{today|month|all-time}`, week=bare path, `/collections/week` 308s) — podium top-3 + Ranks 4–N grid, sr-only list + CollectionPage JSON-LD, sitemap'd; `/api/collections/trending`; `/tags` This-week chip + rank chips + "Private · no public stats" + leaderboard promo band; profile `/t/{u}` stat strip + per-card stats.
+- **Privacy catch**: profile stats sum ONLY currently-public tags — `getOwnerCollectionStats().totals` includes since-privated history (fine for the owner dashboard, leaky on a public page); regression-tested in users-profile-query.test.ts.
+- **State**: 1825 tests green, build clean, e2e-verified locally (view→event→board, bot/private filtered). Spec branch merged in. Follow-ups: signed-in visitors to /trending & /collections see app Header stacked over the page's own dark header (pre-existing /trending behavior); "see full top 24" continuation dropped (grid just shows all 24).
+
+## 2026-08-21 — Spec: Discovery — collection view stats + leaderboards (docs only)
+
+- **Why**: User wants a Discovery feature — view tracking on public tagged collections, day/week/month/all-time leaderboards (gamification for curators, browse-first entry for new users), with plumbing reserved for future Reddit-style theater sorts (hot/rising/new).
+- **What**: `docs/specs/discovery-leaderboards.md`. Key decisions: new append-only `collection_events` table keyed `(ownerUserId, tag)` (NOT bolted onto `activity` — keeps the anonymity choke point untouched); events = `view` (/t page, bot-filtered, self-views excluded, public-only) + `clone` (weight ×5); single ranking choke point `src/lib/discovery/rank.ts` with mode-aware signature (`top` implemented, hot/rising/new defined but deferred); surfaces = `/collections/{window}` leaderboard page + `/api/collections/trending` + /tags stat line; `hidden` moderation lever mirrors activity.
+- **Verified en route**: collection theater, /t page, and clone endpoint currently record ZERO events (collection views are invisible today).
+- **State**: spec only, nothing built. Follow-up: user to review spec, then build MVP per §10 cut-line.
+
 ## 2026-08-21 — Review round: usernames w/ redirects, Save-primary, YouTube fixed, profile + journey (PRs #356–#362)
 
 - **Why**: Live owner review after the launch-blocker round: admin list needed real usernames, Download outweighed Save (conversion CTA), YouTube stalled the theater, /t profile looked bare, "Make your own" was a dead-end journey.

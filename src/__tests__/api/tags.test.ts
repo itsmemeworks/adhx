@@ -102,10 +102,35 @@ describe('API: /api/tags', () => {
       const data = await response.json()
 
       expect(data.tags).toEqual([
-        { tag: 'work', count: 3, isPublic: false, shareUrl: null },
-        { tag: 'important', count: 2, isPublic: false, shareUrl: null },
-        { tag: 'later', count: 1, isPublic: false, shareUrl: null },
+        {
+          tag: 'work',
+          count: 3,
+          isPublic: false,
+          shareUrl: null,
+          viewCount: 0,
+          cloneCount: 0,
+          rank: null,
+        },
+        {
+          tag: 'important',
+          count: 2,
+          isPublic: false,
+          shareUrl: null,
+          viewCount: 0,
+          cloneCount: 0,
+          rank: null,
+        },
+        {
+          tag: 'later',
+          count: 1,
+          isPublic: false,
+          shareUrl: null,
+          viewCount: 0,
+          cloneCount: 0,
+          rank: null,
+        },
       ])
+      expect(data.stats).toEqual({ viewCount: 0, cloneCount: 0, bestRank: null })
     })
 
     it("only returns current user's tags", async () => {
@@ -127,7 +152,85 @@ describe('API: /api/tags', () => {
       const response = await GET()
       const data = await response.json()
 
-      expect(data.tags).toEqual([{ tag: 'usera', count: 1, isPublic: false, shareUrl: null }])
+      expect(data.tags).toEqual([
+        {
+          tag: 'usera',
+          count: 1,
+          isPublic: false,
+          shareUrl: null,
+          viewCount: 0,
+          cloneCount: 0,
+          rank: null,
+        },
+      ])
+    })
+
+    it('includes discovery view/clone/rank stats for a public tag', async () => {
+      await testInstance.db
+        .insert(schema.bookmarkTags)
+        .values([{ userId: USER_A, bookmarkId: 't1', tag: 'popular' }])
+      await testInstance.db.insert(schema.tagShares).values({
+        userId: USER_A,
+        tag: 'popular',
+        shareCode: 'code-popular',
+        isPublic: true,
+        createdAt: new Date().toISOString(),
+      })
+      const now = new Date().toISOString()
+      await testInstance.db.insert(schema.collectionEvents).values([
+        { action: 'view', ownerUserId: USER_A, tag: 'popular', createdAt: now },
+        { action: 'view', ownerUserId: USER_A, tag: 'popular', createdAt: now },
+        { action: 'clone', ownerUserId: USER_A, tag: 'popular', createdAt: now },
+      ])
+
+      const { GET } = await import('@/app/api/tags/route')
+      const response = await GET()
+      const data = await response.json()
+
+      const popular = data.tags.find((t: { tag: string }) => t.tag === 'popular')
+      expect(popular.viewCount).toBe(2)
+      expect(popular.cloneCount).toBe(1)
+      // Sole public tag on the board this week -> charts at #1.
+      expect(popular.rank).toBe(1)
+      expect(data.stats).toEqual({ viewCount: 2, cloneCount: 1, bestRank: 1 })
+    })
+
+    it("zeros a tag's public-facing stats once it is private, even with historical events", async () => {
+      await testInstance.db
+        .insert(schema.bookmarkTags)
+        .values([{ userId: USER_A, bookmarkId: 't1', tag: 'wasPublic' }])
+      await testInstance.db.insert(schema.tagShares).values({
+        userId: USER_A,
+        tag: 'wasPublic',
+        shareCode: 'code-wasPublic',
+        isPublic: false,
+        createdAt: new Date().toISOString(),
+      })
+      // Historical events recorded back when the tag was public.
+      await testInstance.db.insert(schema.collectionEvents).values([
+        {
+          action: 'view',
+          ownerUserId: USER_A,
+          tag: 'wasPublic',
+          createdAt: new Date().toISOString(),
+        },
+        {
+          action: 'clone',
+          ownerUserId: USER_A,
+          tag: 'wasPublic',
+          createdAt: new Date().toISOString(),
+        },
+      ])
+
+      const { GET } = await import('@/app/api/tags/route')
+      const response = await GET()
+      const data = await response.json()
+
+      const tag = data.tags.find((t: { tag: string }) => t.tag === 'wasPublic')
+      expect(tag.isPublic).toBe(false)
+      expect(tag.viewCount).toBe(0)
+      expect(tag.cloneCount).toBe(0)
+      expect(tag.rank).toBeNull()
     })
   })
 
