@@ -917,36 +917,36 @@ export async function GET() {
 
 ## Key API Routes
 
-| Route                                           | Method      | Auth | Description                                                                                                            |
-| ----------------------------------------------- | ----------- | ---- | ---------------------------------------------------------------------------------------------------------------------- |
-| `/api/health`                                   | GET         | No   | Health check for monitoring                                                                                            |
-| `/api/activity`                                 | GET         | No   | Public anonymous activity pulse (recent previews/saves/reads/shares, no userId, 5s cache)                              |
-| `/api/activity/share`                           | POST        | No   | Record a send/download. Body `{ platform, id }` only — display fields copied server-side. 204.                         |
-| `/api/trending`                                 | GET         | No   | Public anonymous trending JSON (wraps `getTrendingItems`, optional `?platform=`, no userId) — for GEO/AI search        |
-| `/api/feed`                                     | GET         | Yes  | Main feed with filtering (`?id=` returns one bookmark regardless of read state — used to open a saved tweet in triage) |
-| `/api/bookmarks/[id]/read`                      | POST/DELETE | Yes  | Toggle read status                                                                                                     |
-| `/api/bookmarks/[id]/tags`                      | POST/DELETE | Yes  | Add/remove tags                                                                                                        |
-| `/api/sync`                                     | GET         | Yes  | SSE sync stream                                                                                                        |
-| `/api/tweets/add`                               | POST        | Yes  | Add single tweet (Twitter-only, delegates from `/api/bookmarks/add`)                                                   |
-| `/api/bookmarks/add`                            | POST        | Yes  | Platform-agnostic add — accepts X / Instagram / TikTok URLs, dispatches to the right resolver                          |
-| `/api/tags`                                     | GET         | Yes  | List user's tags with counts and share URLs                                                                            |
-| `/api/tags`                                     | PATCH       | Yes  | Toggle tag public sharing (returns `shareUrl`)                                                                         |
-| `/api/tags`                                     | DELETE      | Yes  | Delete tag from all bookmarks                                                                                          |
-| `/api/share/tag/by-name/[username]/[tag]`       | GET         | No   | View shared tag collection (friendly URL)                                                                              |
-| `/api/share/tag/by-name/[username]/[tag]/clone` | POST        | Yes  | Clone shared tag to user's account                                                                                     |
-| `/api/share/tag/[code]`                         | GET         | No   | View shared tag (legacy random code)                                                                                   |
-| `/api/share/tweet/[username]/[id]`              | GET         | No   | Public tweet JSON API (LLM-friendly, 5-min cache)                                                                      |
-| `/api/auth/twitter`                             | GET         | No   | Start OAuth flow                                                                                                       |
-| `/api/auth/twitter/callback`                    | GET         | No   | OAuth callback                                                                                                         |
-| `/api/auth/twitter/status`                      | GET         | No   | Check auth status and refresh tokens                                                                                   |
-| `/api/media/instagram/video`                    | GET         | No   | Stream Instagram Reel MP4 inline (Range supported)                                                                     |
-| `/api/media/instagram/video/download`           | GET         | No   | Stream Reel MP4 with `Content-Disposition: attachment`                                                                 |
-| `/api/media/tiktok/video`                       | GET         | No   | Stream TikTok MP4 inline (Range supported)                                                                             |
-| `/api/media/tiktok/video/download`              | GET         | No   | Stream TikTok MP4 with `Content-Disposition: attachment`                                                               |
-| `/api/media/tiktok/thumbnail`                   | GET         | No   | Resolve + proxy a TikTok poster JPEG from `username`+`id` (via tiktxk → CDN); used by feed + Discover                  |
-| `/api/media/instagram/thumbnail`                | GET         | No   | Resolve + proxy an Instagram poster from `id`                                                                          |
-| `/api/triage/streak`                            | GET         | Yes  | Triage streak stats (current streak, total/this-week triaged) for the Settings streak card                             |
-| `/api/collections/trending`                     | GET         | No   | Public anonymous collection leaderboard JSON (`?window=today\|week\|month\|all-time`, wraps `getCollectionLeaderboard`)  |
+| Route                                           | Method      | Auth | Description                                                                                                             |
+| ----------------------------------------------- | ----------- | ---- | ----------------------------------------------------------------------------------------------------------------------- |
+| `/api/health`                                   | GET         | No   | Health check for monitoring                                                                                             |
+| `/api/activity`                                 | GET         | No   | Public anonymous activity pulse (recent previews/saves/reads/shares, no userId, 5s cache)                               |
+| `/api/activity/share`                           | POST        | No   | Record a send/download. Body `{ platform, id }` only — display fields copied server-side. 204.                          |
+| `/api/trending`                                 | GET         | No   | Public anonymous trending JSON (wraps `getTrendingItems`, optional `?platform=`, no userId) — for GEO/AI search         |
+| `/api/feed`                                     | GET         | Yes  | Main feed with filtering (`?id=` returns one bookmark regardless of read state — used to open a saved tweet in triage)  |
+| `/api/bookmarks/[id]/read`                      | POST/DELETE | Yes  | Toggle read status                                                                                                      |
+| `/api/bookmarks/[id]/tags`                      | POST/DELETE | Yes  | Add/remove tags                                                                                                         |
+| `/api/sync`                                     | GET         | Yes  | SSE sync stream                                                                                                         |
+| `/api/tweets/add`                               | POST        | Yes  | Add single tweet (Twitter-only, delegates from `/api/bookmarks/add`)                                                    |
+| `/api/bookmarks/add`                            | POST        | Yes  | Platform-agnostic add — accepts X / Instagram / TikTok URLs, dispatches to the right resolver                           |
+| `/api/tags`                                     | GET         | Yes  | List user's tags with counts and share URLs                                                                             |
+| `/api/tags`                                     | PATCH       | Yes  | Toggle tag public sharing (returns `shareUrl`)                                                                          |
+| `/api/tags`                                     | DELETE      | Yes  | Delete tag from all bookmarks                                                                                           |
+| `/api/share/tag/by-name/[username]/[tag]`       | GET         | No   | View shared tag collection (friendly URL)                                                                               |
+| `/api/share/tag/by-name/[username]/[tag]/clone` | POST        | Yes  | Clone shared tag to user's account                                                                                      |
+| `/api/share/tag/[code]`                         | GET         | No   | View shared tag (legacy random code)                                                                                    |
+| `/api/share/tweet/[username]/[id]`              | GET         | No   | Public tweet JSON API (LLM-friendly, 5-min cache)                                                                       |
+| `/api/auth/twitter`                             | GET         | No   | Start OAuth flow                                                                                                        |
+| `/api/auth/twitter/callback`                    | GET         | No   | OAuth callback                                                                                                          |
+| `/api/auth/twitter/status`                      | GET         | No   | Check auth status and refresh tokens                                                                                    |
+| `/api/media/instagram/video`                    | GET         | No   | Stream Instagram Reel MP4 inline (Range supported)                                                                      |
+| `/api/media/instagram/video/download`           | GET         | No   | Stream Reel MP4 with `Content-Disposition: attachment`                                                                  |
+| `/api/media/tiktok/video`                       | GET         | No   | Stream TikTok MP4 inline (Range supported)                                                                              |
+| `/api/media/tiktok/video/download`              | GET         | No   | Stream TikTok MP4 with `Content-Disposition: attachment`                                                                |
+| `/api/media/tiktok/thumbnail`                   | GET         | No   | Resolve + proxy a TikTok poster JPEG from `username`+`id` (via tiktxk → CDN); used by feed + Discover                   |
+| `/api/media/instagram/thumbnail`                | GET         | No   | Resolve + proxy an Instagram poster from `id`                                                                           |
+| `/api/triage/streak`                            | GET         | Yes  | Triage streak stats (current streak, total/this-week triaged) for the Settings streak card                              |
+| `/api/collections/trending`                     | GET         | No   | Public anonymous collection leaderboard JSON (`?window=today\|week\|month\|all-time`, wraps `getCollectionLeaderboard`) |
 | `/api/admin/collections/hide`                   | POST        | Yes  | Admin-only (`ADMIN_USERNAMES`): hide/unhide a collection from leaderboards (`{ username, tag, hidden? }`)               |
 
 ### Discovery leaderboards (`/collections`)

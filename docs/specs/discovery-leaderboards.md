@@ -9,7 +9,7 @@ layer is built mode-aware from day one even though MVP ships only "top".
 ## 1. Why
 
 - **Discovery for new users**: today the only community surfaces are the live pulse and
-  `/trending` (post-level). There is no way to find *collections* — the durable, curated,
+  `/trending` (post-level). There is no way to find _collections_ — the durable, curated,
   highest-signal objects in the product. A leaderboard of the best public collections is the
   natural browse-first entry point.
 - **Gamification for curators**: view counts + a ranked ladder make "Make public" mean
@@ -63,7 +63,7 @@ Invariants carried over from `activity` (all four are load-bearing — see CLAUD
 
 1. **Append-only event log** — exempt from the composite-PK user-owned-data convention.
 2. **`viewerId` is stored but never exposed.** Every read path goes through the single query
-   module (§5); no route ever `select()`s the whole row. The *curator* (owner username) IS
+   module (§5); no route ever `select()`s the whole row. The _curator_ (owner username) IS
    public — it's already on every `/t` page and it's the whole point of the leaderboard.
 3. **Nothing client-supplied is displayed.** Events carry identifiers only; display data
    (tag name, curator, poster tiles, counts) is always joined server-side at read time.
@@ -77,10 +77,10 @@ the in-memory test DB (`src/__tests__/api/setup.ts`) — the documented gotcha.
 
 `recordCollectionEvent({ action, ownerUserId, tag, viewerId })`, hooked into:
 
-| Action  | Hooked into                                                                 | Notes                                                                 |
-| ------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `view`  | `/t/[username]/[tag]/page.tsx` server component (the collection theater)    | Bot-filtered via existing `isLikelyBot()`; only when the tag is public |
-| `clone` | `/api/share/tag/by-name/[username]/[tag]/clone` on a successful clone       | The strongest signal — someone saved the whole collection              |
+| Action  | Hooked into                                                              | Notes                                                                  |
+| ------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| `view`  | `/t/[username]/[tag]/page.tsx` server component (the collection theater) | Bot-filtered via existing `isLikelyBot()`; only when the tag is public |
+| `clone` | `/api/share/tag/by-name/[username]/[tag]/clone` on a successful clone    | The strongest signal — someone saved the whole collection              |
 
 Rules, enforced inside the recorder so call sites stay dumb:
 
@@ -92,7 +92,7 @@ Rules, enforced inside the recorder so call sites stay dumb:
   Sybil-proof — doesn't need to be at this scale; `hidden` + admin route (§8) is the backstop.
 - **Public-only**: recording checks `tag_shares.isPublic` — private collections accrue nothing
   (and a private collection's historical events are excluded at read time anyway, §5).
-- `item_view` (per-post dwell *inside* a collection theater) is deliberately **not** in MVP.
+- `item_view` (per-post dwell _inside_ a collection theater) is deliberately **not** in MVP.
   The theater's "collection mode records nothing to the public pulse" rule stays; if we later
   want per-item stats for curators, they land in `collection_events` (never `activity`) so the
   public pulse stays uncontaminated.
@@ -106,20 +106,20 @@ export type RankWindow = 'day' | 'week' | 'month' | 'all'
 export type RankMode = 'top' | 'hot' | 'rising' | 'new' // MVP implements 'top' only
 
 export interface LeaderboardEntry {
-  username: string        // curator (public by construction)
+  username: string // curator (public by construction)
   tag: string
   rank: number
   score: number
   viewCount: number
   cloneCount: number
   itemCount: number
-  tileThumbs: string[]    // up to 4 poster tiles, same source as CollectionPosterCard
+  tileThumbs: string[] // up to 4 poster tiles, same source as CollectionPosterCard
 }
 
 export function getCollectionLeaderboard(opts: {
   window: RankWindow
-  mode?: RankMode        // default 'top' — the hot/rising/new plumbing (§7)
-  limit?: number         // default 24
+  mode?: RankMode // default 'top' — the hot/rising/new plumbing (§7)
+  limit?: number // default 24
 }): LeaderboardEntry[]
 ```
 
@@ -178,7 +178,7 @@ export function getCollectionLeaderboard(opts: {
 
 ## 7. Hot / rising / new — the plumbing (future theater filter, NOT MVP)
 
-The ask: theater sort modes like Reddit's. What must exist *now* so that's a small PR later:
+The ask: theater sort modes like Reddit's. What must exist _now_ so that's a small PR later:
 
 1. **Timestamped event logs** — already true for posts (`activity`) and now collections (§3).
    Velocity math needs event times, not counters. This is the one thing that can't be
@@ -222,8 +222,9 @@ The ask: theater sort modes like Reddit's. What must exist *now* so that's a sma
 
 **In**: `collection_events` table + migration + test DDL, recorder with view/clone hooks,
 `rank.ts` with `top` × 4 windows, `/collections/{window}` page (podium direction A) + JSON-LD
-+ sitemap, `/api/collections/trending`, the /tags owner upgrade + profile stat strip (§6),
-moderation hide, tests.
+
+- sitemap, `/api/collections/trending`, the /tags owner upgrade + profile stat strip (§6),
+  moderation hide, tests.
 
 **Out (explicitly)**: hot/rising/new implementations (plumbing only), per-item `item_view`
 events, curator rank ladder in Settings, rank-change notifications/digest, rollup tables,
