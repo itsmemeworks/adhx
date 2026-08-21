@@ -11,14 +11,15 @@ process.env.SESSION_SECRET = 'test-secret-for-unit-tests-minimum-32-chars-here'
 
 // Only add DOM matchers and cleanup when in browser environment
 if (typeof window !== 'undefined') {
-  // Import jest-dom matchers for DOM assertions
-  import('@testing-library/jest-dom/vitest')
+  // Await these imports — fire-and-forget dynamic imports raced test
+  // execution, so jest-dom matchers (e.g. toBeEmptyDOMElement) were
+  // intermittently missing when the first test asserted before the import
+  // resolved. Top-level await makes vitest wait before running any test.
+  await import('@testing-library/jest-dom/vitest')
 
-  // Import cleanup to run after each test
-  import('@testing-library/react').then(({ cleanup }) => {
-    afterEach(() => {
-      cleanup()
-    })
+  const { cleanup } = await import('@testing-library/react')
+  afterEach(() => {
+    cleanup()
   })
 
   // Mock window.matchMedia for components that use media queries (e.g., isTouchDevice)
