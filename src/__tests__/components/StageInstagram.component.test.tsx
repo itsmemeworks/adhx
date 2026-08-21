@@ -214,3 +214,81 @@ describe('StageInstagram auto-advance guards', () => {
     expect(onEnded).not.toHaveBeenCalled()
   })
 })
+
+/**
+ * Owner: Instagram doesn't autoplay on mobile (works on desktop). Unlike
+ * Twitter/TikTok — whose `StageVideo` instance is usually already mounted
+ * and persists across navigation — every Instagram item is a genuinely
+ * FRESH `StageVideo` mount, created only once `probeInstagramVideo` resolves
+ * (real-world: seconds after the item became current, well outside any
+ * user-gesture window). These tests exercise that "late attach" path
+ * directly through `StageInstagram` rather than `StageVideo` in isolation,
+ * since that's the actual shape of the bug.
+ */
+describe('StageInstagram late-attach playback (mount happens after the probe resolves)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.mocked(probeInstagramVideo).mockReset()
+    HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue(undefined)
+  })
+
+  it('autoplays muted immediately on the late-attach mount (default muted state) — no stuck tap-to-play overlay', async () => {
+    vi.mocked(probeInstagramVideo).mockResolvedValue(true)
+    const playMock = vi.fn().mockResolvedValue(undefined)
+    HTMLMediaElement.prototype.play = playMock
+
+    const { container } = render(
+      <StageInstagram
+        item={makeItem({ bookmarkId: 'reel-late-attach-muted' })}
+        muted
+        onRequestUnmute={vi.fn()}
+      />,
+    )
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    const video = container.querySelector('video') as HTMLVideoElement
+    expect(video).not.toBeNull()
+    expect(video.muted).toBe(true)
+    expect(container.querySelector('[aria-label="Play video"]')).toBeNull()
+    expect(playMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('falls back to muted playback when the shell is unmuted and the late-mounted video rejects unmuted autoplay — never sits paused', async () => {
+    vi.mocked(probeInstagramVideo).mockResolvedValue(true)
+    const playMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('unmuted autoplay rejected'))
+      .mockResolvedValue(undefined)
+    HTMLMediaElement.prototype.play = playMock
+
+    const { container } = render(
+      <StageInstagram
+        item={makeItem({ bookmarkId: 'reel-late-attach-unmuted' })}
+        muted={false}
+        onRequestUnmute={vi.fn()}
+      />,
+    )
+
+    // Flush the probe resolving 'ready' (mounts a fresh StageVideo) and the
+    // resulting rejected-unmuted → muted-retry play() chain.
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    const video = container.querySelector('video') as HTMLVideoElement
+    expect(video).not.toBeNull()
+    expect(video.muted).toBe(true)
+    expect(container.querySelector('[aria-label="Play video"]')).toBeNull()
+    expect(playMock).toHaveBeenCalledTimes(2)
+  })
+})

@@ -1441,6 +1441,7 @@ export function TheaterShell({
         declutter={desktopDeclutter}
         collection={collection}
         triage={triageChrome}
+        repeatCurrent={isSharedPinnedOnCurrent}
       />
       {liveTagTarget && (
         <TagQuickPicker

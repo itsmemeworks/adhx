@@ -1,8 +1,8 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { render, act } from '@testing-library/react'
 import { StageVideo } from '@/components/theater/StageVideo'
 import type { TheaterItem } from '@/components/theater/types'
 
@@ -62,5 +62,127 @@ describe('StageVideo repeat (shared-post-repeat)', () => {
     )
     const video = container.querySelector('video') as HTMLVideoElement
     expect(video.loop).toBe(false)
+  })
+})
+
+/**
+ * Owner: "I have to tap play on top of the video rather than the play button
+ * in the controls at the bottom — feels like a bug." Root cause: the
+ * transport's `theater-resume`/`theater-toggle-play` handlers bailed out
+ * (no-op) whenever `needsGesture` was true, so only the stage's own
+ * tap-to-play overlay could start a not-yet-started video. Both now route
+ * through the same `handleStartTap` start path.
+ */
+describe('StageVideo transport start-path parity (owner: bottom play button did nothing)', () => {
+  afterEach(() => {
+    HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue(undefined)
+  })
+
+  it('is muted from the very first render, not only after an effect runs (fresh-mount iOS autoplay contract)', () => {
+    const { container } = render(
+      <StageVideo
+        item={makeItem()}
+        src="/api/media/video?a=1"
+        poster={null}
+        muted
+        onRequestUnmute={vi.fn()}
+      />,
+    )
+    const video = container.querySelector('video') as HTMLVideoElement
+    expect(video.muted).toBe(true)
+  })
+
+  it('starts playback via the transport "theater-resume" event after autoplay was rejected (needsGesture)', async () => {
+    const playMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('autoplay rejected'))
+      .mockResolvedValue(undefined)
+    HTMLMediaElement.prototype.play = playMock
+
+    const { container } = render(
+      <StageVideo
+        item={makeItem()}
+        src="/api/media/video?a=1"
+        poster={null}
+        muted
+        onRequestUnmute={vi.fn()}
+      />,
+    )
+
+    // Let the mount effect's rejected play() settle into the "needs a
+    // gesture" state — the tap-to-play overlay should be showing.
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    expect(container.querySelector('[aria-label="Play video"]')).not.toBeNull()
+
+    // Previously a no-op: the transport button dispatches this exact event
+    // (TheaterMobileChrome/DesktopDock's pause/play control), and it used to
+    // bail out on `needsGesture` instead of starting playback.
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent('theater-resume'))
+      await Promise.resolve()
+    })
+
+    expect(playMock).toHaveBeenCalledTimes(2)
+    expect(container.querySelector('[aria-label="Play video"]')).toBeNull()
+  })
+
+  it('also starts playback via "theater-toggle-play" after autoplay was rejected', async () => {
+    const playMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('autoplay rejected'))
+      .mockResolvedValue(undefined)
+    HTMLMediaElement.prototype.play = playMock
+
+    const { container } = render(
+      <StageVideo
+        item={makeItem()}
+        src="/api/media/video?a=1"
+        poster={null}
+        muted
+        onRequestUnmute={vi.fn()}
+      />,
+    )
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    expect(container.querySelector('[aria-label="Play video"]')).not.toBeNull()
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent('theater-toggle-play'))
+      await Promise.resolve()
+    })
+
+    expect(playMock).toHaveBeenCalledTimes(2)
+    expect(container.querySelector('[aria-label="Play video"]')).toBeNull()
+  })
+
+  it('a "theater-pause" while never-started is still a harmless no-op (nothing to pause)', async () => {
+    const playMock = vi.fn().mockRejectedValueOnce(new Error('autoplay rejected'))
+    HTMLMediaElement.prototype.play = playMock
+
+    const { container } = render(
+      <StageVideo
+        item={makeItem()}
+        src="/api/media/video?a=1"
+        poster={null}
+        muted
+        onRequestUnmute={vi.fn()}
+      />,
+    )
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(() => {
+      window.dispatchEvent(new CustomEvent('theater-pause'))
+    }).not.toThrow()
+    // Still shows the tap-to-play overlay — pause didn't fabricate a playing state.
+    expect(container.querySelector('[aria-label="Play video"]')).not.toBeNull()
   })
 })

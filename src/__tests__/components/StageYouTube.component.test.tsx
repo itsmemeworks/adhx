@@ -98,10 +98,206 @@ describe('StageYouTube', () => {
 
     fireEvent.load(iframe)
 
-    expect(postMessage).toHaveBeenCalledTimes(1)
     const [payload, targetOrigin] = postMessage.mock.calls[0]
     expect(targetOrigin).toBe(YT_ORIGIN)
     expect(JSON.parse(payload)).toMatchObject({ event: 'listening' })
+  })
+
+  // Round 2: iOS still never started a Short even with `autoplay=1&mute=1`
+  // in the embed URL and a bare `playVideo` sent on `onReady` — i.e. those
+  // URL-level params can't be trusted. Startup now drives mute-then-play
+  // explicitly through postMessage at every opportunity: a defensive nudge
+  // on the load handshake (before the player necessarily even processes
+  // it), and command order on `onReady` itself.
+  it('sends a defensive mute-then-playVideo nudge on the iframe load handshake, before onReady', () => {
+    const { container } = render(<StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />)
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { postMessage } = stubContentWindow(iframe)
+
+    fireEvent.load(iframe)
+
+    const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+    const muteIdx = funcs.indexOf('mute')
+    const playIdx = funcs.indexOf('playVideo')
+    expect(muteIdx).toBeGreaterThanOrEqual(0)
+    expect(playIdx).toBeGreaterThan(muteIdx)
+  })
+
+  it('sends mute before playVideo on onReady (never trusts the URL-level autoplay/mute params alone)', () => {
+    const { container } = render(<StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />)
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { postMessage, fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postMessage.mockClear()
+
+    postFromPlayer(fakeWindow, { event: 'onReady' })
+
+    const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+    const muteIdx = funcs.indexOf('mute')
+    const playIdx = funcs.indexOf('playVideo')
+    expect(muteIdx).toBeGreaterThanOrEqual(0)
+    expect(playIdx).toBeGreaterThan(muteIdx)
+  })
+
+  it('retries mute+playVideo on a bounded ladder (1s/2.5s/5s) while the player has never reached state 1', () => {
+    const { container } = render(<StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />)
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { postMessage, fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postFromPlayer(fakeWindow, { event: 'onReady' })
+    postMessage.mockClear()
+
+    act(() => {
+      vi.advanceTimersByTime(1_000)
+    })
+    let funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+    expect(funcs).toEqual(['mute', 'playVideo'])
+
+    postMessage.mockClear()
+    act(() => {
+      vi.advanceTimersByTime(1_500) // total 2.5s
+    })
+    funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+    expect(funcs).toEqual(['mute', 'playVideo'])
+
+    postMessage.mockClear()
+    act(() => {
+      vi.advanceTimersByTime(2_500) // total 5s
+    })
+    funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+    expect(funcs).toEqual(['mute', 'playVideo'])
+  })
+
+  it('stops the retry ladder once state 1 is confirmed', () => {
+    const { container } = render(<StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />)
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { postMessage, fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postFromPlayer(fakeWindow, { event: 'onReady' })
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
+    postMessage.mockClear()
+
+    act(() => {
+      vi.advanceTimersByTime(10_000)
+    })
+
+    expect(postMessage).not.toHaveBeenCalled()
+  })
+
+  it('cleans up the retry ladder on unmount (no post-unmount postMessage calls)', () => {
+    const { container, unmount } = render(
+      <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
+    )
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { postMessage, fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postFromPlayer(fakeWindow, { event: 'onReady' })
+    postMessage.mockClear()
+
+    unmount()
+
+    expect(() => {
+      act(() => {
+        vi.advanceTimersByTime(10_000)
+      })
+    }).not.toThrow()
+    expect(postMessage).not.toHaveBeenCalled()
+  })
+
+  it('cleans up the retry ladder on an item change (new videoId)', () => {
+    const { container, rerender } = render(
+      <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
+    )
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postFromPlayer(fakeWindow, { event: 'onReady' })
+
+    rerender(
+      <StageYouTube
+        item={makeItem({ bookmarkId: 'aaaaaaaaaaa' })}
+        muted
+        onRequestUnmute={vi.fn()}
+      />,
+    )
+    const iframe2 = container.querySelector('iframe') as HTMLIFrameElement
+    const { postMessage: postMessage2 } = stubContentWindow(iframe2)
+    postMessage2.mockClear()
+
+    // The old item's ladder rungs must not fire and post through the new
+    // iframe's stubbed contentWindow.
+    act(() => {
+      vi.advanceTimersByTime(10_000)
+    })
+
+    // Some of these calls are the new item's own onLoad/ready flow — the
+    // key assertion is that this doesn't throw and isn't wildly over-firing
+    // from a leaked old-item ladder timer stacking on top of the new one's.
+    expect(postMessage2.mock.calls.length).toBeLessThan(10)
+  })
+
+  // Regression test for a reported live-theater bug: a manual advance off a
+  // stalled YouTube item was followed ~2s later by an unrelated SECOND
+  // auto-advance, timed suspiciously close to the stalled item's own 8s
+  // watchdog. Investigation (see `Stage.component.test.tsx`) confirmed
+  // React's type-based reconciliation cleanly unmounts StageYouTube when the
+  // NEXT item is a different platform/type — but back-to-back YouTube items
+  // (short → short) never unmount StageYouTube at all; the SAME component
+  // instance just receives a new `item` prop, and the old item's stall
+  // watchdog must be torn down entirely by this component's own
+  // `videoId`-keyed effect cleanup, not by React unmounting anything. This
+  // is the one path where a bug here really would leak a stale watchdog
+  // into whatever item is current when it fires.
+  it('does not fire onEnded from a previous never-started YouTube item after swapping to a second YouTube item (same instance, no unmount)', () => {
+    const onEnded = vi.fn()
+    const { container, rerender } = render(
+      <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} onEnded={onEnded} />,
+    )
+    const iframeA = container.querySelector('iframe') as HTMLIFrameElement
+    const { fakeWindow: fakeWindowA } = stubContentWindow(iframeA)
+    fireEvent.load(iframeA)
+    postFromPlayer(fakeWindowA, { event: 'onReady' })
+    // Item A never reaches state 1 — exactly the reported repro (a
+    // localhost/blocked embed that never starts).
+
+    // t+6s: a manual advance to a second YouTube item (chevron click) — the
+    // SAME StageYouTube instance receives a new `item` prop.
+    act(() => {
+      vi.advanceTimersByTime(6_000)
+    })
+    expect(onEnded).not.toHaveBeenCalled()
+
+    rerender(
+      <StageYouTube
+        item={makeItem({ bookmarkId: 'bbbbbbbbbbb' })}
+        muted
+        onRequestUnmute={vi.fn()}
+        onEnded={onEnded}
+      />,
+    )
+    const iframeB = container.querySelector('iframe') as HTMLIFrameElement
+    expect(iframeB).not.toBe(iframeA)
+    const { fakeWindow: fakeWindowB } = stubContentWindow(iframeB)
+    fireEvent.load(iframeB)
+    postFromPlayer(fakeWindowB, { event: 'onReady' })
+    // Item B also never starts.
+
+    // t+9s from A's mount (past A's 8s stall mark) — A's watchdog must not
+    // have survived the swap to B.
+    act(() => {
+      vi.advanceTimersByTime(3_000)
+    })
+    expect(onEnded).not.toHaveBeenCalled()
+
+    // Sanity: B's OWN watchdog is still live and correctly armed — confirms
+    // the assertion above is because A's timer was torn down, not because
+    // the watchdog mechanism itself is broken. B was armed at t+6s (the
+    // rerender), so its 8s mark is t+14s; advancing the remaining ~5s here
+    // (3s already elapsed since B mounted) should now fire it.
+    act(() => {
+      vi.advanceTimersByTime(5_000)
+    })
+    expect(onEnded).toHaveBeenCalledTimes(1)
   })
 
   it('advances (onEnded) when the player reports state 0 (ended)', () => {
@@ -416,9 +612,13 @@ describe('StageYouTube', () => {
     expect(onEnded).toHaveBeenCalledTimes(1)
   })
 
-  it('repeat=true: the stall watchdog still advances a video that never starts', () => {
+  // Round 2: a pinned shared/collection post (`repeat`) has nowhere to
+  // advance TO without abandoning the pin, so the stall watchdog no longer
+  // calls `onEnded` for it — it shows a tap-to-play overlay instead (the
+  // live-queue case, repeat=false, is unchanged — see the test below).
+  it('repeat=true: the stall watchdog shows a tap-to-play overlay instead of advancing off the pin', () => {
     const onEnded = vi.fn()
-    render(
+    const { container } = render(
       <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} onEnded={onEnded} repeat />,
     )
 
@@ -426,7 +626,36 @@ describe('StageYouTube', () => {
       vi.advanceTimersByTime(8_000)
     })
 
-    expect(onEnded).toHaveBeenCalledTimes(1)
+    expect(onEnded).not.toHaveBeenCalled()
+    expect(container.querySelector('iframe')).toBeNull()
+    expect(container.querySelector('button[aria-label="Play video"]')).toBeTruthy()
+  })
+
+  it('repeat=true: tapping the tap-to-play overlay reloads the iframe and re-arms startup', () => {
+    const onEnded = vi.fn()
+    const { container } = render(
+      <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} onEnded={onEnded} repeat />,
+    )
+    act(() => {
+      vi.advanceTimersByTime(8_000)
+    })
+    const playButton = container.querySelector(
+      'button[aria-label="Play video"]',
+    ) as HTMLButtonElement
+    expect(playButton).toBeTruthy()
+
+    fireEvent.click(playButton)
+
+    const iframe = container.querySelector('iframe')
+    expect(iframe).toBeTruthy()
+
+    // A fresh startup attempt is armed — a subsequent unstarted 8s window
+    // shows the overlay again rather than silently doing nothing forever.
+    act(() => {
+      vi.advanceTimersByTime(8_000)
+    })
+    expect(container.querySelector('button[aria-label="Play video"]')).toBeTruthy()
+    expect(onEnded).not.toHaveBeenCalled()
   })
 
   it('repeat=false: an ended state advances as before (no seek command)', () => {
@@ -464,5 +693,48 @@ describe('StageYouTube', () => {
     )
 
     expect(onEnded).not.toHaveBeenCalled()
+  })
+})
+
+// Round 2 diagnostic breadcrumb: `[stage-yt]` console.debug logging, gated
+// behind `?ytdebug=1` so production stays quiet. The owner can flip it on
+// from their phone by appending `?ytdebug=1` to the theater URL for a
+// further on-device round if needed.
+describe('StageYouTube debug logging (?ytdebug=1 gate)', () => {
+  const originalUrl = window.location.href
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    window.history.replaceState(null, '', originalUrl)
+    vi.restoreAllMocks()
+  })
+
+  it('stays quiet by default', () => {
+    const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {})
+    const { container } = render(<StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />)
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postFromPlayer(fakeWindow, { event: 'onReady' })
+
+    expect(debugSpy).not.toHaveBeenCalled()
+  })
+
+  it('logs tagged [stage-yt] breadcrumbs when ?ytdebug=1 is present', () => {
+    window.history.replaceState(null, '', '/?ytdebug=1')
+    const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {})
+
+    const { container } = render(<StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />)
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postFromPlayer(fakeWindow, { event: 'onReady' })
+
+    expect(debugSpy).toHaveBeenCalled()
+    expect(debugSpy.mock.calls.every(([tag]) => tag === '[stage-yt]')).toBe(true)
   })
 })

@@ -1,7 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, Play, Image as ImageIcon, Type as TypeIcon, FileText, Quote } from 'lucide-react'
+import {
+  Check,
+  Play,
+  Image as ImageIcon,
+  Type as TypeIcon,
+  FileText,
+  Quote,
+  Repeat,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCompactRelativeTime } from '@/lib/utils/format'
 import { PlatformGlyph, type ContentType } from '@/components/matter'
@@ -57,6 +65,12 @@ export interface UpNextListProps {
    * a "Show all" toggle. Omit to always render every row (mobile default).
    */
   collapsedCount?: number
+  /**
+   * shared-post-repeat: the current row is pinned and repeating rather than
+   * about to auto-advance — shown as a small Repeat tag in the current row's
+   * tag slot (where a non-current row would show "next ↓" or a seen check).
+   */
+  repeatCurrent?: boolean
 }
 
 export const TYPE_TILE: Record<
@@ -103,6 +117,7 @@ function Row({
   seen,
   fresh,
   onSelect,
+  repeatCurrent,
 }: {
   item: TheaterItem
   isCurrent: boolean
@@ -110,6 +125,7 @@ function Row({
   seen: boolean
   fresh: boolean
   onSelect: (key: string) => void
+  repeatCurrent?: boolean
 }) {
   const key = theaterItemKey(item)
   const caption = stripShortLinksForPreview((item.text || '').trim())
@@ -136,12 +152,18 @@ function Row({
             {formatCompactRelativeTime(item.createdAt)}
           </span>
           <div className="ml-auto flex flex-none items-center gap-1.5">
-            {isNext && (
+            {isCurrent && repeatCurrent ? (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-clay">
+                <Repeat size={10} aria-hidden />
+                repeat
+              </span>
+            ) : isNext ? (
               <span className="text-[10px] font-bold uppercase tracking-wide text-clay">
                 next ↓
               </span>
+            ) : (
+              !isCurrent && seen && <Check size={11} className="text-done" />
             )}
-            {!isCurrent && !isNext && seen && <Check size={11} className="text-done" />}
           </div>
         </div>
         <p className="mt-1 line-clamp-2 text-[12.5px] leading-snug text-ink">
@@ -163,6 +185,7 @@ export function UpNextList({
   className,
   ownScroll = true,
   collapsedCount,
+  repeatCurrent,
 }: UpNextListProps) {
   const [expanded, setExpanded] = useState(false)
 
@@ -219,6 +242,7 @@ export function UpNextList({
               seen={seenFlags[i]}
               fresh={freshKeys.has(key)}
               onSelect={onSelect}
+              repeatCurrent={isCurrent && repeatCurrent}
             />
           )
           if (i === lastUnseenIndex) {

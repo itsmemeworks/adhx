@@ -274,3 +274,44 @@ describe('TheaterMobileChrome: collection mode brand logo is always home', () =>
     expect(screen.getByText('Save collection · 12')).toBeInTheDocument()
   })
 })
+
+// Owner (mobile screenshot): a shared post repeats until deliberate
+// navigation, but the peek bar still read "Up next" with no cue — the loop
+// looked like a bug. Swap the label for a Repeat glyph + "On repeat" while
+// pinned, and accent the next chevron (the deliberate way past the loop).
+describe('TheaterMobileChrome: shared-post-repeat cue', () => {
+  it('shows "On repeat" instead of "Up next" while pinned', () => {
+    render(<TheaterMobileChrome {...base} current={videoItem()} repeatCurrent />)
+    expect(screen.getByText('On repeat')).toBeInTheDocument()
+    expect(screen.queryByText('Up next')).not.toBeInTheDocument()
+  })
+
+  it('reverts to "Up next" once unpinned', () => {
+    render(<TheaterMobileChrome {...base} current={videoItem()} />)
+    expect(screen.getByText('Up next')).toBeInTheDocument()
+    expect(screen.queryByText('On repeat')).not.toBeInTheDocument()
+  })
+
+  it('tapping the "On repeat" label still opens the up-next sheet (same tap behavior)', () => {
+    render(<TheaterMobileChrome {...base} current={videoItem()} repeatCurrent />)
+    const label = screen.getByText('On repeat').closest('button')!
+    expect(label).toHaveAttribute('aria-label', 'Expand up next')
+    fireEvent.click(label)
+    expect(label).toHaveAttribute('aria-label', 'Collapse up next')
+  })
+
+  it('accents the next chevron with the clay treatment while pinned and enabled', () => {
+    render(<TheaterMobileChrome {...base} current={videoItem()} repeatCurrent canNext />)
+    expect(screen.getByLabelText('Next post').className).toContain('text-clay')
+  })
+
+  it('does not accent the next chevron when not pinned', () => {
+    render(<TheaterMobileChrome {...base} current={videoItem()} canNext />)
+    expect(screen.getByLabelText('Next post').className).not.toContain('text-clay')
+  })
+
+  it('does not accent a disabled next chevron even while pinned (nowhere to go)', () => {
+    render(<TheaterMobileChrome {...base} current={videoItem()} repeatCurrent canNext={false} />)
+    expect(screen.getByLabelText('Next post').className).not.toContain('text-clay')
+  })
+})

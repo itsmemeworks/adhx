@@ -4,6 +4,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-21 — Mobile round 3: verified-before-deploy (new gate) — paste ritual, repeat cue, autoplay round 2
+
+- **New process gate (owner mandate after regressions reached their phone)**: mobile UI changes are now verified in LIVE Chrome at 390px against local dev BEFORE deploying — memory `feedback-mobile-ui-verification`. The gate immediately caught a real bug (flick override defeating the sheet's drag hysteresis) pre-deploy.
+- **Paste round 3 (iOS input ritual)**: iOS never calls readText (each read = a disconnected system callout — round 2's retry button made TWO). Tap → overlay with the input deliberately autofocused → iOS's one familiar Paste callout on the field → paste event navigates synchronously. Retry button now non-iOS only; input `text-base sm:` for the 16px zoom rule.
+- **Repeat cue**: peek bar swaps "Up next"→Repeat glyph "On repeat" + clay next chevron while pinned; desktop dock chip + accent; "repeat" tag on the current queue row. Play/pause transport now starts a needsGesture video (the guard no-op'd it; one shared start path). Instagram mobile autoplay: `<video>` muted declaratively at first commit (was imperative-only post-mount — fresh async IG mounts started unmuted → iOS blocked).
+- **Sheet**: drag starts from the REAL computed transform (not height estimates), window-level pointerup backstop (lost capture froze the sheet off-position — the owner's collapse regression), classes own rest; flicks need velocity AND ≥24px travel (10px accidental moves snap back).
+- **YouTube round 2**: startup never trusts URL params — explicit mute→playVideo at load/ready + 1s/2.5s/5s retry ladder while unstarted; pinned+never-started shows tap-to-play (in-gesture iframe remount) instead of a blank stage; live queue keeps the 8s skip. `?ytdebug=1` logs `[stage-yt]` state breadcrumbs. Double-advance report investigated: stall-timer leak RULED OUT by regression tests on both reconciliation paths; hardening added; if it recurs, capture ytdebug output.
+- **State**: 2052 tests green (168 files), typecheck/format clean, 9-point live-browser pass (1 fail → fixed → re-covered by tests). Device-only items for the owner: iOS paste callout feel, YT autoplay, IG autoplay.
+
 ## 2026-08-21 — Mobile theater round 2: shared repeat, sheet drag, logo home, paste rework, autoplay continuity
 
 - **Why**: owner's live phone testing of staging surfaced 5 issues in quick succession; fixed by 4 parallel agents on one tree (disjoint-file fences held after one earlier branch-collision lesson).
