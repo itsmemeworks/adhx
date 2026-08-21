@@ -154,10 +154,11 @@ describe('Curator profile route: /t/[username]', () => {
       expect(firstProps.href).toBe('/t/curator/cool-stuff')
 
       // Discovery stats are forwarded through to the poster card (docs/specs/
-      // discovery-leaderboards.md §6) — the rank chip renders inside the
-      // card's own stat line, not as a top-right `badge` (which the
-      // component docs say isn't safe to combine with `wholeCardLink`).
-      expect(firstProps.stats).toEqual({ viewCount: 42, cloneCount: 5, rank: 3 })
+      // discovery-leaderboards.md §6) — rank renders ONCE, as the corner
+      // medallion (`rank` prop); `stats.rank` is nulled so the footer chip
+      // doesn't repeat it and the badge row keeps room for the other stats.
+      expect(firstProps.stats).toEqual({ viewCount: 42, cloneCount: 5, rank: null })
+      expect(firstProps.rank).toBe(3)
       // The same rank is also forwarded as the top-level `rank` prop, which
       // drives the non-interactive medallion now allowed with `wholeCardLink`.
       expect(firstProps.rank).toBe(3)

@@ -215,6 +215,9 @@ export default async function CuratorProfilePage({ params }: Props) {
           // Single collection: a showcase card, centered and scaled up so it
           // fills a meaningful share of the viewport instead of floating
           // small in a huge empty area.
+          // Rank renders ONCE per card, as the corner medallion — `stats.rank`
+          // is nulled below so the footer chip doesn't repeat it (owner call:
+          // keep the badge row for the other stats).
           <div className="mt-10 w-full max-w-xl sm:mt-14 sm:max-w-2xl">
             <CollectionPosterCard
               tag={profile.collections[0].tag}
@@ -225,7 +228,11 @@ export default async function CuratorProfilePage({ params }: Props) {
               featured
               heightClass="h-[320px] sm:h-[420px] lg:h-[480px]"
               className="w-full"
-              stats={profile.collections[0].stats}
+              stats={
+                profile.collections[0].stats
+                  ? { ...profile.collections[0].stats, rank: null }
+                  : null
+              }
               rank={profile.collections[0].stats?.rank ?? null}
             />
           </div>
@@ -243,7 +250,7 @@ export default async function CuratorProfilePage({ params }: Props) {
                 href={c.href}
                 wholeCardLink
                 className="w-full sm:w-[calc(50%-10px)] lg:w-[calc(25%-15px)]"
-                stats={c.stats}
+                stats={c.stats ? { ...c.stats, rank: null } : null}
                 rank={c.stats?.rank ?? null}
               />
             ))}
