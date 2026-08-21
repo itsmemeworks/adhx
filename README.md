@@ -89,12 +89,12 @@ fly deploy
 
 No auth, rate-limited, stable:
 
-| Endpoint                                  | Returns                                                        |
-| ----------------------------------------- | -------------------------------------------------------------- |
-| `GET /api/share/tweet/{username}/{id}`    | Any X post as clean JSON — full long-form Articles included    |
-| `GET /api/trending`                       | The anonymous community pulse (recent saves/previews)          |
-| `GET /api/collections/trending?window=`   | The collection leaderboard (`today` / `week` / `month` / `all-time`) |
-| [`/llms.txt`](https://adhx.com/llms.txt)  | Machine-readable index of everything above                     |
+| Endpoint                                 | Returns                                                              |
+| ---------------------------------------- | -------------------------------------------------------------------- |
+| `GET /api/share/tweet/{username}/{id}`   | Any X post as clean JSON — full long-form Articles included          |
+| `GET /api/trending`                      | The anonymous community pulse (recent saves/previews)                |
+| `GET /api/collections/trending?window=`  | The collection leaderboard (`today` / `week` / `month` / `all-time`) |
+| [`/llms.txt`](https://adhx.com/llms.txt) | Machine-readable index of everything above                           |
 
 ## Agent skill
 
