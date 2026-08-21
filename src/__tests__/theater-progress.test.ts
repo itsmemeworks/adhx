@@ -5,8 +5,11 @@ import type { TrendingItem } from '@/lib/trending/query'
 /**
  * Pure item -> progress-treatment mapping backing the mobile theater's
  * stories-style auto-advance (docs/specs/theater-first.md): a video plays out
- * on its own timeline, a non-video post gets a fixed 10s dwell, and YouTube
- * (no progress/ended signal from the iframe) gets neither.
+ * on its own timeline, a non-video post gets a fixed 10s dwell. YouTube also
+ * gets the video treatment — StageYouTube drives real play/pause/ended/mute
+ * via the raw postMessage protocol — so the dock/peek-bar transport + audio
+ * buttons render for it (they're gated on this kind), even though the shared
+ * top progress line never actually fills for it.
  */
 
 function make(
@@ -27,8 +30,8 @@ describe('progressKindFor', () => {
     expect(progressKindFor(null)).toBe('none')
   })
 
-  it('returns none for youtube (no progress/ended signal from the iframe)', () => {
-    expect(progressKindFor(make({ platform: 'youtube' }))).toBe('none')
+  it('returns video for youtube (StageYouTube drives real play/pause/ended/mute)', () => {
+    expect(progressKindFor(make({ platform: 'youtube' }))).toBe('video')
   })
 
   it('returns video for tiktok', () => {
