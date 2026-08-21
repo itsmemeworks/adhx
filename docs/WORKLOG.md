@@ -4,6 +4,18 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-21 — Review round: usernames w/ redirects, Save-primary, YouTube fixed, profile + journey (PRs #356–#362)
+
+- **Why**: Live owner review after the launch-blocker round: admin list needed real usernames, Download outweighed Save (conversion CTA), YouTube stalled the theater, /t profile looked bare, "Make your own" was a dead-end journey.
+- **#359 usernames**: first claim free, then up to 2 changes; every change records `username_aliases` → `/t/{old}` 308-redirects forever (no dead links); Settings gains the chooser (shared `UsernameChooser`, /welcome refactored onto it). `ADMIN_USERNAMES=pete,tim,dan,jon` live on staging, staged on prod.
+- **#360**: Save is ALWAYS the primary clay pill in theater action rows; Download demoted to glass. Image posts now downloadable/sharable too (`/api/media/image?download=1`, useSendFile kind: video|photo).
+- **#361 YouTube**: StageYouTube drives the raw iframe postMessage protocol (CSP-safe, no API script): muted autoplay, ended→advance via existing onEnded, onError/8s-stall auto-skip, dock transport+audio wired. Shorts no longer stall the theater.
+- **#357**: /t/{username} redesign — single collection = large centered showcase, many = centered wrap grid, whole card clickable (profile variant only; /tags keeps nested actions).
+- **#362 journey**: "Make your own"/"Start your collection" → `/?start=1` → StartOverlay (signed-out only) teaching Save-to-create-account + paste-a-link (inline input via resolvePastedLink); strips param via replaceState.
+- **#356/#358**: clone-append semantics pinned by regression test (already correct via onConflictDoNothing); component-test flake fixed (setup-components now awaits jest-dom/RTL imports — was racing first test).
+- **State**: all merged + deploying to staging for live verification. Production untouched.
+- **Follow-ups**: Tim must rename memelord→tim (spends 1 of 2 changes) for the admin list to cover him; dan/jon need accounts.
+
 ## 2026-08-21 — Sentry crash fix + five launch blockers (PRs #348–#353)
 
 - **Why**: Staging was crashing fatally (3 Sentry RangeError issues = one bug), and a launch-readiness audit (2026-08-20) surfaced five embarrass-at-launch gaps.
