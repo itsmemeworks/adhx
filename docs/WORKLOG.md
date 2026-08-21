@@ -4,6 +4,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-21 — Mobile round 4: unmute trust, desktop Repeat tag, theater nav menu
+
+- **Unmute kept reverting (owner, BOTH platforms)**: the 1.5s post-unmute settle timer treated signal-silence as rejection — but successful unmutes produce no state event, so it re-muted working sound everywhere. Timer REMOVED entirely for both user and catch-up unmutes: only an OBSERVED pause (state 2) reverts; infoDelivery muted:false/volume>0 clears pending so later unrelated pauses can't be misattributed. The never-starts case stays covered by the round-1 confirmed-playing gate + 8s watchdog. Lesson logged: three self-inflicted bugs from speculative timeouts — evidence-based signals only.
+- **Desktop filmstrip repeat cue** (owner: "MOWN"): pinned current card's tag is now ONE cohesive Repeat-glyph+"Repeat" tag replacing NOW (mutually exclusive by ternary); redundant end-cap "On repeat" chip removed (facts shown once).
+- **Theater avatar menu nav gap** (owner): signed-in menu was Collection/Settings/Sign-out only — now matches the Header: Your collection · Theater (close-if-home) · Tags · Leaderboard · Settings · Sign out; markup deduped with the signed-out burger (shared MenuLink/TheaterMenuEntry).
+- **Expected-behavior note**: each new YouTube item starts silent then self-unmutes once playing confirms (fresh cross-origin iframe = no gesture history) — by design, not a bug.
+- **Process note**: mid-edit verification race caused a false "corrupted file" alarm — when an agent is actively editing, verify only after its report lands.
+- **State**: 2064 tests green (168 files), typecheck/format clean.
+
 ## 2026-08-21 — Mobile round 3: verified-before-deploy (new gate) — paste ritual, repeat cue, autoplay round 2
 
 - **New process gate (owner mandate after regressions reached their phone)**: mobile UI changes are now verified in LIVE Chrome at 390px against local dev BEFORE deploying — memory `feedback-mobile-ui-verification`. The gate immediately caught a real bug (flick override defeating the sheet's drag hysteresis) pre-deploy.

@@ -541,7 +541,14 @@ describe('StageYouTube', () => {
     window.removeEventListener('theater-muted-state', handler)
   })
 
-  it('falls back to muted playback if no further state signal follows the unMute request at all (silent stall)', () => {
+  // Round 4: the owner reproduced the unmute→remute loop on DESKTOP too,
+  // where iOS's cross-origin-gesture policy doesn't even apply — proving a
+  // silent "no signal yet" timer was never a reliable rejection signal for
+  // EITHER path, not just the user-gesture one. The catch-up path (item
+  // mounts already-unmuted, via the `muted={false}` initial prop — never a
+  // prop transition) is now ALSO trusted through silence; see the round-3
+  // block below for the identical guarantee on the user-gesture path.
+  it('does not fall back to muted if no further state signal follows a catch-up unmute at all (round 4: no timer for either path)', () => {
     const { container } = render(
       <StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />,
     )
@@ -553,12 +560,180 @@ describe('StageYouTube', () => {
     postMessage.mockClear()
 
     act(() => {
-      vi.advanceTimersByTime(1_500)
+      vi.advanceTimersByTime(10_000)
     })
+
+    const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+    expect(funcs).not.toContain('mute')
+  })
+
+  it('still falls back to muted if a catch-up unmute is followed by an OBSERVED pause (state 2)', () => {
+    const { container } = render(
+      <StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />,
+    )
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { postMessage, fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postFromPlayer(fakeWindow, { event: 'onReady' })
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
+    postMessage.mockClear()
+
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 2 })
 
     const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
     expect(funcs).toContain('mute')
     expect(funcs).toContain('playVideo')
+  })
+
+  // Round 3: owner on-device report — tapping the audio button unmuted the
+  // Short, then it re-muted itself ~1.5s later, repeatedly. Root cause: a
+  // SUCCESSFUL unmute normally produces NO further state signal at all (the
+  // player just keeps playing) — the old code treated that silence as
+  // failure. Fix: a USER-GESTURE unmute (the `muted` prop transitioning to
+  // false, i.e. the audio-button tap) is trusted outright — no time-based
+  // fallback armed for it at all. Only the automatic catch-up unmute (item
+  // mounts already-unmuted) still arms one (tested above).
+  describe('round 3: user-gesture unmute is trusted (not re-muted by silence)', () => {
+    it('does not auto-remute a user-gesture unmute even when no further signal ever arrives', () => {
+      const { container, rerender } = render(
+        <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { postMessage, fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+      postFromPlayer(fakeWindow, { event: 'onReady' })
+      postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 }) // confirmed playing, muted
+      postMessage.mockClear()
+
+      // The audio-button tap: shell flips `muted` false.
+      rerender(<StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />)
+      expect(JSON.parse(postMessage.mock.calls.at(-1)![0])).toMatchObject({ func: 'unMute' })
+
+      postMessage.mockClear()
+      // No further state signal ever arrives — exactly what a SUCCESSFUL
+      // unmute looks like. Advance well past the old 1.5s settle window.
+      act(() => {
+        vi.advanceTimersByTime(10_000)
+      })
+
+      const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+      expect(funcs).not.toContain('mute')
+    })
+
+    it('still falls back to muted if a user-gesture unmute is followed by an OBSERVED pause (state 2)', () => {
+      const { container, rerender } = render(
+        <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { postMessage, fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+      postFromPlayer(fakeWindow, { event: 'onReady' })
+      postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
+
+      rerender(<StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />)
+      postMessage.mockClear()
+
+      // A real, observed pause with no user action — genuine evidence of
+      // rejection, unlike mere silence.
+      postFromPlayer(fakeWindow, { event: 'onStateChange', info: 2 })
+
+      const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+      expect(funcs).toContain('mute')
+      expect(funcs).toContain('playVideo')
+    })
+
+    it('treats infoDelivery muted:false as immediate confirmation for the catch-up path', () => {
+      const { container } = render(
+        <StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { postMessage, fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+      postFromPlayer(fakeWindow, { event: 'onReady' })
+      postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 }) // deferred catch-up unmute fires
+      postMessage.mockClear()
+
+      postFromPlayer(fakeWindow, { event: 'infoDelivery', info: { playerState: 1, muted: false } })
+
+      act(() => {
+        vi.advanceTimersByTime(10_000)
+      })
+
+      const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+      expect(funcs).not.toContain('mute')
+    })
+
+    // Round 4: there's no timer left to "disarm" — the value of clearing
+    // `unmuteAwaitingConfirmRef` on confirmation is now purely protective:
+    // without it, a LATER, unrelated pause (e.g. the user's own pause
+    // button, or buffering) would be misread as a rejection of an unmute
+    // that had already genuinely succeeded, and incorrectly re-mute it.
+    it('does not fall back on a later, unrelated pause once infoDelivery already confirmed the unmute', () => {
+      const { container } = render(
+        <StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { postMessage, fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+      postFromPlayer(fakeWindow, { event: 'onReady' })
+      postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 }) // deferred catch-up unmute fires
+      postFromPlayer(fakeWindow, { event: 'infoDelivery', info: { playerState: 1, muted: false } })
+      postMessage.mockClear()
+
+      // A later pause — the user pausing playback themselves, unrelated to
+      // the (already-confirmed) unmute.
+      postFromPlayer(fakeWindow, { event: 'onStateChange', info: 2 })
+
+      const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+      expect(funcs).not.toContain('mute')
+    })
+
+    it('treats infoDelivery volume>0 as immediate confirmation when no muted field is present', () => {
+      const { container } = render(
+        <StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { postMessage, fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+      postFromPlayer(fakeWindow, { event: 'onReady' })
+      postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
+      postMessage.mockClear()
+
+      postFromPlayer(fakeWindow, { event: 'infoDelivery', info: { playerState: 1, volume: 100 } })
+
+      act(() => {
+        vi.advanceTimersByTime(1_500)
+      })
+
+      const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+      expect(funcs).not.toContain('mute')
+    })
+
+    it('resets cleanly on rapid repeated taps — the final unmute is still trusted through silence', () => {
+      const { container, rerender } = render(
+        <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { postMessage, fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+      postFromPlayer(fakeWindow, { event: 'onReady' })
+      postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
+
+      // Unmute, mute, unmute again in quick succession (repeated taps).
+      rerender(<StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />)
+      rerender(<StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />)
+      rerender(<StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />)
+
+      postMessage.mockClear()
+      // No further signal at all — the final state is "unmuted", and
+      // silence must not revert it.
+      act(() => {
+        vi.advanceTimersByTime(10_000)
+      })
+
+      const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+      expect(funcs).not.toContain('mute')
+    })
   })
 
   it('falls back to the poster/preview-link stage for an invalid video id', () => {

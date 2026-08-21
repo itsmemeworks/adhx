@@ -92,13 +92,34 @@ const YT_ORIGIN = 'https://www.youtube-nocookie.com'
 const STALL_TIMEOUT_MS = 8_000
 
 /**
- * Backup window after sending `unMute`: if no further state signal arrives
- * at all (a silent stall rather than an explicit pause), fall back to muted
- * anyway. The common case is answered synchronously by an explicit state 2
- * (see `applyPlayerState`) — this timer only catches the rarer "nothing
- * happens" case.
+ * Round 3/4 history — there is deliberately NO time-based "did the unmute
+ * take" fallback anymore, for either the user-gesture or the automatic
+ * catch-up unmute:
+ *
+ * Round 3 bug: a SUCCESSFUL unmute normally produces no further state
+ * signal at all — the player just keeps playing at state 1 — so a 1.5s
+ * "no signal yet = rejected" timer, armed after every unmute request,
+ * treated silence as failure and re-muted a perfectly working unmute on a
+ * loop (owner on-device report: tap → sound → 1.5s → muted again,
+ * repeatedly). Round 3 first fixed this only for the user-gesture path
+ * (trust the gesture, no timer) while keeping the timer for the automatic
+ * catch-up unmute, reasoning a silent iOS rejection was more plausible
+ * there with no gesture behind it.
+ *
+ * Round 4: the owner then reproduced the SAME loop on DESKTOP, where iOS's
+ * cross-origin-gesture policy doesn't even apply — proving the timer was
+ * never a reliable signal for EITHER path (a "successful, no signal" unmute
+ * and a "silently rejected" unmute are indistinguishable by silence alone,
+ * regardless of platform). The timer is removed entirely. The only signal
+ * that ever reverts an unmute now is a real OBSERVED pause (`onStateChange`/
+ * `infoDelivery` reporting state 2) with no corresponding user action — see
+ * `applyPlayerState`'s state-2 branch, which calls `fallBackToMuted()`
+ * regardless of `source`. An `infoDelivery` payload's `muted:false` (or
+ * `volume>0`) is still treated as immediate positive confirmation the
+ * instant it arrives — not because a timer needs disarming anymore, but so
+ * a LATER, unrelated pause (e.g. the user's own pause button) is never
+ * misattributed as this unmute having been rejected.
  */
-const UNMUTE_SETTLE_MS = 1_500
 
 /**
  * Round 2: never trust the embed URL's own `autoplay=1&mute=1` params on
@@ -194,10 +215,16 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
   // this item — `applyPlayerState` re-fires `requestUnmute()` the instant
   // state 1 arrives.
   const pendingUnmuteRef = useRef(false)
-  // An `unMute` command is in flight and we're watching the next state
-  // signal to see whether iOS actually honored it.
+  // Which kind of request is pending — preserved across the defer so the
+  // deferred fire still gets the right fallback treatment (see
+  // `requestUnmute`'s `source` param).
+  const pendingUnmuteSourceRef = useRef<'user' | 'catchup'>('catchup')
+  // An `unMute` command is in flight. Cleared by real evidence only — an
+  // `infoDelivery` muted:false/volume>0 confirmation, or state 1 (kept
+  // playing right through it) — never by a timer (round 4: see the history
+  // note above `requestUnmute`). Only an OBSERVED pause (state 2) while
+  // this is true is treated as a rejection.
   const unmuteAwaitingConfirmRef = useRef(false)
-  const unmuteSettleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Round 2: the bounded mute+playVideo retry ladder, live only until the
   // player confirms state 1.
   const startupRetryTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
@@ -339,13 +366,6 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     [clearStallTimer, clearStartupRetryTimers, advance],
   )
 
-  const clearUnmuteSettleTimer = useCallback(() => {
-    if (unmuteSettleTimerRef.current) {
-      clearTimeout(unmuteSettleTimerRef.current)
-      unmuteSettleTimerRef.current = null
-    }
-  }, [])
-
   // iOS silently pauses (rather than erroring) a cross-origin iframe's
   // unmuted resume when it lacks its own gesture. Recover the same way
   // StageVideo does on an unmuted-continuation rejection: drop back to
@@ -354,11 +374,10 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
   // button shows the pulsing-muted affordance again.
   const fallBackToMuted = useCallback(() => {
     unmuteAwaitingConfirmRef.current = false
-    clearUnmuteSettleTimer()
     postCommand('mute')
     setEffectiveMuted(true)
     postCommand('playVideo')
-  }, [postCommand, clearUnmuteSettleTimer])
+  }, [postCommand])
 
   // The single path that ever asks the embed for sound. Never called before
   // a confirmed `playing` state (state 1) for the current item — iOS blocks
@@ -366,24 +385,32 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
   // gesture, so asking before that point is exactly the bug: the player
   // never starts and the stall watchdog skips it. `applyPlayerState` calls
   // this again the moment state 1 arrives if a request is still pending.
-  const requestUnmute = useCallback(() => {
-    if (!hasPlayedRef.current) {
-      pendingUnmuteRef.current = true
-      return
-    }
-    pendingUnmuteRef.current = false
-    unmuteAwaitingConfirmRef.current = true
-    postCommand('unMute')
-    // Optimistic — corrected back to true by `fallBackToMuted()` (or by a
-    // later `infoDelivery` `muted` field) if iOS actually rejected it.
-    setEffectiveMuted(false)
-    clearUnmuteSettleTimer()
-    unmuteSettleTimerRef.current = setTimeout(() => {
-      // No further state signal at all followed the unMute — a silent
-      // stall rather than an explicit pause. Recover the same way.
-      if (unmuteAwaitingConfirmRef.current) fallBackToMuted()
-    }, UNMUTE_SETTLE_MS)
-  }, [postCommand, clearUnmuteSettleTimer, fallBackToMuted])
+  //
+  // `source` no longer changes behavior (round 4 — see the history note
+  // above) — kept purely so `?ytdebug=1` logs show WHY an unmute was
+  // requested (a real audio-button tap vs. the shell arriving
+  // already-unmuted from a previous item), which is useful context if a
+  // future report needs it. Both paths are trusted identically: only an
+  // OBSERVED pause (state 2, in `applyPlayerState`) ever reverts either
+  // one.
+  const requestUnmute = useCallback(
+    (source: 'user' | 'catchup') => {
+      if (!hasPlayedRef.current) {
+        pendingUnmuteRef.current = true
+        pendingUnmuteSourceRef.current = source
+        return
+      }
+      pendingUnmuteRef.current = false
+      unmuteAwaitingConfirmRef.current = true
+      logStage(`requestUnmute(${source}) -> unMute`)
+      postCommand('unMute')
+      // Optimistic — corrected back to true by `fallBackToMuted()` only on
+      // a real observed pause (state 2), or reinforced by a later
+      // `infoDelivery` `muted`/`volume` field confirming it took.
+      setEffectiveMuted(false)
+    },
+    [postCommand],
+  )
 
   // New item: reset per-video state and arm the stall watchdog. Keyed on
   // `videoId` — the iframe itself also carries `key={videoId}` below, so a
@@ -395,8 +422,8 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     readyRef.current = false
     hasPlayedRef.current = false
     pendingUnmuteRef.current = false
+    pendingUnmuteSourceRef.current = 'catchup'
     unmuteAwaitingConfirmRef.current = false
-    clearUnmuteSettleTimer()
     clearStartupRetryTimers()
     setPlaying(false)
     setNeverStarted(false)
@@ -409,10 +436,9 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     armStallTimer(videoId)
     return () => {
       clearStallTimer()
-      clearUnmuteSettleTimer()
       clearStartupRetryTimers()
     }
-  }, [videoId, armStallTimer, clearStallTimer, clearUnmuteSettleTimer, clearStartupRetryTimers])
+  }, [videoId, armStallTimer, clearStallTimer, clearStartupRetryTimers])
 
   // Reconcile the shell's `muted` signal onto the live player — only on an
   // actual prop transition, same discipline as StageVideo. Muting is always
@@ -424,13 +450,18 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     if (muted) {
       pendingUnmuteRef.current = false
       unmuteAwaitingConfirmRef.current = false
-      clearUnmuteSettleTimer()
       setEffectiveMuted(true)
       postCommand('mute')
     } else {
-      requestUnmute()
+      // A prop transition to unmuted is always a deliberate user gesture
+      // (the audio-button tap flips the shell's `muted`, which flows down
+      // here) — never the automatic catch-up path (that one only ever
+      // fires from `onReady`/`applyPlayerState` below, not from a `muted`
+      // prop CHANGE, since the prop doesn't change on catch-up — it arrives
+      // already-false).
+      requestUnmute('user')
     }
-  }, [muted, postCommand, requestUnmute, clearUnmuteSettleTimer])
+  }, [muted, postCommand, requestUnmute])
 
   // Broadcast playing/muted state so the dock/peek-bar transport + audio
   // buttons stay in sync, exactly like StageVideo.
@@ -469,11 +500,11 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
             // Kept playing right through the unmute — it took. Stop
             // watching for a rejection.
             unmuteAwaitingConfirmRef.current = false
-            clearUnmuteSettleTimer()
           }
           // A confirmed playing state is exactly the signal `requestUnmute`
-          // was waiting for — fire the deferred request now.
-          if (pendingUnmuteRef.current) requestUnmute()
+          // was waiting for — fire the deferred request now, preserving
+          // whichever `source` it was originally requested with.
+          if (pendingUnmuteRef.current) requestUnmute(pendingUnmuteSourceRef.current)
         } else if (state === 2) {
           setPlaying(false)
           if (unmuteAwaitingConfirmRef.current) {
@@ -518,8 +549,11 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
           // arrives (see the state-1 branch above). Asking here, before iOS
           // has seen this iframe play anything, is exactly round 1's bug:
           // an unmuted-autoplay request with no in-iframe gesture gets
-          // silently rejected and the player never starts.
-          if (!mutedRef.current) requestUnmute()
+          // silently rejected and the player never starts. This is the
+          // 'catchup' case — no gesture backs it, so a silent rejection
+          // (round 2) is plausible; see `requestUnmute`'s comment for how
+          // that differs from a user-gesture unmute (round 3).
+          if (!mutedRef.current) requestUnmute('catchup')
           break
         // The raw postMessage protocol streams player state inside
         // `infoDelivery` payloads ({info:{playerState, muted, ...}}) — the
@@ -529,10 +563,30 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
         // 1 and the stall watchdog skips a video that is playing fine
         // (bitten on staging, 2026-08-21). Handle both shapes.
         case 'infoDelivery': {
-          const info = data.info as { playerState?: unknown; muted?: unknown } | null | undefined
+          const info = data.info as
+            { playerState?: unknown; muted?: unknown; volume?: unknown } | null | undefined
           if (info && typeof info === 'object') {
             if (typeof info.playerState === 'number') applyPlayerState(info.playerState)
-            if (typeof info.muted === 'boolean') setEffectiveMuted(info.muted)
+            if (typeof info.muted === 'boolean') {
+              setEffectiveMuted(info.muted)
+              // Real evidence, checked as soon as it arrives: a heartbeat
+              // reporting `muted:false` while we're watching an unmute
+              // request is the player itself confirming it took. Not a
+              // timer-disarm anymore (round 4 removed the timer) — this
+              // stops a LATER, unrelated pause from being misattributed as
+              // THIS unmute having been rejected.
+              if (unmuteAwaitingConfirmRef.current && info.muted === false) {
+                logStage('infoDelivery confirms unmute (muted:false) — clearing pending')
+                unmuteAwaitingConfirmRef.current = false
+              }
+            } else if (
+              unmuteAwaitingConfirmRef.current &&
+              typeof info.volume === 'number' &&
+              info.volume > 0
+            ) {
+              logStage('infoDelivery confirms unmute (volume>0) — clearing pending')
+              unmuteAwaitingConfirmRef.current = false
+            }
           }
           break
         }
@@ -563,7 +617,6 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     advance,
     requestUnmute,
     fallBackToMuted,
-    clearUnmuteSettleTimer,
   ])
 
   // Space bar / the stage's play-pause affordance (`theater-toggle-play`,
@@ -620,7 +673,6 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     hasPlayedRef.current = false
     pendingUnmuteRef.current = false
     unmuteAwaitingConfirmRef.current = false
-    clearUnmuteSettleTimer()
     clearStartupRetryTimers()
     setPlaying(false)
     setEffectiveMuted(true)
