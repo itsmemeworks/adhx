@@ -10,8 +10,10 @@ import {
   List as ListIcon,
   LayoutDashboard,
   Tag as TagIcon,
-  Repeat,
   Check,
+  Globe,
+  Lock,
+  Link2,
   X,
   Plus,
   ListChecks,
@@ -233,6 +235,24 @@ export function FilterBar({
     }
   }
 
+  /** The toggle's other half: make the selected tag private again. */
+  async function handleMakePrivate(tag: string) {
+    setSharing(true)
+    try {
+      const res = await fetch('/api/tags', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tag, isPublic: false }),
+      })
+      if (!res.ok) return
+      onTagUpdated?.(tag, false, '')
+    } catch {
+      // Best-effort, same as handleShareAsTheater.
+    } finally {
+      setSharing(false)
+    }
+  }
+
   return (
     <div className="sticky top-0 z-30 bg-paper/95 backdrop-blur-sm border-b border-hairline">
       <div className="flex items-center gap-2 px-4 sm:px-[26px] py-3 overflow-x-auto scrollbar-hide">
@@ -247,11 +267,6 @@ export function FilterBar({
             <span className="flex-none font-mono text-[12px] text-ink-3">
               {selectedTagInfo?.count ?? 0} post{selectedTagInfo?.count === 1 ? '' : 's'}
             </span>
-            {selectedTagInfo?.isPublic && (
-              <span className="flex-none rounded-full bg-done/15 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-done">
-                Public
-              </span>
-            )}
             {copiedLabel && (
               <span className="flex flex-none items-center gap-1.5 whitespace-nowrap rounded-full bg-inset px-2.5 py-1 font-mono text-[11px] text-ink-2">
                 <Check size={12} className="text-done" />
@@ -273,15 +288,46 @@ export function FilterBar({
                 {tagSelect === selectedTag ? 'Done adding' : 'Add posts'}
               </button>
             )}
+            {/* ONE visibility control — the state IS the action, styled like
+                its sibling Add-posts button so it reads as a standard dash
+                button (the /tags cards carry the same single-toggle rule). */}
             <button
               type="button"
-              onClick={() => void handleShareAsTheater(selectedTag)}
+              onClick={() =>
+                void (selectedTagInfo?.isPublic
+                  ? handleMakePrivate(selectedTag)
+                  : handleShareAsTheater(selectedTag))
+              }
               disabled={sharing}
-              className="flex-shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-clay-grad px-3.5 py-[7px] text-[13px] font-semibold text-white shadow-glow transition-opacity hover:opacity-90 disabled:opacity-60"
+              aria-label={selectedTagInfo?.isPublic ? 'Make private' : 'Make public'}
+              title={selectedTagInfo?.isPublic ? 'Make private' : 'Make public'}
+              className="flex-shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-surface border border-hairline px-3.5 py-[7px] text-[13px] font-semibold text-ink-2 transition-colors hover:text-ink disabled:opacity-60"
             >
-              <Repeat size={13} />
-              Make public
+              {selectedTagInfo?.isPublic ? (
+                <>
+                  <span className="h-1.5 w-1.5 flex-none rounded-full bg-live" aria-hidden />
+                  <Globe size={13} />
+                  Public
+                </>
+              ) : (
+                <>
+                  <Lock size={13} />
+                  Private
+                </>
+              )}
             </button>
+            {selectedTagInfo?.isPublic && (
+              <button
+                type="button"
+                onClick={() => void handleShareAsTheater(selectedTag)}
+                disabled={sharing}
+                aria-label="Copy share link"
+                title="Copy share link"
+                className="flex-shrink-0 inline-flex items-center justify-center rounded-full bg-surface border border-hairline p-[9px] text-ink-2 transition-colors hover:text-ink disabled:opacity-60"
+              >
+                <Link2 size={13} />
+              </button>
+            )}
             {onSelectedTagsChange && (
               <button
                 type="button"

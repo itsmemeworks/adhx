@@ -4,6 +4,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-21 — README overhaul + review round 5 (toolbar toggle, blur seam, stage speaker)
+
+- **README rewritten** (~375→~140 lines): reframed for what ADHX is now (4-platform save → preview mirror → ONE theater → tagged collections → curator profiles → /leaderboard), keys-optional local dev FIRST (magic link logs to console — no X app needed to try it), condensed Docker/Fly, public API table, agent-skill install kept short. Fixed a real doc bug: local OAuth callback + NEXT_PUBLIC_APP_URL said :3000 but `pnpm dev` runs :3001 (README + .env.example corrected). Cut: versus-competitors section, star history, project-structure dump (ARCHITECTURE.md covers it), most gag lines.
+- **FilterBar selected-tag toolbar de-dup** (owner): PUBLIC chip + always-"Make public" clay button → ONE state-aware toggle (green dot + Globe "Public" ↔ Lock "Private", styled like the sibling Add-posts button) + a copy-link icon button when public (make-public still auto-copies the share URL).
+- **Theater blur seam** (owner): glass action pills' backdrop-blur sampled the Save button's glow → vertical seam on Open. Blur dropped from the 10 glow-adjacent pills (both chromes), bg bumped to white/[0.14].
+- **Stage speaker hint removed** (owner): StageVideo's faint bottom-left Volume2 indicator duplicated the dock/peek-bar audio button.
+- **State**: 1865 tests green. All shipped with the README PR.
+
 ## 2026-08-21 — Review round 4: ONE theater player, glow radius, standardized toggle
 
 - **Legacy player OUT of the theater** (owner: "My Collection is just a different playlist in that same theater"): TriageStage's twitter-video branch now uses the SAME StageVideo as live/tag theaters (merged with the tiktok branch) — the round-2 VideoPlayer bolt-on (controlled muted/onUserUnmute props, transport-event wrapper) is fully REVERTED from VideoPlayer.tsx (which stays the feed/lightbox/preview player only). Fixes native controls leaking into fullscreen + the mute-icon desync. Accepted trade-off (commented in TriageStage): >5min twitter videos stream plain MP4 proxy, identical to the live theater's existing behavior for the same post — the HLS path only ever existed in the legacy player.

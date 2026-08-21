@@ -110,7 +110,7 @@ const DRAG_THRESHOLD = 30
  * alongside Share/Open (mirrors GLASS/PRIMARY in TheaterDesktopChrome).
  */
 const PILL_GLASS =
-  'inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 text-[13px] font-semibold text-white backdrop-blur-md disabled:opacity-70'
+  'inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/[0.14] px-3 text-[13px] font-semibold text-white disabled:opacity-70'
 const PILL_PRIMARY =
   'inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full bg-clay-grad px-3 text-[13px] font-semibold text-white shadow-glow transition-opacity disabled:opacity-70'
 
@@ -307,7 +307,7 @@ export function TheaterMobileChrome({
               type="button"
               onClick={triage.onClose}
               aria-label="Close triage"
-              className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md"
+              className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full border border-white/25 bg-white/[0.14] text-white"
             >
               <X size={16} />
             </button>
@@ -488,7 +488,7 @@ export function TheaterMobileChrome({
               <button
                 type="button"
                 onClick={triage.onLater}
-                className="inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/25 bg-white/10 text-[11px] font-semibold text-white backdrop-blur-md"
+                className="inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/25 bg-white/[0.14] text-[11px] font-semibold text-white"
               >
                 <Clock size={16} />
                 Later
@@ -507,7 +507,7 @@ export function TheaterMobileChrome({
               <button
                 type="button"
                 onClick={triage.onDelete}
-                className="inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/25 bg-white/10 text-[11px] font-semibold text-white backdrop-blur-md"
+                className="inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/25 bg-white/[0.14] text-[11px] font-semibold text-white"
               >
                 <Trash2 size={16} />
                 Delete
@@ -534,7 +534,7 @@ export function TheaterMobileChrome({
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`Open on ${platformLabel}`}
-                    className="inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md"
+                    className="inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 bg-white/[0.14] text-white"
                   >
                     <ExternalLink size={16} />
                   </a>
@@ -546,7 +546,7 @@ export function TheaterMobileChrome({
               {collection && isCollectionOwner ? (
                 <a
                   href={`/?tag=${encodeURIComponent(collection.tag)}`}
-                  className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 text-[13px] font-semibold text-white backdrop-blur-md"
+                  className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/[0.14] px-3 text-[13px] font-semibold text-white"
                 >
                   <TagIcon size={15} />
                   Manage collection
@@ -593,7 +593,7 @@ export function TheaterMobileChrome({
                           triage.onLiveTag?.(current)
                         }}
                         onTouchEnd={(e) => e.stopPropagation()}
-                        className="inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md"
+                        className="inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 bg-white/[0.14] text-white"
                         aria-label="Tag this post"
                       >
                         <TagIcon size={16} />
@@ -630,7 +630,7 @@ export function TheaterMobileChrome({
                 type="button"
                 onClick={() => void handleShare()}
                 aria-label="Share link"
-                className="inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md"
+                className="inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 bg-white/[0.14] text-white"
               >
                 {copied ? <Check size={16} className="text-done" /> : <Share2 size={16} />}
               </button>
@@ -648,7 +648,7 @@ export function TheaterMobileChrome({
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`Open on ${platformLabel}`}
-                    className="inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md"
+                    className="inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 bg-white/[0.14] text-white"
                   >
                     <ExternalLink size={16} />
                   </a>
