@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { progressKindFor } from '@/components/theater/TheaterProgressLine'
+import { progressKindFor, progressKindForPin } from '@/components/theater/TheaterProgressLine'
 import type { TrendingItem } from '@/lib/trending/query'
 
 /**
@@ -55,5 +55,35 @@ describe('progressKindFor', () => {
 
   it('returns timed for a twitter item with no contentType set', () => {
     expect(progressKindFor(make({ platform: 'twitter' }))).toBe('timed')
+  })
+})
+
+/**
+ * shared-post-repeat: while the shared post is pinned (isSharedPostPinned in
+ * TheaterShell.tsx), a 'timed' item (photo/text/quote/article) must never
+ * auto-advance the visitor out from under it — so its progress kind is
+ * demoted to 'none', which stops both the ticking line and the
+ * `theater-advance` dispatch that would otherwise fire when it fills.
+ * 'video' items are untouched: their auto-advance is already blocked at the
+ * player level (StageVideo's `loop` attribute / StageYouTube's seek-to-0
+ * replay), so their progress line keeps behaving normally.
+ */
+describe('progressKindForPin', () => {
+  it('demotes timed to none while pinned', () => {
+    expect(progressKindForPin('timed', true)).toBe('none')
+  })
+
+  it('leaves timed alone when not pinned', () => {
+    expect(progressKindForPin('timed', false)).toBe('timed')
+  })
+
+  it('never touches video, pinned or not', () => {
+    expect(progressKindForPin('video', true)).toBe('video')
+    expect(progressKindForPin('video', false)).toBe('video')
+  })
+
+  it('never touches none, pinned or not', () => {
+    expect(progressKindForPin('none', true)).toBe('none')
+    expect(progressKindForPin('none', false)).toBe('none')
   })
 })

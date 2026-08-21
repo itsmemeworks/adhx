@@ -14,6 +14,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { useSheetDrag } from './useSheetDrag'
 import {
   Download as DownloadIcon,
   Loader2,
@@ -47,7 +48,7 @@ import { useSendFile } from './useSendFile'
 import { useClampExpand } from './useClampExpand'
 import { theaterItemKey, PLATFORM_LABEL, TRIAGE_TAB_ORDER, TRIAGE_TAB_LABEL } from './types'
 import { TheaterLinkedText } from './TheaterText'
-import { TheaterProgressLine, progressKindFor } from './TheaterProgressLine'
+import { TheaterProgressLine, progressKindFor, progressKindForPin } from './TheaterProgressLine'
 import { UpNextList } from './UpNextList'
 import { SaveCollectionButton } from './SaveCollectionButton'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
@@ -87,8 +88,15 @@ export interface TheaterMobileChromeProps {
   /** The signed-in viewer IS this collection's curator — hide the clone CTA, show Manage. */
   isCollectionOwner?: boolean
   onRequestSignIn?: () => void
-  /** Collection mode, non-owner viewers: the "Make your own" CTA (the top scrim's brand link) — opens the sign-in modal in place (authed non-owners are routed home instead, handled by the caller). */
-  onRequestMakeYourOwn?: () => void
+  /**
+   * No longer used here — the collection top scrim's brand logo is always a
+   * plain home link now (owner override: it used to open this in place of
+   * navigating home, which stranded non-owner viewers with no way back to
+  /** Shared mode: the shared post is pinned + repeating (no auto-advance), so
+   * the 10s 'timed' progress line would tick toward an advance that never
+   * comes — demote it to 'none' while pinned. Video repeat is native
+   * player-level and unaffected. */
+  repeatCurrent?: boolean
   /** Triage mode (unified-theater-triage.md §2): swaps the top scrim's meta for a Collection↔Live tab switcher, and the bottom action row for Later/Tag/Delete/Done. */
   triage?: TheaterTriageChrome
 }
@@ -101,8 +109,6 @@ const PEEK_ICON_BTN =
 /** Applied on top of `PEEK_ICON_BTN` for a disabled prev/next chevron at either end of the list — dimmed, no hover/active feedback, but the button stays in place (no layout shift) so the row never reflows. */
 const PEEK_ICON_BTN_DISABLED =
   'opacity-35 hover:bg-transparent hover:text-ink-3 active:bg-transparent active:text-ink-3 disabled:cursor-default'
-/** Minimum finger travel (px) on the peek handle to count as a drag, not a tap. */
-const DRAG_THRESHOLD = 30
 
 /**
  * Bottom-scrim action pills. Save drives account signups, so it's ALWAYS the
@@ -136,13 +142,15 @@ export function TheaterMobileChrome({
   onSaveCollection,
   isCollectionOwner = false,
   onRequestSignIn,
-  onRequestMakeYourOwn,
+  repeatCurrent = false,
   triage,
 }: TheaterMobileChromeProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const dragStartYRef = useRef<number | null>(null)
+  const sheetRef = useRef<HTMLDivElement>(null)
+  const peekRef = useRef<HTMLDivElement>(null)
+  const sheetDrag = useSheetDrag({ open: sheetOpen, onOpenChange: setSheetOpen, sheetRef, peekRef })
   const sendFile = useSendFile(current)
   const { ref: captionRef, expanded, setExpanded, overflowing } = useClampExpand(currentKey)
 
@@ -154,7 +162,10 @@ export function TheaterMobileChrome({
   // the 10s dwell line also silently hides/breaks the audio and pause
   // controls for collection-tab videos (which still play via StageVideo).
   const mediaKind = progressKindFor(current)
-  const progressKind = triage && triage.tab === 'collection' ? 'none' : mediaKind
+  const progressKind = progressKindForPin(
+    triage && triage.tab === 'collection' ? 'none' : mediaKind,
+    repeatCurrent,
+  )
 
   // Pause/play button state. `'video'`-kind items mirror StageVideo's real
   // playing state (so a tap on the video itself, or an autoplay retry, keeps
@@ -261,24 +272,6 @@ export function TheaterMobileChrome({
     }
   }
 
-  // Drag the peek handle: up opens, down closes, a near-zero drag is a tap
-  // toggle. preventDefault suppresses the ghost click Safari/Chrome fire
-  // after a touch sequence, so the onClick fallback (mouse/VoiceOver) never
-  // double-toggles a real touch.
-  const handleHandleTouchStart = (e: React.TouchEvent) => {
-    dragStartYRef.current = e.touches[0].clientY
-  }
-  const handleHandleTouchEnd = (e: React.TouchEvent) => {
-    const start = dragStartYRef.current
-    dragStartYRef.current = null
-    if (start == null) return
-    e.preventDefault()
-    const dy = e.changedTouches[0].clientY - start
-    if (dy <= -DRAG_THRESHOLD) setSheetOpen(true)
-    else if (dy >= DRAG_THRESHOLD) setSheetOpen(false)
-    else setSheetOpen((v) => !v)
-  }
-
   const trendCount = current ? (current.trendCount ?? current.saveCount ?? 0) : 0
   const tagCount = triage?.tags?.length ?? 0
   const handle = current?.author ? current.author.replace(/^@+/, '') : ''
@@ -331,27 +324,18 @@ export function TheaterMobileChrome({
         >
           {/* One row: brand left, #tag right — the curator/count live in the
               peek bar's center label; a second scrim row was too much for
-              phone widths (live review). No separate "Make your own" pill
-              fits here (see the desktop chrome's top bar), so for non-owner
-              viewers the brand link itself doubles as that CTA — opening the
-              sign-in modal in place for a signed-out visitor (an authed
-              non-owner is just routed home; see `onRequestMakeYourOwn`). The
-              collection's own owner keeps a plain home link. */}
+              phone widths (live review). The logo is ALWAYS the plain home
+              link here, owner and non-owner alike — a visitor viewing a
+              shared tag must always be able to get back to the main theater
+              (owner override: wiring it to open the "Make your own" modal
+              instead left non-owners with no way home). Conversion is
+              carried entirely by the Save-collection CTA below, which
+              already opens the sign-in modal in place for a signed-out
+              visitor (`handleSaveCollection` in TheaterShell). */}
           <div className="flex items-center justify-between gap-3">
-            {isCollectionOwner ? (
-              <a href="/" className="flex items-center" aria-label="ADHX home">
-                <MatterLogo size={16} className="[&>span]:text-white" />
-              </a>
-            ) : (
-              <button
-                type="button"
-                onClick={() => onRequestMakeYourOwn?.()}
-                className="flex items-center"
-                aria-label="Make your own collection"
-              >
-                <MatterLogo size={16} className="[&>span]:text-white" />
-              </button>
-            )}
+            <a href="/" className="flex items-center" aria-label="ADHX home">
+              <MatterLogo size={16} className="[&>span]:text-white" />
+            </a>
             <span className="min-w-0 truncate text-[15px] font-bold text-white">
               #{collection.tag}
             </span>
@@ -410,7 +394,9 @@ export function TheaterMobileChrome({
                 Leaderboard / Sign in — instead of no navigation at all.
                 Triage above never passes this (always reached authed);
                 collection mode's top scrim doesn't mount this component at
-                all (its own "Make your own" CTA is the signed-out path). */}
+                all — its plain home logo plus the bottom scrim's
+                Save-collection CTA cover both navigation and signed-out
+                conversion there. */}
             <TheaterAvatarMenu onRequestSignIn={onRequestSignIn} allowSignedOut />
           </div>
         </div>
@@ -690,172 +676,177 @@ export function TheaterMobileChrome({
           at all times, even while immersed, so only the top/bottom scrims
           above hide. */}
       <div
+        ref={sheetRef}
+        style={sheetDrag.style}
         className={cn(
           'pointer-events-auto absolute inset-x-0 bottom-0 z-20 flex h-[70dvh] flex-col overscroll-contain rounded-t-2xl shadow-[0_-8px_24px_rgba(0,0,0,.35)] backdrop-blur-md transition-[transform,background-color] duration-300 ease-out',
-          sheetOpen ? 'translate-y-0 bg-surface' : 'translate-y-[calc(100%-4.25rem)] bg-surface/70',
+          sheetOpen ? 'bg-surface' : 'bg-surface/70',
+          !sheetDrag.dragging && (sheetOpen ? 'translate-y-0' : 'translate-y-[calc(100%-4.25rem)]'),
         )}
       >
-        {/* Peek bar: drag handle on top (tap/drag toggles the sheet, as
-            before), then a control row — de-clutter fixed at the far left
-            (never moves), the audio button to its right (video posts only,
-            so its presence never shifts de-clutter), the up-next label
-            screen-centered (absolutely positioned over the bar so it lands
-            at the true midpoint regardless of the side groups' unequal
-            widths), and prev/pause/next on the right. All non-drag-handle
-            buttons stop propagation on click AND touchend so pressing them
-            never also toggles the sheet open/closed. */}
-        <button
-          type="button"
-          onClick={() => setSheetOpen((v) => !v)}
-          onTouchStart={handleHandleTouchStart}
-          onTouchEnd={handleHandleTouchEnd}
-          aria-expanded={sheetOpen}
-          aria-label={sheetOpen ? 'Collapse up next' : 'Expand up next'}
-          className="flex w-full flex-none items-center justify-center pb-0.5 pt-2"
-        >
-          <span className="h-1 w-9 rounded-full bg-hairline" aria-hidden />
-        </button>
+        {/* Peek bar: drag handle on top (tap toggles; a real pointer drag
+            follows the finger 1:1 via useSheetDrag, snapping open/closed on
+            release by distance or flick velocity — see the hook), then a
+            control row — de-clutter fixed at the far left (never moves), the
+            audio button to its right (video posts only, so its presence
+            never shifts de-clutter), the up-next label screen-centered
+            (absolutely positioned over the bar so it lands at the true
+            midpoint regardless of the side groups' unequal widths), and
+            prev/pause/next on the right. All non-drag-handle buttons stop
+            propagation on click AND touchend so pressing them never also
+            toggles the sheet open/closed. */}
+        <div ref={peekRef} className="flex-none">
+          <button
+            type="button"
+            {...sheetDrag.handlers}
+            aria-expanded={sheetOpen}
+            aria-label={sheetOpen ? 'Collapse up next' : 'Expand up next'}
+            className="flex w-full touch-none items-center justify-center pb-0.5 pt-2"
+          >
+            <span className="h-1 w-9 rounded-full bg-hairline" aria-hidden />
+          </button>
 
-        <div className="relative flex flex-none items-center px-2 pb-2">
-          {/* De-clutter is always first (far left, fixed position); the audio
+          <div className="relative flex items-center px-2 pb-2">
+            {/* De-clutter is always first (far left, fixed position); the audio
               button sits to its right and only exists for video posts — it
               hides, but de-clutter never moves. */}
-          <div className="flex items-center gap-0.5">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                setDeclutter((v) => !v)
-              }}
-              onTouchEnd={(e) => e.stopPropagation()}
-              aria-label={declutter ? 'Show controls' : 'Hide controls'}
-              className={PEEK_ICON_BTN}
-            >
-              {/* De-cluttering EXPANDS the stage — the enter action (declutter
-                  false → true) reads outward (Maximize2); exiting reads
-                  inward (Minimize2), restoring the compact chrome. */}
-              {declutter ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-            </button>
-            {mediaKind === 'video' && (
+            <div className="flex items-center gap-0.5">
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation()
-                  onToggleMute()
+                  setDeclutter((v) => !v)
                 }}
                 onTouchEnd={(e) => e.stopPropagation()}
-                aria-label={displayMuted ? 'Unmute' : 'Mute'}
-                className={cn(
-                  'inline-flex h-10 w-10 flex-none items-center justify-center rounded-full transition-colors hover:bg-inset hover:text-ink active:bg-inset active:text-ink',
-                  soundPulse ? 'animate-sound-pulse text-ink' : 'text-ink-3',
-                )}
+                aria-label={declutter ? 'Show controls' : 'Hide controls'}
+                className={PEEK_ICON_BTN}
               >
-                {displayMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                {/* De-cluttering EXPANDS the stage — the enter action (declutter
+                  false → true) reads outward (Maximize2); exiting reads
+                  inward (Minimize2), restoring the compact chrome. */}
+                {declutter ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
               </button>
-            )}
-          </div>
+              {mediaKind === 'video' && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onToggleMute()
+                  }}
+                  onTouchEnd={(e) => e.stopPropagation()}
+                  aria-label={displayMuted ? 'Unmute' : 'Mute'}
+                  className={cn(
+                    'inline-flex h-10 w-10 flex-none items-center justify-center rounded-full transition-colors hover:bg-inset hover:text-ink active:bg-inset active:text-ink',
+                    soundPulse ? 'animate-sound-pulse text-ink' : 'text-ink-3',
+                  )}
+                >
+                  {displayMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                </button>
+              )}
+            </div>
 
-          <div className="pointer-events-none absolute inset-x-0 flex justify-center">
-            {triage ? (
-              <div
-                className="pointer-events-auto inline-flex rounded-full bg-inset p-0.5 text-[11.5px] font-semibold"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {TRIAGE_TAB_ORDER.map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      triage.onTabChange(t)
-                    }}
-                    onTouchEnd={(e) => e.stopPropagation()}
-                    aria-current={triage.tab === t ? 'true' : undefined}
-                    className={cn(
-                      'rounded-full px-3 py-1 whitespace-nowrap transition-colors',
-                      triage.tab === t ? 'bg-surface text-ink shadow-sm' : 'text-ink-3',
-                    )}
-                  >
-                    {TRIAGE_TAB_LABEL[t]}
-                  </button>
-                ))}
-              </div>
-            ) : (
+            <div className="pointer-events-none absolute inset-x-0 flex justify-center">
+              {triage ? (
+                <div
+                  className="pointer-events-auto inline-flex rounded-full bg-inset p-0.5 text-[11.5px] font-semibold"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {TRIAGE_TAB_ORDER.map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        triage.onTabChange(t)
+                      }}
+                      onTouchEnd={(e) => e.stopPropagation()}
+                      aria-current={triage.tab === t ? 'true' : undefined}
+                      className={cn(
+                        'rounded-full px-3 py-1 whitespace-nowrap transition-colors',
+                        triage.tab === t ? 'bg-surface text-ink shadow-sm' : 'text-ink-3',
+                      )}
+                    >
+                      {TRIAGE_TAB_LABEL[t]}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setSheetOpen((v) => !v)}
+                  aria-expanded={sheetOpen}
+                  aria-label={sheetOpen ? 'Collapse up next' : 'Expand up next'}
+                  className="pointer-events-auto flex max-w-[45%] items-center justify-center gap-1 truncate px-1 text-center text-[12px] font-semibold text-ink-2"
+                >
+                  {collection ? (
+                    <>
+                      <Repeat size={11} className="flex-none" aria-hidden />
+                      <span className="truncate">
+                        #{collection.tag} · {collection.count}
+                      </span>
+                    </>
+                  ) : newCount > 0 ? (
+                    `${newCount} new`
+                  ) : (
+                    'Up next'
+                  )}
+                </button>
+              )}
+            </div>
+
+            <div className="ml-auto flex items-center gap-0.5">
               <button
                 type="button"
-                onClick={() => setSheetOpen((v) => !v)}
-                aria-expanded={sheetOpen}
-                aria-label={sheetOpen ? 'Collapse up next' : 'Expand up next'}
-                className="pointer-events-auto flex max-w-[45%] items-center justify-center gap-1 truncate px-1 text-center text-[12px] font-semibold text-ink-2"
+                disabled={!canPrev}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onPrev()
+                }}
+                onTouchEnd={(e) => e.stopPropagation()}
+                aria-label="Previous post"
+                aria-disabled={!canPrev}
+                className={cn(PEEK_ICON_BTN, !canPrev && PEEK_ICON_BTN_DISABLED)}
               >
-                {collection ? (
-                  <>
-                    <Repeat size={11} className="flex-none" aria-hidden />
-                    <span className="truncate">
-                      #{collection.tag} · {collection.count}
-                    </span>
-                  </>
-                ) : newCount > 0 ? (
-                  `${newCount} new`
-                ) : (
-                  'Up next'
-                )}
+                <ChevronUp size={18} />
               </button>
-            )}
-          </div>
-
-          <div className="ml-auto flex items-center gap-0.5">
-            <button
-              type="button"
-              disabled={!canPrev}
-              onClick={(e) => {
-                e.stopPropagation()
-                onPrev()
-              }}
-              onTouchEnd={(e) => e.stopPropagation()}
-              aria-label="Previous post"
-              aria-disabled={!canPrev}
-              className={cn(PEEK_ICON_BTN, !canPrev && PEEK_ICON_BTN_DISABLED)}
-            >
-              <ChevronUp size={18} />
-            </button>
-            {/* Video always gets a pause button (even in the collection tab,
+              {/* Video always gets a pause button (even in the collection tab,
                 where `progressKind` is forced 'none'); a 'timed' item only
                 gets one where there's an actual auto-advance to pause — never
                 in the collection tab, where pausing a static post is
                 meaningless. */}
-            {(mediaKind === 'video' || progressKind !== 'none') && (
+              {(mediaKind === 'video' || progressKind !== 'none') && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleTogglePause()
+                  }}
+                  onTouchEnd={(e) => e.stopPropagation()}
+                  aria-label={paused ? 'Play' : 'Pause'}
+                  className={PEEK_ICON_BTN}
+                >
+                  {paused ? (
+                    <Play size={16} fill="currentColor" />
+                  ) : (
+                    <Pause size={16} fill="currentColor" />
+                  )}
+                </button>
+              )}
               <button
                 type="button"
+                disabled={!canNext}
                 onClick={(e) => {
                   e.stopPropagation()
-                  handleTogglePause()
+                  onNext()
                 }}
                 onTouchEnd={(e) => e.stopPropagation()}
-                aria-label={paused ? 'Play' : 'Pause'}
-                className={PEEK_ICON_BTN}
+                aria-label="Next post"
+                aria-disabled={!canNext}
+                className={cn(PEEK_ICON_BTN, !canNext && PEEK_ICON_BTN_DISABLED)}
               >
-                {paused ? (
-                  <Play size={16} fill="currentColor" />
-                ) : (
-                  <Pause size={16} fill="currentColor" />
-                )}
+                <ChevronDown size={18} />
               </button>
-            )}
-            <button
-              type="button"
-              disabled={!canNext}
-              onClick={(e) => {
-                e.stopPropagation()
-                onNext()
-              }}
-              onTouchEnd={(e) => e.stopPropagation()}
-              aria-label="Next post"
-              aria-disabled={!canNext}
-              className={cn(PEEK_ICON_BTN, !canNext && PEEK_ICON_BTN_DISABLED)}
-            >
-              <ChevronDown size={18} />
-            </button>
+            </div>
           </div>
         </div>
 

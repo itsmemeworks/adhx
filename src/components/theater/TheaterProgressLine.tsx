@@ -46,6 +46,23 @@ export function progressKindFor(item: TheaterItem | null): ProgressKind {
   return 'timed'
 }
 
+/**
+ * Pure: demote a 'timed' kind to 'none' while the shared post is pinned
+ * (shared-post-repeat: the visitor lands on a shared link and it repeats
+ * instead of auto-advancing into the live pulse until they deliberately
+ * navigate — see TheaterShell's `sharedPinned`/`isSharedPostPinned`). A
+ * pinned photo/text/article must never auto-advance out from under the
+ * visitor, so its progress line renders nothing (no timer, no
+ * `theater-advance` dispatch) rather than visibly counting toward an advance
+ * that will never happen. 'video' and 'none' pass through unchanged — video
+ * auto-advance is independently blocked at the player level (StageVideo's
+ * `loop` attribute / StageYouTube's seek-to-0 replay), so its progress line
+ * stays honest.
+ */
+export function progressKindForPin(kind: ProgressKind, pinned: boolean): ProgressKind {
+  return pinned && kind === 'timed' ? 'none' : kind
+}
+
 export interface TheaterProgressLineProps {
   /** Current item key — progress resets when it changes. */
   itemKey: string | null

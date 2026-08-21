@@ -6,6 +6,7 @@ import {
   computeCanPrev,
   computeCanNext,
   findFreshArrival,
+  isSharedPostPinned,
 } from '@/components/theater/TheaterShell'
 import { theaterItemKey } from '@/components/theater/types'
 
@@ -142,6 +143,47 @@ describe('computeCanPrev / computeCanNext', () => {
   it('no current item (-1): both disabled regardless of waiting', () => {
     expect(computeCanNext(-1, false)).toBe(false)
     expect(computeCanNext(-1, true)).toBe(false)
+  })
+})
+
+/**
+ * shared-post-repeat (owner rationale: a visitor lands on a shared preview
+ * link and a 5s auto-advance carries them into the live pulse before they
+ * can Save/tag/copy the link): `isSharedPostPinned` is the pure gate behind
+ * both the player-level repeat (StageVideo's `loop` / StageYouTube's
+ * seek-to-0 replay) and the 'timed' auto-advance suppression
+ * (`progressKindForPin`). It's true only in shared mode, only while the pin
+ * hasn't been cleared by a deliberate nav, and only while the shared post is
+ * actually the item on stage.
+ */
+describe('isSharedPostPinned', () => {
+  const sharedKey = 'twitter:123'
+  const otherKey = 'twitter:456'
+
+  it('is true on landing: shared mode, pinned, current IS the shared post', () => {
+    expect(isSharedPostPinned('shared', sharedKey, true, sharedKey)).toBe(true)
+  })
+
+  it('is false once the pin is cleared (a deliberate nav happened)', () => {
+    expect(isSharedPostPinned('shared', sharedKey, false, sharedKey)).toBe(false)
+  })
+
+  it('is false for every other mode, even if pinned=true and the keys match', () => {
+    expect(isSharedPostPinned('home', sharedKey, true, sharedKey)).toBe(false)
+    expect(isSharedPostPinned('collection', sharedKey, true, sharedKey)).toBe(false)
+    expect(isSharedPostPinned('triage', sharedKey, true, sharedKey)).toBe(false)
+  })
+
+  it('is false once the visitor has navigated to a different post, even if the pin flag is stale', () => {
+    expect(isSharedPostPinned('shared', sharedKey, true, otherKey)).toBe(false)
+  })
+
+  it('is false when there is no shared item (home mode has none)', () => {
+    expect(isSharedPostPinned('shared', null, true, sharedKey)).toBe(false)
+  })
+
+  it('is false when nothing is current yet (currentKey null)', () => {
+    expect(isSharedPostPinned('shared', sharedKey, true, null)).toBe(false)
   })
 })
 

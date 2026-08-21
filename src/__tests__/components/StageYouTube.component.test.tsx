@@ -257,7 +257,7 @@ describe('StageYouTube', () => {
     expect(JSON.parse(postMessage.mock.calls.at(-1)![0])).toMatchObject({ func: 'playVideo' })
   })
 
-  it('sends unMute/mute commands when the muted prop transitions', () => {
+  it('sends mute immediately, but defers unMute until a confirmed playing state, when the muted prop transitions', () => {
     const { container, rerender } = render(
       <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
     )
@@ -267,7 +267,15 @@ describe('StageYouTube', () => {
     postFromPlayer(fakeWindow, { event: 'onReady' })
     postMessage.mockClear()
 
+    // Toggling to unmuted before any confirmed playing state must NOT ask
+    // the embed for sound yet — iOS rejects an unmuted request with no
+    // in-iframe gesture and no `playing` confirmation.
     rerender(<StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />)
+    expect(postMessage.mock.calls.map(([p]) => JSON.parse(p).func)).not.toContain('unMute')
+
+    // Once the player confirms it's actually playing, the deferred request
+    // fires.
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
     expect(JSON.parse(postMessage.mock.calls.at(-1)![0])).toMatchObject({ func: 'unMute' })
 
     postMessage.mockClear()
@@ -275,7 +283,7 @@ describe('StageYouTube', () => {
     expect(JSON.parse(postMessage.mock.calls.at(-1)![0])).toMatchObject({ func: 'mute' })
   })
 
-  it('unMutes on ready when the shell was already unmuted before the handshake completed', () => {
+  it('never asks for sound before a confirmed playing state, even when the shell is already unmuted before the handshake completes', () => {
     const { container } = render(
       <StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />,
     )
@@ -287,7 +295,74 @@ describe('StageYouTube', () => {
     postFromPlayer(fakeWindow, { event: 'onReady' })
 
     const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+    expect(funcs).not.toContain('unMute')
+    expect(funcs).toContain('playVideo')
+  })
+
+  it('unmutes once a confirmed playing state arrives, when the shell was already unmuted before the handshake completed', () => {
+    const { container } = render(
+      <StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />,
+    )
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { postMessage, fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postFromPlayer(fakeWindow, { event: 'onReady' })
+    postMessage.mockClear()
+
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
+
+    const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
     expect(funcs).toContain('unMute')
+  })
+
+  it('falls back to muted playback when an explicit pause follows the unMute request (iOS rejecting the unmuted resume)', () => {
+    const mutedEvents: boolean[] = []
+    const handler = (e: Event) => mutedEvents.push((e as CustomEvent).detail.muted)
+    window.addEventListener('theater-muted-state', handler)
+
+    const { container } = render(
+      <StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />,
+    )
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { postMessage, fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postFromPlayer(fakeWindow, { event: 'onReady' })
+
+    // Confirmed playing (muted) — the deferred unmute fires.
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
+    expect(mutedEvents.at(-1)).toBe(false) // optimistic: we just asked for sound
+
+    postMessage.mockClear()
+    // iOS silently pauses instead of erroring when it rejects the unmuted
+    // resume — the player reports state 2 with no user action involved.
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 2 })
+
+    const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+    expect(funcs).toContain('mute')
+    expect(funcs).toContain('playVideo')
+    expect(mutedEvents.at(-1)).toBe(true)
+
+    window.removeEventListener('theater-muted-state', handler)
+  })
+
+  it('falls back to muted playback if no further state signal follows the unMute request at all (silent stall)', () => {
+    const { container } = render(
+      <StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />,
+    )
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { postMessage, fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postFromPlayer(fakeWindow, { event: 'onReady' })
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
+    postMessage.mockClear()
+
+    act(() => {
+      vi.advanceTimersByTime(1_500)
+    })
+
+    const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+    expect(funcs).toContain('mute')
+    expect(funcs).toContain('playVideo')
   })
 
   it('falls back to the poster/preview-link stage for an invalid video id', () => {
@@ -300,6 +375,75 @@ describe('StageYouTube', () => {
     )
     expect(container.querySelector('iframe')).toBeNull()
     expect(container.querySelector('a[href]')).toBeTruthy()
+  })
+
+  // shared-post-repeat: while pinned, an ended state (0) is answered with a
+  // seek-to-0-and-replay instead of ever calling onEnded — the embed's
+  // stand-in for `<video loop>` on the raw postMessage protocol.
+  it('repeat=true: replays via seekTo(0)+playVideo on ended instead of advancing', () => {
+    const onEnded = vi.fn()
+    const { container } = render(
+      <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} onEnded={onEnded} repeat />,
+    )
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { postMessage, fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postMessage.mockClear()
+
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 0 })
+
+    expect(onEnded).not.toHaveBeenCalled()
+    const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+    expect(funcs).toContain('seekTo')
+    expect(funcs).toContain('playVideo')
+    const seekCall = postMessage.mock.calls.find(
+      ([payload]) => JSON.parse(payload).func === 'seekTo',
+    )
+    expect(JSON.parse(seekCall![0]).args).toEqual([0, true])
+  })
+
+  it('repeat=true: onError still advances rather than looping on a broken video', () => {
+    const onEnded = vi.fn()
+    const { container } = render(
+      <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} onEnded={onEnded} repeat />,
+    )
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+
+    postFromPlayer(fakeWindow, { event: 'onError', info: 150 })
+
+    expect(onEnded).toHaveBeenCalledTimes(1)
+  })
+
+  it('repeat=true: the stall watchdog still advances a video that never starts', () => {
+    const onEnded = vi.fn()
+    render(
+      <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} onEnded={onEnded} repeat />,
+    )
+
+    act(() => {
+      vi.advanceTimersByTime(8_000)
+    })
+
+    expect(onEnded).toHaveBeenCalledTimes(1)
+  })
+
+  it('repeat=false: an ended state advances as before (no seek command)', () => {
+    const onEnded = vi.fn()
+    const { container } = render(
+      <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} onEnded={onEnded} />,
+    )
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { postMessage, fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postMessage.mockClear()
+
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 0 })
+
+    expect(onEnded).toHaveBeenCalledTimes(1)
+    const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+    expect(funcs).not.toContain('seekTo')
   })
 
   it('ignores messages from an unrelated origin', () => {

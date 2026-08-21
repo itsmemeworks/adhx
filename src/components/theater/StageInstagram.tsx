@@ -12,7 +12,7 @@
  * A persistent miss falls back to Instagram's official embed.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowRight, Loader2 } from 'lucide-react'
 import {
   instagramEmbedUrl,
@@ -29,12 +29,42 @@ export interface StageInstagramProps {
   muted: boolean
   onRequestUnmute: () => void
   onEnded?: () => void
+  /** shared-post-repeat: forwarded straight through to the StageVideo it renders once the mirror is ready. */
+  repeat?: boolean
 }
 
 type ProbeStatus = 'probing' | 'ready' | 'failed'
 
 /** Cap the visible "probing" wait at 3s before switching to the quieter status line (spec §11). */
 const INSTAGRAM_SPINNER_MS = 3_000
+
+/**
+ * The official IG-embed fallback (persistent mirror miss) never fires
+ * `ended` — it's a bare iframe we don't control. In auto-advance contexts
+ * (an `onEnded` prop, `repeat` false), give a viewer a moment to notice the
+ * embed, then move the queue along rather than parking on it forever.
+ */
+const ADVANCE_AFTER_EMBED_FALLBACK_MS = 8_000
+
+/**
+ * `probeInstagramVideo` can legitimately take up to
+ * `INSTAGRAM_PROBE_ATTEMPTS * INSTAGRAM_PROBE_TIMEOUT_MS` (up to ~70s) on a
+ * very cold mirror before it even resolves to 'failed'. That's far longer
+ * than a viewer will wait on a stalled item in an auto-advancing queue, so
+ * this is a hard ceiling independent of the probe's own outcome: if nothing
+ * has started playing by this point, advance — the probe keeps running in
+ * the background and still warms `probedReady` for next time.
+ */
+const NEVER_STARTED_GUARD_MS = 20_000
+
+/**
+ * Pure: given the current probe status, should an auto-advance guard fire?
+ * Never once the mirror is confirmed ready — StageVideo owns `onEnded` from
+ * that point on.
+ */
+export function shouldAdvanceInstagramStage(status: ProbeStatus): boolean {
+  return status !== 'ready'
+}
 
 /** Reel ids whose mirror already answered 200/206 this session — skip the probe on a repeat visit. */
 const probedReady = new Set<string>()
@@ -52,7 +82,13 @@ export function instagramStagePhase(
   return slow ? 'status' : 'spinner'
 }
 
-export function StageInstagram({ item, muted, onRequestUnmute, onEnded }: StageInstagramProps) {
+export function StageInstagram({
+  item,
+  muted,
+  onRequestUnmute,
+  onEnded,
+  repeat,
+}: StageInstagramProps) {
   const id = item.bookmarkId || ''
   const [status, setStatus] = useState<ProbeStatus>(() =>
     probedReady.has(id) ? 'ready' : 'probing',
@@ -87,6 +123,43 @@ export function StageInstagram({ item, muted, onRequestUnmute, onEnded }: StageI
     }
   }, [id])
 
+  // `status` at the moment either guard's timer actually fires — read via a
+  // ref so a stale value captured at schedule time can't suppress a real
+  // advance (or fire a spurious one after the mirror came ready).
+  const statusRef = useRef(status)
+  useEffect(() => {
+    statusRef.current = status
+  }, [status])
+
+  // Guard 2: the IG-embed fallback never fires `ended` on its own (it's a
+  // bare iframe we don't control). Give a viewer a moment on it, then move
+  // the queue along. Keyed on `status` transitioning to 'failed', so a later
+  // item that lands in 'ready' or a fresh 'probing' never inherits a stale
+  // timer (the effect's own cleanup clears it on every status change).
+  useEffect(() => {
+    if (!onEnded || repeat) return
+    if (status !== 'failed') return
+    const timer = setTimeout(() => {
+      onEnded()
+    }, ADVANCE_AFTER_EMBED_FALLBACK_MS)
+    return () => clearTimeout(timer)
+  }, [status, onEnded, repeat])
+
+  // Guard 3: an overall "nothing started" ceiling from mount, independent of
+  // the probe's own (up to ~70s) retry budget — if the probe is still
+  // spinning well past its documented warm-up window, don't make an
+  // auto-advancing queue wait on it. Keyed on `id` rather than `status` so
+  // it can't be re-armed by a status flicker within the same item; if Guard
+  // 2 already advanced first, the parent swaps the item and this effect's
+  // `id`-change cleanup cancels the now-irrelevant timer before it fires.
+  useEffect(() => {
+    if (!onEnded || repeat || !id) return
+    const timer = setTimeout(() => {
+      if (shouldAdvanceInstagramStage(statusRef.current)) onEnded()
+    }, NEVER_STARTED_GUARD_MS)
+    return () => clearTimeout(timer)
+  }, [id, onEnded, repeat])
+
   const poster = item.thumbnailUrl ?? null
 
   if (status === 'ready') {
@@ -98,6 +171,7 @@ export function StageInstagram({ item, muted, onRequestUnmute, onEnded }: StageI
         muted={muted}
         onRequestUnmute={onRequestUnmute}
         onEnded={onEnded}
+        repeat={repeat}
       />
     )
   }

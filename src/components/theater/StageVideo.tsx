@@ -35,6 +35,14 @@ export interface StageVideoProps {
   muted: boolean
   onRequestUnmute: () => void
   onEnded?: () => void
+  /**
+   * shared-post-repeat: while true, the native `loop` attribute takes over —
+   * the browser restarts the video in place and never fires `ended`, so
+   * `onEnded` (and therefore the shell's auto-advance) simply never runs.
+   * Applied declaratively (unlike `src`/`muted`, which are imperative) since
+   * it needs no coordination with the play()-call effect below.
+   */
+  repeat?: boolean
 }
 
 export function StageVideo({
@@ -44,6 +52,7 @@ export function StageVideo({
   muted,
   onRequestUnmute,
   onEnded,
+  repeat,
 }: StageVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [ended, setEnded] = useState(false)
@@ -280,6 +289,7 @@ export function StageVideo({
       <video
         ref={videoRef}
         poster={poster ?? undefined}
+        loop={repeat}
         playsInline
         onPlaying={() => {
           // The media element is the source of truth — a successful start
