@@ -158,7 +158,7 @@ export default async function CuratorProfilePage({ params }: Props) {
           </span>
         </a>
         <Link
-          href="/"
+          href="/?start=1"
           className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur transition-colors hover:bg-white/20"
         >
           Make your own
