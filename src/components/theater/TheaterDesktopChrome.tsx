@@ -124,7 +124,7 @@ export interface DesktopDockProps {
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 const GLASS =
-  'inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-4 text-[12.5px] font-semibold text-white backdrop-blur-md transition-colors hover:bg-white/20 disabled:opacity-60'
+  'inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/[0.14] px-4 text-[12.5px] font-semibold text-white transition-colors hover:bg-white/20 disabled:opacity-60'
 /**
  * Save drives account signups, so it's ALWAYS the visually primary action —
  * every Save variant (sign-in prompt, SavePostButton, TriageLiveSaveButton,
