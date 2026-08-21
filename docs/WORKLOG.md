@@ -4,6 +4,18 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-21 — Sentry crash fix + five launch blockers (PRs #348–#353)
+
+- **Why**: Staging was crashing fatally (3 Sentry RangeError issues = one bug), and a launch-readiness audit (2026-08-20) surfaced five embarrass-at-launch gaps.
+- **#348**: `@sentry/node` added to `serverExternalPackages` — Turbopack was bundling TWO SDK copies (ssr + server chunk graphs) whose `http.Server.emit` Proxy wraps recursed into each other until stack overflow, killing the process. Rule: any global-patching dep must be in serverExternalPackages. Deployed + verified on staging (0 chunks contain the SDK, no new events).
+- **#349**: DELETE /api/account now deletes `users`, `user_identities`, login tokens (by userId AND email), `tag_shares`, and clears the session cookie — previously the account rows survived "deletion".
+- **#350**: `/api/trending` + `/api/share/tweet/*` rate-limited (120/min/IP, Retry-After) — were the only public endpoints without a limiter.
+- **#351**: 404/error pages rebuilt on Matter tokens; dead `/search` link removed.
+- **#352**: empty-account onboarding panel (Connect X / Sync / paste-a-link / trending) — email-only signups previously hit a dead-end "no unread bookmarks". Detects via existing `stats.total`.
+- **#353**: `activity.hidden` moderation flag filtered in `getTrendingItems()` + 4 direct readers (sitemap, author hubs, RelatedSaves, archive); `POST /api/admin/activity/hide` gated by `ADMIN_USERNAMES` env (unset = 403). **Set `ADMIN_USERNAMES` on Fly (staging+prod).**
+- **State**: all merged to main, deployed to staging, e2e-verified. Production still pending the user's call.
+- **Follow-ups**: launch analysis (2026-08-20 session) ranked next: export (CSV/JSON), digest email via Resend, deleted-post-preservation marketing, self-host Docker path.
+
 ## 2026-08-20 — Fix fatal Sentry double-bundle stack overflow crash
 
 - **Why**: Staging was crashing with `RangeError: Maximum call stack size exceeded` (Sentry issues 7683515836, 7681948228, 7680748280). Root cause: `next.config.js` only externalized `better-sqlite3`, so Turbopack bundled a full copy of `@sentry/node` into both the server and SSR chunk graphs. Two independent SDK instances each Proxy-wrapped `http.Server.emit` (httpServerIntegration) and recursed into each other until the stack overflowed — a process-killing uncaughtException.
