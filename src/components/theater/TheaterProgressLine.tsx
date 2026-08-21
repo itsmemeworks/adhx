@@ -5,15 +5,20 @@
  * of the screen (clay/orange on a faint track):
  * - kind 'video': fill mirrors the current video's playback — driven by
  *   `theater-video-progress` window CustomEvents (detail: { progress: 0..1 })
- *   dispatched by StageVideo on timeupdate.
+ *   dispatched by StageVideo on timeupdate. YouTube also gets this kind
+ *   (StageYouTube drives real play/pause/ended/mute via the raw postMessage
+ *   protocol — see that file) so the dock/peek-bar transport + audio buttons
+ *   render and work, but it never dispatches `theater-video-progress` (the
+ *   protocol's periodic position payload isn't documented/stable enough to
+ *   trust for a scrub bar), so the fill just stays an empty track.
  * - kind 'timed': a 10s countdown fill; when it completes, dispatches a
  *   `theater-advance` window CustomEvent (the shell listens and goes next).
  *   Pauses while a `theater-pause` event is active and resumes (from the same
  *   progress) on `theater-resume` — dispatched by the mobile chrome's
  *   explicit pause/play button (TheaterMobileChrome). There is no longer a
  *   hold-to-pause gesture — it interfered with text selection on long posts.
- * - kind 'none' (YouTube — no progress/ended signal from the iframe): renders
- *   nothing; navigation stays manual.
+ * - kind 'none': no item, or triage's Collection tab (Done/Later/Delete are
+ *   the only ways forward there — see TheaterShell's `handleAdvance`).
  *
  * Progress state lives entirely inside this component (rAF/event driven) so
  * ticks never re-render the shell/stage tree — the fill's width is mutated
@@ -30,8 +35,12 @@ export const NON_VIDEO_DWELL_MS = 10_000
 /** Pure: which progress treatment an item gets. */
 export function progressKindFor(item: TheaterItem | null): ProgressKind {
   if (!item) return 'none'
-  if (item.platform === 'youtube') return 'none'
-  if (item.platform === 'tiktok' || item.platform === 'instagram' || item.contentType === 'video') {
+  if (
+    item.platform === 'youtube' ||
+    item.platform === 'tiktok' ||
+    item.platform === 'instagram' ||
+    item.contentType === 'video'
+  ) {
     return 'video'
   }
   return 'timed'

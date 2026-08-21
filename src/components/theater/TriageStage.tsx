@@ -104,7 +104,10 @@ export function TriageStage({ feedItem, muted, onRequestUnmute, tags }: TriageSt
   }
 
   if (platform === 'youtube') {
-    return <StageYouTube item={theaterItem} />
+    // No `onEnded` here — triage's Collection tab never auto-advances
+    // (Done/Later/Delete are the only ways forward), same as StageVideo's
+    // twitter/tiktok branches below.
+    return <StageYouTube item={theaterItem} muted={muted} onRequestUnmute={onRequestUnmute} />
   }
 
   if (platform === 'twitter' && isVideo) {

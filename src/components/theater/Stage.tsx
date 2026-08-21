@@ -59,9 +59,12 @@ export function Stage({ item, muted, onRequestUnmute, onEnded, photoCaption }: S
     )
   }
 
-  // YouTube has no MP4 — official youtube-nocookie iframe only.
+  // YouTube has no MP4 — official youtube-nocookie iframe only, driven by
+  // the raw postMessage protocol for autoplay/ended/transport (StageYouTube).
   if (item.platform === 'youtube') {
-    return <StageYouTube item={item} />
+    return (
+      <StageYouTube item={item} muted={muted} onRequestUnmute={onRequestUnmute} onEnded={onEnded} />
+    )
   }
 
   if (playback.kind === 'video' && playback.src) {
