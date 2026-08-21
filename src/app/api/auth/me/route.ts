@@ -46,6 +46,7 @@ export async function GET() {
       displayName: account.user.displayName,
       avatarUrl: account.user.avatarUrl,
       usernameChosen: account.user.usernameChosen,
+      usernameChangeCount: account.user.usernameChangeCount,
     },
     identities: account.identities,
     xConnected: account.xConnected,

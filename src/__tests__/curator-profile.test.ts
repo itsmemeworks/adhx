@@ -25,9 +25,19 @@ vi.mock('@/lib/users/profile', async (importOriginal) => {
   }
 })
 
+// Resolved only on a `not_found` — never hits the real DB in this route-level
+// test (mirrors `getPublicProfile` above). Redirect behavior is covered by
+// its own describe block below.
+vi.mock('@/lib/users/lookup', () => ({
+  resolveUsernameAlias: vi.fn(() => Promise.resolve(null)),
+}))
+
 vi.mock('next/navigation', () => ({
   notFound: vi.fn(() => {
     throw new Error('NOT_FOUND')
+  }),
+  permanentRedirect: vi.fn((path: string) => {
+    throw new Error(`REDIRECT:${path}`)
   }),
 }))
 
@@ -147,6 +157,30 @@ describe('Curator profile route: /t/[username]', () => {
       await generateMetadata({ params: Promise.resolve({ username: '%63urator' }) })
 
       expect(vi.mocked(mocked)).toHaveBeenCalledWith('curator')
+    })
+
+    it('308s to the current username when the old one resolves via username_aliases', async () => {
+      const { getPublicProfile: mocked } = await import('@/lib/users/profile')
+      vi.mocked(mocked).mockResolvedValue({ status: 'not_found' })
+      const { resolveUsernameAlias } = await import('@/lib/users/lookup')
+      vi.mocked(resolveUsernameAlias).mockResolvedValue({ userId: 'u1', username: 'newname' })
+
+      const CuratorProfilePage = (await import('@/app/t/[username]/page')).default
+      await expect(
+        CuratorProfilePage({ params: Promise.resolve({ username: 'oldname' }) }),
+      ).rejects.toThrow('REDIRECT:/t/newname')
+    })
+
+    it('still 404s when neither a live user nor an alias matches', async () => {
+      const { getPublicProfile: mocked } = await import('@/lib/users/profile')
+      vi.mocked(mocked).mockResolvedValue({ status: 'not_found' })
+      const { resolveUsernameAlias } = await import('@/lib/users/lookup')
+      vi.mocked(resolveUsernameAlias).mockResolvedValue(null)
+
+      const CuratorProfilePage = (await import('@/app/t/[username]/page')).default
+      await expect(
+        CuratorProfilePage({ params: Promise.resolve({ username: 'nobody' }) }),
+      ).rejects.toThrow('NOT_FOUND')
     })
   })
 })

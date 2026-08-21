@@ -14,14 +14,16 @@ import type { TheaterItem } from '@/components/theater/types'
 // jsdom has no scrollIntoView — the dock auto-scrolls the current filmstrip card into view.
 Element.prototype.scrollIntoView = vi.fn()
 
+const mockUseSendFile = vi.fn((..._args: unknown[]) => ({
+  supported: false,
+  ready: false,
+  sending: false,
+  mode: 'download' as const,
+  send: vi.fn(),
+}))
+
 vi.mock('@/components/theater/useSendFile', () => ({
-  useSendFile: () => ({
-    supported: false,
-    ready: false,
-    sending: false,
-    mode: 'download',
-    send: vi.fn(),
-  }),
+  useSendFile: (...args: unknown[]) => mockUseSendFile(...args),
 }))
 
 function videoItem(overrides: Partial<TheaterItem> = {}): TheaterItem {
@@ -81,6 +83,13 @@ const dockBase = {
 }
 
 beforeEach(() => {
+  mockUseSendFile.mockReturnValue({
+    supported: false,
+    ready: false,
+    sending: false,
+    mode: 'download' as const,
+    send: vi.fn(),
+  })
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: vi.fn().mockImplementation((query: string) => ({
@@ -233,5 +242,97 @@ describe('DesktopStageChrome', () => {
     fireEvent.submit(input.closest('form')!)
 
     expect(screen.getByText('Not a supported link')).toBeInTheDocument()
+  })
+})
+
+/**
+ * Save-is-always-primary / Download-is-secondary (product decision: Save
+ * drives account signups, so it must always carry the clay-grad primary
+ * treatment; Download is a power-user affordance and stays on the glass
+ * secondary style, matching Link/Open) — see TASK 1 of the
+ * save-primary-image-download PR.
+ */
+describe('DesktopStageChrome: Save/Download button hierarchy', () => {
+  const stageBase = {
+    mode: 'home' as const,
+    declutter: false,
+    onToggleDeclutter: vi.fn(),
+  }
+
+  beforeEach(() => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: false })
+  })
+
+  it('signed-out Save (sign-in prompt) is primary (bg-clay-grad)', () => {
+    render(<DesktopStageChrome {...stageBase} current={videoItem()} />)
+    const saveBtn = screen.getByText('Save').closest('button')!
+    expect(saveBtn.className).toContain('bg-clay-grad')
+  })
+
+  it('Download is secondary (glass), never bg-clay-grad, even when it is the only sendable action', () => {
+    mockUseSendFile.mockReturnValue({
+      supported: true,
+      ready: true,
+      sending: false,
+      mode: 'download' as const,
+      send: vi.fn(),
+    })
+    render(<DesktopStageChrome {...stageBase} current={videoItem()} />)
+    const downloadBtn = screen.getByText('Download').closest('button')!
+    expect(downloadBtn.className).not.toContain('bg-clay-grad')
+    expect(downloadBtn.className).toContain('border-white/25')
+
+    // Save must still be primary alongside it.
+    const saveBtn = screen.getByText('Save').closest('button')!
+    expect(saveBtn.className).toContain('bg-clay-grad')
+  })
+
+  it('shared+authed SavePostButton is primary', async () => {
+    render(<DesktopStageChrome {...stageBase} mode="shared" authed current={videoItem()} />)
+    const saveBtn = await screen.findByText('Save')
+    expect(saveBtn.closest('button')!.className).toContain('bg-clay-grad')
+  })
+
+  it('triage live-tab Save is primary, Download (when present) stays secondary', () => {
+    mockUseSendFile.mockReturnValue({
+      supported: true,
+      ready: true,
+      sending: false,
+      mode: 'download' as const,
+      send: vi.fn(),
+    })
+    const triage = {
+      tab: 'live' as const,
+      onTabChange: vi.fn(),
+      onDone: vi.fn(),
+      onLater: vi.fn(),
+      onDelete: vi.fn(),
+      onTag: vi.fn(),
+      onSave: vi.fn(),
+      onLiveTag: vi.fn(),
+      savedKeys: new Set<string>(),
+      remaining: 0,
+      streak: { current: 0, longest: 0 },
+      onClose: vi.fn(),
+    }
+    render(<DesktopStageChrome {...stageBase} current={videoItem()} triage={triage} />)
+
+    const saveBtn = screen.getByText('Save').closest('button')!
+    expect(saveBtn.className).toContain('bg-clay-grad')
+
+    const downloadBtn = screen.getByText('Download').closest('button')!
+    expect(downloadBtn.className).not.toContain('bg-clay-grad')
+  })
+
+  it('text posts never show Download (nothing sendable)', () => {
+    mockUseSendFile.mockReturnValue({
+      supported: false,
+      ready: false,
+      sending: false,
+      mode: 'download' as const,
+      send: vi.fn(),
+    })
+    render(<DesktopStageChrome {...stageBase} current={textItem()} />)
+    expect(screen.queryByText('Download')).not.toBeInTheDocument()
   })
 })

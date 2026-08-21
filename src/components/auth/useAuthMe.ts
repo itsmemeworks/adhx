@@ -13,6 +13,8 @@ export interface AuthMeUser {
   username: string
   displayName: string
   avatarUrl: string | null
+  usernameChosen: boolean
+  usernameChangeCount: number
 }
 
 export interface AuthMe {

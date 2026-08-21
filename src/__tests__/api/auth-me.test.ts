@@ -78,6 +78,7 @@ describe('API: /api/auth/me', () => {
       displayName: 'X User',
       avatarUrl: 'https://example.com/avatar.jpg',
       usernameChosen: true,
+      usernameChangeCount: 0,
     })
     expect(data.identities.x).toEqual({ providerId: 'x-user-1', username: 'xuser' })
     expect(data.identities.email).toBeNull()

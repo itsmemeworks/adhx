@@ -366,6 +366,32 @@ try {
   console.log('[migrate] Warning: username_chosen backfill failed', error)
 }
 
+// users.username_change_count — counts username changes AFTER the first
+// free claim (see users.username_chosen above). Same guarded-ALTER pattern.
+try {
+  db.exec('ALTER TABLE users ADD COLUMN username_change_count INTEGER NOT NULL DEFAULT 0')
+  console.log('[migrate] Added users.username_change_count')
+} catch {
+  // Column already exists — nothing to do.
+}
+
+// username_aliases — records every username a user has changed AWAY from
+// (after their first claim) so old /t/{username}/... links keep resolving
+// via a permanent redirect instead of 404ing. Guarded CREATE TABLE IF NOT
+// EXISTS, same pattern as the accounts tables above.
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS username_aliases (
+      username TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+  `)
+  console.log('[migrate] Ensured username_aliases table')
+} catch (error) {
+  console.log('[migrate] Warning: failed to create username_aliases table', error)
+}
+
 console.log(`[migrate] Database ready at: ${path.resolve(DB_PATH)}`)
 
 db.close()

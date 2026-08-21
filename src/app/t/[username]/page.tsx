@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { getPublicProfile, type PublicProfileResult } from '@/lib/users/profile'
+import { resolveUsernameAlias } from '@/lib/users/lookup'
 import { CollectionPosterCard } from '@/components/tags'
 import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
 
@@ -24,21 +25,34 @@ interface Props {
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://adhx.com'
 
-async function loadProfile(usernameParam: string): Promise<PublicProfileResult> {
+type ProfileLoadResult = PublicProfileResult | { status: 'redirect'; username: string }
+
+/**
+ * Resolves a profile by username, falling back to `username_aliases` when
+ * the direct lookup 404s — a curator who's since renamed still resolves,
+ * via `{ status: 'redirect' }`, so the page component can 308 old shared
+ * links to the current username instead of dead-ending them.
+ */
+async function loadProfile(usernameParam: string): Promise<ProfileLoadResult> {
   let username: string
   try {
     username = decodeURIComponent(usernameParam)
   } catch {
     return { status: 'not_found' }
   }
-  return getPublicProfile(username)
+  const result = await getPublicProfile(username)
+  if (result.status === 'not_found') {
+    const alias = await resolveUsernameAlias(username)
+    if (alias) return { status: 'redirect', username: alias.username }
+  }
+  return result
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username } = await params
   const result = await loadProfile(username)
 
-  if (result.status === 'not_found') {
+  if (result.status === 'not_found' || result.status === 'redirect') {
     return {
       title: `@${username} — ADHX`,
       description: 'A curator on ADHX.',
@@ -87,6 +101,7 @@ function formatMemberSince(iso: string | null): string | null {
 export default async function CuratorProfilePage({ params }: Props) {
   const { username } = await params
   const result = await loadProfile(username)
+  if (result.status === 'redirect') permanentRedirect(`/t/${result.username}`)
   if (result.status === 'not_found') notFound()
 
   const { profile } = result
@@ -150,7 +165,7 @@ export default async function CuratorProfilePage({ params }: Props) {
         </Link>
       </nav>
 
-      <main className="mx-auto max-w-5xl px-5 pb-20 pt-10 sm:px-11">
+      <main className="mx-auto flex max-w-5xl flex-col items-center px-5 pb-16 pt-10 sm:px-11">
         <header className="flex flex-col items-center gap-4 text-center">
           {profile.avatarUrl ? (
             <img
@@ -173,20 +188,43 @@ export default async function CuratorProfilePage({ params }: Props) {
           </p>
         </header>
 
-        <div className="mt-12 grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
-          {profile.collections.map((c) => (
+        {profile.collections.length === 1 ? (
+          // Single collection: a showcase card, centered and scaled up so it
+          // fills a meaningful share of the viewport instead of floating
+          // small in a huge empty area.
+          <div className="mt-10 w-full max-w-xl sm:mt-14 sm:max-w-2xl">
             <CollectionPosterCard
-              key={c.tag}
-              tag={c.tag}
-              count={c.count}
-              tiles={c.tiles}
-              href={c.href}
+              tag={profile.collections[0].tag}
+              count={profile.collections[0].count}
+              tiles={profile.collections[0].tiles}
+              href={profile.collections[0].href}
+              wholeCardLink
+              featured
+              heightClass="h-[320px] sm:h-[420px] lg:h-[480px]"
+              className="w-full"
             />
-          ))}
-        </div>
+          </div>
+        ) : (
+          // Multiple collections: wrap in a centered flex row rather than a
+          // fixed-column grid, so a partial last row (e.g. 3 of 4 columns)
+          // still centers as a group instead of packing left.
+          <div className="mt-10 flex w-full flex-wrap justify-center gap-4 sm:mt-14 sm:gap-5">
+            {profile.collections.map((c) => (
+              <CollectionPosterCard
+                key={c.tag}
+                tag={c.tag}
+                count={c.count}
+                tiles={c.tiles}
+                href={c.href}
+                wholeCardLink
+                className="w-full sm:w-[calc(50%-10px)] lg:w-[calc(25%-15px)]"
+              />
+            ))}
+          </div>
+        )}
       </main>
 
-      <footer className="flex flex-col items-center gap-4 px-5 py-14 text-center">
+      <footer className="mx-auto flex max-w-5xl flex-col items-center gap-4 border-t border-white/10 px-5 pb-14 pt-10 text-center sm:px-11">
         <p className="text-sm text-white/40">Save now. Read never. Find always.</p>
         <Link
           href="/"

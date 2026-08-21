@@ -100,6 +100,18 @@ const PEEK_ICON_BTN_DISABLED =
 /** Minimum finger travel (px) on the peek handle to count as a drag, not a tap. */
 const DRAG_THRESHOLD = 30
 
+/**
+ * Bottom-scrim action pills. Save drives account signups, so it's ALWAYS the
+ * visually primary action (sign-in prompt, the triage live-tab Save/Saved
+ * button) — same PILL_PRIMARY as `SaveCollectionButton`. Download is a
+ * power-user affordance, not a headline feature, so it uses PILL_GLASS
+ * alongside Share/Open (mirrors GLASS/PRIMARY in TheaterDesktopChrome).
+ */
+const PILL_GLASS =
+  'inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 text-[13px] font-semibold text-white backdrop-blur-md disabled:opacity-70'
+const PILL_PRIMARY =
+  'inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full bg-clay-grad px-3 text-[13px] font-semibold text-white shadow-glow transition-opacity disabled:opacity-70'
+
 export function TheaterMobileChrome({
   current,
   items,
@@ -540,10 +552,10 @@ export function TheaterMobileChrome({
                       disabled={sendFile.sending}
                       title={
                         sendFile.mode === 'share'
-                          ? 'Opens your share sheet with the video file'
-                          : 'Download the video file'
+                          ? 'Opens your share sheet with the file'
+                          : 'Download the file'
                       }
-                      className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full bg-clay-grad px-3 text-[13px] font-semibold text-white shadow-glow transition-opacity disabled:opacity-70"
+                      className={PILL_GLASS}
                     >
                       {sendFile.sending ? (
                         <Loader2 size={15} className="animate-spin" />
@@ -573,7 +585,7 @@ export function TheaterMobileChrome({
                           if (!triage.savedKeys.has(theaterItemKey(current))) triage.onSave(current)
                         }}
                         disabled={triage.savedKeys.has(theaterItemKey(current))}
-                        className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 text-[13px] font-semibold text-white backdrop-blur-md disabled:opacity-70"
+                        className={PILL_PRIMARY}
                       >
                         {triage.savedKeys.has(theaterItemKey(current)) ? (
                           <Check size={15} />
@@ -587,7 +599,7 @@ export function TheaterMobileChrome({
                     <button
                       type="button"
                       onClick={() => onRequestSignIn?.()}
-                      className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 text-[13px] font-semibold text-white backdrop-blur-md"
+                      className={PILL_PRIMARY}
                     >
                       <LogIn size={15} />
                       Save

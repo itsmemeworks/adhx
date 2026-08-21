@@ -1,8 +1,11 @@
 import crypto from 'crypto'
 import { db, runInTransaction } from '@/lib/db'
-import { users, userIdentities, loginTokens, oauthTokens } from '@/lib/db/schema'
+import { users, userIdentities, loginTokens, oauthTokens, usernameAliases } from '@/lib/db/schema'
 import { and, desc, eq, gt, isNull, lt } from 'drizzle-orm'
 import { deleteTokens } from './oauth'
+import { MAX_USERNAME_CHANGES, sanitizeUsername } from './username-rules'
+
+export { MAX_USERNAME_CHANGES, sanitizeUsername }
 
 const TOKEN_TTL_MS = 15 * 60 * 1000
 
@@ -23,6 +26,7 @@ export interface Account {
     avatarUrl: string | null
     email: string | null
     usernameChosen: boolean
+    usernameChangeCount: number
   }
   identities: AccountIdentities
   xConnected: boolean
@@ -60,6 +64,7 @@ export async function getAccount(userId: string): Promise<Account | null> {
       avatarUrl: user.avatarUrl,
       email: user.email,
       usernameChosen: !!user.usernameChosen,
+      usernameChangeCount: user.usernameChangeCount,
     },
     identities: {
       x: xIdentity
@@ -80,18 +85,28 @@ function randomHex(bytes: number): string {
 }
 
 /**
- * True if `username` is already taken by a *different* account.
- * `excludeUserId` lets a user check/re-claim their own current username
- * without it reading as taken.
+ * True if `username` is already taken — either as another account's current
+ * username, or as a redirect alias for a username another account changed
+ * away from. `excludeUserId` lets a user check/re-claim their own current
+ * username, or reclaim their OWN past username (freeing its alias), without
+ * either reading as taken.
  */
 export async function isUsernameTaken(username: string, excludeUserId?: string): Promise<boolean> {
-  const rows = await db
+  const [userRow] = await db
     .select({ id: users.id })
     .from(users)
     .where(eq(users.username, username))
     .limit(1)
-  if (rows.length === 0) return false
-  return rows[0].id !== excludeUserId
+  if (userRow) return userRow.id !== excludeUserId
+
+  const [aliasRow] = await db
+    .select({ userId: usernameAliases.userId })
+    .from(usernameAliases)
+    .where(eq(usernameAliases.username, username))
+    .limit(1)
+  if (aliasRow) return aliasRow.userId !== excludeUserId
+
+  return false
 }
 
 function sanitizeLocalPart(email: string): string {
@@ -105,46 +120,85 @@ function sanitizeLocalPart(email: string): string {
   return cleaned || 'reader'
 }
 
-/**
- * Public username grammar: lowercase `[a-z0-9_-]`, must start alphanumeric,
- * capped at 15 chars. Used by the `/welcome` one-shot chooser and its live
- * availability check — the single normalizer so client preview and server
- * validation never disagree.
- */
-export function sanitizeUsername(raw: string): string {
-  const stripped = raw.toLowerCase().replace(/[^a-z0-9_-]/g, '')
-  const startsAlnum = stripped.replace(/^[-_]+/, '')
-  return startsAlnum.slice(0, 15)
-}
-
 export type ChooseUsernameResult =
-  { ok: true; username: string } | { error: 'taken' | 'invalid' | 'already_chosen' }
+  | { ok: true; username: string; changesRemaining: number }
+  | { error: 'taken' | 'invalid' | 'change_limit_reached' }
 
 /**
- * One-shot username claim for the `/welcome` prompt. Rejects when the user
- * has already spent their choice (`usernameChosen`), validates grammar, then
- * atomically updates `username` + `usernameChosen` so a claim can never be
- * spent twice.
+ * Claim or change a username. Used by `POST /api/auth/username` both for
+ * the `/welcome` first-claim prompt and for changes from Settings.
+ *
+ * - **First claim** (`usernameChosen` false — a brand-new email account at
+ *   `/welcome`, or a pre-existing account claiming for the first time from
+ *   Settings) is free: it doesn't count against `MAX_USERNAME_CHANGES` and
+ *   doesn't create a redirect alias for the old (auto-derived) name, since
+ *   that name was never really chosen and shouldn't be locked to the
+ *   account forever.
+ * - **Every subsequent change** costs one of `MAX_USERNAME_CHANGES` (2).
+ *   Once spent, the old username is recorded in `username_aliases` so
+ *   existing `/t/{username}/...` links keep resolving via a permanent
+ *   redirect — see `src/lib/users/lookup.ts`.
+ * - **Resubmitting the current username** is always a free no-op (common
+ *   when a user opens the chooser and just confirms) — it works even after
+ *   the change cap is reached.
+ * - **Reclaiming one of the caller's own past usernames** is exempt from the
+ *   general "taken" check (an alias you own never blocks you) and frees
+ *   that alias row, since the name is becoming the caller's real username
+ *   again. It's still a change like any other, though — it costs one of
+ *   `MAX_USERNAME_CHANGES` and is still rejected once the cap is spent.
+ *
+ * All mutations (the alias insert/delete + the `users` row update) happen
+ * inside one `runInTransaction()` so a change can never be spent twice, and
+ * a crash mid-change can never leave a name aliased with no real owner.
  */
 export async function chooseUsername(userId: string, raw: string): Promise<ChooseUsernameResult> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1)
   if (!user) return { error: 'invalid' }
-  if (user.usernameChosen) return { error: 'already_chosen' }
 
   const username = sanitizeUsername(raw)
   if (username.length < 3 || username.length > 15) {
     return { error: 'invalid' }
   }
 
+  const isFirstClaim = !user.usernameChosen
+
+  if (!isFirstClaim && username === user.username) {
+    return { ok: true, username, changesRemaining: MAX_USERNAME_CHANGES - user.usernameChangeCount }
+  }
+
+  if (!isFirstClaim && user.usernameChangeCount >= MAX_USERNAME_CHANGES) {
+    return { error: 'change_limit_reached' }
+  }
+
   if (await isUsernameTaken(username, userId)) {
     return { error: 'taken' }
   }
 
+  const oldUsername = user.username
+  const newChangeCount = isFirstClaim ? user.usernameChangeCount : user.usernameChangeCount + 1
+
   runInTransaction(() => {
-    db.update(users).set({ username, usernameChosen: true }).where(eq(users.id, userId)).run()
+    // Reclaiming one of the caller's own past usernames frees that alias —
+    // it's becoming the real username again, so the redirect is moot.
+    db.delete(usernameAliases)
+      .where(and(eq(usernameAliases.username, username), eq(usernameAliases.userId, userId)))
+      .run()
+
+    if (!isFirstClaim) {
+      // The name being left behind keeps resolving via redirect. A first
+      // claim never creates an alias — see the doc comment above.
+      db.insert(usernameAliases)
+        .values({ username: oldUsername, userId, createdAt: Date.now() })
+        .run()
+    }
+
+    db.update(users)
+      .set({ username, usernameChosen: true, usernameChangeCount: newChangeCount })
+      .where(eq(users.id, userId))
+      .run()
   })
 
-  return { ok: true, username }
+  return { ok: true, username, changesRemaining: MAX_USERNAME_CHANGES - newChangeCount }
 }
 
 // ===========================================
