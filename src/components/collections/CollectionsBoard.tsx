@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MatterLogo, LiveDot } from '@/components/matter'
 import { CollectionPosterCard } from '@/components/tags'
@@ -48,11 +47,12 @@ const SIZE_CLASSES: Record<LeaderboardCardSize, string> = {
   grid: 'h-[240px] w-full',
 }
 
-/** One leaderboard slot: the canonical poster card + the curator's handle
- * underneath (info the old bespoke card carried inline in its footer — the
- * shared card's footer has no room reserved for it, so it lives outside).
- * #1 keeps its glow treatment via a wrapper class, since the shared card has
- * no rank-1-specific styling hook of its own. */
+/** One leaderboard slot: the canonical poster card, with the curator's
+ * handle rendered as the card's own top-right `curator` badge (previously a
+ * separate row below the card — the owner review flagged that as "totally
+ * off" spacing vs. every other card). #1 keeps its glow treatment via a
+ * wrapper class, since the shared card has no rank-1-specific styling hook
+ * of its own. */
 function LeaderboardCard({
   entry,
   rank,
@@ -63,7 +63,7 @@ function LeaderboardCard({
   size: LeaderboardCardSize
 }) {
   return (
-    <div className={cn('flex flex-col items-center gap-2', rank === 1 && 'shadow-glow')}>
+    <div className={cn(rank === 1 && 'shadow-glow')}>
       <CollectionPosterCard
         tag={entry.tag}
         count={entry.itemCount}
@@ -72,13 +72,10 @@ function LeaderboardCard({
         wholeCardLink
         featured={size === 'podium-lead'}
         rank={rank}
+        curator={entry.username}
         heightClass={SIZE_CLASSES[size]}
         stats={{ viewCount: entry.viewCount, cloneCount: entry.cloneCount }}
       />
-      <span className="inline-flex items-center gap-1 rounded-full bg-black/45 px-2 py-0.5 font-mono text-[10.5px] text-white/70 backdrop-blur-md">
-        <User size={10.5} aria-hidden="true" />
-        {entry.username}
-      </span>
     </div>
   )
 }

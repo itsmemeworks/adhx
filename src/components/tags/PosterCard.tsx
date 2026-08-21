@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Bookmark, Eye, Flame, Layers, Lock } from 'lucide-react'
+import { Bookmark, Eye, Flame, Layers, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 /** Discovery view/save stats for this collection (docs/specs/discovery-leaderboards.md §6).
@@ -27,12 +27,15 @@ export interface CollectionPosterCardProps {
   /** Card link target — the whole mosaic area clicks through to this
    * (or, with `wholeCardLink`, the entire card). */
   href: string
-  /** Top-right overlay (e.g. a PUBLIC/Private badge, optionally with a
-   * secondary action stacked under it). Rendered outside the card's Link so
-   * its own interactive children never trigger card navigation. INTERACTIVE
-   * — must not be combined with `wholeCardLink` (nesting a button/anchor
-   * inside an `<a>` is invalid HTML). `rank` below is the non-interactive
-   * alternative that IS safe with `wholeCardLink`. */
+  /** Top-right overlay — a single interactive visibility toggle (Public/
+   * Private) for `/tags`. Rendered outside the card's Link so its own
+   * interactive children never trigger card navigation. INTERACTIVE — must
+   * not be combined with `wholeCardLink` (nesting a button/anchor inside an
+   * `<a>` is invalid HTML). `rank` below is the non-interactive alternative
+   * that IS safe with `wholeCardLink`. When both `badge` and `curator` are
+   * passed, `badge` wins and `curator` is dropped — in practice `/tags`
+   * passes `badge` and the leaderboard passes `curator`; no caller passes
+   * both. */
   badge?: React.ReactNode
   /** Bottom-right actions (make-public pill, copy/open glass buttons, …).
    * INTERACTIVE — must not be combined with `wholeCardLink`, same reason as
@@ -56,13 +59,14 @@ export interface CollectionPosterCardProps {
   /** Discovery view/save stats, rendered as icon badges in the fixed footer
    * badge row (eye + views, bookmark + saves, and a clay "#N" chip when
    * `rank` is a number). Omit or pass `null` when there's nothing to show —
-   * existing callers are unaffected. Mutually exclusive with
-   * `privateStatsNote` (stats wins if both are somehow passed). */
+   * existing callers are unaffected. */
   stats?: PosterCardStats | null
-  /** When `stats` is absent, renders a "Private" icon badge in the same
-   * footer row the stat badges would occupy — for a private collection with
-   * no public numbers to show. */
-  privateStatsNote?: boolean
+  /** Top-right overlay badge showing who curated this collection — a
+   * non-interactive `User` icon + handle, safe to combine with
+   * `wholeCardLink` (the leaderboard's usage). Dropped when `badge` is also
+   * passed (see `badge`'s doc). Usernames are capped at 15 chars, so this is
+   * sized for that. */
+  curator?: string
   /** 1-based leaderboard position. Renders a NON-interactive top-left rank
    * medallion — a gold clay-grad pill for #1, a clay-grad circle for #2-3,
    * and a glass circle for #4+ (mirrors the old leaderboard-only
@@ -115,9 +119,12 @@ export function CollectionPosterCard({
   wholeCardLink = false,
   featured = false,
   stats = null,
-  privateStatsNote = false,
+  curator,
   rank = null,
 }: CollectionPosterCardProps): React.ReactElement {
+  // `badge` wins when both are passed (see the prop's doc) — in practice
+  // /tags passes `badge` and the leaderboard passes `curator`, never both.
+  const topRightOverlay = badge ?? (curator ? <CuratorBadge username={curator} /> : null)
   const mosaic = (
     <PosterMosaic tiles={tiles} count={count} tilesLoading={tilesLoading} featured={featured} />
   )
@@ -134,7 +141,7 @@ export function CollectionPosterCard({
     <div
       className={cn(
         'absolute inset-x-0 bottom-0 z-10 flex items-end justify-between gap-3',
-        featured ? 'p-6 sm:p-8' : 'p-4',
+        featured ? 'p-5' : 'p-4',
       )}
     >
       <div className="pointer-events-none min-w-0 flex-1">
@@ -143,7 +150,7 @@ export function CollectionPosterCard({
         <div
           className={cn(
             'truncate font-serif font-semibold text-white',
-            featured ? 'text-[30px] sm:text-[40px]' : 'text-[22px] sm:text-[24px]',
+            featured ? 'text-[26px] sm:text-[32px]' : 'text-[22px] sm:text-[24px]',
           )}
           style={{ textShadow: TEXT_SHADOW }}
         >
@@ -189,14 +196,7 @@ export function CollectionPosterCard({
                 </span>
               )}
             </>
-          ) : (
-            privateStatsNote && (
-              <span className={BADGE_CLASS}>
-                <Lock size={10.5} aria-hidden="true" />
-                Private
-              </span>
-            )
-          )}
+          ) : null}
         </div>
       </div>
       {children && (
@@ -222,7 +222,7 @@ export function CollectionPosterCard({
         {mosaic}
         {scrim}
         {typeof rank === 'number' && <RankMedallion rank={rank} />}
-        {badge && <div className="absolute right-3 top-3 z-10">{badge}</div>}
+        {topRightOverlay && <div className="absolute right-3 top-3 z-10">{topRightOverlay}</div>}
         {footer}
       </Link>
     )
@@ -239,10 +239,22 @@ export function CollectionPosterCard({
       </Link>
 
       {typeof rank === 'number' && <RankMedallion rank={rank} />}
-      {badge && <div className="absolute right-3 top-3 z-10">{badge}</div>}
+      {topRightOverlay && <div className="absolute right-3 top-3 z-10">{topRightOverlay}</div>}
 
       {footer}
     </div>
+  )
+}
+
+/** Top-right, non-interactive "curated by" badge for the leaderboard — same
+ * recipe as the other footer badges (`BADGE_CLASS`), just relocated. Safe
+ * with `wholeCardLink` since it carries no click handler. */
+function CuratorBadge({ username }: { username: string }) {
+  return (
+    <span className={BADGE_CLASS}>
+      <User size={10.5} aria-hidden="true" />
+      {username}
+    </span>
   )
 }
 

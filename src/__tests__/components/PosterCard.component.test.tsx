@@ -88,7 +88,7 @@ describe('CollectionPosterCard', () => {
     )
 
     const title = screen.getByText('#solo')
-    expect(title.className).toContain('text-[30px]')
+    expect(title.className).toContain('text-[26px]')
   })
 
   it('the post-count badge always renders, even with no other stats (fixed footer geometry)', () => {
@@ -282,21 +282,7 @@ describe('CollectionPosterCard', () => {
       expect(screen.queryByText(/^#\d/)).not.toBeInTheDocument()
     })
 
-    it('renders a Private icon badge in place of the stat badges when stats is absent', () => {
-      render(
-        <CollectionPosterCard
-          tag="cool-stuff"
-          count={2}
-          tiles={TILES}
-          href="/?tag=cool-stuff"
-          privateStatsNote
-        />,
-      )
-
-      expect(screen.getByText('Private')).toBeInTheDocument()
-    })
-
-    it('renders neither stat badges nor the private badge by default (byte-compatible with existing callers)', () => {
+    it('renders neither stat badges nor a "Private" note by default (byte-compatible with existing callers)', () => {
       render(
         <CollectionPosterCard tag="cool-stuff" count={2} tiles={TILES} href="/?tag=cool-stuff" />,
       )
@@ -305,6 +291,63 @@ describe('CollectionPosterCard', () => {
       expect(screen.queryByTitle(/views|saves/)).not.toBeInTheDocument()
       // The post-count badge is still there — row 2 is always rendered.
       expect(screen.getByTitle('2 posts')).toBeInTheDocument()
+    })
+  })
+
+  describe('curator badge (leaderboard usage)', () => {
+    it('renders a top-right User-icon badge with the handle when curator is passed', () => {
+      render(
+        <CollectionPosterCard
+          tag="cool-stuff"
+          count={1}
+          tiles={TILES}
+          href="/t/alice/cool-stuff"
+          wholeCardLink
+          curator="alice"
+        />,
+      )
+
+      expect(screen.getByText('alice')).toBeInTheDocument()
+    })
+
+    it('is non-interactive and safe to combine with wholeCardLink', () => {
+      render(
+        <CollectionPosterCard
+          tag="cool-stuff"
+          count={1}
+          tiles={TILES}
+          href="/t/alice/cool-stuff"
+          wholeCardLink
+          curator="alice"
+        />,
+      )
+
+      const link = screen.getByRole('link', { name: 'View #cool-stuff' })
+      expect(link.querySelectorAll('a, button')).toHaveLength(0)
+    })
+
+    it('badge wins over curator when both are passed', () => {
+      render(
+        <CollectionPosterCard
+          tag="cool-stuff"
+          count={1}
+          tiles={TILES}
+          href="/?tag=cool-stuff"
+          badge={<span data-testid="badge">Public</span>}
+          curator="alice"
+        />,
+      )
+
+      expect(screen.getByTestId('badge')).toBeInTheDocument()
+      expect(screen.queryByText('alice')).not.toBeInTheDocument()
+    })
+
+    it('renders no top-right overlay when neither badge nor curator is passed', () => {
+      render(
+        <CollectionPosterCard tag="cool-stuff" count={1} tiles={TILES} href="/?tag=cool-stuff" />,
+      )
+
+      expect(screen.queryByTestId('badge')).not.toBeInTheDocument()
     })
   })
 })

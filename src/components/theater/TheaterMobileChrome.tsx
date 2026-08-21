@@ -85,6 +85,8 @@ export interface TheaterMobileChromeProps {
   /** The signed-in viewer IS this collection's curator — hide the clone CTA, show Manage. */
   isCollectionOwner?: boolean
   onRequestSignIn?: () => void
+  /** Collection mode, non-owner viewers: the "Make your own" CTA (the top scrim's brand link) — opens the sign-in modal in place (authed non-owners are routed home instead, handled by the caller). */
+  onRequestMakeYourOwn?: () => void
   /** Triage mode (unified-theater-triage.md §2): swaps the top scrim's meta for a Collection↔Live tab switcher, and the bottom action row for Later/Tag/Delete/Done. */
   triage?: TheaterTriageChrome
 }
@@ -132,6 +134,7 @@ export function TheaterMobileChrome({
   onSaveCollection,
   isCollectionOwner = false,
   onRequestSignIn,
+  onRequestMakeYourOwn,
   triage,
 }: TheaterMobileChromeProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -321,14 +324,26 @@ export function TheaterMobileChrome({
           {/* One row: brand left, #tag right — the curator/count live in the
               peek bar's center label; a second scrim row was too much for
               phone widths (live review). No separate "Make your own" pill
-              fits here (see the desktop chrome's top bar), so the brand link
-              itself is the mobile equivalent — `/?start=1` teaches the
-              save-to-create-account mechanic instead of dumping a signed-out
-              visitor on the bare theater. */}
+              fits here (see the desktop chrome's top bar), so for non-owner
+              viewers the brand link itself doubles as that CTA — opening the
+              sign-in modal in place for a signed-out visitor (an authed
+              non-owner is just routed home; see `onRequestMakeYourOwn`). The
+              collection's own owner keeps a plain home link. */}
           <div className="flex items-center justify-between gap-3">
-            <a href="/?start=1" className="flex items-center" aria-label="ADHX home">
-              <MatterLogo size={16} className="[&>span]:text-white" />
-            </a>
+            {isCollectionOwner ? (
+              <a href="/" className="flex items-center" aria-label="ADHX home">
+                <MatterLogo size={16} className="[&>span]:text-white" />
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onRequestMakeYourOwn?.()}
+                className="flex items-center"
+                aria-label="Make your own collection"
+              >
+                <MatterLogo size={16} className="[&>span]:text-white" />
+              </button>
+            )}
             <span className="min-w-0 truncate text-[15px] font-bold text-white">
               #{collection.tag}
             </span>
@@ -705,7 +720,10 @@ export function TheaterMobileChrome({
               aria-label={declutter ? 'Show controls' : 'Hide controls'}
               className={PEEK_ICON_BTN}
             >
-              {declutter ? <Maximize2 size={16} /> : <Minimize2 size={16} />}
+              {/* De-cluttering EXPANDS the stage — the enter action (declutter
+                  false → true) reads outward (Maximize2); exiting reads
+                  inward (Minimize2), restoring the compact chrome. */}
+              {declutter ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
             </button>
             {kind === 'video' && (
               <button

@@ -32,6 +32,20 @@ vi.mock('@/lib/users/lookup', () => ({
   resolveUsernameAlias: vi.fn(() => Promise.resolve(null)),
 }))
 
+// Defaults to signed-out — the CTA-state describe block below overrides this
+// per case to cover own-profile / other-profile / signed-out.
+vi.mock('@/lib/auth/session', () => ({
+  getCurrentUserId: vi.fn(() => Promise.resolve(null)),
+}))
+
+// The real component opens a modal via client-side state; this route test
+// only needs to assert it's the CTA rendered (not the sign-in flow itself,
+// which is SignInModal's own concern), so render it as a plain identifiable
+// marker.
+vi.mock('@/components/auth/MakeYourOwnButton', () => ({
+  MakeYourOwnButton: ({ children }: { children: React.ReactNode }) => children,
+}))
+
 vi.mock('next/navigation', () => ({
   notFound: vi.fn(() => {
     throw new Error('NOT_FOUND')
@@ -52,6 +66,7 @@ vi.mock('@/components/tags', () => ({
 const SAMPLE_PROFILE = {
   status: 'ok' as const,
   profile: {
+    userId: 'user-curator',
     username: 'curator',
     displayName: 'The Curator',
     avatarUrl: 'https://example.com/avatar.jpg',
@@ -224,6 +239,66 @@ describe('Curator profile route: /t/[username]', () => {
       await expect(
         CuratorProfilePage({ params: Promise.resolve({ username: 'nobody' }) }),
       ).rejects.toThrow('NOT_FOUND')
+    })
+  })
+
+  // Owner review: "why am I seeing Make your own as an authenticated user?"
+  // — the top-right pill and the footer pitch block must react to whether
+  // the viewer is signed out, viewing their own profile, or signed in as
+  // someone else.
+  describe('auth-aware CTAs', () => {
+    it('signed out: shows the sign-up CTA in both the top pill and the footer', async () => {
+      const { getPublicProfile: mocked } = await import('@/lib/users/profile')
+      vi.mocked(mocked).mockResolvedValue(SAMPLE_PROFILE)
+      const { getCurrentUserId } = await import('@/lib/auth/session')
+      vi.mocked(getCurrentUserId).mockResolvedValue(null)
+
+      const CuratorProfilePage = (await import('@/app/t/[username]/page')).default
+      const result = await CuratorProfilePage({
+        params: Promise.resolve({ username: 'curator' }),
+      })
+      const html = renderToStaticMarkup(result as React.ReactElement)
+
+      expect(html).toContain('Make your own')
+      expect(html).toContain('Start your collection')
+      expect(html).not.toContain('Manage collections')
+    })
+
+    it("signed in, own profile: top pill becomes 'Manage collections' → /tags, footer pitch is gone", async () => {
+      const { getPublicProfile: mocked } = await import('@/lib/users/profile')
+      vi.mocked(mocked).mockResolvedValue(SAMPLE_PROFILE)
+      const { getCurrentUserId } = await import('@/lib/auth/session')
+      vi.mocked(getCurrentUserId).mockResolvedValue(SAMPLE_PROFILE.profile.userId)
+
+      const CuratorProfilePage = (await import('@/app/t/[username]/page')).default
+      const result = await CuratorProfilePage({
+        params: Promise.resolve({ username: 'curator' }),
+      })
+      const html = renderToStaticMarkup(result as React.ReactElement)
+
+      expect(html).toContain('Manage collections')
+      expect(html).toContain('href="/tags"')
+      expect(html).not.toContain('Make your own')
+      expect(html).not.toContain('Start your collection')
+      expect(html).not.toContain('Save now. Read never.')
+    })
+
+    it("signed in, someone else's profile: neither CTA renders", async () => {
+      const { getPublicProfile: mocked } = await import('@/lib/users/profile')
+      vi.mocked(mocked).mockResolvedValue(SAMPLE_PROFILE)
+      const { getCurrentUserId } = await import('@/lib/auth/session')
+      vi.mocked(getCurrentUserId).mockResolvedValue('some-other-user')
+
+      const CuratorProfilePage = (await import('@/app/t/[username]/page')).default
+      const result = await CuratorProfilePage({
+        params: Promise.resolve({ username: 'curator' }),
+      })
+      const html = renderToStaticMarkup(result as React.ReactElement)
+
+      expect(html).not.toContain('Make your own')
+      expect(html).not.toContain('Manage collections')
+      expect(html).not.toContain('Start your collection')
+      expect(html).not.toContain('Save now. Read never.')
     })
   })
 })

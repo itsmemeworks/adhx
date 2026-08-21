@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { TheaterMobileChrome } from '@/components/theater/TheaterMobileChrome'
 import type { TheaterItem, TheaterTriageChrome } from '@/components/theater/types'
 
@@ -176,5 +176,54 @@ describe('TheaterMobileChrome: text posts', () => {
   it('text posts never show Download (nothing sendable)', () => {
     render(<TheaterMobileChrome {...base} current={textItem()} />)
     expect(screen.queryByText('Download')).not.toBeInTheDocument()
+  })
+})
+
+// De-cluttering EXPANDS the stage (owner review: the previous icon was
+// backwards) — entering it reads outward (Maximize2); exiting reads inward
+// (Minimize2).
+describe('TheaterMobileChrome: de-clutter icon', () => {
+  it('shows the outward (Maximize2) icon before de-cluttering, then swaps to Minimize2', () => {
+    render(<TheaterMobileChrome {...base} current={videoItem()} />)
+    const toggle = screen.getByLabelText('Hide controls')
+    expect(toggle.querySelector('.lucide-maximize-2')).toBeInTheDocument()
+    expect(toggle.querySelector('.lucide-minimize-2')).not.toBeInTheDocument()
+
+    fireEvent.click(toggle)
+    const restored = screen.getByLabelText('Show controls')
+    expect(restored.querySelector('.lucide-minimize-2')).toBeInTheDocument()
+    expect(restored.querySelector('.lucide-maximize-2')).not.toBeInTheDocument()
+  })
+})
+
+describe('TheaterMobileChrome: collection mode "Make your own"', () => {
+  it('non-owner: the brand link opens the sign-in modal in place instead of navigating', () => {
+    const onRequestMakeYourOwn = vi.fn()
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={videoItem()}
+        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        isCollectionOwner={false}
+        onRequestMakeYourOwn={onRequestMakeYourOwn}
+      />,
+    )
+    const trigger = screen.getByLabelText('Make your own collection')
+    expect(trigger.tagName).toBe('BUTTON')
+    fireEvent.click(trigger)
+    expect(onRequestMakeYourOwn).toHaveBeenCalledTimes(1)
+  })
+
+  it('owner: the brand link is a plain home link, not the make-your-own trigger', () => {
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={videoItem()}
+        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        isCollectionOwner
+      />,
+    )
+    expect(screen.queryByLabelText('Make your own collection')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('ADHX home')).toHaveAttribute('href', '/')
   })
 })

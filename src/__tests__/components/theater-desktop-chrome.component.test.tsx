@@ -256,6 +256,79 @@ describe('DesktopStageChrome', () => {
 
     expect(screen.getByText('Not a supported link')).toBeInTheDocument()
   })
+
+  // De-cluttering EXPANDS the stage (owner review: the previous icon was
+  // backwards) — entering it reads outward (Maximize2); the reverse
+  // (Minimize2) lives on TheaterShell's floating restore button, not here.
+  it('the de-clutter toggle shows the outward (Maximize2) icon, never Minimize2', () => {
+    render(<DesktopStageChrome {...stageBase} current={videoItem()} />)
+    const toggle = screen.getByLabelText('Hide controls')
+    expect(toggle.querySelector('.lucide-maximize-2')).toBeInTheDocument()
+    expect(toggle.querySelector('.lucide-minimize-2')).not.toBeInTheDocument()
+  })
+
+  it('triage mode: the close button sits inside the tab-selector pill, not in the far-right cluster', () => {
+    const triage = {
+      tab: 'live' as const,
+      onTabChange: vi.fn(),
+      onDone: vi.fn(),
+      onLater: vi.fn(),
+      onDelete: vi.fn(),
+      onTag: vi.fn(),
+      onSave: vi.fn(),
+      onLiveTag: vi.fn(),
+      savedKeys: new Set<string>(),
+      remaining: 0,
+      streak: { current: 0, longest: 0 },
+      onClose: vi.fn(),
+    }
+    render(<DesktopStageChrome {...stageBase} current={videoItem()} triage={triage} />)
+
+    const closeBtn = screen.getByLabelText('Close triage')
+    const liveTab = screen.getByText('Live', { selector: 'button' })
+    // Same immediate pill container as the tab buttons (contained cluster).
+    expect(closeBtn.parentElement).toBe(liveTab.parentElement)
+    fireEvent.click(closeBtn)
+    expect(triage.onClose).toHaveBeenCalled()
+
+    // The far-right cluster (outside the tab pill) holds only the avatar
+    // menu and the de-clutter toggle — no stray close button there.
+    const declutterBtn = screen.getByLabelText('Hide controls')
+    const rightCluster = declutterBtn.parentElement!
+    expect(rightCluster.querySelector('[aria-label="Close triage"]')).toBeNull()
+  })
+
+  it('collection mode: "Make your own" opens the sign-in modal in place instead of navigating', () => {
+    const onRequestMakeYourOwn = vi.fn()
+    render(
+      <DesktopStageChrome
+        {...stageBase}
+        mode="collection"
+        current={videoItem()}
+        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        isCollectionOwner={false}
+        onRequestMakeYourOwn={onRequestMakeYourOwn}
+      />,
+    )
+    const cta = screen.getByText('Make your own')
+    expect(cta.tagName).toBe('BUTTON')
+    expect(cta.closest('a')).toBeNull()
+    fireEvent.click(cta)
+    expect(onRequestMakeYourOwn).toHaveBeenCalledTimes(1)
+  })
+
+  it('collection mode: the owner never sees "Make your own"', () => {
+    render(
+      <DesktopStageChrome
+        {...stageBase}
+        mode="collection"
+        current={videoItem()}
+        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        isCollectionOwner
+      />,
+    )
+    expect(screen.queryByText('Make your own')).not.toBeInTheDocument()
+  })
 })
 
 /**
