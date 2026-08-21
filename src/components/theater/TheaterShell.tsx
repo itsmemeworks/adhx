@@ -30,6 +30,7 @@ import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 // module may not exist yet at review time; see the "Save collection" CTA
 // below (collection mode only).
 import { SignInModal, useAuthMe } from '@/components/auth'
+import { StartOverlay } from './StartOverlay'
 // TagQuickPicker is built by a parallel agent (unified-theater-triage.md §4)
 // — imported per the shared contract for the triage "Tag" action.
 import { TagQuickPicker } from '@/components/tags'
@@ -293,6 +294,27 @@ export function computeLoopedPrev(length: number, index: number, loop: boolean):
   if (index === -1 || length === 0) return null
   if (index === 0) return loop ? length - 1 : null
   return index - 1
+}
+
+/**
+ * Pure: whether the first-intent teaching overlay (`StartOverlay`, `?start=1`
+ * — the "Make your own"/"Start your collection" CTAs) should be visible.
+ * Only the signed-out live theater (`mode === 'home'`) ever shows it — an
+ * already-authed visitor has a collection already, so this stays false the
+ * moment auth state resolves to authenticated, regardless of the query
+ * param or dismiss state. `authLoading` gates the initial render so an
+ * authed visitor never sees a flash of the overlay before their auth state
+ * is known.
+ */
+export function shouldShowStartOverlay(params: {
+  mode: TheaterMode
+  startRequested: boolean
+  dismissed: boolean
+  authLoading: boolean
+  authenticated: boolean
+}): boolean {
+  const { mode, startRequested, dismissed, authLoading, authenticated } = params
+  return mode === 'home' && startRequested && !dismissed && !authLoading && !authenticated
 }
 
 export function TheaterShell({
@@ -1018,7 +1040,7 @@ export function TheaterShell({
   // from a since-navigated-away item can never advance past the wrong post.
   useEffect(() => {
     function handleAdvance() {
-      if (showSignInRef.current) return
+      if (showSignInRef.current || startOverlayOpenRef.current) return
       // Triage's Collection tab never auto-advances — Done/Later/Delete are
       // the only ways forward there. A leftover mobile progress-line timer
       // from the same content type would otherwise fire this and silently
@@ -1095,6 +1117,12 @@ export function TheaterShell({
   useEffect(() => {
     showSignInRef.current = showSignIn
   }, [showSignIn])
+  // Mirrors showSignInRef — read fresh inside the auto-advance/onEnded
+  // callbacks below (declared before this ref exists in source order, but
+  // both only ever run post-render via effects/DOM events, by which point
+  // every hook in this render has already executed) without re-registering
+  // those listeners on every open/close of the overlay.
+  const startOverlayOpenRef = useRef(false)
   const [saveIntentOnLoad] = useState(
     () =>
       typeof window !== 'undefined' &&
@@ -1137,6 +1165,47 @@ export function TheaterShell({
       })
       .catch(() => {})
   }, [saveIntentOnLoad, mode, sharedItem, authMe.loading, authMe.me])
+
+  // First-intent teaching overlay (`?start=1` — the "Make your own"/"Start
+  // your collection" CTAs land here instead of bare `/`). Read once at first
+  // render, same pattern as `saveIntentOnLoad` above — the URL-sync effect
+  // rewrites the address bar for the picked lead item, so `start` must be
+  // captured before that can drop it. Only meaningful for the signed-out
+  // live theater (`mode === 'home'`); shared/collection/triage never show it.
+  const [startRequested] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('start') === '1',
+  )
+  const [startDismissed, setStartDismissed] = useState(false)
+  const startStrippedRef = useRef(false)
+
+  // Strip `start` from the address bar once auth state is known, regardless
+  // of whether the overlay ends up shown — an already-authed visitor has a
+  // collection already and never sees it, but the param is still noise in
+  // their URL. Mirrors the ?save=1 stripping effect elsewhere in this file.
+  useEffect(() => {
+    if (mode !== 'home' || !startRequested || startStrippedRef.current) return
+    if (authMe.loading) return
+    startStrippedRef.current = true
+    try {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('start')
+      const qs = url.searchParams.toString()
+      window.history.replaceState(null, '', url.pathname + (qs ? `?${qs}` : ''))
+    } catch {
+      // Blocked in some embedded/sandboxed contexts — never worth breaking playback over.
+    }
+  }, [mode, startRequested, authMe.loading])
+
+  const showStartOverlay = shouldShowStartOverlay({
+    mode,
+    startRequested,
+    dismissed: startDismissed,
+    authLoading: authMe.loading,
+    authenticated: !!authMe.me?.authenticated,
+  })
+  startOverlayOpenRef.current = showStartOverlay
 
   const performClone = useCallback(async () => {
     if (!collection) return
@@ -1299,7 +1368,7 @@ export function TheaterShell({
               muted={muted}
               onRequestUnmute={onRequestUnmute}
               onEnded={() => {
-                if (!showSignInRef.current) goNext()
+                if (!showSignInRef.current && !startOverlayOpenRef.current) goNext()
               }}
               photoCaption={false}
             />
@@ -1443,6 +1512,7 @@ export function TheaterShell({
           onClose={() => setTagPickerItem(null)}
         />
       )}
+      <StartOverlay open={showStartOverlay} onDismiss={() => setStartDismissed(true)} />
     </div>
   )
 }

@@ -227,7 +227,7 @@ export default async function CuratorProfilePage({ params }: Props) {
       <footer className="mx-auto flex max-w-5xl flex-col items-center gap-4 border-t border-white/10 px-5 pb-14 pt-10 text-center sm:px-11">
         <p className="text-sm text-white/40">Save now. Read never. Find always.</p>
         <Link
-          href="/"
+          href="/?start=1"
           className="inline-flex items-center rounded-full bg-clay-grad px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-opacity hover:opacity-90"
         >
           Start your collection

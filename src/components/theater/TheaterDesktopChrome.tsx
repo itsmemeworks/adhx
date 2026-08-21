@@ -499,7 +499,7 @@ export function DesktopStageChrome({
             ) : null
           ) : collection ? (
             !isCollectionOwner && (
-              <a href="/" className={GLASS}>
+              <a href="/?start=1" className={GLASS}>
                 Make your own
               </a>
             )

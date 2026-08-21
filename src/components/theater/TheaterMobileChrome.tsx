@@ -320,9 +320,13 @@ export function TheaterMobileChrome({
         >
           {/* One row: brand left, #tag right — the curator/count live in the
               peek bar's center label; a second scrim row was too much for
-              phone widths (live review). */}
+              phone widths (live review). No separate "Make your own" pill
+              fits here (see the desktop chrome's top bar), so the brand link
+              itself is the mobile equivalent — `/?start=1` teaches the
+              save-to-create-account mechanic instead of dumping a signed-out
+              visitor on the bare theater. */}
           <div className="flex items-center justify-between gap-3">
-            <a href="/" className="flex items-center" aria-label="ADHX home">
+            <a href="/?start=1" className="flex items-center" aria-label="ADHX home">
               <MatterLogo size={16} className="[&>span]:text-white" />
             </a>
             <span className="min-w-0 truncate text-[15px] font-bold text-white">
