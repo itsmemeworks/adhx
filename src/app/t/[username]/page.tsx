@@ -165,7 +165,7 @@ export default async function CuratorProfilePage({ params }: Props) {
         </Link>
       </nav>
 
-      <main className="mx-auto max-w-5xl px-5 pb-20 pt-10 sm:px-11">
+      <main className="mx-auto flex max-w-5xl flex-col items-center px-5 pb-16 pt-10 sm:px-11">
         <header className="flex flex-col items-center gap-4 text-center">
           {profile.avatarUrl ? (
             <img
@@ -188,20 +188,43 @@ export default async function CuratorProfilePage({ params }: Props) {
           </p>
         </header>
 
-        <div className="mt-12 grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
-          {profile.collections.map((c) => (
+        {profile.collections.length === 1 ? (
+          // Single collection: a showcase card, centered and scaled up so it
+          // fills a meaningful share of the viewport instead of floating
+          // small in a huge empty area.
+          <div className="mt-10 w-full max-w-xl sm:mt-14 sm:max-w-2xl">
             <CollectionPosterCard
-              key={c.tag}
-              tag={c.tag}
-              count={c.count}
-              tiles={c.tiles}
-              href={c.href}
+              tag={profile.collections[0].tag}
+              count={profile.collections[0].count}
+              tiles={profile.collections[0].tiles}
+              href={profile.collections[0].href}
+              wholeCardLink
+              featured
+              heightClass="h-[320px] sm:h-[420px] lg:h-[480px]"
+              className="w-full"
             />
-          ))}
-        </div>
+          </div>
+        ) : (
+          // Multiple collections: wrap in a centered flex row rather than a
+          // fixed-column grid, so a partial last row (e.g. 3 of 4 columns)
+          // still centers as a group instead of packing left.
+          <div className="mt-10 flex w-full flex-wrap justify-center gap-4 sm:mt-14 sm:gap-5">
+            {profile.collections.map((c) => (
+              <CollectionPosterCard
+                key={c.tag}
+                tag={c.tag}
+                count={c.count}
+                tiles={c.tiles}
+                href={c.href}
+                wholeCardLink
+                className="w-full sm:w-[calc(50%-10px)] lg:w-[calc(25%-15px)]"
+              />
+            ))}
+          </div>
+        )}
       </main>
 
-      <footer className="flex flex-col items-center gap-4 px-5 py-14 text-center">
+      <footer className="mx-auto flex max-w-5xl flex-col items-center gap-4 border-t border-white/10 px-5 pb-14 pt-10 text-center sm:px-11">
         <p className="text-sm text-white/40">Save now. Read never. Find always.</p>
         <Link
           href="/"
