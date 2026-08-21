@@ -34,6 +34,14 @@
  * the two apart. No rAF interpolation between heartbeats yet (v1) — upgrade
  * path if the fill looks steppy on-device.
  *
+ * Round 6 (owner on-device report: audio icon needed two presses to unmute):
+ * `infoDelivery`'s `muted` field can be STALE — a heartbeat reflecting the
+ * state from before our most recent `mute`/`unMute` command routinely lands
+ * right after we send it. `lastCommandedMutedRef` gates this: a heartbeat is
+ * only trusted when it agrees with what we last commanded; a contradicting
+ * one is logged (`?ytdebug=1`) and ignored rather than flipping the
+ * dock/peek-bar audio icon back for one render.
+ *
  * THE GOTCHA (CLAUDE.md, bitten before): an `aspect-[9/16]` box around an
  * absolutely-positioned iframe collapses to zero height. The fix is a
  * concrete height on the box itself, derived from the stage's own `h-full`
@@ -57,32 +65,8 @@ import { PlatformChip } from '@/components/matter'
 import { isValidVideoId, youtubeEmbedUrl } from '@/lib/media/youtube'
 import { previewPath } from '@/lib/activity/preview-path'
 import { StageFrame, StageHeadline, StageCTA } from './stage-primitives'
+import { logStage, logStageVerbose, YtDebugOverlay } from './YtDebugOverlay'
 import type { TheaterItem } from './types'
-
-/**
- * Round-2 diagnostic breadcrumb (owner re-tested on iPhone after round 1 and
- * YouTube Shorts still never started, even though `buildEmbedSrc` already
- * carries `autoplay=1&mute=1&playsinline=1` and `onReady` sends `playVideo`
- * — i.e. iOS appears not to honor the URL-level params reliably in this
- * embed, so the fix below stops trusting them and drives startup entirely
- * through explicit postMessage commands instead). Gate behind `?ytdebug=1`
- * so production stays quiet; the owner can flip it on from their phone
- * (append `?ytdebug=1` to the theater URL) if a further round is needed.
- */
-function isYtDebugEnabled(): boolean {
-  if (typeof window === 'undefined') return false
-  try {
-    return new URLSearchParams(window.location.search).get('ytdebug') === '1'
-  } catch {
-    return false
-  }
-}
-
-function logStage(...args: unknown[]) {
-  if (!isYtDebugEnabled()) return
-  // eslint-disable-next-line no-console
-  console.debug('[stage-yt]', ...args)
-}
 
 /** The embed's own origin — every inbound message is filtered to this, and
  * every outbound command is targeted at it. */
@@ -92,6 +76,22 @@ const YT_ORIGIN = 'https://www.youtube-nocookie.com'
  * (dead/region-blocked/embedding-disabled Short that still loads an iframe),
  * treat it exactly like `onError` and advance rather than stalling the queue. */
 const STALL_TIMEOUT_MS = 8_000
+
+/** Round 6 (`?ytdebug=1` overlay): human-readable labels for the IFrame
+ * protocol's numeric player states, so the on-screen ring buffer reads as
+ * "state -> playing (1)" instead of a bare number. */
+const YT_PLAYER_STATE_LABELS: Record<number, string> = {
+  '-1': 'unstarted',
+  0: 'ended',
+  1: 'playing',
+  2: 'paused',
+  3: 'buffering',
+  5: 'cued',
+}
+
+function describeYtPlayerState(state: number): string {
+  return `${YT_PLAYER_STATE_LABELS[state] ?? 'unknown'} (${state})`
+}
 
 /**
  * Round 3/4 history — there is deliberately NO time-based "did the unmute
@@ -228,6 +228,18 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
   // note above `requestUnmute`). Only an OBSERVED pause (state 2) while
   // this is true is treated as a rejection.
   const unmuteAwaitingConfirmRef = useRef(false)
+  // Round 6: what we last explicitly told the player to be (via `mute`/
+  // `unMute`) — the mute-state counterpart of `hasPlayedRef`'s "only trust
+  // evidence" discipline. `infoDelivery` streams frequently enough that a
+  // heartbeat reporting the OPPOSITE of our most recent command routinely
+  // arrives just after we send it — a message the player queued/sent
+  // *before* processing our command, not evidence the command failed (a
+  // real rejection is signalled only by an OBSERVED pause — see
+  // `applyPlayerState`'s state-2 branch). Without this guard, that stale
+  // echo overwrites `effectiveMuted` back to the pre-command value for one
+  // render, which the dock/peek-bar audio icon shows as the tap having
+  // "failed" — reported on-device as needing two presses to unmute.
+  const lastCommandedMutedRef = useRef(muted)
   // Round 2: the bounded mute+playVideo retry ladder, live only until the
   // player confirms state 1.
   const startupRetryTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
@@ -239,6 +251,12 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
   // comment): the latest `videoId`, so a stall timer can refuse to act if
   // it somehow fires after the displayed item has already moved on.
   const currentVideoIdRef = useRef(videoId)
+  // Round 6 (`?ytdebug=1` overlay): the last playerState value actually
+  // logged, so `applyPlayerState` can surface every genuine transition on
+  // the on-screen ring buffer without also logging the SAME state on every
+  // repeated `infoDelivery` heartbeat while it holds steady (e.g. dozens of
+  // `playerState: 1` reports a second while a video just plays normally).
+  const lastLoggedStateRef = useRef<number | null>(null)
   const [playing, setPlaying] = useState(false)
   const [effectiveMuted, setEffectiveMuted] = useState(muted)
   const [clientOrigin, setClientOrigin] = useState<string | null>(null)
@@ -377,6 +395,7 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
   // button shows the pulsing-muted affordance again.
   const fallBackToMuted = useCallback(() => {
     unmuteAwaitingConfirmRef.current = false
+    lastCommandedMutedRef.current = true
     postCommand('mute')
     setEffectiveMuted(true)
     postCommand('playVideo')
@@ -405,6 +424,7 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
       }
       pendingUnmuteRef.current = false
       unmuteAwaitingConfirmRef.current = true
+      lastCommandedMutedRef.current = false
       logStage(`requestUnmute(${source}) -> unMute`)
       postCommand('unMute')
       // Optimistic — corrected back to true by `fallBackToMuted()` only on
@@ -427,6 +447,7 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     pendingUnmuteRef.current = false
     pendingUnmuteSourceRef.current = 'catchup'
     unmuteAwaitingConfirmRef.current = false
+    lastLoggedStateRef.current = null
     clearStartupRetryTimers()
     setPlaying(false)
     setNeverStarted(false)
@@ -435,6 +456,7 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     // desired one, so the audio affordance doesn't flash "unmuted" before
     // any unmute has actually been attempted (let alone confirmed).
     setEffectiveMuted(true)
+    lastCommandedMutedRef.current = true
     if (!videoId) return
     armStallTimer(videoId)
     return () => {
@@ -453,6 +475,7 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     if (muted) {
       pendingUnmuteRef.current = false
       unmuteAwaitingConfirmRef.current = false
+      lastCommandedMutedRef.current = true
       setEffectiveMuted(true)
       postCommand('mute')
     } else {
@@ -491,9 +514,19 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
         return
       }
       if (!data || typeof data !== 'object') return
-      logStage('message', data.event, data.info)
+      // The generic entry log is console-only (`logStageVerbose`) — this
+      // fires on EVERY inbound postMessage, including `infoDelivery`
+      // heartbeats that can arrive several times a second while a video
+      // plays, which would otherwise burn the on-screen overlay's whole
+      // 8-line window on repeats. The transitions that actually matter are
+      // logged separately below, only when something changes.
+      logStageVerbose('message', data.event, data.info)
 
       const applyPlayerState = (state: number | null) => {
+        if (state !== null && state !== lastLoggedStateRef.current) {
+          lastLoggedStateRef.current = state
+          logStage(`state -> ${describeYtPlayerState(state)}`)
+        }
         if (state === 1) {
           hasPlayedRef.current = true
           clearStallTimer()
@@ -585,7 +618,22 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
           if (info && typeof info === 'object') {
             if (typeof info.playerState === 'number') applyPlayerState(info.playerState)
             if (typeof info.muted === 'boolean') {
-              setEffectiveMuted(info.muted)
+              // Round 6 (owner on-device report: audio icon needed two
+              // presses to unmute): `infoDelivery` streams frequently enough
+              // that a heartbeat reflecting the state from BEFORE our most
+              // recent `mute`/`unMute` command routinely lands right after we
+              // send it. Only trust this field as new information when it
+              // AGREES with what we last commanded — a heartbeat reporting
+              // the OPPOSITE is a stale echo, not evidence the command
+              // failed (see `lastCommandedMutedRef`'s doc comment; a real
+              // rejection is only ever an OBSERVED pause, handled below).
+              if (info.muted === lastCommandedMutedRef.current) {
+                setEffectiveMuted(info.muted)
+              } else {
+                logStage(
+                  `infoDelivery muted:${info.muted} contradicts last command (${lastCommandedMutedRef.current}) — ignored as stale`,
+                )
+              }
               // Real evidence, checked as soon as it arrives: a heartbeat
               // reporting `muted:false` while we're watching an unmute
               // request is the player itself confirming it took. Not a
@@ -712,6 +760,7 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     hasPlayedRef.current = false
     pendingUnmuteRef.current = false
     unmuteAwaitingConfirmRef.current = false
+    lastLoggedStateRef.current = null
     clearStartupRetryTimers()
     setPlaying(false)
     setEffectiveMuted(true)
@@ -724,82 +773,91 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
   if (neverStarted) {
     const href = previewPath(item.platform, item.author, item.bookmarkId || '')
     return (
-      <StageFrame>
-        {item.thumbnailUrl ? (
-          <>
-            <img
-              src={item.thumbnailUrl}
-              alt=""
-              referrerPolicy="no-referrer"
-              className="absolute inset-0 h-full w-full object-contain opacity-60"
-            />
-            <div className="absolute inset-0 bg-[#08070a]/55" aria-hidden />
-          </>
-        ) : null}
-        <div className="relative flex flex-col items-center gap-4">
-          <button
-            type="button"
-            onClick={handleTapToPlay}
-            className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-md"
-            aria-label="Play video"
-          >
-            <Play size={26} fill="currentColor" />
-          </button>
-          <StageCTA href={href} />
-        </div>
-      </StageFrame>
+      <>
+        <StageFrame>
+          {item.thumbnailUrl ? (
+            <>
+              <img
+                src={item.thumbnailUrl}
+                alt=""
+                referrerPolicy="no-referrer"
+                className="absolute inset-0 h-full w-full object-contain opacity-60"
+              />
+              <div className="absolute inset-0 bg-[#08070a]/55" aria-hidden />
+            </>
+          ) : null}
+          <div className="relative flex flex-col items-center gap-4">
+            <button
+              type="button"
+              onClick={handleTapToPlay}
+              className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-md"
+              aria-label="Play video"
+            >
+              <Play size={26} fill="currentColor" />
+            </button>
+            <StageCTA href={href} />
+          </div>
+        </StageFrame>
+        <YtDebugOverlay />
+      </>
     )
   }
 
   if (!videoId) {
     const href = previewPath(item.platform, item.author, item.bookmarkId || '')
     return (
-      <StageFrame>
-        {item.thumbnailUrl ? (
-          <>
-            <img
-              src={item.thumbnailUrl}
-              alt=""
-              referrerPolicy="no-referrer"
-              className="absolute inset-0 h-full w-full object-contain opacity-60"
-            />
-            <div className="absolute inset-0 bg-[#08070a]/55" aria-hidden />
-          </>
-        ) : null}
-        <div className="relative flex max-w-xl flex-col items-center gap-4 px-6 text-center">
-          <PlatformChip platform="youtube" />
-          {text && <StageHeadline>{text}</StageHeadline>}
-          <StageCTA href={href} />
-        </div>
-      </StageFrame>
+      <>
+        <StageFrame>
+          {item.thumbnailUrl ? (
+            <>
+              <img
+                src={item.thumbnailUrl}
+                alt=""
+                referrerPolicy="no-referrer"
+                className="absolute inset-0 h-full w-full object-contain opacity-60"
+              />
+              <div className="absolute inset-0 bg-[#08070a]/55" aria-hidden />
+            </>
+          ) : null}
+          <div className="relative flex max-w-xl flex-col items-center gap-4 px-6 text-center">
+            <PlatformChip platform="youtube" />
+            {text && <StageHeadline>{text}</StageHeadline>}
+            <StageCTA href={href} />
+          </div>
+        </StageFrame>
+        <YtDebugOverlay />
+      </>
     )
   }
 
   return (
-    <div className="flex h-full w-full flex-col bg-[#08070a]">
-      <div className="flex min-h-0 flex-1 items-center justify-center p-4 sm:p-8">
-        <div className="relative aspect-[9/16] h-[min(82vh,100%)] max-w-full overflow-hidden rounded-2xl bg-black shadow-2xl">
-          {clientOrigin && (
-            <iframe
-              key={`${videoId}-${reloadNonce}`}
-              id={playerId}
-              ref={iframeRef}
-              src={buildEmbedSrc(videoId, clientOrigin)}
-              title={text || 'YouTube Short'}
-              className="absolute inset-0 h-full w-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              referrerPolicy="strict-origin-when-cross-origin"
-              allowFullScreen
-              onLoad={handleLoad}
-            />
-          )}
+    <>
+      <div className="flex h-full w-full flex-col bg-[#08070a]">
+        <div className="flex min-h-0 flex-1 items-center justify-center p-4 sm:p-8">
+          <div className="relative aspect-[9/16] h-[min(82vh,100%)] max-w-full overflow-hidden rounded-2xl bg-black shadow-2xl">
+            {clientOrigin && (
+              <iframe
+                key={`${videoId}-${reloadNonce}`}
+                id={playerId}
+                ref={iframeRef}
+                src={buildEmbedSrc(videoId, clientOrigin)}
+                title={text || 'YouTube Short'}
+                className="absolute inset-0 h-full w-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                allowFullScreen
+                onLoad={handleLoad}
+              />
+            )}
+          </div>
         </div>
+        {text && (
+          <div className="flex-shrink-0 px-6 pb-6 sm:px-10 sm:pb-8">
+            <p className="line-clamp-1 text-center text-sm text-white/70">{text}</p>
+          </div>
+        )}
       </div>
-      {text && (
-        <div className="flex-shrink-0 px-6 pb-6 sm:px-10 sm:pb-8">
-          <p className="line-clamp-1 text-center text-sm text-white/70">{text}</p>
-        </div>
-      )}
-    </div>
+      <YtDebugOverlay />
+    </>
   )
 }

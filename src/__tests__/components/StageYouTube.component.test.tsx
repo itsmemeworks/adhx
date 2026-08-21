@@ -4,6 +4,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, fireEvent, act } from '@testing-library/react'
 import { StageYouTube } from '@/components/theater/StageYouTube'
+import { resetYtDebugLines } from '@/components/theater/YtDebugOverlay'
 import type { TheaterItem } from '@/components/theater/types'
 
 /**
@@ -736,6 +737,101 @@ describe('StageYouTube', () => {
     })
   })
 
+  // Round 6: owner on-device report — the audio icon needed TWO presses to
+  // unmute a fresh YouTube item. Root cause: `infoDelivery` streams so
+  // frequently that a heartbeat reflecting the state from BEFORE our
+  // `unMute` command routinely arrives right after we send it — the old
+  // code trusted every heartbeat's `muted` field unconditionally, so that
+  // stale `muted:true` echo flipped `effectiveMuted` (and the broadcast
+  // `theater-muted-state` the chrome's icon reads) back to muted for one
+  // render, reading as the tap having failed.
+  describe('round 6: a stale infoDelivery muted echo does not undo a fresh command', () => {
+    it('ignores a muted:true heartbeat that contradicts a just-sent unMute (ignores the stale echo entirely)', () => {
+      const mutedEvents: boolean[] = []
+      const handler = (e: Event) => mutedEvents.push((e as CustomEvent).detail.muted)
+      window.addEventListener('theater-muted-state', handler)
+
+      const { container, rerender } = render(
+        <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+      postFromPlayer(fakeWindow, { event: 'onReady' })
+      postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
+
+      // The audio-button tap: shell flips `muted` false -> unMute sent,
+      // effectiveMuted optimistically flips false.
+      rerender(<StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />)
+      expect(mutedEvents.at(-1)).toBe(false)
+
+      // A heartbeat that was queued by the player BEFORE it processed our
+      // unMute command — still reports the pre-command muted:true state.
+      postFromPlayer(fakeWindow, { event: 'infoDelivery', info: { playerState: 1, muted: true } })
+
+      // Must NOT flip back to muted — that flicker is exactly what read as
+      // "the tap didn't work" on-device.
+      expect(mutedEvents.at(-1)).toBe(false)
+
+      // The real confirmation, once it lands, is trusted normally.
+      postFromPlayer(fakeWindow, { event: 'infoDelivery', info: { playerState: 1, muted: false } })
+      expect(mutedEvents.at(-1)).toBe(false)
+
+      window.removeEventListener('theater-muted-state', handler)
+    })
+
+    it('ignores a muted:false heartbeat that contradicts a just-sent mute command', () => {
+      const mutedEvents: boolean[] = []
+      const handler = (e: Event) => mutedEvents.push((e as CustomEvent).detail.muted)
+      window.addEventListener('theater-muted-state', handler)
+
+      const { container, rerender } = render(
+        <StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+      postFromPlayer(fakeWindow, { event: 'onReady' })
+      postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
+      expect(mutedEvents.at(-1)).toBe(false)
+
+      // User re-mutes: shell flips `muted` true -> mute sent, effectiveMuted
+      // flips true immediately (muting is always trusted immediately).
+      rerender(<StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />)
+      expect(mutedEvents.at(-1)).toBe(true)
+
+      // A stale heartbeat still reporting the pre-command unmuted state.
+      postFromPlayer(fakeWindow, { event: 'infoDelivery', info: { playerState: 1, muted: false } })
+
+      expect(mutedEvents.at(-1)).toBe(true)
+
+      window.removeEventListener('theater-muted-state', handler)
+    })
+
+    it('still accepts a real observed pause as rejection evidence even with the new guard in place', () => {
+      const { container, rerender } = render(
+        <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { postMessage, fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+      postFromPlayer(fakeWindow, { event: 'onReady' })
+      postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
+
+      rerender(<StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />)
+      postMessage.mockClear()
+
+      // A genuine observed pause (state 2) — real rejection evidence,
+      // unaffected by the stale-echo guard (which only gates the `muted`
+      // field on infoDelivery, not onStateChange).
+      postFromPlayer(fakeWindow, { event: 'onStateChange', info: 2 })
+
+      const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+      expect(funcs).toContain('mute')
+      expect(funcs).toContain('playVideo')
+    })
+  })
+
   it('falls back to the poster/preview-link stage for an invalid video id', () => {
     const { container } = render(
       <StageYouTube
@@ -999,6 +1095,7 @@ describe('StageYouTube debug logging (?ytdebug=1 gate)', () => {
     vi.useRealTimers()
     window.history.replaceState(null, '', originalUrl)
     vi.restoreAllMocks()
+    resetYtDebugLines()
   })
 
   it('stays quiet by default', () => {
@@ -1024,5 +1121,28 @@ describe('StageYouTube debug logging (?ytdebug=1 gate)', () => {
 
     expect(debugSpy).toHaveBeenCalled()
     expect(debugSpy.mock.calls.every(([tag]) => tag === '[stage-yt]')).toBe(true)
+  })
+
+  // Round 6: the same breadcrumbs also render on-screen (no Mac tether
+  // needed to read iOS Safari's console) — verifies the actual protocol run
+  // surfaces its key moments in `<YtDebugOverlay/>`, not just `console.debug`.
+  it('surfaces the on-screen overlay with curated protocol moments, not the raw per-message noise', () => {
+    window.history.replaceState(null, '', '/?ytdebug=1')
+
+    const { container } = render(<StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />)
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postFromPlayer(fakeWindow, { event: 'onReady' })
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
+
+    // The curated moments show up on-screen...
+    expect(container.textContent).toContain('iframe onLoad')
+    expect(container.textContent).toContain('onReady -> mute, playVideo')
+    expect(container.textContent).toContain('state -> playing (1)')
+
+    // ...but the raw per-message entry log (fired for every inbound
+    // postMessage, including this one) does not — it's console-only.
+    expect(container.textContent).not.toContain('onStateChange')
   })
 })
