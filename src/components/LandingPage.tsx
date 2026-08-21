@@ -16,11 +16,7 @@ import {
   Send,
   Link2,
 } from 'lucide-react'
-import {
-  parseShareUrl,
-  isSafeInternalPath,
-  matchTikTokShortLink,
-} from '@/lib/utils/parse-share-url'
+import { parseShareUrl, navigateToPastedLink } from '@/lib/utils/parse-share-url'
 import { getPlatformType, type PlatformType } from '@/lib/platform'
 import { LiveDot, ConnectWithX } from '@/components/matter'
 import { PublicNav } from '@/components/PublicNav'
@@ -81,43 +77,19 @@ export function LandingPage() {
     window.location.href = '/api/auth/twitter'
   }
 
-  // URL detection + the on-ADHX preview path are owned by the shared
-  // detectPlatformPost/parseShareUrl helpers (src/lib/platform/url.ts,
-  // src/lib/utils/parse-share-url.ts) — same source of truth as
-  // PreviewAnotherLink and the PWA share target, so X/Instagram/TikTok/
-  // YouTube (incl. TikTok short links) all resolve identically here.
-  const parseAndNavigate = (url: string): boolean => {
-    const trimmed = url.trim()
-
-    // TikTok short links resolve via an /api route that 307s to the preview
-    // server-side — the client router can't follow that cross-route redirect,
-    // so this branch alone needs a hard navigation. Build the URL from a
-    // constant prefix/suffix with only the extracted link passed through
-    // `encodeURIComponent`, rather than assigning a pre-concatenated string
-    // (threaded in from another module) straight to `location.href`.
-    const shortLink = matchTikTokShortLink(trimmed)
-    if (shortLink) {
-      window.location.href = `/api/tiktok/resolve?url=${encodeURIComponent(shortLink)}&go=1`
-      return true
-    }
-
-    // Everything else is a real app route — use the client router, not a
-    // DOM navigation sink.
-    const result = parseShareUrl(trimmed)
-    if (result && isSafeInternalPath(result.path)) {
-      router.push(result.path)
-      return true
-    }
-    return false
-  }
-
+  // URL detection + the on-ADHX preview path, and the navigation itself, are
+  // owned by the shared detectPlatformPost/parseShareUrl/navigateToPastedLink
+  // helpers (src/lib/platform/url.ts, src/lib/utils/parse-share-url.ts) —
+  // same source of truth as PreviewAnotherLink, PasteLinkButton, and the PWA
+  // share target, so X/Instagram/TikTok/YouTube (incl. TikTok short links)
+  // all resolve identically here.
   const handleTweetUrlChange = (value: string) => {
     setTweetUrl(value)
     setUrlError('')
 
     // Auto-navigate as soon as the pasted text resolves to a known post/video.
     if (parseShareUrl(value)) {
-      parseAndNavigate(value)
+      navigateToPastedLink(router, value)
     }
   }
 
@@ -125,7 +97,7 @@ export function LandingPage() {
     e.preventDefault()
     setUrlError('')
 
-    if (!parseAndNavigate(tweetUrl)) {
+    if (!navigateToPastedLink(router, tweetUrl)) {
       setUrlError(
         "That's not an X, Instagram, TikTok, or YouTube link. But we appreciate the mystery.",
       )

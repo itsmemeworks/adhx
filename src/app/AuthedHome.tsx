@@ -21,6 +21,7 @@ import { Loader2, CheckCircle2, MessageSquare } from 'lucide-react'
 import { TheaterShell } from '@/components/theater/TheaterShell'
 import type { TriageTab } from '@/components/theater/types'
 import { PasteToPreview } from '@/components/PasteToPreview'
+import { PasteLinkButton } from '@/components/PasteLinkButton'
 import { useTheme } from '@/lib/theme/context'
 import { ConnectWithX } from '@/components/matter'
 import { parseSyncErrorEvent, type SyncErrorCode } from '@/lib/sync/messages'
@@ -1040,6 +1041,16 @@ function FeedPageContent(): React.ReactElement {
           onTagSelectChange={setTagSelectTag}
         />
       </ErrorBoundary>
+
+      {/* Mobile one-tap save (Tier 1): touch Safari/Chrome have no paste
+          gesture, so ⌘V's `PasteToPreview` above is desktop-only in
+          practice — this is the mobile equivalent, "Copy Link" in any share
+          sheet → open ADHX → tap here. Hidden at `sm`+, where the header's
+          own affordances (and ⌘V) cover it; kept out of the FilterBar's
+          pill row so it doesn't scroll out of view as just another chip. */}
+      <div className="px-4 pt-3 sm:hidden">
+        <PasteLinkButton className="w-full justify-center" />
+      </div>
 
       {/* Collection/Live now live in the top bar (Matter); Live opens the
           theater via `open-theater`, which we listen for below. */}

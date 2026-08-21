@@ -80,3 +80,43 @@ export function matchTikTokShortLink(url: string): string | null {
 export function isSafeInternalPath(path: string): boolean {
   return path.startsWith('/') && !path.startsWith('//') && !path.includes(':')
 }
+
+/** The subset of Next's `useRouter()` this module needs — kept minimal so callers don't have to import Next's router type. */
+export interface PastedLinkRouter {
+  push: (href: string) => void
+}
+
+/**
+ * Resolve pasted/typed text to its on-ADHX destination and navigate there.
+ * Returns whether a supported link was found (and navigation started).
+ *
+ * The single source of truth for the CodeQL-hardened navigation shape used
+ * by every "paste a link" surface (the landing page's hero input,
+ * `PreviewAnotherLink`, and `PasteLinkButton`) — previously duplicated
+ * byte-for-byte across `LandingPage.tsx` and `PreviewAnotherLink.tsx`. A
+ * TikTok short link resolves via an `/api` route that 307s to the preview
+ * server-side — the client router can't follow that cross-route redirect, so
+ * that branch alone needs a hard navigation, built from a constant
+ * prefix/suffix with only the extracted link passed through
+ * `encodeURIComponent` (never a pre-concatenated string assigned straight to
+ * `location.href`). Everything else is a real app route, navigated via the
+ * given router and guarded by `isSafeInternalPath` — clipboard/pasted text is
+ * user-controlled input flowing into navigation, the exact sink CodeQL flags,
+ * so the guard stays even though `parseShareUrl` only ever builds safe paths.
+ */
+export function navigateToPastedLink(router: PastedLinkRouter, raw: string): boolean {
+  const trimmed = raw.trim()
+
+  const shortLink = matchTikTokShortLink(trimmed)
+  if (shortLink) {
+    window.location.href = `/api/tiktok/resolve?url=${encodeURIComponent(shortLink)}&go=1`
+    return true
+  }
+
+  const result = parseShareUrl(trimmed)
+  if (result && isSafeInternalPath(result.path)) {
+    router.push(result.path)
+    return true
+  }
+  return false
+}

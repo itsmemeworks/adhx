@@ -3,6 +3,7 @@
 import { Clipboard, RefreshCw, TrendingUp } from 'lucide-react'
 import { useAuthMe } from '@/components/auth'
 import { ConnectWithX, PlatformGlyph } from '@/components/matter'
+import { PasteLinkButton } from '@/components/PasteLinkButton'
 import { cn } from '@/lib/utils'
 
 /**
@@ -44,11 +45,26 @@ export function EmptyAccountOnboarding(): React.ReactElement {
           />
         )}
 
-        <OnboardingAction
-          icon={<Clipboard className="w-5 h-5" />}
-          title="Paste a link"
-          description="Copy an X, Instagram, TikTok, or YouTube link, then paste it (⌘V / Ctrl+V) anywhere on this page — we'll show a preview to save."
-        />
+        {/* Desktop: ⌘V/Ctrl+V paste-to-preview (global listener, see
+            PasteToPreview). Mobile Safari has no paste gesture, so the
+            mobile build swaps this for the actual one-tap Paste link
+            button instead of a description of a shortcut that doesn't
+            apply there. */}
+        <div className="hidden sm:block">
+          <OnboardingAction
+            icon={<Clipboard className="w-5 h-5" />}
+            title="Paste a link"
+            description="Copy an X, Instagram, TikTok, or YouTube link, then paste it (⌘V / Ctrl+V) anywhere on this page — we'll show a preview to save."
+          />
+        </div>
+        <div className="sm:hidden">
+          <OnboardingAction
+            icon={<Clipboard className="w-5 h-5" />}
+            title="Paste a link"
+            description="Copy an X, Instagram, TikTok, or YouTube link from any share sheet, then tap below."
+            actionSlot={<PasteLinkButton className="mt-3 w-full justify-center" />}
+          />
+        </div>
 
         <OnboardingAction
           icon={<TrendingUp className="w-5 h-5" />}
@@ -68,6 +84,14 @@ interface OnboardingActionProps {
   href?: string
   onClick?: () => void
   primary?: boolean
+  /**
+   * An interactive control rendered below the description, for actions that
+   * need real state (e.g. `PasteLinkButton`'s idle/resolving/error clipboard
+   * flow) rather than a static `href`/`onClick`. Never combine with
+   * `href`/`onClick` — the card itself must stay a plain, non-interactive
+   * wrapper so the nested control isn't inside another link/button.
+   */
+  actionSlot?: React.ReactNode
 }
 
 function OnboardingAction({
@@ -77,6 +101,7 @@ function OnboardingAction({
   href,
   onClick,
   primary = false,
+  actionSlot,
 }: OnboardingActionProps): React.ReactElement {
   const content = (
     <div className="flex items-start gap-3 text-left">
@@ -91,6 +116,7 @@ function OnboardingAction({
       <span className="flex-1 min-w-0">
         {title && <span className="block font-semibold text-ink text-[14.5px]">{title}</span>}
         <span className="block text-[13px] text-ink-2 mt-0.5">{description}</span>
+        {actionSlot}
       </span>
     </div>
   )

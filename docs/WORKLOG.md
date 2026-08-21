@@ -4,6 +4,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-21 — Mobile save: paste-link button + signed-out burger menu
+
+- **Why**: owner wants iOS users WITHOUT the shortcut to save fast (share sheet "Copy Link" is universal) and signed-out mobile visitors to have nav (avatar slot was empty).
+- **Paste link**: new `PasteLinkButton` (clipboard read on tap → resolve → preview; input fallback when clipboard denied/unavailable; ~3s self-clearing error). Mounted: AuthedHome mobile strip (sm:hidden), empty-account onboarding card (mobile variant via `actionSlot`), theater mobile top scrim iconOnly (home+shared modes). Navigation goes through new shared `navigateToPastedLink()` in parse-share-url.ts — the CodeQL-hardened shape (router.push + constant-prefix/encodeURIComponent tiktok-resolve rebuild), deduplicated out of LandingPage/PreviewAnotherLink.
+- **Burger menu**: `TheaterAvatarMenu` gained `allowSignedOut` + `onRequestSignIn` — signed-out home/shared theaters (mobile AND desktop, same slot) show a burger: Theater (/ — close-only when already there), Leaderboard, Sign in (opens the shell's SignInModal). Triage/collection mounts unchanged (default false). NO Trending entry (deprecated as user nav per owner).
+- **State**: 1946 tests green (+20), build clean. Owner to eyeball on staging: AuthedHome button strip placement + theater iconOnly fallback panel position.
+
 ## 2026-08-21 — Staging v1.52.0 test round: 3 fixes (undo toast, collection audio, deleted tweets)
 
 - **Why**: 4-agent Chrome/curl sweep of staging post-#375 + live owner mobile testing. SEO checks 10/10 pass; theater/preview/authed surfaces pass. Owner found 2 bugs; Sentry surfaced a 3rd.

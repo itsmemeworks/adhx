@@ -572,7 +572,14 @@ export function DesktopStageChrome({
             </>
           )}
 
-          <TheaterAvatarMenu />
+          {/* Signed-out visitors on desktop only get the burger fallback in
+              home/shared mode — collection mode already has its own
+              "Make your own" CTA above, and triage is always reached
+              authed — matching the mobile chrome's `allowSignedOut` gate. */}
+          <TheaterAvatarMenu
+            onRequestSignIn={onRequestSignIn}
+            allowSignedOut={!triage && !collection}
+          />
 
           {/* De-cluttering EXPANDS the stage, so the enter action reads
               outward (Maximize2); the floating restore button rendered by

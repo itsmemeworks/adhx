@@ -92,7 +92,11 @@ describe('FeedGrid empty states', () => {
     mockAuthMe(EMAIL_ONLY_ME)
     render(<FeedGrid {...baseProps} items={[]} unreadOnly stats={{ total: 0, unread: 0 }} />)
 
-    expect(await screen.findByText('Paste a link')).toBeInTheDocument()
+    // Desktop (⌘V copy) and mobile (PasteLinkButton) variants both render in
+    // jsdom regardless of their `hidden sm:*`/`sm:hidden` classes — jsdom
+    // doesn't evaluate media-query-gated visibility, so both are present at
+    // once. Assert there's at least one rather than picking a single match.
+    expect((await screen.findAllByText('Paste a link')).length).toBeGreaterThan(0)
     const trendingLink = await screen.findByRole('link', { name: /explore what.?s trending/i })
     expect(trendingLink).toHaveAttribute('href', '/trending')
   })

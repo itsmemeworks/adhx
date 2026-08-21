@@ -1,11 +1,24 @@
-import { describe, it, expect } from 'vitest'
-import { parseShareUrl, extractSharedUrl, isSafeInternalPath } from '@/lib/utils/parse-share-url'
+/**
+ * @vitest-environment jsdom
+ */
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import {
+  parseShareUrl,
+  extractSharedUrl,
+  isSafeInternalPath,
+  navigateToPastedLink,
+  type PastedLinkRouter,
+} from '@/lib/utils/parse-share-url'
 
 /**
  * Share Page URL Parsing Tests
  *
- * Tests the URL parsing utility used by the PWA Share Target /share page.
- * Maps a shared link from any supported platform to its ADHX preview path.
+ * Tests the URL parsing utility used by the PWA Share Target /share page,
+ * plus `navigateToPastedLink` — the shared navigation sink every "paste a
+ * link" surface (LandingPage, PreviewAnotherLink, PasteLinkButton) routes
+ * through. jsdom is needed here (not the file's original `node` default)
+ * because that helper touches `window.location.href` for the TikTok
+ * short-link hard-navigation branch.
  */
 
 describe('parseShareUrl — X / Twitter', () => {
@@ -143,5 +156,73 @@ describe('isSafeInternalPath — guards window.location assignment', () => {
 
   it('rejects a path that is missing the leading slash', () => {
     expect(isSafeInternalPath('elonmusk/status/1')).toBe(false)
+  })
+})
+
+describe('navigateToPastedLink — the shared paste-a-link navigation sink', () => {
+  const makeRouter = (): PastedLinkRouter & { push: ReturnType<typeof vi.fn> } => ({
+    push: vi.fn<(href: string) => void>(),
+  })
+
+  beforeEach(() => {
+    // A plain object standing in for `window.location` — assigning `.href`
+    // on the real jsdom Location attempts a navigation and logs a noisy
+    // "not implemented" error; this just records the value instead.
+    Object.defineProperty(window, 'location', {
+      value: { ...window.location, href: '' },
+      writable: true,
+    })
+  })
+
+  it('navigates a tweet URL via the router', () => {
+    const router = makeRouter()
+    expect(navigateToPastedLink(router, 'https://x.com/naval/status/2064012969239859490')).toBe(
+      true,
+    )
+    expect(router.push).toHaveBeenCalledWith('/naval/status/2064012969239859490')
+    expect(window.location.href).toBe('')
+  })
+
+  it('navigates an Instagram reel URL via the router', () => {
+    const router = makeRouter()
+    expect(navigateToPastedLink(router, 'https://www.instagram.com/reels/DXVsqQ7CSXw')).toBe(true)
+    expect(router.push).toHaveBeenCalledWith('/reels/DXVsqQ7CSXw')
+  })
+
+  it('navigates a canonical TikTok video URL via the router', () => {
+    const router = makeRouter()
+    expect(
+      navigateToPastedLink(router, 'https://www.tiktok.com/@sophieraiin/video/7619017281691045134'),
+    ).toBe(true)
+    expect(router.push).toHaveBeenCalledWith('/@sophieraiin/video/7619017281691045134')
+  })
+
+  it('navigates a YouTube Short URL via the router', () => {
+    const router = makeRouter()
+    expect(navigateToPastedLink(router, 'https://youtu.be/Y9aytLYBajw')).toBe(true)
+    expect(router.push).toHaveBeenCalledWith('/shorts/Y9aytLYBajw')
+  })
+
+  it('rebuilds a TikTok short link into a hard navigation instead of router.push', () => {
+    const router = makeRouter()
+    expect(navigateToPastedLink(router, 'https://vm.tiktok.com/ZMABcd123/')).toBe(true)
+    expect(router.push).not.toHaveBeenCalled()
+    expect(window.location.href).toBe(
+      '/api/tiktok/resolve?url=https%3A%2F%2Fvm.tiktok.com%2FZMABcd123&go=1',
+    )
+  })
+
+  it('returns false and navigates nowhere for unsupported text', () => {
+    const router = makeRouter()
+    expect(navigateToPastedLink(router, 'just some ordinary text, no link here')).toBe(false)
+    expect(router.push).not.toHaveBeenCalled()
+    expect(window.location.href).toBe('')
+  })
+
+  it('refuses a javascript: URL smuggled in as pasted text', () => {
+    const router = makeRouter()
+    expect(navigateToPastedLink(router, 'javascript:alert(1)')).toBe(false)
+    expect(router.push).not.toHaveBeenCalled()
+    expect(window.location.href).toBe('')
   })
 })
