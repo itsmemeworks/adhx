@@ -29,7 +29,7 @@ import {
   Clock,
   Loader2,
   Clipboard,
-  Minimize2,
+  Maximize2,
   Download as DownloadIcon,
   Link as LinkIcon,
   LogIn,
@@ -89,6 +89,8 @@ export interface DesktopStageChromeProps {
   /** The signed-in viewer IS this collection's curator — hide clone/make-your-own, show Manage. */
   isCollectionOwner?: boolean
   onRequestSignIn?: () => void
+  /** Collection mode, non-owner viewers: the "Make your own" CTA — opens the sign-in modal in place (authed non-owners are routed home instead, handled by the caller). */
+  onRequestMakeYourOwn?: () => void
   /** Triage mode (unified-theater-triage.md §2): swaps the top bar's Live/paste-input for a Collection↔Live tab switcher, and the bottom-right action set for Later/Tag/Delete/Done. */
   triage?: TheaterTriageChrome
 }
@@ -316,6 +318,7 @@ export function DesktopStageChrome({
   onSaveCollection,
   isCollectionOwner = false,
   onRequestSignIn,
+  onRequestMakeYourOwn,
   triage,
 }: DesktopStageChromeProps) {
   const [pasteValue, setPasteValue] = useState('')
@@ -448,7 +451,11 @@ export function DesktopStageChrome({
           {triage ? (
             <>
               <span className="h-5 w-px flex-none bg-white/20" aria-hidden />
-              <div className="inline-flex flex-none rounded-full bg-white/10 p-1 text-[12.5px] font-semibold">
+              {/* The close button lives INSIDE this same pill container, right
+                  of the tab buttons — owner review: it should read as part of
+                  one contained cluster with the tab selector, not stranded
+                  among the far-right avatar/de-clutter controls. */}
+              <div className="inline-flex flex-none items-center gap-0.5 rounded-full bg-white/10 p-1 text-[12.5px] font-semibold">
                 {TRIAGE_TAB_ORDER.map((t) => (
                   <button
                     key={t}
@@ -466,6 +473,14 @@ export function DesktopStageChrome({
                     {TRIAGE_TAB_LABEL[t]}
                   </button>
                 ))}
+                <button
+                  type="button"
+                  onClick={triage.onClose}
+                  aria-label="Close triage"
+                  className="ml-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full text-white/60 transition-colors hover:bg-white/15 hover:text-white"
+                >
+                  <X size={14} />
+                </button>
               </div>
             </>
           ) : collection ? (
@@ -507,9 +522,9 @@ export function DesktopStageChrome({
             ) : null
           ) : collection ? (
             !isCollectionOwner && (
-              <a href="/?start=1" className={GLASS}>
+              <button type="button" onClick={() => onRequestMakeYourOwn?.()} className={GLASS}>
                 Make your own
-              </a>
+              </button>
             )
           ) : (
             <>
@@ -559,24 +574,16 @@ export function DesktopStageChrome({
 
           <TheaterAvatarMenu />
 
-          {triage && (
-            <button
-              type="button"
-              onClick={triage.onClose}
-              aria-label="Close triage"
-              className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-full border border-white/[.18] bg-white/[.08] text-white backdrop-blur-md"
-            >
-              <X size={16} />
-            </button>
-          )}
-
+          {/* De-cluttering EXPANDS the stage, so the enter action reads
+              outward (Maximize2); the floating restore button rendered by
+              TheaterShell when decluttered uses Minimize2 for the reverse. */}
           <button
             type="button"
             onClick={onToggleDeclutter}
             aria-label="Hide controls"
             className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-full border border-white/[.18] bg-white/[.08] text-white backdrop-blur-md"
           >
-            <Minimize2 size={16} />
+            <Maximize2 size={16} />
           </button>
         </div>
       </div>

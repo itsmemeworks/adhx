@@ -362,26 +362,58 @@ function toPosterTiles(items: FeedItem[] | undefined): PosterTile[] {
   })
 }
 
-function PublicBadge() {
+/**
+ * The single top-right visibility control — both the state indicator AND the
+ * toggle action (owner review: "what's the point in having Make Public in a
+ * different place from Make Private?"). Public renders the green-tinted
+ * badge recipe as a button that makes it private; private renders a neutral
+ * glass badge as a button that makes it public.
+ */
+function VisibilityToggle({
+  isPublic,
+  busy,
+  onMakePublic,
+  onMakePrivate,
+}: {
+  isPublic: boolean
+  busy: boolean
+  onMakePublic: () => void
+  onMakePrivate: () => void
+}) {
+  if (isPublic) {
+    return (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          onMakePrivate()
+        }}
+        disabled={busy}
+        aria-label="Make private"
+        title="Make private"
+        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide transition-opacity hover:opacity-80 disabled:opacity-60"
+        style={{ backgroundColor: 'rgba(74,168,120,.28)', color: '#8fd9b0' }}
+      >
+        <Globe size={10} />
+        Public
+      </button>
+    )
+  }
   return (
-    <span
-      className="inline-flex items-center rounded-full px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide"
-      style={{ backgroundColor: 'rgba(74,168,120,.28)', color: '#8fd9b0' }}
-    >
-      Public
-    </span>
-  )
-}
-
-function PrivateBadge() {
-  return (
-    <span
-      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide text-white/55 backdrop-blur-md"
-      style={{ backgroundColor: 'rgba(0,0,0,.35)' }}
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation()
+        onMakePublic()
+      }}
+      disabled={busy}
+      aria-label="Make public"
+      title="Make public"
+      className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/50 px-2 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide text-white/70 backdrop-blur-md transition-colors hover:text-white disabled:opacity-60"
     >
       <Lock size={10} />
       Private
-    </span>
+    </button>
   )
 }
 
@@ -411,26 +443,6 @@ function TagPosterCard({
   const tiles = toPosterTiles(previewItems)
   const tilesLoading = previewLoading && previewItems === undefined
 
-  const badge = tag.isPublic ? (
-    <div className="flex flex-col items-end gap-1.5">
-      <PublicBadge />
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation()
-          onMakePrivate()
-        }}
-        disabled={busy}
-        className="flex items-center gap-1 text-[10.5px] font-medium text-white/55 transition-colors hover:text-white/85 disabled:opacity-60"
-      >
-        <Lock size={10} />
-        Make private
-      </button>
-    </div>
-  ) : (
-    <PrivateBadge />
-  )
-
   return (
     <div className="flex flex-col gap-2">
       <CollectionPosterCard
@@ -439,15 +451,22 @@ function TagPosterCard({
         tiles={tiles}
         tilesLoading={tilesLoading}
         href={`/?tag=${encodeURIComponent(tag.tag)}`}
-        badge={badge}
+        badge={
+          <VisibilityToggle
+            isPublic={!!tag.isPublic}
+            busy={busy}
+            onMakePublic={onMakePublic}
+            onMakePrivate={onMakePrivate}
+          />
+        }
+        rank={tag.isPublic ? (tag.rank ?? null) : null}
         stats={
           tag.isPublic
-            ? { viewCount: tag.viewCount ?? 0, cloneCount: tag.cloneCount ?? 0, rank: tag.rank }
+            ? { viewCount: tag.viewCount ?? 0, cloneCount: tag.cloneCount ?? 0, rank: null }
             : null
         }
-        privateStatsNote={!tag.isPublic}
       >
-        {tag.isPublic ? (
+        {tag.isPublic && (
           <>
             <button
               type="button"
@@ -471,16 +490,6 @@ function TagPosterCard({
               </a>
             )}
           </>
-        ) : (
-          <button
-            type="button"
-            onClick={onMakePublic}
-            disabled={busy}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-clay-grad px-3.5 text-[12.5px] font-semibold text-white shadow-glow transition-opacity hover:opacity-90 disabled:opacity-60"
-          >
-            <Globe size={13} />
-            Make public
-          </button>
         )}
       </CollectionPosterCard>
 

@@ -4,6 +4,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-21 — Review rounds 2–3: /leaderboard, theater controls, card de-dup, make-your-own journey (PRs #369 + this)
+
+- **#369 (merged)**: theater My-Collection tab Twitter videos obey shared mute/pause (controlled `muted` on VideoPlayer + transport events, event-time element resolution — HLS untouched); tabs = Live · My Collection (Live default); leaderboard page moved /collections→**/leaderboard** (all old URLs 308; /api/collections/* machine endpoints unchanged); Header renders nothing on leaderboard routes until auth resolves (kills signed-out flash).
+- **This PR — /tags card de-dup**: ONE top-right visibility toggle pill (Globe "Public"/Lock "Private", click toggles) replaces PUBLIC badge + Make-private link + footer Private badge + the overlapping clay Make-public pill; rank = top-left medallion (footer flame chip gone — rank shows once everywhere); `privateStatsNote` prop deleted.
+- **Podium card**: curator = top-right User-icon badge on the card (below-card text row deleted); featured spacing pulled into family (p-5, 26/32px title).
+- **Make-your-own journey**: CTA opens SignInModal IN PLACE (title "Make your own collection", returnTo /) — theater chromes use the shell's single modal w/ intent variant; profile uses new MakeYourOwnButton. Profile CTAs auth-aware: signed-out=modal, owner="Manage collections"→/tags, other-authed=nothing. `?start=1`/StartOverlay DELETED (no producers left; also fixed latent bug: mobile brand logo sent owners to /?start=1).
+- **De-clutter icons un-inverted** (Maximize2=enter, Minimize2=exit); desktop close-X moved into the tab-selector pill cluster (far right = avatar + de-clutter only).
+- **Flake note**: Header.component.test "avatar menu open-theater" failed once in a full run, passes alone + on re-run — same isolation-flake family as #356.
+
 ## 2026-08-21 — Discovery polish round: card unification, nav rework, grammar fixes (live owner review)
 
 - **Why**: Owner reviewed staging — cards inconsistent across /tags, /t/{u}, /collections; tag title shifted with stat-line presence; wordy overlays losing legibility; double header on authed /collections; nav confusion; triage drifted from "mark read"; /tags search dead; alias redirect missed their own rename.

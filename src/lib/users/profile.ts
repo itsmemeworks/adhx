@@ -62,6 +62,10 @@ export interface ProfileStats {
 }
 
 export interface PublicProfile {
+  /** The profile owner's account id — used by the page to compare against
+   * the viewer's session id (is this the signed-in visitor's own profile?).
+   * Never rendered; internal to the route's auth-aware CTA logic. */
+  userId: string
   /** Canonical-cased username. */
   username: string
   displayName: string | null
@@ -219,6 +223,7 @@ async function fetchPublicProfile(usernameParam: string): Promise<PublicProfileR
     return {
       status: 'ok',
       profile: {
+        userId,
         username,
         displayName,
         avatarUrl,
@@ -331,6 +336,7 @@ async function fetchPublicProfile(usernameParam: string): Promise<PublicProfileR
   return {
     status: 'ok',
     profile: {
+      userId,
       username,
       displayName,
       avatarUrl,

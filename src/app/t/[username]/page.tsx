@@ -3,9 +3,19 @@ import Link from 'next/link'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { getPublicProfile, type PublicProfileResult } from '@/lib/users/profile'
 import { resolveUsernameAlias } from '@/lib/users/lookup'
+import { getCurrentUserId } from '@/lib/auth/session'
 import { CollectionPosterCard } from '@/components/tags'
+import { MakeYourOwnButton } from '@/components/auth/MakeYourOwnButton'
 import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
 import { Bookmark, Eye, Flame } from 'lucide-react'
+
+/** Ghost-pill styling shared by the top-right "Make your own"/"Manage
+ * collections" CTA, whichever of the two renders. */
+const TOP_PILL_CLASS =
+  'inline-flex items-center rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur transition-colors hover:bg-white/20'
+/** Clay CTA styling for the footer "Start your collection" pitch block. */
+const FOOTER_CTA_CLASS =
+  'inline-flex items-center rounded-full bg-clay-grad px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-opacity hover:opacity-90'
 
 /**
  * `/t/{username}` — public curator profile page.
@@ -101,7 +111,7 @@ function formatMemberSince(iso: string | null): string | null {
 
 export default async function CuratorProfilePage({ params }: Props) {
   const { username } = await params
-  const result = await loadProfile(username)
+  const [result, viewerId] = await Promise.all([loadProfile(username), getCurrentUserId()])
   if (result.status === 'redirect') permanentRedirect(`/t/${result.username}`)
   if (result.status === 'not_found') notFound()
 
@@ -109,6 +119,13 @@ export default async function CuratorProfilePage({ params }: Props) {
   const canonicalUrl = `${BASE_URL}/t/${profile.username}`
   const memberSince = formatMemberSince(profile.memberSince)
   const monogram = profile.username.charAt(0).toUpperCase()
+  // Three states for both the top-right pill and the footer pitch block
+  // (owner review: "why am I seeing Make your own as an authenticated
+  // user?"): signed out gets the sign-up CTAs; the profile's own owner gets
+  // a "Manage collections" shortcut instead and no footer pitch; a visitor
+  // signed in as someone ELSE gets no substitute CTA at all.
+  const isSignedOut = viewerId == null
+  const isOwnProfile = viewerId != null && viewerId === profile.userId
 
   const jsonLd = buildCollectionPageLd({
     name: `@${profile.username} — collections on ADHX`,
@@ -158,12 +175,15 @@ export default async function CuratorProfilePage({ params }: Props) {
             ADHX
           </span>
         </a>
-        <Link
-          href="/?start=1"
-          className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur transition-colors hover:bg-white/20"
-        >
-          Make your own
-        </Link>
+        {isSignedOut ? (
+          <MakeYourOwnButton className={TOP_PILL_CLASS} returnTo="/">
+            Make your own
+          </MakeYourOwnButton>
+        ) : isOwnProfile ? (
+          <Link href="/tags" className={TOP_PILL_CLASS}>
+            Manage collections
+          </Link>
+        ) : null}
       </nav>
 
       <main className="mx-auto flex max-w-5xl flex-col items-center px-5 pb-16 pt-10 sm:px-11">
@@ -258,15 +278,14 @@ export default async function CuratorProfilePage({ params }: Props) {
         )}
       </main>
 
-      <footer className="mx-auto flex max-w-5xl flex-col items-center gap-4 border-t border-white/10 px-5 pb-14 pt-10 text-center sm:px-11">
-        <p className="text-sm text-white/40">Save now. Read never. Find always.</p>
-        <Link
-          href="/?start=1"
-          className="inline-flex items-center rounded-full bg-clay-grad px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-opacity hover:opacity-90"
-        >
-          Start your collection
-        </Link>
-      </footer>
+      {isSignedOut && (
+        <footer className="mx-auto flex max-w-5xl flex-col items-center gap-4 border-t border-white/10 px-5 pb-14 pt-10 text-center sm:px-11">
+          <p className="text-sm text-white/40">Save now. Read never. Find always.</p>
+          <MakeYourOwnButton className={FOOTER_CTA_CLASS} returnTo="/">
+            Start your collection
+          </MakeYourOwnButton>
+        </footer>
+      )}
     </div>
   )
 }

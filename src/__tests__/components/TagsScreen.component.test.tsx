@@ -2,9 +2,15 @@
  * @vitest-environment jsdom
  *
  * TagsScreen (`/tags`) component tests (unified-theater-triage.md §4) —
- * covers the poster-card grid render (counts + Public badge), "Make public"
- * (PATCH make-public + copy the friendly URL), "Make private", the empty
- * state, and the card's `?tag=` link target.
+ * covers the poster-card grid render (counts + the Public/Private visibility
+ * toggle), toggling to public (PATCH make-public + copy the friendly URL),
+ * toggling to private, the empty state, and the card's `?tag=` link target.
+ *
+ * The visibility toggle is a SINGLE top-right control that is both the state
+ * indicator and the action (owner review: "what's the point in having Make
+ * Public in a different place from Make Private?") — public tags show a
+ * "Public" pill that makes the tag private on click, private tags show a
+ * "Private" pill that makes it public on click.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, fireEvent, screen, waitFor } from '@testing-library/react'
@@ -83,7 +89,7 @@ describe('TagsClient', () => {
     expect(screen.getByRole('link', { name: 'View #work' })).toHaveAttribute('href', '/?tag=work')
   })
 
-  it('"Make public" PATCHes make-public and copies the friendly URL', async () => {
+  it('clicking the "Private" toggle PATCHes make-public and copies the friendly URL', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.assign(navigator, { clipboard: { writeText } })
 
@@ -101,7 +107,7 @@ describe('TagsClient', () => {
     render(<TagsClient />)
 
     await waitFor(() => expect(screen.getByText('#work')).toBeInTheDocument())
-    fireEvent.click(screen.getByText('Make public'))
+    fireEvent.click(screen.getByRole('button', { name: 'Make public' }))
 
     await waitFor(() => expect(screen.getByText('Public')).toBeInTheDocument())
     await waitFor(() =>
@@ -123,7 +129,7 @@ describe('TagsClient', () => {
     render(<TagsClient />)
 
     await waitFor(() => expect(screen.getByText('#work')).toBeInTheDocument())
-    fireEvent.click(screen.getByText('Make public'))
+    fireEvent.click(screen.getByRole('button', { name: 'Make public' }))
 
     await waitFor(() => expect(screen.getByText('User not found')).toBeInTheDocument())
     expect(screen.queryByText('Public')).not.toBeInTheDocument()
@@ -143,7 +149,7 @@ describe('TagsClient', () => {
     render(<TagsClient />)
 
     await waitFor(() => expect(screen.getByText('#work')).toBeInTheDocument())
-    fireEvent.click(screen.getByText('Make public'))
+    fireEvent.click(screen.getByRole('button', { name: 'Make public' }))
 
     await waitFor(() => expect(screen.getByText(/couldn't reach the server/i)).toBeInTheDocument())
   })
@@ -165,7 +171,7 @@ describe('TagsClient', () => {
     render(<TagsClient />)
 
     await waitFor(() => expect(screen.getByText('#work')).toBeInTheDocument())
-    fireEvent.click(screen.getByText('Make public'))
+    fireEvent.click(screen.getByRole('button', { name: 'Make public' }))
 
     // The card flips public regardless of the clipboard outcome.
     await waitFor(() => expect(screen.getByText('Public')).toBeInTheDocument())
@@ -301,7 +307,7 @@ describe('TagsClient', () => {
     expect(screen.queryByText('#work')).not.toBeInTheDocument()
   })
 
-  it('"Make private" PATCHes isPublic: false and drops the Public chip', async () => {
+  it('clicking the "Public" toggle PATCHes isPublic: false and drops the Public chip', async () => {
     global.fetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
       if (url === '/api/tags' && !init) {
         return jsonResponse({
@@ -318,8 +324,39 @@ describe('TagsClient', () => {
     render(<TagsClient />)
 
     await waitFor(() => expect(screen.getByText('Public')).toBeInTheDocument())
-    fireEvent.click(screen.getByText('Make private'))
+    fireEvent.click(screen.getByRole('button', { name: 'Make private' }))
 
     await waitFor(() => expect(screen.queryByText('Public')).not.toBeInTheDocument())
+  })
+
+  it('renders the rank medallion (top-left) instead of a footer rank chip for a charting public tag', async () => {
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/tags') {
+        return jsonResponse({
+          tags: [
+            {
+              tag: 'work',
+              count: 3,
+              isPublic: true,
+              shareUrl: '/t/tester/work',
+              viewCount: 42,
+              cloneCount: 5,
+              rank: 2,
+            },
+          ],
+        })
+      }
+      return jsonResponse({})
+    }) as unknown as typeof fetch
+
+    const { container } = render(<TagsClient />)
+
+    await waitFor(() => expect(screen.getByText('#work')).toBeInTheDocument())
+    // The rank medallion renders top-left...
+    const medallion = container.querySelector('.left-3.top-3')
+    expect(medallion).toHaveTextContent('2')
+    // ...and the footer badge row has no separate "#2" rank chip (it would
+    // otherwise be overlapped by the copy/open action buttons).
+    expect(screen.queryByTitle('#2 this week')).not.toBeInTheDocument()
   })
 })

@@ -10,7 +10,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Maximize2 } from 'lucide-react'
+import { Minimize2 } from 'lucide-react'
 import type { FeedItem } from '@/components/feed/types'
 import { Stage } from './Stage'
 import { TriageStage } from './TriageStage'
@@ -30,7 +30,6 @@ import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 // module may not exist yet at review time; see the "Save collection" CTA
 // below (collection mode only).
 import { SignInModal, useAuthMe } from '@/components/auth'
-import { StartOverlay } from './StartOverlay'
 // TagQuickPicker is built by a parallel agent (unified-theater-triage.md §4)
 // — imported per the shared contract for the triage "Tag" action.
 import { TagQuickPicker } from '@/components/tags'
@@ -294,27 +293,6 @@ export function computeLoopedPrev(length: number, index: number, loop: boolean):
   if (index === -1 || length === 0) return null
   if (index === 0) return loop ? length - 1 : null
   return index - 1
-}
-
-/**
- * Pure: whether the first-intent teaching overlay (`StartOverlay`, `?start=1`
- * — the "Make your own"/"Start your collection" CTAs) should be visible.
- * Only the signed-out live theater (`mode === 'home'`) ever shows it — an
- * already-authed visitor has a collection already, so this stays false the
- * moment auth state resolves to authenticated, regardless of the query
- * param or dismiss state. `authLoading` gates the initial render so an
- * authed visitor never sees a flash of the overlay before their auth state
- * is known.
- */
-export function shouldShowStartOverlay(params: {
-  mode: TheaterMode
-  startRequested: boolean
-  dismissed: boolean
-  authLoading: boolean
-  authenticated: boolean
-}): boolean {
-  const { mode, startRequested, dismissed, authLoading, authenticated } = params
-  return mode === 'home' && startRequested && !dismissed && !authLoading && !authenticated
 }
 
 export function TheaterShell({
@@ -1040,7 +1018,7 @@ export function TheaterShell({
   // from a since-navigated-away item can never advance past the wrong post.
   useEffect(() => {
     function handleAdvance() {
-      if (showSignInRef.current || startOverlayOpenRef.current) return
+      if (showSignInRef.current) return
       // Triage's Collection tab never auto-advances — Done/Later/Delete are
       // the only ways forward there. A leftover mobile progress-line timer
       // from the same content type would otherwise fire this and silently
@@ -1098,6 +1076,12 @@ export function TheaterShell({
     !!collection && !!authMe.me?.user?.username && authMe.me.user.username === collection.curator
   const [saveStatus, setSaveStatus] = useState<SaveCollectionStatus>('idle')
   const [showSignIn, setShowSignIn] = useState(false)
+  // Which flavor of the shared sign-in modal is open — a single modal
+  // instance below (mounted once) renders different copy/returnTo per
+  // intent, rather than each chrome/CTA mounting its own SignInModal.
+  const [signInIntent, setSignInIntent] = useState<
+    'save-post' | 'save-collection' | 'make-your-own'
+  >('save-post')
   const pendingSaveRef = useRef(false)
   const autoSaveTriggeredRef = useRef(false)
 
@@ -1117,12 +1101,6 @@ export function TheaterShell({
   useEffect(() => {
     showSignInRef.current = showSignIn
   }, [showSignIn])
-  // Mirrors showSignInRef — read fresh inside the auto-advance/onEnded
-  // callbacks below (declared before this ref exists in source order, but
-  // both only ever run post-render via effects/DOM events, by which point
-  // every hook in this render has already executed) without re-registering
-  // those listeners on every open/close of the overlay.
-  const startOverlayOpenRef = useRef(false)
   const [saveIntentOnLoad] = useState(
     () =>
       typeof window !== 'undefined' &&
@@ -1134,6 +1112,7 @@ export function TheaterShell({
     const item = currentRef.current
     const path = theaterUrlSyncPath(item)
     setSignInReturnTo(path ? `${path}?save=1` : null)
+    setSignInIntent('save-post')
     setShowSignIn(true)
   }, [])
 
@@ -1166,47 +1145,6 @@ export function TheaterShell({
       .catch(() => {})
   }, [saveIntentOnLoad, mode, sharedItem, authMe.loading, authMe.me])
 
-  // First-intent teaching overlay (`?start=1` — the "Make your own"/"Start
-  // your collection" CTAs land here instead of bare `/`). Read once at first
-  // render, same pattern as `saveIntentOnLoad` above — the URL-sync effect
-  // rewrites the address bar for the picked lead item, so `start` must be
-  // captured before that can drop it. Only meaningful for the signed-out
-  // live theater (`mode === 'home'`); shared/collection/triage never show it.
-  const [startRequested] = useState(
-    () =>
-      typeof window !== 'undefined' &&
-      new URLSearchParams(window.location.search).get('start') === '1',
-  )
-  const [startDismissed, setStartDismissed] = useState(false)
-  const startStrippedRef = useRef(false)
-
-  // Strip `start` from the address bar once auth state is known, regardless
-  // of whether the overlay ends up shown — an already-authed visitor has a
-  // collection already and never sees it, but the param is still noise in
-  // their URL. Mirrors the ?save=1 stripping effect elsewhere in this file.
-  useEffect(() => {
-    if (mode !== 'home' || !startRequested || startStrippedRef.current) return
-    if (authMe.loading) return
-    startStrippedRef.current = true
-    try {
-      const url = new URL(window.location.href)
-      url.searchParams.delete('start')
-      const qs = url.searchParams.toString()
-      window.history.replaceState(null, '', url.pathname + (qs ? `?${qs}` : ''))
-    } catch {
-      // Blocked in some embedded/sandboxed contexts — never worth breaking playback over.
-    }
-  }, [mode, startRequested, authMe.loading])
-
-  const showStartOverlay = shouldShowStartOverlay({
-    mode,
-    startRequested,
-    dismissed: startDismissed,
-    authLoading: authMe.loading,
-    authenticated: !!authMe.me?.authenticated,
-  })
-  startOverlayOpenRef.current = showStartOverlay
-
   const performClone = useCallback(async () => {
     if (!collection) return
     setSaveStatus((s) => {
@@ -1220,6 +1158,7 @@ export function TheaterShell({
       )
       if (res.status === 401) {
         pendingSaveRef.current = true
+        setSignInIntent('save-collection')
         setShowSignIn(true)
         setSaveStatus('idle')
         return
@@ -1235,11 +1174,26 @@ export function TheaterShell({
     if (!collection) return
     if (!isCollectionAuthed) {
       pendingSaveRef.current = true
+      setSignInIntent('save-collection')
       setShowSignIn(true)
       return
     }
     void performClone()
   }, [collection, isCollectionAuthed, performClone])
+
+  // "Make your own" (collection mode, non-owner viewers): an already-authed
+  // visitor doesn't need the sign-up pitch — that CTA just takes them home to
+  // start their own collection. A signed-out visitor gets the sign-in modal
+  // IN PLACE (owner review: navigating them away to `/?start=1` left them
+  // "with no idea what they're supposed to do").
+  const handleMakeYourOwn = useCallback(() => {
+    if (isCollectionAuthed) {
+      window.location.assign('/')
+      return
+    }
+    setSignInIntent('make-your-own')
+    setShowSignIn(true)
+  }, [isCollectionAuthed])
 
   // If sign-in completes while the modal is open (in-modal magic link, no
   // reload), fire the deferred clone as soon as `useAuthMe()` reflects it.
@@ -1368,7 +1322,7 @@ export function TheaterShell({
               muted={muted}
               onRequestUnmute={onRequestUnmute}
               onEnded={() => {
-                if (!showSignInRef.current && !startOverlayOpenRef.current) goNext()
+                if (!showSignInRef.current) goNext()
               }}
               photoCaption={false}
             />
@@ -1395,7 +1349,7 @@ export function TheaterShell({
             aria-label="Show controls"
             className="absolute right-4 top-4 z-20 hidden h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md transition-colors hover:bg-black/70 lg:flex"
           >
-            <Maximize2 size={18} />
+            <Minimize2 size={18} />
           </button>
         )}
         <TheaterMobileChrome
@@ -1419,6 +1373,7 @@ export function TheaterShell({
           saveStatus={saveStatus}
           onSaveCollection={handleSaveCollection}
           onRequestSignIn={openSignIn}
+          onRequestMakeYourOwn={handleMakeYourOwn}
           triage={triageChrome}
         />
         <DesktopStageChrome
@@ -1433,6 +1388,7 @@ export function TheaterShell({
           saveStatus={saveStatus}
           onSaveCollection={handleSaveCollection}
           onRequestSignIn={openSignIn}
+          onRequestMakeYourOwn={handleMakeYourOwn}
           triage={triageChrome}
         />
         {/* Triage's Delete (and Done/Later) undo toast — a 5s window, same
@@ -1492,16 +1448,26 @@ export function TheaterShell({
           setShowSignIn(false)
           authMe.refresh()
         }}
-        title={collection ? 'Save this collection' : 'Save it to your collection'}
+        title={
+          signInIntent === 'make-your-own'
+            ? 'Make your own collection'
+            : collection
+              ? 'Save this collection'
+              : 'Save it to your collection'
+        }
         subtitle={
-          collection
-            ? `${collection.count} ${collection.count === 1 ? 'post' : 'posts'} from ${collection.tag}, curated by @${collection.curator} — save them to your collection.`
-            : 'Your saved posts stay yours — sync your X bookmarks anytime from Settings.'
+          signInIntent === 'make-your-own'
+            ? 'Sign up and start saving — anything you save can be tagged into collections like this one.'
+            : collection
+              ? `${collection.count} ${collection.count === 1 ? 'post' : 'posts'} from ${collection.tag}, curated by @${collection.curator} — save them to your collection.`
+              : 'Your saved posts stay yours — sync your X bookmarks anytime from Settings.'
         }
         returnTo={
-          collection
-            ? `/t/${collection.curator}/${collection.tag}?save=1`
-            : (signInReturnTo ?? undefined)
+          signInIntent === 'make-your-own'
+            ? '/'
+            : collection
+              ? `/t/${collection.curator}/${collection.tag}?save=1`
+              : (signInReturnTo ?? undefined)
         }
       />
       {isTriage && tagPickerItem && (
@@ -1512,7 +1478,6 @@ export function TheaterShell({
           onClose={() => setTagPickerItem(null)}
         />
       )}
-      <StartOverlay open={showStartOverlay} onDismiss={() => setStartDismissed(true)} />
     </div>
   )
 }
