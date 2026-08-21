@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.53.0](https://github.com/itsmemeworks/adhx/compare/v1.52.0...v1.53.0) (2026-08-21)
+
+
+### Features
+
+* mobile paste-link save flow and signed-out theater burger menu ([#378](https://github.com/itsmemeworks/adhx/issues/378)) ([c1e592a](https://github.com/itsmemeworks/adhx/commit/c1e592adf66b9694c5fa7e4be84d4a57b21de180))
+* mobile theater round — shared repeat, sheet drag, paste rework, autoplay continuity ([#381](https://github.com/itsmemeworks/adhx/issues/381)) ([5d6013e](https://github.com/itsmemeworks/adhx/commit/5d6013ef485cede380680b1e4d615c1cd31f29f9))
+* starter collections onboarding for new users ([#380](https://github.com/itsmemeworks/adhx/issues/380)) ([0b1868b](https://github.com/itsmemeworks/adhx/commit/0b1868b2a3fb16ae9259e4253a1815b783da087b))
+
+
+### Bug Fixes
+
+* hide native youtube controls on the theater stage ([#379](https://github.com/itsmemeworks/adhx/issues/379)) ([79e4c98](https://github.com/itsmemeworks/adhx/commit/79e4c98da519e96aea5605400893c60cfdf6d911))
+* mobile round 3 — paste ritual, repeat cue, sheet gesture polish, youtube startup ladder ([#382](https://github.com/itsmemeworks/adhx/issues/382)) ([340bf18](https://github.com/itsmemeworks/adhx/commit/340bf18fd1836dafffa86b9c2d9b712b5decdf0f))
+* transient triage undo, collection-tab audio, graceful deleted tweets ([#376](https://github.com/itsmemeworks/adhx/issues/376)) ([4f8a37c](https://github.com/itsmemeworks/adhx/commit/4f8a37c14a881ec391fcb2d43f12c0122f16d097))
+
 ## [1.52.0](https://github.com/itsmemeworks/adhx/compare/v1.51.0...v1.52.0) (2026-08-21)
 
 
