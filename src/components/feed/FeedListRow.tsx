@@ -1,6 +1,15 @@
 'use client'
 
-import { Play, ChevronRight, Image as ImageIcon, FileText, Video, Quote, Link2 } from 'lucide-react'
+import {
+  Play,
+  Check,
+  ChevronRight,
+  Image as ImageIcon,
+  FileText,
+  Video,
+  Quote,
+  Link2,
+} from 'lucide-react'
 import type { FeedItem } from './types'
 import { PlatformGlyph, TypeBadge, type ContentType } from '@/components/matter'
 import { formatCompactRelativeTime, formatDurationMs } from '@/lib/utils/format'
@@ -31,10 +40,18 @@ export function FeedListRow({
   item,
   onClick,
   compact = false,
+  selectionMode = false,
+  selected = false,
+  onToggleSelect,
 }: {
   item: FeedItem
   onClick?: () => void
   compact?: boolean
+  /** Add-posts tag selection (same contract as FeedCard): clicks toggle
+   * membership instead of expanding, with a leading check circle. */
+  selectionMode?: boolean
+  selected?: boolean
+  onToggleSelect?: () => void
 }) {
   const type = feedItemType(item)
   const thumb = feedItemThumb(item)
@@ -73,13 +90,25 @@ export function FeedListRow({
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={selectionMode ? onToggleSelect : onClick}
       className={cn(
         'w-full flex items-center text-left border-b border-hairline transition-colors duration-150 hover:bg-inset/60',
         compact ? 'gap-3 px-4 py-[13px]' : 'gap-4 px-4 sm:px-[26px] py-[14px]',
         unread ? 'bg-surface' : 'bg-transparent',
+        selectionMode && selected && 'bg-clay/10 hover:bg-clay/15',
       )}
     >
+      {selectionMode && (
+        <span
+          className={cn(
+            'flex-none flex h-[22px] w-[22px] items-center justify-center rounded-full border-2 transition-colors',
+            selected ? 'bg-clay border-clay' : 'border-ink-3/60',
+          )}
+          aria-hidden
+        >
+          {selected && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+        </span>
+      )}
       {/* unread dot */}
       <span
         className={cn(

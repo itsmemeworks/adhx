@@ -1,6 +1,6 @@
 'use client'
 
-import { Play } from 'lucide-react'
+import { Play, Check } from 'lucide-react'
 import type { FeedItem } from './types'
 import { TypeBadge } from '@/components/matter'
 import { formatCompactRelativeTime, formatDurationMs } from '@/lib/utils/format'
@@ -16,11 +16,19 @@ export function FeedBentoTile({
   cs,
   rs,
   onClick,
+  selectionMode = false,
+  selected = false,
+  onToggleSelect,
 }: {
   item: FeedItem
   cs: number
   rs: number
   onClick?: () => void
+  /** Add-posts tag selection (same contract as FeedCard): clicks toggle
+   * membership instead of expanding, with a top-right check badge. */
+  selectionMode?: boolean
+  selected?: boolean
+  onToggleSelect?: () => void
 }) {
   const type = feedItemType(item)
   const thumb = feedItemThumb(item)
@@ -34,10 +42,24 @@ export function FeedBentoTile({
     return (
       <button
         type="button"
-        onClick={onClick}
+        onClick={selectionMode ? onToggleSelect : onClick}
         style={style}
-        className="relative block overflow-hidden rounded-card border border-hairline bg-surface shadow-m-sm text-left group"
+        className={cn(
+          'relative block overflow-hidden rounded-card border bg-surface shadow-m-sm text-left group',
+          selectionMode && selected ? 'border-clay ring-2 ring-clay' : 'border-hairline',
+        )}
       >
+        {selectionMode && (
+          <span
+            className={cn(
+              'absolute top-2.5 right-2.5 z-10 flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors',
+              selected ? 'bg-clay border-clay' : 'bg-black/35 border-white/70 backdrop-blur',
+            )}
+            aria-hidden
+          >
+            {selected && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
+          </span>
+        )}
         <img
           src={thumb}
           alt=""
@@ -97,13 +119,25 @@ export function FeedBentoTile({
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={selectionMode ? onToggleSelect : onClick}
       style={style}
       className={cn(
-        'flex flex-col overflow-hidden rounded-card border border-hairline shadow-m-sm p-4 text-left',
+        'relative flex flex-col overflow-hidden rounded-card border shadow-m-sm p-4 text-left',
         isQuote ? 'bg-clay/[0.07]' : 'bg-surface',
+        selectionMode && selected ? 'border-clay ring-2 ring-clay' : 'border-hairline',
       )}
     >
+      {selectionMode && (
+        <span
+          className={cn(
+            'absolute top-2.5 right-2.5 z-10 flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors',
+            selected ? 'bg-clay border-clay' : 'bg-black/35 border-white/70 backdrop-blur',
+          )}
+          aria-hidden
+        >
+          {selected && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
+        </span>
+      )}
       {/* self-start so the badge hugs its content instead of stretching full-width */}
       <TypeBadge type={type} className="self-start" />
       <span
