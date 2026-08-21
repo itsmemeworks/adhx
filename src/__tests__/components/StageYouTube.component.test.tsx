@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, fireEvent, act } from '@testing-library/react'
 import { StageYouTube } from '@/components/theater/StageYouTube'
-import { resetYtDebugLines } from '@/components/theater/YtDebugOverlay'
+import { resetYtDebugLines, YtDebugOverlay } from '@/components/theater/YtDebugOverlay'
 import type { TheaterItem } from '@/components/theater/types'
 
 /**
@@ -480,6 +480,34 @@ describe('StageYouTube', () => {
     expect(JSON.parse(postMessage.mock.calls.at(-1)![0])).toMatchObject({ func: 'mute' })
   })
 
+  // Gesture-unmute fix: the chrome's audio button now ALSO dispatches this
+  // synchronous window event (alongside the `muted` prop update above, which
+  // is the async/persistence path). For this postMessage-based cross-origin
+  // player it maps onto the SAME `requestUnmute`/`mute` command path and gate
+  // — postMessage isn't restricted by WebKit's same-call-stack rule the way
+  // StageVideo's `video.muted` is, but routing through one shared listener
+  // keeps every stage on the same contract.
+  it('theater-set-muted maps onto the same requestUnmute/mute command path as the muted prop', () => {
+    const { container } = render(<StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />)
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { postMessage, fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postFromPlayer(fakeWindow, { event: 'onReady' })
+    postMessage.mockClear()
+
+    // Unmute request before a confirmed playing state defers, exactly like
+    // the `muted` prop transition.
+    dispatchWindowEvent(new CustomEvent('theater-set-muted', { detail: { muted: false } }))
+    expect(postMessage.mock.calls.map(([p]) => JSON.parse(p).func)).not.toContain('unMute')
+
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
+    expect(JSON.parse(postMessage.mock.calls.at(-1)![0])).toMatchObject({ func: 'unMute' })
+
+    postMessage.mockClear()
+    dispatchWindowEvent(new CustomEvent('theater-set-muted', { detail: { muted: true } }))
+    expect(JSON.parse(postMessage.mock.calls.at(-1)![0])).toMatchObject({ func: 'mute' })
+  })
+
   it('never asks for sound before a confirmed playing state, even when the shell is already unmuted before the handshake completes', () => {
     const { container } = render(
       <StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />,
@@ -664,12 +692,87 @@ describe('StageYouTube', () => {
       expect(funcs).not.toContain('mute')
     })
 
-    // Round 4: there's no timer left to "disarm" — the value of clearing
-    // `unmuteAwaitingConfirmRef` on confirmation is now purely protective:
-    // without it, a LATER, unrelated pause (e.g. the user's own pause
-    // button, or buffering) would be misread as a rejection of an unmute
-    // that had already genuinely succeeded, and incorrectly re-mute it.
-    it('does not fall back on a later, unrelated pause once infoDelivery already confirmed the unmute', () => {
+    // Round 4 originally treated the `muted:false` confirmation itself as
+    // enough to protect against a later, unrelated pause. Round 7's
+    // on-device trace overturned that FOR THE CATCH-UP PATH specifically:
+    // iOS's real enforcement pattern is confirm-then-pause — `infoDelivery`
+    // reports `muted:false`, then a pause follows within about a second,
+    // and that pause IS the rejection, not something unrelated. A `user`
+    // gesture still isn't policed this way (see the top of this describe
+    // block) — this test (`muted={false}` from mount, so onReady's `if
+    // (!mutedRef.current) requestUnmute('catchup')` branch fires) is
+    // specifically the catch-up path.
+    it('DOES fall back on a pause shortly after a catch-up confirmation, absent sustained playback evidence (round 7: iOS confirm-then-pause)', () => {
+      const mutedEvents: boolean[] = []
+      const handler = (e: Event) =>
+        mutedEvents.push((e as CustomEvent<{ muted: boolean }>).detail.muted)
+      window.addEventListener('theater-muted-state', handler)
+
+      try {
+        const { container } = render(
+          <StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />,
+        )
+        const iframe = container.querySelector('iframe') as HTMLIFrameElement
+        const { postMessage, fakeWindow } = stubContentWindow(iframe)
+        fireEvent.load(iframe)
+        postFromPlayer(fakeWindow, { event: 'onReady' })
+        postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 }) // deferred catch-up unmute fires
+        postFromPlayer(fakeWindow, {
+          event: 'infoDelivery',
+          info: { playerState: 1, muted: false },
+        })
+        postMessage.mockClear()
+
+        // The exact device-trace shape: the pause follows the confirmation
+        // with no intervening sustained-progress evidence.
+        postFromPlayer(fakeWindow, { event: 'onStateChange', info: 2 })
+
+        const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+        expect(funcs).toContain('mute')
+        expect(funcs).toContain('playVideo')
+        // effectiveMuted reflects the fallback, not the earlier (real, but
+        // ultimately policed) confirmation.
+        expect(mutedEvents.at(-1)).toBe(true)
+      } finally {
+        window.removeEventListener('theater-muted-state', handler)
+      }
+    })
+
+    it('does NOT fall back on a later pause once sustained currentTime progress has cleared the catch-up attribution', () => {
+      const { container } = render(
+        <StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { postMessage, fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+      postFromPlayer(fakeWindow, { event: 'onReady' })
+      postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 }) // deferred catch-up unmute fires, baseline currentTime=0
+      postFromPlayer(fakeWindow, { event: 'infoDelivery', info: { playerState: 1, muted: false } })
+
+      // Sustained evidence: currentTime has advanced well past the >1.5s
+      // threshold from the (defaulted-to-0) baseline, while still playing.
+      postFromPlayer(fakeWindow, {
+        event: 'infoDelivery',
+        info: { playerState: 1, currentTime: 3, duration: 30 },
+      })
+      postMessage.mockClear()
+
+      // Now a later pause really is unrelated (e.g. the user's own pause
+      // button, or buffering) — round 4's original protective intent, just
+      // gated on real evidence instead of an unconditional confirmation.
+      postFromPlayer(fakeWindow, { event: 'onStateChange', info: 2 })
+
+      const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+      expect(funcs).not.toContain('mute')
+    })
+
+    // Closes a second instance of the same premature-clear bug class: state 1
+    // (`applyPlayerState`'s OWN "kept playing, it took" branch) used to clear
+    // `unmuteAwaitingConfirmRef` unconditionally, exactly like the
+    // `muted:false` confirmation did. A stray state-1 heartbeat landing
+    // between the catch-up unmute and iOS's enforcement pause is no more
+    // trustworthy than the confirmation is for that path.
+    it('a bare state-1 heartbeat does not clear catch-up attribution either — still falls back without sustained progress', () => {
       const { container } = render(
         <StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />,
       )
@@ -679,14 +782,15 @@ describe('StageYouTube', () => {
       postFromPlayer(fakeWindow, { event: 'onReady' })
       postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 }) // deferred catch-up unmute fires
       postFromPlayer(fakeWindow, { event: 'infoDelivery', info: { playerState: 1, muted: false } })
+      // A redundant state-1 heartbeat, no currentTime attached — must not be
+      // treated as proof either.
+      postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
       postMessage.mockClear()
 
-      // A later pause — the user pausing playback themselves, unrelated to
-      // the (already-confirmed) unmute.
       postFromPlayer(fakeWindow, { event: 'onStateChange', info: 2 })
 
       const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
-      expect(funcs).not.toContain('mute')
+      expect(funcs).toContain('mute')
     })
 
     it('treats infoDelivery volume>0 as immediate confirmation when no muted field is present', () => {
@@ -1080,10 +1184,13 @@ describe('StageYouTube', () => {
   })
 })
 
-// Round 2 diagnostic breadcrumb: `[stage-yt]` console.debug logging, gated
-// behind `?ytdebug=1` so production stays quiet. The owner can flip it on
-// from their phone by appending `?ytdebug=1` to the theater URL for a
-// further on-device round if needed.
+// Round 2 diagnostic breadcrumb: `[yt]` console.debug logging, gated behind
+// `?ytdebug=1` (or the widened `?avdebug=1`) so production stays quiet. The
+// owner can flip it on from their phone by appending `?ytdebug=1` to the
+// theater URL for a further on-device round if needed. `<YtDebugOverlay/>` is
+// no longer mounted inside StageYouTube itself (gesture-unmute round: moved
+// to TheaterShell so ONE overlay serves every stage) — it's rendered as a
+// sibling here, matching the real render tree.
 describe('StageYouTube debug logging (?ytdebug=1 gate)', () => {
   const originalUrl = window.location.href
 
@@ -1109,7 +1216,7 @@ describe('StageYouTube debug logging (?ytdebug=1 gate)', () => {
     expect(debugSpy).not.toHaveBeenCalled()
   })
 
-  it('logs tagged [stage-yt] breadcrumbs when ?ytdebug=1 is present', () => {
+  it('logs tagged [yt] breadcrumbs when ?ytdebug=1 is present', () => {
     window.history.replaceState(null, '', '/?ytdebug=1')
     const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {})
 
@@ -1120,16 +1227,39 @@ describe('StageYouTube debug logging (?ytdebug=1 gate)', () => {
     postFromPlayer(fakeWindow, { event: 'onReady' })
 
     expect(debugSpy).toHaveBeenCalled()
-    expect(debugSpy.mock.calls.every(([tag]) => tag === '[stage-yt]')).toBe(true)
+    expect(debugSpy.mock.calls.every(([tag]) => tag === '[yt]')).toBe(true)
+  })
+
+  // Widened gate: the alternate `?avdebug=1` param name (shared with
+  // StageVideo/the chrome's audio button now) must also enable YouTube's
+  // breadcrumbs.
+  it('also logs when ?avdebug=1 is present instead of ?ytdebug=1', () => {
+    window.history.replaceState(null, '', '/?avdebug=1')
+    const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {})
+
+    const { container } = render(<StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />)
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postFromPlayer(fakeWindow, { event: 'onReady' })
+
+    expect(debugSpy).toHaveBeenCalled()
   })
 
   // Round 6: the same breadcrumbs also render on-screen (no Mac tether
   // needed to read iOS Safari's console) — verifies the actual protocol run
   // surfaces its key moments in `<YtDebugOverlay/>`, not just `console.debug`.
+  // The overlay is rendered as a sibling (TheaterShell mounts it once,
+  // outside StageYouTube — see the describe block's own note above).
   it('surfaces the on-screen overlay with curated protocol moments, not the raw per-message noise', () => {
     window.history.replaceState(null, '', '/?ytdebug=1')
 
-    const { container } = render(<StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />)
+    const { container } = render(
+      <>
+        <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />
+        <YtDebugOverlay />
+      </>,
+    )
     const iframe = container.querySelector('iframe') as HTMLIFrameElement
     const { fakeWindow } = stubContentWindow(iframe)
     fireEvent.load(iframe)

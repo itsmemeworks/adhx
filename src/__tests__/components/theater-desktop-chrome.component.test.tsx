@@ -74,7 +74,7 @@ const dockBase = {
   onSelect: vi.fn(),
   waiting: false,
   muted: true,
-  onToggleMute: vi.fn(),
+  onSetMuted: vi.fn(),
   canPrev: true,
   canNext: true,
   onPrev: vi.fn(),
@@ -253,6 +253,67 @@ describe('DesktopDock: shared-post-repeat cue', () => {
       />,
     )
     expect(screen.getByLabelText('Next post').className).not.toContain('text-clay')
+  })
+})
+
+/**
+ * Gesture-unmute fix, desktop counterpart of the mobile chrome's tests: the
+ * transport's audio button must dispatch a SYNCHRONOUS `theater-set-muted`
+ * window event (the gesture-context fast path StageVideo/StageYouTube listen
+ * for) alongside calling `onSetMuted` (persistence) — both moving toward the
+ * DISPLAYED state's opposite, not a blind toggle of the `muted` prop.
+ */
+describe('DesktopDock: audio button gesture-context unmute', () => {
+  const items = [videoItem({ bookmarkId: '1' })]
+
+  it('dispatches theater-set-muted synchronously and calls onSetMuted with the computed value', () => {
+    const onSetMuted = vi.fn()
+    const heard: boolean[] = []
+    const listener = (e: Event) => heard.push((e as CustomEvent<{ muted: boolean }>).detail.muted)
+    window.addEventListener('theater-set-muted', listener)
+    try {
+      render(
+        <DesktopDock
+          {...dockBase}
+          items={items}
+          current={items[0]}
+          currentKey={theaterItemKey(items[0])}
+          muted
+          onSetMuted={onSetMuted}
+        />,
+      )
+      const audioBtn = screen.getByLabelText('Unmute')
+      fireEvent.click(audioBtn)
+      expect(heard).toEqual([false])
+      expect(onSetMuted).toHaveBeenCalledWith(false)
+    } finally {
+      window.removeEventListener('theater-set-muted', listener)
+    }
+  })
+
+  it('moves toward the DISPLAYED state, not a blind toggle of a stale `muted` prop', () => {
+    const onSetMuted = vi.fn()
+    const heard: boolean[] = []
+    const listener = (e: Event) => heard.push((e as CustomEvent<{ muted: boolean }>).detail.muted)
+    window.addEventListener('theater-set-muted', listener)
+    try {
+      render(
+        <DesktopDock
+          {...dockBase}
+          items={items}
+          current={items[0]}
+          currentKey={theaterItemKey(items[0])}
+          muted={false}
+          onSetMuted={onSetMuted}
+        />,
+      )
+      const audioBtn = screen.getByLabelText('Mute')
+      fireEvent.click(audioBtn)
+      expect(heard).toEqual([true])
+      expect(onSetMuted).toHaveBeenCalledWith(true)
+    } finally {
+      window.removeEventListener('theater-set-muted', listener)
+    }
   })
 })
 

@@ -78,7 +78,7 @@ const base = {
   canPrev: true,
   canNext: true,
   muted: true,
-  onToggleMute: vi.fn(),
+  onSetMuted: vi.fn(),
 }
 
 beforeEach(() => {
@@ -373,5 +373,87 @@ describe('TheaterMobileChrome: Collection-tab progress line (video flows, timed 
   it('a video item shows the progress line outside triage entirely (home/shared/collection-mode theaters)', () => {
     const { container } = render(<TheaterMobileChrome {...base} current={videoItem()} />)
     expect(container.querySelector('.bg-clay')).not.toBeNull()
+  })
+})
+
+/**
+ * Gesture-unmute fix: the audio button must dispatch a SYNCHRONOUS
+ * `theater-set-muted` window event (the gesture-context fast path StageVideo/
+ * StageYouTube listen for) in the same click handler that calls `onSetMuted`
+ * (the persistence path) — and both must move toward the DISPLAYED state's
+ * opposite, not blindly toggle the (possibly stale) `muted` prop.
+ */
+describe('TheaterMobileChrome: audio button gesture-context unmute', () => {
+  it('dispatches theater-set-muted synchronously with the value computed from displayMuted, and calls onSetMuted with the same value', () => {
+    const onSetMuted = vi.fn()
+    const heard: boolean[] = []
+    const listener = (e: Event) => {
+      heard.push((e as CustomEvent<{ muted: boolean }>).detail.muted)
+    }
+    window.addEventListener('theater-set-muted', listener)
+    try {
+      render(<TheaterMobileChrome {...base} muted current={videoItem()} onSetMuted={onSetMuted} />)
+      // Starts muted (displayMuted derives from the `muted` prop until a
+      // `theater-muted-state` broadcast arrives) — aria-label reads "Unmute".
+      const audioBtn = screen.getByLabelText('Unmute')
+      fireEvent.click(audioBtn)
+
+      // The event listener ran SYNCHRONOUSLY inside fireEvent.click, before
+      // any assertion below — proving the dispatch isn't deferred to a
+      // passive effect.
+      expect(heard).toEqual([false])
+      expect(onSetMuted).toHaveBeenCalledWith(false)
+    } finally {
+      window.removeEventListener('theater-set-muted', listener)
+    }
+  })
+
+  it('moves toward the DISPLAYED state, not a blind toggle of a stale `muted` prop', () => {
+    const onSetMuted = vi.fn()
+    const heard: boolean[] = []
+    const listener = (e: Event) => heard.push((e as CustomEvent<{ muted: boolean }>).detail.muted)
+    window.addEventListener('theater-set-muted', listener)
+    try {
+      // Shell prop says muted=false, but the chrome hasn't heard a
+      // `theater-muted-state` broadcast confirming that yet — this is
+      // exactly the observed-divergence scenario the fix accounts for.
+      // `displayMuted` still falls back to the (stale) `muted` prop here, so
+      // this asserts the button reads whatever IS currently displayed, not
+      // some independent internal toggle counter.
+      render(
+        <TheaterMobileChrome
+          {...base}
+          muted={false}
+          current={videoItem()}
+          onSetMuted={onSetMuted}
+        />,
+      )
+      const audioBtn = screen.getByLabelText('Mute')
+      fireEvent.click(audioBtn)
+      expect(heard).toEqual([true])
+      expect(onSetMuted).toHaveBeenCalledWith(true)
+    } finally {
+      window.removeEventListener('theater-set-muted', listener)
+    }
+  })
+
+  it('trusts a live theater-muted-state broadcast over the shell prop when computing the next value', () => {
+    const onSetMuted = vi.fn()
+    const heard: boolean[] = []
+    const listener = (e: Event) => heard.push((e as CustomEvent<{ muted: boolean }>).detail.muted)
+    window.addEventListener('theater-set-muted', listener)
+    try {
+      // Shell prop still says muted (true), but StageVideo has already
+      // broadcast that the live element is actually unmuted — displayMuted
+      // must follow the live signal.
+      render(<TheaterMobileChrome {...base} muted current={videoItem()} onSetMuted={onSetMuted} />)
+      fireEvent(window, new CustomEvent('theater-muted-state', { detail: { muted: false } }))
+      const audioBtn = screen.getByLabelText('Mute')
+      fireEvent.click(audioBtn)
+      expect(heard).toEqual([true])
+      expect(onSetMuted).toHaveBeenCalledWith(true)
+    } finally {
+      window.removeEventListener('theater-set-muted', listener)
+    }
   })
 })

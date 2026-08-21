@@ -19,6 +19,7 @@ import { StageUnavailable } from './StageUnavailable'
 import { TriageAllClear } from './TriageAllClear'
 import { DesktopStageChrome, DesktopDock } from './TheaterDesktopChrome'
 import { TheaterMobileChrome } from './TheaterMobileChrome'
+import { YtDebugOverlay } from './YtDebugOverlay'
 import { useTheaterFeed } from './useTheaterFeed'
 import { useSeenSet } from './useSeenSet'
 import { useTheaterKeyboard } from './useTheaterKeyboard'
@@ -993,7 +994,14 @@ export function TheaterShell({
   )
 
   const onRequestUnmute = useCallback(() => setMuted(false), [])
-  const onToggleMute = useCallback(() => setMuted((m) => !m), [])
+  // Explicit setter (not a blind toggle) — the chrome's audio button computes
+  // the target value itself from its DISPLAYED state (which can diverge from
+  // this `muted` prop; see TheaterMobileChrome/TheaterDesktopChrome's
+  // `handleAudioTap`) and passes it straight through. This is the
+  // persistence/next-item-initial-signal path; the gesture-context fast path
+  // for actually flipping the live element is the synchronous
+  // `theater-set-muted` window event the same tap dispatches.
+  const onSetMuted = useCallback((next: boolean) => setMuted(next), [])
 
   // Suppress the browser's native pull-to-refresh / overscroll chaining while
   // the theater is mounted — it's a fixed full-viewport overlay, not a normal
@@ -1449,7 +1457,7 @@ export function TheaterShell({
           canPrev={chromeCanPrev}
           canNext={chromeCanNext}
           muted={muted}
-          onToggleMute={onToggleMute}
+          onSetMuted={onSetMuted}
           collection={collection}
           isCollectionOwner={isCollectionOwner}
           saveStatus={saveStatus}
@@ -1517,7 +1525,7 @@ export function TheaterShell({
         onSelect={chromeOnSelect}
         waiting={isTriageCollection ? false : waiting}
         muted={muted}
-        onToggleMute={onToggleMute}
+        onSetMuted={onSetMuted}
         canPrev={chromeCanPrev}
         canNext={chromeCanNext}
         onPrev={chromeOnPrev}
@@ -1527,6 +1535,12 @@ export function TheaterShell({
         triage={triageChrome}
         repeatCurrent={isSharedPinnedOnCurrent}
       />
+      {/* `?ytdebug=1`/`?avdebug=1` diagnostics overlay (YtDebugOverlay.tsx) —
+          mounted ONCE here so it serves every stage (StageVideo/StageYouTube/
+          the chrome's audio button), not just the YouTube branches that used
+          to embed it directly. Renders null with zero footprint when neither
+          param is present. */}
+      <YtDebugOverlay />
       {liveTagTarget && (
         <TagQuickPicker
           platform={liveTagTarget.platform}

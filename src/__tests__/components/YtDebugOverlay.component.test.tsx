@@ -14,6 +14,9 @@ import {
   YtDebugOverlay,
   logStage,
   logStageVerbose,
+  logSV,
+  logAV,
+  isYtDebugEnabled,
   resetYtDebugLines,
 } from '@/components/theater/YtDebugOverlay'
 
@@ -96,5 +99,61 @@ describe('YtDebugOverlay', () => {
     })
 
     expect(container.textContent).toMatch(/waiting for events/i)
+  })
+
+  // Gesture-unmute fix: the overlay now serves StageVideo and the shared
+  // chrome's audio button too, not just StageYouTube — gate widened to
+  // `?avdebug=1` (either param works) and lines carry a source prefix.
+  describe('widened gate (?avdebug=1) and multi-source prefixes', () => {
+    it('is disabled with neither param', () => {
+      expect(isYtDebugEnabled()).toBe(false)
+    })
+
+    it('enables via ?avdebug=1 (not just ?ytdebug=1)', () => {
+      window.history.replaceState(null, '', '/?avdebug=1')
+      expect(isYtDebugEnabled()).toBe(true)
+    })
+
+    it('logSV (StageVideo) lines are prefixed [sv]', () => {
+      window.history.replaceState(null, '', '/?avdebug=1')
+      const { container } = render(<YtDebugOverlay />)
+      act(() => {
+        logSV('mount item platform=twitter initialMuted=true')
+      })
+      expect(container.textContent).toContain('[sv]')
+      expect(container.textContent).toContain('mount item platform=twitter')
+    })
+
+    it('logAV (chrome audio-button tap) lines are prefixed [av]', () => {
+      window.history.replaceState(null, '', '/?avdebug=1')
+      const { container } = render(<YtDebugOverlay />)
+      act(() => {
+        logAV('audio tap: displayed=muted -> requesting unmuted')
+      })
+      expect(container.textContent).toContain('[av]')
+      expect(container.textContent).toContain('displayed=muted')
+    })
+
+    it('logStage (StageYouTube) lines are prefixed [yt], distinguishing them from [sv]/[av] in the same window', () => {
+      window.history.replaceState(null, '', '/?avdebug=1')
+      const { container } = render(<YtDebugOverlay />)
+      act(() => {
+        logStage('state -> playing (1)')
+        logSV('play() rejected NotAllowedError')
+        logAV('audio tap: displayed=unmuted -> requesting muted')
+      })
+      expect(container.textContent).toContain('[yt] state -> playing (1)')
+      expect(container.textContent).toContain('[sv] play() rejected')
+      expect(container.textContent).toContain('[av] audio tap')
+    })
+
+    it('logSV/logAV stay silent (no console, no ring buffer) when neither param is present', () => {
+      const { container } = render(<YtDebugOverlay />)
+      act(() => {
+        logSV('should never be recorded')
+        logAV('should never be recorded either')
+      })
+      expect(container.firstChild).toBeNull()
+    })
   })
 })

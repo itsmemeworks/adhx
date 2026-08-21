@@ -26,6 +26,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Play, RotateCcw, ArrowDown } from 'lucide-react'
+import { logSV } from './YtDebugOverlay'
 import type { TheaterItem } from './types'
 
 export interface StageVideoProps {
@@ -97,9 +98,37 @@ export function StageVideo({
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
+    logSV(`[muted] prop reconcile -> ${muted} (async persistence path)`)
     video.muted = muted
     setEffectiveMuted(muted)
   }, [muted])
+
+  // Gesture-context fast path (the persistent double-tap-to-unmute bug): the
+  // chrome's audio button dispatches this SYNCHRONOUSLY, from inside its own
+  // click handler's call stack, alongside (not instead of) calling the
+  // shell's setter — which lands on the `[muted]` prop above one render
+  // later, OUTSIDE the tap's gesture context. WebKit gates un-muting a
+  // playing video on the mutation happening synchronously in response to a
+  // user gesture; the prop effect above is a passive effect and always runs
+  // in a separate task, so it was the ONLY stage control still relying on
+  // that async path (pause/play already used synchronous `theater-pause`/
+  // `theater-resume`/`theater-toggle-play` events). Applying the SAME value
+  // here first means the `[muted]` effect above observes an
+  // already-correct element and is just idempotent housekeeping by the time
+  // it runs.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ muted: boolean }>).detail
+      if (!detail) return
+      const video = videoRef.current
+      if (!video) return
+      logSV(`theater-set-muted(${detail.muted}) applied synchronously`)
+      video.muted = detail.muted
+      setEffectiveMuted(detail.muted)
+    }
+    window.addEventListener('theater-set-muted', handler)
+    return () => window.removeEventListener('theater-set-muted', handler)
+  }, [])
 
   // New item: reset per-video UI state, then swap the element's source in
   // place and play it. This is the ONLY place that calls play() for a
@@ -118,6 +147,7 @@ export function StageVideo({
     const video = videoRef.current
     if (!video) return
 
+    logSV(`mount item platform=${item.platform} initialMuted=${video.muted}`)
     video.src = src
     video.load()
 
@@ -126,7 +156,8 @@ export function StageVideo({
     // re-derive from the `muted` prop here.
     video.play().then(
       () => setPlaying(true),
-      () => {
+      (err: unknown) => {
+        logSV('play() rejected', err instanceof Error ? err.name : String(err))
         if (!video.muted) {
           // Unmuted continuation denied for this item — never leave the
           // video frozen. Drop back to muted and surface the sound
@@ -270,6 +301,7 @@ export function StageVideo({
   // Drops back to muted and resumes, exactly like the mount effect's own
   // rejected-unmuted-continuation fallback above.
   const revertCatchUpUnmute = () => {
+    logSV('catch-up unmute reverted (observed pause)')
     catchUpPendingRef.current = false
     const video = videoRef.current
     if (!video) return
@@ -294,6 +326,7 @@ export function StageVideo({
     // unmuted without a fresh gesture even where starting unmuted from cold
     // couldn't.
     if (!muted && effectiveMuted && !catchUpAttemptedRef.current) {
+      logSV('catch-up unmute attempt (confirmed playing, shell wants sound)')
       catchUpAttemptedRef.current = true
       catchUpPendingRef.current = true
       const video = videoRef.current
@@ -304,6 +337,10 @@ export function StageVideo({
 
   const handleVideoPause = () => {
     const video = videoRef.current
+    logSV('pause event', {
+      ended: video?.ended ?? false,
+      catchUpPending: catchUpPendingRef.current,
+    })
     // A pause synthesized by reaching the end fires just before `ended` —
     // `handleEnded` (and its own `catchUpPendingRef` clear) owns that
     // transition, never a rejection.

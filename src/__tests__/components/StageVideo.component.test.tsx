@@ -351,3 +351,93 @@ describe('StageVideo Instagram catch-up unmute (confirmed-playing retry, evidenc
     expect(container.querySelector('[aria-label="Replay"]')).not.toBeNull()
   })
 })
+
+/**
+ * Gesture-unmute fix: the audio button's blind reliance on the `[muted]`
+ * prop-reconcile effect (a passive effect, always scheduled in a task AFTER
+ * the click handler returns — outside WebKit's user-gesture window) was the
+ * root cause of the persistent double-tap-to-unmute bug. `theater-set-muted`
+ * is the new gesture-context fast path: a plain `window.dispatchEvent` inside
+ * the tap's own call stack reaches this listener SYNCHRONOUSLY (DOM event
+ * listeners registered via `addEventListener` run in the dispatching call's
+ * stack), so `video.muted` flips before the click handler returns — unlike
+ * the React state -> prop -> `useEffect` round trip.
+ */
+describe('StageVideo theater-set-muted (gesture-context fast path)', () => {
+  it('applies video.muted synchronously, within the dispatching call, without waiting for a re-render', async () => {
+    const { container } = render(
+      <StageVideo
+        item={makeItem()}
+        src="/api/media/video?a=1"
+        poster={null}
+        muted
+        onRequestUnmute={vi.fn()}
+      />,
+    )
+    await act(async () => {
+      await Promise.resolve()
+    })
+    const video = container.querySelector('video') as HTMLVideoElement
+    expect(video.muted).toBe(true)
+
+    // No `act()`/await here on purpose — this asserts the mutation already
+    // happened by the time dispatchEvent returns, i.e. synchronously, the
+    // same way a real click handler's call stack would observe it.
+    window.dispatchEvent(new CustomEvent('theater-set-muted', { detail: { muted: false } }))
+    expect(video.muted).toBe(false)
+  })
+
+  it('re-mutes synchronously too (both directions go through the same fast path)', async () => {
+    const { container } = render(
+      <StageVideo
+        item={makeItem()}
+        src="/api/media/video?a=1"
+        poster={null}
+        muted={false}
+        onRequestUnmute={vi.fn()}
+      />,
+    )
+    await act(async () => {
+      await Promise.resolve()
+    })
+    const video = container.querySelector('video') as HTMLVideoElement
+
+    window.dispatchEvent(new CustomEvent('theater-set-muted', { detail: { muted: true } }))
+    expect(video.muted).toBe(true)
+  })
+
+  it('is idempotent with the later `[muted]` prop-reconcile effect applying the same value', async () => {
+    const { container, rerender } = render(
+      <StageVideo
+        item={makeItem()}
+        src="/api/media/video?a=1"
+        poster={null}
+        muted
+        onRequestUnmute={vi.fn()}
+      />,
+    )
+    await act(async () => {
+      await Promise.resolve()
+    })
+    const video = container.querySelector('video') as HTMLVideoElement
+
+    // The gesture-context event fires first (synchronous tap handler)...
+    window.dispatchEvent(new CustomEvent('theater-set-muted', { detail: { muted: false } }))
+    expect(video.muted).toBe(false)
+
+    // ...then the shell's state update flows back down as the same `muted`
+    // prop value one render later — must not fight or revert it.
+    await act(async () => {
+      rerender(
+        <StageVideo
+          item={makeItem()}
+          src="/api/media/video?a=1"
+          poster={null}
+          muted={false}
+          onRequestUnmute={vi.fn()}
+        />,
+      )
+    })
+    expect(video.muted).toBe(false)
+  })
+})

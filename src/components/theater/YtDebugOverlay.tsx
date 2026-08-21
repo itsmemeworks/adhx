@@ -1,19 +1,31 @@
 'use client'
 
 /**
- * `?ytdebug=1` diagnostics for `StageYouTube.tsx` (round 2: console
- * breadcrumbs; round 6: this on-screen overlay). Reading iOS Safari's
- * console requires a Mac tether, which is too much friction for the owner to
- * reach for on every retest — this mirrors the breadcrumbs into a tiny
- * on-screen panel (last ~8 curated lines, second-precision timestamps) so a
- * phone screenshot is enough. Zero footprint when the param is absent: the
- * ring buffer stays empty and `<YtDebugOverlay/>` renders null.
+ * `?ytdebug=1` (or `?avdebug=1` — same gate, widened name kept for
+ * back-compat with existing bookmarked debug URLs) on-screen diagnostics
+ * (round 2: console breadcrumbs for `StageYouTube.tsx`; round 6: the
+ * on-screen overlay; gesture-unmute round: widened to cover `StageVideo.tsx`
+ * and the chrome's audio button too — the mobile double-tap-to-unmute bug
+ * reported against a Twitter/TikTok video, not YouTube, needed the same
+ * screenshot-friendly diagnostics StageYouTube already had). Reading iOS
+ * Safari's console requires a Mac tether, which is too much friction for the
+ * owner to reach for on every retest — this mirrors the breadcrumbs into a
+ * tiny on-screen panel (last ~8 curated lines, second-precision timestamps)
+ * so a phone screenshot is enough. Zero footprint when neither param is
+ * present: the ring buffer stays empty and `<YtDebugOverlay/>` renders null.
+ * Mounted ONCE, at `TheaterShell` level, so it serves every stage rather than
+ * only the YouTube branches.
  *
  * `logStage` is the call every MEANINGFUL protocol moment in StageYouTube.tsx
  * goes through — startup nudges, each retry rung, state transitions, mute
  * confirmations/rejections (including the round-6 stale-echo guard), and the
- * stall/error branches. It always writes to `console.debug` (for a tethered
- * session) AND appends a line to the on-screen ring buffer.
+ * stall/error branches. `logSV` is StageVideo's counterpart (mount, play()
+ * rejections, the `[muted]` reconcile, the synchronous `theater-set-muted`
+ * event, catch-up attempts/reverts, pause events); `logAV` is the shared
+ * chrome's audio-button tap. All three write to `console.debug` (for a
+ * tethered session) AND append a line to the SAME on-screen ring buffer,
+ * prefixed `[yt]`/`[sv]`/`[av]` respectively so a screenshot can tell the
+ * source apart.
  *
  * `logStageVerbose` is console-only, for the high-volume, low-signal
  * per-message entry log (StageYouTube's protocol handler logs every inbound
@@ -83,28 +95,48 @@ export function resetYtDebugLines(): void {
 /**
  * Round 2: gate every diagnostic behind an explicit opt-in so production
  * stays quiet — the owner flips it on from their phone by appending
- * `?ytdebug=1` to the theater URL.
+ * `?ytdebug=1` (YouTube-only history) OR `?avdebug=1` (the widened
+ * audio/video name — either works, both gate the same overlay) to the
+ * theater URL.
  */
 export function isYtDebugEnabled(): boolean {
   if (typeof window === 'undefined') return false
   try {
-    return new URLSearchParams(window.location.search).get('ytdebug') === '1'
+    const params = new URLSearchParams(window.location.search)
+    return params.get('ytdebug') === '1' || params.get('avdebug') === '1'
   } catch {
     return false
   }
 }
 
-export function logStage(...args: unknown[]) {
+function logCurated(prefix: string, args: unknown[]) {
   if (!isYtDebugEnabled()) return
   // eslint-disable-next-line no-console
-  console.debug('[stage-yt]', ...args)
-  appendLine(args.map((a) => (typeof a === 'string' ? a : safeStringify(a))).join(' '))
+  console.debug(prefix, ...args)
+  appendLine(
+    `${prefix} ${args.map((a) => (typeof a === 'string' ? a : safeStringify(a))).join(' ')}`,
+  )
+}
+
+export function logStage(...args: unknown[]) {
+  logCurated('[yt]', args)
 }
 
 export function logStageVerbose(...args: unknown[]) {
   if (!isYtDebugEnabled()) return
   // eslint-disable-next-line no-console
-  console.debug('[stage-yt]', ...args)
+  console.debug('[yt]', ...args)
+}
+
+/** StageVideo's counterpart to `logStage` — same gate, same ring buffer,
+ * `[sv]` prefix. */
+export function logSV(...args: unknown[]) {
+  logCurated('[sv]', args)
+}
+
+/** The shared chrome's audio-button tap — not tied to either player. */
+export function logAV(...args: unknown[]) {
+  logCurated('[av]', args)
 }
 
 /** Fixed, bottom-left, above the mobile peek bar (`PEEK_H` in
@@ -131,7 +163,7 @@ export function YtDebugOverlay() {
       aria-hidden
     >
       {lines.length === 0 ? (
-        <div className="text-white/40">[stage-yt] waiting for events…</div>
+        <div className="text-white/40">[av/sv/yt] waiting for events…</div>
       ) : (
         lines.map((line, i) => (
           <div key={i} className="truncate">
