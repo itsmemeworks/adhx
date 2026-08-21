@@ -257,7 +257,7 @@ export function TagsClient() {
         {tags === null ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="h-[200px] rounded-[14px] bg-inset animate-pulse" />
+              <div key={i} className="h-[240px] rounded-[14px] bg-inset animate-pulse" />
             ))}
           </div>
         ) : tags.length === 0 ? (
@@ -410,14 +410,6 @@ function TagPosterCard({
     <PrivateBadge />
   )
 
-  const subtitle =
-    tag.isPublic && tag.shareUrl ? (
-      <>
-        <span aria-hidden>·</span>
-        <span className="truncate">{`adhx.com${tag.shareUrl}`}</span>
-      </>
-    ) : undefined
-
   return (
     <div className="flex flex-col gap-2">
       <CollectionPosterCard
@@ -427,7 +419,6 @@ function TagPosterCard({
         tilesLoading={tilesLoading}
         href={`/?tag=${encodeURIComponent(tag.tag)}`}
         badge={badge}
-        subtitle={subtitle}
         stats={
           tag.isPublic
             ? { viewCount: tag.viewCount ?? 0, cloneCount: tag.cloneCount ?? 0, rank: tag.rank }

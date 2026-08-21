@@ -273,7 +273,7 @@ export function TagQuickPicker({
             }}
             placeholder="New tag"
             aria-label="New tag name"
-            maxLength={10}
+            maxLength={15}
             className="min-w-0 flex-1 bg-transparent text-[13.5px] outline-none"
             style={{ color: INK, caretColor: INK }}
           />

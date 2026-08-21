@@ -1,13 +1,14 @@
 import Link from 'next/link'
+import { User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MatterLogo, LiveDot } from '@/components/matter'
+import { CollectionPosterCard } from '@/components/tags'
 import {
   RANK_WINDOWS,
   windowToPath,
   type RankWindow,
   type LeaderboardEntry,
 } from '@/lib/discovery/rank'
-import { CollectionCard } from './CollectionCard'
 
 /**
  * The visual surface of /collections + /collections/[window] — the "podium"
@@ -20,7 +21,59 @@ import { CollectionCard } from './CollectionCard'
  * Header chrome (MatterLogo + LiveDot + brand label, dark stage) matches
  * `src/components/trending/TrendingRankedList.tsx` on purpose — same Matter
  * dark vocabulary, different content.
+ *
+ * Cards are the canonical `CollectionPosterCard` (`@/components/tags`) — the
+ * leaderboard used to have its own bespoke `CollectionCard`, now deleted, so
+ * /collections, /tags, and /t/{username} all render collections identically.
+ * The board's own contribution on top is the rank medallion (`rank` prop,
+ * safe with `wholeCardLink`) and the size hierarchy below.
  */
+
+type LeaderboardCardSize = 'podium-lead' | 'podium-side' | 'grid'
+
+/** Width+height per slot — merged into the card's own className via
+ * `heightClass`, which just interpolates whatever string it's given. */
+const SIZE_CLASSES: Record<LeaderboardCardSize, string> = {
+  'podium-lead': 'w-[260px] sm:w-[300px] h-[340px] sm:h-[380px]',
+  'podium-side': 'w-[220px] sm:w-[240px] h-[290px] sm:h-[320px]',
+  grid: 'h-[240px] w-full',
+}
+
+/** One leaderboard slot: the canonical poster card + the curator's handle
+ * underneath (info the old bespoke card carried inline in its footer — the
+ * shared card's footer has no room reserved for it, so it lives outside).
+ * #1 keeps its glow treatment via a wrapper class, since the shared card has
+ * no rank-1-specific styling hook of its own. */
+function LeaderboardCard({
+  entry,
+  rank,
+  size,
+}: {
+  entry: LeaderboardEntry
+  rank: number
+  size: LeaderboardCardSize
+}) {
+  return (
+    <div className={cn('flex flex-col items-center gap-2', rank === 1 && 'shadow-glow')}>
+      <CollectionPosterCard
+        tag={entry.tag}
+        count={entry.itemCount}
+        tiles={entry.tiles}
+        href={`/t/${entry.username}/${entry.tag}`}
+        wholeCardLink
+        featured={size === 'podium-lead'}
+        rank={rank}
+        heightClass={SIZE_CLASSES[size]}
+        stats={{ viewCount: entry.viewCount, cloneCount: entry.cloneCount }}
+      />
+      <span className="inline-flex items-center gap-1 rounded-full bg-black/45 px-2 py-0.5 font-mono text-[10.5px] text-white/70 backdrop-blur-md">
+        <User size={10.5} aria-hidden="true" />
+        {entry.username}
+      </span>
+    </div>
+  )
+}
+
 export function CollectionsBoard({
   window,
   entries,
@@ -97,17 +150,17 @@ export function CollectionsBoard({
             <div className="mt-14 flex flex-col items-center gap-5 sm:flex-row sm:items-end sm:justify-center sm:gap-4">
               {second && (
                 <div className="order-2 sm:order-1">
-                  <CollectionCard entry={second} rank={2} size="podium-side" />
+                  <LeaderboardCard entry={second} rank={2} size="podium-side" />
                 </div>
               )}
               {first && (
                 <div className="order-1 sm:order-2">
-                  <CollectionCard entry={first} rank={1} size="podium-lead" />
+                  <LeaderboardCard entry={first} rank={1} size="podium-lead" />
                 </div>
               )}
               {third && (
                 <div className="order-3">
-                  <CollectionCard entry={third} rank={3} size="podium-side" />
+                  <LeaderboardCard entry={third} rank={3} size="podium-side" />
                 </div>
               )}
             </div>
@@ -121,7 +174,7 @@ export function CollectionsBoard({
                 </div>
                 <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {rest.map((entry) => (
-                    <CollectionCard
+                    <LeaderboardCard
                       key={`${entry.username}:${entry.tag}`}
                       entry={entry}
                       rank={entry.rank}

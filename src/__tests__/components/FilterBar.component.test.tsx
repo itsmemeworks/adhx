@@ -373,7 +373,7 @@ describe('FilterBar Component', () => {
       const input = screen.getByPlaceholderText('tag name')
       fireEvent.change(input, { target: { value: 'Claude Code!' } })
 
-      expect(screen.getByText('→ #claude-cod')).toBeTruthy()
+      expect(screen.getByText('→ #claude-code')).toBeTruthy()
     })
 
     it('submitting the new-tag form selects it and enters Add-posts mode', () => {
@@ -395,8 +395,8 @@ describe('FilterBar Component', () => {
       fireEvent.change(input, { target: { value: 'Reading List' } })
       fireEvent.submit(input.closest('form')!)
 
-      expect(onSelectedTagsChange).toHaveBeenCalledWith(['reading-li'])
-      expect(onTagSelectChange).toHaveBeenCalledWith('reading-li')
+      expect(onSelectedTagsChange).toHaveBeenCalledWith(['reading-list'])
+      expect(onTagSelectChange).toHaveBeenCalledWith('reading-list')
     })
 
     it('keeps the Tags dropdown visible with zero tags when onTagSelectChange is wired', () => {

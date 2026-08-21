@@ -737,13 +737,13 @@ Tags are sanitized before storage to ensure URL-safe, consistent naming:
 - Invalid characters replaced with hyphens
 - Multiple hyphens collapsed
 - Leading/trailing hyphens removed
-- Maximum 10 characters (truncated, not rejected)
+- Maximum 15 characters (truncated, not rejected)
 
 ```typescript
 import { sanitizeTag } from '@/lib/utils/tag'
 
 sanitizeTag('Test Tag!') // → 'test-tag'
-sanitizeTag('Claude Code') // → 'claude-cod' (truncated to 10)
+sanitizeTag('Claude Code') // → 'claude-code'
 sanitizeTag('AI/ML') // → 'ai-ml'
 ```
 

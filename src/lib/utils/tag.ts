@@ -3,7 +3,7 @@
  * Ensures consistent tag formatting across the application.
  */
 
-const MAX_TAG_LENGTH = 10
+const MAX_TAG_LENGTH = 15
 
 /**
  * Sanitize a tag input to a valid slug format.
@@ -15,7 +15,7 @@ const MAX_TAG_LENGTH = 10
  *
  * @example
  * sanitizeTag('AI@Claude#Test!') // 'ai-claude'
- * sanitizeTag('  Hello World  ') // 'hello-worl'
+ * sanitizeTag('  Hello World  ') // 'hello-world'
  * sanitizeTag('---test---') // 'test'
  */
 export function sanitizeTag(input: string): string {

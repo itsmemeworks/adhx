@@ -464,7 +464,7 @@ export function FilterBar({
                         }
                       }}
                       placeholder="tag name"
-                      maxLength={10}
+                      maxLength={15}
                       className="min-w-0 flex-1 rounded-md border border-hairline bg-paper px-2 py-1 text-sm text-ink outline-none focus:border-clay"
                     />
                     <button
