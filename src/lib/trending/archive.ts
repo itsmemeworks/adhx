@@ -1,6 +1,6 @@
 import { db } from '@/lib/db'
 import { activity, bookmarks, bookmarkMedia, bookmarkLinks } from '@/lib/db/schema'
-import { and, desc, gte, inArray, lt, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, inArray, lt, sql } from 'drizzle-orm'
 import type { ContentType } from '@/components/matter'
 import type { TrendingItem } from './query'
 
@@ -207,6 +207,7 @@ export async function listArchiveWeeks(): Promise<ArchiveWeekSummary[]> {
       createdAt: activity.createdAt,
     })
     .from(activity)
+    .where(eq(activity.hidden, 0))
     .orderBy(desc(activity.createdAt))
     .limit(WEEK_DISCOVERY_ROW_CAP)
     .all()
@@ -301,7 +302,11 @@ export async function getArchiveItems(slug: string): Promise<ArchiveWeekResult |
     })
     .from(activity)
     .where(
-      and(gte(activity.createdAt, start.toISOString()), lt(activity.createdAt, end.toISOString())),
+      and(
+        eq(activity.hidden, 0),
+        gte(activity.createdAt, start.toISOString()),
+        lt(activity.createdAt, end.toISOString()),
+      ),
     )
     .orderBy(desc(activity.createdAt))
     .limit(PER_WEEK_ROW_CAP)

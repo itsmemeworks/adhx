@@ -109,4 +109,15 @@ describe('GET /api/activity', () => {
     const res = await GET()
     expect(res.headers.get('Cache-Control')).toContain('max-age=5')
   })
+
+  it('excludes rows moderated via activity.hidden', async () => {
+    seed({ bookmarkId: 'visible', createdAt: '2026-06-06T10:00:00Z' })
+    seed({ bookmarkId: 'spam', createdAt: '2026-06-06T10:01:00Z', hidden: 1 })
+
+    const res = await GET()
+    const { items } = await res.json()
+    const ids = items.map((i: { bookmarkId: string }) => i.bookmarkId)
+    expect(ids).toContain('visible')
+    expect(ids).not.toContain('spam')
+  })
 })

@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 import { db } from '@/lib/db'
 import { tagShares, bookmarks, users, activity } from '@/lib/db/schema'
-import { eq, desc, sql } from 'drizzle-orm'
+import { and, eq, desc, sql } from 'drizzle-orm'
 import { previewPath } from '@/lib/activity/record'
 import type { PlatformId } from '@/lib/platform/url'
 import { FILTER_SLUGS } from '@/lib/trending/filter'
@@ -162,7 +162,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
           contentType: activity.contentType,
         })
         .from(activity)
-        .where(eq(activity.platform, platform))
+        .where(and(eq(activity.hidden, 0), eq(activity.platform, platform)))
         .orderBy(desc(activity.createdAt))
         .limit(SOURCE_CAP)
         .all()
@@ -221,6 +221,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     const days = db
       .selectDistinct({ day: sql<string>`date(${activity.createdAt})` })
       .from(activity)
+      .where(eq(activity.hidden, 0))
       .all()
     const weeks = completedWeekSlugs(
       days.map((d) => d.day).filter((d): d is string => !!d),

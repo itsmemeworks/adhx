@@ -127,7 +127,13 @@ async function fetchAuthorProfile(handle: string): Promise<AuthorProfile | null>
       createdAt: activity.createdAt,
     })
     .from(activity)
-    .where(and(eq(activity.platform, 'twitter'), sql`lower(${activity.author}) = lower(${handle})`))
+    .where(
+      and(
+        eq(activity.hidden, 0),
+        eq(activity.platform, 'twitter'),
+        sql`lower(${activity.author}) = lower(${handle})`,
+      ),
+    )
     .orderBy(desc(activity.createdAt))
     .limit(ACTIVITY_FETCH_CAP)
     .all()

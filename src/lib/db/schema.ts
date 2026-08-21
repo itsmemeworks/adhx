@@ -314,6 +314,12 @@ export const activity = sqliteTable(
     url: text('url').notNull(),
     userId: text('user_id'), // private — never exposed publicly
     createdAt: text('created_at').notNull(),
+    // Content-level moderation lever: 1 hides this row from every public read
+    // path (getTrendingItems / /api/activity / /api/trending / the theater),
+    // set via the admin-only POST /api/admin/activity/hide route. Does NOT
+    // delete the row (append-only event log) and never touches the user's
+    // own saved bookmark.
+    hidden: integer('hidden').notNull().default(0),
   },
   (table) => ({
     createdAtIdx: index('activity_created_at_idx').on(table.createdAt),

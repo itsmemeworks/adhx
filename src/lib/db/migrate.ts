@@ -161,6 +161,20 @@ try {
   // Column already exists — nothing to do.
 }
 
+// activity.hidden — content-level moderation lever for the public
+// trending/pulse feed. Defaults to 0 (visible) so existing rows are
+// unaffected; set to 1 via the admin-only POST /api/admin/activity/hide
+// route to remove a spammy/offensive post from every public read path
+// without deleting the append-only event log row. Guarded for re-runs (no
+// IF NOT EXISTS). SQLite's ALTER TABLE ADD COLUMN with a literal DEFAULT
+// backfills existing rows to 0, matching the column's NOT NULL default.
+try {
+  db.exec('ALTER TABLE activity ADD COLUMN hidden integer NOT NULL DEFAULT 0')
+  console.log('[migrate] Added activity.hidden')
+} catch {
+  // Column already exists — nothing to do.
+}
+
 // Tiny settle-guard table for the one-time backfills below. Both backfills
 // scan/rewrite a full table (bookmarks / bookmark_media) with no usable index
 // for their WHERE clause (a leading-wildcard NOT LIKE, and platform+type

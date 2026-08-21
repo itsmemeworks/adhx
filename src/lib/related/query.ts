@@ -74,7 +74,13 @@ export async function getRelatedSaves(input: RelatedSavesInput): Promise<Related
         url: activity.url,
       })
       .from(activity)
-      .where(and(eq(activity.platform, input.platform), eq(activity.author, handle)))
+      .where(
+        and(
+          eq(activity.hidden, 0),
+          eq(activity.platform, input.platform),
+          eq(activity.author, handle),
+        ),
+      )
       .orderBy(desc(activity.createdAt))
       .limit(AUTHOR_FETCH)
       .all()
