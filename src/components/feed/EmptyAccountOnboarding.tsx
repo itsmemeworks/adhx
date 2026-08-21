@@ -4,6 +4,7 @@ import { Clipboard, RefreshCw, TrendingUp } from 'lucide-react'
 import { useAuthMe } from '@/components/auth'
 import { ConnectWithX, PlatformGlyph } from '@/components/matter'
 import { PasteLinkButton } from '@/components/PasteLinkButton'
+import { StarterCollections } from '@/components/onboarding/StarterCollections'
 import { cn } from '@/lib/utils'
 
 /**
@@ -72,6 +73,13 @@ export function EmptyAccountOnboarding(): React.ReactElement {
           description="See what the community is saving and sending right now."
           href="/trending"
         />
+      </div>
+
+      {/* Collapses to nothing when there are no public collections to offer —
+          the save-methods cards above are already a complete onboarding
+          path on their own. See StarterCollections' own doc. */}
+      <div className="mt-10 w-full max-w-2xl">
+        <StarterCollections compact />
       </div>
     </div>
   )
