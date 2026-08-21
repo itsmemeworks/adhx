@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, fireEvent, act } from '@testing-library/react'
 import { StageYouTube } from '@/components/theater/StageYouTube'
-import { resetYtDebugLines } from '@/components/theater/YtDebugOverlay'
+import { resetYtDebugLines, YtDebugOverlay } from '@/components/theater/YtDebugOverlay'
 import type { TheaterItem } from '@/components/theater/types'
 
 /**
@@ -477,6 +477,34 @@ describe('StageYouTube', () => {
 
     postMessage.mockClear()
     rerender(<StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />)
+    expect(JSON.parse(postMessage.mock.calls.at(-1)![0])).toMatchObject({ func: 'mute' })
+  })
+
+  // Gesture-unmute fix: the chrome's audio button now ALSO dispatches this
+  // synchronous window event (alongside the `muted` prop update above, which
+  // is the async/persistence path). For this postMessage-based cross-origin
+  // player it maps onto the SAME `requestUnmute`/`mute` command path and gate
+  // — postMessage isn't restricted by WebKit's same-call-stack rule the way
+  // StageVideo's `video.muted` is, but routing through one shared listener
+  // keeps every stage on the same contract.
+  it('theater-set-muted maps onto the same requestUnmute/mute command path as the muted prop', () => {
+    const { container } = render(<StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />)
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { postMessage, fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postFromPlayer(fakeWindow, { event: 'onReady' })
+    postMessage.mockClear()
+
+    // Unmute request before a confirmed playing state defers, exactly like
+    // the `muted` prop transition.
+    dispatchWindowEvent(new CustomEvent('theater-set-muted', { detail: { muted: false } }))
+    expect(postMessage.mock.calls.map(([p]) => JSON.parse(p).func)).not.toContain('unMute')
+
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
+    expect(JSON.parse(postMessage.mock.calls.at(-1)![0])).toMatchObject({ func: 'unMute' })
+
+    postMessage.mockClear()
+    dispatchWindowEvent(new CustomEvent('theater-set-muted', { detail: { muted: true } }))
     expect(JSON.parse(postMessage.mock.calls.at(-1)![0])).toMatchObject({ func: 'mute' })
   })
 
@@ -1080,10 +1108,13 @@ describe('StageYouTube', () => {
   })
 })
 
-// Round 2 diagnostic breadcrumb: `[stage-yt]` console.debug logging, gated
-// behind `?ytdebug=1` so production stays quiet. The owner can flip it on
-// from their phone by appending `?ytdebug=1` to the theater URL for a
-// further on-device round if needed.
+// Round 2 diagnostic breadcrumb: `[yt]` console.debug logging, gated behind
+// `?ytdebug=1` (or the widened `?avdebug=1`) so production stays quiet. The
+// owner can flip it on from their phone by appending `?ytdebug=1` to the
+// theater URL for a further on-device round if needed. `<YtDebugOverlay/>` is
+// no longer mounted inside StageYouTube itself (gesture-unmute round: moved
+// to TheaterShell so ONE overlay serves every stage) — it's rendered as a
+// sibling here, matching the real render tree.
 describe('StageYouTube debug logging (?ytdebug=1 gate)', () => {
   const originalUrl = window.location.href
 
@@ -1109,7 +1140,7 @@ describe('StageYouTube debug logging (?ytdebug=1 gate)', () => {
     expect(debugSpy).not.toHaveBeenCalled()
   })
 
-  it('logs tagged [stage-yt] breadcrumbs when ?ytdebug=1 is present', () => {
+  it('logs tagged [yt] breadcrumbs when ?ytdebug=1 is present', () => {
     window.history.replaceState(null, '', '/?ytdebug=1')
     const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {})
 
@@ -1120,16 +1151,39 @@ describe('StageYouTube debug logging (?ytdebug=1 gate)', () => {
     postFromPlayer(fakeWindow, { event: 'onReady' })
 
     expect(debugSpy).toHaveBeenCalled()
-    expect(debugSpy.mock.calls.every(([tag]) => tag === '[stage-yt]')).toBe(true)
+    expect(debugSpy.mock.calls.every(([tag]) => tag === '[yt]')).toBe(true)
+  })
+
+  // Widened gate: the alternate `?avdebug=1` param name (shared with
+  // StageVideo/the chrome's audio button now) must also enable YouTube's
+  // breadcrumbs.
+  it('also logs when ?avdebug=1 is present instead of ?ytdebug=1', () => {
+    window.history.replaceState(null, '', '/?avdebug=1')
+    const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {})
+
+    const { container } = render(<StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />)
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postFromPlayer(fakeWindow, { event: 'onReady' })
+
+    expect(debugSpy).toHaveBeenCalled()
   })
 
   // Round 6: the same breadcrumbs also render on-screen (no Mac tether
   // needed to read iOS Safari's console) — verifies the actual protocol run
   // surfaces its key moments in `<YtDebugOverlay/>`, not just `console.debug`.
+  // The overlay is rendered as a sibling (TheaterShell mounts it once,
+  // outside StageYouTube — see the describe block's own note above).
   it('surfaces the on-screen overlay with curated protocol moments, not the raw per-message noise', () => {
     window.history.replaceState(null, '', '/?ytdebug=1')
 
-    const { container } = render(<StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />)
+    const { container } = render(
+      <>
+        <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />
+        <YtDebugOverlay />
+      </>,
+    )
     const iframe = container.querySelector('iframe') as HTMLIFrameElement
     const { fakeWindow } = stubContentWindow(iframe)
     fireEvent.load(iframe)

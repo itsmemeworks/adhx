@@ -65,7 +65,7 @@ import { PlatformChip } from '@/components/matter'
 import { isValidVideoId, youtubeEmbedUrl } from '@/lib/media/youtube'
 import { previewPath } from '@/lib/activity/preview-path'
 import { StageFrame, StageHeadline, StageCTA } from './stage-primitives'
-import { logStage, logStageVerbose, YtDebugOverlay } from './YtDebugOverlay'
+import { logStage, logStageVerbose } from './YtDebugOverlay'
 import type { TheaterItem } from './types'
 
 /** The embed's own origin — every inbound message is filtered to this, and
@@ -465,29 +465,61 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     }
   }, [videoId, armStallTimer, clearStallTimer, clearStartupRetryTimers])
 
+  // Shared by both the `[muted]` prop-reconcile effect below AND the
+  // synchronous `theater-set-muted` listener (gesture-unmute fix): muting is
+  // always safe immediately; unmuting always funnels through
+  // `requestUnmute()`'s confirmed-playing gate. No-ops before the handshake
+  // completes — `onReady` applies the latest value instead once it does.
+  const applyMuted = useCallback(
+    (next: boolean) => {
+      if (!readyRef.current) return
+      if (next) {
+        pendingUnmuteRef.current = false
+        unmuteAwaitingConfirmRef.current = false
+        lastCommandedMutedRef.current = true
+        setEffectiveMuted(true)
+        postCommand('mute')
+      } else {
+        // A deliberate user gesture (the audio-button tap) — never the
+        // automatic catch-up path (that one only ever fires from
+        // `onReady`/`applyPlayerState` below).
+        requestUnmute('user')
+      }
+    },
+    [postCommand, requestUnmute],
+  )
+
   // Reconcile the shell's `muted` signal onto the live player — only on an
-  // actual prop transition, same discipline as StageVideo. Muting is always
-  // safe immediately; unmuting always funnels through `requestUnmute()`'s
-  // confirmed-playing gate. If the handshake hasn't completed yet, `onReady`
-  // below applies the latest value instead.
+  // actual prop transition, same discipline as StageVideo. This is the
+  // async/persistence path (a React state update flowing back down as a
+  // prop, one render behind the tap) — the gesture-context fast path is the
+  // `theater-set-muted` listener below, which applies the SAME value
+  // synchronously inside the tap. By the time this effect runs, the element
+  // is usually already correct, so this is idempotent housekeeping, not the
+  // primary mechanism.
   useEffect(() => {
-    if (!readyRef.current) return
-    if (muted) {
-      pendingUnmuteRef.current = false
-      unmuteAwaitingConfirmRef.current = false
-      lastCommandedMutedRef.current = true
-      setEffectiveMuted(true)
-      postCommand('mute')
-    } else {
-      // A prop transition to unmuted is always a deliberate user gesture
-      // (the audio-button tap flips the shell's `muted`, which flows down
-      // here) — never the automatic catch-up path (that one only ever
-      // fires from `onReady`/`applyPlayerState` below, not from a `muted`
-      // prop CHANGE, since the prop doesn't change on catch-up — it arrives
-      // already-false).
-      requestUnmute('user')
+    applyMuted(muted)
+  }, [muted, applyMuted])
+
+  // Gesture-context fast path (mobile round 7 — the persistent
+  // double-tap-to-unmute bug): the chrome's audio button dispatches this
+  // SYNCHRONOUSLY, from inside its own click handler's call stack, alongside
+  // (not instead of) calling the shell's setter above. For StageVideo this
+  // distinction is what makes WebKit honor the unmute; for this
+  // postMessage-based cross-origin player it can't hurt either way — YouTube's
+  // own embed governs its unmute policy internally, but routing the command
+  // from within the tap's gesture context costs nothing and keeps every
+  // stage on one consistent contract.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ muted: boolean }>).detail
+      if (!detail) return
+      logStage(`theater-set-muted(${detail.muted}) applied`)
+      applyMuted(detail.muted)
     }
-  }, [muted, postCommand, requestUnmute])
+    window.addEventListener('theater-set-muted', handler)
+    return () => window.removeEventListener('theater-set-muted', handler)
+  }, [applyMuted])
 
   // Broadcast playing/muted state so the dock/peek-bar transport + audio
   // buttons stay in sync, exactly like StageVideo.
@@ -773,91 +805,82 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
   if (neverStarted) {
     const href = previewPath(item.platform, item.author, item.bookmarkId || '')
     return (
-      <>
-        <StageFrame>
-          {item.thumbnailUrl ? (
-            <>
-              <img
-                src={item.thumbnailUrl}
-                alt=""
-                referrerPolicy="no-referrer"
-                className="absolute inset-0 h-full w-full object-contain opacity-60"
-              />
-              <div className="absolute inset-0 bg-[#08070a]/55" aria-hidden />
-            </>
-          ) : null}
-          <div className="relative flex flex-col items-center gap-4">
-            <button
-              type="button"
-              onClick={handleTapToPlay}
-              className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-md"
-              aria-label="Play video"
-            >
-              <Play size={26} fill="currentColor" />
-            </button>
-            <StageCTA href={href} />
-          </div>
-        </StageFrame>
-        <YtDebugOverlay />
-      </>
+      <StageFrame>
+        {item.thumbnailUrl ? (
+          <>
+            <img
+              src={item.thumbnailUrl}
+              alt=""
+              referrerPolicy="no-referrer"
+              className="absolute inset-0 h-full w-full object-contain opacity-60"
+            />
+            <div className="absolute inset-0 bg-[#08070a]/55" aria-hidden />
+          </>
+        ) : null}
+        <div className="relative flex flex-col items-center gap-4">
+          <button
+            type="button"
+            onClick={handleTapToPlay}
+            className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-md"
+            aria-label="Play video"
+          >
+            <Play size={26} fill="currentColor" />
+          </button>
+          <StageCTA href={href} />
+        </div>
+      </StageFrame>
     )
   }
 
   if (!videoId) {
     const href = previewPath(item.platform, item.author, item.bookmarkId || '')
     return (
-      <>
-        <StageFrame>
-          {item.thumbnailUrl ? (
-            <>
-              <img
-                src={item.thumbnailUrl}
-                alt=""
-                referrerPolicy="no-referrer"
-                className="absolute inset-0 h-full w-full object-contain opacity-60"
-              />
-              <div className="absolute inset-0 bg-[#08070a]/55" aria-hidden />
-            </>
-          ) : null}
-          <div className="relative flex max-w-xl flex-col items-center gap-4 px-6 text-center">
-            <PlatformChip platform="youtube" />
-            {text && <StageHeadline>{text}</StageHeadline>}
-            <StageCTA href={href} />
-          </div>
-        </StageFrame>
-        <YtDebugOverlay />
-      </>
+      <StageFrame>
+        {item.thumbnailUrl ? (
+          <>
+            <img
+              src={item.thumbnailUrl}
+              alt=""
+              referrerPolicy="no-referrer"
+              className="absolute inset-0 h-full w-full object-contain opacity-60"
+            />
+            <div className="absolute inset-0 bg-[#08070a]/55" aria-hidden />
+          </>
+        ) : null}
+        <div className="relative flex max-w-xl flex-col items-center gap-4 px-6 text-center">
+          <PlatformChip platform="youtube" />
+          {text && <StageHeadline>{text}</StageHeadline>}
+          <StageCTA href={href} />
+        </div>
+      </StageFrame>
     )
   }
 
   return (
-    <>
-      <div className="flex h-full w-full flex-col bg-[#08070a]">
-        <div className="flex min-h-0 flex-1 items-center justify-center p-4 sm:p-8">
-          <div className="relative aspect-[9/16] h-[min(82vh,100%)] max-w-full overflow-hidden rounded-2xl bg-black shadow-2xl">
-            {clientOrigin && (
-              <iframe
-                key={`${videoId}-${reloadNonce}`}
-                id={playerId}
-                ref={iframeRef}
-                src={buildEmbedSrc(videoId, clientOrigin)}
-                title={text || 'YouTube Short'}
-                className="absolute inset-0 h-full w-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                referrerPolicy="strict-origin-when-cross-origin"
-                allowFullScreen
-                onLoad={handleLoad}
-              />
-            )}
-          </div>
+    <div className="flex h-full w-full flex-col bg-[#08070a]">
+      <div className="flex min-h-0 flex-1 items-center justify-center p-4 sm:p-8">
+        <div className="relative aspect-[9/16] h-[min(82vh,100%)] max-w-full overflow-hidden rounded-2xl bg-black shadow-2xl">
+          {clientOrigin && (
+            <iframe
+              key={`${videoId}-${reloadNonce}`}
+              id={playerId}
+              ref={iframeRef}
+              src={buildEmbedSrc(videoId, clientOrigin)}
+              title={text || 'YouTube Short'}
+              className="absolute inset-0 h-full w-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allowFullScreen
+              onLoad={handleLoad}
+            />
+          )}
         </div>
-        {text && (
-          <div className="flex-shrink-0 px-6 pb-6 sm:px-10 sm:pb-8">
-            <p className="line-clamp-1 text-center text-sm text-white/70">{text}</p>
-          </div>
-        )}
       </div>
-      <YtDebugOverlay />
-    </>
+      {text && (
+        <div className="flex-shrink-0 px-6 pb-6 sm:px-10 sm:pb-8">
+          <p className="line-clamp-1 text-center text-sm text-white/70">{text}</p>
+        </div>
+      )}
+    </div>
   )
 }

@@ -63,6 +63,7 @@ import { progressKindFor } from './TheaterProgressLine'
 import { UpNextList, TYPE_TILE, warmOnHover } from './UpNextList'
 import { SaveCollectionButton } from './SaveCollectionButton'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
+import { logAV } from './YtDebugOverlay'
 import type {
   SaveCollectionStatus,
   TheaterCollectionMeta,
@@ -108,7 +109,15 @@ export interface DesktopDockProps {
   onSelect: (key: string) => void
   waiting?: boolean
   muted: boolean
-  onToggleMute: () => void
+  /**
+   * Sets TheaterShell's `muted` state to an explicit value (not a blind
+   * toggle — the audio button computes the target from the DISPLAYED state,
+   * `displayMuted`, which can diverge from this `muted` prop; see
+   * `handleAudioTap` below). This is the persistence path only — the
+   * gesture-context fast path is the synchronous `theater-set-muted` window
+   * event `handleAudioTap` dispatches alongside this call.
+   */
+  onSetMuted: (muted: boolean) => void
   canPrev: boolean
   canNext: boolean
   onPrev: () => void
@@ -868,7 +877,7 @@ export function DesktopDock({
   onSelect,
   waiting,
   muted,
-  onToggleMute,
+  onSetMuted,
   canPrev,
   canNext,
   onPrev,
@@ -924,6 +933,21 @@ export function DesktopDock({
   const paused = kind === 'video' ? !videoPlaying : timedPaused
   const displayMuted = liveMuted ?? muted
   const soundPulse = kind === 'video' && displayMuted && videoPlaying
+
+  // Computed from the DISPLAYED state (not the shell's possibly-stale
+  // `muted` prop) so the button always moves the direction the icon shows —
+  // then dispatches synchronously (gesture-context fast path for
+  // StageVideo/StageYouTube) alongside the shell setter (persistence, one
+  // render later). See `onSetMuted`'s doc comment above. Mirrors
+  // TheaterMobileChrome's identical handler.
+  const handleAudioTap = () => {
+    const next = !displayMuted
+    logAV(
+      `audio tap: displayed=${displayMuted ? 'muted' : 'unmuted'} -> requesting ${next ? 'muted' : 'unmuted'}`,
+    )
+    window.dispatchEvent(new CustomEvent('theater-set-muted', { detail: { muted: next } }))
+    onSetMuted(next)
+  }
 
   const handleTogglePause = () => {
     if (kind === 'video') {
@@ -998,7 +1022,7 @@ export function DesktopDock({
           aria-label={displayMuted ? 'Unmute' : 'Mute'}
           disabled={kind !== 'video'}
           aria-disabled={kind !== 'video'}
-          onClick={onToggleMute}
+          onClick={handleAudioTap}
           className={cn(TRANSPORT_BTN, soundPulse && 'animate-sound-pulse text-ink')}
         >
           {displayMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}

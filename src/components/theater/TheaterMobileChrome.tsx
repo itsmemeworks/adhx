@@ -58,6 +58,7 @@ import { UpNextList } from './UpNextList'
 import { SaveCollectionButton } from './SaveCollectionButton'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
 import { StageIconButton } from './stage-primitives'
+import { logAV } from './YtDebugOverlay'
 import type {
   SaveCollectionStatus,
   TheaterCollectionMeta,
@@ -84,8 +85,15 @@ export interface TheaterMobileChromeProps {
   canNext: boolean
   /** Current sound state (owned by TheaterShell) — the audio button's fallback signal, see `liveMuted` below. */
   muted: boolean
-  /** Flips TheaterShell's `muted` state. */
-  onToggleMute: () => void
+  /**
+   * Sets TheaterShell's `muted` state to an explicit value (not a blind
+   * toggle — the audio button computes the target from the DISPLAYED state,
+   * `displayMuted`, which can diverge from this `muted` prop; see
+   * `handleAudioTap` below). This is the persistence path only — the
+   * gesture-context fast path is the synchronous `theater-set-muted` window
+   * event `handleAudioTap` dispatches alongside this call.
+   */
+  onSetMuted: (muted: boolean) => void
   /** Collection mode (`/t/{username}/{tag}`): identity chrome + swaps the bottom action row's Download/Save-login for the Save-collection CTA. */
   collection?: TheaterCollectionMeta
   saveStatus?: SaveCollectionStatus
@@ -142,7 +150,7 @@ export function TheaterMobileChrome({
   canPrev,
   canNext,
   muted,
-  onToggleMute,
+  onSetMuted,
   collection,
   saveStatus = 'idle',
   onSaveCollection,
@@ -235,6 +243,20 @@ export function TheaterMobileChrome({
   // while the current video is effectively muted AND actually playing, so a
   // paused or already-unmuted video never pulses.
   const soundPulse = mediaKind === 'video' && displayMuted && videoPlaying
+
+  // Computed from the DISPLAYED state (not the shell's possibly-stale
+  // `muted` prop) so the button always moves the direction the icon shows —
+  // then dispatches synchronously (gesture-context fast path for
+  // StageVideo/StageYouTube) alongside the shell setter (persistence, one
+  // render later). See `onSetMuted`'s doc comment above.
+  const handleAudioTap = () => {
+    const next = !displayMuted
+    logAV(
+      `audio tap: displayed=${displayMuted ? 'muted' : 'unmuted'} -> requesting ${next ? 'muted' : 'unmuted'}`,
+    )
+    window.dispatchEvent(new CustomEvent('theater-set-muted', { detail: { muted: next } }))
+    onSetMuted(next)
+  }
 
   const handleTogglePause = () => {
     if (mediaKind === 'video') {
@@ -740,7 +762,7 @@ export function TheaterMobileChrome({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation()
-                    onToggleMute()
+                    handleAudioTap()
                   }}
                   onTouchEnd={(e) => e.stopPropagation()}
                   aria-label={displayMuted ? 'Unmute' : 'Mute'}
