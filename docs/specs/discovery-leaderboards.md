@@ -137,27 +137,44 @@ export function getCollectionLeaderboard(opts: {
 
 ## 6. Surfaces (MVP)
 
-**`/collections` — the leaderboard page** (public, anonymous, crawlable):
+**`/collections` — the leaderboard page** (public, anonymous, crawlable). Design settled
+2026-08-21 on the "Collection Leaderboard" design canvas: **direction A — Podium**:
 
 - `export const dynamic = 'force-dynamic'` (reads SQLite — same runtime-render rule as
   `/trending`; no `generateStaticParams`).
-- Window tabs **Today · Week · Month · All-time** as tidy paths `/collections/{window}`
+- Window tabs **Today · This week · Month · All-time** as tidy paths `/collections/{window}`
   (`/collections` = week, the default — day is too jumpy pre-scale, all-time too static),
   reflected via `history.replaceState` exactly like `/trending/[filter]`.
-- Rows/grid of `CollectionPosterCard`s (reused) with a rank badge (#1/#2/#3 get the flame
-  treatment) and a stat line ("1.2k views · 34 saves this week"). Click → the existing looping
-  collection theater at `/t/{username}/{tag}`.
+- **Podium layout**: centered hero of the top 3 as large `CollectionPosterCard`s (#1 biggest,
+  clay-grad rank medallion + flame + glow; #2/#3 flanking with clay medallions), then a
+  "Ranks 4–9" 3-col poster grid with glass rank badges, closed by a "See the full top 24 →"
+  continuation. Every card carries curator handle + post count + a mono stat line
+  (eye views · bookmark saves). Click → the existing looping collection theater at
+  `/t/{username}/{tag}`. Mobile = featured #1 poster + compact chart rows.
 - SEO: sr-only ranked list + `CollectionPage`/`ItemList` JSON-LD, Matter dark styling to match
   `/trending`'s ranked list. Add to the sitemap (weekly, 0.7) and link it from the theater's
   static hero copy + `/trending`.
+- Not selected (kept on the canvas for reference): B — dense chart rows with movement arrows
+  (rank vs prior window — derivable from the event log, could migrate into A later), C —
+  uniform rank-badged grid.
 
 **`GET /api/collections/trending?window=&limit=`** — public anonymous JSON wrapping
 `getCollectionLeaderboard()` (GEO/AI-search sibling of `/api/trending`). Rate-limited 120/min/IP,
 60s cache headers, listed in `llms.txt`.
 
-**Curator stat surface**: the owner's `/tags` poster cards gain a small
-"👁 1.2k · #4 this week" line (data already in the leaderboard query; one extra lookup by
-owner). The full "your rank ladder" Settings card is a follow-up, not MVP.
+**Curator stat surfaces** (both designed on the same canvas, both MVP):
+
+- **Owner `/tags` upgrade**: title row gains a "This week" summary chip (total views · saves ·
+  best rank); each public poster card gains the mono stat line (views · saves) + a clay
+  "#N this week" rank chip when charting; private cards read "Private · no public stats"
+  instead of nothing; a "New tag" ghost card and a leaderboard cross-promo band
+  ("#memes is #4 on this week's leaderboard · 14 views to #3 · See the leaderboard →")
+  fill the previously-empty page and close the gamification loop.
+- **Public profile `/t/{username}`**: the hero gains a curator stat strip under the handle
+  (views this week · saves · leaderboard rank), and each collection card gains the same
+  stat line, with the "#N this week" chip top-right on charting collections. All counts are
+  anonymous aggregates — nothing viewer-identifying (§3 invariant 2 applies).
+- The full "your rank ladder" Settings card is a follow-up, not MVP.
 
 ## 7. Hot / rising / new — the plumbing (future theater filter, NOT MVP)
 
@@ -204,8 +221,9 @@ The ask: theater sort modes like Reddit's. What must exist *now* so that's a sma
 ## 10. MVP cut-line
 
 **In**: `collection_events` table + migration + test DDL, recorder with view/clone hooks,
-`rank.ts` with `top` × 4 windows, `/collections/{window}` page + JSON-LD + sitemap,
-`/api/collections/trending`, /tags stat line, moderation hide, tests.
+`rank.ts` with `top` × 4 windows, `/collections/{window}` page (podium direction A) + JSON-LD
++ sitemap, `/api/collections/trending`, the /tags owner upgrade + profile stat strip (§6),
+moderation hide, tests.
 
 **Out (explicitly)**: hot/rising/new implementations (plumbing only), per-item `item_view`
 events, curator rank ladder in Settings, rank-change notifications/digest, rollup tables,
