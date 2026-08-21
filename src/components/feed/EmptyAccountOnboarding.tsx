@@ -2,7 +2,7 @@
 
 import { Clipboard, RefreshCw, TrendingUp } from 'lucide-react'
 import { useAuthMe } from '@/components/auth'
-import { ConnectWithX } from '@/components/matter'
+import { ConnectWithX, PlatformGlyph } from '@/components/matter'
 import { cn } from '@/lib/utils'
 
 /**
@@ -36,8 +36,8 @@ export function EmptyAccountOnboarding(): React.ReactElement {
           />
         ) : (
           <OnboardingAction
-            icon={<ConnectWithX size={15} />}
-            title={null}
+            icon={<PlatformGlyph platform="x" size={18} />}
+            title={<ConnectWithX size={15} />}
             description="Import your existing X bookmarks in one click."
             href="/api/auth/twitter"
             primary
@@ -63,7 +63,7 @@ export function EmptyAccountOnboarding(): React.ReactElement {
 
 interface OnboardingActionProps {
   icon: React.ReactNode
-  title: string | null
+  title: React.ReactNode
   description: string
   href?: string
   onClick?: () => void
