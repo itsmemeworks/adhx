@@ -186,3 +186,168 @@ describe('StageVideo transport start-path parity (owner: bottom play button did 
     expect(container.querySelector('[aria-label="Play video"]')).not.toBeNull()
   })
 })
+
+/**
+ * Instagram catch-up unmute: every Instagram item is a genuinely fresh
+ * StageVideo mount (see StageInstagram.tsx), so it carries no user-gesture
+ * history — when the shell already wants sound (`muted={false}`) the
+ * initial unmuted play() attempt below is routinely rejected and the mount
+ * effect falls back to muted (already covered by
+ * StageInstagram.component.test.tsx's "late-attach" tests). Previously
+ * nothing ever asked for sound again after that fallback. These tests cover
+ * the fix: once playback is CONFIRMED (a real `playing` event — never
+ * before, matching the round-4 "evidence only" discipline elsewhere in this
+ * file), retry sound once; an unexpected `pause` right after is the only
+ * signal treated as the platform vetoing it.
+ */
+describe('StageVideo Instagram catch-up unmute (confirmed-playing retry, evidence-only revert)', () => {
+  afterEach(() => {
+    HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue(undefined)
+  })
+
+  it('unmutes once playback is confirmed after falling back to muted, while the shell wants sound', async () => {
+    // 1st call: the initial unmuted attempt (rejected — no gesture on this
+    // fresh element). 2nd+: the fallback's muted retry, and anything after.
+    const playMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('unmuted autoplay rejected'))
+      .mockResolvedValue(undefined)
+    HTMLMediaElement.prototype.play = playMock
+
+    const { container } = render(
+      <StageVideo
+        item={makeItem()}
+        src="/api/media/video?a=1"
+        poster={null}
+        muted={false}
+        onRequestUnmute={vi.fn()}
+      />,
+    )
+
+    // Let the mount effect's reject -> muted-fallback chain settle.
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    const video = container.querySelector('video') as HTMLVideoElement
+    expect(video.muted).toBe(true) // fell back to muted, exactly as before this fix
+
+    // Confirmed playing — the only signal that triggers the catch-up retry.
+    await act(async () => {
+      video.dispatchEvent(new Event('playing'))
+      await Promise.resolve()
+    })
+
+    expect(video.muted).toBe(false)
+  })
+
+  it('does not attempt a catch-up unmute when the shell wants muted playback', async () => {
+    const { container } = render(
+      <StageVideo
+        item={makeItem()}
+        src="/api/media/video?a=1"
+        poster={null}
+        muted
+        onRequestUnmute={vi.fn()}
+      />,
+    )
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    const video = container.querySelector('video') as HTMLVideoElement
+    expect(video.muted).toBe(true)
+
+    await act(async () => {
+      video.dispatchEvent(new Event('playing'))
+      await Promise.resolve()
+    })
+
+    expect(video.muted).toBe(true)
+  })
+
+  it('reverts to muted and resumes when an unexpected pause follows the catch-up unmute (observed rejection)', async () => {
+    const playMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('unmuted autoplay rejected'))
+      .mockResolvedValue(undefined)
+    HTMLMediaElement.prototype.play = playMock
+
+    const { container } = render(
+      <StageVideo
+        item={makeItem()}
+        src="/api/media/video?a=1"
+        poster={null}
+        muted={false}
+        onRequestUnmute={vi.fn()}
+      />,
+    )
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    const video = container.querySelector('video') as HTMLVideoElement
+
+    await act(async () => {
+      video.dispatchEvent(new Event('playing'))
+      await Promise.resolve()
+    })
+    expect(video.muted).toBe(false) // catch-up applied
+
+    const callsBeforeRevert = playMock.mock.calls.length
+    await act(async () => {
+      video.dispatchEvent(new Event('pause'))
+      await Promise.resolve()
+    })
+
+    expect(video.muted).toBe(true) // reverted
+    // Reverting also resumes playback with a fresh play() call.
+    expect(playMock.mock.calls.length).toBeGreaterThan(callsBeforeRevert)
+  })
+
+  it('does NOT treat the pause that precedes a natural `ended` as a catch-up rejection', async () => {
+    const playMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('unmuted autoplay rejected'))
+      .mockResolvedValue(undefined)
+    HTMLMediaElement.prototype.play = playMock
+
+    const { container } = render(
+      <StageVideo
+        item={makeItem()}
+        src="/api/media/video?a=1"
+        poster={null}
+        muted={false}
+        onRequestUnmute={vi.fn()}
+      />,
+    )
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    const video = container.querySelector('video') as HTMLVideoElement
+
+    await act(async () => {
+      video.dispatchEvent(new Event('playing'))
+      await Promise.resolve()
+    })
+    expect(video.muted).toBe(false) // catch-up applied
+
+    // Real playback reaching its end: browsers fire `pause` immediately
+    // before `ended`. `video.ended` is read live by the pause handler, so
+    // stub it the way jsdom's own read-only getter would report it.
+    Object.defineProperty(video, 'ended', { value: true, configurable: true })
+
+    await act(async () => {
+      video.dispatchEvent(new Event('pause'))
+      video.dispatchEvent(new Event('ended'))
+    })
+
+    // Stayed unmuted — this was a natural end, not a rejection.
+    expect(video.muted).toBe(false)
+    expect(container.querySelector('[aria-label="Replay"]')).not.toBeNull()
+  })
+})

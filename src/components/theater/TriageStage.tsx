@@ -76,6 +76,16 @@ export interface TriageStageProps {
   feedItem: FeedItem
   muted: boolean
   onRequestUnmute: () => void
+  /**
+   * A video finished playing (unified-theater-triage.md §2 — "My Collection
+   * is just a different playlist in that same theater"): pure navigation to
+   * the next queue item, never a read-state decision — see
+   * `TheaterShell.triageAdvanceOnEnded`. Only ever wired to the video-
+   * capable branches below (instagram/youtube/twitter+tiktok); text/photo/
+   * quote/article still wait on a deliberate Done/Later/Delete, so they
+   * never receive this prop.
+   */
+  onEnded?: () => void
   /** Current item's tags (unified-theater-triage.md §B), for the text/quote
    * branches below — media posts get their chips from the chrome's bottom-left
    * overlay instead, which already sits over the content. */
@@ -85,21 +95,36 @@ export interface TriageStageProps {
 /** Dispatches the right stage variant for the current triage `FeedItem`,
  * converting to `TheaterItem` for the shared theater stages — the SAME
  * players every other theater playlist uses. */
-export function TriageStage({ feedItem, muted, onRequestUnmute, tags }: TriageStageProps) {
+export function TriageStage({ feedItem, muted, onRequestUnmute, onEnded, tags }: TriageStageProps) {
   const theaterItem = feedItemToTheaterItem(feedItem)
   const platform = feedItem.platform ?? 'twitter'
   const primary = feedItem.media?.[0]
   const isVideo = primary?.mediaType === 'video' || primary?.mediaType === 'animated_gif'
 
   if (platform === 'instagram') {
-    return <StageInstagram item={theaterItem} muted={muted} onRequestUnmute={onRequestUnmute} />
+    return (
+      <StageInstagram
+        item={theaterItem}
+        muted={muted}
+        onRequestUnmute={onRequestUnmute}
+        onEnded={onEnded}
+      />
+    )
   }
 
   if (platform === 'youtube') {
-    // No `onEnded` here — triage's Collection tab never auto-advances
-    // (Done/Later/Delete are the only ways forward), same as StageVideo's
-    // twitter/tiktok branches below.
-    return <StageYouTube item={theaterItem} muted={muted} onRequestUnmute={onRequestUnmute} />
+    // Videos in the Collection tab auto-advance on end just like every
+    // other playlist now — `onEnded` flows through to the shell's
+    // `triageAdvanceOnEnded` (pure navigation only; Done/Later/Delete still
+    // decide read state), same as StageVideo's twitter/tiktok branch below.
+    return (
+      <StageYouTube
+        item={theaterItem}
+        muted={muted}
+        onRequestUnmute={onRequestUnmute}
+        onEnded={onEnded}
+      />
+    )
   }
 
   // Twitter and TikTok video both play through the SAME StageVideo the live
@@ -117,6 +142,7 @@ export function TriageStage({ feedItem, muted, onRequestUnmute, tags }: TriageSt
         poster={theaterItem.thumbnailUrl ?? null}
         muted={muted}
         onRequestUnmute={onRequestUnmute}
+        onEnded={onEnded}
       />
     )
   }

@@ -163,8 +163,14 @@ describe('PasteLinkButton — non-iOS (readText flow, unchanged)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Paste link' }))
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
 
-    fireEvent.mouseDown(document.body)
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    // The outside-click listener attaches in an effect after the overlay
+    // opens — poll rather than asserting synchronously, or a slow CI runner
+    // can fire the mousedown before the listener exists (real flake, seen on
+    // the PR #385 run; the behavior itself is live-browser verified).
+    await waitFor(() => {
+      fireEvent.mouseDown(document.body)
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
   })
 
   it('closes the overlay on Escape', async () => {

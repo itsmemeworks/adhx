@@ -23,14 +23,16 @@
  * "never actually started" stall watchdog that skips the item instead of
  * parking the queue on a dead Short — mirroring `onError`.
  *
- * `progressKindFor()` (`TheaterProgressLine.tsx`) now maps YouTube to the
- * same `'video'` kind as twitter/tiktok/instagram so the dock/peek-bar
- * pause+audio buttons render at all — they're gated on that kind in
- * `TheaterDesktopChrome`/`TheaterMobileChrome`. The shared top progress
- * LINE still never fills for YouTube (the raw protocol's periodic
- * `infoDelivery` current-time payload isn't documented/stable enough to
- * trust for a scrub bar), which just reads as an empty track — acceptable,
- * and far better than the buttons not existing at all.
+ * `progressKindFor()` (`TheaterProgressLine.tsx`) maps YouTube to the same
+ * `'video'` kind as twitter/tiktok/instagram so the dock/peek-bar pause+audio
+ * buttons render at all — they're gated on that kind in
+ * `TheaterDesktopChrome`/`TheaterMobileChrome`. Round 5: the shared top
+ * progress LINE now fills for YouTube too — `infoDelivery`'s (undocumented,
+ * but observed reliable) `currentTime`/`duration` fields feed the same
+ * `theater-video-progress` window event StageVideo dispatches on
+ * `timeupdate`, so `TheaterProgressLine`'s 'video'-kind listener can't tell
+ * the two apart. No rAF interpolation between heartbeats yet (v1) — upgrade
+ * path if the fill looks steppy on-device.
  *
  * THE GOTCHA (CLAUDE.md, bitten before): an `aspect-[9/16]` box around an
  * absolutely-positioned iframe collapses to zero height. The fix is a
@@ -143,10 +145,11 @@ export interface StageYouTubeProps {
    * player itself. */
   onRequestUnmute: () => void
   /** Ended, errored, or stalled — the same advance path StageVideo's
-   * `onEnded` drives. Omit (triage's Collection tab, which never
-   * auto-advances — Done/Later/Delete are the only ways forward there) to
-   * disable auto-advance entirely; every internal advance path is a no-op
-   * without it. */
+   * `onEnded` drives. Triage's Collection tab now wires this through to pure
+   * queue navigation ("My Collection is just a different playlist in that
+   * same theater" — Done/Later/Delete still decide read state, finishing
+   * playback just moves along). Omit to disable auto-advance entirely —
+   * every internal advance path is a no-op without it. */
   onEnded?: () => void
   /**
    * shared-post-repeat: the embed has no native `loop` param that survives
@@ -516,6 +519,12 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
           }
         } else if (state === 0) {
           setPlaying(false)
+          // Mirror StageVideo's own ended-state dispatch: the bar visibly
+          // reaches full before either looping (repeat) or the item
+          // advances away.
+          window.dispatchEvent(
+            new CustomEvent('theater-video-progress', { detail: { progress: 1 } }),
+          )
           // shared-post-repeat: stand in for `<video loop>` — the embed has
           // no reliable native loop param on the JS-API path, so an ended
           // state is answered with a seek-and-replay instead of advancing.
@@ -564,7 +573,15 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
         // (bitten on staging, 2026-08-21). Handle both shapes.
         case 'infoDelivery': {
           const info = data.info as
-            { playerState?: unknown; muted?: unknown; volume?: unknown } | null | undefined
+            | {
+                playerState?: unknown
+                muted?: unknown
+                volume?: unknown
+                currentTime?: unknown
+                duration?: unknown
+              }
+            | null
+            | undefined
           if (info && typeof info === 'object') {
             if (typeof info.playerState === 'number') applyPlayerState(info.playerState)
             if (typeof info.muted === 'boolean') {
@@ -586,6 +603,28 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
             ) {
               logStage('infoDelivery confirms unmute (volume>0) — clearing pending')
               unmuteAwaitingConfirmRef.current = false
+            }
+            // Round 5: drive the shared clay progress bar the same way
+            // StageVideo does — the SAME `theater-video-progress` window
+            // event, the SAME `{ progress }` detail shape (a 0..1 fraction;
+            // `TheaterProgressLine`'s 'video'-kind listener clamps it, so no
+            // clamping needed on the send side either — mirrors StageVideo's
+            // own `handleTimeUpdate`, which doesn't clamp there). infoDelivery
+            // streams `currentTime`/`duration` frequently while playing — v1
+            // dispatches on every heartbeat with no interpolation; if that
+            // looks steppy on-device (heartbeat cadence is undocumented),
+            // rAF-interpolating between heartbeats is the upgrade path.
+            // Unlike `logStage`, this dispatch is NOT gated behind
+            // `?ytdebug=1` — it's the feature, not a diagnostic.
+            if (
+              typeof info.currentTime === 'number' &&
+              typeof info.duration === 'number' &&
+              info.duration > 0
+            ) {
+              const progress = info.currentTime / info.duration
+              window.dispatchEvent(
+                new CustomEvent('theater-video-progress', { detail: { progress } }),
+              )
             }
           }
           break

@@ -869,6 +869,119 @@ describe('StageYouTube', () => {
 
     expect(onEnded).not.toHaveBeenCalled()
   })
+
+  // Round 5: drive the shared clay progress bar from infoDelivery's
+  // currentTime/duration, via the SAME `theater-video-progress` window
+  // event + `{ progress }` detail shape StageVideo dispatches on
+  // timeupdate — TheaterProgressLine's 'video'-kind listener can't tell the
+  // two apart.
+  describe('round 5: progress bar (theater-video-progress from infoDelivery)', () => {
+    function captureProgressEvents() {
+      const progress: number[] = []
+      const handler = (e: Event) =>
+        progress.push((e as CustomEvent<{ progress: number }>).detail.progress)
+      window.addEventListener('theater-video-progress', handler)
+      return {
+        progress,
+        stop: () => window.removeEventListener('theater-video-progress', handler),
+      }
+    }
+
+    it('dispatches theater-video-progress with currentTime/duration from infoDelivery', () => {
+      const { progress, stop } = captureProgressEvents()
+      const { container } = render(
+        <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+
+      postFromPlayer(fakeWindow, {
+        event: 'infoDelivery',
+        info: { playerState: 1, currentTime: 5, duration: 20 },
+      })
+
+      expect(progress).toEqual([0.25])
+      stop()
+    })
+
+    it('does not dispatch when duration is missing', () => {
+      const { progress, stop } = captureProgressEvents()
+      const { container } = render(
+        <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+
+      postFromPlayer(fakeWindow, {
+        event: 'infoDelivery',
+        info: { playerState: 1, currentTime: 5 },
+      })
+
+      expect(progress).toEqual([])
+      stop()
+    })
+
+    it('does not dispatch when duration is 0 (guards a divide-by-zero)', () => {
+      const { progress, stop } = captureProgressEvents()
+      const { container } = render(
+        <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+
+      postFromPlayer(fakeWindow, {
+        event: 'infoDelivery',
+        info: { playerState: 1, currentTime: 0, duration: 0 },
+      })
+
+      expect(progress).toEqual([])
+      stop()
+    })
+
+    it('dispatches progress:1 on ended (state 0), mirroring StageVideo', () => {
+      const { progress, stop } = captureProgressEvents()
+      const { container } = render(
+        <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+
+      postFromPlayer(fakeWindow, { event: 'onStateChange', info: 0 })
+
+      expect(progress).toEqual([1])
+      stop()
+    })
+
+    it('keeps working alongside existing playerState/mute handling in the same payload', () => {
+      const onEnded = vi.fn()
+      const { progress, stop } = captureProgressEvents()
+      const { container } = render(
+        <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} onEnded={onEnded} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+
+      // A single payload carrying playerState, muted, AND currentTime/duration
+      // — the stall watchdog should disarm (playerState) and the bar should
+      // fill (currentTime/duration), from the very same message.
+      postFromPlayer(fakeWindow, {
+        event: 'infoDelivery',
+        info: { playerState: 1, muted: true, currentTime: 10, duration: 20 },
+      })
+
+      expect(progress).toEqual([0.5])
+      act(() => {
+        vi.advanceTimersByTime(8_000)
+      })
+      expect(onEnded).not.toHaveBeenCalled() // stall watchdog correctly disarmed
+      stop()
+    })
+  })
 })
 
 // Round 2 diagnostic breadcrumb: `[stage-yt]` console.debug logging, gated

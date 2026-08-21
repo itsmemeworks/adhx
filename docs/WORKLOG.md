@@ -4,6 +4,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-21 — Mobile round 5: collection playlist, IG catch-up unmute, YT progress bar, deleted-tweet tombstone
+
+- **My Collection = real playlist** (owner decision, reverses "triage never auto-advances"): collection-tab VIDEOS get the clay progress line (`collectionTabProgressKind` — 'timed' still demoted, photos/text still wait for actions) and auto-advance on ended via new `triageAdvanceOnEnded` (pure `setTriageIndex` — deliberately NOT triageLater, which records streaks + pops a false "Later" undo toast). End-of-queue lands on TriageAllClear for free.
+- **IG catch-up unmute** (owner: IG stayed muted while X had sound): every IG item is a FRESH StageVideo mount (X/TikTok reuse one instance) → initial unmuted play rejected → fell back muted forever. Now: one evidence-gated catch-up on confirmed `playing` (unmute if shell wants sound; observed non-ended pause reverts; deliberate pauses clear the pending flag). No timers.
+- **YT progress bar**: StageYouTube dispatches the same `theater-video-progress` event StageVideo does, from infoDelivery currentTime/duration; progress:1 on ended (bar snaps full before loop/advance); receiver already clamps + handles backward jumps.
+- **Deleted-tweet tombstone** (owner: legacy purple "Connect with X to save" dead-end): unresolvable tweets now render the shared theater with a never-pinned `StageUnavailable` lead ("This post is no longer available on X", @author, zero CTAs) that auto-advances via the existing 10s timed dwell + clay countdown; `robots noindex`, title "Post unavailable - ADHX". `QuickAddLanding` DELETED. Reels/tiktok/shorts verified unaffected (they never had the legacy branch).
+- **Verified before deploy** (the gate): 2097 tests green (170 files) + live-browser pass on all four (tombstone renders+advances, collection video flows toast-free, IG unmutes after playing, progress event contract incl. backward jumps). Timing caveat from automation (backgrounded-tab timers) checked against code: dwell is exactly 10_000ms.
+
 ## 2026-08-21 — Mobile round 4: unmute trust, desktop Repeat tag, theater nav menu
 
 - **Unmute kept reverting (owner, BOTH platforms)**: the 1.5s post-unmute settle timer treated signal-silence as rejection — but successful unmutes produce no state event, so it re-muted working sound everywhere. Timer REMOVED entirely for both user and catch-up unmutes: only an OBSERVED pause (state 2) reverts; infoDelivery muted:false/volume>0 clears pending so later unrelated pauses can't be misattributed. The never-starts case stays covered by the round-1 confirmed-playing gate + 8s watchdog. Lesson logged: three self-inflicted bugs from speculative timeouts — evidence-based signals only.
