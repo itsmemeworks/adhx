@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { ok, handleRouteError } from '@/lib/api/response'
 import { getTrendingItems } from '@/lib/trending/query'
+import { mediaRateLimit } from '@/lib/rate-limit'
 import type { PlatformId } from '@/lib/platform/url'
 
 /**
@@ -13,6 +14,11 @@ import type { PlatformId } from '@/lib/platform/url'
  *
  * Optional `?platform=` filters to one network. The public slug `x` maps to the
  * internal `twitter` id; the canonical ids are also accepted.
+ *
+ * Rate-limited generously (120 req/min/IP) — this is a crawlable SEO/GEO
+ * surface meant to be hit by search + AI crawlers, so the limit is a backstop
+ * against hammering, not a throttle on legitimate traffic. The response is
+ * also cheap (a single local SQLite read) and cached for 60s.
  */
 export const dynamic = 'force-dynamic'
 
@@ -26,6 +32,9 @@ function parsePlatform(value: string | null): PlatformId | undefined {
 }
 
 export async function GET(request: NextRequest) {
+  const limited = mediaRateLimit(request, { windowMs: 60_000, max: 120 })
+  if (limited) return limited
+
   try {
     const platform = parsePlatform(request.nextUrl.searchParams.get('platform'))
     const { items, savedToday } = await getTrendingItems({ platform })

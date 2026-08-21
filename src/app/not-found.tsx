@@ -1,31 +1,35 @@
 import Link from 'next/link'
-import { FileQuestion, Home, Search } from 'lucide-react'
+import { Compass, Flame } from 'lucide-react'
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen flex items-center justify-center p-8">
-      <div className="max-w-md text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-muted rounded-full mb-6">
-          <FileQuestion className="w-8 h-8 text-muted-foreground" />
+    <div className="min-h-screen bg-paper flex items-center justify-center p-8">
+      <div className="max-w-md w-full text-center">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-surface border border-hairline mb-6">
+          <Compass className="w-7 h-7 text-ink-3" />
         </div>
-        <h1 className="text-2xl font-bold mb-2">Page Not Found</h1>
-        <p className="text-muted-foreground mb-6">
-          The page you're looking for doesn't exist or has been moved.
+
+        <h1 className="font-serif text-[30px] sm:text-[38px] font-semibold tracking-tight text-ink mb-2">
+          Nothing saved here
+        </h1>
+        <p className="text-[15px] text-ink-2 mb-8">
+          This page doesn&rsquo;t exist, or it wandered off. Save now, read never, find always
+          &mdash; just not at this URL.
         </p>
-        <div className="flex items-center justify-center gap-4">
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            className="inline-flex min-h-[44px] w-full sm:w-auto items-center justify-center gap-1.5 rounded-full bg-clay-grad px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-opacity hover:opacity-90"
           >
-            <Home className="w-4 h-4" />
-            Dashboard
+            Back to your collection
           </Link>
           <Link
-            href="/search"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-secondary rounded-lg hover:bg-secondary/80 transition-colors"
+            href="/trending"
+            className="inline-flex min-h-[44px] w-full sm:w-auto items-center justify-center gap-1.5 rounded-full border border-hairline bg-surface px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-inset"
           >
-            <Search className="w-4 h-4" />
-            Search
+            <Flame className="w-4 h-4 text-flame" />
+            See what&rsquo;s trending
           </Link>
         </div>
       </div>

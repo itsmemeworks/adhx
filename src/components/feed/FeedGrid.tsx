@@ -5,6 +5,7 @@ import { Image, Loader2 } from 'lucide-react'
 import { FeedCard } from './FeedCard'
 import { FeedListRow } from './FeedListRow'
 import { FeedBentoTile, BENTO_SPANS } from './FeedBentoTile'
+import { EmptyAccountOnboarding } from './EmptyAccountOnboarding'
 import type { FeedItem } from './types'
 
 export type FeedView = 'grid' | 'list' | 'bento'
@@ -145,6 +146,12 @@ export function FeedGrid({
   }
 
   if (items.length === 0) {
+    // stats.total is the GLOBAL bookmark count (unfiltered — see /api/feed's
+    // early-return branch), so this is true only for a genuinely empty
+    // account, never "no results for the current filter/search".
+    if (stats.total === 0) {
+      return <EmptyAccountOnboarding />
+    }
     return <EmptyState unreadOnly={unreadOnly} stats={stats} onShowAll={onShowAll} />
   }
 
