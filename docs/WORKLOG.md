@@ -4,6 +4,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-21 — Starter collections onboarding + YouTube stage native-controls fix
+
+- **Starter collections** (owner-picked activation feature pre-promo): new `StarterCollections` component — top-3 all-time public collections from `/api/collections/trending`, self-excluded, rendered as canonical `CollectionPosterCard`s with one-tap clone (existing clone endpoint) → "Added · N posts". Collapses to nothing on empty/error/all-own. Mounted: `/welcome` step 2 after username claim (modal widens 420→720px) + `EmptyAccountOnboarding` compact block. Feed refresh reuses the `tweet-added` event → useSyncListener.
+- **YouTube stage** (owner mobile screenshot): `buildEmbedSrc` never set `controls=0` — native seek/CC/settings chrome fought the theater UI (persistent on touch). Now controls=0, disablekb=1, fs=0, iv_load_policy=3; postMessage transport unaffected. YT's title card on load/pause is embed-baked, stays per ToS. (PR #379)
+- **State**: 1954 tests green (164 files), typecheck/build clean. Next: owner eyeball of welcome step-2 + empty-state placement on staging.
+
 ## 2026-08-21 — Mobile save: paste-link button + signed-out burger menu
 
 - **Why**: owner wants iOS users WITHOUT the shortcut to save fast (share sheet "Copy Link" is universal) and signed-out mobile visitors to have nav (avatar slot was empty).

@@ -78,7 +78,7 @@ describe('WelcomeClient', () => {
     expect(screen.getByRole('button', { name: /Claim @popular/ })).toBeDisabled()
   })
 
-  it('claims the typed username and redirects to returnTo on success', async () => {
+  it('claims the typed username, then shows the starter-collections step, and redirects to returnTo on Continue', async () => {
     claimResponse = jsonResponse({ ok: true, username: 'freshname' })
     render(<WelcomeClient suggestedUsername="j0hndoe" returnTo="/feed" />)
     const input = screen.getByLabelText('Username') as HTMLInputElement
@@ -86,7 +86,9 @@ describe('WelcomeClient', () => {
     fireEvent.change(input, { target: { value: 'freshname' } })
     fireEvent.click(screen.getByRole('button', { name: /Claim @freshname/ }))
 
-    await waitFor(() => expect(assignSpy).toHaveBeenCalledWith('/feed'))
+    expect(
+      await screen.findByRole('heading', { name: /you.?re in, @freshname/i }),
+    ).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/auth/username',
       expect.objectContaining({
@@ -94,9 +96,13 @@ describe('WelcomeClient', () => {
         body: JSON.stringify({ username: 'freshname' }),
       }),
     )
+    expect(assignSpy).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Continue to your collection' }))
+    await waitFor(() => expect(assignSpy).toHaveBeenCalledWith('/feed'))
   })
 
-  it('"Keep @suggestion" submits the prefilled suggestion even after editing the field', async () => {
+  it('"Keep @suggestion" submits the prefilled suggestion, then Skip redirects to returnTo', async () => {
     claimResponse = jsonResponse({ ok: true, username: 'j0hndoe' })
     render(<WelcomeClient suggestedUsername="j0hndoe" returnTo="/" />)
     const input = screen.getByLabelText('Username') as HTMLInputElement
@@ -110,6 +116,9 @@ describe('WelcomeClient', () => {
         expect.objectContaining({ body: JSON.stringify({ username: 'j0hndoe' }) }),
       ),
     )
+    expect(await screen.findByText(/skip — i.?ll add my own/i)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByText(/skip — i.?ll add my own/i))
     await waitFor(() => expect(assignSpy).toHaveBeenCalledWith('/'))
   })
 
