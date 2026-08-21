@@ -89,13 +89,14 @@ export interface TheaterMobileChromeProps {
   isCollectionOwner?: boolean
   onRequestSignIn?: () => void
   /**
-   * No longer used here — the collection top scrim's brand logo is always a
-   * plain home link now (owner override: it used to open this in place of
-   * navigating home, which stranded non-owner viewers with no way back to
-  /** Shared mode: the shared post is pinned + repeating (no auto-advance), so
+   * Shared mode: the shared post is pinned + repeating (no auto-advance), so
    * the 10s 'timed' progress line would tick toward an advance that never
-   * comes — demote it to 'none' while pinned. Video repeat is native
-   * player-level and unaffected. */
+   * comes — demote it to 'none' while pinned (video repeat is native
+   * player-level and unaffected). Also swaps the peek bar's "Up next" label
+   * for a Repeat glyph + "On repeat" (owner: the loop had no visual cue and
+   * read as a bug) and accents the next chevron — the deliberate way past
+   * the repeat — with the clay treatment.
+   */
   repeatCurrent?: boolean
   /** Triage mode (unified-theater-triage.md §2): swaps the top scrim's meta for a Collection↔Live tab switcher, and the bottom action row for Later/Tag/Delete/Done. */
   triage?: TheaterTriageChrome
@@ -776,7 +777,10 @@ export function TheaterMobileChrome({
                   onClick={() => setSheetOpen((v) => !v)}
                   aria-expanded={sheetOpen}
                   aria-label={sheetOpen ? 'Collapse up next' : 'Expand up next'}
-                  className="pointer-events-auto flex max-w-[45%] items-center justify-center gap-1 truncate px-1 text-center text-[12px] font-semibold text-ink-2"
+                  className={cn(
+                    'pointer-events-auto flex max-w-[45%] items-center justify-center gap-1 truncate px-1 text-center text-[12px] font-semibold',
+                    repeatCurrent ? 'text-clay' : 'text-ink-2',
+                  )}
                 >
                   {collection ? (
                     <>
@@ -784,6 +788,11 @@ export function TheaterMobileChrome({
                       <span className="truncate">
                         #{collection.tag} · {collection.count}
                       </span>
+                    </>
+                  ) : repeatCurrent ? (
+                    <>
+                      <Repeat size={11} className="flex-none" aria-hidden />
+                      <span className="truncate">On repeat</span>
                     </>
                   ) : newCount > 0 ? (
                     `${newCount} new`
@@ -842,7 +851,17 @@ export function TheaterMobileChrome({
                 onTouchEnd={(e) => e.stopPropagation()}
                 aria-label="Next post"
                 aria-disabled={!canNext}
-                className={cn(PEEK_ICON_BTN, !canNext && PEEK_ICON_BTN_DISABLED)}
+                className={cn(
+                  PEEK_ICON_BTN,
+                  !canNext && PEEK_ICON_BTN_DISABLED,
+                  // shared-post-repeat: while pinned, "continue" (past the
+                  // repeating post) is the only forward move — accent it so
+                  // the way out of the loop reads as an affordance, not a
+                  // dead end.
+                  repeatCurrent &&
+                    canNext &&
+                    'text-clay hover:bg-clay/10 hover:text-clay active:bg-clay/10 active:text-clay',
+                )}
               >
                 <ChevronDown size={18} />
               </button>
@@ -858,6 +877,7 @@ export function TheaterMobileChrome({
           freshKeys={freshKeys}
           newCount={newCount}
           onSelect={handleSelect}
+          repeatCurrent={repeatCurrent}
           className="min-h-0 flex-1 pb-[max(1rem,env(safe-area-inset-bottom))]"
         />
       </div>

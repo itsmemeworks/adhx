@@ -50,11 +50,37 @@
  */
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { Play } from 'lucide-react'
 import { PlatformChip } from '@/components/matter'
 import { isValidVideoId, youtubeEmbedUrl } from '@/lib/media/youtube'
 import { previewPath } from '@/lib/activity/preview-path'
 import { StageFrame, StageHeadline, StageCTA } from './stage-primitives'
 import type { TheaterItem } from './types'
+
+/**
+ * Round-2 diagnostic breadcrumb (owner re-tested on iPhone after round 1 and
+ * YouTube Shorts still never started, even though `buildEmbedSrc` already
+ * carries `autoplay=1&mute=1&playsinline=1` and `onReady` sends `playVideo`
+ * — i.e. iOS appears not to honor the URL-level params reliably in this
+ * embed, so the fix below stops trusting them and drives startup entirely
+ * through explicit postMessage commands instead). Gate behind `?ytdebug=1`
+ * so production stays quiet; the owner can flip it on from their phone
+ * (append `?ytdebug=1` to the theater URL) if a further round is needed.
+ */
+function isYtDebugEnabled(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    return new URLSearchParams(window.location.search).get('ytdebug') === '1'
+  } catch {
+    return false
+  }
+}
+
+function logStage(...args: unknown[]) {
+  if (!isYtDebugEnabled()) return
+  // eslint-disable-next-line no-console
+  console.debug('[stage-yt]', ...args)
+}
 
 /** The embed's own origin — every inbound message is filtered to this, and
  * every outbound command is targeted at it. */
@@ -73,6 +99,16 @@ const STALL_TIMEOUT_MS = 8_000
  * happens" case.
  */
 const UNMUTE_SETTLE_MS = 1_500
+
+/**
+ * Round 2: never trust the embed URL's own `autoplay=1&mute=1` params on
+ * iOS — send `mute` then `playVideo` explicitly ourselves, both on the load
+ * handshake (before `onReady`, as a defensive early nudge) and on `onReady`
+ * itself, and keep re-sending on this ladder while the player has never
+ * reached state 1. Cleared the moment state 1 arrives (or on unmount/id
+ * change) — see `scheduleStartupRetries`.
+ */
+const STARTUP_RETRY_DELAYS_MS = [1_000, 2_500, 5_000]
 
 export interface StageYouTubeProps {
   item: TheaterItem
@@ -162,13 +198,30 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
   // signal to see whether iOS actually honored it.
   const unmuteAwaitingConfirmRef = useRef(false)
   const unmuteSettleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Round 2: the bounded mute+playVideo retry ladder, live only until the
+  // player confirms state 1.
+  const startupRetryTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const mutedRef = useRef(muted)
   const onEndedRef = useRef(onEnded)
   const onRequestUnmuteRef = useRef(onRequestUnmute)
   const repeatRef = useRef(repeat)
+  // Defense-in-depth for `armStallTimer`'s fired callback (see its own
+  // comment): the latest `videoId`, so a stall timer can refuse to act if
+  // it somehow fires after the displayed item has already moved on.
+  const currentVideoIdRef = useRef(videoId)
   const [playing, setPlaying] = useState(false)
   const [effectiveMuted, setEffectiveMuted] = useState(muted)
   const [clientOrigin, setClientOrigin] = useState<string | null>(null)
+  // Round 2: a pinned shared/collection post (`repeat`) whose stall
+  // watchdog fired with the player never having started. The live queue's
+  // watchdog still advances past a dead Short (unchanged) — but a pinned
+  // post has nowhere to advance TO without abandoning the pin, so this
+  // shows a tap-to-play overlay instead. The tap forces a full iframe
+  // reload inside the user's own gesture (`reloadNonce`), which iOS honors
+  // far more reliably than a postMessage command sent to a frame that never
+  // got its own gesture.
+  const [neverStarted, setNeverStarted] = useState(false)
+  const [reloadNonce, setReloadNonce] = useState(0)
 
   useEffect(() => {
     setClientOrigin(window.location.origin)
@@ -187,6 +240,9 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     onRequestUnmuteRef.current = onRequestUnmute
   }, [onRequestUnmute])
   useEffect(() => {
+    currentVideoIdRef.current = videoId
+  }, [videoId])
+  useEffect(() => {
     repeatRef.current = repeat
   }, [repeat])
 
@@ -197,19 +253,91 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     }
   }, [])
 
+  const clearStartupRetryTimers = useCallback(() => {
+    startupRetryTimersRef.current.forEach(clearTimeout)
+    startupRetryTimersRef.current = []
+  }, [])
+
   // The single advance path: `onEnded`, `onError`, and the stall watchdog
-  // all funnel through here, exactly matching StageVideo's one-caller
-  // discipline for its own advance signal.
+  // (live-queue case) all funnel through here, exactly matching StageVideo's
+  // one-caller discipline for its own advance signal.
   const advance = useCallback(() => {
     clearStallTimer()
+    clearStartupRetryTimers()
     onEndedRef.current?.()
-  }, [clearStallTimer])
+  }, [clearStallTimer, clearStartupRetryTimers])
 
   const postCommand = useCallback((func: string, args: unknown[] = []) => {
     const win = iframeRef.current?.contentWindow
     if (!win) return
     win.postMessage(JSON.stringify({ event: 'command', func, args }), YT_ORIGIN)
   }, [])
+
+  // Round 2: never trust the embed URL's `autoplay=1&mute=1` params alone —
+  // drive startup explicitly, mute BEFORE play every time. Used by the load
+  // handshake (defensive early nudge), `onReady`, and each startup retry
+  // rung.
+  const sendMuteAndPlay = useCallback(
+    (tag: string) => {
+      logStage(tag, '-> mute, playVideo')
+      postCommand('mute')
+      postCommand('playVideo')
+    },
+    [postCommand],
+  )
+
+  const scheduleStartupRetries = useCallback(() => {
+    clearStartupRetryTimers()
+    STARTUP_RETRY_DELAYS_MS.forEach((delay, idx) => {
+      const timer = setTimeout(() => {
+        if (hasPlayedRef.current) return
+        logStage(
+          `startup retry rung ${idx + 1}/${STARTUP_RETRY_DELAYS_MS.length} fired (never reached state 1 yet)`,
+        )
+        sendMuteAndPlay(`startup-retry-${idx + 1}`)
+      }, delay)
+      startupRetryTimersRef.current.push(timer)
+    })
+  }, [clearStartupRetryTimers, sendMuteAndPlay])
+
+  // The "never actually started" watchdog. In the live queue (no `repeat`),
+  // a dead/region-blocked Short is skipped exactly as before. A PINNED
+  // shared/collection post (`repeat`) has nowhere to advance to without
+  // abandoning the pin, so it shows a tap-to-play overlay instead — see
+  // `neverStarted` above.
+  //
+  // `forVideoId` is captured explicitly (not read from the `videoId` in
+  // render scope) because this callback is memoized once and reused across
+  // renders — closing over `videoId` directly would freeze it at whichever
+  // render first created the callback. The fired timer then checks
+  // `forVideoId` against `currentVideoIdRef` (kept fresh below) before doing
+  // anything: under normal React reconciliation this is always true (a
+  // manual advance to a different item either unmounts this component
+  // entirely — different platform/type — or, for a same-platform swap,
+  // this same effect's cleanup already clears the old timer before the new
+  // one is armed; both paths are covered by regression tests). This check
+  // is a second, independent guard against a leaked timer ever mis-firing
+  // an advance into whatever item happens to be current when it goes off —
+  // defense in depth for a reported (but not reproduced) live-theater
+  // double-advance, not a fix for a confirmed leak.
+  const armStallTimer = useCallback(
+    (forVideoId: string | null) => {
+      clearStallTimer()
+      stallTimerRef.current = setTimeout(() => {
+        if (forVideoId !== currentVideoIdRef.current) return
+        if (hasPlayedRef.current) return
+        if (repeatRef.current) {
+          logStage('stall: pinned/repeat item never started — showing tap-to-play overlay')
+          clearStartupRetryTimers()
+          setNeverStarted(true)
+          return
+        }
+        logStage('stall: item never started — advancing (live queue)')
+        advance()
+      }, STALL_TIMEOUT_MS)
+    },
+    [clearStallTimer, clearStartupRetryTimers, advance],
+  )
 
   const clearUnmuteSettleTimer = useCallback(() => {
     if (unmuteSettleTimerRef.current) {
@@ -260,28 +388,31 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
   // New item: reset per-video state and arm the stall watchdog. Keyed on
   // `videoId` — the iframe itself also carries `key={videoId}` below, so a
   // new video is a fresh element + a fresh handshake, never a stale one.
+  // `reloadNonce` is intentionally NOT a dependency — the tap-to-play
+  // handler below does its own equivalent reset before bumping it, so this
+  // effect re-running on the same `videoId` isn't needed for that path.
   useEffect(() => {
     readyRef.current = false
     hasPlayedRef.current = false
     pendingUnmuteRef.current = false
     unmuteAwaitingConfirmRef.current = false
     clearUnmuteSettleTimer()
+    clearStartupRetryTimers()
     setPlaying(false)
+    setNeverStarted(false)
     // The embed URL always carries mute=1 regardless of what the shell
     // wants — reflect that actual starting state rather than the shell's
     // desired one, so the audio affordance doesn't flash "unmuted" before
     // any unmute has actually been attempted (let alone confirmed).
     setEffectiveMuted(true)
-    clearStallTimer()
     if (!videoId) return
-    stallTimerRef.current = setTimeout(() => {
-      if (!hasPlayedRef.current) advance()
-    }, STALL_TIMEOUT_MS)
+    armStallTimer(videoId)
     return () => {
       clearStallTimer()
       clearUnmuteSettleTimer()
+      clearStartupRetryTimers()
     }
-  }, [videoId, advance, clearStallTimer, clearUnmuteSettleTimer])
+  }, [videoId, armStallTimer, clearStallTimer, clearUnmuteSettleTimer, clearStartupRetryTimers])
 
   // Reconcile the shell's `muted` signal onto the live player — only on an
   // actual prop transition, same discipline as StageVideo. Muting is always
@@ -326,11 +457,13 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
         return
       }
       if (!data || typeof data !== 'object') return
+      logStage('message', data.event, data.info)
 
       const applyPlayerState = (state: number | null) => {
         if (state === 1) {
           hasPlayedRef.current = true
           clearStallTimer()
+          clearStartupRetryTimers()
           setPlaying(true)
           if (unmuteAwaitingConfirmRef.current) {
             // Kept playing right through the unmute — it took. Stop
@@ -370,18 +503,23 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
       switch (data.event) {
         case 'onReady':
           readyRef.current = true
-          // The URL already carries mute=1+autoplay=1. If the shell's
-          // `muted` had already flipped false before the handshake
-          // finished (e.g. the user unmuted on a previous item), do NOT
-          // ask for sound yet — `requestUnmute()` just records the desire
-          // and defers until a confirmed `playing` state actually arrives
-          // (see the state-1 branch above). Asking here, before iOS has
-          // seen this iframe play anything, is exactly the bug: an
-          // unmuted-autoplay request with no in-iframe gesture gets
-          // silently rejected and the player never starts, so the stall
-          // watchdog skips a Short that would have played fine muted.
+          // Round 2: never trust the embed URL's own `autoplay=1&mute=1`
+          // params — iOS appears not to honor them reliably in this embed
+          // (owner re-test: still never started even with them set and a
+          // bare `playVideo` sent here). Drive startup explicitly instead:
+          // mute BEFORE play, then keep re-sending on a bounded ladder
+          // until state 1 is confirmed (cleared above the moment it is).
+          sendMuteAndPlay('onReady')
+          scheduleStartupRetries()
+          // If the shell's `muted` had already flipped false before the
+          // handshake finished (e.g. the user unmuted on a previous item),
+          // do NOT ask for sound yet — `requestUnmute()` just records the
+          // desire and defers until a confirmed `playing` state actually
+          // arrives (see the state-1 branch above). Asking here, before iOS
+          // has seen this iframe play anything, is exactly round 1's bug:
+          // an unmuted-autoplay request with no in-iframe gesture gets
+          // silently rejected and the player never starts.
           if (!mutedRef.current) requestUnmute()
-          postCommand('playVideo')
           break
         // The raw postMessage protocol streams player state inside
         // `infoDelivery` payloads ({info:{playerState, muted, ...}}) — the
@@ -404,7 +542,10 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
         case 'onError':
           // 101/150 = embedding disabled by the uploader; other codes cover
           // invalid/removed/private videos. None of them are recoverable
-          // from here — skip rather than stall the queue.
+          // from here — skip rather than stall the queue (unchanged by
+          // round 2 — only the "never started" watchdog case grew a
+          // pinned-post exception, see `armStallTimer`).
+          logStage('onError', data.info)
           advance()
           break
         default:
@@ -415,6 +556,9 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     return () => window.removeEventListener('message', handleMessage)
   }, [
     postCommand,
+    sendMuteAndPlay,
+    scheduleStartupRetries,
+    clearStartupRetryTimers,
     clearStallTimer,
     advance,
     requestUnmute,
@@ -454,7 +598,66 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
   function handleLoad() {
     const win = iframeRef.current?.contentWindow
     if (!win) return
+    logStage('iframe onLoad — listening handshake + defensive mute/play nudge')
     win.postMessage(JSON.stringify({ event: 'listening', id: playerId }), YT_ORIGIN)
+    // Round 2: a defensive early nudge, before `onReady` even confirms the
+    // player is listening — harmless if ignored (the player isn't ready
+    // yet), but on iOS a command sent this early sometimes lands before the
+    // URL-level `autoplay=1` params get a chance to be silently dropped.
+    sendMuteAndPlay('onLoad-defensive')
+  }
+
+  // Round 2: the pinned tap-to-play recovery. A real tap inside our own
+  // page is a genuine user gesture — reloading the iframe's `src` inside
+  // that gesture (via `reloadNonce`, forcing a full remount even though
+  // `videoId` is unchanged) is far more reliably honored by iOS than any
+  // postMessage command sent to a cross-origin frame that never got its own
+  // gesture. Resets exactly what a fresh mount resets; `onLoad`/`onReady`
+  // on the new iframe drive the rest (mute-first nudge, retry ladder,
+  // stall watchdog) normally.
+  function handleTapToPlay() {
+    readyRef.current = false
+    hasPlayedRef.current = false
+    pendingUnmuteRef.current = false
+    unmuteAwaitingConfirmRef.current = false
+    clearUnmuteSettleTimer()
+    clearStartupRetryTimers()
+    setPlaying(false)
+    setEffectiveMuted(true)
+    setNeverStarted(false)
+    logStage('tap-to-play: reloading the iframe fresh inside a user gesture')
+    setReloadNonce((n) => n + 1)
+    armStallTimer(videoId)
+  }
+
+  if (neverStarted) {
+    const href = previewPath(item.platform, item.author, item.bookmarkId || '')
+    return (
+      <StageFrame>
+        {item.thumbnailUrl ? (
+          <>
+            <img
+              src={item.thumbnailUrl}
+              alt=""
+              referrerPolicy="no-referrer"
+              className="absolute inset-0 h-full w-full object-contain opacity-60"
+            />
+            <div className="absolute inset-0 bg-[#08070a]/55" aria-hidden />
+          </>
+        ) : null}
+        <div className="relative flex flex-col items-center gap-4">
+          <button
+            type="button"
+            onClick={handleTapToPlay}
+            className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-md"
+            aria-label="Play video"
+          >
+            <Play size={26} fill="currentColor" />
+          </button>
+          <StageCTA href={href} />
+        </div>
+      </StageFrame>
+    )
   }
 
   if (!videoId) {
@@ -487,7 +690,7 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
         <div className="relative aspect-[9/16] h-[min(82vh,100%)] max-w-full overflow-hidden rounded-2xl bg-black shadow-2xl">
           {clientOrigin && (
             <iframe
-              key={videoId}
+              key={`${videoId}-${reloadNonce}`}
               id={playerId}
               ref={iframeRef}
               src={buildEmbedSrc(videoId, clientOrigin)}

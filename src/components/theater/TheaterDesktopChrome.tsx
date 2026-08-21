@@ -119,6 +119,13 @@ export interface DesktopDockProps {
   collection?: TheaterCollectionMeta
   /** Triage mode: end cap shows "{remaining} left" + streak instead of savedToday/newCount. */
   triage?: TheaterTriageChrome
+  /**
+   * shared-post-repeat (desktop parity with TheaterMobileChrome): the shared
+   * post is pinned and repeating — accents the transport's next chevron (the
+   * deliberate way past the loop) and shows a small Repeat + "On repeat" cue
+   * in the end cap, since there's no peek-bar label here to relabel.
+   */
+  repeatCurrent?: boolean
 }
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -864,6 +871,7 @@ export function DesktopDock({
   declutter,
   collection,
   triage,
+  repeatCurrent = false,
 }: DesktopDockProps) {
   const [showAll, setShowAll] = useState(false)
   const cardRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
@@ -972,7 +980,11 @@ export function DesktopDock({
           aria-label="Next post"
           disabled={!canNext}
           onClick={onNext}
-          className={TRANSPORT_BTN}
+          className={cn(
+            TRANSPORT_BTN,
+            // shared-post-repeat: accent the deliberate way past the loop.
+            repeatCurrent && canNext && 'text-clay hover:bg-clay/10 hover:text-clay',
+          )}
         >
           <ChevronRight size={18} />
         </button>
@@ -1164,6 +1176,16 @@ export function DesktopDock({
           </span>
         ) : (
           <>
+            {/* shared-post-repeat: same cue as the mobile peek bar's relabeled
+                "On repeat" — desktop has no equivalent label to swap, so this
+                is the one small addition near the transport per the design
+                principle of one shared cue per state, not a duplicated set. */}
+            {repeatCurrent && (
+              <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-clay">
+                <Repeat size={10} aria-hidden />
+                On repeat
+              </span>
+            )}
             {!collection &&
               (waiting ? (
                 <span className="text-[10.5px] text-ink-3">Waiting for new sends…</span>
@@ -1201,6 +1223,7 @@ export function DesktopDock({
               freshKeys={freshKeys}
               newCount={newCount}
               onSelect={handlePanelSelect}
+              repeatCurrent={repeatCurrent}
               className="min-h-0 flex-1 pb-2"
             />
           </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 /**
  * Live-drag gesture for the mobile Up-next sheet's peek handle
@@ -11,13 +11,50 @@ import { useCallback, useMemo, useRef, useState } from 'react'
  * classifies a near-zero-movement release as the existing tap toggle, and
  * otherwise snaps open/closed by how far it travelled or how fast it was
  * flicked — the two pure decision functions below are unit-tested directly.
+ *
+ * Resting-position regression fix: once a gesture ends, `dragging` flips
+ * back to `false` and the caller's `style` becomes `undefined` — at that
+ * point the CSS classes (`translate-y-0` / `translate-y-[calc(100%-4.25rem)]`)
+ * are the ONLY thing positioning the sheet, exactly as before this feature
+ * existed. Two things previously undermined that:
+ *   1. A drag's starting offset was computed from `open` + a height
+ *      subtraction (`sheetHeight - peekHeight`), independent of wherever the
+ *      sheet was ACTUALLY rendered. `PEEK_H` (the class's hardcoded
+ *      4.25rem) is a hand-maintained approximation of the peek bar's real
+ *      height, not derived from it — any drift between that constant and
+ *      the peek bar's true rendered height (safe-area insets, a taller
+ *      control row on video posts, sub-pixel layout) meant a drag could
+ *      begin a few px away from the true resting spot. `getTranslateY` below
+ *      reads the sheet's actual computed transform instead, so a drag always
+ *      starts from exactly where the sheet visually already is.
+ *   2. If `endDrag` never ran (a lost `pointerup`/`pointercancel` — capture
+ *      quirks, the OS intercepting the gesture, a lost-capture edge case),
+ *      `dragging` stayed `true` forever and the sheet froze wherever the
+ *      last `pointermove` left it, a few px short of the true collapsed
+ *      offset. The window-level listeners + `onLostPointerCapture` below are
+ *      a backstop that guarantees the gesture always resolves and hands
+ *      control back to the CSS classes.
  */
 
 /** Below this much total finger travel (px), a pointer sequence is a tap, not a drag. */
 const TAP_THRESHOLD_PX = 8
 
-/** A release faster than this (px/ms) snaps in the flick's direction regardless of position. */
+/** A release faster than this (px/ms) snaps in the flick's direction regardless of position — but only alongside `MIN_FLICK_DISTANCE_PX` below. */
 const FLICK_VELOCITY_PX_MS = 0.5
+
+/**
+ * A flick can only override the travel hysteresis once the gesture has
+ * covered at least this much distance. Velocity alone is a bad gate: a mis-
+ * timestamped few-px thumb twitch (an accidental brush of the handle, or a
+ * couple of tightly-spaced synthetic pointermove samples) easily clears
+ * `FLICK_VELOCITY_PX_MS` while covering almost no ground, and would
+ * otherwise fully toggle the sheet on what should have snapped straight back
+ * (live-browser verification caught this). 24px is comfortably above the
+ * 8px tap threshold — so it never fires on anything tap-classified — while
+ * staying well under a genuine flick's typical travel (40px+), so a real
+ * quick flick still overrides instantly.
+ */
+const MIN_FLICK_DISTANCE_PX = 24
 
 /** Fraction of the open<->closed travel range that must be crossed to flip state absent a flick. */
 const SNAP_THRESHOLD_RATIO = 0.28
@@ -31,13 +68,47 @@ export function isTap(maxTravelPx: number): boolean {
 }
 
 /**
+ * Reads an element's ACTUAL rendered translateY (from its computed
+ * `transform`), not a value we independently derived. Used to start a drag
+ * from wherever the sheet really is on screen right now — see the module
+ * doc's point 1. Real browsers resolve computed `transform` to
+ * `matrix(a, b, c, d, tx, ty)` (ty at index 5) or `matrix3d(...)` (ty at
+ * index 13); jsdom instead echoes the literal `translate(...)`/`translateY()`
+ * syntax back unresolved, so that's handled as a fallback too. Returns 0 for
+ * `'none'` or anything unparseable.
+ */
+export function getTranslateY(el: Element): number {
+  const { transform } = window.getComputedStyle(el)
+  if (!transform || transform === 'none') return 0
+
+  const matrix3d = transform.match(/^matrix3d\(([^)]+)\)$/)
+  if (matrix3d) {
+    const ty = parseFloat(matrix3d[1].split(',')[13]?.trim())
+    return Number.isFinite(ty) ? ty : 0
+  }
+  const matrix2d = transform.match(/^matrix\(([^)]+)\)$/)
+  if (matrix2d) {
+    const ty = parseFloat(matrix2d[1].split(',')[5]?.trim())
+    return Number.isFinite(ty) ? ty : 0
+  }
+  const translateY = transform.match(/translateY\(\s*(-?[\d.]+)px\s*\)/)
+  if (translateY) return parseFloat(translateY[1])
+  const translate = transform.match(/^translate\(\s*(-?[\d.]+)px\s*,\s*(-?[\d.]+)px\s*\)$/)
+  if (translate) return parseFloat(translate[2])
+
+  return 0
+}
+
+/**
  * Decides open vs. closed at release. `dy` is the signed vertical distance
  * travelled from gesture start (positive = downward, toward closed);
  * `travelDistance` is the sheet's full open<->closed range in px; `velocity`
  * is signed px/ms at release (positive = moving downward). A fast flick wins
- * outright; otherwise the sheet flips only once the finger has crossed
- * `SNAP_THRESHOLD_RATIO` of the travel range away from where it started —
- * short drags snap back to the starting state.
+ * outright, but ONLY once `dy` also clears `MIN_FLICK_DISTANCE_PX` — velocity
+ * by itself isn't enough (see that constant's doc). Short of that, the sheet
+ * flips only once the finger has crossed `SNAP_THRESHOLD_RATIO` of the travel
+ * range away from where it started — short drags (fast or slow) snap back to
+ * the starting state.
  */
 export function resolveSnap({
   startOpen,
@@ -50,7 +121,7 @@ export function resolveSnap({
   travelDistance: number
   velocity: number
 }): 'open' | 'closed' {
-  if (Math.abs(velocity) > FLICK_VELOCITY_PX_MS) {
+  if (Math.abs(velocity) > FLICK_VELOCITY_PX_MS && Math.abs(dy) >= MIN_FLICK_DISTANCE_PX) {
     return velocity < 0 ? 'open' : 'closed'
   }
   if (travelDistance <= 0) return startOpen ? 'open' : 'closed'
@@ -85,6 +156,7 @@ export function useSheetDrag({ open, onOpenChange, sheetRef, peekRef }: UseSheet
   const [dragTranslate, setDragTranslate] = useState<number | null>(null)
   const startRef = useRef<{
     y: number
+    pointerId: number
     baseTranslate: number
     travelDistance: number
     startOpen: boolean
@@ -105,12 +177,31 @@ export function useSheetDrag({ open, onOpenChange, sheetRef, peekRef }: UseSheet
       const sheetEl = sheetRef.current
       const peekEl = peekRef.current
       if (!sheetEl || !peekEl) return
-      const travelDistance = Math.max(
-        0,
-        sheetEl.getBoundingClientRect().height - peekEl.getBoundingClientRect().height,
-      )
-      const baseTranslate = open ? 0 : travelDistance
-      startRef.current = { y: e.clientY, baseTranslate, travelDistance, startOpen: open }
+      // Start from the REAL rendered position (see module doc point 1), not
+      // `open ? 0 : (measured height difference)` — that guarantees zero pop
+      // at touch-down regardless of any drift between the peek bar's actual
+      // height and the CSS class's hardcoded closed offset.
+      const baseTranslate = getTranslateY(sheetEl)
+      // The clamp/snap-ratio ceiling: when starting CLOSED, `baseTranslate`
+      // already IS the real closed offset — use it directly (exact, no
+      // estimate). When starting OPEN, the closed offset isn't currently
+      // rendered to read, so fall back to the height-based estimate; any
+      // imprecision there only affects how far mid-drag values travel while
+      // the finger is still down; release always clears fully to the CSS
+      // classes, so the resting position is unaffected either way.
+      const travelDistance = open
+        ? Math.max(
+            0,
+            sheetEl.getBoundingClientRect().height - peekEl.getBoundingClientRect().height,
+          )
+        : baseTranslate
+      startRef.current = {
+        y: e.clientY,
+        pointerId: e.pointerId,
+        baseTranslate,
+        travelDistance,
+        startOpen: open,
+      }
       samplesRef.current = [{ y: e.clientY, t: e.timeStamp }]
       maxTravelRef.current = 0
       setDragging(true)
@@ -122,7 +213,7 @@ export function useSheetDrag({ open, onOpenChange, sheetRef, peekRef }: UseSheet
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
     const start = startRef.current
-    if (!start) return
+    if (!start || e.pointerId !== start.pointerId) return
     const dy = e.clientY - start.y
     maxTravelRef.current = Math.max(maxTravelRef.current, Math.abs(dy))
     const clamped = Math.min(start.travelDistance, Math.max(0, start.baseTranslate + dy))
@@ -135,12 +226,12 @@ export function useSheetDrag({ open, onOpenChange, sheetRef, peekRef }: UseSheet
   }, [])
 
   const endDrag = useCallback(
-    (e: React.PointerEvent) => {
+    (e: { clientY: number; pointerId?: number }) => {
       const start = startRef.current
+      if (!start || (e.pointerId != null && e.pointerId !== start.pointerId)) return
       startRef.current = null
       setDragging(false)
       setDragTranslate(null)
-      if (!start) return
       suppressNextClickRef.current = true
 
       if (isTap(maxTravelRef.current)) {
@@ -171,6 +262,27 @@ export function useSheetDrag({ open, onOpenChange, sheetRef, peekRef }: UseSheet
 
   const onPointerUp = useCallback((e: React.PointerEvent) => endDrag(e), [endDrag])
   const onPointerCancel = useCallback((e: React.PointerEvent) => endDrag(e), [endDrag])
+  // Fires whenever capture is released for ANY reason (a normal release
+  // already handled above, but also e.g. the browser reclaiming it) — a
+  // second safety net alongside the window listeners below so a drag can
+  // never get permanently stuck away from the resting position.
+  const onLostPointerCapture = useCallback((e: React.PointerEvent) => endDrag(e), [endDrag])
+
+  // Backstop: if the handle's own pointerup/pointercancel is ever lost
+  // (capture quirks, the OS stealing the gesture), a pointerup/pointercancel
+  // ANYWHERE still ends the drag — see module doc point 2. `endDrag` is
+  // idempotent (guarded by `startRef`), so this never double-applies a
+  // gesture the local handlers already resolved.
+  useEffect(() => {
+    if (!dragging) return
+    const handleWindowEnd = (e: PointerEvent) => endDrag(e)
+    window.addEventListener('pointerup', handleWindowEnd)
+    window.addEventListener('pointercancel', handleWindowEnd)
+    return () => {
+      window.removeEventListener('pointerup', handleWindowEnd)
+      window.removeEventListener('pointercancel', handleWindowEnd)
+    }
+  }, [dragging, endDrag])
 
   const onClick = useCallback(() => {
     if (suppressNextClickRef.current) {
@@ -189,6 +301,13 @@ export function useSheetDrag({ open, onOpenChange, sheetRef, peekRef }: UseSheet
   return {
     dragging,
     style,
-    handlers: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel, onClick },
+    handlers: {
+      onPointerDown,
+      onPointerMove,
+      onPointerUp,
+      onPointerCancel,
+      onLostPointerCapture,
+      onClick,
+    },
   }
 }

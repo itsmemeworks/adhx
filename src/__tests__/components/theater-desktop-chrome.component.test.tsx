@@ -161,6 +161,66 @@ describe('DesktopDock', () => {
   })
 })
 
+// Desktop parity with TheaterMobileChrome's peek-bar relabel: the shared
+// post repeats until deliberate navigation, so the transport needs the same
+// "this is on purpose" cue — one small chip in the end cap plus an accented
+// next chevron (the deliberate way past the loop).
+describe('DesktopDock: shared-post-repeat cue', () => {
+  it('shows an "On repeat" chip in the end cap while pinned', () => {
+    const items = [videoItem({ bookmarkId: '1' })]
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+        repeatCurrent
+      />,
+    )
+    expect(screen.getByText('On repeat')).toBeInTheDocument()
+  })
+
+  it('shows no cue when not pinned', () => {
+    const items = [videoItem({ bookmarkId: '1' })]
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+      />,
+    )
+    expect(screen.queryByText('On repeat')).not.toBeInTheDocument()
+  })
+
+  it('accents the next transport chevron with clay while pinned and enabled', () => {
+    const items = [videoItem({ bookmarkId: '1' })]
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+        repeatCurrent
+      />,
+    )
+    expect(screen.getByLabelText('Next post').className).toContain('text-clay')
+  })
+
+  it('does not accent the next chevron when not pinned', () => {
+    const items = [videoItem({ bookmarkId: '1' })]
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+      />,
+    )
+    expect(screen.getByLabelText('Next post').className).not.toContain('text-clay')
+  })
+})
+
 describe('DesktopStageChrome', () => {
   const stageBase = {
     mode: 'home' as const,

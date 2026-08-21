@@ -125,10 +125,32 @@ export function StageVideo({
     )
   }, [src])
 
+  // The ONE start path for a not-yet-started video (autoplay rejected, the
+  // tap-to-play overlay showing): used by the overlay's own tap AND — via the
+  // `needsGesture` branches below — the peek-bar/dock transport's play/resume
+  // button, so both user gestures produce identical behavior. Previously only
+  // the overlay called this; the transport handlers below just bailed out
+  // whenever `needsGesture` was true, so tapping "play" in the controls did
+  // nothing until the viewer also tapped the overlay on the stage itself.
+  const handleStartTap = () => {
+    const video = videoRef.current
+    if (!video) return
+    setNeedsGesture(false)
+    setErrored(false)
+    video.play().then(
+      () => setPlaying(true),
+      () => setErrored(true),
+    )
+  }
+
   useEffect(() => {
     const handler = () => {
       const video = videoRef.current
-      if (!video || ended || needsGesture) return
+      if (!video || ended) return
+      if (needsGesture) {
+        handleStartTap()
+        return
+      }
       if (video.paused) {
         video.play().then(
           () => setPlaying(true),
@@ -146,7 +168,9 @@ export function StageVideo({
   // Explicit pause/resume (mobile theater's pause button, TheaterMobileChrome)
   // — unlike `theater-toggle-play` above, these have a single fixed meaning
   // each rather than flipping on current state, so a stale re-tap can't
-  // fight itself. Guarded the same way as the toggle handler.
+  // fight itself. Guarded the same way as the toggle handler; a resume while
+  // `needsGesture` is the exact same "start from a dead stop" case the stage
+  // overlay handles, so it routes through the same `handleStartTap`.
   useEffect(() => {
     const handlePause = () => {
       const video = videoRef.current
@@ -156,7 +180,11 @@ export function StageVideo({
     }
     const handleResume = () => {
       const video = videoRef.current
-      if (!video || ended || needsGesture) return
+      if (!video || ended) return
+      if (needsGesture) {
+        handleStartTap()
+        return
+      }
       video.play().then(
         () => setPlaying(true),
         () => setNeedsGesture(true),
@@ -212,17 +240,6 @@ export function StageVideo({
     video.play().then(
       () => setPlaying(true),
       () => setNeedsGesture(true),
-    )
-  }
-
-  const handleStartTap = () => {
-    const video = videoRef.current
-    if (!video) return
-    setNeedsGesture(false)
-    setErrored(false)
-    video.play().then(
-      () => setPlaying(true),
-      () => setErrored(true),
     )
   }
 
@@ -289,6 +306,18 @@ export function StageVideo({
       <video
         ref={videoRef}
         poster={poster ?? undefined}
+        // Declared here (not just set imperatively in the mute-sync effect
+        // below) so the element is muted from the very first commit rather
+        // than only after a passive effect runs — a fresh mount (every
+        // Instagram item: StageInstagram swaps in a brand-new StageVideo the
+        // moment its mirror probe succeeds) otherwise starts life unmuted by
+        // the browser's own default, and iOS Safari's muted-autoplay
+        // allowance is keyed to the element carrying `muted` from creation,
+        // not to a same-tick-but-later JS assignment. React doesn't keep this
+        // attribute reactive on updates (a known video/audio element quirk),
+        // which is exactly why the mute-sync effect below still owns every
+        // change after mount — this only fixes the initial value.
+        muted={effectiveMuted}
         loop={repeat}
         playsInline
         onPlaying={() => {
