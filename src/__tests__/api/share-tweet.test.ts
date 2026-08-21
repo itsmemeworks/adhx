@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { NextRequest } from 'next/server'
 import { createTestDb, type TestDbInstance, USER_A, USER_B } from './setup'
 import * as schema from '@/lib/db/schema'
+import { __resetRateLimitState } from '@/lib/rate-limit'
 
 /**
  * API Route Tests: /api/share/tweet/[username]/[id]
@@ -34,8 +35,10 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 
-function createRequest(username: string, id: string): NextRequest {
-  return new NextRequest(`http://localhost:3000/api/share/tweet/${username}/${id}`)
+function createRequest(username: string, id: string, ip = '127.0.0.1'): NextRequest {
+  return new NextRequest(`http://localhost:3000/api/share/tweet/${username}/${id}`, {
+    headers: { 'x-forwarded-for': ip },
+  })
 }
 
 // Helper to build a minimal FxTwitter response
@@ -67,6 +70,7 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
   beforeEach(() => {
     testInstance = createTestDb()
     vi.clearAllMocks()
+    __resetRateLimitState()
   })
 
   afterEach(() => {
@@ -568,6 +572,55 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
       })
       const data = await response.json()
       expect(data.adhxContext.savedByCount).toBe(3)
+    })
+  })
+
+  describe('Rate limiting', () => {
+    it('allows a normal request through', async () => {
+      mockFetchTweetData.mockResolvedValue(buildFxResponse())
+      const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
+      const response = await GET(createRequest('testuser', '123', '10.0.0.1'), {
+        params: Promise.resolve({ username: 'testuser', id: '123' }),
+      })
+      expect(response.status).toBe(200)
+    })
+
+    it('returns 429 with Retry-After once an IP exceeds the per-minute limit', async () => {
+      mockFetchTweetData.mockResolvedValue(buildFxResponse())
+      const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
+      const ip = '10.0.0.2'
+      let last: Response | null = null
+      for (let i = 0; i < 121; i++) {
+        last = await GET(createRequest('testuser', '123', ip), {
+          params: Promise.resolve({ username: 'testuser', id: '123' }),
+        })
+      }
+      expect(last!.status).toBe(429)
+      expect(last!.headers.get('Retry-After')).toBeTruthy()
+      const body = await last!.json()
+      expect(body.error).toBe('Too many requests')
+      // A rate-limited response short-circuits before fetching the tweet.
+      expect(mockFetchTweetData).not.toHaveBeenCalledTimes(121)
+    })
+
+    it('rate-limits per IP — a different IP is unaffected by another IP being limited', async () => {
+      mockFetchTweetData.mockResolvedValue(buildFxResponse())
+      const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
+      const hammered = '10.0.0.3'
+      for (let i = 0; i < 121; i++) {
+        await GET(createRequest('testuser', '123', hammered), {
+          params: Promise.resolve({ username: 'testuser', id: '123' }),
+        })
+      }
+      const limitedRes = await GET(createRequest('testuser', '123', hammered), {
+        params: Promise.resolve({ username: 'testuser', id: '123' }),
+      })
+      expect(limitedRes.status).toBe(429)
+
+      const freshRes = await GET(createRequest('testuser', '123', '10.0.0.4'), {
+        params: Promise.resolve({ username: 'testuser', id: '123' }),
+      })
+      expect(freshRes.status).toBe(200)
     })
   })
 })
