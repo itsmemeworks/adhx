@@ -1,5 +1,59 @@
 # Changelog
 
+## [1.52.0](https://github.com/itsmemeworks/adhx/compare/v1.51.0...v1.52.0) (2026-08-21)
+
+
+### Features
+
+* accounts with magic-link email + X identities, Settings rebuild, collection theaters ([#331](https://github.com/itsmemeworks/adhx/issues/331)) ([b60a92f](https://github.com/itsmemeworks/adhx/commit/b60a92f7ac875257def825876dd66b16829a3640))
+* admin-only lever to hide spam/offensive posts from the trending pulse ([#353](https://github.com/itsmemeworks/adhx/issues/353)) ([ac7dd77](https://github.com/itsmemeworks/adhx/commit/ac7dd77cad528faefb03ed4ffb8bfc367e2f1785))
+* discovery /collections leaderboards + curator stats ([#366](https://github.com/itsmemeworks/adhx/issues/366)) ([f94e075](https://github.com/itsmemeworks/adhx/commit/f94e0753f8e345992f3d13241d0820fbef77c6b5))
+* discovery polish — card unification, nav rework, grammar + alias fixes ([#367](https://github.com/itsmemeworks/adhx/issues/367)) ([78f2f05](https://github.com/itsmemeworks/adhx/commit/78f2f05b04abb6e336ac0923a8026fd736aa0b4a))
+* one-shot username chooser for new email accounts ([#344](https://github.com/itsmemeworks/adhx/issues/344)) ([1f4cf48](https://github.com/itsmemeworks/adhx/commit/1f4cf481814b6096d4dc110271ccfced44f71159))
+* poster cards, public curator profiles, owner view for collections ([#347](https://github.com/itsmemeworks/adhx/issues/347)) ([9df10c4](https://github.com/itsmemeworks/adhx/commit/9df10c4f2ed95d1650a2367d739f55e70631724f))
+* save is always primary, download demoted, photo download support ([#360](https://github.com/itsmemeworks/adhx/issues/360)) ([10a4767](https://github.com/itsmemeworks/adhx/commit/10a4767a17041b7e2b096eaf5ac8e9a0dae1daeb))
+* tags screen, tags nav, visible tag chips in triage ([#338](https://github.com/itsmemeworks/adhx/issues/338)) ([775391a](https://github.com/itsmemeworks/adhx/commit/775391acadc344b2e11185584a42eb2e3b0b3cb0))
+* unified theater triage, collection-live nav, tags create/fill, paste-first add ([#336](https://github.com/itsmemeworks/adhx/issues/336)) ([8091d03](https://github.com/itsmemeworks/adhx/commit/8091d0354a4b3f781e0eb001bc8cd94e2c60ec31))
+* username claim/change from settings, up to 2 renames with redirects ([#359](https://github.com/itsmemeworks/adhx/issues/359)) ([0789847](https://github.com/itsmemeworks/adhx/commit/0789847672661fcb6820af395579e4a4481ddada))
+
+
+### Bug Fixes
+
+* add-posts tag selection works in list and bento views ([#373](https://github.com/itsmemeworks/adhx/issues/373)) ([cecf242](https://github.com/itsmemeworks/adhx/commit/cecf242db005e2c2abe254964678cd278e6a71c0))
+* await jest-dom and cleanup imports in component test setup ([#358](https://github.com/itsmemeworks/adhx/issues/358)) ([e2848f1](https://github.com/itsmemeworks/adhx/commit/e2848f15ad7868f1de9360050bc7cf263dba85d2))
+* carry the save intent through sign-in on individual posts ([#333](https://github.com/itsmemeworks/adhx/issues/333)) ([67876e7](https://github.com/itsmemeworks/adhx/commit/67876e7a2f1d0b5d4d76769c91ac6fc69d6ab8b4))
+* clearing the tag filter exits add-posts selection mode ([#374](https://github.com/itsmemeworks/adhx/issues/374)) ([292654a](https://github.com/itsmemeworks/adhx/commit/292654a7e9d45039df84876f85f0493cf05369dd))
+* collection theater top bar — drop the chip, share one baseline ([#343](https://github.com/itsmemeworks/adhx/issues/343)) ([8a7072f](https://github.com/itsmemeworks/adhx/commit/8a7072f44fc47c531de2b11fa57ad12f8f02d5ca))
+* collection top bar sits on a true text baseline, tag gets its hash ([#346](https://github.com/itsmemeworks/adhx/issues/346)) ([0fb9977](https://github.com/itsmemeworks/adhx/commit/0fb99778946c4b172433944830eeef48ae4d81c8))
+* connect-with-x onboarding card gets a real title and glyph icon ([#355](https://github.com/itsmemeworks/adhx/issues/355)) ([22789a6](https://github.com/itsmemeworks/adhx/commit/22789a63050c6e24971f0cd11a7b85d856fc08c6))
+* delegate tweet saves over loopback instead of the public origin ([#334](https://github.com/itsmemeworks/adhx/issues/334)) ([38a11b5](https://github.com/itsmemeworks/adhx/commit/38a11b5adaf076a36344e84877bd9bd028d50597))
+* delete account also removes users/identities/tokens rows ([#349](https://github.com/itsmemeworks/adhx/issues/349)) ([216c88a](https://github.com/itsmemeworks/adhx/commit/216c88a6dc8a079d52f85183f5f1850001759231))
+* externalize @sentry/node to stop double-bundled sdk recursion crash ([#348](https://github.com/itsmemeworks/adhx/issues/348)) ([d095500](https://github.com/itsmemeworks/adhx/commit/d095500e4f295f2c9026eca3b3337d9fefd3ed63))
+* first-intent overlay teaches save-to-create-account on ?start=1 ([#362](https://github.com/itsmemeworks/adhx/issues/362)) ([1d9f388](https://github.com/itsmemeworks/adhx/commit/1d9f3885e9f6999d08582c7bff1b5eb514558cfb))
+* four live-review issues in the unified theater ([#337](https://github.com/itsmemeworks/adhx/issues/337)) ([6767705](https://github.com/itsmemeworks/adhx/commit/67677058818ce7b30c415e1f637826b3c8b24e79))
+* on-brand 404/error pages, drop dead /search link ([#351](https://github.com/itsmemeworks/adhx/issues/351)) ([60b928d](https://github.com/itsmemeworks/adhx/commit/60b928d656b6c82150bb62e121056b29dcb545ce))
+* onboard email-only signups with zero bookmarks instead of a dead end ([#352](https://github.com/itsmemeworks/adhx/issues/352)) ([604e177](https://github.com/itsmemeworks/adhx/commit/604e1776f9d1b22ae5058cc35892953708725a4a))
+* one theater player for every playlist, glow radius, standard toggle ([#371](https://github.com/itsmemeworks/adhx/issues/371)) ([a06c9b5](https://github.com/itsmemeworks/adhx/commit/a06c9b5a61df6d321e53920b046e893cefeeeca7))
+* profile cards show rank once — medallion only, footer chip removed ([#368](https://github.com/itsmemeworks/adhx/issues/368)) ([cb06262](https://github.com/itsmemeworks/adhx/commit/cb06262804d613a5c9e78fb6a863de8f417326dc))
+* rate-limit the two unprotected public geo/seo endpoints ([#350](https://github.com/itsmemeworks/adhx/issues/350)) ([8b6d94b](https://github.com/itsmemeworks/adhx/commit/8b6d94bf808b514c1a2cd9d3d22f6d06cf02af9a))
+* read youtube player state from infodelivery payloads ([#364](https://github.com/itsmemeworks/adhx/issues/364)) ([6241cea](https://github.com/itsmemeworks/adhx/commit/6241cea0dd2231359c66fb4cf0c594623d43ebd6))
+* review round 2 — copy, tag ux, nav reach, email-account shares ([#340](https://github.com/itsmemeworks/adhx/issues/340)) ([c083f31](https://github.com/itsmemeworks/adhx/commit/c083f31d7d2b4a4664d13537d26cbb9621105b57))
+* showcase single collections, center the poster grid, whole-card links on /t/{username} ([#357](https://github.com/itsmemeworks/adhx/issues/357)) ([0da5e11](https://github.com/itsmemeworks/adhx/commit/0da5e11366bd6ff721b8bc6daadc1616a804e6c3))
+* tag views ignore read state ([#341](https://github.com/itsmemeworks/adhx/issues/341)) ([817e1ad](https://github.com/itsmemeworks/adhx/commit/817e1ad1f1a4002afec12f0ae8612fb30dde9dc2))
+* tags card de-dup, podium curator badge, make-your-own modal journey ([#370](https://github.com/itsmemeworks/adhx/issues/370)) ([a24c75e](https://github.com/itsmemeworks/adhx/commit/a24c75e1039f7ba8fa45b1c06342b76a8fc15867))
+* theater controls on my-collection tab, /leaderboard url, header flash ([#369](https://github.com/itsmemeworks/adhx/issues/369)) ([c05f40a](https://github.com/itsmemeworks/adhx/commit/c05f40a045366641225da625fbe885c5ff95b65e))
+* triage queue honors current filters; tag counts refresh; tag-from-live; drop quick save tools ([#342](https://github.com/itsmemeworks/adhx/issues/342)) ([e28837f](https://github.com/itsmemeworks/adhx/commit/e28837ffdc0742d02bb72f8274b072d663c14f5f))
+* youtube embed origin from window.location, not a build-baked env ([#363](https://github.com/itsmemeworks/adhx/issues/363)) ([6688934](https://github.com/itsmemeworks/adhx/commit/6688934ab0db90c9b3361d4bc78f09d93c0343c3))
+* youtube shorts autoplay, auto-advance, and skip in the theater ([#361](https://github.com/itsmemeworks/adhx/issues/361)) ([30c9dda](https://github.com/itsmemeworks/adhx/commit/30c9dda4ad59b49aadeee348a13d192a440ad8e3))
+
+
+### Documentation
+
+* readme overhaul + toolbar toggle, blur seam, stage speaker fixes ([#372](https://github.com/itsmemeworks/adhx/issues/372)) ([1f26d12](https://github.com/itsmemeworks/adhx/commit/1f26d12dd51f9292c84ef10f7c9665bcead79089))
+* worklog entry for review round 3 and the username chooser ([#345](https://github.com/itsmemeworks/adhx/issues/345)) ([1882d5a](https://github.com/itsmemeworks/adhx/commit/1882d5a51eb972544e138a07bba2a6afbf0cab56))
+* worklog entry for the live-review fixes + tags screen round ([#339](https://github.com/itsmemeworks/adhx/issues/339)) ([ec05857](https://github.com/itsmemeworks/adhx/commit/ec058577a5a4baf8d24733c2ee13273aa6bef4c9))
+* worklog entry for the sentry crash fix and five launch blockers ([#354](https://github.com/itsmemeworks/adhx/issues/354)) ([61d1416](https://github.com/itsmemeworks/adhx/commit/61d141647df157b7abcefe51acc5a8e27ead41e8))
+
 ## [1.51.0](https://github.com/itsmemeworks/adhx/compare/v1.50.1...v1.51.0) (2026-08-19)
 
 
