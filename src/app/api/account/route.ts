@@ -12,22 +12,41 @@ import {
   syncState,
   userPreferences,
   oauthTokens,
+  tagShares,
+  users,
+  userIdentities,
+  loginTokens,
 } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, or } from 'drizzle-orm'
 import { runInTransaction } from '@/lib/db'
 import { withAuth } from '@/lib/api/with-auth'
 import { handleRouteError } from '@/lib/api/response'
+import { clearSessionCookie } from '@/lib/auth/session'
 
 /**
  * DELETE /api/account
  *
- * Completely deletes the user's account and all associated data.
- * This includes OAuth tokens, so the user will be logged out.
+ * Completely deletes the user's account and all associated data: bookmarks,
+ * collections, tags, preferences, sync state, OAuth tokens, the `users` row,
+ * and every linked sign-in identity (X + email) and outstanding magic-link
+ * token. Nothing that identifies this account (username, email, X id)
+ * survives — this is what makes "Delete account" actually delete the account.
+ *
+ * The `activity` table is deliberately NOT touched here — it's an anonymous,
+ * append-only event log; `userId` there is stored but never exposed and is
+ * intentionally retained (see CLAUDE.md).
  *
  * This is a destructive, irreversible operation.
  */
 export const DELETE = withAuth(async (_req, userId) => {
   try {
+    // Read the account's email up front (outside the transaction — plain
+    // selects on the better-sqlite3 driver are fine here) so we can also
+    // sweep any magic-link tokens issued to that address, not just ones
+    // carrying this userId (a 'signin' token only stores the email).
+    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1)
+    const email = user?.email ?? null
+
     // Delete everything atomically, in order to respect foreign key constraints.
     // If any delete fails, all are rolled back (avoids a half-deleted account).
     // Uses synchronous .run() inside transaction (required by better-sqlite3).
@@ -62,14 +81,36 @@ export const DELETE = withAuth(async (_req, userId) => {
       // 10. Delete user preferences
       db.delete(userPreferences).where(eq(userPreferences.userId, userId)).run()
 
-      // 11. Delete OAuth tokens (this logs the user out)
+      // 11. Delete public tag-share settings
+      db.delete(tagShares).where(eq(tagShares.userId, userId)).run()
+
+      // 12. Delete outstanding magic-link tokens — by userId (email-change
+      // confirmations carry it) and by email (signin tokens only carry the
+      // address, not a userId).
+      if (email) {
+        db.delete(loginTokens)
+          .where(or(eq(loginTokens.userId, userId), eq(loginTokens.email, email)))
+          .run()
+      } else {
+        db.delete(loginTokens).where(eq(loginTokens.userId, userId)).run()
+      }
+
+      // 13. Delete linked sign-in identities (X + email)
+      db.delete(userIdentities).where(eq(userIdentities.userId, userId)).run()
+
+      // 14. Delete OAuth tokens
       db.delete(oauthTokens).where(eq(oauthTokens.userId, userId)).run()
+
+      // 15. Delete the account itself
+      db.delete(users).where(eq(users.id, userId)).run()
     })
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: 'Account deleted successfully.',
     })
+    clearSessionCookie(response)
+    return response
   } catch (error) {
     return handleRouteError(error, {
       endpoint: '/api/account',
