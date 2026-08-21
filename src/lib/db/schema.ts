@@ -332,6 +332,35 @@ export const activity = sqliteTable(
   }),
 )
 
+// Collection events — the append-only event log behind Discovery leaderboards
+// (docs/specs/discovery-leaderboards.md §3). Collections are keyed by
+// (ownerUserId, tag), not (platform, bookmarkId), so they get their own log
+// rather than nullable columns on `activity`. Same invariants as `activity`:
+// append-only (exempt from the composite-PK user-owned-data convention),
+// `viewerId` stored for dedupe/moderation but NEVER exposed by any read path
+// (every read goes through src/lib/discovery/rank.ts), recording is
+// fire-and-forget, and `hidden` is the content-level moderation lever.
+export const collectionEvents = sqliteTable(
+  'collection_events',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    action: text('action').notNull(), // 'view' | 'clone' — future: 'item_view' | 'share'
+    ownerUserId: text('owner_user_id').notNull(),
+    tag: text('tag').notNull(),
+    viewerId: text('viewer_id'), // private — never exposed publicly
+    createdAt: text('created_at').notNull(),
+    hidden: integer('hidden').notNull().default(0),
+  },
+  (table) => ({
+    collectionIdx: index('collection_events_collection_idx').on(
+      table.ownerUserId,
+      table.tag,
+      table.createdAt,
+    ),
+    createdAtIdx: index('collection_events_created_at_idx').on(table.createdAt),
+  }),
+)
+
 // ===========================================
 // ACCOUNTS - users + linked sign-in identities
 // ===========================================
@@ -488,6 +517,8 @@ export type TagShare = typeof tagShares.$inferSelect
 export type NewTagShare = typeof tagShares.$inferInsert
 export type Activity = typeof activity.$inferSelect
 export type NewActivity = typeof activity.$inferInsert
+export type CollectionEvent = typeof collectionEvents.$inferSelect
+export type NewCollectionEvent = typeof collectionEvents.$inferInsert
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 export type UserIdentity = typeof userIdentities.$inferSelect
