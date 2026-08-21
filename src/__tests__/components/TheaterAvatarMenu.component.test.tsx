@@ -75,7 +75,7 @@ describe('TheaterAvatarMenu', () => {
     expect(await screen.findByLabelText('Account menu')).toBeInTheDocument()
   })
 
-  it('opens the menu with the three items', async () => {
+  it('opens the menu with the full nav set plus account actions', async () => {
     mockAuthMe(AUTHED_ME)
     render(<TheaterAvatarMenu />)
     const button = await screen.findByLabelText('Account menu')
@@ -84,9 +84,45 @@ describe('TheaterAvatarMenu', () => {
     fireEvent.click(button)
 
     expect(screen.getByText('Your collection')).toBeInTheDocument()
+    expect(screen.getByText('Theater')).toBeInTheDocument()
+    expect(screen.getByText('Tags')).toBeInTheDocument()
+    expect(screen.getByText('Leaderboard')).toBeInTheDocument()
     expect(screen.getByText('Settings')).toBeInTheDocument()
     expect(screen.getByText('Sign out')).toBeInTheDocument()
     expect(screen.getByText('@weedauwl')).toBeInTheDocument()
+  })
+
+  it('matches the authed Header avatar menu’s nav hrefs — Collection/Tags/Leaderboard/Settings', async () => {
+    mockAuthMe(AUTHED_ME)
+    render(<TheaterAvatarMenu />)
+    fireEvent.click(await screen.findByLabelText('Account menu'))
+
+    expect(screen.getByText('Your collection').closest('a')).toHaveAttribute('href', '/')
+    expect(screen.getByText('Tags').closest('a')).toHaveAttribute('href', '/tags')
+    expect(screen.getByText('Leaderboard').closest('a')).toHaveAttribute('href', '/leaderboard')
+    expect(screen.getByText('Settings').closest('a')).toHaveAttribute('href', '/settings')
+  })
+
+  it('on the home theater, Theater closes the menu instead of navigating', async () => {
+    mockPathname = '/'
+    mockAuthMe(AUTHED_ME)
+    render(<TheaterAvatarMenu />)
+    fireEvent.click(await screen.findByLabelText('Account menu'))
+
+    const theaterEntry = screen.getByText('Theater').closest('button')
+    expect(theaterEntry).toBeInTheDocument()
+
+    fireEvent.click(theaterEntry!)
+    expect(screen.queryByText('Theater')).not.toBeInTheDocument()
+  })
+
+  it('from a shared preview page, Theater is a link home', async () => {
+    mockPathname = '/naval/status/123'
+    mockAuthMe(AUTHED_ME)
+    render(<TheaterAvatarMenu />)
+    fireEvent.click(await screen.findByLabelText('Account menu'))
+
+    expect(screen.getByText('Theater').closest('a')).toHaveAttribute('href', '/')
   })
 
   it('POSTs logout and redirects on Sign out', async () => {

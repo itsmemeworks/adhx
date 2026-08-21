@@ -121,9 +121,14 @@ export interface DesktopDockProps {
   triage?: TheaterTriageChrome
   /**
    * shared-post-repeat (desktop parity with TheaterMobileChrome): the shared
-   * post is pinned and repeating — accents the transport's next chevron (the
-   * deliberate way past the loop) and shows a small Repeat + "On repeat" cue
-   * in the end cap, since there's no peek-bar label here to relabel.
+   * post is pinned and repeating. The filmstrip's current card swaps its
+   * "NOW" tag for a Repeat glyph + "Repeat" (the state cue — mirrors the
+   * mobile peek bar's relabeled center button), and the transport's next
+   * chevron gets the clay accent (the deliberate way past the loop). No
+   * separate end-cap chip — an earlier version had one, but stacked next to
+   * the filmstrip tag it read as a third, redundant indicator (owner: it
+   * also visually mushed with the current card's tag into "MOWN"); one tag
+   * + one accented control is enough ("facts shown once").
    */
   repeatCurrent?: boolean
 }
@@ -1066,7 +1071,17 @@ export function DesktopDock({
                   {formatCompactRelativeTime(item.createdAt)}
                 </span>
                 <span className="ml-auto flex-none">
-                  {isCurrent ? (
+                  {/* shared-post-repeat (owner: the desktop filmstrip's NOW
+                      tag sitting near a separate repeat glyph elsewhere read
+                      as garbled "MOWN") — while pinned, the current card's
+                      tag IS the repeat state: one cohesive icon+label tag,
+                      never NOW alongside a second indicator. */}
+                  {isCurrent && repeatCurrent ? (
+                    <span className="inline-flex items-center gap-1 whitespace-nowrap text-[9.5px] font-bold uppercase tracking-wide text-clay">
+                      <Repeat size={10} aria-hidden />
+                      Repeat
+                    </span>
+                  ) : isCurrent ? (
                     <span className="text-[9.5px] font-bold uppercase tracking-wide text-clay">
                       NOW
                     </span>
@@ -1176,16 +1191,12 @@ export function DesktopDock({
           </span>
         ) : (
           <>
-            {/* shared-post-repeat: same cue as the mobile peek bar's relabeled
-                "On repeat" — desktop has no equivalent label to swap, so this
-                is the one small addition near the transport per the design
-                principle of one shared cue per state, not a duplicated set. */}
-            {repeatCurrent && (
-              <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-clay">
-                <Repeat size={10} aria-hidden />
-                On repeat
-              </span>
-            )}
+            {/* shared-post-repeat: NO end-cap chip here (removed after owner
+                feedback — a third indicator alongside the filmstrip's own
+                Repeat tag and the accented next chevron was one too many;
+                "facts shown once"). The current card IS the state cue on
+                desktop, same as the mobile peek bar's relabeled center
+                button; the chevron accent is the "way out" cue. */}
             {!collection &&
               (waiting ? (
                 <span className="text-[10.5px] text-ink-3">Waiting for new sends…</span>

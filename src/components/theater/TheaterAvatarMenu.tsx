@@ -1,8 +1,14 @@
 'use client'
 
-import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type ReactNode,
+} from 'react'
 import { usePathname } from 'next/navigation'
-import { Bookmark, LogIn, LogOut, Menu, Radio, Settings, Trophy } from 'lucide-react'
+import { Bookmark, LogIn, LogOut, Menu, Radio, Settings, Tag, Trophy } from 'lucide-react'
 import { useAuthMe } from '@/components/auth'
 import { cn } from '@/lib/utils'
 
@@ -32,6 +38,59 @@ const THEATER_SHORTCUT_KEYS = new Set([
   'K',
 ])
 
+/** A plain `<a>` menu item — shared shape for every nav link in both the signed-in and signed-out menus. */
+function MenuLink({
+  href,
+  onClick,
+  children,
+}: {
+  href: string
+  onClick: () => void
+  children: ReactNode
+}) {
+  return (
+    <a
+      href={href}
+      role="menuitem"
+      onClick={onClick}
+      className="flex items-center gap-2.5 px-4 py-2.5 text-[13px] transition-colors hover:bg-white/[.06]"
+      style={{ color: SUBTLE }}
+    >
+      {children}
+    </a>
+  )
+}
+
+/**
+ * The "Theater" nav entry — identical in the signed-in and signed-out
+ * menus, and identical semantics to the Header's own Theater nav item:
+ * already on the home theater (`/`), it just closes the menu (a real
+ * navigation would restart the stage the visitor is already watching);
+ * anywhere else (a shared preview page), it's a real link home.
+ */
+function TheaterMenuEntry({ isHome, onClose }: { isHome: boolean; onClose: () => void }) {
+  if (isHome) {
+    return (
+      <button
+        type="button"
+        role="menuitem"
+        onClick={onClose}
+        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13px] transition-colors hover:bg-white/[.06]"
+        style={{ color: SUBTLE }}
+      >
+        <Radio size={15} />
+        Theater
+      </button>
+    )
+  }
+  return (
+    <MenuLink href="/" onClick={onClose}>
+      <Radio size={15} />
+      Theater
+    </MenuLink>
+  )
+}
+
 export interface TheaterAvatarMenuProps {
   className?: string
   /**
@@ -56,10 +115,13 @@ export interface TheaterAvatarMenuProps {
 
 /**
  * Avatar button + dropdown for the theater chrome. Signed in: the account
- * menu (collection/settings/sign out). Signed out with `allowSignedOut`: a
- * burger menu (Theater/Leaderboard/Sign in) in the same slot, so new mobile
- * visitors have SOME way to reach the public surfaces. Signed out without
- * `allowSignedOut` (or while auth is still loading): renders nothing.
+ * menu — Your collection / Theater / Tags / Leaderboard / Settings (the same
+ * nav set as the authed Header's own avatar menu, so signed-in visitors
+ * aren't stranded on a preview page) plus Sign out. Signed out with
+ * `allowSignedOut`: a burger menu (Theater/Leaderboard/Sign in) in the same
+ * slot, so new mobile visitors have SOME way to reach the public surfaces.
+ * Signed out without `allowSignedOut` (or while auth is still loading):
+ * renders nothing.
  */
 export function TheaterAvatarMenu({
   className,
@@ -105,13 +167,16 @@ export function TheaterAvatarMenu({
 
   if (loading) return null
 
+  // Already on the home theater: the Theater nav entry just closes the menu
+  // instead of navigating (a real navigation would restart the stage the
+  // visitor is already watching). From anywhere else (a shared preview
+  // page), it's a real link home. Shared by both the signed-in and
+  // signed-out menus below.
+  const isHome = pathname === '/'
+  const close = () => setOpen(false)
+
   if (!me?.authenticated || !me.user) {
     if (!allowSignedOut) return null
-
-    // Already on the home theater: closing the menu is enough — a real
-    // navigation to `/` would restart the stage the visitor is already
-    // watching. From anywhere else (a shared preview page), it's a real link.
-    const isHome = pathname === '/'
 
     return (
       <div
@@ -136,39 +201,11 @@ export function TheaterAvatarMenu({
             className="absolute right-0 top-full z-50 mt-2 w-60 overflow-hidden rounded-2xl border shadow-2xl"
             style={{ backgroundColor: PANEL, borderColor: BORDER }}
           >
-            {isHome ? (
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => setOpen(false)}
-                className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13px] transition-colors hover:bg-white/[.06]"
-                style={{ color: SUBTLE }}
-              >
-                <Radio size={15} />
-                Theater
-              </button>
-            ) : (
-              <a
-                href="/"
-                role="menuitem"
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-2.5 px-4 py-2.5 text-[13px] transition-colors hover:bg-white/[.06]"
-                style={{ color: SUBTLE }}
-              >
-                <Radio size={15} />
-                Theater
-              </a>
-            )}
-            <a
-              href="/leaderboard"
-              role="menuitem"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 px-4 py-2.5 text-[13px] transition-colors hover:bg-white/[.06]"
-              style={{ color: SUBTLE }}
-            >
+            <TheaterMenuEntry isHome={isHome} onClose={close} />
+            <MenuLink href="/leaderboard" onClick={close}>
               <Trophy size={15} />
               Leaderboard
-            </a>
+            </MenuLink>
             <div className="my-1 h-px" style={{ backgroundColor: BORDER }} />
             <button
               type="button"
@@ -273,26 +310,29 @@ export function TheaterAvatarMenu({
             </div>
           </div>
 
-          <a
-            href="/"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-2.5 px-4 py-2.5 text-[13px] transition-colors hover:bg-white/[.06]"
-            style={{ color: SUBTLE }}
-          >
+          {/* Nav group — matches the authed Header's avatar-menu nav set
+              (Collection/Theater/Tags/Leaderboard/Settings) so signed-in
+              visitors aren't stranded on a preview page with no way to
+              reach the rest of the app. "Your collection" keeps this
+              menu's own naming convention rather than Header's plain
+              "Collection". */}
+          <MenuLink href="/" onClick={close}>
             <Bookmark size={15} />
             Your collection
-          </a>
-          <a
-            href="/settings"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-2.5 px-4 py-2.5 text-[13px] transition-colors hover:bg-white/[.06]"
-            style={{ color: SUBTLE }}
-          >
+          </MenuLink>
+          <TheaterMenuEntry isHome={isHome} onClose={close} />
+          <MenuLink href="/tags" onClick={close}>
+            <Tag size={15} />
+            Tags
+          </MenuLink>
+          <MenuLink href="/leaderboard" onClick={close}>
+            <Trophy size={15} />
+            Leaderboard
+          </MenuLink>
+          <MenuLink href="/settings" onClick={close}>
             <Settings size={15} />
             Settings
-          </a>
+          </MenuLink>
           <div className="my-1 h-px" style={{ backgroundColor: BORDER }} />
           <button
             type="button"

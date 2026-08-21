@@ -166,7 +166,36 @@ describe('DesktopDock', () => {
 // "this is on purpose" cue — one small chip in the end cap plus an accented
 // next chevron (the deliberate way past the loop).
 describe('DesktopDock: shared-post-repeat cue', () => {
-  it('shows an "On repeat" chip in the end cap while pinned', () => {
+  it('the filmstrip current card shows "Repeat" instead of "NOW" while pinned', () => {
+    const items = [videoItem({ bookmarkId: '1' }), videoItem({ bookmarkId: '2' })]
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+        repeatCurrent
+      />,
+    )
+    expect(screen.getByText('Repeat')).toBeInTheDocument()
+    expect(screen.queryByText('NOW')).not.toBeInTheDocument()
+  })
+
+  it('the filmstrip current card shows "NOW" (not "Repeat") when not pinned', () => {
+    const items = [videoItem({ bookmarkId: '1' }), videoItem({ bookmarkId: '2' })]
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+      />,
+    )
+    expect(screen.getByText('NOW')).toBeInTheDocument()
+    expect(screen.queryByText('Repeat')).not.toBeInTheDocument()
+  })
+
+  it('never shows both "NOW" and "Repeat" on the current card at once', () => {
     const items = [videoItem({ bookmarkId: '1' })]
     render(
       <DesktopDock
@@ -177,10 +206,15 @@ describe('DesktopDock: shared-post-repeat cue', () => {
         repeatCurrent
       />,
     )
-    expect(screen.getByText('On repeat')).toBeInTheDocument()
+    const currentCard = screen.getByText('Repeat').closest('button')!
+    expect(currentCard).toHaveAttribute('aria-current', 'true')
+    expect(currentCard.textContent).not.toContain('NOW')
   })
 
-  it('shows no cue when not pinned', () => {
+  // The end-cap chip was removed after owner feedback (a third indicator
+  // stacked next to the filmstrip's own tag read as redundant/garbled) —
+  // the filmstrip card tag + accented chevron carry the state alone now.
+  it('does not render a separate "On repeat" end-cap chip', () => {
     const items = [videoItem({ bookmarkId: '1' })]
     render(
       <DesktopDock
@@ -188,6 +222,7 @@ describe('DesktopDock: shared-post-repeat cue', () => {
         items={items}
         current={items[0]}
         currentKey={theaterItemKey(items[0])}
+        repeatCurrent
       />,
     )
     expect(screen.queryByText('On repeat')).not.toBeInTheDocument()
