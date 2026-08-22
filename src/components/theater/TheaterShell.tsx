@@ -1364,7 +1364,22 @@ export function TheaterShell({
   // auto-advance path) — this is THE combined signal every consumer uses:
   // Stage's `repeat` prop, the progress-line pin demotion, the chromes'
   // `repeatCurrent`, and the 'timed' advance guard below.
-  const repeatCurrentActive = isSharedPinnedOnCurrent || effectiveRepeatMode === 'one'
+  /**
+   * A queue of ONE that is supposed to loop cannot loop by NAVIGATING:
+   * `computeLoopedNext(1, 0, true)` returns 0 — the index it is already on —
+   * so the shell sets the key it already has, React bails on the identical
+   * state, and the video never restarts. Owner report: a single-post tag
+   * playlist "isn't looping".
+   *
+   * Looping one post IS the player-level behaviour this flag already drives
+   * (native `loop` on the video, no auto-advance, no timed progress line
+   * ticking toward an advance that can never happen), so route it here rather
+   * than teaching navigation to re-fire a no-op. Covers a one-post playlist
+   * and repeat-all over a one-post queue alike.
+   */
+  const loopingSingleItem = displayItems.length === 1 && (loop || effectiveRepeatMode === 'all')
+  const repeatCurrentActive =
+    isSharedPinnedOnCurrent || effectiveRepeatMode === 'one' || loopingSingleItem
   // Read fresh inside the `theater-advance` listener (empty-deps-registered
   // below) without re-registering that listener on every render.
   const repeatCurrentActiveRef = useRef(repeatCurrentActive)
