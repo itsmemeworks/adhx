@@ -80,8 +80,10 @@ export interface TheaterMobileChromeProps {
   seenReady: boolean
   freshKeys: ReadonlySet<string>
   newCount: number
-  /** Passed straight through to `UpNextList` for its section headings — the arrival snapshot the queue was grouped by. Absent in playlist/shared mode. */
+  /** Passed straight through to `UpNextList` for its section headings — the arrival snapshot the queue was grouped by. Absent only in playlist mode (one authored order, no groups); shared mode passes it and pins its lead post out of the grouping instead. */
   wasSeenOnEntry?: (key: string) => boolean
+  /** The shared post on a preview page — pinned as the lead row and excluded from the section grouping (it isn't "what's new", it's the link the visitor followed). Passed straight to `UpNextList`. */
+  pinnedKey?: string | null
   /** How many posts the position counter is out of — what will actually play from here (see `computeQueueTotal`). Falls back to `items.length`. */
   queueTotal?: number
   onSelect: (key: string) => void
@@ -180,6 +182,7 @@ export function TheaterMobileChrome({
   freshKeys,
   newCount,
   wasSeenOnEntry,
+  pinnedKey,
   queueTotal,
   onSelect,
   onPrev,
@@ -1064,6 +1067,7 @@ export function TheaterMobileChrome({
           seenReady={seenReady}
           freshKeys={freshKeys}
           wasSeenOnEntry={wasSeenOnEntry}
+          pinnedKey={pinnedKey}
           onSelect={handleSelect}
           repeatCurrent={repeatCurrent}
           className="min-h-0 flex-1 pb-[max(1rem,env(safe-area-inset-bottom))]"

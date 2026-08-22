@@ -53,8 +53,11 @@ export interface UpNextListProps {
    * Was this key already watched when the session STARTED
    * (`SeenSet.seenOnEntry`)? Drives the section headings, and must be the same
    * snapshot `orderLiveQueue` grouped by — grouping off live seen state would
-   * move rows under the viewer as their dwell timers fire. Absent in
-   * playlist/shared mode, where the queue isn't grouped at all.
+   * move rows under the viewer as their dwell timers fire. Absent in playlist
+   * mode, whose one curated order has no groups; SHARED mode does pass it
+   * (owner: a preview page's queue showed no sections at all while the same
+   * queue on `/` did — "we just need to be always consistent here"), with the
+   * shared post itself pinned out of the grouping via `pinnedKey`.
    */
   wasSeenOnEntry?: (key: string) => boolean
   onSelect: (key: string) => void
@@ -80,6 +83,14 @@ export interface UpNextListProps {
    * tag slot (where a non-current row would show "next ↓" or a seen check).
    */
   repeatCurrent?: boolean
+  /**
+   * The shared post on a preview page: always the lead row, and deliberately
+   * OUTSIDE the arrived/unwatched/watched grouping — it isn't part of "what's
+   * new", it's the thing you followed a link to. It gets its own "Shared post"
+   * heading, is excluded from every group count, and never counts toward
+   * caught-up (which is about the live queue below it).
+   */
+  pinnedKey?: string | null
 }
 
 export const TYPE_TILE: Record<
@@ -225,6 +236,7 @@ export function UpNextList({
   ownScroll = true,
   collapsedCount,
   repeatCurrent,
+  pinnedKey,
 }: UpNextListProps) {
   const [expanded, setExpanded] = useState(false)
 
@@ -239,7 +251,7 @@ export function UpNextList({
   // we've been watching?". Only in grouped (live) mode: `wasSeenOnEntry`
   // absent means playlist/shared, which has one curated order and no groups.
   const groups: (LiveQueueGroup | null)[] = items.map((item) =>
-    seenReady && wasSeenOnEntry
+    seenReady && wasSeenOnEntry && theaterItemKey(item) !== pinnedKey
       ? liveQueueGroupOf(theaterItemKey(item), wasSeenOnEntry, (k) => freshKeys.has(k))
       : null,
   )
@@ -260,14 +272,25 @@ export function UpNextList({
   }, {})
   const headingCount = (g: LiveQueueGroup) =>
     g === 'watched' ? groupCounts.watched : groupRemaining[g]
-  /** Index of each group's first row — where its heading goes. */
-  const headingAt = new Map<number, LiveQueueGroup>()
+  /**
+   * Index → the heading that renders above that row: each group's first row,
+   * plus the pinned shared post, which gets a heading of its own because it
+   * belongs to no group. Without that, a preview page read "Up next / [the
+   * shared post] / New since you opened / … / [more unwatched posts with no
+   * heading]" — the pinned lead consumed the "Up next" heading and the real
+   * unwatched run below it went unlabelled.
+   */
+  const headingAt = new Map<number, { label: string; count?: number }>()
   const started = new Set<LiveQueueGroup>()
   groups.forEach((g, i) => {
     if (!g || started.has(g)) return
     started.add(g)
-    headingAt.set(i, g)
+    headingAt.set(i, { label: LIVE_QUEUE_GROUP_LABEL[g], count: headingCount(g) })
   })
+  if (pinnedKey && seenReady && wasSeenOnEntry) {
+    const pinnedIndex = items.findIndex((item) => theaterItemKey(item) === pinnedKey)
+    if (pinnedIndex !== -1) headingAt.set(pinnedIndex, { label: 'Shared post' })
+  }
   // "Caught up" means nothing is PENDING, live — not that the arrival queue
   // was empty. Watching the last row flips it without moving anything.
   const unwatchedTotal = (groupRemaining.arrived ?? 0) + (groupRemaining.unwatched ?? 0)
@@ -322,11 +345,9 @@ export function UpNextList({
                   role="separator"
                   className="mt-1 flex items-center gap-2 px-2.5 pb-0.5 text-[10.5px] font-medium uppercase tracking-wide text-ink-3"
                 >
-                  <span>{LIVE_QUEUE_GROUP_LABEL[heading]}</span>
-                  {!!headingCount(heading) && (
-                    <span className="font-mono normal-case tracking-normal">
-                      {headingCount(heading)}
-                    </span>
+                  <span>{heading.label}</span>
+                  {!!heading.count && (
+                    <span className="font-mono normal-case tracking-normal">{heading.count}</span>
                   )}
                   <span className="h-px flex-1 bg-hairline" />
                 </div>

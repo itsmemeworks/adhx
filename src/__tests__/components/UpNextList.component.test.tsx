@@ -172,3 +172,80 @@ describe('UpNextList — watching a row updates the heading, not the layout', ()
     expect(screen.getAllByRole('separator').map((el) => el.textContent)).toEqual(['Up next'])
   })
 })
+
+/**
+ * Owner report from a shared preview URL: "if I go to a direct preview URL
+ * then I don't get the watched, the different categorizations or sections
+ * within the playlist… If I just go straight to the root domain then I do see
+ * the different sections. We just need to be always consistent here."
+ *
+ * Shared mode now groups its queue exactly like home. The shared post itself
+ * is the exception: it leads because the visitor followed a link to it, not
+ * because it's new or unwatched, so it sits OUTSIDE the grouping under its own
+ * heading. Without that carve-out the pinned lead consumed the first group's
+ * heading and the real run below it went unlabelled.
+ */
+describe('UpNextList — the pinned shared post sits outside the groups', () => {
+  const hoursAgo = (h: number) => new Date(Date.now() - h * 3600_000).toISOString()
+  const post = (id: string, addedHoursAgo: number) =>
+    item({ bookmarkId: id, url: `/alice/status/${id}`, addedAt: hoursAgo(addedHoursAgo) })
+
+  const sharedQueue = [post('shared', 2), post('todo', 1), post('todo2', 3), post('seen', 4)]
+  const sharedProps = {
+    items: sharedQueue,
+    pinnedKey: 'twitter:shared',
+    wasSeenOnEntry: (k: string) => k === 'twitter:seen',
+  }
+
+  it('gives the shared post its own heading and still labels the queue below it', () => {
+    render(<UpNextList {...base} {...sharedProps} />)
+
+    const headings = screen
+      .getAllByRole('separator')
+      .map((el) => el.textContent?.replace(/\s+/g, ' ').trim())
+    // "Shared post" carries no count — it's one post, and the number would
+    // read as a queue length. The live groups below keep theirs.
+    expect(headings).toEqual(['Shared post', 'Up next2', 'Watched earlier1'])
+  })
+
+  it('excludes the shared post from the group counts', () => {
+    // 'shared' is unwatched, but "Up next" counts 2 (todo + todo2) — not 3.
+    render(<UpNextList {...base} {...sharedProps} />)
+    const upNext = screen
+      .getAllByRole('separator')
+      .find((el) => el.textContent?.includes('Up next'))!
+    expect(upNext.textContent?.replace(/\s+/g, ' ').trim()).toBe('Up next2')
+  })
+
+  it('does not count the shared post toward caught-up', () => {
+    // Everything in the live queue is watched; only the pinned post is not.
+    // The visitor IS caught up on the feed — the shared post is why they're
+    // here, not something they're behind on.
+    render(
+      <UpNextList
+        {...base}
+        items={[post('shared', 2), post('seen', 4)]}
+        pinnedKey="twitter:shared"
+        wasSeenOnEntry={(k) => k === 'twitter:seen'}
+      />,
+    )
+    expect(screen.getByText(/all caught up/i)).toBeInTheDocument()
+  })
+
+  it('groups normally when there is no pinned post (home)', () => {
+    render(<UpNextList {...base} items={sharedQueue} wasSeenOnEntry={sharedProps.wasSeenOnEntry} />)
+    const headings = screen
+      .getAllByRole('separator')
+      .map((el) => el.textContent?.replace(/\s+/g, ' ').trim())
+    // No carve-out: 'shared' is just another unwatched post, so 3 are pending.
+    expect(headings).toEqual(['Up next3', 'Watched earlier1'])
+    expect(screen.queryByText('Shared post')).not.toBeInTheDocument()
+  })
+
+  it('renders no headings at all in playlist mode (no wasSeenOnEntry)', () => {
+    // A curated tag playlist has one authored order and opts out of grouping —
+    // passing pinnedKey alone must not start labelling it.
+    render(<UpNextList {...base} items={sharedQueue} pinnedKey="twitter:shared" />)
+    expect(screen.queryAllByRole('separator')).toHaveLength(0)
+  })
+})

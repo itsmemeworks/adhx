@@ -113,8 +113,10 @@ export interface DesktopDockProps {
   seenReady: boolean
   freshKeys: ReadonlySet<string>
   newCount: number
-  /** Passed straight through to `UpNextList` for its section headings — the arrival snapshot the queue was grouped by. Absent in playlist/shared mode. */
+  /** Passed straight through to `UpNextList` for its section headings — the arrival snapshot the queue was grouped by. Absent only in playlist mode (one authored order, no groups); shared mode passes it and pins its lead post out of the grouping instead. */
   wasSeenOnEntry?: (key: string) => boolean
+  /** The shared post on a preview page — pinned as the lead row and excluded from the section grouping (it isn't "what's new", it's the link the visitor followed). Passed straight to `UpNextList`. */
+  pinnedKey?: string | null
   /** How many posts the end cap's count is out of — what will actually play from here (see `computeQueueTotal`). Falls back to `items.length`. */
   queueTotal?: number
   savedToday: number
@@ -975,6 +977,7 @@ export function DesktopDock({
   freshKeys,
   newCount,
   wasSeenOnEntry,
+  pinnedKey,
   queueTotal,
   savedToday,
   onSelect,
@@ -1408,6 +1411,7 @@ export function DesktopDock({
               seenReady={seenReady}
               freshKeys={freshKeys}
               wasSeenOnEntry={wasSeenOnEntry}
+              pinnedKey={pinnedKey}
               onSelect={handlePanelSelect}
               repeatCurrent={repeatCurrent}
               className="min-h-0 flex-1 pb-2"

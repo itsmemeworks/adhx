@@ -1114,10 +1114,14 @@ export function TheaterShell({
   // point of the owner's "you would need to specifically click it".
   const [rewatching, setRewatching] = useState(false)
 
-  // Does this surface order its queue unseen-first? The live feed does (home,
-  // and the authed Live tab). A shared post always leads, and a curated tag
-  // playlist keeps its curated order — neither is a "what's new" queue.
-  const liveOrdering = !sharedItem && !loop
+  // Does this surface order its queue unseen-first? The live feed does — home,
+  // the authed Live tab, AND a shared preview page, whose queue below the
+  // shared post IS that same live feed (owner: a preview page showed no
+  // sections while `/` showed them — "we just need to be always consistent
+  // here"). The shared post itself still leads, via `pinnedKey`, and is
+  // excluded from the grouping by the lists. Only a curated tag playlist opts
+  // out: it has one authored order and no notion of "what's new".
+  const liveOrdering = !loop
   // ORDERING uses the arrival snapshot, never the live seen state — see
   // `orderLiveQueue`. Identity is stable per snapshot so the memos below
   // don't recompute as the viewer marks things seen.
@@ -1145,12 +1149,20 @@ export function TheaterShell({
   // Where the already-watched block starts. 0 disables the boundary entirely
   // (nothing unseen, or the viewer opted into a re-watch / repeat 'all'), which
   // is exactly what `computeLiveNext` treats as "no boundary".
+  // The shared post leads whether or not this viewer has seen it before, so a
+  // re-visited shared link would otherwise start the queue with a WATCHED row
+  // and zero the run — killing the boundary for the whole live queue behind
+  // it. Count the lead as pending: it's the post they followed a link to.
+  const wasSeenForRun = useCallback(
+    (key: string) => (key === sharedItemKey ? false : wasSeenOnEntry(key)),
+    [sharedItemKey, wasSeenOnEntry],
+  )
   const unseenCount = useMemo(
     () =>
       liveOrdering && seenSet.ready && !rewatching
-        ? unseenBlockLength(displayItems, wasSeenOnEntry)
+        ? unseenBlockLength(displayItems, wasSeenForRun)
         : 0,
-    [displayItems, liveOrdering, seenSet.ready, rewatching, wasSeenOnEntry],
+    [displayItems, liveOrdering, seenSet.ready, rewatching, wasSeenForRun],
   )
 
   // Seed savedKeys with EXISTING collection membership: a live-tab post the
@@ -2030,6 +2042,7 @@ export function TheaterShell({
           newCount={chromeNewCount}
           wasSeenOnEntry={liveOrdering ? wasSeenOnEntry : undefined}
           queueTotal={liveOrdering ? queueTotal : undefined}
+          pinnedKey={sharedItemKey}
           onSelect={chromeOnSelect}
           onPrev={chromeOnPrev}
           onNext={chromeOnNext}
@@ -2105,6 +2118,7 @@ export function TheaterShell({
         newCount={chromeNewCount}
         wasSeenOnEntry={liveOrdering ? wasSeenOnEntry : undefined}
         queueTotal={liveOrdering ? queueTotal : undefined}
+        pinnedKey={sharedItemKey}
         savedToday={feed.savedToday}
         onSelect={chromeOnSelect}
         waiting={isTriageCollection ? false : waiting}

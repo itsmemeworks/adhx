@@ -165,3 +165,84 @@ describe('TheaterShell: repeat is a remembered switch', () => {
     expect(chromeProps().queueTotal).toBe(3)
   })
 })
+
+/**
+ * Owner report: "If I go to a direct preview URL then I don't get the watched,
+ * the different categorizations or sections within the playlist. If I just go
+ * straight to the root domain then I do see the different sections. We just
+ * need to be always consistent here."
+ *
+ * Shared mode's queue below the shared post IS the live feed, so it now takes
+ * the same unseen-first ordering and grouping. The shared post keeps leading
+ * (it's why the visitor is here) and is pinned out of the grouping —
+ * `pinnedKey`, asserted here at the wiring level; UpNextList's own test covers
+ * how it renders.
+ */
+describe('TheaterShell: a shared preview page groups its queue like home', () => {
+  beforeEach(() => {
+    mockMobileChrome.mockClear()
+    window.localStorage.clear()
+  })
+
+  const shared = textItem('shared')
+
+  it('passes the grouping snapshot in shared mode (it used to pass nothing)', async () => {
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([shared, textItem('2'), textItem('3')])}
+          mode="shared"
+          sharedItem={shared}
+        />,
+      )
+    })
+    const props = chromeProps()
+    expect(typeof props.wasSeenOnEntry).toBe('function')
+    expect(props.pinnedKey).toBe(theaterItemKey(shared))
+  })
+
+  it('keeps the shared post leading even though the queue is reordered', async () => {
+    // '2' is unwatched and '3' watched, so ordering would sort the tail — but
+    // the shared post must stay at index 0 regardless.
+    window.localStorage.setItem('adhx-seen-v1', JSON.stringify([theaterItemKey(textItem('3'))]))
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([textItem('3'), shared, textItem('2')])}
+          mode="shared"
+          sharedItem={shared}
+        />,
+      )
+    })
+    const items = chromeProps().items as TheaterItem[]
+    expect(items.map((i) => i.bookmarkId)).toEqual(['shared', '2', '3'])
+  })
+
+  it('counts a RE-VISITED shared post as pending, so the boundary survives', async () => {
+    // The visitor has seen this shared post before, and one queue post. A
+    // watched lead would zero the unwatched run and switch the stop-when-
+    // caught-up boundary off for the whole queue behind it.
+    window.localStorage.setItem(
+      'adhx-seen-v1',
+      JSON.stringify([theaterItemKey(shared), theaterItemKey(textItem('3'))]),
+    )
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([shared, textItem('2'), textItem('3')])}
+          mode="shared"
+          sharedItem={shared}
+        />,
+      )
+    })
+    // shared (exempt) + '2' = a 2-long pending run, not 0 and not all 3.
+    expect(chromeProps().queueTotal).toBe(2)
+  })
+
+  it('leaves a curated playlist ungrouped', async () => {
+    await act(async () => {
+      render(<TheaterShell seed={seed([textItem('1'), textItem('2')])} mode="playlist" />)
+    })
+    expect(chromeProps().wasSeenOnEntry).toBeUndefined()
+  })
+})
