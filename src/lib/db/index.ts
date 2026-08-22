@@ -24,7 +24,22 @@ const globalForDb = globalThis as unknown as {
 }
 
 function resolveDbPath(): string {
-  return process.env['DATABASE_PATH'] || './data/adhdone.db'
+  const fromEnv = process.env['DATABASE_PATH']
+  if (fromEnv) return fromEnv
+  // Only the Playwright Next (distDir `.next-e2e`) reads the sidecar — never
+  // the owner's `pnpm dev` on `.next`.
+  if (process.env['NEXT_DIST_DIR'] === '.next-e2e') {
+    try {
+      const sidecar = path.join(process.cwd(), '.next-e2e', 'database-path')
+      if (fs.existsSync(sidecar)) {
+        const written = fs.readFileSync(sidecar, 'utf8').trim()
+        if (written) return written
+      }
+    } catch {
+      // no e2e sidecar
+    }
+  }
+  return './data/adhdone.db'
 }
 
 function getSqlite(): Database.Database {

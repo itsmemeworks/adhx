@@ -11,7 +11,17 @@ import {
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
 export const E2E_ROOT = ROOT
-export const E2E_DB_PATH = path.join(ROOT, E2E_DB_RELATIVE)
+/**
+ * Isolated file locally (`data/e2e.db`) so Playwright never touches the
+ * owner's `adhdone.db`. On GitHub Actions, Next's Turbopack workers drop
+ * `DATABASE_PATH` and fall back to `./data/adhdone.db` — so migrate/seed
+ * the default path there. GHA runners have no owner DB. Do not use `CI`
+ * (Playwright sets that locally too).
+ */
+export const E2E_DB_PATH = path.join(
+  ROOT,
+  process.env.GITHUB_ACTIONS ? 'data/adhdone.db' : E2E_DB_RELATIVE,
+)
 
 /** Env for migrate / seed / the dedicated Next process on :3002. */
 export function e2eProcessEnv(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {

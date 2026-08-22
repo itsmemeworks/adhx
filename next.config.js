@@ -1,6 +1,15 @@
-import { readFileSync } from 'fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'fs'
+import { join } from 'path'
 
 const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'))
+
+// Playwright e2e: persist DATABASE_PATH where Next workers can find it even
+// when Turbopack drops the env. Owner `pnpm dev` uses `.next` and never
+// writes this file.
+if (process.env.NEXT_DIST_DIR === '.next-e2e' && process.env.DATABASE_PATH) {
+  mkdirSync('.next-e2e', { recursive: true })
+  writeFileSync(join('.next-e2e', 'database-path'), process.env.DATABASE_PATH, 'utf8')
+}
 
 // In dev, Next/React use eval() for HMR + debugging (callstack reconstruction),
 // which a strict CSP blocks — noisy console errors on every page. Allow it for

@@ -11,6 +11,7 @@ function rmIfExists(file: string) {
 }
 
 export default function globalSetup(): void {
+  console.log(`[e2e] migrate/seed ${E2E_DB_PATH}`)
   fs.mkdirSync(`${E2E_ROOT}/data`, { recursive: true })
   rmIfExists(E2E_DB_PATH)
   rmIfExists(`${E2E_DB_PATH}-wal`)

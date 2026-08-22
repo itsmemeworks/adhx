@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-22 — E2E CI uses the default sqlite path
+
+GitHub Actions e2e now migrates `data/adhdone.db` (Next's fallback when Turbopack workers drop `DATABASE_PATH`). Local `pnpm test:e2e` still uses `data/e2e.db` so it cannot clobber the owner's DB. Gated on `GITHUB_ACTIONS`, not `CI`.
+
+---
+
 ## 2026-08-22 — E2E CI opened the empty default DB
 
 CI migrated `data/e2e.db` then Next compiled `@/lib/db` without `DATABASE_PATH` and cached an empty `adhdone.db` on `globalThis`. `/api/health` is `SELECT 1`, so Playwright started the suite anyway. DB open is now lazy and re-opens when the resolved path changes; env is read with bracket access so Turbopack cannot inline `undefined`.
