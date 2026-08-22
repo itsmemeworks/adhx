@@ -94,7 +94,7 @@ export default async function TrendingArchiveIndexPage() {
           className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-ink-2 transition-colors hover:text-ink"
         >
           <ArrowLeft size={15} />
-          Back to Trending
+          <span>Back to Trending</span>
         </Link>
 
         <h1 className="font-serif text-3xl font-semibold tracking-[-0.015em] text-ink sm:text-4xl">

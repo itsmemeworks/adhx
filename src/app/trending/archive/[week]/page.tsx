@@ -160,7 +160,7 @@ export default async function TrendingArchiveWeekPage({ params }: Props) {
           className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-ink-2 transition-colors hover:text-ink"
         >
           <ArrowLeft size={15} />
-          All weeks
+          <span>All weeks</span>
         </Link>
 
         <h1 className="font-serif text-3xl font-semibold tracking-[-0.015em] text-ink sm:text-4xl">
@@ -184,7 +184,7 @@ export default async function TrendingArchiveWeekPage({ params }: Props) {
               className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-2 transition-colors hover:text-ink"
             >
               <ArrowLeft size={15} />
-              Previous week
+              <span>Previous week</span>
             </Link>
           ) : (
             <span />
@@ -194,7 +194,7 @@ export default async function TrendingArchiveWeekPage({ params }: Props) {
               href={`/trending/archive/${nextSlug}`}
               className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-2 transition-colors hover:text-ink"
             >
-              Next week
+              <span>Next week</span>
               <ArrowRight size={15} />
             </Link>
           ) : (
@@ -228,7 +228,7 @@ function ArchiveItemCard({ item }: { item: TrendingItem }) {
       <div className="absolute right-2.5 top-2.5">
         <span className="inline-flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 text-[11.5px] font-bold text-orange-300 backdrop-blur-sm">
           <Flame size={12} className="text-orange-400" fill="currentColor" />
-          {saveCount}
+          <span>{saveCount}</span>
         </span>
       </div>
     ) : null

@@ -714,7 +714,7 @@ function TtsPlayer({ text, minutes }: { text: string; minutes: number }) {
       </button>
       <span className="text-xs font-mono flex-none text-fink-2 whitespace-nowrap flex items-center gap-1.5">
         <Volume2 className="w-3.5 h-3.5" />
-        Listen · {minutes} min
+        <span>Listen · {minutes} min</span>
       </span>
     </div>
   )

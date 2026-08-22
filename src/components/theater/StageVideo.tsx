@@ -520,7 +520,7 @@ export function StageVideo({
             className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-white/10 px-4 py-2.5 text-sm font-semibold text-white"
           >
             <RotateCcw size={15} />
-            Try again
+            <span>Try again</span>
           </button>
         </div>
       )}

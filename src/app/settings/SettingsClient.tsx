@@ -1254,7 +1254,7 @@ function SettingsPage() {
               </ul>
               <p className="text-sm text-green-700 flex items-center gap-1.5">
                 <Check className="h-4 w-4 flex-shrink-0" />
-                Your sign-in connections will be preserved
+                <span>Your sign-in connections will be preserved</span>
               </p>
               <div>
                 <label className="block text-sm font-medium text-ink-2 mb-2">
@@ -1320,7 +1320,7 @@ function SettingsPage() {
               <div className="p-3 bg-red-500/10 rounded-[11px] border border-red-500/30">
                 <p className="text-sm text-red-700 font-medium flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4" />
-                  This action is permanent and cannot be undone!
+                  <span>This action is permanent and cannot be undone!</span>
                 </p>
               </div>
               <p className="text-ink-2">This will permanently delete:</p>

@@ -262,7 +262,7 @@ export function VideoPlayer({
             className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
           >
             <ExternalLink className="w-4 h-4" />
-            Watch on {platformName}
+            <span>Watch on {platformName}</span>
           </a>
         )}
       </div>

@@ -202,7 +202,7 @@ export function TagQuickPicker({
             style={{ color: INK }}
           >
             <TagIcon size={15} style={{ color: SUBTLE }} />
-            Tags
+            <span>Tags</span>
           </h2>
           <button
             type="button"

@@ -270,7 +270,7 @@ export function FilterBar({
             {copiedLabel && (
               <span className="flex flex-none items-center gap-1.5 whitespace-nowrap rounded-full bg-inset px-2.5 py-1 font-mono text-[11px] text-ink-2">
                 <Check size={12} className="text-done" />
-                {copiedLabel} copied
+                <span>{copiedLabel} copied</span>
               </span>
             )}
             {onTagSelectChange && (
@@ -285,7 +285,7 @@ export function FilterBar({
                 )}
               >
                 <ListChecks size={13} />
-                {tagSelect === selectedTag ? 'Done adding' : 'Add posts'}
+                <span>{tagSelect === selectedTag ? 'Done adding' : 'Add posts'}</span>
               </button>
             )}
             {/* ONE visibility control — the state IS the action, styled like
@@ -307,12 +307,12 @@ export function FilterBar({
                 <>
                   <span className="h-1.5 w-1.5 flex-none rounded-full bg-live" aria-hidden />
                   <Globe size={13} />
-                  Public
+                  <span>Public</span>
                 </>
               ) : (
                 <>
                   <Lock size={13} />
-                  Private
+                  <span>Private</span>
                 </>
               )}
             </button>
@@ -535,7 +535,7 @@ export function FilterBar({
                   className="w-full px-3 py-2 text-left text-sm flex items-center gap-2 text-clay font-medium hover:bg-inset transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  New tag
+                  <span>New tag</span>
                 </button>
               )}
             </AnchoredMenu>

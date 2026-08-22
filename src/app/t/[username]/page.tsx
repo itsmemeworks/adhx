@@ -203,11 +203,11 @@ export default async function CuratorProfilePage({ params }: Props) {
             <div className="flex items-center gap-5 rounded-full border border-white/10 bg-white/[0.03] px-5 py-2.5 font-mono text-[12.5px] text-white/75">
               <span className="flex items-center gap-1.5">
                 <Eye size={13} />
-                {profile.stats.viewCount} views this week
+                <span>{profile.stats.viewCount} views this week</span>
               </span>
               <span className="flex items-center gap-1.5">
                 <Bookmark size={13} />
-                {profile.stats.cloneCount} saves
+                <span>{profile.stats.cloneCount} saves</span>
               </span>
               {profile.stats.bestRank != null && (
                 <Link
