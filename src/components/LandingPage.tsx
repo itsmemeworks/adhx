@@ -129,9 +129,11 @@ export function LandingPage() {
           <div>
             <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold bg-surface border border-hairline text-ink-2 mb-5">
               <LiveDot />
-              {live.recentActivity > 0
-                ? `${live.recentActivity.toLocaleString()} watched & sent today`
-                : 'Real-time community pulse'}
+              <span>
+                {live.recentActivity > 0
+                  ? `${live.recentActivity.toLocaleString()} watched & sent today`
+                  : 'Real-time community pulse'}
+              </span>
             </span>
 
             <div className="font-indie-flower leading-[.9] text-ink mb-4 text-[60px] min-[860px]:text-[84px]">

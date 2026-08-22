@@ -31,7 +31,7 @@ export function IosShortcutInstallButton({
       )}
     >
       <Share className="w-4 h-4" aria-hidden />
-      {children}
+      <span>{children}</span>
     </a>
   )
 }
