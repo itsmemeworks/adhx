@@ -550,7 +550,7 @@ The app offers multiple ways to save tweets, shown contextually based on the use
 
 **iOS Shortcut:**
 
-- Published iCloud shortcut ID: `0d187480099b4d34a745ec8750a4587b` — **X-only** (rewrites `x.com` → `adhx.com`). Not in this repo. We still **push this as the install**: one tap, then Share → ADHX from X. Surfaces: iOS bottom banner (`PWAInstallPrompt`), landing hero + promo, Settings, preview CTA nudge (`IosShortcutNudge`). Dismiss key `adhx-shortcut-dismissed`.
+- Published iCloud shortcut ID: `0d187480099b4d34a745ec8750a4587b` — **X-only** (rewrites `x.com` → `adhx.com`). Not in this repo. We still **push this as the install**: one tap, then Share → ADHX from X. Surfaces: iOS banner (`PWAInstallPrompt` — tap away or X dismisses it), landing hero + promo, **Settings** (`IosShortcutSettingsCard`, always on iOS so the link is never lost), preview CTA nudge (`IosShortcutNudge`). Dismiss key `adhx-shortcut-dismissed`.
 - **All four platforms:** URL-prefix or a Share Sheet shortcut that opens `https://adhx.com/share?url=` (`IosShareRecipe`, behind “Instagram, TikTok, YouTube too”). `/share` already maps X / IG / TikTok / YouTube (and TikTok short links).
 - Rebuilding the iCloud shortcut to `/share?url=` is a manual Shortcuts.app change, then a new iCloud link. Until then, don't claim the published shortcut works on IG/TikTok/YouTube.
 

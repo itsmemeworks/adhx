@@ -1,16 +1,16 @@
 'use client'
 
 import { Archive as ArchiveIcon } from 'lucide-react'
+import { StageIconButton } from './stage-primitives'
 import type { TheaterPersonalChrome } from './types'
 
 const DESKTOP_PRIMARY =
   'inline-flex h-11 items-center justify-center gap-1.5 rounded-full bg-clay-grad px-5 text-[12.5px] font-semibold text-white shadow-glow transition-opacity hover:opacity-90 disabled:opacity-60'
-const MOBILE_PRIMARY =
-  'inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl bg-done/25 text-[11px] font-semibold text-done'
 
 /**
  * Collection-tab Archive — the one extra action vs Live (Download / Link /
- * Tag / Open live in the shared chrome row).
+ * Tag / Open live in the shared chrome row). Mobile matches Tag/Share/Open
+ * (44px glass circle). Desktop keeps the labelled clay pill.
  */
 export function TheaterCollectionActions({
   collection,
@@ -19,15 +19,21 @@ export function TheaterCollectionActions({
   collection: TheaterPersonalChrome
   variant: 'desktop' | 'mobile'
 }) {
-  const desktop = variant === 'desktop'
+  if (variant === 'mobile') {
+    return (
+      <StageIconButton onClick={() => collection.onDone()} aria-label="Archive">
+        <ArchiveIcon size={16} />
+      </StageIconButton>
+    )
+  }
   return (
     <button
       type="button"
       onClick={collection.onDone}
       title="Archive — take it out of your collection queue"
-      className={desktop ? DESKTOP_PRIMARY : MOBILE_PRIMARY}
+      className={DESKTOP_PRIMARY}
     >
-      <ArchiveIcon size={desktop ? 14 : 16} />
+      <ArchiveIcon size={14} />
       <span>Archive</span>
     </button>
   )

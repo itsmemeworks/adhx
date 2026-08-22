@@ -8,8 +8,14 @@ import { SHORTCUT_DISMISS_KEY } from '@/components/IosShortcutInstall'
 import { X_ONLY_SHORTCUT_URL } from '@/lib/share/ios'
 
 let mockPlatform: 'ios' | 'android' | 'desktop' = 'desktop'
+let mockPathname = '/'
 vi.mock('@/lib/platform', () => ({
   getPlatformType: () => mockPlatform,
+}))
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn(), refresh: vi.fn() }),
+  usePathname: () => mockPathname,
+  useSearchParams: () => new URLSearchParams(),
 }))
 
 function setStandalone(value: boolean) {
@@ -40,6 +46,7 @@ function fireBeforeInstallPrompt() {
 
 beforeEach(() => {
   mockPlatform = 'desktop'
+  mockPathname = '/'
   setStandalone(false)
   localStorage.clear()
   // @ts-expect-error — stub SW registration
@@ -57,16 +64,21 @@ describe('PWAInstallPrompt', () => {
   it('offers a one-tap Share Sheet install on iOS', () => {
     mockPlatform = 'ios'
     render(<PWAInstallPrompt />)
-    expect(screen.getByText('Add ADHX to Share')).toBeInTheDocument()
-    const add = screen.getByRole('link', { name: /add/i })
-    expect(add).toHaveAttribute('href', X_ONLY_SHORTCUT_URL)
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /add shortcut/i })).not.toBeInTheDocument()
+    const install = screen.getByRole('link', { name: /install the iOS shortcut/i })
+    expect(install).toHaveAttribute('href', X_ONLY_SHORTCUT_URL)
+    expect(install).toHaveAttribute('target', '_blank')
+    expect(
+      screen.getByText(/Share posts to ADHX from X, Instagram, TikTok, and YouTube in one tap\./),
+    ).toBeInTheDocument()
   })
 
   it('still shows the iOS shortcut prompt in standalone (home screen ≠ share sheet)', () => {
     mockPlatform = 'ios'
     setStandalone(true)
     render(<PWAInstallPrompt />)
-    expect(screen.getByText('Add ADHX to Share')).toBeInTheDocument()
+    expect(screen.getByText('Install the iOS shortcut')).toBeInTheDocument()
   })
 
   it('offers a one-tap Add button on Android once beforeinstallprompt fires', async () => {
@@ -100,8 +112,49 @@ describe('PWAInstallPrompt', () => {
     mockPlatform = 'ios'
     render(<PWAInstallPrompt />)
     fireEvent.click(screen.getByLabelText('Dismiss'))
-    await waitFor(() => expect(screen.queryByText('Add ADHX to Share')).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.queryByText('Install the iOS shortcut')).not.toBeInTheDocument(),
+    )
     expect(localStorage.getItem(SHORTCUT_DISMISS_KEY)).toBe('1')
+  })
+
+  it('dismisses the iOS banner when tapping away', async () => {
+    mockPlatform = 'ios'
+    render(
+      <div>
+        <button type="button">elsewhere</button>
+        <PWAInstallPrompt />
+      </div>,
+    )
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'elsewhere' }))
+    await waitFor(() =>
+      expect(screen.queryByText('Install the iOS shortcut')).not.toBeInTheDocument(),
+    )
+    expect(localStorage.getItem(SHORTCUT_DISMISS_KEY)).toBe('1')
+  })
+
+  it('does not dismiss the iOS banner when tapping the card itself', () => {
+    mockPlatform = 'ios'
+    render(<PWAInstallPrompt />)
+    fireEvent.pointerDown(screen.getByRole('link', { name: /install the iOS shortcut/i }))
+    expect(screen.getByText('Install the iOS shortcut')).toBeInTheDocument()
+    expect(localStorage.getItem(SHORTCUT_DISMISS_KEY)).toBeNull()
+  })
+
+  it('hangs fixed under the theater logo, and sits in-flow under the header elsewhere', () => {
+    mockPlatform = 'ios'
+    const { rerender } = render(<PWAInstallPrompt />)
+    expect(
+      screen.getByRole('link', { name: /install the iOS shortcut/i }).closest('.fixed'),
+    ).toHaveClass('left-3', 'top-[calc(env(safe-area-inset-top,0px)+3.15rem)]')
+
+    mockPathname = '/library'
+    rerender(<PWAInstallPrompt />)
+    const wrap = screen
+      .getByRole('link', { name: /install the iOS shortcut/i })
+      .closest('.sm\\:hidden')
+    expect(wrap).toHaveClass('relative', 'mx-3', 'mt-2')
+    expect(wrap).not.toHaveClass('fixed')
   })
 
   it('registers the service worker', () => {

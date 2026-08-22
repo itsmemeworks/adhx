@@ -164,7 +164,8 @@ export function CollectionStage({
   }
 
   if (theaterItem.contentType === 'photo') {
-    return <StageText item={theaterItem} photo />
+    // Chrome already paints author + caption (same as Live's `photoCaption={false}`).
+    return <StageText item={theaterItem} photo photoCaption={false} />
   }
 
   if (theaterItem.contentType === 'quote') {

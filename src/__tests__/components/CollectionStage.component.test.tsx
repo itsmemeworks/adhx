@@ -47,7 +47,13 @@ vi.mock('@/components/theater/StageYouTube', () => ({
   ),
 }))
 vi.mock('@/components/theater/StageText', () => ({
-  StageText: () => <div data-testid="stage-text" />,
+  StageText: (props: { photo?: boolean; photoCaption?: boolean }) => (
+    <div
+      data-testid="stage-text"
+      data-photo={String(!!props.photo)}
+      data-photo-caption={String(props.photoCaption)}
+    />
+  ),
 }))
 vi.mock('@/components/theater/StageArticle', () => ({
   StageArticle: () => <div data-testid="stage-article" />,
@@ -146,6 +152,22 @@ describe('CollectionStage: onEnded wiring to the video-capable stages', () => {
       />,
     )
     expect(getByTestId('stage-video').dataset.repeat).toBe('true')
+  })
+
+  it('a photo item hides the stage caption — the chrome already paints it', () => {
+    const { getByTestId } = render(
+      <CollectionStage
+        feedItem={feedItem({
+          media: [
+            { mediaType: 'photo', thumbnailUrl: 'https://example.com/p.jpg' },
+          ] as FeedItem['media'],
+        })}
+        muted
+        onRequestUnmute={vi.fn()}
+      />,
+    )
+    expect(getByTestId('stage-text').dataset.photo).toBe('true')
+    expect(getByTestId('stage-text').dataset.photoCaption).toBe('false')
   })
 
   it('a text-only item ignores onEnded (StageText has no such affordance) and still renders', () => {

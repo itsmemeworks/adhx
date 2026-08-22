@@ -138,7 +138,7 @@ export function SignInModal({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[80] flex items-center justify-center p-4"
       style={{ backgroundColor: 'rgba(8,7,10,.72)', backdropFilter: 'blur(8px)' }}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose()

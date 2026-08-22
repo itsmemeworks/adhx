@@ -6,6 +6,66 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-22 — iOS shortcut banner dismisses on tap-away
+
+The iOS install banner is a soft nudge: any tap outside it (or the X) hides it and remembers. Settings now has an iOS-only "iOS shortcut" card with the iCloud link + the four-platform recipe, so dismissing the banner never loses the install path.
+
+---
+
+## 2026-08-22 — Mobile signup / collection pass
+
+Signed up on an iPhone-14 viewport, cloned a starter playlist, tagged a post, opened Library + Tags. Fixes: hide the iOS banner on `/welcome` (it covered the chooser); Sign-in / tag picker sit above the banner (`z-80`); Continue after starters goes to `/collection` not Live; welcome card scrolls; tag input is 16px (no iOS zoom); starter Add is 44px; banner is in-flow under the header on Library/Settings so it doesn't cover Paste.
+
+---
+
+## 2026-08-22 — Playlist tag stays out of the mobile peek bar
+
+Peek-bar center was `Repeat + #tag · N` — a 15-char tag collided with transport. Center is now the queue position like every other mode. Tag + count + curator sit in the expanded up-next sheet. Desktop unchanged.
+
+---
+
+## 2026-08-22 — Mobile theater actions are icon-only
+
+The bottom-scrim action row on phones had no room for pill labels (Copy / Save playlist / Download / Save / Manage). Those are now the same 44px glass icon buttons as Share / Open; names live in `aria-label`. Desktop pills are unchanged.
+
+---
+
+## 2026-08-22 — iOS shortcut banner hangs under the logo
+
+Mobile iOS banner is a left-aligned callout under the brand (theater: under the stage logo; `/library` etc: under the header logo), clay outline + caret. Whole card is the iCloud-shortcut link except dismiss. Copy names X, Instagram, TikTok, and YouTube — one tap, no copy and paste.
+
+---
+
+## 2026-08-22 — iOS shortcut banner is the tap target
+
+The mobile iOS banner is one link (iCloud shortcut) except the dismiss X. No separate Add shortcut pill — title + subtitle take the width. Card uses the clay outline. It mounts on theater/playlist too, pinned above the peek bar (`z-70`) so it stays visible without covering nav.
+
+---
+
+## 2026-08-22 — iOS shortcut banner is the tap target
+
+The mobile iOS banner is one link (iCloud shortcut) except the dismiss X. No separate Add shortcut pill — title + subtitle take the width. Card uses the clay outline.
+
+---
+
+## 2026-08-22 — Playlist mobile Download/Copy
+
+`/t/{user}/{tag}` mobile swapped the whole Download/Copy + Save slot for Save playlist / Manage. Desktop already kept Download/Copy. Same row now: Download (or Copy) · Save playlist · Share · Open.
+
+---
+
+## 2026-08-22 — iOS shortcut banner copy + outline CTA
+
+The mobile iOS banner now says it installs a Shortcuts.app shortcut so sharing posts to ADHX from X is one tap. Logo dropped for space. CTA uses the clay-border outline (`IosShortcutInstallButton variant="outline"`), not the filled clay-grad pill.
+
+---
+
+## 2026-08-22 — Mobile collection Archive + photo caption
+
+Phone-width pass: Live / trending / leaderboard / sign-in / shorts were fine. Collection Archive still used the old Later/Delete column (`flex-col bg-done/25`) in the Live action row — now a 44px glass circle like Tag/Share/Open. Collection photos also painted the caption on the stage *and* in the chrome; stage `photoCaption` is off, matching Live. The iOS “Add to Share” banner sat on `/collection`’s peek bar (same z-60 as TheaterShell); AppShell now treats `/` `/collection` `/t/` as theater surfaces and skips Header + PWA there.
+
+---
+
 ## 2026-08-22 — YouTube clay bar without iframe click
 
 YouTube withholds `currentTime` until a click inside the embed, so the progress line stayed at 0 on autoplay. While playing we now clock the bar from duration + play-start (snap when a real time / `mediaReferenceTime` arrives) and pull `getCurrentTime`/`getDuration` if starved. Interpolated time is display-only. E2E stubs the nocookie embed so the bar can be asserted without a real player.

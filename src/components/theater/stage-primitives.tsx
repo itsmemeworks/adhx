@@ -9,6 +9,7 @@
 
 import type { MouseEvent, ReactNode, TouchEvent } from 'react'
 import { ArrowRight } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 /**
  * 44px icon-button chrome (dark scrim actions) — was repeated identically 4×
@@ -20,12 +21,15 @@ import { ArrowRight } from 'lucide-react'
  * only these are actually used across the 4 call sites.
  */
 const STAGE_ICON_BUTTON_CLASS =
-  'inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 bg-white/[0.14] text-white'
+  'inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 bg-white/[0.14] text-white disabled:opacity-70'
 
 export interface StageIconButtonProps {
   href?: string
   target?: string
   rel?: string
+  title?: string
+  disabled?: boolean
+  className?: string
   onClick?: (e: MouseEvent<HTMLElement>) => void
   onTouchEnd?: (e: TouchEvent<HTMLElement>) => void
   'aria-label': string
@@ -36,19 +40,24 @@ export function StageIconButton({
   href,
   target,
   rel,
+  title,
+  disabled,
+  className,
   onClick,
   onTouchEnd,
   children,
   ...rest
 }: StageIconButtonProps) {
+  const cls = cn(STAGE_ICON_BUTTON_CLASS, className)
   if (href) {
     return (
       <a
         href={href}
         target={target}
         rel={rel}
+        title={title}
         onClick={onClick}
-        className={STAGE_ICON_BUTTON_CLASS}
+        className={cls}
         {...rest}
       >
         {children}
@@ -58,9 +67,11 @@ export function StageIconButton({
   return (
     <button
       type="button"
+      title={title}
+      disabled={disabled}
       onClick={onClick}
       onTouchEnd={onTouchEnd}
-      className={STAGE_ICON_BUTTON_CLASS}
+      className={cls}
       {...rest}
     >
       {children}

@@ -98,7 +98,7 @@ export function StarterCollections({
 }
 
 const GLASS_BUTTON =
-  'inline-flex items-center gap-1.5 rounded-full border border-white/[0.14] bg-white/10 px-2.5 py-1 text-[10.5px] font-semibold text-white/85 backdrop-blur-md transition-colors hover:bg-white/15 disabled:opacity-60'
+  'inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-white/[0.14] bg-white/10 px-3 py-2 text-[12.5px] font-semibold text-white/85 backdrop-blur-md transition-colors hover:bg-white/15 disabled:opacity-60'
 
 function StarterCard({ entry }: { entry: StarterEntry }) {
   const [state, setState] = useState<CloneState>('idle')

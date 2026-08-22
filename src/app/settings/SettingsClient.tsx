@@ -28,6 +28,7 @@ import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
 import { useTheme } from '@/lib/theme/context'
 import { PlatformGlyph, ConnectWithX } from '@/components/matter'
 import { UsernameChooser, type UsernameClaimSuccess } from '@/components/auth/UsernameChooser'
+import { IosShortcutSettingsCard } from '@/components/IosShortcutInstall'
 import { MAX_USERNAME_CHANGES } from '@/lib/auth/username-rules'
 import { cn } from '@/lib/utils'
 
@@ -917,6 +918,8 @@ function SettingsPage() {
         ) : (
           me && <SignInConnectionCard me={me} refresh={fetchMe} />
         )}
+
+        <IosShortcutSettingsCard />
 
         {/* Sync X bookmarks */}
         {!meLoading && me && (

@@ -122,9 +122,13 @@ export function StageText({
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <p className="max-w-2xl px-8 text-center font-serif text-3xl text-white/80">
-              {text || 'Photo'}
-            </p>
+            {photoCaption ? (
+              <p className="max-w-2xl px-8 text-center font-serif text-3xl text-white/80">
+                {text || 'Photo'}
+              </p>
+            ) : (
+              <p className="text-sm text-white/40">Photo</p>
+            )}
           </div>
         )}
 

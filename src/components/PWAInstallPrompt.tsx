@@ -1,10 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import Image from 'next/image'
 import { Plus, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { getPlatformType, type PlatformType } from '@/lib/platform'
-import { IosShortcutInstallButton, SHORTCUT_DISMISS_KEY } from '@/components/IosShortcutInstall'
+import { SHORTCUT_DISMISS_KEY } from '@/components/IosShortcutInstall'
+import { X_ONLY_SHORTCUT_URL } from '@/lib/share/ios'
 
 /**
  * Mobile install nudge.
@@ -33,10 +36,28 @@ function isStandalone(): boolean {
   )
 }
 
+/** Just under the theater logo row (safe-area + wordmark + a little air). */
+const THEATER_BANNER_TOP = 'top-[calc(env(safe-area-inset-top,0px)+3.15rem)]'
+
+function isTheaterPath(pathname: string): boolean {
+  return (
+    pathname === '/' ||
+    pathname === '/collection' ||
+    pathname.startsWith('/t/') ||
+    /^\/\w+\/status\/\d+$/.test(pathname) ||
+    /^\/reels?\/[A-Za-z0-9_-]+$/.test(pathname) ||
+    /^\/shorts\/[A-Za-z0-9_-]{11}$/.test(pathname) ||
+    /^\/@?[A-Za-z0-9._]+\/video\/\d+$/.test(pathname)
+  )
+}
+
 export function PWAInstallPrompt() {
+  const pathname = usePathname()
   const [platform, setPlatform] = useState<PlatformType>('desktop')
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null)
   const [visible, setVisible] = useState(false)
+  const bannerRef = useRef<HTMLDivElement>(null)
+  const pinUnderTheaterLogo = isTheaterPath(pathname)
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
@@ -81,6 +102,18 @@ export function PWAInstallPrompt() {
     }
   }
 
+  // iOS banner is a soft nudge — any tap outside it dismisses (no need for X).
+  useEffect(() => {
+    if (!visible || platform !== 'ios') return
+    function onPointerDown(e: PointerEvent) {
+      const root = bannerRef.current
+      if (!root || root.contains(e.target as Node)) return
+      dismiss()
+    }
+    document.addEventListener('pointerdown', onPointerDown, true)
+    return () => document.removeEventListener('pointerdown', onPointerDown, true)
+  }, [visible, platform])
+
   const install = async () => {
     if (!deferred) return
     await deferred.prompt()
@@ -93,29 +126,39 @@ export function PWAInstallPrompt() {
 
   if (platform === 'ios') {
     return (
-      <div className="fixed bottom-3 inset-x-3 z-[60] sm:hidden">
-        <div className="mx-auto max-w-md flex items-center gap-3 rounded-2xl bg-surface border border-hairline shadow-2xl px-4 py-3">
-          <Image
-            src="/icon-192.png"
-            alt=""
-            width={40}
-            height={40}
-            className="w-10 h-10 rounded-xl flex-shrink-0"
+      <div
+        ref={bannerRef}
+        className={cn(
+          'z-[70] sm:hidden',
+          pinUnderTheaterLogo ? `fixed left-3 ${THEATER_BANNER_TOP}` : 'relative mx-3 mt-2',
+        )}
+      >
+        <div className="relative w-[min(19rem,calc(100vw-1.5rem))]">
+          <span
+            aria-hidden
+            className="absolute -top-1.5 left-5 h-3 w-3 rotate-45 border-l border-t border-clay bg-surface"
           />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-ink">Add ADHX to Share</p>
-            <p className="text-xs text-ink-3">In X: Share → ADHX. Skip rewriting the URL.</p>
+          <div className="relative flex items-start rounded-2xl border border-clay bg-surface shadow-2xl">
+            <a
+              href={X_ONLY_SHORTCUT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="min-w-0 flex-1 px-4 py-3"
+            >
+              <p className="text-sm font-semibold text-ink">Install the iOS shortcut</p>
+              <p className="text-xs leading-snug text-ink-3">
+                Share posts to ADHX from X, Instagram, TikTok, and YouTube in one tap.
+              </p>
+            </a>
+            <button
+              type="button"
+              onClick={dismiss}
+              aria-label="Dismiss"
+              className="inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center p-1.5 text-ink-3 hover:text-ink-2"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
-          <IosShortcutInstallButton className="flex-shrink-0 !px-3 text-sm">
-            Add
-          </IosShortcutInstallButton>
-          <button
-            onClick={dismiss}
-            aria-label="Dismiss"
-            className="flex-shrink-0 p-1.5 min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-ink-3 hover:text-ink-2"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
       </div>
     )

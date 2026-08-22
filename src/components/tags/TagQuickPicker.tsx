@@ -178,7 +178,7 @@ export function TagQuickPicker({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[80] flex items-center justify-center p-4"
       style={{ backgroundColor: 'rgba(8,7,10,.72)', backdropFilter: 'blur(8px)' }}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose()
@@ -271,13 +271,13 @@ export function TagQuickPicker({
             placeholder="New tag"
             aria-label="New tag name"
             maxLength={15}
-            className="min-w-0 flex-1 bg-transparent text-[13.5px] outline-none"
+            className="min-w-0 flex-1 bg-transparent text-base outline-none sm:text-[13.5px]"
             style={{ color: INK, caretColor: INK }}
           />
           {newTagValue.trim() && (
             <button
               type="submit"
-              className="flex-none text-[12.5px] font-semibold"
+              className="flex-none min-h-[44px] px-1 text-[12.5px] font-semibold"
               style={{ color: ACCENT }}
             >
               Add
