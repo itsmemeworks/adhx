@@ -11,6 +11,7 @@ import { usePathname } from 'next/navigation'
 import { Bookmark, LogIn, LogOut, Menu, Radio, Settings, Tag, Trophy } from 'lucide-react'
 import { useAuthMe } from '@/components/auth'
 import { cn } from '@/lib/utils'
+import { TRIAGE_TAB_ORDER, TRIAGE_TAB_LABEL, type TriageTab } from './types'
 import { generateAvatarDataUri, usableAvatarUrl } from '@/lib/avatar/generated-avatar'
 
 // The theater is ALWAYS dark regardless of the site's light/dark theme, so
@@ -121,6 +122,59 @@ function TheaterMenuEntry({ isHome, onClose }: { isHome: boolean; onClose: () =>
   )
 }
 
+/**
+ * The Theater entry expanded into its two playlists (owner: "Theater just has
+ * two sub options: live and collection and we can just highlight which one is
+ * selected"). This is the MOBILE home for the tab switcher — the top scrim has
+ * the logo, trend/time chips, paste and this burger competing for ~360px, so a
+ * tab pill up there overlaps; desktop has room in its top bar and keeps the
+ * pill instead. Only one of the two ever renders, so the control is never
+ * duplicated.
+ *
+ * Selecting a tab goes through `onTabChange` rather than an `<a href>`: the
+ * pair is routes (`/` and `/collection`) but the chrome flips the tab locally
+ * first so the switch is instant, then navigates — a plain link would reload
+ * the stage the viewer is watching.
+ */
+function TheaterTabsGroup({
+  tab,
+  onTabChange,
+  onClose,
+}: {
+  tab: TriageTab
+  onTabChange: (tab: TriageTab) => void
+  onClose: () => void
+}) {
+  return (
+    <>
+      <p
+        className="flex items-center gap-2.5 px-4 pt-2.5 pb-1 text-[11px] font-semibold tracking-wide uppercase"
+        style={{ color: MUTED }}
+      >
+        <Radio size={13} />
+        <span>Theater</span>
+      </p>
+      {TRIAGE_TAB_ORDER.map((t) => (
+        <button
+          key={t}
+          type="button"
+          role="menuitem"
+          aria-current={tab === t ? 'page' : undefined}
+          onClick={() => {
+            onTabChange(t)
+            onClose()
+          }}
+          className="flex w-full items-center gap-2.5 py-2.5 pr-4 pl-[2.4rem] text-left text-[13px] transition-colors hover:bg-white/[.06]"
+          style={{ color: tab === t ? INK : SUBTLE }}
+        >
+          <span>{TRIAGE_TAB_LABEL[t]}</span>
+          {tab === t && <CurrentDot />}
+        </button>
+      ))}
+    </>
+  )
+}
+
 export interface TheaterAvatarMenuProps {
   className?: string
   /**
@@ -150,6 +204,13 @@ export interface TheaterAvatarMenuProps {
    * Theater is a real link home and never marked.
    */
   theaterActive?: boolean
+  /**
+   * Mobile triage only: expands the Theater entry into its Live / My
+   * Collection sub-options with the selected one marked. Desktop omits it —
+   * its top bar carries the tab pill, and rendering both would be two
+   * controls for one piece of state.
+   */
+  theaterTabs?: { tab: TriageTab; onTabChange: (tab: TriageTab) => void }
 }
 
 /**
@@ -167,6 +228,7 @@ export function TheaterAvatarMenu({
   onRequestSignIn,
   allowSignedOut = false,
   theaterActive = false,
+  theaterTabs,
 }: TheaterAvatarMenuProps) {
   const { me, loading } = useAuthMe()
   const [open, setOpen] = useState(false)
@@ -367,9 +429,21 @@ export function TheaterAvatarMenu({
               "Collection". */}
           <MenuLink href="/library" onClick={close}>
             <Bookmark size={15} />
-            <span>Your collection</span>
+            {/* "Library" (the grid over your saves — repo terminology) rather
+                than "Your collection", which became ambiguous the moment the
+                Theater group below gained a "My Collection" tab: two rows
+                reading as the same destination, going to different screens. */}
+            <span>Library</span>
           </MenuLink>
-          <TheaterMenuEntry isHome={isHome} onClose={close} />
+          {theaterTabs ? (
+            <TheaterTabsGroup
+              tab={theaterTabs.tab}
+              onTabChange={theaterTabs.onTabChange}
+              onClose={close}
+            />
+          ) : (
+            <TheaterMenuEntry isHome={isHome} onClose={close} />
+          )}
           <MenuLink href="/tags" onClick={close} current={isTags}>
             <Tag size={15} />
             <span>Tags</span>

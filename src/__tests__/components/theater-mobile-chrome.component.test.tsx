@@ -103,6 +103,19 @@ beforeEach(() => {
   mockTheaterAvatarMenu.mockClear()
 })
 
+/**
+ * The peek bar's centre label. Two buttons carry the "Expand up next" label
+ * (the drag handle above it does too), so pick the one that actually holds
+ * text — the handle is a bare chevron.
+ */
+function peekCentreText(): string {
+  const labelled = screen
+    .getAllByLabelText(/up next/i)
+    .filter((el) => (el.textContent ?? '').trim().length > 0)
+  expect(labelled).toHaveLength(1)
+  return (labelled[0].textContent ?? '').trim()
+}
+
 // Round 8 (owner: the solid clay-grad Save fill was "too much") — Save now
 // uses PILL_SAVE (a clay border on the same glass background every other
 // pill uses), never the old solid `bg-clay-grad` fill. Download stays on
@@ -163,10 +176,18 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     expect(downloadBtn.className).not.toContain('border-clay')
   })
 
-  it('renders Live before My Collection, not the bare "Collection" label', () => {
+  /**
+   * The Live ⇄ My Collection switch is NOT a control this chrome draws. A tab
+   * pill in the top scrim overlapped the logo, trend/time chips and paste
+   * button at phone widths (owner), so mobile hands the pair to the burger as
+   * Theater sub-options and desktop keeps its top-bar pill. What this chrome
+   * owes is the wiring; the rendering is TheaterAvatarMenu's test.
+   */
+  it('hands the Live/Collection switch to the burger instead of drawing tabs', () => {
+    const onTabChange = vi.fn()
     const triage: TheaterTriageChrome = {
       tab: 'live',
-      onTabChange: vi.fn(),
+      onTabChange,
       onDone: vi.fn(),
       onLater: vi.fn(),
       onDelete: vi.fn(),
@@ -180,12 +201,95 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     }
     render(<TheaterMobileChrome {...base} current={videoItem()} triage={triage} />)
 
+    expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
+      expect.objectContaining({ theaterTabs: { tab: 'live', onTabChange } }),
+    )
+    // No tab buttons of its own — in the scrim or the peek bar.
+    expect(screen.queryByText('My Collection')).not.toBeInTheDocument()
     expect(screen.queryByText('Collection')).not.toBeInTheDocument()
-    const liveTab = screen.getByText('Live', { selector: 'button' })
-    const collectionTab = screen.getByText('My Collection')
-    expect(
-      liveTab.compareDocumentPosition(collectionTab) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
+    expect(screen.queryByText('Live', { selector: 'button' })).not.toBeInTheDocument()
+  })
+
+  /**
+   * The slot the tabs vacated: the peek bar's centre now carries the queue
+   * position in triage too (owner asked the count to be boundary-aware, and
+   * triage was the one mode with nowhere to put it).
+   */
+  it('spends the freed peek-bar centre on the queue position', () => {
+    const triage: TheaterTriageChrome = {
+      tab: 'collection',
+      onTabChange: vi.fn(),
+      onDone: vi.fn(),
+      onLater: vi.fn(),
+      onDelete: vi.fn(),
+      onTag: vi.fn(),
+      onSave: vi.fn(),
+      onLiveTag: vi.fn(),
+      savedKeys: new Set<string>(),
+      remaining: 0,
+      streak: { current: 0, longest: 0 },
+      onClose: vi.fn(),
+    }
+    const items = [videoItem({ bookmarkId: '1' }), videoItem({ bookmarkId: '2' })]
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={items[1]}
+        items={items}
+        currentKey="twitter:2"
+        queueTotal={2}
+        triage={triage}
+      />,
+    )
+
+    expect(peekCentreText()).toBe('2 / 2')
+  })
+
+  /**
+   * "N new" counts arrivals in the live pulse. The Collection tab is a finite
+   * backlog the viewer is working down — nothing arrives into it mid-session,
+   * so the suffix would be counting posts that aren't in the queue on screen.
+   */
+  it('omits the "N new" suffix on the Collection tab', () => {
+    const triage: TheaterTriageChrome = {
+      tab: 'collection',
+      onTabChange: vi.fn(),
+      onDone: vi.fn(),
+      onLater: vi.fn(),
+      onDelete: vi.fn(),
+      onTag: vi.fn(),
+      onSave: vi.fn(),
+      onLiveTag: vi.fn(),
+      savedKeys: new Set<string>(),
+      remaining: 0,
+      streak: { current: 0, longest: 0 },
+      onClose: vi.fn(),
+    }
+    const items = [videoItem({ bookmarkId: '1' })]
+    const { rerender } = render(
+      <TheaterMobileChrome
+        {...base}
+        current={items[0]}
+        items={items}
+        currentKey="twitter:1"
+        newCount={3}
+        triage={triage}
+      />,
+    )
+    expect(peekCentreText()).toBe('1 / 1')
+
+    // The live tab, where "new" does mean something, keeps it.
+    rerender(
+      <TheaterMobileChrome
+        {...base}
+        current={items[0]}
+        items={items}
+        currentKey="twitter:1"
+        newCount={3}
+        triage={{ ...triage, tab: 'live' }}
+      />,
+    )
+    expect(peekCentreText()).toBe('1 / 1 · 3 new')
   })
 })
 

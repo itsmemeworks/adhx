@@ -48,13 +48,7 @@ import { authorProfileUrl, previewPath, sourceUrl } from '@/lib/activity/preview
 import { inferType } from '@/lib/trending/filter'
 import { useSendFile } from './useSendFile'
 import { useClampExpand } from './useClampExpand'
-import {
-  theaterItemKey,
-  PLATFORM_LABEL,
-  TRIAGE_TAB_ORDER,
-  TRIAGE_TAB_LABEL,
-  REPEAT_MODE_LABEL,
-} from './types'
+import { theaterItemKey, PLATFORM_LABEL, REPEAT_MODE_LABEL } from './types'
 import { TheaterLinkedText } from './TheaterText'
 import {
   TheaterProgressLine,
@@ -141,7 +135,7 @@ export interface TheaterMobileChromeProps {
    */
   repeatMode?: RepeatMode
   onCycleRepeat?: () => void
-  /** Triage mode (unified-theater-triage.md §2): swaps the top scrim's meta for a Collection↔Live tab switcher, and the bottom action row for Later/Tag/Delete/Done. */
+  /** Triage mode (unified-theater-triage.md §2): swaps the top scrim's post meta for a close button + the burger (which carries the Live↔Collection switch as Theater sub-options — the top scrim is too tight for a tab pill at phone widths, unlike desktop's top bar), and the bottom action row for Later/Tag/Delete/Done. */
   triage?: TheaterTriageChrome
 }
 
@@ -405,7 +399,18 @@ export function TheaterMobileChrome({
             <MatterLogo size={16} className="[&>span]:text-white" />
           </a>
           <div className="flex flex-none items-center gap-1.5">
-            <TheaterAvatarMenu theaterActive />
+            {/* Live ⇄ My Collection lives in this menu on mobile, as two
+                sub-options under Theater (owner: a tab pill up here "is
+                going to definitely cause overlap with the logo, the play
+                stats, and the paste and burger menu… why not just put it in
+                the burger menu for mobile?"). Desktop keeps its top-bar pill
+                and does NOT pass this — one control per surface, never both.
+                It's what freed the peek bar's centre slot for the queue
+                position. */}
+            <TheaterAvatarMenu
+              theaterActive
+              theaterTabs={{ tab: triage.tab, onTabChange: triage.onTabChange }}
+            />
             <button
               type="button"
               onClick={triage.onClose}
@@ -941,69 +946,49 @@ export function TheaterMobileChrome({
               )}
             </div>
 
+            {/* Centre slot: where you are in the queue. Triage used to spend
+                this on the Live/Collection tabs — they're in the top scrim
+                now (see above), so every mode gets the position, which is
+                what the owner asked the count to be aware of. */}
             <div className="pointer-events-none absolute inset-x-0 flex justify-center">
-              {triage ? (
-                <div
-                  className="pointer-events-auto inline-flex rounded-full bg-inset p-0.5 text-[11.5px] font-semibold"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {TRIAGE_TAB_ORDER.map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        triage.onTabChange(t)
-                      }}
-                      onTouchEnd={(e) => e.stopPropagation()}
-                      aria-current={triage.tab === t ? 'true' : undefined}
-                      className={cn(
-                        'rounded-full px-3 py-1 whitespace-nowrap transition-colors',
-                        triage.tab === t ? 'bg-surface text-ink shadow-sm' : 'text-ink-3',
-                      )}
-                    >
-                      {TRIAGE_TAB_LABEL[t]}
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setSheetOpen((v) => !v)}
-                  aria-expanded={sheetOpen}
-                  aria-label={sheetOpen ? 'Collapse up next' : 'Expand up next'}
-                  className={cn(
-                    'pointer-events-auto flex max-w-[45%] items-center justify-center gap-1 truncate px-1 text-center text-[12px] font-semibold',
-                    repeatCurrent ? 'text-clay' : 'text-ink-2',
-                  )}
-                >
-                  {playlist ? (
-                    <>
-                      <Repeat size={11} className="flex-none" aria-hidden />
-                      <span className="truncate">
-                        #{playlist.tag} · {playlist.count}
-                      </span>
-                    </>
-                  ) : repeatCurrent ? (
-                    <>
-                      <Repeat size={11} className="flex-none" aria-hidden />
-                      <span className="truncate">On repeat</span>
-                    </>
-                  ) : queueIndex !== -1 ? (
-                    // Queue position ("3 / 7"), out of what will actually PLAY
-                    // from here — the unwatched run while repeat is off, the
-                    // whole queue once it isn't (see `computeQueueTotal`). The
-                    // fresh-arrival count folds in when there is one.
-                    `${queueIndex + 1} / ${queueTotal ?? items.length}${
-                      newCount > 0 ? ` · ${newCount} new` : ''
-                    }`
-                  ) : newCount > 0 ? (
-                    `${newCount} new`
-                  ) : (
-                    'Up next'
-                  )}
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => setSheetOpen((v) => !v)}
+                aria-expanded={sheetOpen}
+                aria-label={sheetOpen ? 'Collapse up next' : 'Expand up next'}
+                className={cn(
+                  'pointer-events-auto flex max-w-[45%] items-center justify-center gap-1 truncate px-1 text-center text-[12px] font-semibold',
+                  repeatCurrent ? 'text-clay' : 'text-ink-2',
+                )}
+              >
+                {playlist ? (
+                  <>
+                    <Repeat size={11} className="flex-none" aria-hidden />
+                    <span className="truncate">
+                      #{playlist.tag} · {playlist.count}
+                    </span>
+                  </>
+                ) : repeatCurrent ? (
+                  <>
+                    <Repeat size={11} className="flex-none" aria-hidden />
+                    <span className="truncate">On repeat</span>
+                  </>
+                ) : queueIndex !== -1 ? (
+                  // Queue position ("3 / 7"), out of what will actually PLAY
+                  // from here — the unwatched run while repeat is off, the
+                  // whole queue once it isn't (see `computeQueueTotal`). The
+                  // fresh-arrival count folds in when there is one, but only
+                  // where "new" means anything: the Collection tab is a finite
+                  // backlog, not the live pulse.
+                  `${queueIndex + 1} / ${queueTotal ?? items.length}${
+                    newCount > 0 && triage?.tab !== 'collection' ? ` · ${newCount} new` : ''
+                  }`
+                ) : newCount > 0 && triage?.tab !== 'collection' ? (
+                  `${newCount} new`
+                ) : (
+                  'Up next'
+                )}
+              </button>
             </div>
 
             <div className="ml-auto flex items-center gap-0.5">
