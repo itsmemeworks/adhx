@@ -4,6 +4,7 @@ import { getTheaterFeed } from '@/lib/theater/feed'
 import { TheaterStaticList } from '@/components/theater/TheaterStaticList'
 import { TheaterShell } from '@/components/theater/TheaterShell'
 import { metrics } from '@/lib/sentry'
+import { recordAnalytic } from '@/lib/analytics/record'
 import { collectionPath } from '@/lib/theater/collection-href'
 import AuthedTheater from './AuthedTheater'
 
@@ -45,6 +46,7 @@ export default async function HomePage({
 
   const seed = await getTheaterFeed()
   metrics.theaterOpened('home')
+  recordAnalytic({ name: 'theater.open', userId, surface: 'live' })
 
   if (userId) {
     return <AuthedTheater seed={seed} tab="live" />

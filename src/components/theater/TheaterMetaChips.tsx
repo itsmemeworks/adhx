@@ -3,6 +3,7 @@
 import { Flame } from 'lucide-react'
 import { PlatformGlyph } from '@/components/matter'
 import { sourceUrl } from '@/lib/activity/preview-path'
+import { pingAnalytic } from '@/lib/analytics/client'
 import { addedToAdhxLabel, formatCompactRelativeTime, hasKnownTimestamp } from '@/lib/utils/format'
 import { PLATFORM_LABEL, type TheaterItem } from './types'
 
@@ -35,6 +36,12 @@ export function PlatformTimeChip({ item }: { item: TheaterItem }) {
       rel="noopener noreferrer"
       className={CHIP}
       title={`Open on ${label}`}
+      onClick={() =>
+        pingAnalytic('post.open', {
+          platform: item.platform,
+          id: item.bookmarkId || undefined,
+        })
+      }
     >
       {inner}
     </a>

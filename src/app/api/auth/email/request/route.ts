@@ -3,6 +3,7 @@ import { createLoginToken, hasRecentLoginToken, invalidateLoginToken } from '@/l
 import { sendMagicLinkEmail } from '@/lib/email/magic-link'
 import { isValidEmail } from '@/lib/utils/email'
 import { isSafeReturnUrl } from '@/lib/auth/return-url'
+import { recordAnalytic } from '@/lib/analytics/record'
 
 // POST /api/auth/email/request - kick off an email sign-in.
 // Always returns { ok: true } for a well-formed email (even when sending
@@ -47,5 +48,6 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  recordAnalytic({ name: 'auth.start', source: 'email' })
   return NextResponse.json({ ok: true })
 }

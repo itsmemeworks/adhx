@@ -24,6 +24,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { reelVideoSrc } from '@/components/feed/video-src'
 import { previewPath } from '@/lib/activity/preview-path'
 import { pingSharePulse } from '@/lib/activity/ping-share'
+import { pingAnalytic } from '@/lib/analytics/client'
 import { getPlatformType } from '@/lib/platform'
 import type { TheaterItem } from './types'
 
@@ -320,6 +321,11 @@ export function useSendFile(
             await navigator.share(payload)
             setPrimed(false)
             pingSharePulse(item.platform, item.bookmarkId || '')
+            pingAnalytic('post.send', {
+              platform: item.platform,
+              id: item.bookmarkId || undefined,
+              source: 'share',
+            })
             return
           } catch (err) {
             // User dismissed the sheet — a cancel, not a failure. Don't fall
@@ -348,6 +354,11 @@ export function useSendFile(
         try {
           await navigator.share({ url: canonicalUrl })
           pingSharePulse(item.platform, item.bookmarkId || '')
+          pingAnalytic('post.send', {
+            platform: item.platform,
+            id: item.bookmarkId || undefined,
+            source: 'share',
+          })
           return
         } catch (err) {
           if (err instanceof DOMException && err.name === 'AbortError') return
@@ -366,6 +377,11 @@ export function useSendFile(
         document.body.removeChild(link)
         setTimeout(() => URL.revokeObjectURL(blobUrl), 100)
         pingSharePulse(item.platform, item.bookmarkId || '')
+        pingAnalytic('post.send', {
+          platform: item.platform,
+          id: item.bookmarkId || undefined,
+          source: 'download',
+        })
         return
       }
 
@@ -380,6 +396,11 @@ export function useSendFile(
         link.click()
         document.body.removeChild(link)
         pingSharePulse(item.platform, item.bookmarkId || '')
+        pingAnalytic('post.send', {
+          platform: item.platform,
+          id: item.bookmarkId || undefined,
+          source: 'download',
+        })
         return
       }
 

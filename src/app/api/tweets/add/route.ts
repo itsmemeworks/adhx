@@ -76,6 +76,7 @@ export const POST = withAuth(async (request, userId) => {
         contentType: dup.category,
         url: previewPath('twitter', dup.author, parsed.tweetId),
         userId,
+        source: source as 'manual' | 'url_prefix' | 'pwa_share',
       })
       return NextResponse.json(
         {
@@ -416,6 +417,7 @@ export const POST = withAuth(async (request, userId) => {
       thumbnailUrl: tweet.media?.all?.[0]?.thumbnail_url || tweet.media?.all?.[0]?.url || null,
       url: previewPath('twitter', saveAuthor, parsed.tweetId),
       userId,
+      source: source as 'manual' | 'url_prefix' | 'pwa_share',
     })
 
     return NextResponse.json({

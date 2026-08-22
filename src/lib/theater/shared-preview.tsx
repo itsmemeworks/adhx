@@ -5,6 +5,7 @@ import { jsonLdScriptContent } from '@/lib/utils/structured-data'
 import { isLikelyBot } from '@/lib/activity/bot'
 import { recordActivity, type ActivityInput } from '@/lib/activity/record'
 import { metrics } from '@/lib/sentry'
+import { recordAnalytic } from '@/lib/analytics/record'
 import { buildSharedSeed } from './shared-seed'
 import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
 
@@ -20,6 +21,13 @@ export async function recordHumanPreview(
   if (isLikelyBot((await headers()).get('user-agent'))) return
   recordActivity({ action: 'preview', ...event })
   metrics.theaterOpened('shared')
+  recordAnalytic({
+    name: 'theater.open',
+    userId: event.userId,
+    platform: event.platform,
+    bookmarkId: event.bookmarkId,
+    surface: 'shared',
+  })
 }
 
 export async function sharedPreviewSeed(sharedItem: TheaterItem): Promise<TheaterFeedSeed> {

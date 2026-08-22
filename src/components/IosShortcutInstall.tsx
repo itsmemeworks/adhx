@@ -5,6 +5,7 @@ import { ChevronDown, Share, X } from 'lucide-react'
 import { IosShareRecipe } from '@/components/IosShareRecipe'
 import { getPlatformType, isIOSDevice } from '@/lib/platform'
 import { X_ONLY_SHORTCUT_URL } from '@/lib/share/ios'
+import { pingAnalytic } from '@/lib/analytics/client'
 import { cn } from '@/lib/utils'
 
 export const SHORTCUT_DISMISS_KEY = 'adhx-shortcut-dismissed'
@@ -24,6 +25,7 @@ export function IosShortcutInstallButton({
       href={X_ONLY_SHORTCUT_URL}
       target="_blank"
       rel="noopener noreferrer"
+      onClick={() => pingAnalytic('shortcut.install', { source: 'shortcut' })}
       className={cn(
         'inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold',
         variant === 'outline'

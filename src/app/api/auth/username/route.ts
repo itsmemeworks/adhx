@@ -3,6 +3,7 @@ import { withAuth } from '@/lib/api/with-auth'
 import { chooseUsername, isUsernameTaken } from '@/lib/auth/account'
 import { sanitizeUsername } from '@/lib/auth/username-rules'
 import { setSessionCookie } from '@/lib/auth/session'
+import { recordAnalytic } from '@/lib/analytics/record'
 
 // POST /api/auth/username (authed) - claim or change a username. Used by
 // the `/welcome` first-claim prompt and the Settings chooser (up to
@@ -24,6 +25,8 @@ export const POST = withAuth(async (req: NextRequest, userId: string) => {
     const status = result.error === 'invalid' ? 400 : 409
     return NextResponse.json({ error: result.error }, { status })
   }
+
+  recordAnalytic({ name: 'welcome.complete', userId, surface: 'welcome' })
 
   const response = NextResponse.json({
     ok: true,

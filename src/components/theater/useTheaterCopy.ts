@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { previewPath } from '@/lib/activity/preview-path'
+import { pingAnalytic } from '@/lib/analytics/client'
 import type { TheaterItem } from './types'
 
 /**
@@ -29,6 +30,10 @@ export function useTheaterCopy(current: TheaterItem | null, caption: string) {
       const path = previewPath(current.platform, current.author, current.bookmarkId || '')
       const url = new URL(path, window.location.origin).toString()
       await navigator.clipboard.writeText(url)
+      pingAnalytic('post.copy', {
+        platform: current.platform,
+        id: current.bookmarkId || undefined,
+      })
       setLinkCopied(true)
       if (linkTimeout.current) clearTimeout(linkTimeout.current)
       linkTimeout.current = setTimeout(() => setLinkCopied(false), 1600)

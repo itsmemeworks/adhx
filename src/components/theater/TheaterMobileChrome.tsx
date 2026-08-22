@@ -41,6 +41,7 @@ import { MatterLogo } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { PasteLinkButton } from '@/components/PasteLinkButton'
 import { authorProfileUrl, previewPath, sourceUrl } from '@/lib/activity/preview-path'
+import { pingAnalytic } from '@/lib/analytics/client'
 import { inferType } from '@/lib/trending/filter'
 import { useSendFile } from './useSendFile'
 import { useTheaterCopy } from './useTheaterCopy'
@@ -305,6 +306,11 @@ export function TheaterMobileChrome({
     if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
       try {
         await navigator.share({ url: shareUrl })
+        pingAnalytic('post.copy', {
+          platform: current.platform,
+          id: current.bookmarkId || undefined,
+          source: 'share',
+        })
         return
       } catch (err) {
         // User dismissed the sheet — a cancel, not a failure.
@@ -315,6 +321,10 @@ export function TheaterMobileChrome({
 
     try {
       await navigator.clipboard.writeText(shareUrl)
+      pingAnalytic('post.copy', {
+        platform: current.platform,
+        id: current.bookmarkId || undefined,
+      })
       setCopied(true)
       if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
       copyTimeoutRef.current = setTimeout(() => setCopied(false), 1600)
@@ -661,6 +671,12 @@ export function TheaterMobileChrome({
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={`Open on ${platformLabel}`}
+                  onClick={() =>
+                    pingAnalytic('post.open', {
+                      platform: current.platform,
+                      id: current.bookmarkId || undefined,
+                    })
+                  }
                 >
                   <ExternalLink size={16} />
                 </StageIconButton>

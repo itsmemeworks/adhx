@@ -317,6 +317,36 @@ export const collectionEvents = sqliteTable(
   }),
 )
 
+// Analytics events — private growth log. Append-only, like `activity`, but
+// NEVER rendered on a public surface. Dimensions only (event name + platform
+// / type / surface / source / ids). `userId` is stored for future
+// rate-limiting and never selected by `/api/analytics`. Distinct from the
+// pulse: tagging, archive, copy, open, auth, and shortcut clicks belong
+// here so they can feed leaderboards later without flooding /trending.
+export const analyticsEvents = sqliteTable(
+  'analytics_events',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    name: text('name').notNull(),
+    platform: text('platform'),
+    contentType: text('content_type'),
+    surface: text('surface'),
+    source: text('source'),
+    bookmarkId: text('bookmark_id'),
+    tag: text('tag'),
+    userId: text('user_id'), // private — never exposed publicly
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => ({
+    createdAtIdx: index('analytics_events_created_at_idx').on(table.createdAt),
+    nameCreatedAtIdx: index('analytics_events_name_created_at_idx').on(table.name, table.createdAt),
+    platformCreatedAtIdx: index('analytics_events_platform_created_at_idx').on(
+      table.platform,
+      table.createdAt,
+    ),
+  }),
+)
+
 // ===========================================
 // ACCOUNTS - users + linked sign-in identities
 // ===========================================
@@ -455,6 +485,8 @@ export type Activity = typeof activity.$inferSelect
 export type NewActivity = typeof activity.$inferInsert
 export type CollectionEvent = typeof collectionEvents.$inferSelect
 export type NewCollectionEvent = typeof collectionEvents.$inferInsert
+export type AnalyticsEvent = typeof analyticsEvents.$inferSelect
+export type NewAnalyticsEvent = typeof analyticsEvents.$inferInsert
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 export type UserIdentity = typeof userIdentities.$inferSelect

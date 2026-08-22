@@ -3,6 +3,7 @@ import { activity, bookmarks, type NewActivity } from '@/lib/db/schema'
 import { and, desc, eq, gt } from 'drizzle-orm'
 import { previewPath } from './preview-path'
 import type { TextLinkRef, TheaterQuoteRef } from '@/lib/trending/query'
+import { recordPostAnalytic } from '@/lib/analytics/record'
 
 /**
  * The public activity "pulse".
@@ -60,6 +61,8 @@ export interface ActivityInput {
   url: string
   /** Private — for abuse handling only, never surfaced publicly. */
   userId?: string | null
+  /** Growth-log source only — not displayed on the pulse. */
+  source?: 'manual' | 'url_prefix' | 'pwa_share' | 'sync' | 'clone'
 }
 
 const TEXT_CAP = 500
@@ -178,6 +181,23 @@ export function recordActivity(input: ActivityInput): void {
       createdAt: new Date().toISOString(),
     }
     db.insert(activity).values(row).run()
+    const analyticName =
+      input.action === 'preview'
+        ? 'post.view'
+        : input.action === 'save'
+          ? 'post.save'
+          : input.action === 'share'
+            ? 'post.share'
+            : null
+    if (analyticName) {
+      recordPostAnalytic(analyticName, {
+        userId: input.userId,
+        platform: input.platform,
+        contentType: input.contentType,
+        bookmarkId: input.bookmarkId,
+        source: input.source,
+      })
+    }
   } catch {
     // Best-effort: a pulse write must never break the user's action.
   }

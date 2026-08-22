@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { bookmarkTags, bookmarks } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { metrics } from '@/lib/sentry'
+import { recordPostAnalytic } from '@/lib/analytics/record'
 import { sanitizeTag } from '@/lib/utils/tag'
 import { withAuth } from '@/lib/api/with-auth'
 
@@ -94,6 +95,7 @@ export const POST = withAuth(
         )
 
       metrics.bookmarkTagged(allTags.length)
+      recordPostAnalytic('post.tag', { userId, platform, bookmarkId: id, tag: cleanTag })
     } catch (error: unknown) {
       if ((error as { code?: string }).code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {
         return NextResponse.json({ success: true, tag: cleanTag })
@@ -144,6 +146,7 @@ export const DELETE = withAuth(
         ),
       )
 
+    recordPostAnalytic('post.untag', { userId, platform, bookmarkId: id, tag: cleanTag })
     return NextResponse.json({ success: true })
   },
 )

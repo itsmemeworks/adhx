@@ -14,6 +14,7 @@ import { TheaterShell } from '@/components/theater/TheaterShell'
 import { buildCollectionSeed } from '@/lib/theater/tag-seed'
 import { recordCollectionEvent } from '@/lib/discovery/record'
 import { isLikelyBot } from '@/lib/activity/bot'
+import { recordAnalytic } from '@/lib/analytics/record'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
 /**
@@ -213,6 +214,12 @@ export default async function SharedTagPage({ params }: Props) {
           ownerUserId,
           tag: data.tag,
           viewerId: session?.userId ?? null,
+        })
+        recordAnalytic({
+          name: 'theater.open',
+          userId: session?.userId ?? null,
+          tag: data.tag,
+          surface: 'playlist',
         })
       }
     }

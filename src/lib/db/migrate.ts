@@ -452,6 +452,41 @@ try {
   console.log('[migrate] Warning: failed to create collection_events table', error)
 }
 
+// analytics_events — private growth log (see src/lib/analytics/record.ts).
+// Guarded CREATE TABLE IF NOT EXISTS, same pattern as collection_events.
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS analytics_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      platform TEXT,
+      content_type TEXT,
+      surface TEXT,
+      source TEXT,
+      bookmark_id TEXT,
+      tag TEXT,
+      user_id TEXT,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS analytics_events_created_at_idx ON analytics_events(created_at);
+    CREATE INDEX IF NOT EXISTS analytics_events_name_created_at_idx ON analytics_events(name, created_at);
+    CREATE INDEX IF NOT EXISTS analytics_events_platform_created_at_idx ON analytics_events(platform, created_at);
+  `)
+  console.log('[migrate] Ensured analytics_events table')
+} catch (error) {
+  console.log('[migrate] Warning: failed to create analytics_events table', error)
+}
+
+try {
+  const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
+  const res = db.prepare('DELETE FROM analytics_events WHERE created_at < ?').run(cutoff)
+  if (res.changes > 0) {
+    console.log(`[migrate] Pruned ${res.changes} analytics_events rows older than 90 days`)
+  }
+} catch (error) {
+  console.log('[migrate] Warning: analytics_events pruning failed', error)
+}
+
 // Dead custom-collections product + unused archiver columns. Tables and
 // columns stay in historical drizzle SQL so already-applied journals are
 // untouched; this drops them on every boot (IF EXISTS / try-catch).

@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { getPlatformType, type PlatformType } from '@/lib/platform'
 import { SHORTCUT_DISMISS_KEY } from '@/components/IosShortcutInstall'
 import { X_ONLY_SHORTCUT_URL } from '@/lib/share/ios'
+import { pingAnalytic } from '@/lib/analytics/client'
 
 /**
  * Mobile install nudge.
@@ -144,6 +145,7 @@ export function PWAInstallPrompt() {
               target="_blank"
               rel="noopener noreferrer"
               className="min-w-0 flex-1 px-4 py-3"
+              onClick={() => pingAnalytic('shortcut.install', { source: 'shortcut' })}
             >
               <p className="text-sm font-semibold text-ink">Install the iOS shortcut</p>
               <p className="text-xs leading-snug text-ink-3">

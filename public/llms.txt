@@ -8,6 +8,7 @@
 - [Tag Playlist](/api/share/tag/by-name/{username}/{tag}): Posts in a user's public tag playlist (X / Instagram / TikTok / YouTube) with media metadata. No auth required.
 - [Trending JSON](/api/trending): Cross-network real-time trending JSON — the posts the community is saving and previewing right now across X, Instagram, TikTok, and YouTube, ranked by trend score (saves + previews + sends). Anonymous (no user identity). Optional `?platform=x|instagram|tiktok|youtube` filter. 60s cache. No auth required.
 - [Activity Pulse](/api/activity): Public anonymous feed of recent community actions (previews, saves, shares) across all platforms. No user identity, no auth required. 5s cache. Archive is private and is never written here.
+- [Analytics summary](/api/analytics): Aggregate growth counts (saves, views, shares, tags, …) by platform and content type, plus a top-posts list. Optional `?window=today|week|month|all`. No user identity. No auth required.
 - [Playlists Leaderboard JSON](/api/collections/trending): Public anonymous ranking of curators' shared tag playlists by views + clones. Optional `?window=today|week|month|all-time` (default `week`) and `?limit=` (1–50, default 24). No user identity — entries carry a curator username, never a userId. 60s cache. No auth required.
 
 ## Public Pages

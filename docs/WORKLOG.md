@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-22 — Growth analytics event log
+
+Private `analytics_events` table + `recordAnalytic` choke point so we can count saves/views/shares/tags/archive/copy/open/auth/shortcut by platform and type without dumping those into the public pulse. Pulse actions dual-write; client POSTs are an allowlist. `GET /api/analytics?window=` returns aggregates and top posts with no userId. 90-day prune. Follow-up: wire these rollups into leaderboards.
+
+---
+
 ## 2026-08-22 — iOS shortcut banner dismisses on tap-away
 
 The iOS install banner is a soft nudge: any tap outside it (or the X) hides it and remembers. Settings now has an iOS-only "iOS shortcut" card with the iCloud link + the four-platform recipe, so dismissing the banner never loses the install path.

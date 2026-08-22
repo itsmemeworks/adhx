@@ -16,6 +16,7 @@ import { TheaterShell } from '@/components/theater/TheaterShell'
 import { buildSharedSeed, tweetToTheaterItem } from '@/lib/theater/shared-seed'
 import type { TextLinkRef, TheaterQuoteRef } from '@/components/theater/types'
 import { metrics } from '@/lib/sentry'
+import { recordAnalytic } from '@/lib/analytics/record'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
 type FxTweet = NonNullable<FxTwitterResponse['tweet']>
@@ -190,6 +191,12 @@ export default async function QuickAddPage({ params }: Props) {
         url: previewPath('twitter', previewAuthor, id),
       })
       metrics.theaterOpened('shared')
+      recordAnalytic({
+        name: 'theater.open',
+        platform: 'twitter',
+        bookmarkId: id,
+        surface: 'shared',
+      })
     }
 
     const baseUrl = PUBLIC_BASE_URL

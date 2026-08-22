@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { consumeLoginToken, findOrCreateUserForEmail, linkEmailToUser } from '@/lib/auth/account'
 import { setSessionCookie } from '@/lib/auth/session'
 import { isSafeReturnUrl } from '@/lib/auth/return-url'
+import { recordAnalytic } from '@/lib/analytics/record'
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
@@ -32,6 +33,7 @@ export async function GET(request: NextRequest) {
   }
 
   const { userId, username, created } = await findOrCreateUserForEmail(row.email)
+  recordAnalytic({ name: 'auth.complete', userId, source: 'email' })
   const destination = row.returnTo && isSafeReturnUrl(row.returnTo) ? row.returnTo : '/'
   // Brand-new email accounts get one chance to pick a public username before
   // landing where they were headed — their auto-derived username is the
