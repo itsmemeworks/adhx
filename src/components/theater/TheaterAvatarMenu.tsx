@@ -11,6 +11,7 @@ import { usePathname } from 'next/navigation'
 import { Bookmark, LogIn, LogOut, Menu, Radio, Settings, Tag, Trophy } from 'lucide-react'
 import { useAuthMe } from '@/components/auth'
 import { cn } from '@/lib/utils'
+import { generateAvatarDataUri, usableAvatarUrl } from '@/lib/avatar/generated-avatar'
 
 // The theater is ALWAYS dark regardless of the site's light/dark theme, so
 // the dropdown panel uses a hardcoded palette rather than the Matter theme
@@ -107,7 +108,7 @@ function TheaterMenuEntry({ isHome, onClose }: { isHome: boolean; onClose: () =>
         style={{ color: INK }}
       >
         <Radio size={15} />
-        Theater
+        <span>Theater</span>
         <CurrentDot />
       </button>
     )
@@ -115,7 +116,7 @@ function TheaterMenuEntry({ isHome, onClose }: { isHome: boolean; onClose: () =>
   return (
     <MenuLink href="/" onClick={onClose}>
       <Radio size={15} />
-      Theater
+      <span>Theater</span>
     </MenuLink>
   )
 }
@@ -169,6 +170,9 @@ export function TheaterAvatarMenu({
 }: TheaterAvatarMenuProps) {
   const { me, loading } = useAuthMe()
   const [open, setOpen] = useState(false)
+  // A remote avatar that fails to load falls through to the generated icon,
+  // same as having no avatarUrl at all.
+  const [avatarBroken, setAvatarBroken] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
 
@@ -251,7 +255,7 @@ export function TheaterAvatarMenu({
             <TheaterMenuEntry isHome={isHome} onClose={close} />
             <MenuLink href="/leaderboard" onClick={close} current={isLeaderboard}>
               <Trophy size={15} />
-              Leaderboard
+              <span>Leaderboard</span>
             </MenuLink>
             <div className="my-1 h-px" style={{ backgroundColor: BORDER }} />
             <button
@@ -265,7 +269,7 @@ export function TheaterAvatarMenu({
               style={{ color: SUBTLE }}
             >
               <LogIn size={15} />
-              Sign in
+              <span>Sign in</span>
             </button>
           </div>
         )}
@@ -274,7 +278,11 @@ export function TheaterAvatarMenu({
   }
 
   const { user, identities } = me
-  const initial = (user.displayName || user.username || '?').trim().charAt(0).toUpperCase() || '?'
+  // `usableAvatarUrl` also rejects a platform's own "no photo" placeholder
+  // (X's grey silhouette) — it loads fine, so `onError` never fires for it.
+  const remoteAvatar = usableAvatarUrl(user.avatarUrl)
+  const showAvatarImage = Boolean(remoteAvatar) && !avatarBroken
+  const generatedAvatarUri = generateAvatarDataUri(user.username || user.displayName)
   const identityLabel = identities?.x
     ? `@${identities.x.username}`
     : identities?.email?.email || `@${user.username}`
@@ -308,16 +316,13 @@ export function TheaterAvatarMenu({
         onClick={() => setOpen((v) => !v)}
         className="flex h-10 w-10 flex-none items-center justify-center overflow-hidden rounded-full border border-white/25 bg-white/10 text-[13px] font-semibold text-white backdrop-blur-md transition-colors hover:bg-white/20"
       >
-        {user.avatarUrl ? (
-          <img
-            src={user.avatarUrl}
-            alt=""
-            referrerPolicy="no-referrer"
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          initial
-        )}
+        <img
+          src={showAvatarImage ? remoteAvatar! : generatedAvatarUri}
+          alt=""
+          referrerPolicy="no-referrer"
+          className="h-full w-full object-cover"
+          onError={() => setAvatarBroken(true)}
+        />
       </button>
 
       {open && (
@@ -334,16 +339,13 @@ export function TheaterAvatarMenu({
               className="flex h-9 w-9 flex-none items-center justify-center overflow-hidden rounded-full text-[13px] font-semibold text-white"
               style={{ backgroundColor: BORDER }}
             >
-              {user.avatarUrl ? (
-                <img
-                  src={user.avatarUrl}
-                  alt=""
-                  referrerPolicy="no-referrer"
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                initial
-              )}
+              <img
+                src={showAvatarImage ? remoteAvatar! : generatedAvatarUri}
+                alt=""
+                referrerPolicy="no-referrer"
+                className="h-full w-full object-cover"
+                onError={() => setAvatarBroken(true)}
+              />
             </div>
             <div className="min-w-0">
               <p className="truncate text-[13.5px] font-semibold" style={{ color: INK }}>
@@ -365,20 +367,20 @@ export function TheaterAvatarMenu({
               "Collection". */}
           <MenuLink href="/" onClick={close}>
             <Bookmark size={15} />
-            Your collection
+            <span>Your collection</span>
           </MenuLink>
           <TheaterMenuEntry isHome={isHome} onClose={close} />
           <MenuLink href="/tags" onClick={close} current={isTags}>
             <Tag size={15} />
-            Tags
+            <span>Tags</span>
           </MenuLink>
           <MenuLink href="/leaderboard" onClick={close} current={isLeaderboard}>
             <Trophy size={15} />
-            Leaderboard
+            <span>Leaderboard</span>
           </MenuLink>
           <MenuLink href="/settings" onClick={close} current={isSettings}>
             <Settings size={15} />
-            Settings
+            <span>Settings</span>
           </MenuLink>
           <div className="my-1 h-px" style={{ backgroundColor: BORDER }} />
           <button
@@ -389,7 +391,7 @@ export function TheaterAvatarMenu({
             style={{ color: SUBTLE }}
           >
             <LogOut size={15} />
-            Sign out
+            <span>Sign out</span>
           </button>
         </div>
       )}

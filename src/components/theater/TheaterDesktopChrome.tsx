@@ -288,7 +288,7 @@ export function SavePostButton({
       ) : (
         <Bookmark size={14} />
       )}
-      {status === 'saved' ? 'Saved' : status === 'error' ? 'Try again' : 'Save'}
+      <span>{status === 'saved' ? 'Saved' : status === 'error' ? 'Try again' : 'Save'}</span>
     </button>
   )
 }
@@ -336,7 +336,7 @@ function FlameChip({ trendCount }: { trendCount: number }) {
     // the two read as mismatched heights).
     <span className="inline-flex min-h-[32px] flex-none items-center gap-1 rounded-full bg-black/40 px-2.5 text-[11px] font-bold text-orange-300 backdrop-blur-sm">
       <Flame size={11} className="text-orange-400" fill="currentColor" />
-      {trendCount}
+      <span>{trendCount}</span>
     </span>
   )
 }
@@ -558,23 +558,27 @@ export function DesktopStageChrome({
                 #{collection.tag}
               </span>
               <span className="min-w-0 truncate font-mono text-[11px] leading-none text-white/55">
-                curated by{' '}
+                <span>curated by </span>
                 <Link
                   href={`/t/${encodeURIComponent(collection.curator)}`}
                   onClick={(e) => e.stopPropagation()}
                   className="underline decoration-white/30 underline-offset-2 transition-colors hover:text-white"
                 >
                   @{collection.curator}
-                </Link>{' '}
-                · {collection.count} {collection.count === 1 ? 'post' : 'posts'} ·{' '}
-                <Repeat size={10} className="inline" aria-hidden /> loops
+                </Link>
+                <span>
+                  {' '}
+                  · {collection.count} {collection.count === 1 ? 'post' : 'posts'} ·{' '}
+                </span>
+                <Repeat size={10} className="inline" aria-hidden />
+                <span> loops</span>
               </span>
             </>
           ) : (
             <>
               <span className="inline-flex flex-none items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-white/55">
                 <span className="h-2 w-2 flex-none rounded-full bg-live" aria-hidden />
-                Live
+                <span>Live</span>
               </span>
             </>
           )}
@@ -784,7 +788,7 @@ export function DesktopStageChrome({
         >
           <button type="button" onClick={triage.onLater} className={GLASS}>
             <Clock size={14} />
-            Later
+            <span>Later</span>
           </button>
           <button
             type="button"
@@ -792,15 +796,15 @@ export function DesktopStageChrome({
             className={cn(GLASS, tagCount > 0 && 'border-clay/50 text-clay')}
           >
             <TagIcon size={14} fill={tagCount > 0 ? 'currentColor' : 'none'} />
-            {tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}
+            <span>{tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}</span>
           </button>
           <button type="button" onClick={triage.onDelete} className={GLASS}>
             <Trash2 size={14} />
-            Delete
+            <span>Delete</span>
           </button>
           <button type="button" onClick={triage.onDone} className={PRIMARY}>
             <Check size={14} />
-            Done
+            <span>Done</span>
           </button>
           {openUrl && (
             <a
@@ -811,7 +815,7 @@ export function DesktopStageChrome({
               className={GLASS}
             >
               <ExternalLink size={14} />
-              Open
+              <span>Open</span>
             </a>
           )}
         </div>
@@ -839,7 +843,7 @@ export function DesktopStageChrome({
               ) : (
                 <DownloadIcon size={14} />
               )}
-              Download
+              <span>Download</span>
             </button>
           ) : textLike && caption ? (
             // Text-like posts have no file — the Download slot copies the
@@ -851,18 +855,18 @@ export function DesktopStageChrome({
               className={GLASS}
             >
               {textCopied ? <Check size={14} className="text-done" /> : <CopyIcon size={14} />}
-              {textCopied ? 'Copied' : 'Copy'}
+              <span>{textCopied ? 'Copied' : 'Copy'}</span>
             </button>
           ) : null}
           <button type="button" onClick={() => void handleCopyLink()} className={GLASS}>
             {linkCopied ? <Check size={14} className="text-done" /> : <LinkIcon size={14} />}
-            {linkCopied ? 'Copied' : 'Link'}
+            <span>{linkCopied ? 'Copied' : 'Link'}</span>
           </button>
           {collection ? (
             isCollectionOwner ? (
               <a href={`/?tag=${encodeURIComponent(collection.tag)}`} className={GLASS}>
                 <TagIcon size={14} />
-                Manage collection
+                <span>Manage collection</span>
               </a>
             ) : (
               <SaveCollectionButton
@@ -882,7 +886,7 @@ export function DesktopStageChrome({
                   className={GLASS}
                 >
                   <TagIcon size={14} />
-                  Tag
+                  <span>Tag</span>
                 </button>
                 <TriageLiveSaveButton current={current} triage={triage} className={SAVE_OUTLINE} />
               </>
@@ -892,7 +896,7 @@ export function DesktopStageChrome({
           ) : (
             <button type="button" onClick={() => onRequestSignIn?.()} className={SAVE_OUTLINE}>
               <Bookmark size={14} />
-              Save
+              <span>Save</span>
             </button>
           )}
           {openUrl && (
@@ -904,7 +908,7 @@ export function DesktopStageChrome({
               className={GLASS}
             >
               <ExternalLink size={14} />
-              Open
+              <span>Open</span>
             </a>
           )}
         </div>
@@ -938,7 +942,7 @@ function TriageLiveSaveButton({
       className={className}
     >
       {saved ? <Check size={14} /> : <Bookmark size={14} />}
-      {saved ? 'Saved' : 'Save'}
+      <span>{saved ? 'Saved' : 'Save'}</span>
     </button>
   )
 }
@@ -1213,7 +1217,7 @@ export function DesktopDock({
                   {isCurrent && repeatCurrent ? (
                     <span className="inline-flex items-center gap-1 whitespace-nowrap text-[9.5px] font-bold uppercase tracking-wide text-clay">
                       <Repeat size={10} aria-hidden />
-                      Repeat
+                      <span>Repeat</span>
                     </span>
                   ) : isCurrent ? (
                     <span className="text-[9.5px] font-bold uppercase tracking-wide text-clay">
@@ -1313,7 +1317,7 @@ export function DesktopDock({
           className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-ink-2 hover:text-ink"
         >
           {showAll ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
-          Show all
+          <span>Show all</span>
         </button>
         <span className="font-mono text-[10.5px] text-ink-3">{items.length} posts</span>
         {!collection && newCount > 0 && (

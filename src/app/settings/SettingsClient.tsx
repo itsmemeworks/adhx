@@ -362,7 +362,7 @@ function SignInConnectionCard({ me, refresh }: { me: AuthMe; refresh: () => void
                 ) : (
                   <LogOut className="h-3.5 w-3.5" />
                 )}
-                Disconnect
+                <span>Disconnect</span>
               </button>
             ) : (
               <a
@@ -530,7 +530,9 @@ function SyncBookmarksCard({
         )}
       >
         <RefreshCw className="h-[18px] w-[18px]" />
-        {cooldown.canSync ? 'Sync now' : `Available in ${formatCooldown(displayedCooldown)}`}
+        <span>
+          {cooldown.canSync ? 'Sync now' : `Available in ${formatCooldown(displayedCooldown)}`}
+        </span>
       </button>
       <p className="text-[13px] text-ink-3 text-center mt-3">
         {lastSyncAt ? `Last sync ${getTimeSince(lastSyncAt)}` : 'No syncs yet'}
@@ -1092,13 +1094,20 @@ function SettingsPage() {
                 </span>
               </div>
               <p className="text-[12.5px] text-ink-3">
-                <strong className="font-bold text-ink-2">Bo</strong>lds the{' '}
-                <strong className="font-bold text-ink-2">fi</strong>rst{' '}
-                <strong className="font-bold text-ink-2">pa</strong>rt of{' '}
-                <strong className="font-bold text-ink-2">ea</strong>ch{' '}
-                <strong className="font-bold text-ink-2">wo</strong>rd to{' '}
-                <strong className="font-bold text-ink-2">gui</strong>de your{' '}
-                <strong className="font-bold text-ink-2">ey</strong>es.
+                <strong className="font-bold text-ink-2">Bo</strong>
+                <span>lds the </span>
+                <strong className="font-bold text-ink-2">fi</strong>
+                <span>rst </span>
+                <strong className="font-bold text-ink-2">pa</strong>
+                <span>rt of </span>
+                <strong className="font-bold text-ink-2">ea</strong>
+                <span>ch </span>
+                <strong className="font-bold text-ink-2">wo</strong>
+                <span>rd to </span>
+                <strong className="font-bold text-ink-2">gui</strong>
+                <span>de your </span>
+                <strong className="font-bold text-ink-2">ey</strong>
+                <span>es.</span>
               </p>
             </div>
             <button
@@ -1119,7 +1128,7 @@ function SettingsPage() {
           {/* Font Selection */}
           <div className="flex items-center gap-1.5 text-[12.5px] font-bold tracking-[0.04em] uppercase text-ink-3 mb-2.5">
             <Type className="w-3.5 h-3.5" />
-            Body Font
+            <span>Body Font</span>
           </div>
           <div className="flex flex-col gap-2">
             {(
@@ -1169,7 +1178,7 @@ function SettingsPage() {
             <div className="flex-1 min-w-0">
               <div className="font-bold text-[14.5px] text-ink flex items-center gap-2">
                 <Eraser className="h-[15px] w-[15px] text-ink-3 flex-shrink-0" />
-                Clear all data
+                <span>Clear all data</span>
               </div>
               <div className="text-[12.5px] text-ink-3 mt-0.5">
                 Delete all bookmarks and sync history. Keeps your sign-in connections.
@@ -1188,7 +1197,7 @@ function SettingsPage() {
             <div className="flex-1 min-w-0">
               <div className="font-bold text-[14.5px] text-ink flex items-center gap-2">
                 <UserX className="h-[15px] w-[15px] text-ink-3 flex-shrink-0" />
-                Delete account
+                <span>Delete account</span>
               </div>
               <div className="text-[12.5px] text-ink-3 mt-0.5">
                 Permanently delete everything, including your sign-in connections.

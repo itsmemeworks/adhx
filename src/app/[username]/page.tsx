@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { ExternalLink, FileText, Play } from 'lucide-react'
 import { getAuthorProfile, isValidHandle, type AuthorItem } from '@/lib/authors/query'
 import { MatterLogo, PlatformGlyph, TypeBadge } from '@/components/matter'
+import { AvatarImage } from '@/components/avatar/AvatarImage'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { getSession } from '@/lib/auth/session'
 import { formatRelativeTime } from '@/lib/utils/format'
@@ -228,18 +229,11 @@ export default async function AuthorHubPage({ params }: Props) {
 
       <header className="border-b border-hairline px-5 py-10 sm:px-11">
         <div className="mx-auto flex max-w-5xl items-center gap-4">
-          {profile.avatarUrl ? (
-            <img
-              src={profile.avatarUrl}
-              alt=""
-              referrerPolicy="no-referrer"
-              className="h-16 w-16 flex-none rounded-full border border-hairline object-cover"
-            />
-          ) : (
-            <div className="flex h-16 w-16 flex-none items-center justify-center rounded-full border border-hairline bg-inset text-ink-3">
-              <PlatformGlyph platform="twitter" size={24} />
-            </div>
-          )}
+          <AvatarImage
+            src={profile.avatarUrl}
+            seed={profile.handle}
+            className="h-16 w-16 flex-none rounded-full border border-hairline object-cover"
+          />
           <div className="min-w-0">
             <h1 className="truncate font-serif text-2xl font-semibold text-ink">{displayName}</h1>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-2">

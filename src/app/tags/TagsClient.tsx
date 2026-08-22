@@ -245,14 +245,14 @@ export function TagsClient() {
               <div className="mt-1 flex items-center gap-2 font-mono text-[12.5px] text-ink">
                 <span className="flex items-center gap-1">
                   <Eye size={12} />
-                  {ownerStats.viewCount} views
+                  <span>{ownerStats.viewCount} views</span>
                 </span>
                 <span aria-hidden className="text-ink-3">
                   ·
                 </span>
                 <span className="flex items-center gap-1">
                   <Bookmark size={12} />
-                  {ownerStats.cloneCount} saves
+                  <span>{ownerStats.cloneCount} saves</span>
                 </span>
                 {ownerStats.bestRank != null && (
                   <>
@@ -261,7 +261,7 @@ export function TagsClient() {
                     </span>
                     <span className="flex items-center gap-1 text-[#e88a5e]">
                       <Flame size={12} fill="currentColor" />
-                      best rank #{ownerStats.bestRank}
+                      <span>best rank #{ownerStats.bestRank}</span>
                     </span>
                   </>
                 )}
@@ -401,7 +401,7 @@ function VisibilityToggle({
     >
       {isPublic && <span className="h-1.5 w-1.5 flex-none rounded-full bg-live" aria-hidden />}
       <toggle.Icon size={11} />
-      {toggle.label}
+      <span>{toggle.label}</span>
     </button>
   )
 }
@@ -491,7 +491,7 @@ function TagPosterCard({
       {error && (
         <p className="flex items-center gap-1.5 text-[12px] text-red-600 dark:text-red-400">
           <AlertCircle size={12} className="flex-none" />
-          {error}
+          <span>{error}</span>
         </p>
       )}
     </div>

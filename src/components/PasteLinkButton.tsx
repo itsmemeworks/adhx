@@ -217,7 +217,7 @@ export function PasteLinkButton({ className, iconOnly = false }: PasteLinkButton
         ) : (
           <Clipboard size={iconOnly ? 16 : 15} />
         )}
-        {!iconOnly && 'Paste link'}
+        {!iconOnly && <span>Paste link</span>}
       </button>
 
       {overlayOpen && (

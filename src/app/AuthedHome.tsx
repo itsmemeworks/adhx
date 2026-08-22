@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, Suspense, useRef } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { LandingPage } from '@/components/LandingPage'
 import {
   FeedGrid,
@@ -56,6 +56,11 @@ export default function AuthedHome(): React.ReactElement {
 function FeedPageContent(): React.ReactElement {
   const router = useRouter()
   const searchParams = useSearchParams()
+  // The grid lives at `/library` (the theater took `/`), and every URL sync
+  // below is a query-string update on WHATEVER route it's mounted at — so the
+  // "no query string left" case has to fall back to this pathname, not to a
+  // hardcoded '/'. It used to be '/' and that silently navigated the grid home.
+  const pathname = usePathname()
   const { resolvedTheme, setTheme } = useTheme()
 
   const [items, setItems] = useState<FeedItem[]>([])
@@ -298,7 +303,7 @@ function FeedPageContent(): React.ReactElement {
           eventSource.close()
           eventSourceRef.current = null
           setIsSyncing(false)
-          router.replace('/', { scroll: false })
+          router.replace(pathname, { scroll: false })
           window.dispatchEvent(new CustomEvent('sync-complete'))
 
           // Keep modal open for 2s after completion so user can see final state
@@ -323,7 +328,7 @@ function FeedPageContent(): React.ReactElement {
           if (firstLogin) {
             setShowSyncModal(true)
             // Drop ?firstLogin= so a refresh doesn't re-fire sync into a loop.
-            router.replace('/', { scroll: false })
+            router.replace(pathname, { scroll: false })
           } else {
             setTimeout(() => {
               setSyncProgress(null)
@@ -561,8 +566,8 @@ function FeedPageContent(): React.ReactElement {
     if (!unreadOnly) params.set('unreadOnly', 'false')
     else params.delete('unreadOnly')
     const queryString = params.toString()
-    router.replace(queryString ? `?${queryString}` : '/', { scroll: false })
-  }, [filter, platformFilter, sort, sortDirection, unreadOnly, router, searchParams])
+    router.replace(queryString ? `?${queryString}` : pathname, { scroll: false })
+  }, [filter, platformFilter, sort, sortDirection, unreadOnly, router, searchParams, pathname])
 
   // Handle ?open=tweetId URL parameter to open a specific tweet in lightbox
   useEffect(() => {
@@ -573,7 +578,7 @@ function FeedPageContent(): React.ReactElement {
     const params = new URLSearchParams(searchParams.toString())
     params.delete('open')
     const queryString = params.toString()
-    router.replace(queryString ? `?${queryString}` : '/', { scroll: false })
+    router.replace(queryString ? `?${queryString}` : pathname, { scroll: false })
 
     // Try to find it in current items first
     const currentIndex = items.findIndex((i) => i.id === openId)
@@ -614,7 +619,7 @@ function FeedPageContent(): React.ReactElement {
     params.delete('text')
     params.delete('error')
     const queryString = params.toString()
-    router.replace(queryString ? `?${queryString}` : '/', { scroll: false })
+    router.replace(queryString ? `?${queryString}` : pathname, { scroll: false })
 
     // Refresh the feed to include the newly added tweet. Rather than reading
     // `items` from this closure after the refresh resolves (which is always a
@@ -664,8 +669,8 @@ function FeedPageContent(): React.ReactElement {
     const params = new URLSearchParams(searchParams.toString())
     params.delete('triage')
     const qs = params.toString()
-    router.replace(qs ? `?${qs}` : '/', { scroll: false })
-  }, [searchParams, router])
+    router.replace(qs ? `?${qs}` : pathname, { scroll: false })
+  }, [searchParams, router, pathname])
 
   // Arrived via ?triage=1 — open the full unread queue once authenticated.
   useEffect(() => {
@@ -684,8 +689,8 @@ function FeedPageContent(): React.ReactElement {
     const params = new URLSearchParams(searchParams.toString())
     params.delete('live')
     const qs = params.toString()
-    router.replace(qs ? `?${qs}` : '/', { scroll: false })
-  }, [searchParams, router])
+    router.replace(qs ? `?${qs}` : pathname, { scroll: false })
+  }, [searchParams, router, pathname])
 
   // Arrived via ?live=1 — open the theater on the Live tab once authenticated.
   useEffect(() => {

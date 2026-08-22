@@ -6,6 +6,7 @@ import { resolveUsernameAlias } from '@/lib/users/lookup'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { CollectionPosterCard } from '@/components/tags'
 import { MakeYourOwnButton } from '@/components/auth/MakeYourOwnButton'
+import { AvatarImage } from '@/components/avatar/AvatarImage'
 import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
 import { Bookmark, Eye, Flame } from 'lucide-react'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
@@ -119,7 +120,6 @@ export default async function CuratorProfilePage({ params }: Props) {
   const { profile } = result
   const canonicalUrl = `${BASE_URL}/t/${profile.username}`
   const memberSince = formatMemberSince(profile.memberSince)
-  const monogram = profile.username.charAt(0).toUpperCase()
   // Three states for both the top-right pill and the footer pitch block
   // (owner review: "why am I seeing Make your own as an authenticated
   // user?"): signed out gets the sign-up CTAs; the profile's own owner gets
@@ -189,21 +189,11 @@ export default async function CuratorProfilePage({ params }: Props) {
 
       <main className="mx-auto flex max-w-5xl flex-col items-center px-5 pb-16 pt-10 sm:px-11">
         <header className="flex flex-col items-center gap-4 text-center">
-          {profile.avatarUrl ? (
-            <img
-              src={profile.avatarUrl}
-              alt=""
-              referrerPolicy="no-referrer"
-              className="h-[76px] w-[76px] rounded-full object-cover"
-            />
-          ) : (
-            <div
-              className="flex h-[76px] w-[76px] items-center justify-center rounded-full bg-clay-grad text-3xl font-semibold text-white"
-              aria-hidden
-            >
-              {monogram}
-            </div>
-          )}
+          <AvatarImage
+            src={profile.avatarUrl}
+            seed={profile.username}
+            className="h-[76px] w-[76px] rounded-full object-cover"
+          />
           <h1 className="font-serif text-[34px] font-medium text-white">@{profile.username}</h1>
           <p className="font-mono text-xs uppercase tracking-wide text-white/50">
             {stats.join(' · ')}

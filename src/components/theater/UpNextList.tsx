@@ -157,7 +157,7 @@ function Row({
             {isCurrent && repeatCurrent ? (
               <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-clay">
                 <Repeat size={10} aria-hidden />
-                repeat
+                <span>repeat</span>
               </span>
             ) : isNext ? (
               <span className="text-[10px] font-bold uppercase tracking-wide text-clay">
@@ -256,7 +256,7 @@ export function UpNextList({
                   className="my-1 flex items-center gap-2 px-2.5 text-[10.5px] font-medium uppercase tracking-wide text-ink-3"
                 >
                   <span className="h-px flex-1 bg-hairline" />
-                  You&rsquo;re caught up
+                  <span>You&rsquo;re caught up</span>
                   <span className="h-px flex-1 bg-hairline" />
                 </div>
               </div>

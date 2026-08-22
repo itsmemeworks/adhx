@@ -171,6 +171,15 @@ export interface TheaterShellProps {
   initialTriageIndex?: number
   /** Which triage sub-tab to open on (the Triage pill vs. the Live pill in Header both dispatch `open-theater`, differing only in this). */
   initialTriageTab?: TriageTab
+  /**
+   * Called when the viewer flips the Live ⇄ My Collection switch. The switch
+   * is a ROUTE on the signed-in theater (`/` is Live, `/collection` is My
+   * Collection — owner: "a specific route that they select"), so the page
+   * passes a `router.push` here. The tab still flips locally first, so the
+   * switch responds instantly and doesn't wait on navigation; callers that
+   * are a plain overlay (the `/library` grid's triage session) omit it.
+   */
+  onTriageTabChange?: (tab: TriageTab) => void
   /** Notify the Collection feed so it can drop archived/deleted items without a refetch. */
   onTriageResolved?: (id: string, action: 'archive' | 'delete') => void
   /** Notify the Collection feed an archive was undone, so it can restore the item + unread count. */
@@ -449,6 +458,7 @@ export function TheaterShell({
   triageItems,
   initialTriageIndex,
   initialTriageTab,
+  onTriageTabChange,
   onTriageResolved,
   onTriageRestored,
   onClose,
@@ -462,6 +472,15 @@ export function TheaterShell({
   // Triage's Collection tab never blends the live pulse in; its Live tab
   // reuses the exact same live feed home/shared mode does.
   const [triageTab, setTriageTab] = useState<TriageTab>(initialTriageTab ?? 'live')
+  // Flip locally first (instant switch), then let the page navigate to that
+  // tab's route — see `onTriageTabChange`.
+  const changeTriageTab = useCallback(
+    (tab: TriageTab) => {
+      setTriageTab(tab)
+      onTriageTabChange?.(tab)
+    },
+    [onTriageTabChange],
+  )
   const isTriageCollection = isTriage && triageTab === 'collection'
   const feed = useTheaterFeed(seed, { live: !loop && !isTriageCollection })
   const seenSet = useSeenSet()
@@ -1664,7 +1683,7 @@ export function TheaterShell({
   const triageChrome: TheaterTriageChrome | undefined = isTriage
     ? {
         tab: triageTab,
-        onTabChange: setTriageTab,
+        onTabChange: changeTriageTab,
         onDone: triageDone,
         onLater: triageLater,
         onDelete: triageDelete,

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { NextRequest } from 'next/server'
+import { eq } from 'drizzle-orm'
 import * as schema from '@/lib/db/schema'
 import { createTestDb, type TestDbInstance } from './setup'
 
@@ -393,6 +394,141 @@ describe('API: /api/auth/twitter/callback', () => {
       )
 
       expect(metrics.authCompleted).toHaveBeenCalledWith(false)
+    })
+  })
+
+  describe('X identity already linked to another account', () => {
+    // Regression coverage for Sentry WHITE-SUN-6317-17
+    // (SqliteError: UNIQUE constraint failed: users.id). findOrCreateUserForX
+    // itself is unit-tested in depth in
+    // src/__tests__/account-x-identity.test.ts — these cover the HTTP-level
+    // contract: a conflict must redirect cleanly, never 500, never touch the
+    // caller's session.
+    beforeEach(async () => {
+      await testInstance.db.insert(schema.oauthState).values({
+        state: 'valid-state',
+        codeVerifier: 'test-code-verifier',
+        createdAt: new Date().toISOString(),
+      })
+    })
+
+    it('redirects to /settings?auth_error=x_already_linked and leaves the signed-in session untouched when a DIFFERENT session tries to connect an already-linked X account', async () => {
+      // Account 'x-owner' already owns the X identity being connected.
+      await testInstance.db.insert(schema.users).values({ id: 'x-owner', username: 'xowner' })
+      await testInstance.db
+        .insert(schema.userIdentities)
+        .values({ provider: 'x', providerId: 'shared-x-id', userId: 'x-owner' })
+
+      // A different account is currently signed in and attempts to connect
+      // the same X account (e.g. from Settings).
+      const { getSession } = await import('@/lib/auth/session')
+      vi.mocked(getSession).mockResolvedValueOnce({
+        userId: 'signed-in-user',
+        username: 'signedin',
+      })
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            access_token: 'new-access-token',
+            refresh_token: 'new-refresh-token',
+            expires_in: 7200,
+            scope: 'tweet.read',
+          }),
+      })
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ data: { id: 'shared-x-id', username: 'sharedxaccount' } }),
+      })
+
+      const { GET } = await import('@/app/api/auth/twitter/callback/route')
+      const response = await GET(
+        createCallbackRequest({ code: 'valid-code', state: 'valid-state' }),
+      )
+
+      expect(response.status).toBe(307)
+      expect(response.headers.get('location')).toBe(
+        'http://localhost:3000/settings?auth_error=x_already_linked',
+      )
+      // No session cookie churn — the caller's session is left alone.
+      const cookies = response.headers.getSetCookie()
+      expect(cookies.some((c) => c.includes('adhx_session'))).toBe(false)
+
+      // No rows moved: the identity still belongs to the original owner, and
+      // no oauth_tokens row was written for anyone.
+      const identities = await testInstance.db
+        .select()
+        .from(schema.userIdentities)
+        .where(eq(schema.userIdentities.providerId, 'shared-x-id'))
+      expect(identities).toHaveLength(1)
+      expect(identities[0].userId).toBe('x-owner')
+      const tokenRows = await testInstance.db.select().from(schema.oauthTokens)
+      expect(tokenRows).toHaveLength(0)
+    })
+
+    it('does not 500 and signs in cleanly when the X id belongs to an account whose X identity was previously unlinked', async () => {
+      // Reproduces the exact Sentry crash: an X-first account ('detached-id')
+      // later added an email and called unlinkX() — the `users` row survives
+      // with that id, but its `user_identities` row for provider 'x' is
+      // gone. Logging in again with X (no session — the reported scenario
+      // had no cookies at all) must relink, not crash on a `users.id`
+      // collision.
+      await testInstance.db.insert(schema.users).values({
+        id: 'detached-id',
+        username: 'detacheduser',
+        email: 'detached@example.com',
+        usernameChosen: true,
+      })
+      await testInstance.db
+        .insert(schema.userIdentities)
+        .values({ provider: 'email', providerId: 'detached@example.com', userId: 'detached-id' })
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            access_token: 'new-access-token',
+            refresh_token: 'new-refresh-token',
+            expires_in: 7200,
+            scope: 'tweet.read',
+          }),
+      })
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ data: { id: 'detached-id', username: 'detacheduser' } }),
+      })
+
+      const { GET } = await import('@/app/api/auth/twitter/callback/route')
+      const response = await GET(
+        createCallbackRequest({ code: 'valid-code', state: 'valid-state' }),
+      )
+
+      expect(response.status).toBe(307)
+      const location = response.headers.get('location')
+      expect(location).toContain('firstLogin=true')
+      expect(location).not.toContain('error')
+
+      const cookies = response.headers.getSetCookie()
+      expect(cookies.some((c) => c.includes('adhx_session'))).toBe(true)
+
+      const identities = await testInstance.db
+        .select()
+        .from(schema.userIdentities)
+        .where(eq(schema.userIdentities.providerId, 'detached-id'))
+      expect(identities).toEqual([
+        expect.objectContaining({
+          provider: 'x',
+          providerId: 'detached-id',
+          userId: 'detached-id',
+        }),
+      ])
+      // Only the one original users row — never duplicated.
+      const userRows = await testInstance.db
+        .select()
+        .from(schema.users)
+        .where(eq(schema.users.id, 'detached-id'))
+      expect(userRows).toHaveLength(1)
     })
   })
 

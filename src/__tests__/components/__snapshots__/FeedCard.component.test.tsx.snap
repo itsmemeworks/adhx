@@ -35,7 +35,9 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > '4
           <span
             class="w-[5px] h-[5px] rounded-full flex-none bg-type-photo"
           />
-          Photo
+          <span>
+            Photo
+          </span>
         </span>
         <span
           class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
@@ -130,7 +132,9 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
           <span
             class="w-[5px] h-[5px] rounded-full flex-none bg-type-article"
           />
-          Article
+          <span>
+            Article
+          </span>
         </span>
         <span
           class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
@@ -188,7 +192,9 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
           <span
             class="w-[5px] h-[5px] rounded-full flex-none bg-type-article"
           />
-          Article
+          <span>
+            Article
+          </span>
         </span>
         <span
           class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
@@ -281,7 +287,9 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'e
           <span
             class="w-[5px] h-[5px] rounded-full flex-none bg-type-video"
           />
-          Video
+          <span>
+            Video
+          </span>
         </span>
         <span
           class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
@@ -361,7 +369,9 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
           <span
             class="w-[5px] h-[5px] rounded-full flex-none bg-type-photo"
           />
-          Photo
+          <span>
+            Photo
+          </span>
         </span>
         <span
           class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
@@ -471,7 +481,9 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
           <span
             class="w-[5px] h-[5px] rounded-full flex-none bg-type-photo"
           />
-          Photo
+          <span>
+            Photo
+          </span>
         </span>
         <span
           class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"
@@ -1481,7 +1493,9 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'v
           <span
             class="w-[5px] h-[5px] rounded-full flex-none bg-type-video"
           />
-          Video
+          <span>
+            Video
+          </span>
         </span>
         <span
           class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/50 backdrop-blur-md text-white"

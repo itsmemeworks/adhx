@@ -166,7 +166,7 @@ export function CollectionPosterCard({
             aria-label={`${count} post${count === 1 ? '' : 's'}`}
           >
             <Layers size={10.5} aria-hidden="true" />
-            {count}
+            <span>{count}</span>
           </span>
           {stats ? (
             <>
@@ -176,7 +176,7 @@ export function CollectionPosterCard({
                 aria-label={`${stats.viewCount} views`}
               >
                 <Eye size={10.5} aria-hidden="true" />
-                {stats.viewCount}
+                <span>{stats.viewCount}</span>
               </span>
               <span
                 className={BADGE_CLASS}
@@ -184,7 +184,7 @@ export function CollectionPosterCard({
                 aria-label={`${stats.cloneCount} saves`}
               >
                 <Bookmark size={10.5} aria-hidden="true" />
-                {stats.cloneCount}
+                <span>{stats.cloneCount}</span>
               </span>
               {typeof stats.rank === 'number' && (
                 <span
@@ -192,7 +192,8 @@ export function CollectionPosterCard({
                   style={CLAY_BADGE_STYLE}
                   title={`#${stats.rank} this week`}
                 >
-                  <Flame size={10} fill="currentColor" aria-hidden="true" />#{stats.rank}
+                  <Flame size={10} fill="currentColor" aria-hidden="true" />
+                  <span>#{stats.rank}</span>
                 </span>
               )}
             </>
@@ -253,7 +254,7 @@ function CuratorBadge({ username }: { username: string }) {
   return (
     <span className={BADGE_CLASS}>
       <User size={10.5} aria-hidden="true" />
-      {username}
+      <span>{username}</span>
     </span>
   )
 }

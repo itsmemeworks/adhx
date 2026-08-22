@@ -450,7 +450,7 @@ export function TheaterMobileChrome({
                 {trendCount >= 2 && (
                   <span className="inline-flex min-h-[32px] flex-none items-center gap-1 rounded-full bg-black/40 px-2.5 text-[11px] font-bold text-orange-300 backdrop-blur-sm">
                     <Flame size={11} className="text-orange-400" fill="currentColor" />
-                    {trendCount}
+                    <span>{trendCount}</span>
                   </span>
                 )}
                 {(() => {
@@ -617,7 +617,7 @@ export function TheaterMobileChrome({
                 className="inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/25 bg-white/[0.14] text-[11px] font-semibold text-white"
               >
                 <Clock size={16} />
-                Later
+                <span>Later</span>
               </button>
               <button
                 type="button"
@@ -628,7 +628,7 @@ export function TheaterMobileChrome({
                 )}
               >
                 <TagIcon size={16} fill={tagCount > 0 ? 'currentColor' : 'none'} />
-                {tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}
+                <span>{tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}</span>
               </button>
               <button
                 type="button"
@@ -636,7 +636,7 @@ export function TheaterMobileChrome({
                 className="inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/25 bg-white/[0.14] text-[11px] font-semibold text-white"
               >
                 <Trash2 size={16} />
-                Delete
+                <span>Delete</span>
               </button>
               <button
                 type="button"
@@ -644,7 +644,7 @@ export function TheaterMobileChrome({
                 className="inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl bg-done/25 text-[11px] font-semibold text-done"
               >
                 <Check size={16} />
-                Done
+                <span>Done</span>
               </button>
               {(() => {
                 const openUrl = sourceUrl(
@@ -674,7 +674,7 @@ export function TheaterMobileChrome({
                   className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/[0.14] px-3 text-[13px] font-semibold text-white"
                 >
                   <TagIcon size={15} />
-                  Manage collection
+                  <span>Manage collection</span>
                 </a>
               ) : collection ? (
                 <SaveCollectionButton
@@ -706,7 +706,7 @@ export function TheaterMobileChrome({
                       ) : (
                         <DownloadIcon size={15} />
                       )}
-                      Download
+                      <span>Download</span>
                     </button>
                   ) : textLike && (current.text || '').trim() ? (
                     // Text-like posts have no file — the Download slot copies
@@ -721,7 +721,7 @@ export function TheaterMobileChrome({
                       ) : (
                         <CopyIcon size={15} />
                       )}
-                      {textCopied ? 'Copied' : 'Copy'}
+                      <span>{textCopied ? 'Copied' : 'Copy'}</span>
                     </button>
                   ) : null}
                   {triage?.tab === 'live' ? (
@@ -749,7 +749,9 @@ export function TheaterMobileChrome({
                         ) : (
                           <Bookmark size={15} />
                         )}
-                        {triage.savedKeys.has(theaterItemKey(current)) ? 'Saved' : 'Save'}
+                        <span>
+                          {triage.savedKeys.has(theaterItemKey(current)) ? 'Saved' : 'Save'}
+                        </span>
                       </button>
                     </>
                   ) : mode === 'shared' && authed ? (
@@ -760,7 +762,7 @@ export function TheaterMobileChrome({
                   ) : (
                     <button type="button" onClick={() => onRequestSignIn?.()} className={PILL_SAVE}>
                       <Bookmark size={15} />
-                      Save
+                      <span>Save</span>
                     </button>
                   )}
                 </>

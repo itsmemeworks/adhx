@@ -119,7 +119,7 @@ export function TypeBadge({ type, className }: { type: ContentType | string; cla
       )}
     >
       <span className={cn('w-[5px] h-[5px] rounded-full flex-none', meta.dot)} />
-      {meta.label}
+      <span>{meta.label}</span>
     </span>
   )
 }
@@ -138,7 +138,7 @@ export function LiveDot({ className }: { className?: string }) {
 export function ConnectWithX({ size = 15 }: { size?: number }) {
   return (
     <span className="inline-flex items-center gap-1.5">
-      Connect with
+      <span>Connect with</span>
       <PlatformGlyph platform="twitter" size={size} />
     </span>
   )

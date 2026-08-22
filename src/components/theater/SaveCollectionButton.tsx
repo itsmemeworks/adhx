@@ -29,7 +29,7 @@ export function SaveCollectionButton({
     return (
       <a href="/" className={className}>
         <Check size={14} />
-        Saved &middot; View in your collection
+        <span>Saved &middot; View in your collection</span>
       </a>
     )
   }
@@ -41,7 +41,7 @@ export function SaveCollectionButton({
       ) : (
         <Bookmark size={14} />
       )}
-      {status === 'error' ? 'Try again' : `Save collection · ${count}`}
+      <span>{status === 'error' ? 'Try again' : `Save collection · ${count}`}</span>
     </button>
   )
 }

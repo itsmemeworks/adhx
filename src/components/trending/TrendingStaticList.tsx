@@ -47,7 +47,7 @@ export function TrendingStaticList({ items, heading }: { items: TrendingItem[]; 
               <a href={href}>
                 <span>
                   <PlatformGlyph platform={item.platform} size={14} />
-                  {platform}
+                  <span>{platform}</span>
                 </span>
                 <TypeBadge type={type} />
                 <span>{name}</span>

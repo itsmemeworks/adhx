@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { useTheme } from '@/lib/theme/context'
 import { cn } from '@/lib/utils'
+import { generateAvatarDataUri, usableAvatarUrl } from '@/lib/avatar/generated-avatar'
 import { MatterLogo } from '@/components/matter'
 import { SyncProgress } from './sync/SyncProgress'
 import {
@@ -357,30 +358,12 @@ export function Header() {
   }
 
   const openTriage = () => {
-    // The feed page owns triage. If we're already there, open it directly;
-    // otherwise navigate to the feed with ?triage=1 so it opens once loaded.
-    if (pathname === '/') {
-      // `open-theater` is the standardized event (unified theater nav); a
-      // parallel migration listens for it. `open-triage` is the legacy event
-      // some listeners still expect — dispatch both until that integration
-      // lands, then drop the legacy one.
-      window.dispatchEvent(new CustomEvent('open-theater', { detail: { tab: 'triage' } }))
-      window.dispatchEvent(new CustomEvent('open-triage'))
-    } else {
-      router.push('/?triage=1')
-    }
-  }
-
-  const openLive = () => {
-    // Mirrors openTriage: the theater lives on the feed page (`/`), so only
-    // dispatch the open-theater event when we're already there. From any
-    // other route (e.g. /tags), navigate to the feed with ?live=1 so it
-    // opens the theater on the Live tab once loaded.
-    if (pathname === '/') {
-      window.dispatchEvent(new CustomEvent('open-theater', { detail: { tab: 'live' } }))
-    } else {
-      router.push('/?live=1')
-    }
+    // Triaging your unread queue IS the theater's My Collection tab, which now
+    // has its own route — so this is a plain navigation. (It used to dispatch
+    // `open-theater`/`open-triage` at the grid on `/`, which owned the theater
+    // as an overlay; the grid still listens for those events for its own
+    // in-page triage session, opened by clicking a card.)
+    router.push('/collection')
   }
 
   const toggleTheme = () => {
@@ -401,8 +384,16 @@ export function Header() {
     return `${seconds}s`
   }
 
-  const userInitial = authStatus?.user?.username?.[0]?.toUpperCase() || 'U'
   const profileImage = authStatus?.user?.profileImageUrl
+  // No avatar (or one that fails to load) gets a generated icon seeded off the
+  // username, so the same account always draws the same face — see
+  // `src/lib/avatar/generated-avatar.ts`. Replaces the old initial-letter tile.
+  const [avatarBroken, setAvatarBroken] = useState(false)
+  const remoteAvatar = usableAvatarUrl(profileImage)
+  const avatarSrc =
+    remoteAvatar && !avatarBroken
+      ? remoteAvatar
+      : generateAvatarDataUri(authStatus?.user?.username || 'adhx')
 
   // Signed-out: the only signed-out page is the marketing landing, which has
   // its own nav — so the app top bar renders nothing (avoids a double header).
@@ -433,30 +424,37 @@ export function Header() {
               <MatterLogo size={20} />
             </Link>
 
-            {/* Primary nav — Collection/Tags/Leaderboard stay links; Theater
-                opens the theater overlay instead of navigating. "Theater" is
-                the mode's actual name, not "Live": the theater contains BOTH
-                the live community pulse and your own collection-as-theater as
-                internal tabs, so the nav entry names the surface, not one tab.
+            {/* Primary nav — every entry is a real route now that the theater
+                has its own: `/` is the theater on Live, `/collection` is the
+                theater on My Collection (the switch inside the theater moves
+                between those two), and the grid + filters + search moved to
+                `/library`. "Theater" names the surface rather than one tab,
+                since it holds both.
                 Only when authenticated, hidden on mobile (mobile uses the menu). */}
             {authStatus?.authenticated && (
               <nav className="hidden lg:flex items-center gap-1 text-[13.5px]">
                 <Link
+                  href="/library"
+                  className={cn(
+                    'rounded-full px-3 py-1.5 font-semibold transition-colors',
+                    pathname === '/library'
+                      ? 'bg-clay/[0.12] text-clay'
+                      : 'text-ink-2 hover:text-ink',
+                  )}
+                >
+                  Library
+                </Link>
+                <Link
                   href="/"
                   className={cn(
                     'rounded-full px-3 py-1.5 font-semibold transition-colors',
-                    pathname === '/' ? 'bg-clay/[0.12] text-clay' : 'text-ink-2 hover:text-ink',
+                    pathname === '/' || pathname === '/collection'
+                      ? 'bg-clay/[0.12] text-clay'
+                      : 'text-ink-2 hover:text-ink',
                   )}
                 >
-                  Collection
-                </Link>
-                <button
-                  type="button"
-                  onClick={openLive}
-                  className="rounded-full px-3 py-1.5 font-semibold text-ink-2 hover:text-ink transition-colors"
-                >
                   Theater
-                </button>
+                </Link>
                 <Link
                   href="/tags"
                   className={cn(
@@ -550,17 +548,12 @@ export function Header() {
                   onClick={() => setShowUserMenu(!showUserMenu)}
                   className="w-[33px] h-[33px] rounded-full overflow-hidden hover:ring-2 hover:ring-clay/40 transition-all flex items-center justify-center"
                 >
-                  {profileImage ? (
-                    <img
-                      src={profileImage}
-                      alt={authStatus?.user?.username || 'User'}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-clay-grad flex items-center justify-center text-white text-sm font-semibold">
-                      {userInitial}
-                    </div>
-                  )}
+                  <img
+                    src={avatarSrc}
+                    alt={authStatus?.user?.username || 'User'}
+                    className="w-full h-full object-cover"
+                    onError={() => setAvatarBroken(true)}
+                  />
                 </button>
 
                 {showUserMenu && (
@@ -573,17 +566,12 @@ export function Header() {
                       {authStatus?.authenticated && authStatus.user && (
                         <div className="px-4 py-3 border-b border-hairline">
                           <div className="flex items-center gap-3 min-w-0">
-                            {profileImage ? (
-                              <img
-                                src={profileImage}
-                                alt={authStatus.user.username}
-                                className="w-10 h-10 rounded-full flex-shrink-0"
-                              />
-                            ) : (
-                              <div className="w-10 h-10 rounded-full bg-clay-grad flex items-center justify-center text-white font-semibold flex-shrink-0">
-                                {userInitial}
-                              </div>
-                            )}
+                            <img
+                              src={avatarSrc}
+                              alt={authStatus.user.username}
+                              className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                              onError={() => setAvatarBroken(true)}
+                            />
                             <div className="min-w-0">
                               <p className="font-semibold text-ink font-mono truncate">
                                 {identities?.x
@@ -618,29 +606,31 @@ export function Header() {
                       {/* Nav + Settings links */}
                       <div className="py-1">
                         <Link
-                          href="/"
+                          href="/library"
                           onClick={() => setShowUserMenu(false)}
                           className={cn(
                             'flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset transition-colors',
-                            pathname === '/'
+                            pathname === '/library'
                               ? 'font-semibold text-clay'
                               : 'text-ink-2 hover:text-ink',
                           )}
                         >
                           <Bookmark className="w-4 h-4" />
-                          Collection
+                          Library
                         </Link>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowUserMenu(false)
-                            openLive()
-                          }}
-                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset text-ink-2 hover:text-ink transition-colors"
+                        <Link
+                          href="/"
+                          onClick={() => setShowUserMenu(false)}
+                          className={cn(
+                            'flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset transition-colors',
+                            pathname === '/' || pathname === '/collection'
+                              ? 'font-semibold text-clay'
+                              : 'text-ink-2 hover:text-ink',
+                          )}
                         >
                           <Radio className="w-4 h-4" />
                           Theater
-                        </button>
+                        </Link>
                         <Link
                           href="/tags"
                           onClick={() => setShowUserMenu(false)}
