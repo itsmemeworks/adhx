@@ -67,10 +67,40 @@ describe('API: /api/feed', () => {
     })
   })
 
+  /**
+   * The flag was renamed `unreadOnly` → `hideArchived` when the read-state
+   * vocabulary became archiving. The old name has to keep working: it lives in
+   * URLs people bookmarked and in the browser history of anyone who used the
+   * filter before the rename.
+   */
+  describe('hideArchived / unreadOnly back-compat', () => {
+    async function idsFor(params: Record<string, string>) {
+      const { GET } = await import('@/app/api/feed/route')
+      const data = await (await GET(createRequest(params))).json()
+      return (data.items as { id: string }[]).map((i) => i.id).sort()
+    }
+
+    it('honours the superseded unreadOnly=false exactly like hideArchived=false', async () => {
+      expect(await idsFor({ unreadOnly: 'false' })).toEqual(await idsFor({ hideArchived: 'false' }))
+    })
+
+    it('prefers hideArchived when both are supplied', async () => {
+      // Conflicting params: the current name wins rather than the result
+      // depending on parameter order.
+      expect(await idsFor({ hideArchived: 'false', unreadOnly: 'true' })).toEqual(
+        await idsFor({ hideArchived: 'false' }),
+      )
+    })
+
+    it('still defaults to hiding archived posts when neither is given', async () => {
+      expect(await idsFor({})).toEqual(await idsFor({ hideArchived: 'true' }))
+    })
+  })
+
   describe('Per-platform media URLs', () => {
     async function feedMedia(id: string) {
       const { GET } = await import('@/app/api/feed/route')
-      const data = await (await GET(createRequest({ unreadOnly: 'false' }))).json()
+      const data = await (await GET(createRequest({ hideArchived: 'false' }))).json()
       return data.items.find((i: { id: string }) => i.id === id)?.media?.[0]
     }
 
@@ -161,7 +191,7 @@ describe('API: /api/feed', () => {
         ])
 
       const { GET } = await import('@/app/api/feed/route')
-      const response = await GET(createRequest({ unreadOnly: 'false' }))
+      const response = await GET(createRequest({ hideArchived: 'false' }))
 
       expect(response.status).toBe(200)
       const data = await response.json()
@@ -185,7 +215,7 @@ describe('API: /api/feed', () => {
       })
 
       const { GET } = await import('@/app/api/feed/route')
-      const response = await GET(createRequest({ unreadOnly: 'false' }))
+      const response = await GET(createRequest({ hideArchived: 'false' }))
 
       expect(response.status).toBe(200)
       const data = await response.json()
@@ -196,11 +226,11 @@ describe('API: /api/feed', () => {
   })
 
   describe('Direct id lookup (?id=)', () => {
-    it('returns a bookmark by id even when it is already read (bypasses unreadOnly)', async () => {
+    it('returns a bookmark by id even when it is already read (bypasses hideArchived)', async () => {
       await testInstance.db
         .insert(schema.bookmarks)
         .values([createTestBookmark(USER_A, 'tweet-1'), createTestBookmark(USER_A, 'tweet-2')])
-      // Mark tweet-1 as read — the default feed (unreadOnly) would hide it.
+      // Mark tweet-1 as read — the default feed (hideArchived) would hide it.
       await testInstance.db.insert(schema.readStatus).values({
         userId: USER_A,
         bookmarkId: 'tweet-1',
@@ -208,7 +238,7 @@ describe('API: /api/feed', () => {
       })
 
       const { GET } = await import('@/app/api/feed/route')
-      // No unreadOnly param → defaults to true; the id lookup must still resolve it.
+      // No hideArchived param → defaults to true; the id lookup must still resolve it.
       const response = await GET(createRequest({ id: 'tweet-1' }))
 
       expect(response.status).toBe(200)
@@ -253,7 +283,7 @@ describe('API: /api/feed', () => {
       const { GET } = await import('@/app/api/feed/route')
 
       const url = new URL('http://localhost:3000/api/feed')
-      url.searchParams.set('unreadOnly', 'false')
+      url.searchParams.set('hideArchived', 'false')
       url.searchParams.append('tag', 'javascript')
 
       const response = await GET(new NextRequest(url))
@@ -271,7 +301,7 @@ describe('API: /api/feed', () => {
       const { GET } = await import('@/app/api/feed/route')
 
       const url = new URL('http://localhost:3000/api/feed')
-      url.searchParams.set('unreadOnly', 'false')
+      url.searchParams.set('hideArchived', 'false')
       url.searchParams.append('tag', 'javascript')
       url.searchParams.append('tag', 'react')
 
@@ -289,7 +319,7 @@ describe('API: /api/feed', () => {
       const { GET } = await import('@/app/api/feed/route')
 
       const url = new URL('http://localhost:3000/api/feed')
-      url.searchParams.set('unreadOnly', 'false')
+      url.searchParams.set('hideArchived', 'false')
       url.searchParams.append('tag', 'javascript')
       url.searchParams.append('tag', 'python')
 
@@ -305,7 +335,7 @@ describe('API: /api/feed', () => {
       const { GET } = await import('@/app/api/feed/route')
 
       const url = new URL('http://localhost:3000/api/feed')
-      url.searchParams.set('unreadOnly', 'false')
+      url.searchParams.set('hideArchived', 'false')
       url.searchParams.append('tag', 'JAVASCRIPT')
 
       const response = await GET(new NextRequest(url))
@@ -328,7 +358,7 @@ describe('API: /api/feed', () => {
       const { GET } = await import('@/app/api/feed/route')
 
       const url = new URL('http://localhost:3000/api/feed')
-      url.searchParams.set('unreadOnly', 'false')
+      url.searchParams.set('hideArchived', 'false')
       url.searchParams.append('tag', 'javascript')
 
       const response = await GET(new NextRequest(url))
@@ -355,7 +385,7 @@ describe('API: /api/feed', () => {
 
     it('returns correct page size', async () => {
       const { GET } = await import('@/app/api/feed/route')
-      const response = await GET(createRequest({ limit: '5', unreadOnly: 'false' }))
+      const response = await GET(createRequest({ limit: '5', hideArchived: 'false' }))
 
       expect(response.status).toBe(200)
       const data = await response.json()
@@ -368,7 +398,7 @@ describe('API: /api/feed', () => {
 
     it('returns correct page offset', async () => {
       const { GET } = await import('@/app/api/feed/route')
-      const response = await GET(createRequest({ page: '2', limit: '5', unreadOnly: 'false' }))
+      const response = await GET(createRequest({ page: '2', limit: '5', hideArchived: 'false' }))
 
       expect(response.status).toBe(200)
       const data = await response.json()
@@ -379,7 +409,7 @@ describe('API: /api/feed', () => {
 
     it('non-numeric page falls back to page 1 instead of erroring', async () => {
       const { GET } = await import('@/app/api/feed/route')
-      const response = await GET(createRequest({ page: 'abc', unreadOnly: 'false' }))
+      const response = await GET(createRequest({ page: 'abc', hideArchived: 'false' }))
 
       expect(response.status).toBe(200)
       const data = await response.json()
@@ -390,7 +420,7 @@ describe('API: /api/feed', () => {
 
     it('page=0 is treated as page 1', async () => {
       const { GET } = await import('@/app/api/feed/route')
-      const response = await GET(createRequest({ page: '0', unreadOnly: 'false' }))
+      const response = await GET(createRequest({ page: '0', hideArchived: 'false' }))
 
       expect(response.status).toBe(200)
       const data = await response.json()
@@ -400,7 +430,7 @@ describe('API: /api/feed', () => {
 
     it('non-numeric limit falls back to the default limit instead of erroring', async () => {
       const { GET } = await import('@/app/api/feed/route')
-      const response = await GET(createRequest({ limit: 'abc', unreadOnly: 'false' }))
+      const response = await GET(createRequest({ limit: 'abc', hideArchived: 'false' }))
 
       expect(response.status).toBe(200)
       const data = await response.json()
@@ -419,7 +449,7 @@ describe('API: /api/feed', () => {
       await testInstance.db.insert(schema.bookmarks).values(extra)
 
       const { GET } = await import('@/app/api/feed/route')
-      const response = await GET(createRequest({ limit: '-1', unreadOnly: 'false' }))
+      const response = await GET(createRequest({ limit: '-1', hideArchived: 'false' }))
 
       expect(response.status).toBe(200)
       const data = await response.json()
@@ -430,7 +460,7 @@ describe('API: /api/feed', () => {
 
     it('limit above 100 is clamped to 100', async () => {
       const { GET } = await import('@/app/api/feed/route')
-      const response = await GET(createRequest({ limit: '99999', unreadOnly: 'false' }))
+      const response = await GET(createRequest({ limit: '99999', hideArchived: 'false' }))
 
       expect(response.status).toBe(200)
       const data = await response.json()
@@ -468,9 +498,9 @@ describe('API: /api/feed', () => {
       expect(data.items.every((i: { isRead: boolean }) => !i.isRead)).toBe(true)
     })
 
-    it('returns all items when unreadOnly is false', async () => {
+    it('returns all items when hideArchived is false', async () => {
       const { GET } = await import('@/app/api/feed/route')
-      const response = await GET(createRequest({ unreadOnly: 'false' }))
+      const response = await GET(createRequest({ hideArchived: 'false' }))
 
       expect(response.status).toBe(200)
       const data = await response.json()
@@ -498,7 +528,7 @@ describe('API: /api/feed', () => {
 
     it('returns correct stats', async () => {
       const { GET } = await import('@/app/api/feed/route')
-      const response = await GET(createRequest({ unreadOnly: 'false' }))
+      const response = await GET(createRequest({ hideArchived: 'false' }))
 
       expect(response.status).toBe(200)
       const data = await response.json()
@@ -522,7 +552,7 @@ describe('API: /api/feed', () => {
       ])
 
       const { GET } = await import('@/app/api/feed/route')
-      const response = await GET(createRequest({ unreadOnly: 'false' }))
+      const response = await GET(createRequest({ hideArchived: 'false' }))
       const data = await response.json()
 
       expect(data.items[0].id).toBe('tweet-new') // newer processedAt first
@@ -542,7 +572,7 @@ describe('API: /api/feed', () => {
       ])
 
       const { GET } = await import('@/app/api/feed/route')
-      const response = await GET(createRequest({ sort: 'posted', unreadOnly: 'false' }))
+      const response = await GET(createRequest({ sort: 'posted', hideArchived: 'false' }))
       const data = await response.json()
 
       expect(data.items[0].id).toBe('tweet-new-post') // newer createdAt first
@@ -560,7 +590,7 @@ describe('API: /api/feed', () => {
       ])
 
       const { GET } = await import('@/app/api/feed/route')
-      const response = await GET(createRequest({ sortDir: 'asc', unreadOnly: 'false' }))
+      const response = await GET(createRequest({ sortDir: 'asc', hideArchived: 'false' }))
       const data = await response.json()
 
       expect(data.items[0].id).toBe('tweet-old') // older processedAt first
@@ -581,7 +611,7 @@ describe('API: /api/feed', () => {
 
       const { GET } = await import('@/app/api/feed/route')
       const response = await GET(
-        createRequest({ sort: 'posted', sortDir: 'asc', unreadOnly: 'false' }),
+        createRequest({ sort: 'posted', sortDir: 'asc', hideArchived: 'false' }),
       )
       const data = await response.json()
 
@@ -600,7 +630,7 @@ describe('API: /api/feed', () => {
       ])
 
       const { GET } = await import('@/app/api/feed/route')
-      const response = await GET(createRequest({ sortDir: 'invalid', unreadOnly: 'false' }))
+      const response = await GET(createRequest({ sortDir: 'invalid', hideArchived: 'false' }))
       const data = await response.json()
 
       expect(data.items[0].id).toBe('tweet-new') // desc by default
@@ -622,7 +652,7 @@ describe('API: /api/feed', () => {
       ])
 
       const { GET } = await import('@/app/api/feed/route')
-      const response = await GET(createRequest({ sort: 'posted', unreadOnly: 'false' }))
+      const response = await GET(createRequest({ sort: 'posted', hideArchived: 'false' }))
       const data = await response.json()
 
       expect(data.items[0].id).toBe('tweet-mar')
@@ -643,7 +673,7 @@ describe('API: /api/feed', () => {
       ])
 
       const { GET } = await import('@/app/api/feed/route')
-      const response = await GET(createRequest({ sort: 'posted', unreadOnly: 'false' }))
+      const response = await GET(createRequest({ sort: 'posted', hideArchived: 'false' }))
       const data = await response.json()
 
       expect(data.items[0].id).toBe('tweet-with-date')
@@ -664,7 +694,7 @@ describe('API: /api/feed', () => {
 
     it('filters by manual source', async () => {
       const { GET } = await import('@/app/api/feed/route')
-      const response = await GET(createRequest({ filter: 'manual', unreadOnly: 'false' }))
+      const response = await GET(createRequest({ filter: 'manual', hideArchived: 'false' }))
 
       expect(response.status).toBe(200)
       const data = await response.json()
@@ -678,7 +708,7 @@ describe('API: /api/feed', () => {
 
     it('does not include synced bookmarks in manual filter', async () => {
       const { GET } = await import('@/app/api/feed/route')
-      const response = await GET(createRequest({ filter: 'manual', unreadOnly: 'false' }))
+      const response = await GET(createRequest({ filter: 'manual', hideArchived: 'false' }))
 
       expect(response.status).toBe(200)
       const data = await response.json()

@@ -91,7 +91,11 @@ function FeedPageContent(): React.ReactElement {
   const [sortDirection, setSortDirection] = useState<SortDirection>(
     (searchParams.get('sortDir') as SortDirection) || 'desc',
   )
-  const [unreadOnly, setUnreadOnly] = useState(searchParams.get('unreadOnly') !== 'false')
+  // Reads `hideArchived`, falling back to the old `unreadOnly` so a URL someone
+  // bookmarked before the rename still opens the view they saved.
+  const [hideArchived, setHideArchived] = useState(
+    (searchParams.get('hideArchived') ?? searchParams.get('unreadOnly')) !== 'false',
+  )
   const [view, setView] = useState<'grid' | 'list' | 'bento'>('grid')
   const [search, setSearch] = useState(searchParams.get('search') || '')
   const [personalQueue, setPersonalQueue] = useState<FeedItem[]>([])
@@ -210,7 +214,7 @@ function FeedPageContent(): React.ReactElement {
         const id: string | undefined = data?.bookmark?.id
 
         if (id) {
-          const q = new URLSearchParams({ unreadOnly: 'false', filter: 'all', limit: '5' })
+          const q = new URLSearchParams({ hideArchived: 'false', filter: 'all', limit: '5' })
           q.append('id', id)
           const fres = await fetch(`/api/feed?${q}`)
           if (fres.ok) {
@@ -255,11 +259,11 @@ function FeedPageContent(): React.ReactElement {
   // reversed that: "The collection theater is just about marking a post as read or not read."
   // The collection theater is now strictly the full unread backlog, every time, regardless of
   // what's active in the grid behind it — a consistent queue instead of a
-  // filtered snapshot. So the query below is fixed (unreadOnly=true, no
+  // filtered snapshot. So the query below is fixed (hideArchived=true, no
   // filter/platform/tag/search) rather than derived from component state.
   // The feed API caps at 100/request, which covers a typical backlog.
   const buildActiveQueueQuery = useCallback(
-    () => new URLSearchParams({ filter: 'all', unreadOnly: 'true', limit: '100' }),
+    () => new URLSearchParams({ filter: 'all', hideArchived: 'true', limit: '100' }),
     [],
   )
 
@@ -519,7 +523,7 @@ function FeedPageContent(): React.ReactElement {
           page: currentPage.toString(),
           limit: '50',
           filter,
-          unreadOnly: (tagActive ? false : unreadOnly).toString(),
+          hideArchived: (tagActive ? false : hideArchived).toString(),
         })
         if (platformFilter !== 'all') params.set('platform', platformFilter)
         if (sort !== 'added') params.set('sort', sort)
@@ -569,7 +573,7 @@ function FeedPageContent(): React.ReactElement {
       platformFilter,
       sort,
       sortDirection,
-      unreadOnly,
+      hideArchived,
       search,
       page,
       selectedTags,
@@ -581,13 +585,14 @@ function FeedPageContent(): React.ReactElement {
     const urlFilter = (searchParams.get('filter') as FilterType) || 'all'
     const urlSort = (searchParams.get('sort') as SortType) || 'added'
     const urlSortDir = (searchParams.get('sortDir') as SortDirection) || 'desc'
-    const urlUnreadOnly = searchParams.get('unreadOnly') !== 'false'
+    const urlHideArchived =
+      (searchParams.get('hideArchived') ?? searchParams.get('unreadOnly')) !== 'false'
     const urlSearch = searchParams.get('search') || ''
 
     if (urlFilter !== filter) setFilter(urlFilter)
     if (urlSort !== sort) setSort(urlSort)
     if (urlSortDir !== sortDirection) setSortDirection(urlSortDir)
-    if (urlUnreadOnly !== unreadOnly) setUnreadOnly(urlUnreadOnly)
+    if (urlHideArchived !== hideArchived) setHideArchived(urlHideArchived)
     if (urlSearch !== search) setSearch(urlSearch)
   }, [searchParams])
 
@@ -603,7 +608,7 @@ function FeedPageContent(): React.ReactElement {
     platformFilter,
     sort,
     sortDirection,
-    unreadOnly,
+    hideArchived,
     search,
     selectedTags,
     tagSelectTag,
@@ -719,11 +724,13 @@ function FeedPageContent(): React.ReactElement {
     else params.delete('sort')
     if (sortDirection !== 'desc') params.set('sortDir', sortDirection)
     else params.delete('sortDir')
-    if (!unreadOnly) params.set('unreadOnly', 'false')
-    else params.delete('unreadOnly')
+    if (!hideArchived) params.set('hideArchived', 'false')
+    else params.delete('hideArchived')
+    // Never leave the superseded name behind in the URL.
+    params.delete('unreadOnly')
     const queryString = params.toString()
     router.replace(queryString ? `?${queryString}` : pathname, { scroll: false })
-  }, [filter, platformFilter, sort, sortDirection, unreadOnly, router, searchParams, pathname])
+  }, [filter, platformFilter, sort, sortDirection, hideArchived, router, searchParams, pathname])
 
   // Handle ?open=tweetId URL parameter to open a specific tweet in lightbox
   useEffect(() => {
@@ -747,7 +754,7 @@ function FeedPageContent(): React.ReactElement {
     // or one on a later page. Fetch that specific bookmark by id (read state and
     // pagination ignored) and open it directly in the collection theater.
     let alive = true
-    fetch(`/api/feed?id=${encodeURIComponent(openId)}&unreadOnly=false&limit=1`)
+    fetch(`/api/feed?id=${encodeURIComponent(openId)}&hideArchived=false&limit=1`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (!alive) return
@@ -860,7 +867,7 @@ function FeedPageContent(): React.ReactElement {
 
   // Reconcile the feed's items/stats with actions taken inside the collection theater.
   const { handlePostResolved, handlePostRestored } = usePersonalQueue({
-    unreadOnly,
+    hideArchived,
     setItems,
     setStats,
   })
@@ -926,7 +933,7 @@ function FeedPageContent(): React.ReactElement {
         case 'u':
         case 'U':
           e.preventDefault()
-          setUnreadOnly((prev) => !prev)
+          setHideArchived((prev) => !prev)
           break
         case 'f':
         case 'F':
@@ -1218,8 +1225,8 @@ function FeedPageContent(): React.ReactElement {
           onSortChange={setSort}
           sortDirection={sortDirection}
           onSortDirectionChange={setSortDirection}
-          unreadOnly={unreadOnly}
-          onUnreadOnlyChange={setUnreadOnly}
+          hideArchived={hideArchived}
+          onHideArchivedChange={setHideArchived}
           view={view}
           onViewChange={changeView}
           selectedTags={selectedTags}
@@ -1257,12 +1264,12 @@ function FeedPageContent(): React.ReactElement {
             hasMore={hasMore}
             lastSyncAt={lastSyncAt}
             sortField={sort === 'posted' ? 'createdAt' : 'processedAt'}
-            unreadOnly={unreadOnly}
+            hideArchived={hideArchived}
             stats={stats}
             view={view}
             onExpand={openPersonalFromItem}
             onLoadMore={loadMore}
-            onShowAll={() => setUnreadOnly(false)}
+            onShowAll={() => setHideArchived(false)}
             tagSelectTag={tagSelectTag}
             justAddedKey={justAddedKey}
           />

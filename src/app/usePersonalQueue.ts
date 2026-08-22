@@ -4,7 +4,7 @@ import { useCallback, type Dispatch, type SetStateAction } from 'react'
 import type { FeedItem } from '@/components/feed'
 
 interface UsePersonalQueueOptions {
-  unreadOnly: boolean
+  hideArchived: boolean
   setItems: Dispatch<SetStateAction<FeedItem[]>>
   setStats: Dispatch<SetStateAction<{ total: number; unread: number }>>
 }
@@ -21,13 +21,13 @@ interface UsePersonalQueueReturn {
  * the collection theater (archive/delete an item, or undo an archive).
  */
 export function usePersonalQueue({
-  unreadOnly,
+  hideArchived,
   setItems,
   setStats,
 }: UsePersonalQueueOptions): UsePersonalQueueReturn {
   const handlePostResolved = useCallback(
     (id: string, action: 'archive' | 'delete') => {
-      if (action === 'delete' || unreadOnly) {
+      if (action === 'delete' || hideArchived) {
         setItems((prev) => prev.filter((i) => i.id !== id))
       } else {
         setItems((prev) => prev.map((i) => (i.id === id ? { ...i, isRead: true } : i)))
@@ -36,7 +36,7 @@ export function usePersonalQueue({
       // one drops the unread count.
       setStats((prev) => ({ ...prev, unread: Math.max(0, prev.unread - 1) }))
     },
-    [unreadOnly, setItems, setStats],
+    [hideArchived, setItems, setStats],
   )
 
   const handlePostRestored = useCallback(
@@ -45,7 +45,7 @@ export function usePersonalQueue({
         (prev) =>
           prev.some((i) => i.id === item.id)
             ? prev.map((i) => (i.id === item.id ? { ...i, isRead: false } : i))
-            : [{ ...item, isRead: false }, ...prev], // was dropped under unreadOnly — re-add it
+            : [{ ...item, isRead: false }, ...prev], // was dropped under hideArchived — re-add it
       )
       setStats((prev) => ({ ...prev, unread: prev.unread + 1 }))
     },

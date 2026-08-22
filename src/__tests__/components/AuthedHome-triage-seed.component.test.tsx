@@ -9,7 +9,7 @@
  * reversed that — the collection theater is strictly the full unread backlog, every time.
  * This verifies opening the theater's collection tab while the grid has a
  * non-default filter/platform/tag active still requests the FULL unread
- * queue (unreadOnly=true, filter=all, no platform/tag/search params).
+ * queue (hideArchived=true, filter=all, no platform/tag/search params).
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useState, useEffect } from 'react'
@@ -112,7 +112,7 @@ beforeEach(() => {
 })
 
 describe('AuthedHome collection seeding ignores active filters', () => {
-  it('requests the full unread queue (unreadOnly=true, filter=all) on open-theater, even with photos/instagram/tag/search active', async () => {
+  it('requests the full unread queue (hideArchived=true, filter=all) on open-theater, even with photos/instagram/tag/search active', async () => {
     render(<FeedPage />)
 
     // Let the initial (filtered) grid fetch happen first.
@@ -125,7 +125,7 @@ describe('AuthedHome collection seeding ignores active filters', () => {
     await waitFor(() => expect(feedRequests.length).toBeGreaterThan(0))
 
     const collectionRequest = feedRequests[feedRequests.length - 1]
-    expect(collectionRequest).toContain('unreadOnly=true')
+    expect(collectionRequest).toContain('hideArchived=true')
     expect(collectionRequest).toContain('filter=all')
     expect(collectionRequest).not.toContain('platform=')
     expect(collectionRequest).not.toContain('tag=')

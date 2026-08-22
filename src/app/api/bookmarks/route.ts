@@ -17,7 +17,7 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
   const category = searchParams.get('category')
   const author = searchParams.get('author')
   const search = searchParams.get('search')
-  const unreadOnly = searchParams.get('unreadOnly') === 'true'
+  const hideArchived = searchParams.get('hideArchived') === 'true'
 
   const offset = (page - 1) * limit
 
@@ -45,7 +45,7 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
     }
 
     // For unread filter, we need to exclude bookmarks that have read status (filtered by userId)
-    if (unreadOnly) {
+    if (hideArchived) {
       const readBookmarkIds = await db
         .select({ bookmarkId: readStatus.bookmarkId })
         .from(readStatus)

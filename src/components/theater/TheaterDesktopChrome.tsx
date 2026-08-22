@@ -227,7 +227,7 @@ export function SavePostButton({
       return
     }
     let cancelled = false
-    const q = new URLSearchParams({ unreadOnly: 'false', filter: 'all', limit: '5' })
+    const q = new URLSearchParams({ hideArchived: 'false', filter: 'all', limit: '5' })
     q.append('id', current.bookmarkId)
     fetch(`/api/feed?${q}`)
       .then((r) => (r.ok ? r.json() : null))

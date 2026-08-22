@@ -94,7 +94,7 @@ export function TagsClient() {
     setPreviewsLoading(Object.fromEntries(tagNames.map((t) => [t, true])))
     tagNames.forEach((tag) => {
       fetch(
-        `/api/feed?tag=${encodeURIComponent(tag)}&unreadOnly=false&limit=${PREVIEW_LIMIT}&filter=all`,
+        `/api/feed?tag=${encodeURIComponent(tag)}&hideArchived=false&limit=${PREVIEW_LIMIT}&filter=all`,
       )
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {

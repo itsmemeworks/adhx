@@ -54,7 +54,7 @@ const items = [fxTwitterToFeedItem(fixtures['plain-text'])]
 const baseProps = {
   lastSyncAt: null as string | null,
   sortField: 'processedAt' as const,
-  unreadOnly: false,
+  hideArchived: false,
   stats: { total: 1, unread: 1 },
   onExpand: vi.fn(),
   onShowAll: vi.fn(),

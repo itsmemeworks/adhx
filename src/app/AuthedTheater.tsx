@@ -54,7 +54,7 @@ export default function AuthedTheater({ seed, tab }: AuthedTheaterProps) {
     let cancelled = false
     // Same query the grid's default view uses: unread first, newest-added
     // first (`sort=added` is the API default — see /api/feed).
-    const params = new URLSearchParams({ filter: 'all', unreadOnly: 'true', limit: '50' })
+    const params = new URLSearchParams({ filter: 'all', hideArchived: 'true', limit: '50' })
     fetch(`/api/feed?${params}`)
       .then((r) => r.json())
       .then((data) => {

@@ -41,7 +41,11 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
   const rawLimit = parseInt(searchParams.get('limit') || '50', 10)
   const limit = Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.min(rawLimit, 100) : 50
   const filter = (searchParams.get('filter') || 'all') as FilterType
-  const unreadOnly = searchParams.get('unreadOnly') !== 'false' // Default to true
+  // `hideArchived` is the current name; `unreadOnly` is still honoured because
+  // the flag shipped under that name and lives in URLs people have bookmarked.
+  // Default true: your collection means your ACTIVE collection.
+  const archivedParam = searchParams.get('hideArchived') ?? searchParams.get('unreadOnly')
+  const hideArchived = archivedParam !== 'false'
   const search = searchParams.get('search')
   const tags = searchParams.getAll('tag') // Multiple tags via ?tag=foo&tag=bar
   const sort = searchParams.get('sort') || 'added' // 'added' or 'posted'
@@ -185,7 +189,7 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
 
     // Unread filter — composite key (bookmarkId, platform) matches read_status PK.
     // Skipped for direct id lookups so an already-read tweet still resolves.
-    if (unreadOnly && ids.length === 0) {
+    if (hideArchived && ids.length === 0) {
       const readSubquery = sql`(
         SELECT ${readStatus.bookmarkId}, ${readStatus.platform}
         FROM ${readStatus}

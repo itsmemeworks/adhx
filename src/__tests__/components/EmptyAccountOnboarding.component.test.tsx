@@ -66,7 +66,7 @@ describe('FeedGrid empty states', () => {
 
   it('shows the onboarding panel with a Connect-X CTA for an empty, email-only account', async () => {
     mockAuthMe(EMAIL_ONLY_ME)
-    render(<FeedGrid {...baseProps} items={[]} unreadOnly stats={{ total: 0, unread: 0 }} />)
+    render(<FeedGrid {...baseProps} items={[]} hideArchived stats={{ total: 0, unread: 0 }} />)
 
     expect(await screen.findByText(/let.?s fill your collection/i)).toBeInTheDocument()
     await waitFor(() =>
@@ -81,7 +81,7 @@ describe('FeedGrid empty states', () => {
 
   it('shows a Sync CTA instead of Connect-X for an empty account with X already connected', async () => {
     mockAuthMe(X_CONNECTED_ME)
-    render(<FeedGrid {...baseProps} items={[]} unreadOnly stats={{ total: 0, unread: 0 }} />)
+    render(<FeedGrid {...baseProps} items={[]} hideArchived stats={{ total: 0, unread: 0 }} />)
 
     expect(await screen.findByText(/let.?s fill your collection/i)).toBeInTheDocument()
     expect(await screen.findByText(/sync your x bookmarks/i)).toBeInTheDocument()
@@ -90,7 +90,7 @@ describe('FeedGrid empty states', () => {
 
   it('still shows a "Paste a link" action and a link to /trending in the onboarding panel', async () => {
     mockAuthMe(EMAIL_ONLY_ME)
-    render(<FeedGrid {...baseProps} items={[]} unreadOnly stats={{ total: 0, unread: 0 }} />)
+    render(<FeedGrid {...baseProps} items={[]} hideArchived stats={{ total: 0, unread: 0 }} />)
 
     // Desktop (⌘V copy) and mobile (PasteLinkButton) variants both render in
     // jsdom regardless of their `hidden sm:*`/`sm:hidden` classes — jsdom
@@ -103,7 +103,7 @@ describe('FeedGrid empty states', () => {
 
   it('shows "All caught up" (not onboarding) when the account has bookmarks but none are unread', async () => {
     mockAuthMe(X_CONNECTED_ME)
-    render(<FeedGrid {...baseProps} items={[]} unreadOnly stats={{ total: 12, unread: 0 }} />)
+    render(<FeedGrid {...baseProps} items={[]} hideArchived stats={{ total: 12, unread: 0 }} />)
 
     expect(await screen.findByText(/all caught up/i)).toBeInTheDocument()
     expect(screen.queryByText(/let.?s fill your collection/i)).not.toBeInTheDocument()
@@ -113,7 +113,12 @@ describe('FeedGrid empty states', () => {
     mockAuthMe(X_CONNECTED_ME)
     const items = [fxTwitterToFeedItem(fixtures['plain-text'])]
     render(
-      <FeedGrid {...baseProps} items={items} unreadOnly={false} stats={{ total: 1, unread: 1 }} />,
+      <FeedGrid
+        {...baseProps}
+        items={items}
+        hideArchived={false}
+        stats={{ total: 1, unread: 1 }}
+      />,
     )
 
     expect(screen.queryByText(/let.?s fill your collection/i)).not.toBeInTheDocument()

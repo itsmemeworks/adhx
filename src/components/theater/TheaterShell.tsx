@@ -975,7 +975,7 @@ export function TheaterShell({
         // (the queue is a snapshot taken when the overlay opened).
         if (item.bookmarkId) {
           try {
-            const q = new URLSearchParams({ unreadOnly: 'false', filter: 'all', limit: '5' })
+            const q = new URLSearchParams({ hideArchived: 'false', filter: 'all', limit: '5' })
             q.append('id', item.bookmarkId)
             const fres = await fetch(`/api/feed?${q}`)
             if (fres.ok) {
@@ -1248,7 +1248,7 @@ export function TheaterShell({
       .slice(0, 50)
     if (unknown.length === 0) return
     unknown.forEach((it) => membershipCheckedRef.current.add(theaterItemKey(it)))
-    const params = new URLSearchParams({ unreadOnly: 'false', filter: 'all', limit: '50' })
+    const params = new URLSearchParams({ hideArchived: 'false', filter: 'all', limit: '50' })
     unknown.forEach((it) => params.append('id', it.bookmarkId as string))
     const attempted = unknown.map((it) => theaterItemKey(it))
     fetch(`/api/feed?${params}`)

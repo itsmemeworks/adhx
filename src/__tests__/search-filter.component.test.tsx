@@ -209,7 +209,7 @@ describe('Header search -> feed filtering (regression)', () => {
 
     replaceSpy.mockClear()
 
-    // 'u' toggles unreadOnly — a state this component owns and writes to the
+    // 'u' toggles hideArchived — a state this component owns and writes to the
     // URL via the same effect that used to also (incorrectly) rebuild `search`
     // from local state.
     fireEvent.keyDown(window, { key: 'u' })
