@@ -48,7 +48,13 @@ import { authorProfileUrl, previewPath, sourceUrl } from '@/lib/activity/preview
 import { inferType } from '@/lib/trending/filter'
 import { useSendFile } from './useSendFile'
 import { useClampExpand } from './useClampExpand'
-import { theaterItemKey, PLATFORM_LABEL, TRIAGE_TAB_ORDER, TRIAGE_TAB_LABEL } from './types'
+import {
+  theaterItemKey,
+  PLATFORM_LABEL,
+  TRIAGE_TAB_ORDER,
+  TRIAGE_TAB_LABEL,
+  REPEAT_MODE_LABEL,
+} from './types'
 import { TheaterLinkedText } from './TheaterText'
 import {
   TheaterProgressLine,
@@ -82,6 +88,8 @@ export interface TheaterMobileChromeProps {
   newCount: number
   /** Passed straight through to `UpNextList` for its section headings — the arrival snapshot the queue was grouped by. Absent in playlist/shared mode. */
   wasSeenOnEntry?: (key: string) => boolean
+  /** How many posts the position counter is out of — what will actually play from here (see `computeQueueTotal`). Falls back to `items.length`. */
+  queueTotal?: number
   onSelect: (key: string) => void
   /** Prev/next navigation for the peek bar's chevrons — the only mobile nav besides keyboard and video-ended auto-advance. */
   onPrev: () => void
@@ -178,6 +186,7 @@ export function TheaterMobileChrome({
   freshKeys,
   newCount,
   wasSeenOnEntry,
+  queueTotal,
   onSelect,
   onPrev,
   onNext,
@@ -898,13 +907,7 @@ export function TheaterMobileChrome({
                     onCycleRepeat()
                   }}
                   onTouchEnd={(e) => e.stopPropagation()}
-                  aria-label={
-                    repeatMode === 'off'
-                      ? 'Repeat: off'
-                      : repeatMode === 'all'
-                        ? 'Repeat: whole queue'
-                        : 'Repeat: this post'
-                  }
+                  aria-label={REPEAT_MODE_LABEL[repeatMode].action}
                   className={cn(
                     'inline-flex h-10 w-10 flex-none items-center justify-center rounded-full hover:bg-inset active:bg-inset',
                     repeatMode !== 'off'
@@ -987,9 +990,13 @@ export function TheaterMobileChrome({
                       <span className="truncate">On repeat</span>
                     </>
                   ) : queueIndex !== -1 ? (
-                    // Queue position ("3 / 17"), with the fresh-arrival count
-                    // folded in when there is one.
-                    `${queueIndex + 1} / ${items.length}${newCount > 0 ? ` · ${newCount} new` : ''}`
+                    // Queue position ("3 / 7"), out of what will actually PLAY
+                    // from here — the unwatched run while repeat is off, the
+                    // whole queue once it isn't (see `computeQueueTotal`). The
+                    // fresh-arrival count folds in when there is one.
+                    `${queueIndex + 1} / ${queueTotal ?? items.length}${
+                      newCount > 0 ? ` · ${newCount} new` : ''
+                    }`
                   ) : newCount > 0 ? (
                     `${newCount} new`
                   ) : (

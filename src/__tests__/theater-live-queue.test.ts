@@ -4,8 +4,10 @@ import {
   liveQueueGroupOf,
   unseenBlockLength,
   computeLiveNext,
+  computeQueueTotal,
   LIVE_QUEUE_GROUP_LABEL,
 } from '@/components/theater/TheaterShell'
+import { REPEAT_MODE_LABEL } from '@/components/theater/types'
 
 /**
  * Live mode is "the last 24 hours of community activity", and what plays is
@@ -167,5 +169,53 @@ describe('computeLiveNext', () => {
   it('never strands a first-time visitor: a whole-queue unwatched run plays through', () => {
     const path = [0, 1, 2, 3, 4].map((index) => computeLiveNext({ ...base, index, unseenCount: 5 }))
     expect(path).toEqual([1, 2, 3, 4, 'waiting'])
+  })
+})
+
+/**
+ * Owner: "maybe for mobile where it shows the count and position in that
+ * count, it should be aware of that too" — i.e. "3 / 26" was misleading when
+ * auto-advance was only ever going to play the handful of unwatched posts. The
+ * denominator is now what will actually play, so flipping repeat visibly
+ * changes the number.
+ */
+describe('computeQueueTotal', () => {
+  const base = { index: 1, length: 26, unseenCount: 7 }
+
+  it('counts out of the unwatched run while repeat is off', () => {
+    expect(computeQueueTotal({ ...base, repeatMode: 'off' })).toBe(7)
+  })
+
+  it('counts out of the whole queue once repeat is on — the switch changes the number', () => {
+    expect(computeQueueTotal({ ...base, repeatMode: 'all' })).toBe(26)
+    expect(computeQueueTotal({ ...base, repeatMode: 'one' })).toBe(26)
+  })
+
+  it('falls back to the whole queue when nothing is pending (caught up)', () => {
+    expect(computeQueueTotal({ ...base, unseenCount: 0, repeatMode: 'off' })).toBe(26)
+  })
+
+  it('falls back to the whole queue when the viewer browsed into watched posts', () => {
+    // index 9 sits outside the 7-long run, so the run no longer describes it —
+    // "10 / 7" would be nonsense.
+    expect(computeQueueTotal({ ...base, index: 9, repeatMode: 'off' })).toBe(26)
+    expect(computeQueueTotal({ ...base, index: -1, repeatMode: 'off' })).toBe(26)
+  })
+
+  it('reads sensibly at the last unwatched post — the boundary the counter describes', () => {
+    expect(computeQueueTotal({ index: 6, length: 26, unseenCount: 7, repeatMode: 'off' })).toBe(7)
+  })
+})
+
+describe('REPEAT_MODE_LABEL', () => {
+  it('names what each state DOES at the boundary, not just "repeat on/off"', () => {
+    // The old labels ("Repeat: off") said nothing about stopping when caught
+    // up, which is the actual decision the control makes.
+    expect(REPEAT_MODE_LABEL.off.action).toBe('Stop when caught up')
+    expect(REPEAT_MODE_LABEL.all.action).toBe('Keep playing')
+    expect(REPEAT_MODE_LABEL.one.action).toBe('Repeat this post')
+    for (const mode of ['off', 'all', 'one'] as const) {
+      expect(REPEAT_MODE_LABEL[mode].state).toBeTruthy()
+    }
   })
 })

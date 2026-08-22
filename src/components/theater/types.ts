@@ -49,6 +49,22 @@ export type TriageTab = 'collection' | 'live'
  */
 export type RepeatMode = 'off' | 'all' | 'one'
 
+/**
+ * What each repeat state DOES at the end of the unwatched run — which is the
+ * decision the control actually makes, and what the old labels ("Repeat: off")
+ * failed to say. Auto-advance stops at that boundary rather than replaying
+ * watched posts, so "off" means "stop when caught up" and "all" means "keep
+ * going". Owner asked whether the boundary needed its own switch; it doesn't —
+ * this control IS the switch, it just wasn't named like one.
+ *
+ * Lives here rather than in either chrome so the two can't drift apart.
+ */
+export const REPEAT_MODE_LABEL: Record<RepeatMode, { action: string; state: string }> = {
+  off: { action: 'Stop when caught up', state: 'Stops when you’re caught up' },
+  all: { action: 'Keep playing', state: 'Keeps playing — watched posts too, then round again' },
+  one: { action: 'Repeat this post', state: 'Repeating this post' },
+}
+
 /** Left-to-right render order for the Live/My-Collection tab switcher —
  * Live first, matching the default in TheaterShell's `useState`. */
 export const TRIAGE_TAB_ORDER: readonly TriageTab[] = ['live', 'collection']

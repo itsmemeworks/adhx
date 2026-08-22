@@ -360,6 +360,35 @@ export function computeLiveNext(opts: {
 }
 
 /**
+ * Pure: how many posts the counter should be OUT OF — i.e. how many will
+ * actually play from here.
+ *
+ * Auto-advance stops at the end of the unwatched run unless repeat says
+ * otherwise, so "2 / 26" was misleading whenever only a handful were pending.
+ * With repeat off the denominator is that run; with repeat on it's the whole
+ * queue. Flipping the control therefore visibly changes the number, which is
+ * the clearest feedback available that the switch did something (owner: "maybe
+ * for mobile where it shows the count and position in that count, it should be
+ * aware of that too").
+ *
+ * Falls back to the full length in the two cases where the run doesn't
+ * describe the viewer's position: nothing pending (caught up — the whole queue
+ * is what a re-watch would play), and having browsed back into already-watched
+ * posts, where the index sits outside the run.
+ */
+export function computeQueueTotal(opts: {
+  index: number
+  length: number
+  unseenCount: number
+  repeatMode: RepeatMode
+}): number {
+  const { index, length, unseenCount, repeatMode } = opts
+  if (repeatMode !== 'off') return length
+  if (unseenCount <= 0 || index < 0 || index >= unseenCount) return length
+  return unseenCount
+}
+
+/**
  * Pure: the canonical preview path to sync the address bar to for the given
  * item, or null when there isn't a well-formed one to sync to. `previewPath()`
  * happily builds a malformed path (e.g. `//status/123`) from an empty author,
@@ -985,19 +1014,26 @@ export function TheaterShell({
   const effectiveRepeatMode: RepeatMode = repeatEnabled ? repeatMode : 'off'
   const repeatModeRef = useRef(effectiveRepeatMode)
   repeatModeRef.current = effectiveRepeatMode
+  // Persisted ACROSS visits (localStorage), not per-session: "keep playing" is
+  // a standing preference about how the theater behaves when you run out of
+  // unwatched posts, and a viewer who wants continuous play shouldn't have to
+  // re-set it every visit — which is what made the control feel like a missing
+  // setting rather than a switch. Deliberately NOT persisting 'one': that one
+  // is about the post in front of you, and inheriting it next visit would
+  // strand you looping something at random. So a session where you flip to
+  // 'one' leaves your last durable off/all choice untouched.
   useEffect(() => {
     if (loop) return
     try {
-      const stored = sessionStorage.getItem('adhx-theater-repeat')
-      if (stored === 'all' || stored === 'one') setRepeatMode(stored)
+      if (localStorage.getItem('adhx-theater-repeat') === 'all') setRepeatMode('all')
     } catch {
       // Storage unavailable — keep 'off'.
     }
   }, [loop])
   useEffect(() => {
-    if (loop) return
+    if (loop || repeatMode === 'one') return
     try {
-      sessionStorage.setItem('adhx-theater-repeat', repeatMode)
+      localStorage.setItem('adhx-theater-repeat', repeatMode)
     } catch {
       // Never let a storage failure break playback.
     }
@@ -1246,6 +1282,8 @@ export function TheaterShell({
   // Same trick for the unseen boundary — goNext is an empty-deps callback.
   const unseenCountRef = useRef(unseenCount)
   unseenCountRef.current = unseenCount
+  const currentKeyRef = useRef(currentKey)
+  currentKeyRef.current = currentKey
 
   // `userInitiated` is passed as an ARGUMENT (not read from a ref) because the
   // updater below runs in React's render phase, long after the call returned —
@@ -1409,6 +1447,32 @@ export function TheaterShell({
     // it already had, `src` never changes, StageVideo's `[src]` effect never
     // re-runs, and nothing ever calls play() again. Owner report: "I click
     // rewatch all… it wasn't auto-playing for me."
+    window.dispatchEvent(new CustomEvent('theater-resume'))
+  }, [clearSharedPin])
+
+  /**
+   * "Keep playing" on the caught-up stage: the standing choice, taken at the
+   * moment it matters. Sets repeat to whole-queue (persisted across visits, so
+   * it's a preference rather than a one-off) and carries straight on into the
+   * next post instead of returning to the top like `replayFromStart` does.
+   *
+   * The next index is computed here rather than through `goNext` because
+   * `repeatModeRef` still says 'off' at this point — the state set above lands
+   * a render later, so `goNext` would read the old value, hit the boundary and
+   * bounce right back into the waiting stage.
+   */
+  const keepPlaying = useCallback(() => {
+    hasNavigatedRef.current = true
+    clearSharedPin()
+    stagedFromWaitingKeyRef.current = null
+    setRepeatMode('all')
+    setWaiting(false)
+    const list = itemsRef.current
+    if (list.length > 0) {
+      const idx = list.findIndex((it) => theaterItemKey(it) === currentKeyRef.current)
+      const next = list[(idx + 1 + list.length) % list.length]
+      if (next) setCurrentKey(theaterItemKey(next))
+    }
     window.dispatchEvent(new CustomEvent('theater-resume'))
   }, [clearSharedPin])
 
@@ -1767,6 +1831,14 @@ export function TheaterShell({
   const chromeSeenReady = isTriageCollection ? true : seenSet.ready
   const chromeFreshKeys = isTriageCollection ? EMPTY_KEY_SET : feed.freshKeys
   const chromeNewCount = isTriageCollection ? 0 : newCount
+  // What the mobile peek bar's "3 / N" is out of: the unwatched run while
+  // repeat is off, the whole queue once it isn't.
+  const queueTotal = computeQueueTotal({
+    index: currentIndex,
+    length: displayItems.length,
+    unseenCount,
+    repeatMode: effectiveRepeatMode,
+  })
   const chromeCanPrev = isTriageCollection ? triageIndex > 0 : canPrev
   const chromeCanNext = isTriageCollection ? !triageFinished : canNext
   // The transport chevrons in triage's Collection tab are pure skip/back —
@@ -1866,6 +1938,9 @@ export function TheaterShell({
                     savedToday={feed.savedToday}
                     onReplay={displayItems.length > 0 ? replayFromStart : undefined}
                     replayCount={displayItems.length}
+                    onKeepPlaying={
+                      repeatEnabled && displayItems.length > 0 ? keepPlaying : undefined
+                    }
                   />
                 </div>
               )}
@@ -1916,6 +1991,7 @@ export function TheaterShell({
           freshKeys={chromeFreshKeys}
           newCount={chromeNewCount}
           wasSeenOnEntry={liveOrdering ? wasSeenOnEntry : undefined}
+          queueTotal={liveOrdering ? queueTotal : undefined}
           onSelect={chromeOnSelect}
           onPrev={chromeOnPrev}
           onNext={chromeOnNext}
@@ -1990,6 +2066,7 @@ export function TheaterShell({
         freshKeys={chromeFreshKeys}
         newCount={chromeNewCount}
         wasSeenOnEntry={liveOrdering ? wasSeenOnEntry : undefined}
+        queueTotal={liveOrdering ? queueTotal : undefined}
         savedToday={feed.savedToday}
         onSelect={chromeOnSelect}
         waiting={isTriageCollection ? false : waiting}

@@ -725,7 +725,7 @@ describe('TheaterMobileChrome: repeat control', () => {
         onCycleRepeat={vi.fn()}
       />,
     )
-    const btn = screen.getByLabelText('Repeat: off')
+    const btn = screen.getByLabelText('Stop when caught up')
     expect(btn.querySelector('.lucide-repeat')).toBeInTheDocument()
     expect(btn.querySelector('.lucide-repeat-1')).not.toBeInTheDocument()
     expect(btn.className).not.toContain('text-clay')
@@ -740,7 +740,7 @@ describe('TheaterMobileChrome: repeat control', () => {
         onCycleRepeat={vi.fn()}
       />,
     )
-    const btn = screen.getByLabelText('Repeat: whole queue')
+    const btn = screen.getByLabelText('Keep playing')
     expect(btn.querySelector('.lucide-repeat')).toBeInTheDocument()
     expect(btn.className).toContain('text-clay')
   })
@@ -754,7 +754,7 @@ describe('TheaterMobileChrome: repeat control', () => {
         onCycleRepeat={vi.fn()}
       />,
     )
-    const btn = screen.getByLabelText('Repeat: this post')
+    const btn = screen.getByLabelText('Repeat this post')
     expect(btn.querySelector('.lucide-repeat-1')).toBeInTheDocument()
     expect(btn.className).toContain('text-clay')
   })
@@ -769,7 +769,7 @@ describe('TheaterMobileChrome: repeat control', () => {
         onCycleRepeat={onCycleRepeat}
       />,
     )
-    fireEvent.click(screen.getByLabelText('Repeat: off'))
+    fireEvent.click(screen.getByLabelText('Stop when caught up'))
     expect(onCycleRepeat).toHaveBeenCalledTimes(1)
     // Sheet stays collapsed — the repeat button stops propagation so it
     // never also toggles the drag-handle's open/closed state.
@@ -792,7 +792,7 @@ describe('TheaterMobileChrome: repeat control', () => {
         onCycleRepeat={vi.fn()}
       />,
     )
-    const btn = screen.getByLabelText('Repeat: whole queue')
+    const btn = screen.getByLabelText('Keep playing')
     expect(btn.className).toContain('text-clay')
   })
 })

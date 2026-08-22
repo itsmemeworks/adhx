@@ -58,7 +58,13 @@ import { inferType } from '@/lib/trending/filter'
 import { resolvePastedLink } from '@/lib/theater/paste-preview'
 import { useSendFile } from './useSendFile'
 import { useClampExpand } from './useClampExpand'
-import { theaterItemKey, PLATFORM_LABEL, TRIAGE_TAB_ORDER, TRIAGE_TAB_LABEL } from './types'
+import {
+  theaterItemKey,
+  PLATFORM_LABEL,
+  TRIAGE_TAB_ORDER,
+  TRIAGE_TAB_LABEL,
+  REPEAT_MODE_LABEL,
+} from './types'
 import { TheaterLinkedText, stripShortLinksForPreview } from './TheaterText'
 import { progressKindFor } from './TheaterProgressLine'
 import { UpNextList, TYPE_TILE, warmOnHover } from './UpNextList'
@@ -109,6 +115,8 @@ export interface DesktopDockProps {
   newCount: number
   /** Passed straight through to `UpNextList` for its section headings — the arrival snapshot the queue was grouped by. Absent in playlist/shared mode. */
   wasSeenOnEntry?: (key: string) => boolean
+  /** How many posts the end cap's count is out of — what will actually play from here (see `computeQueueTotal`). Falls back to `items.length`. */
+  queueTotal?: number
   savedToday: number
   onSelect: (key: string) => void
   waiting?: boolean
@@ -967,6 +975,7 @@ export function DesktopDock({
   freshKeys,
   newCount,
   wasSeenOnEntry,
+  queueTotal,
   savedToday,
   onSelect,
   waiting,
@@ -1128,20 +1137,8 @@ export function DesktopDock({
           <button
             type="button"
             onClick={onCycleRepeat}
-            aria-label={
-              repeatMode === 'off'
-                ? 'Repeat: off'
-                : repeatMode === 'all'
-                  ? 'Repeat: whole queue'
-                  : 'Repeat: this post'
-            }
-            title={
-              repeatMode === 'off'
-                ? 'Repeat off'
-                : repeatMode === 'all'
-                  ? 'Repeating the whole queue'
-                  : 'Repeating this post'
-            }
+            aria-label={REPEAT_MODE_LABEL[repeatMode].action}
+            title={REPEAT_MODE_LABEL[repeatMode].state}
             className={cn(TRANSPORT_BTN, repeatMode !== 'off' && 'text-clay hover:text-clay')}
           >
             {repeatMode === 'one' ? <Repeat1 size={16} /> : <Repeat size={16} />}
@@ -1337,7 +1334,14 @@ export function DesktopDock({
           {showAll ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
           <span>Show all</span>
         </button>
-        <span className="font-mono text-[10.5px] text-ink-3">{items.length} posts</span>
+        {/* "N posts" counts what will actually PLAY from here — the unwatched
+            run while repeat is off, the whole queue once it isn't (see
+            `computeQueueTotal`). Saying 26 when auto-advance will only play the
+            5 pending ones is the desktop version of the misleading "3 / 26"
+            the mobile peek bar used to show. */}
+        <span className="font-mono text-[10.5px] text-ink-3">
+          {queueTotal ?? items.length} posts
+        </span>
         {!playlist && newCount > 0 && (
           <span className="text-[10.5px] font-semibold text-clay">{newCount} new</span>
         )}

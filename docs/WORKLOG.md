@@ -4,6 +4,17 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-22 — The repeat control IS the auto-advance switch (named, remembered, and reflected in the count)
+
+Owner asked whether the auto-advance boundary needed a switch of its own. It doesn't — repeat already encodes it (`off` = stop when caught up, `all` = keep going through watched posts and round again). A second toggle would be two controls for one decision, against the "one control = state + action" rule. What it needed was to LOOK like a switch:
+
+- **Labels name the behaviour, not the mechanism.** `REPEAT_MODE_LABEL` in `types.ts` (one source, so the two chromes can't drift): "Stop when caught up" / "Keep playing" / "Repeat this post". The old "Repeat: off" said nothing about the boundary, which is the actual decision.
+- **It's remembered across visits.** Moved from `sessionStorage` to `localStorage`, so someone who wants continuous play doesn't re-set it every visit — that per-visit reset is most of why it felt like a missing setting. `'one'` deliberately does NOT persist: it's about the post in front of you, and inheriting it would strand you looping something at random, so flipping to it leaves the durable off/all choice intact.
+- **Offered at the moment it matters.** The caught-up stage gained "Keep playing" beside "Re-watch all N" — one-shot vs from-now-on, at the point the viewer has just run out of new posts. `keepPlaying` computes the next index itself rather than calling `goNext`, because `repeatModeRef` still says 'off' on that tick and goNext would hit the boundary and bounce straight back into waiting.
+- **The count reflects it** (owner: "maybe for mobile where it shows the count and position in that count, it should be aware of that too"). `computeQueueTotal` returns the unwatched run while repeat is off and the full length once it isn't, falling back to full length in the two cases where the run doesn't describe the viewer's position (caught up, or browsed back into watched posts). Wired into the mobile peek bar's "3 / 7" and the desktop end cap's "N posts". Verified live: repeat off reads "9 posts", flipping to Keep playing reads "17 posts" — the switch visibly changes the number, which is the clearest feedback that it did something.
+- **Known gap**: in TRIAGE mode (authed `/`) the mobile peek-bar centre renders the Live ⇄ My Collection tab switcher, so the "3 / 7" fraction isn't shown there at all — only the desktop end cap is. Flagged to the owner rather than crowding a tight mobile bar on a guess.
+- **State**: 2340 tests / 186 files green (new `TheaterShell-repeat.component.test.tsx` mounts the shell and drives the real control to assert the persistence carve-out and the denominator change; `computeQueueTotal` + label tests in `theater-live-queue.test.ts`), typecheck + prettier clean.
+
 ## 2026-08-22 — Repeat button regression + one shared <video> for every MP4 platform
 
 - **Repeat icon gone from the authed live theater** (owner, desktop). Regression I caused earlier the same day: the button was gated on `!isTriage`, which was correct while triage was an overlay over the grid — but the moment authed `/` became `mode="triage"` on the Live tab, that silently removed repeat for every signed-in viewer. Now gated on `!isTriageCollection`, so only the finite Done/Later backlog hides it. Verified live: the cycle reads off → whole queue → this post → off.
