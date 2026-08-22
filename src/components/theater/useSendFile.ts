@@ -31,8 +31,18 @@ export interface SendFile {
   supported: boolean
   /** True once the file is prefetched and the share sheet can open in-tap. */
   ready: boolean
-  /** True while a send is in flight. */
+  /** True while a send is in flight — INCLUDING the file fetch a tap kicks off
+   * when the prefetch hasn't finished. The button must keep its spinner up for
+   * the whole of this (owner: "it needs to be smart enough that when you tap
+   * download, it keeps the spinner going until it has the file to send"). */
   sending: boolean
+  /**
+   * The file is now cached but the share sheet was refused because the tap's
+   * user activation expired while fetching it (iOS/Android both drop
+   * activation across an `await`). One more tap shares the real file
+   * instantly. Cleared on a successful send and whenever the item changes.
+   */
+  primed: boolean
   /**
    * The verb `send()` will actually perform: `'share'` only on a touch
    * platform (iOS/Android) whose browser can put a FILE on the share sheet;
@@ -192,7 +202,10 @@ function pingSharePulse(platform: string, id: string): void {
   }
 }
 
-export function useSendFile(item: TheaterItem | null): SendFile {
+export function useSendFile(
+  item: TheaterItem | null,
+  { eager = false }: { eager?: boolean } = {},
+): SendFile {
   const [ready, setReady] = useState(false)
   const [sending, setSending] = useState(false)
   // SSR-safe default: 'share' until the client effect below settles it. This
@@ -200,6 +213,7 @@ export function useSendFile(item: TheaterItem | null): SendFile {
   // harmless (and avoided in practice — Rail/mobile chrome only render the
   // button once `supported` is known, by which point this has run).
   const [mode, setMode] = useState<'share' | 'download'>('share')
+  const [primed, setPrimed] = useState(false)
   const blobRef = useRef<Blob | null>(null)
 
   useEffect(() => {
@@ -236,6 +250,7 @@ export function useSendFile(item: TheaterItem | null): SendFile {
     // instance tracks the same current item, and a superseded fetch is
     // bounded by its own 30s timeout anyway.
     setReady(false)
+    setPrimed(false)
     blobRef.current = null
 
     if (!source || !key) return
@@ -247,36 +262,63 @@ export function useSendFile(item: TheaterItem | null): SendFile {
     }
 
     let cancelled = false
-    const delayTimer = setTimeout(() => {
-      if (cancelled) return
-      prefetchBlob(key, source.src)
-        .then((blob) => {
-          if (cancelled) return
-          blobRef.current = blob
-          setReady(true)
-        })
-        .catch(() => {
-          // Swallow — send() falls back to a link-only share/copy when no
-          // blob ever arrives. There's nothing actionable to surface here.
-        })
-    }, PREFETCH_DELAY_MS)
+    // `eager` skips the skim guard: on a shared preview page there's one post
+    // the visitor followed a link FOR, and it's pinned and repeating rather
+    // than skimmed past — so start immediately and the file is usually ready
+    // before any realistic tap, which is the only way to share it inside the
+    // tap's own activation.
+    const delayTimer = setTimeout(
+      () => {
+        if (cancelled) return
+        prefetchBlob(key, source.src)
+          .then((blob) => {
+            if (cancelled) return
+            blobRef.current = blob
+            setReady(true)
+          })
+          .catch(() => {
+            // Swallow — send() falls back to a link-only share/copy when no
+            // blob ever arrives. There's nothing actionable to surface here.
+          })
+      },
+      eager ? 0 : PREFETCH_DELAY_MS,
+    )
 
     return () => {
       cancelled = true
       clearTimeout(delayTimer)
     }
-  }, [key, source?.src])
+  }, [key, source?.src, eager])
 
   const send = useCallback(async () => {
     if (!item || !source) return
     setSending(true)
     try {
       const canonicalUrl = canonicalUrlFor(item)
-      const blob = blobRef.current
       const hasShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
       // The settled mode gates the share paths — desktop (mode 'download')
       // never opens a share sheet even though its browser may have one.
       const wantsShare = mode === 'share' && hasShare
+
+      /**
+       * Tapped before the prefetch finished. This used to fall straight
+       * through to a link-only share, so a tap 1s into a 3MB video put a URL
+       * on the WhatsApp message instead of the file — the whole point of the
+       * button (owner report). Now the tap WAITS for the file, spinner up
+       * (`sending` is still true), joining the in-flight prefetch rather than
+       * starting a second download. Only a genuine fetch failure falls
+       * through to the link paths below.
+       */
+      let blob = blobRef.current
+      if (!blob && key) {
+        try {
+          blob = await prefetchBlob(key, source.src)
+          blobRef.current = blob
+          setReady(true)
+        } catch {
+          // No file to be had — the fallbacks below still make the tap useful.
+        }
+      }
 
       if (blob && wantsShare) {
         const fallbackType = source.kind === 'photo' ? 'image/jpeg' : 'video/mp4'
@@ -285,20 +327,32 @@ export function useSendFile(item: TheaterItem | null): SendFile {
         if (!navigator.canShare || navigator.canShare(payload)) {
           try {
             await navigator.share(payload)
+            setPrimed(false)
             pingSharePulse(item.platform, item.bookmarkId || '')
             return
           } catch (err) {
             // User dismissed the sheet — a cancel, not a failure. Don't fall
             // through to a second share/download prompt.
             if (err instanceof DOMException && err.name === 'AbortError') return
+            // Activation expired while we fetched the file (both iOS and
+            // Chrome consume transient activation across an `await`). The file
+            // IS cached now, so a second tap shares it inside its own gesture
+            // — say so instead of quietly downgrading this tap to a link,
+            // which is the failure the owner reported.
+            if (err instanceof DOMException && err.name === 'NotAllowedError') {
+              setPrimed(true)
+              return
+            }
             // Any other error (e.g. unsupported payload at share-time):
             // fall through to the link/download paths below.
           }
         }
       }
 
-      // Blob not ready yet (early tap) or file-sharing unsupported — never
-      // leave the tap dead. Link-only share is valid without `files`.
+      // The file could not be fetched at all (dead proxy/mirror), or the
+      // payload was rejected — never leave the tap dead. Link-only share is
+      // valid without `files`. NOT the early-tap path any more: that now waits
+      // for the file above.
       if (wantsShare) {
         try {
           await navigator.share({ url: canonicalUrl })
@@ -346,7 +400,7 @@ export function useSendFile(item: TheaterItem | null): SendFile {
     } finally {
       setSending(false)
     }
-  }, [item, source, mode])
+  }, [item, source, mode, key])
 
-  return { supported, ready, sending, mode, send }
+  return { supported, ready, sending, primed, mode, send }
 }

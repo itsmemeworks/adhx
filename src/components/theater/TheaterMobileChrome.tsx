@@ -212,7 +212,11 @@ export function TheaterMobileChrome({
   const sheetRef = useRef<HTMLDivElement>(null)
   const peekRef = useRef<HTMLDivElement>(null)
   const sheetDrag = useSheetDrag({ open: sheetOpen, onOpenChange: setSheetOpen, sheetRef, peekRef })
-  const sendFile = useSendFile(current)
+  // Eager on a shared preview page: there's one post the visitor followed a
+  // link FOR (pinned + repeating, not skimmed past), so the file should be
+  // ready before they reach for Send — the only way the share sheet opens
+  // inside the tap's own user activation. Elsewhere the 2s skim guard stands.
+  const sendFile = useSendFile(current, { eager: mode === 'shared' })
   const { ref: captionRef, expanded, setExpanded, overflowing } = useClampExpand(currentKey)
 
   // `mediaKind` is the REAL content kind — drives the audio/pause buttons,
@@ -724,14 +728,30 @@ export function TheaterMobileChrome({
                           ? 'Opens your share sheet with the file'
                           : 'Download the file'
                       }
-                      className={PILL_GLASS}
+                      className={cn(PILL_GLASS, sendFile.primed && 'border-clay')}
                     >
+                      {/* Spinner covers the whole wait, including the file
+                          fetch a tap kicks off when the prefetch hasn't
+                          landed (owner: "keeps the spinner going until it has
+                          the file to send"). `primed` = the file is cached but
+                          the sheet needs a fresh gesture, so ASK for the tap
+                          rather than silently sharing a link. */}
                       {sendFile.sending ? (
                         <Loader2 size={15} className="animate-spin" />
+                      ) : sendFile.mode === 'share' ? (
+                        <Share2 size={15} />
                       ) : (
                         <DownloadIcon size={15} />
                       )}
-                      <span>Download</span>
+                      <span>
+                        {sendFile.sending
+                          ? 'Getting file'
+                          : sendFile.primed
+                            ? 'Send now'
+                            : sendFile.mode === 'share'
+                              ? 'Send'
+                              : 'Download'}
+                      </span>
                     </button>
                   ) : textLike && (current.text || '').trim() ? (
                     // Text-like posts have no file — the Download slot copies

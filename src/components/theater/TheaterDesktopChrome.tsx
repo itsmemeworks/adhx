@@ -32,6 +32,7 @@ import {
   Copy as CopyIcon,
   Maximize2,
   Download as DownloadIcon,
+  Share2,
   Link as LinkIcon,
   ExternalLink,
   Flame,
@@ -398,7 +399,11 @@ export function DesktopStageChrome({
   const textCopiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const currentKey = current ? theaterItemKey(current) : null
   const { ref: captionRef, expanded, setExpanded, overflowing } = useClampExpand(currentKey)
-  const sendFile = useSendFile(current)
+  // Eager on a shared preview page: there's one post the visitor followed a
+  // link FOR (pinned + repeating, not skimmed past), so the file should be
+  // ready before they reach for Send — the only way the share sheet opens
+  // inside the tap's own user activation. Elsewhere the 2s skim guard stands.
+  const sendFile = useSendFile(current, { eager: mode === 'shared' })
 
   useEffect(
     () => () => {
@@ -853,14 +858,28 @@ export function DesktopStageChrome({
                   ? 'Opens your share sheet with the file'
                   : 'Download the file'
               }
-              className={GLASS}
+              className={cn(GLASS, sendFile.primed && 'border-clay')}
             >
+              {/* Same contract as the mobile pill: the spinner covers the file
+                  fetch a tap starts, and `primed` asks for the second tap the
+                  share sheet needs rather than downgrading to a link. Reachable
+                  here on a tablet, which gets this chrome at lg+ widths. */}
               {sendFile.sending ? (
                 <Loader2 size={14} className="animate-spin" />
+              ) : sendFile.mode === 'share' ? (
+                <Share2 size={14} />
               ) : (
                 <DownloadIcon size={14} />
               )}
-              <span>Download</span>
+              <span>
+                {sendFile.sending
+                  ? 'Getting file'
+                  : sendFile.primed
+                    ? 'Send now'
+                    : sendFile.mode === 'share'
+                      ? 'Send'
+                      : 'Download'}
+              </span>
             </button>
           ) : textLike && caption ? (
             // Text-like posts have no file — the Download slot copies the
