@@ -100,9 +100,14 @@ export function FeedListRow({
         unread ? 'bg-surface' : 'bg-transparent',
         selectionMode && selected && 'bg-clay/10 hover:bg-clay/15',
         // The list sits inside an `overflow-hidden` surface, which clips a
-        // glow — so the just-pasted row is tinted instead of haloed. Same
-        // signal, same accent, appropriate to the shape.
-        justAdded && 'bg-clay/10',
+        // glow, so the just-pasted row gets a left accent bar instead — same
+        // accent, appropriate to the shape.
+        //
+        // NOT `bg-clay/10`: `clay` is a hex CSS var, and Tailwind's opacity
+        // modifier compiles to NOTHING on those (known repo gotcha), so the
+        // tint this started as was invisible — the list view had no
+        // confirmation at all while grid and bento glowed.
+        justAdded && 'border-l-2 border-clay',
       )}
     >
       {selectionMode && (

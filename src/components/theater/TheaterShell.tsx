@@ -382,7 +382,26 @@ export function computeLiveNext(opts: {
     next === 'waiting' || (!loop && !userInitiated && unseenCount > 0 && next >= unseenCount)
   if (!wouldStop) return next
   // About to stop — but only actually stop if there's nothing left unwatched.
-  if (typeof nextUnwatchedIndex === 'number' && nextUnwatchedIndex >= 0) return nextUnwatchedIndex
+  //
+  // The index must be USABLE, not merely present. It comes from a ref computed
+  // during an earlier render, so after a fresh arrival prepends and reorders
+  // the queue it can be stale in two ways, and both used to be returned
+  // verbatim:
+  //
+  //  - equal to `index`: the caller then sets the key it already has, React
+  //    bails on the identical state, no re-render happens, the finished video
+  //    never gets a new src — and the waiting stage never appears either. That
+  //    is the owner's "it played the new video and then just stopped, without
+  //    showing the final screen".
+  //  - beyond the end: `items[next]` is undefined downstream.
+  //
+  // Either way the honest answer is the caught-up stage.
+  const rescuable =
+    typeof nextUnwatchedIndex === 'number' &&
+    nextUnwatchedIndex >= 0 &&
+    nextUnwatchedIndex < length &&
+    nextUnwatchedIndex !== index
+  if (rescuable) return nextUnwatchedIndex
   return 'waiting'
 }
 
@@ -1750,7 +1769,13 @@ export function TheaterShell({
     // video read as "2 / 21" — the session's original lead-pick was still
     // occupying slot 1). The viewer has been through the whole queue by now,
     // so newest-first is the honest order.
-    setPinnedKey(arrived)
+    //
+    // EXCEPT in shared mode, where `pinnedKey` is not a lead-pick but the
+    // shared post itself — the one invariant of a preview page. Re-pointing it
+    // at an arrival bumps the post the visitor followed a link to out of slot
+    // 1, and leaves the "Shared post" heading (which tracks `sharedItemKey`)
+    // labelling a row in the middle of the list (review finding).
+    if (mode !== 'shared') setPinnedKey(arrived)
     setCurrentKey(arrived)
     setWaiting(false)
   }, [waiting, feed.freshKeys])
@@ -1867,7 +1892,6 @@ export function TheaterShell({
       if (s === 'saving' || s === 'saved') return s
       return 'saving'
     })
-    if (!playlist) return
     try {
       const res = await fetch(
         `/api/share/tag/by-name/${encodeURIComponent(playlist.curator)}/${encodeURIComponent(playlist.tag)}/clone`,

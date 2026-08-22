@@ -7,6 +7,7 @@ import { FeedListRow } from './FeedListRow'
 import { FeedBentoTile, BENTO_SPANS } from './FeedBentoTile'
 import { EmptyAccountOnboarding } from './EmptyAccountOnboarding'
 import type { FeedItem } from './types'
+import { notifyTagsChanged } from '@/lib/client-events'
 
 export type FeedView = 'grid' | 'list' | 'bento'
 
@@ -102,11 +103,7 @@ export function FeedGrid({
           const tags = next
             ? [...item.tags.filter((t) => t !== tagSelectTag), tagSelectTag]
             : item.tags.filter((t) => t !== tagSelectTag)
-          window.dispatchEvent(
-            new CustomEvent('bookmark-tags-changed', {
-              detail: { platform, bookmarkId: item.id, tags },
-            }),
-          )
+          notifyTagsChanged({ platform, bookmarkId: item.id, tags })
         })
         .catch(() => {
           // Revert on failure — best-effort, no toast (mirrors the

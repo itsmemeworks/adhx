@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { notifyTagsChanged } from '@/lib/client-events'
 import { Check, Loader2, Plus, Tag as TagIcon, X } from 'lucide-react'
 import { kebabTagInput, sanitizeTag } from '@/lib/utils/tag'
 import type { TagItem } from '@/components/feed/types'
@@ -147,11 +148,7 @@ export function TagQuickPicker({
       // Announce the post's full updated tag list (unified-theater-triage.md
       // §4/§B) so any open triage queue can patch its snapshot without a
       // refetch — see TheaterShell's `bookmark-tags-changed` listener.
-      window.dispatchEvent(
-        new CustomEvent('bookmark-tags-changed', {
-          detail: { platform, bookmarkId, tags: Array.from(nextChecked) },
-        }),
-      )
+      notifyTagsChanged({ platform, bookmarkId, tags: Array.from(nextChecked) })
     } catch {
       // Revert on failure.
       setChecked((prev) => {

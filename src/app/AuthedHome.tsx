@@ -529,6 +529,10 @@ function FeedPageContent(): React.ReactElement {
 
         const response = await fetch(`/api/feed?${params}`)
         const data = await response.json()
+        // A superseded response must touch NOTHING — including `loading`. The
+        // pending-navigation effect below fires on any loading true→false
+        // edge, so clearing it here resolved deep links (`?open=`, `?triage=1`,
+        // `added=success`) against the stale snapshot, once, with no retry.
         if (requestId !== feedRequestRef.current) return
 
         if (resetPage) {
@@ -554,7 +558,10 @@ function FeedPageContent(): React.ReactElement {
       } catch (error) {
         console.error('Failed to fetch feed:', error)
       } finally {
-        setLoading(false)
+        // Only the newest request owns the spinner. A superseded one clearing
+        // it produced a spurious true→false→true flicker mid-flight, which the
+        // pending-navigation effect reads as "the feed is ready".
+        if (requestId === feedRequestRef.current) setLoading(false)
       }
     },
     [
@@ -1180,10 +1187,12 @@ function FeedPageContent(): React.ReactElement {
         >
           <span
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] shadow-m-sm backdrop-blur',
-              pasteAdd.status === 'error'
-                ? 'border-clay/40 bg-surface/95 text-ink-2'
-                : 'border-hairline bg-surface/95 text-ink-3',
+              // Opacity modifiers are deliberately absent: `clay` and
+              // `surface` are hex CSS vars, and `/NN` on those compiles to
+              // nothing in this setup — the pill was rendering with no
+              // background or border at all.
+              'inline-flex items-center gap-1.5 rounded-full border bg-surface px-3 py-1.5 text-[12.5px] shadow-m-sm',
+              pasteAdd.status === 'error' ? 'border-clay text-ink-2' : 'border-hairline text-ink-3',
             )}
           >
             {pasteAdd.status === 'adding' && <Loader2 size={13} className="animate-spin" />}

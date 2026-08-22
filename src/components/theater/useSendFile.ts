@@ -310,7 +310,12 @@ export function useSendFile(
        * through to the link paths below.
        */
       let blob = blobRef.current
-      if (!blob && key) {
+      // Only the SHARE path needs the bytes in hand — `navigator.share` can't
+      // be handed a URL to fetch. Download mode keeps its old streaming
+      // anchor (below): waiting on a full in-memory buffer of a 1080p video
+      // behind a spinner is strictly worse than the browser's own download
+      // progress, and this fix was only ever about the share sheet.
+      if (!blob && key && wantsShare) {
         try {
           blob = await prefetchBlob(key, source.src)
           blobRef.current = blob
