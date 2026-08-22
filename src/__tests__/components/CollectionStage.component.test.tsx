@@ -16,8 +16,12 @@ import { CollectionStage } from '@/components/theater/CollectionStage'
 import type { FeedItem } from '@/components/feed/types'
 
 vi.mock('@/components/theater/StageVideo', () => ({
-  StageVideo: (props: { onEnded?: () => void }) => (
-    <div data-testid="stage-video" data-has-onended={String(!!props.onEnded)} />
+  StageVideo: (props: { onEnded?: () => void; repeat?: boolean }) => (
+    <div
+      data-testid="stage-video"
+      data-has-onended={String(!!props.onEnded)}
+      data-repeat={String(!!props.repeat)}
+    />
   ),
 }))
 // The probe + auto-advance guards live in `useInstagramStage` now, so that's
@@ -34,8 +38,12 @@ vi.mock('@/components/theater/StageInstagram', () => ({
   StageInstagram: () => <div data-testid="stage-instagram" />,
 }))
 vi.mock('@/components/theater/StageYouTube', () => ({
-  StageYouTube: (props: { onEnded?: () => void }) => (
-    <div data-testid="stage-youtube" data-has-onended={String(!!props.onEnded)} />
+  StageYouTube: (props: { onEnded?: () => void; repeat?: boolean }) => (
+    <div
+      data-testid="stage-youtube"
+      data-has-onended={String(!!props.onEnded)}
+      data-repeat={String(!!props.repeat)}
+    />
   ),
 }))
 vi.mock('@/components/theater/StageText', () => ({
@@ -125,6 +133,19 @@ describe('CollectionStage: onEnded wiring to the video-capable stages', () => {
       />,
     )
     expect(getByTestId('stage-video').dataset.hasOnended).toBe('false')
+  })
+
+  it('forwards repeat to StageVideo so repeat-one can loop the player', () => {
+    const { getByTestId } = render(
+      <CollectionStage
+        feedItem={feedItem({ media: [{ mediaType: 'video' }] as FeedItem['media'] })}
+        muted
+        onRequestUnmute={vi.fn()}
+        onEnded={vi.fn()}
+        repeat
+      />,
+    )
+    expect(getByTestId('stage-video').dataset.repeat).toBe('true')
   })
 
   it('a text-only item ignores onEnded (StageText has no such affordance) and still renders', () => {

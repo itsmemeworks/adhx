@@ -102,7 +102,7 @@ export interface DesktopStageChromeProps {
   onRequestSignIn?: () => void
   /** Playlist mode, non-owner viewers: the "Make your own" CTA — opens the sign-in modal in place (authed non-owners are routed home instead, handled by the caller). */
   onRequestMakeYourOwn?: () => void
-  /** Collection mode (unified-theater-collection.md §2): swaps the top bar's Live/paste-input for a Collection↔Live tab switcher, and the bottom-right action set for Later/Tag/Delete/Done. */
+  /** Collection mode: Collection↔Live tab switcher in the top bar; Collection tab adds Archive to the Live action row. */
   collection?: TheaterPersonalChrome
 }
 
@@ -558,25 +558,8 @@ export function DesktopStageChrome({
         </div>
       )}
 
-      {/* Bottom-right: action buttons. The personal theater's Collection tab replaces the
-          whole set with Later/Tag/Delete/Done — see
-          docs/specs/unified-theater-collection.md §2. */}
-      {current && collection && collection.tab === 'collection' ? (
-        <div
-          className={cn(
-            'pointer-events-auto absolute bottom-6 right-7 transition-[opacity,transform] duration-200 ease-out',
-            declutter && 'translate-y-3 opacity-0 pointer-events-none',
-          )}
-        >
-          <TheaterCollectionActions
-            collection={collection}
-            tagCount={tagCount}
-            openUrl={openUrl}
-            platformLabel={platformLabel}
-            variant="desktop"
-          />
-        </div>
-      ) : current ? (
+      {/* Bottom-right: Download / Link / Tag / Open — Collection adds Archive. */}
+      {current ? (
         <div
           className={cn(
             'pointer-events-auto absolute bottom-6 right-7 flex items-center gap-2 transition-[opacity,transform] duration-200 ease-out',
@@ -639,6 +622,15 @@ export function DesktopStageChrome({
                 className={SAVE_OUTLINE}
               />
             )
+          ) : collection?.tab === 'collection' ? (
+            <button
+              type="button"
+              onClick={collection.onTag}
+              className={cn(GLASS, tagCount > 0 && 'border-clay/50 text-clay')}
+            >
+              <TagIcon size={14} fill={tagCount > 0 ? 'currentColor' : 'none'} />
+              <span>{tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}</span>
+            </button>
           ) : (mode === 'shared' && authed) || collection?.tab === 'live' ? (
             collection?.tab === 'live' ? (
               <>
@@ -677,6 +669,9 @@ export function DesktopStageChrome({
               <ExternalLink size={14} />
               <span>Open</span>
             </a>
+          )}
+          {collection?.tab === 'collection' && (
+            <TheaterCollectionActions collection={collection} variant="desktop" />
           )}
         </div>
       ) : null}

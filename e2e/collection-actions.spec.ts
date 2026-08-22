@@ -6,7 +6,7 @@ import {
   authedTest,
   caption,
   expectTheaterReady,
-  feedHasId,
+  goNext,
   tagsNamed,
 } from './helpers'
 
@@ -37,32 +37,63 @@ authedTest.describe('collection actions', () => {
     await expect(page.getByText(`#${TMP_TAG}`).first()).toBeVisible()
   })
 
-  authedTest('Delete removes the post; Undo restores it before the 5s commit', async ({ page }) => {
-    const stage = page.getByRole('dialog', { name: 'Your collection' })
-    await page.goto(`/collection?open=${POST.hotel.id}&platform=twitter`)
-    await expectTheaterReady(page)
-    await expect(stage.getByText(POST.hotel.text).first()).toBeVisible()
+  authedTest(
+    'collection actions match Live plus Archive — no Later or Delete',
+    async ({ page }) => {
+      await page.goto(`/collection?open=${POST.hotel.id}&platform=twitter`)
+      await expectTheaterReady(page)
+      await expect(page.getByRole('button', { name: 'Link' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Tag', exact: true })).toBeVisible()
+      await expect(page.getByRole('link', { name: 'Open' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Copy' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Later' })).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'Save' })).toHaveCount(0)
+      await expect(page.getByRole('link', { name: 'Open' })).toHaveAttribute(
+        'href',
+        `https://x.com/${POST.hotel.author}/status/${POST.hotel.id}`,
+      )
+    },
+  )
 
-    await page.getByRole('button', { name: 'Delete' }).click()
-    await expect(page.getByRole('button', { name: 'Undo', exact: true })).toBeVisible()
-    await expect(stage.getByText(POST.hotel.text)).toHaveCount(0)
+  authedTest(
+    'Next and arrows skip without a Later toast; Delete key is inert',
+    async ({ page }) => {
+      await page.goto(`/collection?open=${POST.alpha.id}&platform=twitter`)
+      await expectTheaterReady(page)
+      await expect(caption(page, POST.alpha.text)).toBeVisible()
 
-    await page.getByRole('button', { name: 'Undo', exact: true }).click()
-    await expect(stage.getByText(POST.hotel.text).first()).toBeVisible()
-    expect(await feedHasId(page, POST.hotel.id)).toBe(true)
-  })
+      await goNext(page)
+      await expect(caption(page, POST.bravo.text)).toBeVisible()
+      await expect(page.getByText('Later')).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'Undo', exact: true })).toHaveCount(0)
 
-  authedTest('Later advances without removing the post from the collection', async ({ page }) => {
-    const stage = page.getByRole('dialog', { name: 'Your collection' })
-    await page.goto('/collection')
-    await expectTheaterReady(page)
-    const before = (await stage.locator('p').first().textContent())?.trim()
-    expect(before).toBeTruthy()
+      await page.keyboard.press('ArrowRight')
+      await expect(caption(page, POST.charlie.text)).toBeVisible()
+      await expect(page.getByText('Later')).toHaveCount(0)
 
-    await page.getByRole('button', { name: 'Later' }).click()
-    await expect(page.getByRole('button', { name: 'Undo', exact: true })).toBeVisible()
-    await expect(stage.locator('p').first()).not.toHaveText(before!)
-    expect(await feedHasId(page, POST.alpha.id)).toBe(true)
-    expect(await feedHasId(page, POST.bravo.id)).toBe(true)
-  })
+      await page.keyboard.press('Delete')
+      await expect(caption(page, POST.charlie.text)).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(0)
+    },
+  )
+})
+
+authedTest.describe('collection actions (mobile)', () => {
+  authedTest.use({ viewport: { width: 390, height: 844 } })
+
+  authedTest(
+    'mobile row is Share / Tag / Open / Archive — no Later or Delete',
+    async ({ page }) => {
+      await page.goto(`/collection?open=${POST.hotel.id}&platform=twitter`)
+      await expectTheaterReady(page)
+      await expect(page.getByRole('button', { name: 'Share link' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Tag' })).toBeVisible()
+      await expect(page.getByRole('link', { name: 'Open on X' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Later' })).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(0)
+    },
+  )
 })

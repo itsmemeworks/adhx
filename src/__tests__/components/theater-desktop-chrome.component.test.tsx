@@ -565,8 +565,6 @@ describe('DesktopStageChrome', () => {
       tab: 'live' as const,
       onTabChange: vi.fn(),
       onDone: vi.fn(),
-      onLater: vi.fn(),
-      onDelete: vi.fn(),
       onTag: vi.fn(),
       onSave: vi.fn(),
       onLiveTag: vi.fn(),
@@ -685,8 +683,6 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
       tab: 'live' as const,
       onTabChange: vi.fn(),
       onDone: vi.fn(),
-      onLater: vi.fn(),
-      onDelete: vi.fn(),
       onTag: vi.fn(),
       onSave: vi.fn(),
       onLiveTag: vi.fn(),
@@ -718,6 +714,36 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
     expect(savePlaylistBtn.className).not.toContain('bg-clay-grad')
   })
 
+  it('collection tab uses Live actions plus Archive — no Later or Delete', () => {
+    mockUseSendFile.mockReturnValue({
+      supported: true,
+      ready: true,
+      sending: false,
+      mode: 'download' as const,
+      send: vi.fn(),
+    })
+    const collection = {
+      tab: 'collection' as const,
+      onTabChange: vi.fn(),
+      onDone: vi.fn(),
+      onTag: vi.fn(),
+      onSave: vi.fn(),
+      onLiveTag: vi.fn(),
+      savedKeys: new Set<string>(),
+      remaining: 3,
+      onClose: vi.fn(),
+    }
+    render(<DesktopStageChrome {...stageBase} current={videoItem()} collection={collection} />)
+    expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Link' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Tag' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Archive' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Later' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
+  })
+
   it('text posts never show Download (nothing sendable)', () => {
     mockUseSendFile.mockReturnValue({
       supported: false,
@@ -735,8 +761,6 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
       tab: 'live' as const,
       onTabChange: vi.fn(),
       onDone: vi.fn(),
-      onLater: vi.fn(),
-      onDelete: vi.fn(),
       onTag: vi.fn(),
       onSave: vi.fn(),
       onLiveTag: vi.fn(),
@@ -1069,8 +1093,6 @@ describe('DesktopStageChrome: theaterActive prop wiring', () => {
     tab: 'live' as const,
     onTabChange: vi.fn(),
     onDone: vi.fn(),
-    onLater: vi.fn(),
-    onDelete: vi.fn(),
     onTag: vi.fn(),
     onSave: vi.fn(),
     onLiveTag: vi.fn(),

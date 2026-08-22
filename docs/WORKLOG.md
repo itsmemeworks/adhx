@@ -6,6 +6,24 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-22 — YouTube clay bar without iframe click
+
+YouTube withholds `currentTime` until a click inside the embed, so the progress line stayed at 0 on autoplay. While playing we now clock the bar from duration + play-start (snap when a real time / `mediaReferenceTime` arrives) and pull `getCurrentTime`/`getDuration` if starved. Interpolated time is display-only. E2E stubs the nocookie embed so the bar can be asserted without a real player.
+
+---
+
+## 2026-08-22 — Collection actions match Live
+
+`/collection` action row is Download / Link / Tag / Open plus Archive. Later and Delete are gone. Keyboard matches Live (arrows skip); U still undoes Archive.
+
+---
+
+## 2026-08-22 — Repeat on /collection
+
+My Collection hid the repeat control (`repeatEnabled = !isCollectionTab`) and video-end always walked off the queue. Same off → all → one switch as Live now. Playback wrap is `personalAdvanceOnEndedIndex`; All Clear offers Keep playing.
+
+---
+
 ## 2026-08-22 — Signed-out e2e URL assertion
 
 `/collection` and `/library` bounce signed-out visitors to `/`. Live then replaceStates to the current preview path, so `toHaveURL(/\/$/)` raced. The test now waits for theater chrome and asserts we left the authed routes.

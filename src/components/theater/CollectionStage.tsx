@@ -90,6 +90,8 @@ export interface CollectionStageProps {
    * branches below — media posts get their chips from the chrome's bottom-left
    * overlay instead, which already sits over the content. */
   tags?: string[]
+  /** Repeat-one / single-item loop — same player `loop` the live Stage uses. */
+  repeat?: boolean
 }
 
 /** Dispatches the right stage variant for the current collection `FeedItem`,
@@ -101,6 +103,7 @@ export function CollectionStage({
   onRequestUnmute,
   onEnded,
   tags,
+  repeat,
 }: CollectionStageProps) {
   const theaterItem = feedItemToTheaterItem(feedItem)
   const platform = feedItem.platform ?? 'twitter'
@@ -114,6 +117,7 @@ export function CollectionStage({
         muted={muted}
         onRequestUnmute={onRequestUnmute}
         onEnded={onEnded}
+        repeat={repeat}
       />
     )
   }
@@ -129,6 +133,7 @@ export function CollectionStage({
         muted={muted}
         onRequestUnmute={onRequestUnmute}
         onEnded={onEnded}
+        repeat={repeat}
       />
     )
   }
@@ -149,6 +154,7 @@ export function CollectionStage({
         muted={muted}
         onRequestUnmute={onRequestUnmute}
         onEnded={onEnded}
+        repeat={repeat}
       />
     )
   }
@@ -213,13 +219,15 @@ function CollectionInstagramStage({
   muted,
   onRequestUnmute,
   onEnded,
+  repeat,
 }: {
   item: TheaterItem
   muted: boolean
   onRequestUnmute: () => void
   onEnded?: () => void
+  repeat?: boolean
 }) {
-  const instagram = useInstagramStage({ item, active: true, onEnded })
+  const instagram = useInstagramStage({ item, active: true, onEnded, repeat })
   if (instagram.status === 'ready' && instagram.src) {
     return (
       <StageVideo
@@ -229,6 +237,7 @@ function CollectionInstagramStage({
         muted={muted}
         onRequestUnmute={onRequestUnmute}
         onEnded={onEnded}
+        repeat={repeat}
       />
     )
   }

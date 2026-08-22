@@ -9,7 +9,9 @@
  *   (StageYouTube drives real play/pause/ended/mute via the raw postMessage
  *   protocol — see that file) and, since round 5, dispatches the same event
  *   itself from the protocol's `infoDelivery` `currentTime`/`duration`
- *   fields, so the fill tracks YouTube playback too.
+ *   fields, so the fill tracks YouTube playback too. When YouTube
+ *   withholds `currentTime` until an in-iframe gesture, StageYouTube
+ *   interpolates from duration + play-start and still dispatches here.
  * - kind 'timed': a 10s countdown fill; when it completes, dispatches a
  *   `theater-advance` window CustomEvent (the shell listens and goes next).
  *   Pauses while a `theater-pause` event is active and resumes (from the same
@@ -182,7 +184,12 @@ export function TheaterProgressLine({ itemKey, kind }: TheaterProgressLineProps)
       aria-hidden
     >
       <div className="h-[3px] w-full bg-white/15">
-        <div ref={fillRef} className="h-full bg-clay" style={{ width: '0%' }} />
+        <div
+          ref={fillRef}
+          data-theater-progress-fill
+          className="h-full bg-clay"
+          style={{ width: '0%' }}
+        />
       </div>
     </div>
   )

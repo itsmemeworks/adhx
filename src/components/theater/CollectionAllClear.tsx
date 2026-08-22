@@ -8,15 +8,17 @@
  * `FinishedPanel`.
  */
 
-import { PartyPopper } from 'lucide-react'
+import { PartyPopper, Repeat } from 'lucide-react'
 import { StageHeadline } from './stage-primitives'
 
 export interface CollectionAllClearProps {
   total: number
   onClose: () => void
+  /** Repeat the queue from the top — same offer as Live's waiting stage. */
+  onKeepPlaying?: () => void
 }
 
-export function CollectionAllClear({ total, onClose }: CollectionAllClearProps) {
+export function CollectionAllClear({ total, onClose, onKeepPlaying }: CollectionAllClearProps) {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-[#08070a] px-6 text-center">
       <PartyPopper className="h-10 w-10 text-clay" />
@@ -28,13 +30,25 @@ export function CollectionAllClear({ total, onClose }: CollectionAllClearProps) 
       ) : (
         <p className="text-sm text-white/60">Nothing waiting in your collection. Nice.</p>
       )}
-      <button
-        type="button"
-        onClick={onClose}
-        className="mt-2 min-h-[44px] rounded-full bg-clay-grad px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-opacity hover:opacity-90"
-      >
-        Close
-      </button>
+      <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+        {onKeepPlaying && (
+          <button
+            type="button"
+            onClick={onKeepPlaying}
+            className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/[0.14] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/20"
+          >
+            <Repeat size={15} />
+            <span>Keep playing</span>
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onClose}
+          className="min-h-[44px] rounded-full bg-clay-grad px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-opacity hover:opacity-90"
+        >
+          Close
+        </button>
+      </div>
     </div>
   )
 }

@@ -39,6 +39,7 @@ import {
   shouldCommitDelete,
   shouldDismissUndo,
   personalAdvance,
+  personalAdvanceOnEndedIndex,
   personalStepBackIndex,
   pinKeyFirst,
   orderLiveQueue,
@@ -84,6 +85,7 @@ export {
   shouldCommitDelete,
   shouldDismissUndo,
   personalAdvance,
+  personalAdvanceOnEndedIndex,
   personalStepBackIndex,
   pinKeyFirst,
   liveQueueGroupOf,
@@ -186,10 +188,10 @@ export function TheaterShell({
   onClose,
 }: TheaterShellProps) {
   const isPersonal = mode === 'personal'
-  // Collection mode (`/t/{username}/{tag}`) is a fixed, curated queue to loop
-  // through — never a live blend with the anonymous community pulse. Collection
-  // mode never loops either — its queue is a finite backlog with a real end
-  // ("All caught up"), not a wraparound.
+  // Playlist mode (`/t/{username}/{tag}`) is a fixed curated queue that loops.
+  // My Collection (`/collection`) is also a playlist, but its default is still
+  // a finite backlog ("All caught up") — wrap only when the viewer turns
+  // repeat on.
   const loop = mode === 'playlist'
   // The personal theater's Collection tab never blends the live pulse in; its Live tab
   // reuses the exact same live feed home/shared mode does.
@@ -214,9 +216,8 @@ export function TheaterShell({
   // rest of the shell — those always describe the live pulse feed (used
   // directly by home/shared/collection modes, and by the collection theater's OWN Live tab);
   // the collection queue below is a wholly separate, non-live, non-looping list.
-  // The queue itself never mutates after the initial snapshot — Done/Later/
-  // Delete only ever advance `personalIndex`, exactly like the deleted
-  // `CollectionTheater` (which never spliced/replaced its `queue` either).
+  // Archive splices the current post out of this snapshot; skip/next only
+  // advances `personalIndex`.
   const [personalQueue, setPersonalQueue] = useState<FeedItem[]>(() => personalItems ?? [])
   const [personalIndex, setPersonalIndex] = useState(() => Math.max(0, initialPersonalIndex ?? 0))
   const [personalUndo, setPersonalUndo] = useState<PersonalUndoAction | null>(null)
@@ -274,10 +275,9 @@ export function TheaterShell({
     undoDismissTimerRef.current = null
   }, [])
 
-  // Auto-dismiss the undo toast 5s after an archive/keep action — matching
-  // `deleteCurrent`'s own 5s window. Guarded by identity (`u === action`) so a
-  // stale timer left running from a superseded action can never wipe a
-  // newer undo that's since replaced it.
+  // Auto-dismiss the undo toast 5s after Archive. Guarded by identity
+  // (`u === action`) so a stale timer from a superseded action can never
+  // wipe a newer undo that's since replaced it.
   const armUndoDismiss = useCallback(
     (action: PersonalUndoAction) => {
       clearUndoDismissTimer()
@@ -362,46 +362,12 @@ export function TheaterShell({
     removeFromPersonalQueue,
   ])
 
-  // Later: defer — advance without changing read state.
-  const deferCurrent = useCallback(() => {
+  // Skip: next post without changing read state and without a Later toast.
+  // Transport / keyboard next on the collection tab (same as Live arrows).
+  const skipCurrent = useCallback(() => {
     if (!personalCurrentFeedItem) return
-    commitPendingDelete()
-    const action: PersonalUndoAction = {
-      type: 'keep',
-      item: personalCurrentFeedItem,
-      index: personalIndex,
-    }
-    setPersonalUndo(action)
-    armUndoDismiss(action)
     setPersonalIndex(personalAdvance)
-  }, [personalCurrentFeedItem, personalIndex, commitPendingDelete, armUndoDismiss])
-
-  const deleteCurrent = useCallback(() => {
-    if (!personalCurrentFeedItem) return
-    const item = personalCurrentFeedItem
-    commitPendingDelete()
-    // A pending delete has its own 5s expiry (the commit timer above), so it
-    // owns the toast's dismissal — any archive/keep dismiss timer still
-    // running from a prior action is now moot.
-    clearUndoDismissTimer()
-    const timer = setTimeout(() => {
-      fetch(`/api/bookmarks/${item.id}?platform=${item.platform ?? 'twitter'}`, {
-        method: 'DELETE',
-      }).catch(() => {})
-      onPostResolved?.(item, 'delete')
-      notifyCollectionChanged()
-      setPersonalUndo((u) => (u && u.type === 'delete' && u.item.id === item.id ? null : u))
-    }, 5000)
-    personalUndoTimerRef.current = timer
-    setPersonalUndo({ type: 'delete', item, index: personalIndex })
-    removeFromPersonalQueue(item)
-  }, [
-    personalCurrentFeedItem,
-    personalIndex,
-    onPostResolved,
-    commitPendingDelete,
-    clearUndoDismissTimer,
-  ])
+  }, [personalCurrentFeedItem])
 
   const undoLastAction = useCallback(() => {
     if (!personalUndo) return
@@ -444,21 +410,25 @@ export function TheaterShell({
     setPersonalIndex(personalStepBackIndex)
   }, [])
 
-  // A video finished playing in the personal theater's Collection tab ("My Collection is
-  // just a different playlist in that same theater" — the owner's standing
-  // directive, reversing the earlier "videos never auto-advance there"
-  // rule). Deliberately NOT `deferCurrent`: finishing a video isn't a
-  // decision the way tapping Later is — `deferCurrent` also pops the
-  // "Later · Undo" toast, which would misrepresent
-  // a post the viewer simply watched to the end as one they consciously
-  // deferred. This is pure navigation, exactly like `personalStepBack` but
-  // forward — Done/Later/Delete remain the only ways to actually resolve an
-  // item's read state; finishing playback just moves the queue along.
-  // Landing past the last item is already handled for free: `personalFinished`
-  // (`personalIndex >= personalQueue.length`) flips true and the Collection tab
-  // renders `CollectionAllClear`, same as after a real Done/Later/Delete.
+  // A video finished playing in the Collection tab. Pure navigation — same
+  // as skip/next — not Archive. Finishing playback just moves the queue.
+  // Repeat 'off' walks past the last item (`personalFinished`) and shows
+  // CollectionAllClear. Repeat 'all' wraps to 0; 'one' stays on the post
+  // (Stage `repeat` loops the player).
+  const personalQueueLengthRef = useRef(personalQueue.length)
+  personalQueueLengthRef.current = personalQueue.length
+  const personalFinishedRef = useRef(personalFinished)
+  personalFinishedRef.current = personalFinished
+
   const personalAdvanceOnEnded = useCallback(() => {
-    setPersonalIndex(personalAdvance)
+    setPersonalIndex((i) =>
+      personalAdvanceOnEndedIndex(i, personalQueueLengthRef.current, repeatModeRef.current),
+    )
+  }, [])
+
+  const keepPlayingCollection = useCallback(() => {
+    setRepeatMode('all')
+    setPersonalIndex(0)
   }, [])
 
   // Flush any pending delete, and cancel the undo-toast dismiss timer, when
@@ -636,26 +606,17 @@ export function TheaterShell({
     }
   }, [muted])
 
-  // Repeat mode (round 8): session-persisted like the sound preference —
-  // read on mount (not the initializer, for the same SSR-hydration reason),
-  // written on change. Playlist mode DOES expose it (owner: the playlist
-  // player should show the repeat icon, selected): it opens on 'all' — looping
-  // IS the playlist's resting state — and toggles all ⇄ one
-  // (`nextRepeatMode`'s wrapOnly), so it deliberately skips the sessionStorage
-  // read/write below: a playlist page's toggle is per-visit and must never
-  // bleed into the home theater's persisted preference (or vice versa).
+  // Repeat mode (round 8): persisted like the sound preference — read on
+  // mount (not the initializer, for the same SSR-hydration reason), written
+  // on change. Playlist mode (`/t/...`) opens on 'all' and toggles all ⇄ one
+  // (`nextRepeatMode`'s wrapOnly); it skips the localStorage read/write so a
+  // playlist toggle never bleeds into the home/collection preference.
   //
-  // Only the collection COLLECTION tab hides it — a finite backlog with its own
-  // Done/Later semantics, where a stale 'one'/'all' would repeat or wrap a
-  // queue with no visible control to turn it off. It used to be gated on
-  // `!isPersonal`, which was fine while collection was an overlay over the grid; the
-  // moment authed `/` became `mode="personal"` on the LIVE tab, that silently
-  // took the repeat button off the live theater for every signed-in viewer
-  // (owner report: "the repeat icon isn't there anymore… I should be able to
-  // continually repeat the whole live playlist or just repeat a single post").
+  // My Collection (`/collection`) uses the same off → all → one control as
+  // Live. Default stays 'off' (All Clear at the end of the backlog). 'all'
+  // and 'one' wrap or loop through `personalAdvanceOnEndedIndex`.
   const [repeatMode, setRepeatMode] = useState<RepeatMode>(loop ? 'all' : 'off')
-  const repeatEnabled = !isCollectionTab
-  const effectiveRepeatMode: RepeatMode = repeatEnabled ? repeatMode : 'off'
+  const effectiveRepeatMode: RepeatMode = repeatMode
   const repeatModeRef = useRef(effectiveRepeatMode)
   repeatModeRef.current = effectiveRepeatMode
   // Persisted ACROSS visits (localStorage), not per-session: "keep playing" is
@@ -939,7 +900,9 @@ export function TheaterShell({
    * than teaching navigation to re-fire a no-op. Covers a one-post playlist
    * and repeat-all over a one-post queue alike.
    */
-  const loopingSingleItem = displayItems.length === 1 && (loop || effectiveRepeatMode === 'all')
+  const loopingSingleItem =
+    (isCollectionTab ? personalQueue.length : displayItems.length) === 1 &&
+    (loop || effectiveRepeatMode === 'all')
   const repeatCurrentActive =
     isSharedPinnedOnCurrent || effectiveRepeatMode === 'one' || loopingSingleItem
   // Read fresh inside the `theater-advance` listener (empty-deps-registered
@@ -1143,8 +1106,16 @@ export function TheaterShell({
       // paused stage needs telling explicitly.
       window.dispatchEvent(new CustomEvent('theater-resume'))
     }
+    if (
+      next === 'all' &&
+      isCollectionTab &&
+      personalFinishedRef.current &&
+      personalQueueLengthRef.current > 0
+    ) {
+      setPersonalIndex(0)
+    }
     setRepeatMode(next)
-  }, [clearSharedPin, loop])
+  }, [clearSharedPin, loop, isCollectionTab])
 
   // The waiting stage's re-watch button — a deliberate navigation back to the
   // top of the queue. This is the explicit opt-in the owner asked for: it also
@@ -1244,13 +1215,9 @@ export function TheaterShell({
   useTheaterKeyboard({
     isPersonal,
     personalTab,
-    goNext: goNextUser,
-    goPrev: goPrevUser,
+    goNext: isCollectionTab ? skipCurrent : goNextUser,
+    goPrev: isCollectionTab ? personalStepBack : goPrevUser,
     setMuted,
-    archiveCurrent,
-    deferCurrent,
-    deleteCurrent,
-    personalStepBack,
     undoLastAction,
     onClose,
     isPlaybackHidden,
@@ -1562,13 +1529,10 @@ export function TheaterShell({
     canPrev,
     canNext,
   })
-  // The transport chevrons in the personal theater's Collection tab are pure skip/back —
-  // "next" is exactly "Later" (advance without changing read state); the
-  // dedicated Done/Tag/Delete buttons handle actual actions. Home/shared/
-  // collection use the User-wrapped nav (shared-post-repeat: these are the
-  // deliberate-navigation call sites that clear the pin).
+  // Collection transport matches Live: next/prev skip without changing
+  // archive state. Archive is a button, not a chevron.
   const chromeOnPrev = isCollectionTab ? personalStepBack : goPrevUser
-  const chromeOnNext = isCollectionTab ? deferCurrent : goNextUser
+  const chromeOnNext = isCollectionTab ? skipCurrent : goNextUser
   const chromeOnSelect = isCollectionTab
     ? (key: string) => {
         const idx = personalQueue.findIndex(
@@ -1583,8 +1547,6 @@ export function TheaterShell({
         tab: personalTab,
         onTabChange: changePersonalTab,
         onDone: archiveCurrent,
-        onLater: deferCurrent,
-        onDelete: deleteCurrent,
         onTag: () => {
           if (!personalCurrentFeedItem) return
           setTagPickerItem({
@@ -1619,7 +1581,11 @@ export function TheaterShell({
         <div className="absolute inset-0">
           {isCollectionTab ? (
             personalFinished ? (
-              <CollectionAllClear total={personalTotal} onClose={() => onClose?.()} />
+              <CollectionAllClear
+                total={personalTotal}
+                onClose={() => onClose?.()}
+                onKeepPlaying={personalTotal > 0 ? keepPlayingCollection : undefined}
+              />
             ) : personalCurrentFeedItem ? (
               <CollectionStage
                 feedItem={personalCurrentFeedItem}
@@ -1627,6 +1593,7 @@ export function TheaterShell({
                 onRequestUnmute={onRequestUnmute}
                 onEnded={personalAdvanceOnEnded}
                 tags={personalCurrentFeedItem.tags}
+                repeat={repeatCurrentActive}
               />
             ) : null
           ) : isSharedUnavailableOnCurrent && current ? (
@@ -1656,9 +1623,7 @@ export function TheaterShell({
                     savedToday={feed.savedToday}
                     onReplay={displayItems.length > 0 ? replayFromStart : undefined}
                     replayCount={displayItems.length}
-                    onKeepPlaying={
-                      repeatEnabled && displayItems.length > 0 ? keepPlaying : undefined
-                    }
+                    onKeepPlaying={displayItems.length > 0 ? keepPlaying : undefined}
                   />
                 </div>
               )}
@@ -1725,8 +1690,8 @@ export function TheaterShell({
           authed={authed}
           onRequestSignIn={openSignIn}
           repeatCurrent={repeatCurrentActive}
-          repeatMode={repeatEnabled ? displayRepeatMode : undefined}
-          onCycleRepeat={repeatEnabled ? cycleRepeatMode : undefined}
+          repeatMode={displayRepeatMode}
+          onCycleRepeat={cycleRepeatMode}
           collection={personalChrome}
         />
         <DesktopStageChrome
@@ -1743,30 +1708,17 @@ export function TheaterShell({
           onRequestMakeYourOwn={handleMakeYourOwn}
           collection={personalChrome}
         />
-        {/* The collection theater's Delete (and Done/Later) undo toast — auto-dismisses after
-            5s (see `armUndoDismiss`/`commitPendingDelete`'s timer).
-            Works the same on both viewports, so it lives here rather than
-            duplicated inside each chrome component. `bottom-36` (9rem/144px)
-            clears the mobile action row (Later/Tag/Delete/Done — measured:
-            80px bottom padding + 44px min-height = 124px from the screen
-            bottom) with room to spare, and happens to match the desktop
-            dock's own 124px height + margin, so one value now covers both
-            viewports. Keyed by the action's identity so a same-type action
-            right after another (e.g. Later, Later) still replays the
-            entrance transition instead of looking like it never moved. */}
+        {/* Collection Archive undo toast — auto-dismisses after 5s
+            (`armUndoDismiss`). Same placement on both viewports. `bottom-36`
+            clears the mobile action row. Keyed by the action's identity so
+            a second Archive still replays the entrance transition. */}
         {isCollectionTab && personalUndo && (
           <div className="pointer-events-none absolute inset-x-0 bottom-36 z-30 flex justify-center">
             <div
               key={`${personalUndo.type}-${personalUndo.item.platform ?? 'twitter'}-${personalUndo.item.id}-${personalUndo.index}`}
               className="pointer-events-auto flex animate-toast-in items-center gap-3 rounded-full bg-black/80 px-4 py-2 text-[13px] text-white shadow-lg backdrop-blur-md"
             >
-              <span>
-                {personalUndo.type === 'archive'
-                  ? 'Done'
-                  : personalUndo.type === 'delete'
-                    ? 'Deleted'
-                    : 'Later'}
-              </span>
+              <span>{personalUndo.type === 'archive' ? 'Archived' : personalUndo.type}</span>
               <button type="button" onClick={undoLastAction} className="font-semibold text-clay">
                 Undo
               </button>
@@ -1799,8 +1751,8 @@ export function TheaterShell({
         playlist={playlist}
         collection={personalChrome}
         repeatCurrent={repeatCurrentActive}
-        repeatMode={repeatEnabled ? displayRepeatMode : undefined}
-        onCycleRepeat={repeatEnabled ? cycleRepeatMode : undefined}
+        repeatMode={displayRepeatMode}
+        onCycleRepeat={cycleRepeatMode}
       />
       {/* `?ytdebug=1`/`?avdebug=1` diagnostics overlay (YtDebugOverlay.tsx) —
           mounted ONCE here so it serves every stage (StageVideo/StageYouTube/

@@ -138,7 +138,7 @@ export interface TheaterMobileChromeProps {
    */
   repeatMode?: RepeatMode
   onCycleRepeat?: () => void
-  /** Collection mode (unified-theater-collection.md §2): swaps the top scrim's post meta for a close button + the burger (which carries the Live↔Collection switch as Theater sub-options — the top scrim is too tight for a tab pill at phone widths, unlike desktop's top bar), and the bottom action row for Later/Tag/Delete/Done. */
+  /** Collection mode: burger carries Live↔Collection; Collection tab adds Archive to the Live action row (Download/Share/Tag/Open). */
   collection?: TheaterPersonalChrome
 }
 
@@ -562,141 +562,125 @@ export function TheaterMobileChrome({
             />
           </div>
 
-          {collection && collection.tab === 'collection' ? (
-            <TheaterCollectionActions
-              collection={collection}
-              tagCount={tagCount}
-              openUrl={sourceUrl(current.platform, current.author, current.bookmarkId ?? '')}
-              platformLabel={PLATFORM_LABEL[current.platform] ?? current.platform}
-              variant="mobile"
-            />
-          ) : (
-            <div className="flex items-center gap-2">
-              {playlist && isPlaylistOwner ? (
-                <a
-                  href={`/library?tag=${encodeURIComponent(playlist.tag)}`}
-                  className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/[0.14] px-3 text-[13px] font-semibold text-white"
-                >
-                  <TagIcon size={15} />
-                  <span>Manage playlist</span>
-                </a>
-              ) : playlist ? (
-                <SavePlaylistButton
-                  count={playlist.count}
-                  status={saveStatus}
-                  onSave={() => onSavePlaylist?.()}
-                  className={PILL_SAVE}
-                />
-              ) : (
-                <>
-                  {sendFile.supported ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        // No awaits before this call — the tap must stay a fresh
-                        // user gesture for iOS's share sheet (spec §2/§6).
-                        void sendFile.send()
-                      }}
-                      disabled={sendFile.sending}
-                      title={
-                        sendFile.mode === 'share'
-                          ? 'Opens your share sheet with the file'
-                          : 'Download the file'
-                      }
-                      className={cn(PILL_GLASS, sendFile.primed && 'border-clay')}
-                    >
-                      {/* Spinner covers the whole wait, including the file
-                          fetch a tap kicks off when the prefetch hasn't
-                          landed (owner: "keeps the spinner going until it has
-                          the file to send"). `primed` = the file is cached but
-                          the sheet needs a fresh gesture, so ASK for the tap
-                          rather than silently sharing a link. */}
-                      {sendFile.sending ? (
-                        <Loader2 size={15} className="animate-spin" />
-                      ) : (
-                        <DownloadIcon size={15} />
-                      )}
-                      <span>
-                        {sendFile.sending
-                          ? 'Getting file'
-                          : sendFile.primed
-                            ? 'Tap again'
-                            : 'Download'}
-                      </span>
-                    </button>
-                  ) : textLike && (current.text || '').trim() ? (
-                    // Text-like posts have no file — the Download slot copies
-                    // the post's full text instead (round 8, owner request).
-                    <button type="button" onClick={() => void copyText()} className={PILL_GLASS}>
-                      {textCopied ? (
-                        <Check size={15} className="text-done" />
-                      ) : (
-                        <CopyIcon size={15} />
-                      )}
-                      <span>{textCopied ? 'Copied' : 'Copy'}</span>
-                    </button>
-                  ) : null}
-                  {collection?.tab === 'live' ? (
-                    <>
-                      <StageIconButton
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          collection.onLiveTag?.(current)
-                        }}
-                        onTouchEnd={(e) => e.stopPropagation()}
-                        aria-label="Tag this post"
-                      >
-                        <TagIcon size={16} />
-                      </StageIconButton>
-                      {/* Once it's saved the button goes away entirely (owner:
-                          "there's no point in showing 'Saved' for a post —
-                          simply show the tag icon because that denotes that
-                          it's already saved"). The tag icon beside it is both
-                          the affordance and the state. */}
-                      <PersonalLiveSaveButton
-                        current={current}
-                        collection={collection}
-                        className={PILL_SAVE}
-                        iconSize={15}
-                      />
-                    </>
-                  ) : mode === 'shared' && authed ? (
-                    // Signed-in viewers save directly — same branch the
-                    // desktop chrome has always had (see `authed`'s doc
-                    // comment above).
-                    <SavePostButton current={current} className={PILL_SAVE} />
-                  ) : (
-                    <button type="button" onClick={() => onRequestSignIn?.()} className={PILL_SAVE}>
-                      <Bookmark size={15} />
-                      <span>Save</span>
-                    </button>
-                  )}
-                </>
-              )}
-              <StageIconButton onClick={() => void handleShare()} aria-label="Share link">
-                {copied ? <Check size={16} className="text-done" /> : <Share2 size={16} />}
-              </StageIconButton>
-              {(() => {
-                const openUrl = sourceUrl(
-                  current.platform,
-                  current.author,
-                  current.bookmarkId ?? '',
-                )
-                if (!openUrl) return null
-                const platformLabel = PLATFORM_LABEL[current.platform] ?? current.platform
-                return (
-                  <StageIconButton
-                    href={openUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`Open on ${platformLabel}`}
+          <div className="flex items-center gap-2">
+            {playlist && isPlaylistOwner ? (
+              <a
+                href={`/library?tag=${encodeURIComponent(playlist.tag)}`}
+                className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/[0.14] px-3 text-[13px] font-semibold text-white"
+              >
+                <TagIcon size={15} />
+                <span>Manage playlist</span>
+              </a>
+            ) : playlist ? (
+              <SavePlaylistButton
+                count={playlist.count}
+                status={saveStatus}
+                onSave={() => onSavePlaylist?.()}
+                className={PILL_SAVE}
+              />
+            ) : (
+              <>
+                {sendFile.supported ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // No awaits before this call — the tap must stay a fresh
+                      // user gesture for iOS's share sheet (spec §2/§6).
+                      void sendFile.send()
+                    }}
+                    disabled={sendFile.sending}
+                    title={
+                      sendFile.mode === 'share'
+                        ? 'Opens your share sheet with the file'
+                        : 'Download the file'
+                    }
+                    className={cn(PILL_GLASS, sendFile.primed && 'border-clay')}
                   >
-                    <ExternalLink size={16} />
+                    {sendFile.sending ? (
+                      <Loader2 size={15} className="animate-spin" />
+                    ) : (
+                      <DownloadIcon size={15} />
+                    )}
+                    <span>
+                      {sendFile.sending
+                        ? 'Getting file'
+                        : sendFile.primed
+                          ? 'Tap again'
+                          : 'Download'}
+                    </span>
+                  </button>
+                ) : textLike && (current.text || '').trim() ? (
+                  <button type="button" onClick={() => void copyText()} className={PILL_GLASS}>
+                    {textCopied ? (
+                      <Check size={15} className="text-done" />
+                    ) : (
+                      <CopyIcon size={15} />
+                    )}
+                    <span>{textCopied ? 'Copied' : 'Copy'}</span>
+                  </button>
+                ) : null}
+                {collection?.tab === 'collection' ? (
+                  <StageIconButton
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      collection.onTag()
+                    }}
+                    onTouchEnd={(e) => e.stopPropagation()}
+                    aria-label={tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}
+                  >
+                    <TagIcon size={16} fill={tagCount > 0 ? 'currentColor' : 'none'} />
                   </StageIconButton>
-                )
-              })()}
-            </div>
-          )}
+                ) : collection?.tab === 'live' ? (
+                  <>
+                    <StageIconButton
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        collection.onLiveTag?.(current)
+                      }}
+                      onTouchEnd={(e) => e.stopPropagation()}
+                      aria-label="Tag this post"
+                    >
+                      <TagIcon size={16} />
+                    </StageIconButton>
+                    <PersonalLiveSaveButton
+                      current={current}
+                      collection={collection}
+                      className={PILL_SAVE}
+                      iconSize={15}
+                    />
+                  </>
+                ) : mode === 'shared' && authed ? (
+                  <SavePostButton current={current} className={PILL_SAVE} />
+                ) : (
+                  <button type="button" onClick={() => onRequestSignIn?.()} className={PILL_SAVE}>
+                    <Bookmark size={15} />
+                    <span>Save</span>
+                  </button>
+                )}
+              </>
+            )}
+            <StageIconButton onClick={() => void handleShare()} aria-label="Share link">
+              {copied ? <Check size={16} className="text-done" /> : <Share2 size={16} />}
+            </StageIconButton>
+            {(() => {
+              const openUrl = sourceUrl(current.platform, current.author, current.bookmarkId ?? '')
+              if (!openUrl) return null
+              const platformLabel = PLATFORM_LABEL[current.platform] ?? current.platform
+              return (
+                <StageIconButton
+                  href={openUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Open on ${platformLabel}`}
+                >
+                  <ExternalLink size={16} />
+                </StageIconButton>
+              )
+            })()}
+            {collection?.tab === 'collection' && (
+              <TheaterCollectionActions collection={collection} variant="mobile" />
+            )}
+          </div>
         </div>
       )}
 

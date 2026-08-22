@@ -14,24 +14,20 @@ import {
   shouldCommitDelete,
   shouldDismissUndo,
   personalAdvance,
+  personalAdvanceOnEndedIndex,
   personalStepBackIndex,
   type PersonalUndoAction,
 } from '@/components/theater/TheaterShell'
 
 describe('personalKeyAction', () => {
-  it('reproduces the old CollectionTheater/CollectionMode key -> action map', () => {
-    expect(personalKeyAction({ key: 'ArrowRight' })).toBe('done')
-    expect(personalKeyAction({ key: 'ArrowLeft' })).toBe('later')
-    expect(personalKeyAction({ key: 'ArrowDown' })).toBe('delete')
-    expect(personalKeyAction({ key: 'Backspace' })).toBe('delete')
-    expect(personalKeyAction({ key: 'Delete' })).toBe('delete')
+  it('only maps undo and close — arrows are the Live keymap', () => {
     expect(personalKeyAction({ key: 'u' })).toBe('undo')
     expect(personalKeyAction({ key: 'U' })).toBe('undo')
     expect(personalKeyAction({ key: 'Escape' })).toBe('close')
-  })
-
-  it('adds ArrowUp as pure "back" navigation (new in the unified shell)', () => {
-    expect(personalKeyAction({ key: 'ArrowUp' })).toBe('back')
+    expect(personalKeyAction({ key: 'ArrowRight' })).toBe(null)
+    expect(personalKeyAction({ key: 'ArrowLeft' })).toBe(null)
+    expect(personalKeyAction({ key: 'ArrowDown' })).toBe(null)
+    expect(personalKeyAction({ key: 'Delete' })).toBe(null)
   })
 
   it('ignores unmapped keys', () => {
@@ -40,8 +36,8 @@ describe('personalKeyAction', () => {
   })
 
   it('ignores keys with a modifier held', () => {
-    expect(personalKeyAction({ key: 'ArrowRight', metaKey: true })).toBe(null)
-    expect(personalKeyAction({ key: 'ArrowLeft', ctrlKey: true })).toBe(null)
+    expect(personalKeyAction({ key: 'u', metaKey: true })).toBe(null)
+    expect(personalKeyAction({ key: 'Escape', ctrlKey: true })).toBe(null)
     expect(personalKeyAction({ key: 'u', altKey: true })).toBe(null)
   })
 
@@ -51,14 +47,14 @@ describe('personalKeyAction', () => {
     const editable = document.createElement('div')
     Object.defineProperty(editable, 'isContentEditable', { value: true })
 
-    expect(personalKeyAction({ key: 'ArrowRight', target: input })).toBe(null)
-    expect(personalKeyAction({ key: 'ArrowRight', target: textarea })).toBe(null)
+    expect(personalKeyAction({ key: 'u', target: input })).toBe(null)
+    expect(personalKeyAction({ key: 'u', target: textarea })).toBe(null)
     expect(personalKeyAction({ key: 'u', target: editable })).toBe(null)
   })
 
   it('still acts on a non-typing target', () => {
     const div = document.createElement('div')
-    expect(personalKeyAction({ key: 'ArrowRight', target: div })).toBe('done')
+    expect(personalKeyAction({ key: 'u', target: div })).toBe('undo')
   })
 })
 
@@ -111,5 +107,20 @@ describe('personalAdvance / personalStepBackIndex', () => {
   it('back steps to the previous item but never below 0', () => {
     expect(personalStepBackIndex(3)).toBe(2)
     expect(personalStepBackIndex(0)).toBe(0)
+  })
+})
+
+describe('personalAdvanceOnEndedIndex', () => {
+  it('walks past the last item when repeat is off so All Clear can render', () => {
+    expect(personalAdvanceOnEndedIndex(2, 3, 'off')).toBe(3)
+  })
+
+  it('wraps to the start when repeat is the whole queue', () => {
+    expect(personalAdvanceOnEndedIndex(2, 3, 'all')).toBe(0)
+    expect(personalAdvanceOnEndedIndex(0, 3, 'all')).toBe(1)
+  })
+
+  it('stays on the current post when repeat is one', () => {
+    expect(personalAdvanceOnEndedIndex(1, 3, 'one')).toBe(1)
   })
 })

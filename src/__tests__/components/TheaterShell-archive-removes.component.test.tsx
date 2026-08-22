@@ -165,15 +165,6 @@ describe('TheaterShell: Archive removes the post from the collection queue', () 
     expect(queueState().currentKey).toBe('twitter:1')
   })
 
-  it('removes a deleted post too — same gesture family', async () => {
-    await act_(() => {
-      renderCollection(['1', '2', '3'])
-    })
-    const t = collectionProps().collection as { onDelete: () => void }
-    await act_(() => t.onDelete())
-    expect(queueState().ids).toEqual(['2', '3'])
-  })
-
   it('notifies Header + library counts when a post is archived', async () => {
     const stats = vi.fn()
     const feed = vi.fn()
@@ -193,30 +184,20 @@ describe('TheaterShell: Archive removes the post from the collection queue', () 
     }
   })
 
-  it('does not notify on Later — the collection did not change', async () => {
+  it('skip (next) keeps the post and does not notify', async () => {
     const stats = vi.fn()
     window.addEventListener('stats-updated', stats)
     try {
       await act_(() => {
-        renderCollection(['1', '2'])
+        renderCollection(['1', '2', '3'])
       })
-      const t = collectionProps().collection as { onLater: () => void }
-      await act_(() => t.onLater())
+      const onNext = collectionProps().onNext as () => void
+      await act_(() => onNext())
       expect(stats).not.toHaveBeenCalled()
+      expect(queueState().ids).toEqual(['1', '2', '3'])
+      expect(queueState().currentKey).toBe('twitter:2')
     } finally {
       window.removeEventListener('stats-updated', stats)
     }
-  })
-
-  it('KEEPS the post on Later — "show me again" is not a resolution', async () => {
-    await act_(() => {
-      renderCollection(['1', '2', '3'])
-    })
-    const t = collectionProps().collection as { onLater: () => void }
-    await act_(() => t.onLater())
-
-    expect(queueState().ids).toEqual(['1', '2', '3'])
-    // It just moves on.
-    expect(queueState().currentKey).toBe('twitter:2')
   })
 })
