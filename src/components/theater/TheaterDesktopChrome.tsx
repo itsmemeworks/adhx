@@ -26,7 +26,6 @@ import Link from 'next/link'
 import {
   Bookmark,
   Check,
-  Clock,
   Loader2,
   Clipboard,
   Copy as CopyIcon,
@@ -34,12 +33,9 @@ import {
   Download as DownloadIcon,
   Link as LinkIcon,
   ExternalLink,
-  Flame,
   Repeat,
   Repeat1,
   Tag as TagIcon,
-  Trash2,
-  Archive as ArchiveIcon,
   ChevronLeft,
   ChevronRight,
   ChevronUp,
@@ -54,10 +50,17 @@ import { cn } from '@/lib/utils'
 import { addedToAdhxLabel, formatCompactRelativeTime, hasKnownTimestamp } from '@/lib/utils/format'
 import { MatterLogo, PlatformGlyph } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
-import { authorProfileUrl, previewPath, sourceUrl } from '@/lib/activity/preview-path'
+import { authorProfileUrl, sourceUrl } from '@/lib/activity/preview-path'
 import { inferType } from '@/lib/trending/filter'
 import { resolvePastedLink } from '@/lib/theater/paste-preview'
+import { navigateToAppPath } from '@/lib/theater/navigate-app-path'
 import { useSendFile } from './useSendFile'
+import { useTheaterCopy } from './useTheaterCopy'
+import { useTheaterStageEvents } from './useTheaterStageEvents'
+import { SavePostButton, PersonalLiveSaveButton } from './SavePostButton'
+import { FlameChip, PlatformTimeChip } from './TheaterMetaChips'
+import { TheaterTagChips } from './TheaterTagChips'
+import { TheaterCollectionActions } from './TheaterCollectionActions'
 import { useClampExpand } from './useClampExpand'
 import {
   theaterItemKey,
@@ -85,8 +88,6 @@ export interface DesktopStageChromeProps {
   mode: TheaterMode
   /** Null while loading or in the end-of-feed waiting stage — hide the post overlays, keep the top bar. */
   current: TheaterItem | null
-  /** Shared mode (preview pages): the post the visitor landed on (pinned lead). */
-  sharedItem?: TheaterItem
   /** Whether the visiting user is signed in (shared mode: swaps the Save link for a direct SavePostButton). */
   authed?: boolean
   /** De-clutter fades the overlays out (mobile-chrome pattern: opacity + slight translate, pointer-events-none). */
@@ -165,214 +166,19 @@ export interface DesktopDockProps {
   onCycleRepeat?: () => void
 }
 
-type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+export { navigateToAppPath } from '@/lib/theater/navigate-app-path'
+export { SavePostButton } from './SavePostButton'
 
 const GLASS =
   'inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/[0.14] px-4 text-[12.5px] font-semibold text-white transition-colors hover:bg-white/20 disabled:opacity-60'
 /**
- * Solid clay-grad — since round 8 used ONLY by the collection theater's Done button; every
- * Save variant moved to SAVE_OUTLINE below (owner: the solid fill was "too
- * much"). Download/Copy are power-user affordances on GLASS alongside
- * Link/Open.
- */
-const PRIMARY =
-  'inline-flex h-11 items-center justify-center gap-1.5 rounded-full bg-clay-grad px-5 text-[12.5px] font-semibold text-white shadow-glow transition-opacity hover:opacity-90 disabled:opacity-60'
-
-/**
- * The Save buttons (round 8, owner): a Bookmark glyph on the same
- * see-through glass as GLASS, distinguished by a clay border instead of the
- * old solid clay-grad PRIMARY fill ("too much"). Covers SavePostButton,
- * PersonalLiveSaveButton, the signed-out Save prompt, AND SavePlaylistButton
- * (owner follow-up: same outline). PRIMARY remains only for the collection theater's Done.
- * Mirrors `PILL_SAVE` in TheaterMobileChrome.
+ * The Save buttons: a Bookmark glyph on the same see-through glass as GLASS,
+ * distinguished by a clay border. Covers SavePostButton,
+ * PersonalLiveSaveButton, the signed-out Save prompt, AND SavePlaylistButton.
+ * Archive's solid fill lives on TheaterCollectionActions.
  */
 const SAVE_OUTLINE =
   'inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-clay bg-white/[0.14] px-5 text-[12.5px] font-semibold text-white transition-colors hover:bg-white/20 disabled:opacity-60'
-
-/**
- * Shared-mode, signed-in Save (ported verbatim from the deleted Rail.tsx):
- * POSTs the CURRENT item's canonical source URL (never the on-ADHX preview
- * path stored in `current.url`'s pulse-item convention) to the same
- * platform-agnostic endpoint the preview pages' own "Save to collection"
- * CTAs use. Computed via `sourceUrl()` rather than trusting `current.url`.
- */
-/** Cross-mount cache of "is this post already in the viewer's collection?"
- * lookups, keyed by theaterItemKey — one GET per post per page lifetime. */
-const ownershipCache = new Map<string, boolean>()
-
-export function SavePostButton({
-  current,
-  className,
-}: {
-  current: TheaterItem
-  /** Full button class string — the caller owns the visual style (glass on-stage here). */
-  className: string
-}) {
-  const [status, setStatus] = useState<SaveStatus>('idle')
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const key = theaterItemKey(current)
-
-  useEffect(() => {
-    setStatus('idle')
-  }, [key])
-
-  // A post already in the viewer's collection must open as "Saved", not
-  // "Save" — this button only renders for signed-in viewers, so the
-  // `/api/feed?id=` single-bookmark lookup (which ignores read state) is the
-  // membership check. Cached per key so re-staging a post costs nothing.
-  useEffect(() => {
-    if (!current.bookmarkId) return
-    if (ownershipCache.has(key)) {
-      if (ownershipCache.get(key)) setStatus('saved')
-      return
-    }
-    let cancelled = false
-    const q = new URLSearchParams({ hideArchived: 'false', filter: 'all', limit: '5' })
-    q.append('id', current.bookmarkId)
-    fetch(`/api/feed?${q}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        const owned = !!(d?.items ?? []).find(
-          (f: { id: string; platform?: string }) =>
-            (f.platform ?? 'twitter') === current.platform && f.id === current.bookmarkId,
-        )
-        ownershipCache.set(key, owned)
-        if (!cancelled && owned) setStatus('saved')
-      })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [key, current.bookmarkId, current.platform])
-
-  // The shell completes a deferred ?save=1 save (post-sign-in) itself and
-  // announces it here so the button reflects reality without owning the flow.
-  useEffect(() => {
-    function handleSaved(e: Event) {
-      const detail = (e as CustomEvent<{ key?: string }>).detail
-      if (detail?.key === key) setStatus('saved')
-    }
-    window.addEventListener('theater-post-saved', handleSaved)
-    return () => window.removeEventListener('theater-post-saved', handleSaved)
-  }, [key])
-
-  useEffect(
-    () => () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current)
-    },
-    [],
-  )
-
-  const handleSave = async () => {
-    if (status === 'saving' || status === 'saved' || !current.bookmarkId) return
-    setStatus('saving')
-    try {
-      const url = sourceUrl(current.platform, current.author, current.bookmarkId)
-      if (!url) throw new Error('No source URL for this post')
-      const res = await fetch('/api/bookmarks/add', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-      })
-      const data = await res.json().catch(() => null)
-      if (!res.ok || data?.error) throw new Error(data?.error || 'Save failed')
-      ownershipCache.set(key, true)
-      setStatus('saved')
-    } catch {
-      // Quiet failure — never crash the chrome over a save hiccup. Reset
-      // after a beat so the button is tappable again.
-      setStatus('error')
-      if (timeoutRef.current) clearTimeout(timeoutRef.current)
-      timeoutRef.current = setTimeout(() => setStatus('idle'), 2000)
-    }
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={() => void handleSave()}
-      disabled={status === 'saving' || status === 'saved'}
-      className={className}
-    >
-      {status === 'saving' ? (
-        <Loader2 size={14} className="animate-spin" />
-      ) : status === 'saved' ? (
-        <Check size={14} />
-      ) : (
-        <Bookmark size={14} />
-      )}
-      <span>{status === 'saved' ? 'Saved' : status === 'error' ? 'Try again' : 'Save'}</span>
-    </button>
-  )
-}
-
-/** The "Open on {platform}" link-out chip shared by the top bar and the merged meta line. */
-function PlatformTimeChip({ item }: { item: TheaterItem }) {
-  const src = sourceUrl(item.platform, item.author, item.bookmarkId ?? '')
-  const label = PLATFORM_LABEL[item.platform] ?? item.platform
-  const inner = (
-    <>
-      <PlatformGlyph platform={item.platform} size={12} />
-      {/* `addedAt` = when the post was first added to ADHX (owner decision —
-          never the source platform's date, never the moving event time).
-          Unknown → no time, just the glyph. */}
-      {hasKnownTimestamp(item.addedAt) && (
-        <span
-          className="font-mono text-[11px]"
-          title={addedToAdhxLabel(item.addedAt as string)}
-          aria-label={addedToAdhxLabel(item.addedAt as string)}
-          suppressHydrationWarning
-        >
-          {formatCompactRelativeTime(item.addedAt as string)}
-        </span>
-      )}
-    </>
-  )
-  const cls =
-    'inline-flex min-h-[32px] flex-none items-center gap-1.5 rounded-full bg-black/40 px-2.5 text-white/80 backdrop-blur-sm'
-  return src ? (
-    <a
-      href={src}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={cls}
-      title={`Open on ${label}`}
-    >
-      {inner}
-    </a>
-  ) : (
-    <span className={cls} title={`Open on ${label}`}>
-      {inner}
-    </span>
-  )
-}
-
-function FlameChip({ trendCount }: { trendCount: number }) {
-  if (trendCount < 2) return null
-  return (
-    // Same pill geometry + backdrop as PlatformTimeChip beside it (round 8:
-    // the two read as mismatched heights).
-    <span className="inline-flex min-h-[32px] flex-none items-center gap-1 rounded-full bg-black/40 px-2.5 text-[11px] font-bold text-orange-300 backdrop-blur-sm">
-      <Flame size={11} className="text-orange-400" fill="currentColor" />
-      <span>{trendCount}</span>
-    </span>
-  )
-}
-
-/**
- * Navigate to an app-internal path only. `resolvePastedLink` already only
- * builds root-relative app paths, but the pasted text is user/clipboard
- * input, so the sink enforces the invariant too (defense-in-depth, and what
- * proves it to CodeQL: no `javascript:` scheme can survive the leading-`/`
- * requirement, no protocol-relative `//host` escape, and the resolved URL
- * must land on this origin). Exported for unit testing.
- */
-export function navigateToAppPath(path: string): void {
-  if (!path.startsWith('/') || path.startsWith('//')) return
-  const dest = new URL(path, window.location.origin)
-  if (dest.origin !== window.location.origin) return
-  window.location.assign(dest.toString())
-}
 
 export function DesktopStageChrome({
   mode,
@@ -391,12 +197,6 @@ export function DesktopStageChrome({
   const [pasteValue, setPasteValue] = useState('')
   const [pasteError, setPasteError] = useState(false)
   const pasteErrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [linkCopied, setLinkCopied] = useState(false)
-  const linkCopiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // "Copy" for text-like posts (round 8) — separate from `linkCopied` so the
-  // two buttons' feedback never cross-flash.
-  const [textCopied, setTextCopied] = useState(false)
-  const textCopiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const currentKey = current ? theaterItemKey(current) : null
   const { ref: captionRef, expanded, setExpanded, overflowing } = useClampExpand(currentKey)
   // Eager on a shared preview page: there's one post the visitor followed a
@@ -408,8 +208,6 @@ export function DesktopStageChrome({
   useEffect(
     () => () => {
       if (pasteErrorTimeoutRef.current) clearTimeout(pasteErrorTimeoutRef.current)
-      if (linkCopiedTimeoutRef.current) clearTimeout(linkCopiedTimeoutRef.current)
-      if (textCopiedTimeoutRef.current) clearTimeout(textCopiedTimeoutRef.current)
     },
     [],
   )
@@ -464,34 +262,7 @@ export function DesktopStageChrome({
   const openUrl = current
     ? sourceUrl(current.platform, current.author, current.bookmarkId ?? '')
     : null
-
-  const handleCopyLink = async () => {
-    if (!current) return
-    try {
-      const path = previewPath(current.platform, current.author, current.bookmarkId || '')
-      const url = new URL(path, window.location.origin).toString()
-      await navigator.clipboard.writeText(url)
-      setLinkCopied(true)
-      if (linkCopiedTimeoutRef.current) clearTimeout(linkCopiedTimeoutRef.current)
-      linkCopiedTimeoutRef.current = setTimeout(() => setLinkCopied(false), 1600)
-    } catch {
-      // Clipboard denial has nothing actionable to surface.
-    }
-  }
-
-  // Copy the post's full text (round 8): text-like posts have no file to
-  // download, so the Download slot carries this instead of vanishing.
-  const handleCopyText = async () => {
-    if (!caption) return
-    try {
-      await navigator.clipboard.writeText(caption)
-      setTextCopied(true)
-      if (textCopiedTimeoutRef.current) clearTimeout(textCopiedTimeoutRef.current)
-      textCopiedTimeoutRef.current = setTimeout(() => setTextCopied(false), 1600)
-    } catch {
-      // Clipboard denial has nothing actionable to surface.
-    }
-  }
+  const { linkCopied, textCopied, copyLink, copyText } = useTheaterCopy(current, caption)
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10 hidden lg:block">
@@ -783,18 +554,7 @@ export function DesktopStageChrome({
               Text/quote/article posts render their own composition on the
               stage (no media overlay here), so their chips are rendered by
               `CollectionStage` itself, aligned to the text column instead. */}
-          {collection?.tags && collection.tags.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              {collection.tags.map((t) => (
-                <span
-                  key={t}
-                  className="flex-none rounded-full border border-white/12 bg-white/[.06] px-2 py-0.5 text-[10.5px] text-white/55"
-                >
-                  #{t}
-                </span>
-              ))}
-            </div>
-          )}
+          <TheaterTagChips tags={collection?.tags} />
         </div>
       )}
 
@@ -804,47 +564,17 @@ export function DesktopStageChrome({
       {current && collection && collection.tab === 'collection' ? (
         <div
           className={cn(
-            'pointer-events-auto absolute bottom-6 right-7 flex items-center gap-2 transition-[opacity,transform] duration-200 ease-out',
+            'pointer-events-auto absolute bottom-6 right-7 transition-[opacity,transform] duration-200 ease-out',
             declutter && 'translate-y-3 opacity-0 pointer-events-none',
           )}
         >
-          <button type="button" onClick={collection.onLater} className={GLASS}>
-            <Clock size={14} />
-            <span>Later</span>
-          </button>
-          <button
-            type="button"
-            onClick={collection.onTag}
-            className={cn(GLASS, tagCount > 0 && 'border-clay/50 text-clay')}
-          >
-            <TagIcon size={14} fill={tagCount > 0 ? 'currentColor' : 'none'} />
-            <span>{tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}</span>
-          </button>
-          <button type="button" onClick={collection.onDelete} className={GLASS}>
-            <Trash2 size={14} />
-            <span>Delete</span>
-          </button>
-          <button
-            type="button"
-            onClick={collection.onDone}
-            title="Archive — take it out of your collection queue"
-            className={PRIMARY}
-          >
-            <ArchiveIcon size={14} />
-            <span>Archive</span>
-          </button>
-          {openUrl && (
-            <a
-              href={openUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              title={`Open on ${platformLabel}`}
-              className={GLASS}
-            >
-              <ExternalLink size={14} />
-              <span>Open</span>
-            </a>
-          )}
+          <TheaterCollectionActions
+            collection={collection}
+            tagCount={tagCount}
+            openUrl={openUrl}
+            platformLabel={platformLabel}
+            variant="desktop"
+          />
         </div>
       ) : current ? (
         <div
@@ -883,7 +613,7 @@ export function DesktopStageChrome({
             // post's full text instead (round 8, owner request).
             <button
               type="button"
-              onClick={() => void handleCopyText()}
+              onClick={() => void copyText()}
               title="Copy the post's text"
               className={GLASS}
             >
@@ -891,7 +621,7 @@ export function DesktopStageChrome({
               <span>{textCopied ? 'Copied' : 'Copy'}</span>
             </button>
           ) : null}
-          <button type="button" onClick={() => void handleCopyLink()} className={GLASS}>
+          <button type="button" onClick={() => void copyLink()} className={GLASS}>
             {linkCopied ? <Check size={14} className="text-done" /> : <LinkIcon size={14} />}
             <span>{linkCopied ? 'Copied' : 'Link'}</span>
           </button>
@@ -954,37 +684,6 @@ export function DesktopStageChrome({
   )
 }
 
-/**
- * Collection mode's Live-tab Save button: always-authed direct save (the theater
- * is only ever reached signed in from the authed Collection), tracked via
- * `TheaterPersonalChrome.savedKeys` rather than owning its own fetch state —
- * `SavePostButton` above assumes `mode === 'shared'`'s sign-in-modal flow,
- * which doesn't apply here.
- */
-function PersonalLiveSaveButton({
-  current,
-  collection,
-  className,
-}: {
-  current: TheaterItem
-  collection: TheaterPersonalChrome
-  className: string
-}) {
-  const saved = collection.savedKeys.has(theaterItemKey(current))
-  // Once saved, the button goes away rather than sitting there disabled saying
-  // "Saved" (owner: "there's no point in showing 'Saved' for a post — simply
-  // show the tag icon because that denotes that it's already saved"). Same
-  // treatment as the mobile chrome; the tag control beside it is both the
-  // affordance and the state.
-  if (saved) return null
-  return (
-    <button type="button" onClick={() => collection.onSave(current)} className={className}>
-      <Bookmark size={14} />
-      <span>Save</span>
-    </button>
-  )
-}
-
 const TRANSPORT_BTN =
   'inline-flex h-10 w-10 flex-none items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-inset hover:text-ink disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-ink-3'
 
@@ -1020,26 +719,8 @@ export function DesktopDock({
   const cardRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
 
   const kind = progressKindFor(current)
-  const [videoPlaying, setVideoPlaying] = useState(true)
-  const [timedPaused, setTimedPaused] = useState(false)
-  const [liveMuted, setLiveMuted] = useState<boolean | null>(null)
-
-  useEffect(() => {
-    const handlePlaying = (e: Event) => {
-      const detail = (e as CustomEvent<{ playing: boolean }>).detail
-      if (detail) setVideoPlaying(detail.playing)
-    }
-    const handleMuted = (e: Event) => {
-      const detail = (e as CustomEvent<{ muted: boolean }>).detail
-      if (detail) setLiveMuted(detail.muted)
-    }
-    window.addEventListener('theater-playing-state', handlePlaying)
-    window.addEventListener('theater-muted-state', handleMuted)
-    return () => {
-      window.removeEventListener('theater-playing-state', handlePlaying)
-      window.removeEventListener('theater-muted-state', handleMuted)
-    }
-  }, [])
+  const { videoPlaying, timedPaused, setTimedPaused, liveMuted, setLiveMuted } =
+    useTheaterStageEvents()
 
   useEffect(() => {
     setTimedPaused(false)

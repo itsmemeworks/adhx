@@ -5,7 +5,7 @@
  * `!authStatus.authenticated`, placed after an earlier `if (authStatus !==
  * null && !authStatus.authenticated) return null` — so the component always
  * bailed out before that block could render. The link was removed rather than
- * fixed (GitHub discoverability now lives in PublicNav/PreviewShell, the
+ * fixed (GitHub discoverability now lives in PublicNav, the
  * actual signed-out surfaces). This test guards against it reappearing here.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'

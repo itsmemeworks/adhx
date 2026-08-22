@@ -80,7 +80,7 @@ export function LandingPage() {
   // URL detection + the on-ADHX preview path, and the navigation itself, are
   // owned by the shared detectPlatformPost/parseShareUrl/navigateToPastedLink
   // helpers (src/lib/platform/url.ts, src/lib/utils/parse-share-url.ts) —
-  // same source of truth as PreviewAnotherLink, PasteLinkButton, and the PWA
+  // same source of truth as PasteLinkButton and the PWA
   // share target, so X/Instagram/TikTok/YouTube (incl. TikTok short links)
   // all resolve identically here.
   const handleTweetUrlChange = (value: string) => {
@@ -297,6 +297,25 @@ export function LandingPage() {
           <span className="font-indie-flower text-[22px] text-ink-3">
             Save now. Read never. Find always.
           </span>
+          <p className="mt-3 text-xs text-ink-3">
+            <a href="/privacy" className="underline-offset-2 hover:underline">
+              <span>Privacy</span>
+            </a>
+            <span> · </span>
+            <a
+              href="https://github.com/itsmemeworks/adhx/blob/main/SECURITY.md"
+              className="underline-offset-2 hover:underline"
+            >
+              <span>Security</span>
+            </a>
+            <span> · </span>
+            <a
+              href="https://github.com/itsmemeworks/adhx/blob/main/LICENSE"
+              className="underline-offset-2 hover:underline"
+            >
+              <span>MIT</span>
+            </a>
+          </p>
         </footer>
       </div>
     </div>

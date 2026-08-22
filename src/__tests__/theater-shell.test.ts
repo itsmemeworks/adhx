@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   pinKeyFirst,
   theaterUrlSyncPath,
+  theaterTabNavRestore,
   isFeedEnd,
   computeCanPrev,
   computeCanNext,
@@ -94,6 +95,19 @@ describe('theaterUrlSyncPath', () => {
 
   it('returns null for a null item', () => {
     expect(theaterUrlSyncPath(null)).toBe(null)
+  })
+})
+
+describe('theaterTabNavRestore', () => {
+  it('is a no-op when the bar is already a theater tab', () => {
+    expect(theaterTabNavRestore('/', '/collection')).toBe(null)
+    expect(theaterTabNavRestore('/collection', '/')).toBe(null)
+    expect(theaterTabNavRestore('/collection', '/collection')).toBe(null)
+  })
+
+  it('resyncs a Live replaceState preview path to the tab Next is rendering', () => {
+    expect(theaterTabNavRestore('/author99/status/99', '/collection')).toBe('/')
+    expect(theaterTabNavRestore('/@bob/video/1', '/')).toBe('/collection')
   })
 })
 

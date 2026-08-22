@@ -23,13 +23,9 @@ import {
   Bookmark,
   Check,
   Copy as CopyIcon,
-  Flame,
   Repeat,
   Repeat1,
-  Clock,
   Tag as TagIcon,
-  Trash2,
-  Archive as ArchiveIcon,
   ChevronUp,
   ChevronDown,
   Pause,
@@ -41,13 +37,14 @@ import {
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { addedToAdhxLabel, formatCompactRelativeTime, hasKnownTimestamp } from '@/lib/utils/format'
-import { MatterLogo, PlatformGlyph } from '@/components/matter'
+import { MatterLogo } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { PasteLinkButton } from '@/components/PasteLinkButton'
 import { authorProfileUrl, previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { inferType } from '@/lib/trending/filter'
 import { useSendFile } from './useSendFile'
+import { useTheaterCopy } from './useTheaterCopy'
+import { useTheaterStageEvents } from './useTheaterStageEvents'
 import { useClampExpand } from './useClampExpand'
 import { theaterItemKey, PLATFORM_LABEL, REPEAT_MODE_LABEL } from './types'
 import { TheaterLinkedText } from './TheaterText'
@@ -59,7 +56,10 @@ import {
 } from './TheaterProgressLine'
 import { UpNextList } from './UpNextList'
 import { SavePlaylistButton } from './SavePlaylistButton'
-import { SavePostButton } from './TheaterDesktopChrome'
+import { SavePostButton, PersonalLiveSaveButton } from './SavePostButton'
+import { FlameChip, PlatformTimeChip } from './TheaterMetaChips'
+import { TheaterTagChips } from './TheaterTagChips'
+import { TheaterCollectionActions } from './TheaterCollectionActions'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
 import { StageIconButton } from './stage-primitives'
 import { logAV } from './YtDebugOverlay'
@@ -206,10 +206,6 @@ export function TheaterMobileChrome({
   const [sheetOpen, setSheetOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // "Copy" for text-like posts (round 8) — separate from the share-link
-  // `copied` above so the two buttons' feedback never cross-flash.
-  const [textCopied, setTextCopied] = useState(false)
-  const textCopyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
   const peekRef = useRef<HTMLDivElement>(null)
   const sheetDrag = useSheetDrag({ open: sheetOpen, onOpenChange: setSheetOpen, sheetRef, peekRef })
@@ -218,6 +214,7 @@ export function TheaterMobileChrome({
   // ready before they reach for Send — the only way the share sheet opens
   // inside the tap's own user activation. Elsewhere the 2s skim guard stands.
   const sendFile = useSendFile(current, { eager: mode === 'shared' })
+  const { textCopied, copyText } = useTheaterCopy(current, (current?.text || '').trim())
   const { ref: captionRef, expanded, setExpanded, overflowing } = useClampExpand(currentKey)
 
   // `mediaKind` is the REAL content kind — drives the audio/pause buttons,
@@ -241,13 +238,8 @@ export function TheaterMobileChrome({
   // the button honest); `'timed'`-kind items have no underlying element to
   // ask, so the button owns that state itself, reset to playing whenever the
   // current post changes (a paused state must never leak to the next post).
-  const [videoPlaying, setVideoPlaying] = useState(true)
-  const [timedPaused, setTimedPaused] = useState(false)
-  // Live mute signal from StageVideo (`effectiveMuted`, which can diverge
-  // from the shell's `muted` prop when an unmuted-autoplay retry fails and
-  // the element falls back to muted on its own). Starts null — until the
-  // first event arrives, the button trusts the `muted` prop.
-  const [liveMuted, setLiveMuted] = useState<boolean | null>(null)
+  const { videoPlaying, timedPaused, setTimedPaused, liveMuted, setLiveMuted } =
+    useTheaterStageEvents()
   // De-clutter: hides the top and bottom scrims (brand + caption/actions) for
   // an unobstructed view of the stage. The peek bar (nav/pause/audio + the
   // up-next sheet) deliberately stays visible and functional — the point is
@@ -256,27 +248,9 @@ export function TheaterMobileChrome({
   // that way while browsing, not fight it back open on every navigation.
   const [declutter, setDeclutter] = useState(false)
 
-  useEffect(() => {
-    const handlePlaying = (e: Event) => {
-      const detail = (e as CustomEvent<{ playing: boolean }>).detail
-      if (detail) setVideoPlaying(detail.playing)
-    }
-    const handleMuted = (e: Event) => {
-      const detail = (e as CustomEvent<{ muted: boolean }>).detail
-      if (detail) setLiveMuted(detail.muted)
-    }
-    window.addEventListener('theater-playing-state', handlePlaying)
-    window.addEventListener('theater-muted-state', handleMuted)
-    return () => {
-      window.removeEventListener('theater-playing-state', handlePlaying)
-      window.removeEventListener('theater-muted-state', handleMuted)
-    }
-  }, [])
-
   useEffect(
     () => () => {
       if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
-      if (textCopyTimeoutRef.current) clearTimeout(textCopyTimeoutRef.current)
     },
     [],
   )
@@ -361,21 +335,6 @@ export function TheaterMobileChrome({
     } catch {
       // Clipboard can be denied (permissions/insecure context) — nothing
       // actionable to show beyond the button itself.
-    }
-  }
-
-  // Copy the post's full text (round 8): text-like posts have no file to
-  // download, so the Download slot carries this instead of vanishing.
-  const handleCopyText = async () => {
-    const text = (current?.text || '').trim()
-    if (!text) return
-    try {
-      await navigator.clipboard.writeText(text)
-      setTextCopied(true)
-      if (textCopyTimeoutRef.current) clearTimeout(textCopyTimeoutRef.current)
-      textCopyTimeoutRef.current = setTimeout(() => setTextCopied(false), 1600)
-    } catch {
-      // Clipboard can be denied — nothing actionable to show.
     }
   }
 
@@ -478,44 +437,8 @@ export function TheaterMobileChrome({
           <div className="flex flex-none items-center gap-1.5">
             {current && (
               <div className="flex flex-none items-center gap-2">
-                {/* Same pill geometry + backdrop as the platform/time chip
-                    beside it (round 8: the two read as mismatched heights). */}
-                {trendCount >= 2 && (
-                  <span className="inline-flex min-h-[32px] flex-none items-center gap-1 rounded-full bg-black/40 px-2.5 text-[11px] font-bold text-orange-300 backdrop-blur-sm">
-                    <Flame size={11} className="text-orange-400" fill="currentColor" />
-                    <span>{trendCount}</span>
-                  </span>
-                )}
-                {(() => {
-                  const src = sourceUrl(current.platform, current.author, current.bookmarkId ?? '')
-                  const inner = (
-                    <>
-                      <PlatformGlyph platform={current.platform} size={12} />
-                      {/* `addedAt` = when the post was first added to ADHX
-                          (owner decision — never the source platform's date,
-                          never the moving event time). Unknown → no time. */}
-                      {hasKnownTimestamp(current.addedAt) && (
-                        <span
-                          className="font-mono text-[11px]"
-                          title={addedToAdhxLabel(current.addedAt as string)}
-                          aria-label={addedToAdhxLabel(current.addedAt as string)}
-                          suppressHydrationWarning
-                        >
-                          {formatCompactRelativeTime(current.addedAt as string)}
-                        </span>
-                      )}
-                    </>
-                  )
-                  const cls =
-                    'inline-flex min-h-[32px] flex-none items-center gap-1.5 rounded-full bg-black/40 px-2.5 text-white/80 backdrop-blur-sm'
-                  return src ? (
-                    <a href={src} target="_blank" rel="noopener noreferrer" className={cls}>
-                      {inner}
-                    </a>
-                  ) : (
-                    <span className={cls}>{inner}</span>
-                  )
-                })()}
+                <FlameChip trendCount={trendCount} />
+                <PlatformTimeChip item={current} />
               </div>
             )}
             {/* Mobile equivalent of the desktop top bar's ⌘V paste-to-preview
@@ -526,7 +449,7 @@ export function TheaterMobileChrome({
             <PasteLinkButton iconOnly />
             {/* Signed-out visitors here (the home theater + shared preview
                 pages) get a burger fallback in this same slot — Theater /
-                Leaderboard / Sign in — instead of no navigation at all.
+                Leaderboard / Privacy / Sign in — instead of no navigation at all.
                 Collection above never passes this (always reached authed);
                 playlist mode's top scrim doesn't mount this component at
                 all — its plain home logo plus the bottom scrim's
@@ -633,78 +556,20 @@ export function TheaterMobileChrome({
             {/* Tag chips (unified-theater-collection.md §B) — the Collection
                 tab's current item only; display-only, nothing renders
                 without tags. */}
-            {collection?.tags && collection.tags.length > 0 && (
-              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                {collection.tags.map((t) => (
-                  <span
-                    key={t}
-                    className="flex-none rounded-full border border-white/12 bg-white/[.06] px-2 py-0.5 text-[10.5px] text-white/55"
-                  >
-                    #{t}
-                  </span>
-                ))}
-              </div>
-            )}
+            <TheaterTagChips
+              tags={collection?.tags}
+              className="mt-1.5 flex flex-wrap items-center gap-1.5"
+            />
           </div>
 
           {collection && collection.tab === 'collection' ? (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={collection.onLater}
-                className="inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/25 bg-white/[0.14] text-[11px] font-semibold text-white"
-              >
-                <Clock size={16} />
-                <span>Later</span>
-              </button>
-              <button
-                type="button"
-                onClick={collection.onTag}
-                className={cn(
-                  'inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border bg-white/10 text-[11px] font-semibold backdrop-blur-md',
-                  tagCount > 0 ? 'border-clay/50 text-clay' : 'border-white/25 text-white',
-                )}
-              >
-                <TagIcon size={16} fill={tagCount > 0 ? 'currentColor' : 'none'} />
-                <span>{tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={collection.onDelete}
-                className="inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/25 bg-white/[0.14] text-[11px] font-semibold text-white"
-              >
-                <Trash2 size={16} />
-                <span>Delete</span>
-              </button>
-              <button
-                type="button"
-                onClick={collection.onDone}
-                title="Archive — take it out of your collection queue"
-                className="inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl bg-done/25 text-[11px] font-semibold text-done"
-              >
-                <ArchiveIcon size={16} />
-                <span>Archive</span>
-              </button>
-              {(() => {
-                const openUrl = sourceUrl(
-                  current.platform,
-                  current.author,
-                  current.bookmarkId ?? '',
-                )
-                if (!openUrl) return null
-                const platformLabel = PLATFORM_LABEL[current.platform] ?? current.platform
-                return (
-                  <StageIconButton
-                    href={openUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`Open on ${platformLabel}`}
-                  >
-                    <ExternalLink size={16} />
-                  </StageIconButton>
-                )
-              })()}
-            </div>
+            <TheaterCollectionActions
+              collection={collection}
+              tagCount={tagCount}
+              openUrl={sourceUrl(current.platform, current.author, current.bookmarkId ?? '')}
+              platformLabel={PLATFORM_LABEL[current.platform] ?? current.platform}
+              variant="mobile"
+            />
           ) : (
             <div className="flex items-center gap-2">
               {playlist && isPlaylistOwner ? (
@@ -762,11 +627,7 @@ export function TheaterMobileChrome({
                   ) : textLike && (current.text || '').trim() ? (
                     // Text-like posts have no file — the Download slot copies
                     // the post's full text instead (round 8, owner request).
-                    <button
-                      type="button"
-                      onClick={() => void handleCopyText()}
-                      className={PILL_GLASS}
-                    >
+                    <button type="button" onClick={() => void copyText()} className={PILL_GLASS}>
                       {textCopied ? (
                         <Check size={15} className="text-done" />
                       ) : (
@@ -792,16 +653,12 @@ export function TheaterMobileChrome({
                           simply show the tag icon because that denotes that
                           it's already saved"). The tag icon beside it is both
                           the affordance and the state. */}
-                      {!collection.savedKeys.has(theaterItemKey(current)) && (
-                        <button
-                          type="button"
-                          onClick={() => collection.onSave(current)}
-                          className={PILL_SAVE}
-                        >
-                          <Bookmark size={15} />
-                          <span>Save</span>
-                        </button>
-                      )}
+                      <PersonalLiveSaveButton
+                        current={current}
+                        collection={collection}
+                        className={PILL_SAVE}
+                        iconSize={15}
+                      />
                     </>
                   ) : mode === 'shared' && authed ? (
                     // Signed-in viewers save directly — same branch the

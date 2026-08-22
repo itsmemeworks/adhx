@@ -13,21 +13,34 @@ if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true })
 }
 
-// Create SQLite connection with WAL mode for better performance.
-// The constructor `timeout` installs the busy handler BEFORE any pragma runs:
-// `journal_mode = WAL` takes an exclusive lock, and `next build`'s parallel
-// page-data workers each import this module against a fresh db file — without
-// a pre-armed busy handler one worker throws "database is locked" and the
-// whole build dies (flaked twice in CI before this fix).
-const sqlite = new Database(DB_PATH, { timeout: 10000 })
-sqlite.pragma('busy_timeout = 10000')
-sqlite.pragma('journal_mode = WAL')
-sqlite.pragma('foreign_keys = ON')
+/**
+ * One better-sqlite3 handle per process. Next can evaluate this module twice
+ * (RSC graph vs route graph); two connections to the same WAL file is why
+ * `/t/{user}/{tag}` could still render "Private playlist" after PATCH made
+ * the tag public — the page's connection missed the route's write.
+ */
+const globalForDb = globalThis as unknown as { __adhxSqlite?: Database.Database }
 
-// Create Drizzle instance
+function openSqlite(): Database.Database {
+  if (globalForDb.__adhxSqlite) return globalForDb.__adhxSqlite
+
+  // The constructor `timeout` installs the busy handler BEFORE any pragma runs:
+  // `journal_mode = WAL` takes an exclusive lock, and `next build`'s parallel
+  // page-data workers each import this module against a fresh db file — without
+  // a pre-armed busy handler one worker throws "database is locked" and the
+  // whole build dies (flaked twice in CI before this fix).
+  const sqlite = new Database(DB_PATH, { timeout: 10000 })
+  sqlite.pragma('busy_timeout = 10000')
+  sqlite.pragma('journal_mode = WAL')
+  sqlite.pragma('foreign_keys = ON')
+  globalForDb.__adhxSqlite = sqlite
+  return sqlite
+}
+
+const sqlite = openSqlite()
+
 export const db = drizzle(sqlite, { schema })
 
-// Export raw sqlite for FTS5 operations (Drizzle doesn't support virtual tables natively)
 export const rawDb = sqlite
 
 /**
@@ -55,7 +68,9 @@ export function runInTransaction<R>(fn: () => R): R {
   return sqlite.transaction(fn)()
 }
 
-// Close database on process exit
-process.on('exit', () => {
-  sqlite.close()
-})
+if (!(globalThis as unknown as { __adhxSqliteExitHook?: boolean }).__adhxSqliteExitHook) {
+  ;(globalThis as unknown as { __adhxSqliteExitHook?: boolean }).__adhxSqliteExitHook = true
+  process.on('exit', () => {
+    sqlite.close()
+  })
+}

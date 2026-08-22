@@ -18,6 +18,12 @@ const nextConfig = {
   // Enable standalone output for Docker deployment
   output: 'standalone',
 
+  // Playwright e2e runs `next dev` alongside the owner's :3001 server. Next
+  // locks on distDir, so the e2e process uses `.next-e2e` (see e2e/env.ts).
+  distDir: process.env.NEXT_DIST_DIR || '.next',
+  // Dev-only: Playwright hits localhost / 127.0.0.1. Production ignores this.
+  allowedDevOrigins: ['localhost', '127.0.0.1'],
+
   // Enable server-side external packages for better-sqlite3.
   // @sentry/node is also external: without this, Turbopack bundles a full
   // copy of the SDK into both the server and SSR chunk graphs, producing two

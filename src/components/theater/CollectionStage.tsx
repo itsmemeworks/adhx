@@ -43,8 +43,7 @@ function CollectionTagChips({ tags }: { tags?: string[] }) {
 }
 
 /** Minimal inline quote card for the stage — dark-themed, compact. There is no
- * exported `QuoteCard` (the equivalent view in `MediaCard.tsx` is a private,
- * light-surface-only component), so this is a small purpose-built variant. */
+ * exported `QuoteCard`, so this is a small purpose-built variant. */
 function CollectionQuoteCard({ item }: { item: FeedItem }) {
   const q = item.quotedTweet
   const qc = item.quoteContext

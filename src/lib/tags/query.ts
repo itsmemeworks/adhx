@@ -4,6 +4,7 @@ import { eq, and, inArray, desc } from 'drizzle-orm'
 import { getUserIdForUsername } from '@/lib/users/lookup'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { getThumbnailUrl } from '@/lib/media/fxembed'
+import { inferContentType } from '@/lib/content-type'
 
 /**
  * Public tag-collection query — the data layer for `/t/{username}/{tag}`.
@@ -65,6 +66,16 @@ function getCache(): TagCache {
   return c
 }
 
+/** Drop a cached playlist read so a visibility PATCH is visible immediately. */
+export function invalidateTagCollectionCache(username?: string, tag?: string): void {
+  const cache = getCache()
+  if (!username || !tag) {
+    cache.clear()
+    return
+  }
+  cache.delete(`${username.toLowerCase()}:${tag}`)
+}
+
 /**
  * Fetch a public tag collection by username + tag name. Returns `not_found`
  * when the user or tag doesn't exist, `private` when the tag exists but isn't
@@ -81,7 +92,11 @@ export async function getPublicTagCollection(
   if (hit && hit.expiresAt > now) return hit.value
 
   const value = await fetchTagCollection(username, tagName)
-  cache.set(key, { value, expiresAt: now + CACHE_TTL_MS })
+  // Never cache private/not_found — a visibility PATCH must be visible on the
+  // next request, and those misses are a cheap local read.
+  if (value.status === 'ok') {
+    cache.set(key, { value, expiresAt: now + CACHE_TTL_MS })
+  }
   return value
 }
 
@@ -224,20 +239,13 @@ async function fetchTagCollection(username: string, tagName: string): Promise<Ta
     const hasVideo = media.some((m) => m.mediaType === 'video' || m.mediaType === 'animated_gif')
     const hasPhoto = media.some((m) => m.mediaType === 'photo')
 
-    let contentType: ContentType
-    if (b.platform === 'tiktok' || b.platform === 'youtube' || b.platform === 'instagram') {
-      contentType = 'video'
-    } else if (hasVideo) {
-      contentType = 'video'
-    } else if (b.category === 'article') {
-      contentType = 'article'
-    } else if (hasPhoto) {
-      contentType = 'photo'
-    } else if (b.isQuote) {
-      contentType = 'quote'
-    } else {
-      contentType = 'text'
-    }
+    const contentType = inferContentType({
+      platform: b.platform,
+      category: b.category,
+      isQuote: b.isQuote,
+      hasVideo,
+      hasPhoto,
+    })
 
     const isArticle = contentType === 'article'
     const thumbnailUrl = isArticle

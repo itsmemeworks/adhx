@@ -67,8 +67,8 @@ export function slugToWindow(slug: string): RankWindow | null {
  * so it's shareable/crawlable (mirrors `/trending` vs `/trending/[filter]`).
  *
  * This lived at `/collections` until the owner asked for it to move — that
- * path collides with the unrelated `/api/collections` custom-collections
- * API. The old `/collections`(`/[window]`) paths still resolve, via thin
+ * path collided with a now-deleted custom-collections CRUD API. The old
+ * `/collections`(`/[window]`) paths still resolve, via thin
  * `permanentRedirect` stubs in `src/app/collections/`.
  */
 export function windowToPath(window: RankWindow): string {

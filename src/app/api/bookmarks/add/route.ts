@@ -382,7 +382,7 @@ async function addYouTubeShort(userId: string, videoId: string, source: string) 
   })
 
   // Store the poster as a 'video' media row. Playback is the official iframe
-  // embed (resolved in MediaCard from platform+id), so there's no MP4 to store.
+  // embed (resolved in StageYouTube from platform+id), so there's no MP4 to store.
   await db
     .insert(bookmarkMedia)
     .values({

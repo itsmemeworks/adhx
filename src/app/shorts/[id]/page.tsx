@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation'
-import { headers } from 'next/headers'
 import { Metadata } from 'next'
 import {
   fetchYouTubeMetadata,
@@ -8,23 +7,23 @@ import {
   youtubeEmbedUrl,
 } from '@/lib/media/youtube'
 import { getCurrentUserId } from '@/lib/auth/session'
-import { recordActivity, previewPath } from '@/lib/activity/record'
-import { isLikelyBot } from '@/lib/activity/bot'
-import { buildVideoObjectLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
+import { previewPath } from '@/lib/activity/record'
+import { buildVideoObjectLd } from '@/lib/utils/structured-data'
 import {
   buildContentTitle,
   buildSnippetDescription,
   attributionFact,
+  previewPageMetadata,
 } from '@/lib/utils/content-metadata'
 import { RelatedSaves } from '@/components/RelatedSaves'
-import { SharedPostStatic } from '@/components/theater/SharedPostStatic'
-import { TheaterShell } from '@/components/theater/TheaterShell'
-import { buildSharedSeed, youtubeToTheaterItem } from '@/lib/theater/shared-seed'
-import { metrics } from '@/lib/sentry'
-import { db } from '@/lib/db'
-import { bookmarks } from '@/lib/db/schema'
+import { youtubeToTheaterItem } from '@/lib/theater/shared-seed'
+import {
+  recordHumanPreview,
+  SharedPreviewPage,
+  sharedPreviewSeed,
+} from '@/lib/theater/shared-preview'
+import { getSavedPreviewDisplay } from '@/lib/theater/saved-preview'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
-import { and, eq } from 'drizzle-orm'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -33,34 +32,6 @@ interface Props {
 // This route is dynamic (reads cookies for auth), so it is never full-route
 // cached. Crawl-cheapness comes instead from fetchYouTubeMetadata()'s cached
 // oEmbed fetch (next.revalidate 3600) and the DB-first skip for saved posts.
-
-/** Display fields YouTubePreviewLanding needs, sourced from a saved bookmark. */
-interface SavedShort {
-  author: string | null
-  authorName: string | null
-  title: string | null
-}
-
-/**
- * Cross-user lookup: is this Short already in someone's collection? Content is
- * identical regardless of saver (mirrors the cross-user reads in the trending
- * query / /api/activity), so a single row is enough — we render from it and skip
- * the YouTube oEmbed fetch. We never select or expose `userId`.
- */
-function getSavedShort(id: string): SavedShort | null {
-  const row = db
-    .select({
-      author: bookmarks.author,
-      authorName: bookmarks.authorName,
-      text: bookmarks.text,
-    })
-    .from(bookmarks)
-    .where(and(eq(bookmarks.platform, 'youtube'), eq(bookmarks.id, id)))
-    .limit(1)
-    .get()
-  if (!row) return null
-  return { author: row.author, authorName: row.authorName, title: row.text }
-}
 
 export default async function ShortPreviewPage({ params }: Props) {
   const { id } = await params
@@ -72,29 +43,25 @@ export default async function ShortPreviewPage({ params }: Props) {
   // DB-first: if anyone has saved this Short, render from the stored row and
   // skip the YouTube oEmbed fetch. The player is the official iframe embed
   // (resolved from the id), so the saved row's title/author is all the UI needs.
-  const saved = getSavedShort(id)
+  const saved = getSavedPreviewDisplay('youtube', id)
   const userId = await getCurrentUserId()
   const meta = saved ? null : await fetchYouTubeMetadata(id)
 
   const author = saved?.author || meta?.author || null
   const authorName = saved?.authorName || meta?.authorName || null
-  const title = saved?.title || meta?.title || null
+  const title = saved?.text || meta?.title || null
   const available = saved ? true : !!meta
   const previewAuthor = author?.replace(/^@/, '') || authorName || 'youtube'
 
-  if (available && !isLikelyBot((await headers()).get('user-agent'))) {
-    recordActivity({
-      action: 'preview',
-      platform: 'youtube',
-      bookmarkId: id,
-      author: previewAuthor,
-      authorName: authorName,
-      text: title,
-      thumbnailUrl: youtubeThumbnail(id),
-      url: previewPath('youtube', previewAuthor, id),
-    })
-    metrics.theaterOpened('shared')
-  }
+  await recordHumanPreview(available, {
+    platform: 'youtube',
+    bookmarkId: id,
+    author: previewAuthor,
+    authorName: authorName,
+    text: title,
+    thumbnailUrl: youtubeThumbnail(id),
+    url: previewPath('youtube', previewAuthor, id),
+  })
 
   const sharedItem = youtubeToTheaterItem({
     id,
@@ -102,7 +69,7 @@ export default async function ShortPreviewPage({ params }: Props) {
     authorName,
     text: title,
   })
-  const { seed } = await buildSharedSeed(sharedItem)
+  const seed = await sharedPreviewSeed(sharedItem)
 
   const ldAuthorName = authorName || author
   const jsonLd = buildVideoObjectLd({
@@ -113,31 +80,28 @@ export default async function ShortPreviewPage({ params }: Props) {
   })
 
   return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdScriptContent(jsonLd) }}
-      />
-      <SharedPostStatic
-        kind="youtube-short"
-        authorName={authorName}
-        handle={author}
-        text={title}
-        sourceUrl={`https://www.youtube.com/shorts/${id}`}
-        label="YouTube Short"
-        below={
-          available ? (
-            <RelatedSaves
-              platform="youtube"
-              bookmarkId={id}
-              authorHandle={previewAuthor}
-              contentType="video"
-            />
-          ) : undefined
-        }
-      />
-      <TheaterShell seed={seed} mode="shared" sharedItem={sharedItem} authed={!!userId} />
-    </>
+    <SharedPreviewPage
+      jsonLd={jsonLd}
+      seed={seed}
+      sharedItem={sharedItem}
+      authed={!!userId}
+      staticPost={{
+        kind: 'youtube-short',
+        authorName,
+        handle: author,
+        text: title,
+        sourceUrl: `https://www.youtube.com/shorts/${id}`,
+        label: 'YouTube Short',
+        below: available ? (
+          <RelatedSaves
+            platform="youtube"
+            bookmarkId={id}
+            authorHandle={previewAuthor}
+            contentType="video"
+          />
+        ) : undefined,
+      }}
+    />
   )
 }
 
@@ -150,47 +114,36 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const baseUrl = PUBLIC_BASE_URL
   const canonicalUrl = `${baseUrl}/shorts/${id}`
-  const meta = await fetchYouTubeMetadata(id)
+  const saved = getSavedPreviewDisplay('youtube', id)
+  const meta = saved ? null : await fetchYouTubeMetadata(id)
 
-  const who = meta?.authorName || meta?.author
+  const who = saved?.authorName || saved?.author || meta?.authorName || meta?.author
+  const titleText = saved?.text || meta?.title
+  const available = Boolean(saved || meta)
 
   // Content-first `<title>`: the Short's own title (already content-led via
   // oEmbed) gets the brand suffix instead of the old "Preview @user's Short"
   // pitch; falls back to an author-aware label when oEmbed has no title.
   const pageTitle = buildContentTitle(
-    meta?.title || (who ? `${who}'s Short on YouTube` : 'YouTube Short'),
+    titleText || (who ? `${who}'s Short on YouTube` : 'YouTube Short'),
   )
   // oEmbed gives a title and no body, so there's usually no content left to
   // continue past the title — the trail carries the description on its own.
   const description = buildSnippetDescription({
     title: pageTitle,
-    content: meta?.title || '',
+    content: titleText || '',
     facts: [attributionFact(pageTitle, who, 'YouTube'), 'Short'].filter((fact): fact is string =>
       Boolean(fact),
     ),
     closer: 'Watch it here — no YouTube app needed.',
   })
-  const image = meta ? youtubeThumbnail(id) : `${baseUrl}/og-logo.png`
+  const image = available ? youtubeThumbnail(id) : `${baseUrl}/og-logo.png`
 
-  return {
+  return previewPageMetadata({
     title: pageTitle,
     description,
-    openGraph: {
-      type: 'video.other',
-      title: pageTitle,
-      description,
-      siteName: 'ADHX',
-      url: canonicalUrl,
-      images: [{ url: image, alt: pageTitle }],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: pageTitle,
-      description,
-      images: [image],
-    },
-    alternates: {
-      canonical: canonicalUrl,
-    },
-  }
+    canonicalUrl,
+    image,
+    ogType: 'video.other',
+  })
 }

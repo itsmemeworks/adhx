@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { eq } from 'drizzle-orm'
 import { createTestDb, type TestDbInstance, createTestBookmark } from './api/setup'
 import {
   oauthTokens,
@@ -26,7 +27,7 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 
-import { getPublicTagCollection } from '@/lib/tags/query'
+import { getPublicTagCollection, invalidateTagCollectionCache } from '@/lib/tags/query'
 
 const OWNER_ID = 'owner-user-1'
 const OWNER_USERNAME = 'curator'
@@ -81,6 +82,38 @@ describe('getPublicTagCollection', () => {
     // to the private branch — the whole point is nothing renders.
     expect((result as Record<string, unknown>).data).toBeUndefined()
     expect(JSON.stringify(result)).not.toContain('top secret content')
+  })
+
+  it('a visibility flip is visible after invalidateTagCollectionCache', async () => {
+    await seedOwner()
+    await testInstance.db.insert(tagShares).values({
+      userId: OWNER_ID,
+      tag: 'secret-tag',
+      shareCode: 'code-1',
+      isPublic: false,
+    })
+    await testInstance.db
+      .insert(bookmarks)
+      .values(createTestBookmark(OWNER_ID, 'secret-1', { text: 'top secret content' }))
+    await testInstance.db.insert(bookmarkTags).values({
+      userId: OWNER_ID,
+      bookmarkId: 'secret-1',
+      tag: 'secret-tag',
+    })
+
+    expect((await getPublicTagCollection(OWNER_USERNAME, 'secret-tag')).status).toBe('private')
+
+    await testInstance.db
+      .update(tagShares)
+      .set({ isPublic: true })
+      .where(eq(tagShares.tag, 'secret-tag'))
+
+    // Negative results are not cached, so a visibility flip is visible
+    // without an explicit invalidate. invalidate still exists for the
+    // public → private direction (ok results are cached).
+    expect((await getPublicTagCollection(OWNER_USERNAME, 'secret-tag')).status).toBe('ok')
+    invalidateTagCollectionCache(OWNER_USERNAME, 'secret-tag')
+    expect((await getPublicTagCollection(OWNER_USERNAME, 'secret-tag')).status).toBe('ok')
   })
 
   it('returns items for a public tag, ordered newest-first, with on-ADHX preview links', async () => {

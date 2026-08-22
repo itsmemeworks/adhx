@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: '🔒 Security vulnerability'
+    url: https://github.com/itsmemeworks/adhx/security/advisories/new
+    about: 'Report privately — do not open a public issue. See SECURITY.md.'
   - name: '💬 Discussions'
     url: https://github.com/itsmemeworks/adhx/discussions
     about: 'Have a question? Want to share your bookmark hoarding stories? Join the discussion!'

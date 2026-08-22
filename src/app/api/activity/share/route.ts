@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { recordSharePulse } from '@/lib/activity/record'
+import { isAllowedActivityOrigin } from '@/lib/activity/origin'
 import { getCurrentUserId } from '@/lib/auth/session'
-import { mediaRateLimit } from '@/lib/rate-limit'
+import { activityWriteLimit } from '@/lib/rate-limit'
 
 const PLATFORMS = new Set(['twitter', 'instagram', 'tiktok', 'youtube'])
 const ID_MAX = 80
@@ -17,7 +18,10 @@ const ID_MAX = 80
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
-  const limited = mediaRateLimit(request, { windowMs: 60_000, max: 30 })
+  if (!isAllowedActivityOrigin(request)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+  const limited = activityWriteLimit(request)
   if (limited) return limited
 
   let body: unknown

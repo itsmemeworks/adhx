@@ -107,7 +107,7 @@ export function CollectionsBoard({
             <span className="text-[12.5px] font-semibold text-white/60">Playlists</span>
           </span>
           {/* Signed-out nav (round 8): the same burger menu the theater's
-              public surfaces carry — Theater / Leaderboard / Sign in. */}
+              public surfaces carry — Theater / Leaderboard / Privacy / Sign in. */}
           <div className="ml-auto">
             <LeaderboardMenu />
           </div>

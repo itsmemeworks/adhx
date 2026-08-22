@@ -60,9 +60,6 @@ async function seedUserData(userId: string) {
     .insert(schema.userPreferences)
     .values([{ userId, key: 'theme', value: 'dark' }])
   await testInstance.db
-    .insert(schema.syncState)
-    .values([{ userId, key: 'lastSync', value: '2024-01-01T10:00:00Z' }])
-  await testInstance.db
     .insert(schema.syncLogs)
     .values([
       { id: `log-${userId}`, userId, startedAt: '2024-01-01T10:00:00Z', status: 'completed' },
@@ -167,10 +164,6 @@ describe('API: /api/account/clear', () => {
       .select()
       .from(schema.userPreferences)
       .where(eq(schema.userPreferences.userId, USER_A))
-    const syncStates = await testInstance.db
-      .select()
-      .from(schema.syncState)
-      .where(eq(schema.syncState.userId, USER_A))
     const syncLogs = await testInstance.db
       .select()
       .from(schema.syncLogs)
@@ -182,7 +175,6 @@ describe('API: /api/account/clear', () => {
     expect(links).toHaveLength(0)
     expect(archivedPostses).toHaveLength(0)
     expect(prefs).toHaveLength(0)
-    expect(syncStates).toHaveLength(0)
     expect(syncLogs).toHaveLength(0)
 
     // OAuth token should still exist

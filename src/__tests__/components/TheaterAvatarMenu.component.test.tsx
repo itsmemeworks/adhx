@@ -246,7 +246,7 @@ describe('TheaterAvatarMenu — signed-out burger (allowSignedOut)', () => {
     invalidateAuthMe()
   })
 
-  it('renders a burger (not the avatar) with Theater/Leaderboard/Sign in', async () => {
+  it('renders a burger (not the avatar) with Theater/Leaderboard/Privacy/Sign in', async () => {
     mockAuthMe(SIGNED_OUT_ME)
     render(<TheaterAvatarMenu allowSignedOut />)
 
@@ -256,7 +256,16 @@ describe('TheaterAvatarMenu — signed-out burger (allowSignedOut)', () => {
     fireEvent.click(button)
     expect(screen.getByText('Theater')).toBeInTheDocument()
     expect(screen.getByText('Leaderboard')).toBeInTheDocument()
+    expect(screen.getByText('Privacy')).toBeInTheDocument()
     expect(screen.getByText('Sign in')).toBeInTheDocument()
+  })
+
+  it('the Privacy entry links to /privacy', async () => {
+    mockAuthMe(SIGNED_OUT_ME)
+    render(<TheaterAvatarMenu allowSignedOut />)
+    fireEvent.click(await screen.findByLabelText('Menu'))
+
+    expect(screen.getByText('Privacy').closest('a')).toHaveAttribute('href', '/privacy')
   })
 
   it('the Leaderboard entry links to /leaderboard', async () => {

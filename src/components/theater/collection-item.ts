@@ -12,6 +12,7 @@
  */
 
 import type { FeedItem, LinkItem } from '@/components/feed/types'
+import { feedItemType } from '@/components/feed/feedItemMeta'
 import type { TextLinkRef, TheaterItem } from './types'
 import { theaterItemKey } from './types'
 
@@ -42,34 +43,15 @@ function toTextLinks(links: LinkItem[] | null | undefined): TextLinkRef[] | unde
 
 export type CollectionContentType = 'video' | 'photo' | 'text' | 'quote' | 'article'
 
-/** Mirrors `isArticleItem` in `MediaCard.tsx` / `typeOf` in `trending/query.ts`. */
-function isArticleItem(item: FeedItem): boolean {
-  const hasMedia = !!(item.media?.[0]?.thumbnailUrl || item.articlePreview?.imageUrl)
-  return (
-    !!item.isXArticle ||
-    !!(item.articleContent?.blocks && item.articleContent.blocks.length > 0) ||
-    (!hasMedia &&
-      !!(item.articlePreview && (item.articlePreview.title || item.articlePreview.description)))
-  )
-}
-
 /**
- * Real content type for a saved item — mirrors the priority order
- * `getTrendingItems()`'s `typeOf()` uses for saved bookmarks: single-format
- * platforms are always video; otherwise article > video > photo > quote > text.
+ * Real content type for a saved item. Same function as `feedItemType` —
+ * {@link inferContentType} in `src/lib/content-type.ts`.
  */
 export function inferCollectionContentType(item: FeedItem): CollectionContentType {
-  const platform = item.platform ?? 'twitter'
-  if (platform === 'tiktok' || platform === 'youtube' || platform === 'instagram') return 'video'
-  if (isArticleItem(item)) return 'article'
-  const primary = item.media?.[0]
-  if (primary?.mediaType === 'video' || primary?.mediaType === 'animated_gif') return 'video'
-  if (primary?.mediaType === 'photo') return 'photo'
-  if (item.isQuote && (item.quotedTweet || item.quoteContext)) return 'quote'
-  return 'text'
+  return feedItemType(item)
 }
 
-/** The poster/hero image for a saved item — mirrors `heroImageUrl` in `MediaCard.tsx`. */
+/** The poster/hero image for a saved item. */
 function heroThumbnail(item: FeedItem): string | null {
   if (item.media?.[0]?.thumbnailUrl) return item.media[0].thumbnailUrl
   if (item.articlePreview?.imageUrl) return item.articlePreview.imageUrl

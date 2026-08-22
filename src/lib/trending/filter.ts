@@ -1,5 +1,6 @@
 import type { TrendingItem } from './query'
 import type { ContentType } from '@/components/matter'
+import { inferContentType } from '@/lib/content-type'
 
 /**
  * The Discover/Trending filter lenses. Shared between the client grid
@@ -59,18 +60,12 @@ export function filterLabel(filter: FilterId): string {
  *   any other thumbnail ⇒ photo, otherwise text
  */
 export function inferType(item: TrendingItem): ContentType {
-  if (item.contentType) return item.contentType
-  if (item.platform === 'tiktok' || item.platform === 'youtube' || item.platform === 'instagram') {
-    return 'video'
-  }
-  if (item.thumbnailUrl && /profile_images/.test(item.thumbnailUrl)) return 'text'
-  if (
-    item.thumbnailUrl &&
-    /(ext_tw_video_thumb|amplify_video_thumb|tweet_video_thumb)/.test(item.thumbnailUrl)
-  ) {
-    return 'video'
-  }
-  return item.thumbnailUrl ? 'photo' : 'text'
+  return inferContentType({
+    platform: item.platform,
+    contentType: item.contentType,
+    isQuote: !!item.quote,
+    thumbnailUrl: item.thumbnailUrl,
+  })
 }
 
 /**

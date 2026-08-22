@@ -32,9 +32,6 @@ export function createTestDb(): BetterSQLite3Database<typeof schema> & { close: 
       quoted_tweet_id TEXT,
       is_retweet INTEGER DEFAULT 0,
       retweet_context TEXT,
-      extracted_content TEXT,
-      filed_path TEXT,
-      needs_transcript INTEGER DEFAULT 0,
       summary TEXT,
       source TEXT DEFAULT 'sync',
       raw_json TEXT,
@@ -113,15 +110,6 @@ export function createTestDb(): BetterSQLite3Database<typeof schema> & { close: 
       PRIMARY KEY (user_id, key)
     );
 
-    -- Sync state with composite PK
-    CREATE TABLE sync_state (
-      user_id TEXT NOT NULL,
-      key TEXT NOT NULL,
-      value TEXT,
-      updated_at TEXT,
-      PRIMARY KEY (user_id, key)
-    );
-
     -- OAuth tokens
     CREATE TABLE oauth_tokens (
       user_id TEXT PRIMARY KEY,
@@ -133,32 +121,6 @@ export function createTestDb(): BetterSQLite3Database<typeof schema> & { close: 
       scopes TEXT,
       created_at TEXT,
       updated_at TEXT
-    );
-
-    -- Collections
-    CREATE TABLE collections (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
-      name TEXT NOT NULL,
-      description TEXT,
-      color TEXT,
-      icon TEXT,
-      share_code TEXT UNIQUE,
-      is_public INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT
-    );
-    CREATE INDEX collections_user_id_idx ON collections(user_id);
-
-    -- Collection tweets with composite PK (userId, collectionId, platform, bookmarkId)
-    CREATE TABLE collection_tweets (
-      user_id TEXT NOT NULL,
-      collection_id TEXT NOT NULL,
-      platform TEXT NOT NULL DEFAULT 'twitter',
-      bookmark_id TEXT NOT NULL,
-      added_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      notes TEXT,
-      PRIMARY KEY (user_id, collection_id, platform, bookmark_id)
     );
 
     -- Sync logs

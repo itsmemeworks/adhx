@@ -15,6 +15,7 @@ import { TypeBadge, PlatformChip, type ContentType, type PlatformId } from '@/co
 import { cn } from '@/lib/utils'
 import type { FeedItem } from './types'
 import { feedHoverSrc } from './video-src'
+import { feedItemType } from './feedItemMeta'
 
 interface FeedCardProps {
   item: FeedItem
@@ -69,9 +70,10 @@ export function FeedCard({
 
   const hasMedia = item.media && item.media.length > 0
   const primaryMedia = hasMedia ? item.media![0] : null
-  const isVideo = primaryMedia?.mediaType === 'video' || primaryMedia?.mediaType === 'animated_gif'
-  const isArticle = item.category === 'article'
-  const isQuote = item.isQuote && item.quoteContext
+  const type = feedItemType(item)
+  const isVideo = type === 'video'
+  const isArticle = type === 'article'
+  const isQuote = type === 'quote'
   const isNew = lastSyncAt && item.processedAt >= lastSyncAt
 
   const articleLink = isArticle ? item.links?.[0] : null
@@ -89,16 +91,7 @@ export function FeedCard({
   const timeDate = sortField === 'createdAt' && item.createdAt ? item.createdAt : item.processedAt
   const timeBadge = formatCompactRelativeTime(timeDate)
 
-  // Map content to a Matter TypeBadge type.
-  const badgeType: ContentType = isArticle
-    ? 'article'
-    : isVideo
-      ? 'video'
-      : hasMedia
-        ? 'photo'
-        : isQuote
-          ? 'quote'
-          : 'text'
+  const badgeType: ContentType = type
 
   // Platform glyph: twitter renders X; others render their own glyph.
   const platform = (item.platform || 'twitter') as PlatformId

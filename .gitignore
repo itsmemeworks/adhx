@@ -3,6 +3,7 @@ node_modules/
 
 # Next.js
 .next/
+.next-e2e/
 out/
 
 # State files (contain your bookmark data)
@@ -47,6 +48,12 @@ CLAUDE.local.md
 
 plans/
 todos/
+
+# Playwright e2e
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
 
 # Claude Code workspace (local-only)
 .claude/

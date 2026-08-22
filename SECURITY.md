@@ -21,8 +21,11 @@ Found a security issue? First off, thank you! Second, please **don't** post it p
 
 ### How to Report
 
-1. **Email us privately** at [security@adhx.com](mailto:security@adhx.com)
-2. Include:
+**Do not open a public GitHub issue.**
+
+1. **Preferred:** [GitHub private vulnerability report](https://github.com/itsmemeworks/adhx/security/advisories/new) — works even if you do not have our email.
+2. **Or email** [security@adhx.com](mailto:security@adhx.com)
+3. Include:
    - Description of the vulnerability
    - Steps to reproduce
    - Potential impact
@@ -67,7 +70,8 @@ ADHX includes:
 - **JWT-signed sessions** – Your session cookies are cryptographically signed
 - **PKCE OAuth flow** – Secure Twitter/X authentication
 - **SQL injection protection** – All queries use parameterized statements via Drizzle ORM
-- **Local-first storage** – Your bookmarks stay on your server, not ours
+- **Local-first storage** – Your bookmarks stay on the instance's SQLite volume
+- **Pulse anonymity** – `activity.userId` is stored for moderation and is never selected on a public surface (see [PRIVACY.md](PRIVACY.md))
 
 ## Scope
 

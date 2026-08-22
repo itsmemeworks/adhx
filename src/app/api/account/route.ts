@@ -6,10 +6,7 @@ import {
   bookmarkTags,
   bookmarkMedia,
   archivedPosts,
-  collections,
-  collectionTweets,
   syncLogs,
-  syncState,
   userPreferences,
   oauthTokens,
   tagShares,
@@ -27,7 +24,7 @@ import { clearSessionCookie } from '@/lib/auth/session'
  * DELETE /api/account
  *
  * Completely deletes the user's account and all associated data: bookmarks,
- * collections, tags, preferences, sync state, OAuth tokens, the `users` row,
+ * tags, preferences, OAuth tokens, the `users` row,
  * and every linked sign-in identity (X + email) and outstanding magic-link
  * token. Nothing that identifies this account (username, email, X id)
  * survives — this is what makes "Delete account" actually delete the account.
@@ -51,13 +48,7 @@ export const DELETE = withAuth(async (_req, userId) => {
     // If any delete fails, all are rolled back (avoids a half-deleted account).
     // Uses synchronous .run() inside transaction (required by better-sqlite3).
     runInTransaction(() => {
-      // 1. Delete collection tweets (junction table)
-      db.delete(collectionTweets).where(eq(collectionTweets.userId, userId)).run()
-
-      // 2. Delete collections
-      db.delete(collections).where(eq(collections.userId, userId)).run()
-
-      // 3. Delete read status
+      // 1. Delete archive rows
       db.delete(archivedPosts).where(eq(archivedPosts.userId, userId)).run()
 
       // 4. Delete bookmark media
@@ -75,10 +66,7 @@ export const DELETE = withAuth(async (_req, userId) => {
       // 8. Delete sync logs
       db.delete(syncLogs).where(eq(syncLogs.userId, userId)).run()
 
-      // 9. Delete sync state
-      db.delete(syncState).where(eq(syncState.userId, userId)).run()
-
-      // 10. Delete user preferences
+      // 9. Delete user preferences
       db.delete(userPreferences).where(eq(userPreferences.userId, userId)).run()
 
       // 11. Delete public tag-share settings

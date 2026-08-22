@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { db } from '@/lib/db'
 import { getUsernameForUserId } from '@/lib/users/lookup'
 import { bookmarkTags, tagShares } from '@/lib/db/schema'
 import { eq, sql, and } from 'drizzle-orm'
 import { withAuth } from '@/lib/api/with-auth'
 import { getOwnerCollectionStats } from '@/lib/discovery/rank'
+import { invalidateTagCollectionCache } from '@/lib/tags/query'
 
 // Username for friendly share URLs — users-table-first (email-only accounts
 // have no oauth_tokens row; reading only that table 404'd their shares).
@@ -96,22 +98,28 @@ export const PATCH = withAuth(async (request, userId) => {
     .limit(1)
 
   if (existing) {
-    // Update existing share
-    await db
-      .update(tagShares)
+    // better-sqlite3 mutations must `.run()` — `await` alone does not write.
+    db.update(tagShares)
       .set({ isPublic, updatedAt: new Date().toISOString() })
       .where(and(eq(tagShares.userId, userId), eq(tagShares.tag, tag)))
+      .run()
   } else {
     // Create new share record (shareCode still stored for backward compatibility)
     const shareCode = generateShareCode()
-    await db.insert(tagShares).values({
-      userId,
-      tag,
-      shareCode,
-      isPublic,
-      createdAt: new Date().toISOString(),
-    })
+    db.insert(tagShares)
+      .values({
+        userId,
+        tag,
+        shareCode,
+        isPublic,
+        createdAt: new Date().toISOString(),
+      })
+      .run()
   }
+
+  invalidateTagCollectionCache(username, tag)
+  revalidatePath(`/t/${username}/${tag}`)
+  revalidatePath(`/t/${username}`)
 
   // Return friendly URL format: /t/{username}/{tag}
   return NextResponse.json({ success: true, shareUrl: `/t/${username}/${tag}`, isPublic })
@@ -124,13 +132,20 @@ export const DELETE = withAuth(async (request, userId) => {
     return NextResponse.json({ error: 'Tag is required' }, { status: 400 })
   }
 
-  // Delete the tag from all user's bookmarks
-  await db
-    .delete(bookmarkTags)
+  db.delete(bookmarkTags)
     .where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.tag, tag)))
+    .run()
 
-  // Also delete any share settings for this tag
-  await db.delete(tagShares).where(and(eq(tagShares.userId, userId), eq(tagShares.tag, tag)))
+  db.delete(tagShares)
+    .where(and(eq(tagShares.userId, userId), eq(tagShares.tag, tag)))
+    .run()
+
+  const username = await getUsername(userId)
+  if (username) {
+    invalidateTagCollectionCache(username, tag)
+    revalidatePath(`/t/${username}/${tag}`)
+    revalidatePath(`/t/${username}`)
+  }
 
   return NextResponse.json({ success: true })
 })

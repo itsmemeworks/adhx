@@ -50,10 +50,9 @@ describe('API: /api/stats', () => {
     const data = await response.json()
 
     expect(data.total).toBe(0)
-    expect(data.read).toBe(0)
-    expect(data.unread).toBe(0)
+    expect(data.archived).toBe(0)
+    expect(data.active).toBe(0)
     expect(data.withMedia).toBe(0)
-    expect(data.needsTranscript).toBe(0)
     expect(data.manual).toBe(0)
     expect(data.categories).toEqual({})
   })
@@ -84,7 +83,7 @@ describe('API: /api/stats', () => {
     })
   })
 
-  it('calculates read/unread correctly', async () => {
+  it('calculates archived/active correctly', async () => {
     // Add 5 bookmarks
     await testInstance.db
       .insert(schema.bookmarks)
@@ -107,8 +106,8 @@ describe('API: /api/stats', () => {
     const data = await response.json()
 
     expect(data.total).toBe(5)
-    expect(data.read).toBe(2)
-    expect(data.unread).toBe(3)
+    expect(data.archived).toBe(2)
+    expect(data.active).toBe(3)
   })
 
   it('counts bookmarks with media', async () => {
@@ -132,22 +131,6 @@ describe('API: /api/stats', () => {
     const data = await response.json()
 
     expect(data.withMedia).toBe(2) // Distinct bookmarks with media
-  })
-
-  it('counts bookmarks needing transcript', async () => {
-    await testInstance.db
-      .insert(schema.bookmarks)
-      .values([
-        createTestBookmark(USER_A, 't1', { needsTranscript: true }),
-        createTestBookmark(USER_A, 't2', { needsTranscript: true }),
-        createTestBookmark(USER_A, 't3', { needsTranscript: false }),
-      ])
-
-    const { GET } = await import('@/app/api/stats/route')
-    const response = await GET()
-    const data = await response.json()
-
-    expect(data.needsTranscript).toBe(2)
   })
 
   it('isolates stats between users', async () => {
@@ -186,8 +169,8 @@ describe('API: /api/stats', () => {
     const dataA = await responseA.json()
 
     expect(dataA.total).toBe(3)
-    expect(dataA.read).toBe(1)
-    expect(dataA.unread).toBe(2)
+    expect(dataA.archived).toBe(1)
+    expect(dataA.active).toBe(2)
 
     // User B stats
     mockUserId = USER_B
@@ -195,8 +178,8 @@ describe('API: /api/stats', () => {
     const dataB = await responseB.json()
 
     expect(dataB.total).toBe(5)
-    expect(dataB.read).toBe(3)
-    expect(dataB.unread).toBe(2)
+    expect(dataB.archived).toBe(3)
+    expect(dataB.active).toBe(2)
   })
 
   // =========================================

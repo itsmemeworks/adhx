@@ -78,11 +78,7 @@ function FeedPageContent(): React.ReactElement {
   const [sortDirection, setSortDirection] = useState<SortDirection>(
     (searchParams.get('sortDir') as SortDirection) || 'desc',
   )
-  // Reads `hideArchived`, falling back to the old `unreadOnly` so a URL someone
-  // bookmarked before the rename still opens the view they saved.
-  const [hideArchived, setHideArchived] = useState(
-    (searchParams.get('hideArchived') ?? searchParams.get('unreadOnly')) !== 'false',
-  )
+  const [hideArchived, setHideArchived] = useState(searchParams.get('hideArchived') !== 'false')
   const [view, setView] = useState<'grid' | 'list' | 'bento'>('grid')
   const [search, setSearch] = useState(searchParams.get('search') || '')
   // Tag-select plumbing (unified-theater-collection.md §4, built by a parallel
@@ -490,8 +486,7 @@ function FeedPageContent(): React.ReactElement {
     const urlFilter = (searchParams.get('filter') as FilterType) || 'all'
     const urlSort = (searchParams.get('sort') as SortType) || 'added'
     const urlSortDir = (searchParams.get('sortDir') as SortDirection) || 'desc'
-    const urlHideArchived =
-      (searchParams.get('hideArchived') ?? searchParams.get('unreadOnly')) !== 'false'
+    const urlHideArchived = searchParams.get('hideArchived') !== 'false'
     const urlSearch = searchParams.get('search') || ''
 
     if (urlFilter !== filter) setFilter(urlFilter)
@@ -611,7 +606,7 @@ function FeedPageContent(): React.ReactElement {
     else params.delete('sortDir')
     if (!hideArchived) params.set('hideArchived', 'false')
     else params.delete('hideArchived')
-    // Never leave the superseded name behind in the URL.
+    // One-way cleanup of the superseded query name.
     params.delete('unreadOnly')
     const queryString = params.toString()
     router.replace(queryString ? `?${queryString}` : pathname, { scroll: false })
@@ -636,7 +631,7 @@ function FeedPageContent(): React.ReactElement {
       router.replace(collectionPath({ open: addedId, platform: searchParams.get('platform') }))
       return
     }
-    if (searchParams.get('collection') === '1' || searchParams.get('triage') === '1') {
+    if (searchParams.get('collection') === '1') {
       router.replace('/collection')
       return
     }

@@ -4,23 +4,24 @@ import { Metadata } from 'next'
 import { fetchReelMetadata, isValidReelId } from '@/lib/media/instafix'
 import { resolveInstagramVideo } from '@/lib/media/mirrors'
 import { getCurrentUserId } from '@/lib/auth/session'
-import { recordActivity, previewPath } from '@/lib/activity/record'
+import { previewPath } from '@/lib/activity/record'
 import { isLikelyBot } from '@/lib/activity/bot'
-import { buildVideoObjectLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
+import { buildVideoObjectLd } from '@/lib/utils/structured-data'
 import {
   buildContentTitle,
   buildSnippetDescription,
   attributionFact,
+  previewPageMetadata,
 } from '@/lib/utils/content-metadata'
 import { RelatedSaves } from '@/components/RelatedSaves'
-import { SharedPostStatic } from '@/components/theater/SharedPostStatic'
-import { TheaterShell } from '@/components/theater/TheaterShell'
-import { buildSharedSeed, reelToTheaterItem } from '@/lib/theater/shared-seed'
-import { metrics } from '@/lib/sentry'
+import { reelToTheaterItem } from '@/lib/theater/shared-seed'
+import {
+  recordHumanPreview,
+  SharedPreviewPage,
+  sharedPreviewSeed,
+} from '@/lib/theater/shared-preview'
+import { getSavedPreviewDisplay } from '@/lib/theater/saved-preview'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
-import { db } from '@/lib/db'
-import { bookmarks } from '@/lib/db/schema'
-import { and, eq } from 'drizzle-orm'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -29,34 +30,6 @@ interface Props {
 // This route is dynamic (reads cookies for auth), so it is never full-route
 // cached. Crawl-cheapness comes instead from fetchReelMetadata()'s cached scrape
 // (unstable_cache, revalidate 3600) and the DB-first skip for saved posts.
-
-/** Display fields InstagramPreviewLanding needs, sourced from a saved bookmark. */
-interface SavedReel {
-  author: string | null
-  authorName: string | null
-  caption: string | null
-}
-
-/**
- * Cross-user lookup: is this Reel already in someone's collection? Content is
- * identical regardless of saver (mirrors the cross-user reads in the trending
- * query / /api/activity), so a single row is enough — we render from it and skip
- * the Instagram scrape. We never select or expose `userId`.
- */
-function getSavedReel(id: string): SavedReel | null {
-  const row = db
-    .select({
-      author: bookmarks.author,
-      authorName: bookmarks.authorName,
-      text: bookmarks.text,
-    })
-    .from(bookmarks)
-    .where(and(eq(bookmarks.platform, 'instagram'), eq(bookmarks.id, id)))
-    .limit(1)
-    .get()
-  if (!row) return null
-  return { author: row.author, authorName: row.authorName, caption: row.text }
-}
 
 export default async function ReelPreviewPage({ params }: Props) {
   const { id } = await params
@@ -69,13 +42,13 @@ export default async function ReelPreviewPage({ params }: Props) {
   // the Instagram scrape. The poster is served via the /api/media/instagram
   // thumbnail proxy (it re-resolves the signed CDN URL from the id), so the
   // saved row's author/name/caption is all the UI needs.
-  const saved = getSavedReel(id)
+  const saved = getSavedPreviewDisplay('instagram', id)
   const userId = await getCurrentUserId()
   const meta = saved ? null : await fetchReelMetadata(id)
 
   const author = saved?.author || meta?.author || null
   const authorName = saved?.authorName || meta?.authorName || null
-  const caption = saved?.caption || meta?.caption || null
+  const caption = saved?.text || meta?.caption || null
   const description = saved ? null : meta?.description || null
   // Saved reels always get the proxy poster; preview-only only when a CDN image
   // was resolved.
@@ -95,19 +68,15 @@ export default async function ReelPreviewPage({ params }: Props) {
       .catch(() => {})
   }
 
-  if (available && human) {
-    recordActivity({
-      action: 'preview',
-      platform: 'instagram',
-      bookmarkId: id,
-      author: author || 'instagram',
-      authorName: authorName || author || null,
-      text: caption || description || null,
-      thumbnailUrl: imageUrl ?? null,
-      url: previewPath('instagram', author || 'instagram', id),
-    })
-    metrics.theaterOpened('shared')
-  }
+  await recordHumanPreview(available && human, {
+    platform: 'instagram',
+    bookmarkId: id,
+    author: author || 'instagram',
+    authorName: authorName || author || null,
+    text: caption || description || null,
+    thumbnailUrl: imageUrl ?? null,
+    url: previewPath('instagram', author || 'instagram', id),
+  })
 
   const sharedItem = reelToTheaterItem({
     id,
@@ -116,7 +85,7 @@ export default async function ReelPreviewPage({ params }: Props) {
     text: caption || description || null,
     thumbnailUrl: imageUrl ?? null,
   })
-  const { seed } = await buildSharedSeed(sharedItem)
+  const seed = await sharedPreviewSeed(sharedItem)
 
   const baseUrl = PUBLIC_BASE_URL
   const ldAuthorName = authorName || author
@@ -139,31 +108,28 @@ export default async function ReelPreviewPage({ params }: Props) {
   })
 
   return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdScriptContent(jsonLd) }}
-      />
-      <SharedPostStatic
-        kind="instagram-reel"
-        authorName={authorName || author}
-        handle={author}
-        text={caption || description}
-        sourceUrl={`https://www.instagram.com/reel/${id}/`}
-        label="Instagram post"
-        below={
-          available ? (
-            <RelatedSaves
-              platform="instagram"
-              bookmarkId={id}
-              authorHandle={author || 'instagram'}
-              contentType="video"
-            />
-          ) : undefined
-        }
-      />
-      <TheaterShell seed={seed} mode="shared" sharedItem={sharedItem} authed={!!userId} />
-    </>
+    <SharedPreviewPage
+      jsonLd={jsonLd}
+      seed={seed}
+      sharedItem={sharedItem}
+      authed={!!userId}
+      staticPost={{
+        kind: 'instagram-reel',
+        authorName: authorName || author,
+        handle: author,
+        text: caption || description,
+        sourceUrl: `https://www.instagram.com/reel/${id}/`,
+        label: 'Instagram post',
+        below: available ? (
+          <RelatedSaves
+            platform="instagram"
+            bookmarkId={id}
+            authorHandle={author || 'instagram'}
+            contentType="video"
+          />
+        ) : undefined,
+      }}
+    />
   )
 }
 
@@ -178,10 +144,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const baseUrl = PUBLIC_BASE_URL
   const canonicalUrl = `${baseUrl}/reels/${id}`
-  const meta = await fetchReelMetadata(id)
+  const saved = getSavedPreviewDisplay('instagram', id)
+  const meta = saved ? null : await fetchReelMetadata(id)
 
-  const who = meta?.authorName || meta?.author
-  const caption = meta?.caption || meta?.description || ''
+  const who = saved?.authorName || saved?.author || meta?.authorName || meta?.author
+  const caption = saved?.text || meta?.caption || meta?.description || ''
+  const available = Boolean(saved || meta)
+  const hasImage = saved ? true : !!meta?.imageUrl
 
   // Content-first `<title>` + SERP description: lead with the caption itself,
   // falling back to an author-aware label when there's no caption to lead
@@ -197,35 +166,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ),
     closer: 'Watch and send it — no Instagram app.',
   })
-  const image = meta?.imageUrl
+  const image = hasImage
     ? `${baseUrl}/api/media/instagram/thumbnail?id=${encodeURIComponent(id)}`
     : `${baseUrl}/og-logo.png`
-  const videoUrl = meta
+  const videoUrl = available
     ? `${baseUrl}/api/media/instagram/video?id=${encodeURIComponent(id)}`
     : undefined
 
-  return {
+  return previewPageMetadata({
     title: pageTitle,
     description,
-    openGraph: {
-      type: videoUrl ? 'video.other' : 'article',
-      title: pageTitle,
-      description,
-      siteName: 'ADHX',
-      url: canonicalUrl,
-      images: [{ url: image, alt: pageTitle }],
-      ...(videoUrl
-        ? { videos: [{ url: videoUrl, type: 'video/mp4' as const, width: 1080, height: 1920 }] }
-        : {}),
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: pageTitle,
-      description,
-      images: [image],
-    },
-    alternates: {
-      canonical: canonicalUrl,
-    },
-  }
+    canonicalUrl,
+    image,
+    videoUrl,
+  })
 }

@@ -114,7 +114,7 @@ export function buildFeedItem(
     }
 
     if (bookmark.platform === 'youtube') {
-      // Playback is the official iframe embed (handled in MediaCard by
+      // Playback is the official iframe embed (handled in StageYouTube by
       // platform+id); the gallery just needs the poster + a 'video' type.
       return {
         id: m.id,

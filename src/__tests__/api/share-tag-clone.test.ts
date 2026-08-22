@@ -141,7 +141,7 @@ describe('API: /api/share/tag/[code]/clone', () => {
       expect(clonedBookmarks.map((b) => b.id).sort()).toEqual(['tweet-1', 'tweet-2', 'tweet-3'])
     })
 
-    it('marks cloned bookmarks with source "cloned"', async () => {
+    it('marks cloned bookmarks with source "clone"', async () => {
       const { POST } = await import('@/app/api/share/tag/[code]/clone/route')
       await POST(createRequest(), { params: Promise.resolve({ code: 'share123' }) })
 
@@ -151,7 +151,7 @@ describe('API: /api/share/tag/[code]/clone', () => {
         .where(eq(schema.bookmarks.userId, USER_A))
 
       for (const bookmark of clonedBookmarks) {
-        expect(bookmark.source).toBe('cloned')
+        expect(bookmark.source).toBe('clone')
       }
     })
 

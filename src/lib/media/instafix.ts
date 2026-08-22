@@ -79,7 +79,11 @@ export const fetchReelMetadata = unstable_cache(
 
 async function fetchFromInstagram(path: string): Promise<ReelMetadata | null> {
   try {
-    const response = await fetchWithTimeout(`https://www.instagram.com${path}`, 8_000, {
+    const origin = (process.env.INSTAGRAM_OG_BASE?.trim() || 'https://www.instagram.com').replace(
+      /\/$/,
+      '',
+    )
+    const response = await fetchWithTimeout(`${origin}${path}`, 8_000, {
       // Instagram serves OG tags to recognised crawlers, not to plain browsers.
       headers: { 'User-Agent': 'Twitterbot/1.0', Accept: 'text/html' },
       redirect: 'follow',

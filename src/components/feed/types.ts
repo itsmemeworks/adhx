@@ -109,6 +109,12 @@ export interface ArticleContent {
 
 export type Platform = 'twitter' | 'instagram' | 'tiktok' | 'youtube'
 
+/**
+ * Library-rich saved-post shape (media[], quotes, article body, tags).
+ * Theater / trending use the narrower `TrendingItem` (`TheaterItem`).
+ * Convert at the edges with `feedItemToTheaterItem` — do not add the same
+ * field to both types.
+ */
 export interface FeedItem {
   id: string
   platform?: Platform // 'twitter' (default) | 'instagram' | 'tiktok' | 'youtube'

@@ -1,6 +1,6 @@
 /**
  * `/collection` is the only personal theater. The library grid navigates here
- * (card tap, `F`, leftover `?open=` / `?collection=1` / `?triage=1` deep
+ * (card tap, `F`, leftover `?open=` / `?collection=1` deep
  * links) instead of mounting a second TheaterShell overlay.
  */
 

@@ -2,7 +2,111 @@
 
 Append-only context log for agents and contributors. **Newest entries first.** After any substantive piece of work, add a dated entry (≤10 lines): what was done, why, current state, follow-ups. Never rewrite or delete old entries — this file is how a fresh session inherits context that isn't in the code. See `AGENTS.md` for the full protocol.
 
+**Voice:** new entries must not name operator GitHub logins, personal handles, or Fly bypasses. Put those in gitignored `CLAUDE.local.md`. Older entries below were written as an internal ops diary and may still contain them — they are historical, not a public contract.
+
 ---
+
+## 2026-08-22 — Unused leftover files deleted
+
+Deleted unused: `PreviewAnotherLink`, `Tooltip`, landing `AnimatedBackground` + barrel, `XIcon`, `usePersonalQueue` (+ its test — `sameBookmark` stays covered), leftover gestalt theme. `useSendFile` now calls `pingSharePulse` instead of a copy. Dropped unused `sharedItem` on `DesktopStageChrome`. Stale `AddTweetModal` / `CollectionMode` test mocks gone.
+
+Kept on purpose: `YtDebugOverlay`, `tweetUrl`, HLS routes, `summary` / `rawJson`, GET/PATCH `/api/bookmarks/[id]`. Those need an owner call, not a silent drop.
+
+---
+
+## 2026-08-22 — Preview metadata + last dead weight
+
+`generateMetadata` on Reels / TikTok / Shorts is DB-first via `getSavedPreviewDisplay` (same skip as the page body). Shared OG tail is `previewPageMetadata`. Deleted the orphan `TweetPreviewLanding` snapshot. Collection actions no longer branch on an identical wrapper class.
+
+Residual: confirm the security inbox; e2e CI job on the next push. Not a code hold.
+
+---
+
+## 2026-08-22 — Chrome + preview residuals closed
+
+Shared the copy-shaped chrome wiring without merging layouts. Desktop 1,443→1,126, mobile 1,102→959. New modules: `SavePostButton`, `TheaterCollectionActions` (desktop glass vs mobile 44px pills), `TheaterMetaChips`, `TheaterTagChips`, `useTheaterCopy`, `useTheaterStageEvents`, one `navigateToAppPath`. Reels / TikTok / Shorts share `SharedPreviewPage` + `getSavedPreviewDisplay` + `recordHumanPreview`; tweet page stays richer. Typecheck + 190 chrome/paste tests green.
+
+Residual: confirm the security inbox; e2e CI job on the next push. Not a code hold.
+
+---
+
+## 2026-08-22 — Open-source readiness
+
+Public repo voice: PRIVACY.md + `/privacy` (reserved segment, sitemap, landing/settings/theater-menu links). SECURITY.md prefers GitHub private advisories; email is secondary. Operator `gh` logins belong in gitignored `CLAUDE.local.md` — stripped from AGENTS.md / CLAUDE.md / always-push-pr. Historical WORKLOG entries below are not rewritten. GitHub: private vulnerability reporting, secret scanning + push protection. Repo About no longer says “triage mode”.
+
+Residual: confirm the `security@adhx.com` inbox exists; Playwright e2e CI job greens on the next push.
+
+---
+
+## 2026-08-22 — Dead-weight ops routes deleted
+
+Removed unused leftover routes: `GET/POST /api/enrich`, `GET/POST /api/repair/links`, `GET /api/sync/logs`. Nothing in the app called them — sync already enriches via FxTwitter, Settings reads `/api/sync/history`. Kept `tweetUrl`, legacy `/api/share/tag/[code]`, `/api/sentry-test`, `/api/dev/og-tags`.
+
+---
+
+## 2026-08-22 — Optional leftovers closed
+
+Closed the five optional leftovers on this branch (uncommitted — owner commits).
+
+- **Live URL**: `theaterTabNavRestore` resyncs `/` or `/collection` before `router.push` so My Collection is not stuck on a replaceState preview path.
+- **inferContentType**: one priority list (`src/lib/content-type.ts`). Article beats video/photo. Wired through trending, archive, tags, authors, theater backfill, `feedItemType`, collection, `inferType`, FeedCard badge.
+- **FeedItem vs TrendingItem**: adapters at the edges (`feedItemToTheaterItem`). Types stay different on purpose.
+- **Pulse writes**: cross-site Origin → 403; dedicated `activityWriteLimit` (15/min/IP), not the media bucket.
+- **CI**: Owner cleared GitHub billing. Actions is enabled; build/format/test already green. Playwright e2e job is in local `ci.yml` and runs on the next push.
+
+Residual: desktop/mobile chrome still copy-shaped; operator names in WORKLOG; no PRIVACY.md.
+
+---
+
+## 2026-08-22 — Foundation review canvas matches the closed todos
+
+Updated `adhx-foundation-review` canvas: all 13 work items + the six leftover todos are marked done. Residual (not a hold): five content-type inferrers, FeedItem vs TrendingItem, Live replaceState URL lag, pulse-count integrity, CI billing, operator names in WORKLOG. Owner commits.
+
+---
+
+## 2026-08-22 — Foundation-review leftovers closed
+
+Finished the remaining review todos on this branch (uncommitted — owner commits).
+
+- **Docs**: README / ARCHITECTURE / llms.txt / CONTRIBUTING match theater · playlist · library. No Triage. Local boot includes `pnpm db:migrate` + distinct `SESSION_SECRET`.
+- **Cut**: dropped `filedPath` / `needsTranscript` / `extractedContent`, `collections` / `collection_tweets` / `sync_state`. Deleted unused GET `/api/bookmarks`, DiscoverCtaCard, interleave-cta. One `cloneTagToUser()` for both share clones (pair-safe).
+- **Playlist HTML**: one sqlite handle via `globalThis`; PATCH/DELETE `revalidatePath` `/t/{user}/{tag}`. e2e now asserts the page is not “Private playlist”.
+- **TheaterShell**: `useSharedPin`, `useTheaterLiveUrl`, `resolveTheaterChrome`.
+- **e2e**: IG / TikTok / YouTube mocks (`INSTAGRAM_OG_BASE` / `TNKTOK_API_BASE` / `YOUTUBE_OEMBED_BASE`); mobile viewport spec.
+
+---
+
+## 2026-08-22 — Playwright covers the rest of the major surfaces
+
+Expanded `pnpm test:e2e` beyond the first 13 theater regressions. New specs: collection Tag / Delete+Undo / Later; signed-in preview Save; clone of `e2ecurator`'s `e2e-clone` playlist; library search / tag / Show archived / Make public / list / TikTok platform filter; `/trending` `/leaderboard` `/share` paste-to-preview, `/discover` `/collections` redirects, `/api/health`; header + Collection↔Live + Manage playlist + `j`.
+
+- Assertions go through the same Next process (`page.request` / `/api/feed` / `/api/tags`) — a second sqlite connection misses WAL writes. `expectTheaterReady` never presses Escape (that's Close on the personal theater).
+- `/api/tags` PATCH/DELETE now `.run()` so visibility flips persist; `getPublicTagCollection` does not cache private/not_found. Follow-up: `/t/{user}/{tag}` can still disagree with the share API after a flip (RSC vs route db instance); mobile + IG/TikTok/YouTube mocks.
+
+## 2026-08-22 — Playwright covers tag, delete, clone, save, library, public pages
+
+Expanded `pnpm test:e2e` past the first 13 theater regressions. New specs: collection Tag / Delete+Undo / Later; signed-in preview Save; clone of a second curator’s public playlist; library search / tag filter / Show archived / Make public / list view; `/trending` `/leaderboard` `/share` paste-to-preview and `/discover` `/collections` redirects; header + account menu + Collection↔Live + Manage playlist + `j` on Live.
+
+- Seed now includes a curator account (`e2ecurator` / `e2e-clone`) and a non-self `collection_events` view so the leaderboard isn’t empty. Mutating tests clean up (`e2etmp`, cloned rows, preview save, private-tag visibility).
+- Isolated :3002 / `data/e2e.db` unchanged. Follow-up: mobile viewport, IG/TikTok/YouTube preview (need those mocks).
+
+## 2026-08-22 — After-merge theater cleanup (the five follow-ups)
+
+Did the post-merge list from the "Five before-merge theater foundations" entry, on this branch.
+
+- **Dead custom-collections product**: deleted `/api/collections` CRUD + `/api/collections/[id]` + tweets + `collections-context.tsx` + `/api/share/[code]` (tag share stays). Feed no longer filters by `?collection=`. Kept `/api/collections/trending`, admin hide, `/collections` → `/leaderboard` redirects, and the `collections` / `collection_tweets` tables (account wipe still deletes rows).
+- **Dead media**: deleted unused `MediaCard`, `PreviewShell`, `VideoPlayer`, `MediaShareOverlayButton`, `ClampedCaption` and their tests. Theater playback is `StageVideo` / `StageYouTube`.
+- **Dockerfile**: COPY the whole `src/lib` tree instead of per-file migrate/script imports — the staging outage class.
+- **TheaterShell decompose**: pures live in `theater-math.ts` + `useIsDesktopViewport.ts`; `TheaterShell` re-exports so existing test imports keep working.
+- **Shims gone**: feed/page only read `hideArchived` (`unreadOnly` is stripped from the library URL, not honoured). `?triage=1` no longer opens `/collection` (`?collection=1` still does). `/api/stats` no longer aliases `unread`/`read`.
+
+## 2026-08-22 — Playwright e2e for theater regressions
+
+Owner: stop relying on manual clicks every time we add a theater feature. Added `pnpm test:e2e` (Playwright, Chromium) against an isolated Next on **:3002** + `data/e2e.db` — never the owner's `:3001` / `adhdone.db`.
+
+- Covers signed-out routing + sign-in at save-intent, library card → `/collection` (no overlay), `(platform, id)` feed lookup, archive + Undo with no `activity.read` pulse, playlist wrap + single-item loop, preview pin (stays until you turn repeat off or advance), signed-in Live URL rewrite vs `/collection` staying put, repeat `'all'` persist.
+- Preview SSR talks to a tiny FxTwitter mock via new `FXTWITTER_API_BASE` (default unchanged). Auth is a minted `adhx_session` JWT.
+- Not folded into `pnpm test` / husky. CI job `e2e` added (installs Chromium). Follow-up: more coverage for tag/delete/clone once this suite is green locally.
 
 ## 2026-08-22 — Five before-merge theater foundations
 

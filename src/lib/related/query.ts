@@ -3,6 +3,7 @@ import { activity } from '@/lib/db/schema'
 import { and, desc, eq } from 'drizzle-orm'
 import { getTrendingItems } from '@/lib/trending/query'
 import { previewPath } from '@/lib/activity/preview-path'
+import { asContentType } from '@/lib/content-type'
 
 /**
  * "Related saves" for a preview page footer — up to 6 other public posts to
@@ -15,10 +16,6 @@ import { previewPath } from '@/lib/activity/preview-path'
  */
 
 type ContentType = 'video' | 'photo' | 'text' | 'quote' | 'article'
-const CONTENT_TYPES = new Set<string>(['video', 'photo', 'text', 'quote', 'article'])
-function asContentType(v: string | null | undefined): ContentType | undefined {
-  return v && CONTENT_TYPES.has(v) ? (v as ContentType) : undefined
-}
 
 export interface RelatedItem {
   platform: string

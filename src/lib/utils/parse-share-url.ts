@@ -91,9 +91,8 @@ export interface PastedLinkRouter {
  * Returns whether a supported link was found (and navigation started).
  *
  * The single source of truth for the CodeQL-hardened navigation shape used
- * by every "paste a link" surface (the landing page's hero input,
- * `PreviewAnotherLink`, and `PasteLinkButton`) — previously duplicated
- * byte-for-byte across `LandingPage.tsx` and `PreviewAnotherLink.tsx`. A
+ * by every "paste a link" surface (the landing page's hero input and
+ * `PasteLinkButton`). A
  * TikTok short link resolves via an `/api` route that 307s to the preview
  * server-side — the client router can't follow that cross-route redirect, so
  * that branch alone needs a hard navigation, built from a constant

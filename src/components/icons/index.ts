@@ -1,1 +1,0 @@
-export { XIcon } from './XIcon'

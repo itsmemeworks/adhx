@@ -135,7 +135,7 @@ export interface TheaterPersonalChrome {
   onClose: () => void
 }
 
-/** Human platform label for "Open on {platform}" titles — shared by the desktop chrome, mobile chrome, and `CollectionRail`. */
+/** Human platform label for "Open on {platform}" titles — shared by both chromes. */
 export const PLATFORM_LABEL: Record<string, string> = {
   twitter: 'X',
   tiktok: 'TikTok',

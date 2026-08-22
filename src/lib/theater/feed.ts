@@ -4,6 +4,7 @@ import { and, desc, eq, inArray } from 'drizzle-orm'
 import { getTrendingItems, LIVE_WINDOW_HOURS } from '@/lib/trending/query'
 import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
+import { inferContentType } from '@/lib/content-type'
 
 /**
  * Server-side feed assembly for the theater (docs/specs/theater-first.md §4).
@@ -135,15 +136,13 @@ function fetchPublicTagBackfill(existing: TheaterItem[], needed: number): Theate
     seen.add(key)
 
     const media = mediaByBookmark.get(key)
-    const contentType = media
-      ? media.isVideo
-        ? 'video'
-        : 'photo'
-      : row.category === 'article'
-        ? 'article'
-        : row.isQuote
-          ? 'quote'
-          : 'text'
+    const contentType = inferContentType({
+      platform: row.platform,
+      category: row.category,
+      isQuote: row.isQuote,
+      hasVideo: media?.isVideo,
+      hasPhoto: !!media && !media.isVideo,
+    })
 
     out.push({
       action: 'save',

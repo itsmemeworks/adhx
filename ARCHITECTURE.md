@@ -8,56 +8,71 @@ ADHX is a single Next.js 16 (App Router) + React 19 application backed by a
 local SQLite database. There is no separate backend service — the Next.js API
 routes _are_ the backend, and they talk to SQLite via Drizzle ORM.
 
+## Product surfaces
+
+| Route                                                                       | What it is                                                       |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `/`                                                                         | The **theater**, Live tab — community pulse. Signed out or in.   |
+| `/collection`                                                               | The same theater, **My Collection** tab — your active queue.     |
+| `/library`                                                                  | The **library** grid over your saves (search, tags, filters).    |
+| `/t/{user}/{tag}`                                                           | A **playlist** — one public tag, looping theater.                |
+| `/{user}/status/{id}`, `/reels/{id}`, `/@{user}/video/{id}`, `/shorts/{id}` | Preview pages. They **are** the theater (shared mode), plus SEO. |
+
+A **playlist** is one shared tag. A user's pile of saves is their **collection**.
+The grid that browses it is the **library**. Archive is private — it does not
+write a public pulse.
+
 ## Data flow
 
-The core loop is: pull bookmarks from Twitter/X, store them locally, and serve
-them back to the UI.
+Saves arrive three ways, then everything plays in one theater:
 
 ```
-Twitter API  ──►  /api/sync (SSE)  ──►  SQLite (Drizzle)  ──►  /api/feed  ──►  React UI
+URL prefix / paste / share sheet  ──►  preview page  ──►  Save  ──►  SQLite
+X bookmark sync (SSE)             ──►  /api/sync     ──►  SQLite
+SQLite  ──►  /api/feed (library)  ·  theater seed (Live / collection / playlist)
+      └──►  /api/media/* proxies (Twitter / TikTok MP4; IG probe; YouTube iframe)
 ```
 
-1. **Sync** — `/api/sync` opens a Server-Sent Events stream. It pages through
-   the user's Twitter bookmarks, enriches each tweet (media, links, quote/reply
-   context), and writes the results into SQLite, emitting progress events as it
-   goes so the UI can show a live counter.
-2. **Add** — `/api/bookmarks/add` (and its Twitter-only delegate
-   `/api/tweets/add`) save a single item from a pasted URL. Twitter items are
-   enriched via FxTwitter; Instagram/TikTok/YouTube go through their respective
-   resolvers.
-3. **View** — `/api/feed` reads from SQLite with filtering, pagination, and
-   tag/read-status joins (carefully de-N+1'd) and returns JSON the feed
-   components render.
-4. **Media** — Twitter blocks direct browser requests to its CDN, so media is
-   served through proxy routes under `/api/media/*` (video, HLS segments,
-   thumbnails) that add the right headers and stream the bytes back.
+1. **Preview** — swap any supported host for `adhx.com` (or paste the full
+   URL after it). Middleware (`src/proxy.ts`) 307s full-URL pastes onto the
+   preview route. The page records an anonymous `preview` pulse (bots skipped)
+   and renders `TheaterShell` in shared mode.
+2. **Save** — authenticated POST `/api/bookmarks/add` (Twitter goes through
+   `/api/tweets/add` + FxTwitter; IG / TikTok / YouTube through their
+   resolvers). Writes a `save` pulse.
+3. **Sync** — `/api/sync` pages X bookmarks over SSE, enriches, writes SQLite.
+   Newly synced rows can pulse (capped).
+4. **Watch** — Live reads `getTrendingItems()`; My Collection reads `/api/feed`
+   (`hideArchived`, `limit=100`); a playlist reads `getPublicTagCollection()`.
+5. **Media** — Twitter and TikTok MP4s go through `/api/media/*` proxies
+   (SSRF allowlists, timeouts). Instagram probes a mirror before attaching
+   `<video src>`. YouTube is the official nocookie iframe.
 
 ## Auth flow
 
-Authentication is Twitter OAuth 2.0 with PKCE, and sessions are signed JWTs in a
-cookie:
+Accounts are first-class (`users` + `user_identities`). **Magic-link email**
+and **X OAuth 2.0 PKCE** land in one account. Viewing never requires an
+account; saving does.
 
 ```
-/api/auth/twitter ──► Twitter consent ──► /api/auth/twitter/callback
-        (PKCE)                                      │
-                                                    ▼
-                              encrypt tokens (AES-256-GCM) → SQLite
-                                                    │
-                                                    ▼
-                              signed JWT session cookie (jose)
+Email:  POST /api/auth/email/request  ──►  link (Resend, or console in dev)
+        GET  /api/auth/email/callback?token=  ──►  session cookie
+
+X:      /api/auth/twitter  ──►  X consent  ──►  /api/auth/twitter/callback
+        findOrCreateUserForX  ──►  encrypt tokens  ──►  signed JWT session
 ```
 
-- The callback exchanges the auth code for access/refresh tokens, which are
-  **encrypted at rest** (AES-256-GCM) before being stored in `oauth_tokens`.
-- The session itself is a JWT signed with `jose` (cookie `adhx_session`,
-  30-day, httpOnly). Every data-modifying route calls `getCurrentUserId()`
-  (`src/lib/auth/session.ts`) and returns 401 if there is no valid session.
-- `/api/auth/twitter/status` refreshes expiring tokens transparently.
+- Session cookie `adhx_session` is a JWT (`jose`, 30-day, httpOnly). Signing
+  key is `SESSION_SECRET` (falls back to `TWITTER_CLIENT_SECRET` — set a
+  distinct secret in any real deploy).
+- X tokens are encrypted at rest (AES-256-GCM). Refresh goes through
+  `getValidTokens()` only — the refresh token is single-use; concurrent
+  refreshes are coalesced.
+- `/api/auth/me` is the client source of truth (`identities.x` /
+  `identities.email`, `xConnected`). A fatal X refresh deletes the X tokens
+  and keeps the session.
 
 ## The URL-prefix preview trick
-
-ADHX's signature feature: take any supported link and swap its host for
-`adhx.com` to get an on-site preview.
 
 | Source link                     | Becomes                       |
 | ------------------------------- | ----------------------------- |
@@ -66,77 +81,56 @@ ADHX's signature feature: take any supported link and swap its host for
 | `tiktok.com/@{user}/video/{id}` | `adhx.com/@{user}/video/{id}` |
 | `youtube.com/shorts/{id}`       | `adhx.com/shorts/{id}`        |
 
-You can also paste the _full_ source URL after `adhx.com/`; the Next.js
-middleware (`src/proxy.ts`) recognises the shape and 307-redirects to the right
-preview route.
+Full source URLs after `adhx.com/` also work (with or without protocol).
 
-Four platforms, one shared preview shell, but different playback strategies
-because the upstreams differ:
+Playback differs because the upstreams differ:
 
-- **X / Twitter** — metadata and media via FxTwitter; video streamed through the
-  `/api/media/video` proxy (MP4, or HLS for long videos).
-- **Instagram Reels** — poster + caption + link only (the free MP4 mirrors are
-  dead); thumbnails resolved through a proxy.
-- **TikTok** — metadata via an fxTikTok mirror; MP4 streamed through
-  `/api/media/tiktok/video`, which follows the signed CDN redirect.
-- **YouTube Shorts** — metadata via the official oEmbed API, playback via the
-  official privacy-enhanced iframe embed. No download (deliberate — there is no
-  compliant zero-cost MP4 source).
-
-Authenticated visitors see an "Add to Collection" button on every preview;
-saved items land in the same feed as tweets, tagged with a platform badge.
+- **X / Twitter** — FxTwitter metadata; video through `/api/media/video`.
+- **Instagram Reels** — Instagram OG tags for poster/caption; MP4 via
+  vxinstagram, Range-probed before `<video src>`; official iframe fallback.
+- **TikTok** — fxTikTok (`tnktok.com`) metadata; MP4 through
+  `/api/media/tiktok/video` (follows the signed CDN redirect).
+- **YouTube Shorts** — official oEmbed + privacy-enhanced iframe. No download.
 
 ## Database (multi-user, composite keys)
 
-SQLite via `better-sqlite3` + Drizzle ORM. The schema lives in
-`src/lib/db/schema.ts`. The defining design choice is **multi-user isolation
-through composite primary keys**.
+SQLite via `better-sqlite3` + Drizzle ORM (`src/lib/db/schema.ts`). Most
+user-owned tables key on `(userId, platform, id)`:
 
-Most user-owned tables key on `(userId, platform, id)`:
-
-- `userId` lets two users independently bookmark the same tweet.
+- `userId` lets two users independently save the same post.
 - `platform` (`twitter` | `instagram` | `tiktok` | `youtube`) keeps a 19-digit
   TikTok id from colliding with a same-length tweet id.
 
-| Table               | Primary key                                    | Holds                         |
-| ------------------- | ---------------------------------------------- | ----------------------------- |
-| `bookmarks`         | `(userId, platform, id)`                       | the saved item                |
-| `bookmark_media`    | `(userId, platform, id)`                       | photos / video metadata       |
-| `bookmark_tags`     | `(userId, platform, bookmarkId, tag)`          | per-user tags                 |
-| `bookmark_links`    | autoinc `id` (+ `userId`, `platform`)          | enriched outbound links       |
-| `read_status`       | `(userId, platform, bookmarkId)`               | read / unread                 |
-| `collections`       | `id` (+ `userId`)                              | custom collections            |
-| `collection_tweets` | `(userId, collectionId, platform, bookmarkId)` | items in a collection         |
-| `tag_shares`        | `(userId, tag)`                                | public tag-share settings     |
-| `user_preferences`  | `(userId, key)`                                | theme, font, etc.             |
-| `oauth_tokens`      | `userId`                                       | encrypted Twitter tokens      |
-| `activity`          | autoinc `id`                                   | public activity pulse (below) |
+| Table               | Primary key                           | Holds                       |
+| ------------------- | ------------------------------------- | --------------------------- |
+| `bookmarks`         | `(userId, platform, id)`              | the saved item              |
+| `bookmark_media`    | `(userId, platform, id)`              | photos / video metadata     |
+| `bookmark_tags`     | `(userId, platform, bookmarkId, tag)` | per-user tags               |
+| `bookmark_links`    | autoinc `id` (+ `userId`, `platform`) | enriched outbound links     |
+| `archived_posts`    | `(userId, platform, bookmarkId)`      | archive (was `read_status`) |
+| `tag_shares`        | `(userId, tag)`                       | public playlist settings    |
+| `user_preferences`  | `(userId, key)`                       | theme, font, etc.           |
+| `oauth_tokens`      | `userId`                              | encrypted X tokens          |
+| `users`             | `id`                                  | account                     |
+| `user_identities`   | `(provider, providerId)`              | `x` / `email` links         |
+| `activity`          | autoinc `id`                          | public pulse (below)        |
+| `collection_events` | autoinc `id`                          | playlist view/clone log     |
 
-**Invariant:** every query filters by `userId`, and any query touching a
-`bookmarkId` also filters by `platform`. There are no `isNull(userId)`
-fallbacks — those would leak data across users. Multi-table writes go through
-`runInTransaction()` from `@/lib/db`.
+**Invariant:** every user-data query filters by `userId`, and any query
+touching a `bookmarkId` also filters by `platform`. Multi-table writes go
+through `runInTransaction()`. Local boot: `pnpm db:migrate` (Docker runs it
+on start).
 
 ## Trending & the activity pulse
 
-`/trending` is a public, anonymous, real-time feed of what the community is
-saving and previewing right now, with per-lens hubs at `/trending/[filter]`
-(videos / photos / text / articles / just-saved). The old `/discover` path
-308-redirects to it.
+`/trending` is a public, anonymous, crawlable feed of what the community is
+saving, previewing, and sending. `/discover` 308s here.
 
-- Saves, previews, and reads call `recordActivity()`
-  (`src/lib/activity/record.ts`), which writes an append-only row to the
-  `activity` table. Content is **always** resolved server-side — the recorder
-  never trusts client-supplied text or thumbnails (that would be a stored-XSS
-  vector), and there is intentionally no public write endpoint.
-- `GET /api/activity` serves the pulse. It selects an explicit public column
-  list (the stored `userId` is **never** exposed — the pulse is anonymous by
-  construction) and enriches each sparse row server-side by joining the saved
-  bookmark for the right thumbnail, content type, author avatar, and a distinct
-  "save count" that powers the Trending badge. `getTrendingItems()`
-  (`src/lib/trending/query.ts`) is the shared anonymity-safe read path for the
-  server-rendered hubs and the public `/api/trending` JSON endpoint.
-- The theater's live tab polls `/api/activity`, de-dupes, and links each
-  card to the on-ADHX preview path to keep clicks on-site. Each hub also
-  server-renders a crawlable item list + JSON-LD, so the community feed doubles
-  as indexable content (the SEO growth loop).
+- `recordActivity()` writes an append-only `activity` row. Content is always
+  resolved server-side. `userId` is stored and **never** exposed.
+  Archive does **not** write a pulse.
+- `getTrendingItems()` (`src/lib/trending/query.ts`) is the anonymity-safe
+  read path — one row per post, newest event wins. `/`, `/trending`,
+  `/api/activity`, and `/api/trending` all go through it.
+- Playlists rank separately via `collection_events` + `src/lib/discovery/rank.ts`
+  (views + clones; `viewerId` never selected).

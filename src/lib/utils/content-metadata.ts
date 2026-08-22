@@ -1,3 +1,5 @@
+import type { Metadata } from 'next'
+
 /**
  * Platform-agnostic helpers for content-first `<title>` / meta description
  * generation, shared by all preview pages (tweet, Reel, TikTok, Short).
@@ -147,4 +149,50 @@ export function buildSnippetDescription({
   const lead = truncated.length >= minLead ? `${isContinuation ? '…' : ''}${truncated}` : ''
 
   return [lead, ...fixed].filter(Boolean).join(SEP)
+}
+
+/**
+ * Shared OG / Twitter / canonical tail for Reels, TikTok, and Shorts.
+ * The tweet page stays richer (article:author, creator, tombstone).
+ */
+export function previewPageMetadata({
+  title,
+  description,
+  canonicalUrl,
+  image,
+  videoUrl,
+  ogType,
+}: {
+  title: string
+  description: string
+  canonicalUrl: string
+  image: string
+  videoUrl?: string
+  ogType?: 'video.other' | 'article'
+}): Metadata {
+  const type = ogType ?? (videoUrl ? 'video.other' : 'article')
+  return {
+    title,
+    description,
+    openGraph: {
+      type,
+      title,
+      description,
+      siteName: 'ADHX',
+      url: canonicalUrl,
+      images: [{ url: image, alt: title }],
+      ...(videoUrl
+        ? { videos: [{ url: videoUrl, type: 'video/mp4' as const, width: 1080, height: 1920 }] }
+        : {}),
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [image],
+    },
+    alternates: {
+      canonical: canonicalUrl,
+    },
+  }
 }

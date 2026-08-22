@@ -98,7 +98,10 @@ export async function fetchYouTubeMetadata(videoId: string): Promise<YouTubeMeta
   if (!isValidVideoId(videoId)) return null
 
   const watchUrl = `https://www.youtube.com/watch?v=${videoId}`
-  const oembed = `https://www.youtube.com/oembed?url=${encodeURIComponent(watchUrl)}&format=json`
+  const oembedOrigin = (
+    process.env.YOUTUBE_OEMBED_BASE?.trim() || 'https://www.youtube.com'
+  ).replace(/\/$/, '')
+  const oembed = `${oembedOrigin}/oembed?url=${encodeURIComponent(watchUrl)}&format=json`
 
   try {
     const res = await fetchWithTimeout(oembed, 8_000, {

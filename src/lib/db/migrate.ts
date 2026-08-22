@@ -130,10 +130,8 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_archived_posts_archived_at ON archived_posts(archived_at DESC);
   CREATE INDEX IF NOT EXISTS archived_posts_user_id_idx ON archived_posts(user_id);
-  CREATE INDEX IF NOT EXISTS idx_collection_tweets_bookmark ON collection_tweets(bookmark_id);
 
   CREATE INDEX IF NOT EXISTS idx_sync_logs_user_id ON sync_logs(user_id);
-  CREATE INDEX IF NOT EXISTS idx_sync_state_user_id ON sync_state(user_id);
   CREATE INDEX IF NOT EXISTS idx_user_preferences_user_id ON user_preferences(user_id);
 `)
 
@@ -452,6 +450,25 @@ try {
   console.log('[migrate] Ensured collection_events table')
 } catch (error) {
   console.log('[migrate] Warning: failed to create collection_events table', error)
+}
+
+// Dead custom-collections product + unused archiver columns. Tables and
+// columns stay in historical drizzle SQL so already-applied journals are
+// untouched; this drops them on every boot (IF EXISTS / try-catch).
+db.exec(`
+  DROP TABLE IF EXISTS collection_tweets;
+  DROP TABLE IF EXISTS collections;
+  DROP TABLE IF EXISTS sync_state;
+`)
+console.log('[migrate] Dropped unused collections / collection_tweets / sync_state')
+
+for (const column of ['extracted_content', 'filed_path', 'needs_transcript'] as const) {
+  try {
+    db.exec(`ALTER TABLE bookmarks DROP COLUMN ${column}`)
+    console.log(`[migrate] Dropped bookmarks.${column}`)
+  } catch {
+    // Column already gone (fresh DB after this drop, or a re-run).
+  }
 }
 
 console.log(`[migrate] Database ready at: ${path.resolve(DB_PATH)}`)

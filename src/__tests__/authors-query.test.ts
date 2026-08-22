@@ -65,6 +65,7 @@ describe('isValidHandle', () => {
     expect(isValidHandle('Trending')).toBe(false)
     expect(isValidHandle('shorts')).toBe(false)
     expect(isValidHandle('settings')).toBe(false)
+    expect(isValidHandle('privacy')).toBe(false)
   })
 
   it('still accepts an ordinary handle that is not reserved', () => {

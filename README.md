@@ -7,7 +7,7 @@
 
 > **Save now. Read never. Find always.**
 
-ADHX turns the stuff you save from **X, Instagram, TikTok, and YouTube** into something you'll actually watch. Every saved post lands in one collection, plays in one full-screen **theater**, and can be tagged into **collections** you share as looping playlists — with public curator profiles and a community **leaderboard** on top. Open source (MIT), self-hostable, your data in a SQLite file you own.
+ADHX turns the stuff you save from **X, Instagram, TikTok, and YouTube** into something you'll actually watch. Every saved post lands in one **collection**, plays in one full-screen **theater**, and can be tagged into a **playlist** you share as a looping theater — with public curator profiles and a community **leaderboard** on top. Open source (MIT), self-hostable, your data in a SQLite file you own.
 
 <p align="center">
   <img src="public/og-logo.png" alt="ADHX — save now, read never, find always" width="640" />
@@ -17,10 +17,10 @@ ADHX turns the stuff you save from **X, Instagram, TikTok, and YouTube** into so
 
 - **Save from four platforms** — swap any link's host to `adhx.com` (`x.com/user/status/123` → `adhx.com/user/status/123`), use the share sheet / bookmarklet / iOS shortcut, or sync your X bookmarks in one click. On mobile: **Copy Link** in any share sheet → open ADHX → tap **Paste link**.
 - **Every post gets a preview page** — clean, fast, shareable, and indexable, with inline playback. No login needed to view.
-- **The theater** — one full-screen player for everything: the community **Live** pulse, **My Collection**, and any shared tag collection. Keyboard-driven, autoplaying, auto-advancing.
-- **Triage** — flip through your unread backlog and mark posts read with one key. That's the whole feature.
-- **Tagged collections** — tag posts, make a tag public, and it becomes a looping theater at `adhx.com/t/you/tag` with your curator profile at `adhx.com/t/you`.
-- **Leaderboard** — public collections ranked by views and saves at [`/leaderboard`](https://adhx.com/leaderboard), by day / week / month / all-time.
+- **The theater** — one full-screen player for everything: the community **Live** pulse at `/`, **My Collection** at `/collection`, and any shared playlist. Keyboard-driven, autoplaying, auto-advancing. The grid over your saves is the **library** at `/library`.
+- **Archive** — take a post out of the active queue (private — it never appears on the public pulse). Flip **Show archived** in the library when you want it back.
+- **Playlists** — tag posts, make a tag public, and it becomes a looping theater at `adhx.com/t/you/tag` with your curator profile at `adhx.com/t/you`.
+- **Leaderboard** — public playlists ranked by views and clones at [`/leaderboard`](https://adhx.com/leaderboard), by day / week / month / all-time.
 - **Agent-friendly** — public JSON APIs, [`llms.txt`](https://adhx.com/llms.txt), and a portable [agent skill](#agent-skill) for reading X posts as structured data.
 
 ## How it works
@@ -29,8 +29,8 @@ ADHX turns the stuff you save from **X, Instagram, TikTok, and YouTube** into so
 flowchart LR
     A["Link from X / IG /<br/>TikTok / YouTube"] --> B["adhx.com preview page<br/>(watch, share, no login)"]
     B -->|Save| C["Your collection"]
-    C --> D["Theater: watch it<br/>· Triage: mark it read"]
-    C -->|Tag + make public| E["Shared collection<br/>/t/you/tag"]
+    C --> D["Theater: watch it<br/>· Archive: hide it"]
+    C -->|Tag + make public| E["Playlist theater<br/>/t/you/tag"]
     E --> F["Curator profile · Leaderboard<br/>· Live pulse"]
 ```
 
@@ -45,8 +45,11 @@ git clone https://github.com/itsmemeworks/adhx
 cd adhx
 pnpm install
 cp .env.example .env   # defaults work out of the box
+pnpm db:migrate        # creates ./data/adhdone.db (Docker does this on start; local does not)
 pnpm dev
 ```
+
+Set a distinct `SESSION_SECRET` before any real deploy — JWT signing and token encryption fall back to `TWITTER_CLIENT_SECRET` if it is unset. Generate one with `openssl rand -base64 32`.
 
 Open [http://localhost:3001](http://localhost:3001), sign in with any email, copy the magic link from the server console, and paste a post URL to save your first item.
 
@@ -123,7 +126,11 @@ Skill source: [`skills/adhx/SKILL.md`](skills/adhx/SKILL.md)
 
 ## Contributing
 
-Issues and PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). Conventional commits, tests required, releases automated via Release Please. Security reports: see [SECURITY](CONTRIBUTING.md) notes or open a private advisory.
+Issues and PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). Conventional commits, tests required, releases automated via Release Please.
+
+- [Privacy](PRIVACY.md) — what the hosted app stores; `activity.userId` is never public
+- [Security](SECURITY.md) — private vulnerability reports (do not file a public issue)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
 
 ## License
 

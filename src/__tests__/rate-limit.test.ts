@@ -4,6 +4,7 @@ import {
   checkRateLimit,
   getClientIp,
   mediaRateLimit,
+  activityWriteLimit,
 } from '@/lib/rate-limit'
 
 describe('checkRateLimit', () => {
@@ -104,5 +105,26 @@ describe('mediaRateLimit', () => {
 
     expect(third).not.toBeNull()
     expect(third?.status).toBe(429)
+  })
+})
+
+describe('activityWriteLimit', () => {
+  beforeEach(() => {
+    __resetRateLimitState()
+  })
+
+  it('does not share a bucket with mediaRateLimit', () => {
+    const headers = { 'x-forwarded-for': '10.0.0.9' }
+    const mediaReq = () =>
+      new Request('https://example.com/api/media/video', { headers }) as unknown as Parameters<
+        typeof mediaRateLimit
+      >[0]
+    const actReq = () =>
+      new Request('https://example.com/api/activity/share', { headers }) as unknown as Parameters<
+        typeof activityWriteLimit
+      >[0]
+
+    for (let i = 0; i < 3; i++) mediaRateLimit(mediaReq(), { max: 2, windowMs: 10_000 })
+    expect(activityWriteLimit(actReq())).toBeNull()
   })
 })

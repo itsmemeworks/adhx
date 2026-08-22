@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  *
  * The library grid no longer mounts a personal TheaterShell overlay. Leftover
- * deep links (`?collection=1`, `?triage=1`, `open-theater`) navigate to the
+ * deep links (`?collection=1`, `open-theater`) navigate to the
  * one personal theater at `/collection`.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
@@ -138,11 +138,7 @@ describe('AuthedHome collection deep link', () => {
     expect(await navigatesToCollection('collection=1')).toBe(true)
   })
 
-  it('still sends the superseded ?triage=1 to /collection', async () => {
-    expect(await navigatesToCollection('triage=1')).toBe(true)
-  })
-
-  it('does not navigate without either param', async () => {
+  it('does not navigate without the collection param', async () => {
     expect(await navigatesToCollection('filter=all')).toBe(false)
   })
 })

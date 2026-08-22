@@ -7,7 +7,6 @@ import {
   archivedPosts,
   syncLogs,
   bookmarkTags,
-  collectionTweets,
 } from '@/lib/db/schema'
 import { eq, desc, asc, like, and, or, sql, count, inArray, SQL, isNull } from 'drizzle-orm'
 import { metrics } from '@/lib/sentry'
@@ -41,16 +40,12 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
   const rawLimit = parseInt(searchParams.get('limit') || '50', 10)
   const limit = Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.min(rawLimit, 100) : 50
   const filter = (searchParams.get('filter') || 'all') as FilterType
-  // `hideArchived` is the current name; `unreadOnly` is still honoured because
-  // the flag shipped under that name and lives in URLs people have bookmarked.
   // Default true: your collection means your ACTIVE collection.
-  const archivedParam = searchParams.get('hideArchived') ?? searchParams.get('unreadOnly')
-  const hideArchived = archivedParam !== 'false'
+  const hideArchived = searchParams.get('hideArchived') !== 'false'
   const search = searchParams.get('search')
   const tags = searchParams.getAll('tag') // Multiple tags via ?tag=foo&tag=bar
   const sort = searchParams.get('sort') || 'added' // 'added' or 'posted'
   const sortDir = searchParams.get('sortDir') === 'asc' ? 'asc' : 'desc' // default desc (newest first)
-  const collectionId = searchParams.get('collection') // Filter by collection
   const platformFilter = (searchParams.get('platform') || 'all') as PlatformFilter // 'all' | 'twitter' | 'instagram' | 'tiktok'
   // Direct id lookup (?id=...). Returns the specific bookmark(s) regardless of
   // read state / pagination — used to open a saved tweet in the collection theater (e.g. the
@@ -128,17 +123,6 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
       )`
 
       conditions.push(sql`(${bookmarks.id}, ${bookmarks.platform}) IN ${tagMatchSubquery}`)
-    }
-
-    // Collection filter
-    if (collectionId) {
-      const collectionSubquery = sql`(
-        SELECT ${collectionTweets.bookmarkId}, ${collectionTweets.platform}
-        FROM ${collectionTweets}
-        WHERE ${collectionTweets.userId} = ${userId}
-        AND ${collectionTweets.collectionId} = ${collectionId}
-      )`
-      conditions.push(sql`(${bookmarks.id}, ${bookmarks.platform}) IN ${collectionSubquery}`)
     }
 
     // Media type filters using subqueries (composite key prevents cross-platform id collisions)

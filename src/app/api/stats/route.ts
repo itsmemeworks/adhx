@@ -45,12 +45,6 @@ export const GET = withAuth(async (_req, userId) => {
       .from(bookmarkMedia)
       .where(eq(bookmarkMedia.userId, userId))
 
-    // Needs transcript for this user (strict userId check)
-    const [needsTranscriptResult] = await db
-      .select({ count: count() })
-      .from(bookmarks)
-      .where(and(eq(bookmarks.userId, userId), sql`${bookmarks.needsTranscript} = 1`))
-
     // Manually added bookmarks (not via sync)
     const [manualResult] = await db
       .select({ count: count() })
@@ -67,13 +61,8 @@ export const GET = withAuth(async (_req, userId) => {
       total,
       active,
       archived: archivedCount,
-      // The superseded names, kept so nothing that reads this endpoint breaks
-      // mid-deploy. Remove once no caller wants them.
-      unread: active,
-      read: archivedCount,
       categories,
       withMedia: withMediaResult?.count || 0,
-      needsTranscript: needsTranscriptResult?.count || 0,
       manual: manualCount,
     })
   } catch (error) {

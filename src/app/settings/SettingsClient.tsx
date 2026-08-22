@@ -1099,6 +1099,18 @@ function SettingsPage() {
           <p className="text-xs text-ink-3 font-mono">
             ADHX v{process.env.NEXT_PUBLIC_APP_VERSION || '0.0.0'}
           </p>
+          <p className="mt-2 text-xs text-ink-3">
+            <a href="/privacy" className="underline-offset-2 hover:underline">
+              <span>Privacy</span>
+            </a>
+            <span> · </span>
+            <a
+              href="https://github.com/itsmemeworks/adhx/blob/main/SECURITY.md"
+              className="underline-offset-2 hover:underline"
+            >
+              <span>Security</span>
+            </a>
+          </p>
         </div>
       </div>
 

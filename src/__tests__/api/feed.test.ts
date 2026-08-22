@@ -67,32 +67,14 @@ describe('API: /api/feed', () => {
     })
   })
 
-  /**
-   * The flag was renamed `unreadOnly` → `hideArchived` when the read-state
-   * vocabulary became archiving. The old name has to keep working: it lives in
-   * URLs people bookmarked and in the browser history of anyone who used the
-   * filter before the rename.
-   */
-  describe('hideArchived / unreadOnly back-compat', () => {
+  describe('hideArchived', () => {
     async function idsFor(params: Record<string, string>) {
       const { GET } = await import('@/app/api/feed/route')
       const data = await (await GET(createRequest(params))).json()
       return (data.items as { id: string }[]).map((i) => i.id).sort()
     }
 
-    it('honours the superseded unreadOnly=false exactly like hideArchived=false', async () => {
-      expect(await idsFor({ unreadOnly: 'false' })).toEqual(await idsFor({ hideArchived: 'false' }))
-    })
-
-    it('prefers hideArchived when both are supplied', async () => {
-      // Conflicting params: the current name wins rather than the result
-      // depending on parameter order.
-      expect(await idsFor({ hideArchived: 'false', unreadOnly: 'true' })).toEqual(
-        await idsFor({ hideArchived: 'false' }),
-      )
-    })
-
-    it('still defaults to hiding archived posts when neither is given', async () => {
+    it('still defaults to hiding archived posts when the flag is omitted', async () => {
       expect(await idsFor({})).toEqual(await idsFor({ hideArchived: 'true' }))
     })
   })

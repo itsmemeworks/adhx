@@ -23,6 +23,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { reelVideoSrc } from '@/components/feed/video-src'
 import { previewPath } from '@/lib/activity/preview-path'
+import { pingSharePulse } from '@/lib/activity/ping-share'
 import { getPlatformType } from '@/lib/platform'
 import type { TheaterItem } from './types'
 
@@ -185,21 +186,6 @@ function canonicalUrlFor(item: TheaterItem): string {
  */
 export function buildSharePayload(file: File, canonicalUrl: string): ShareData {
   return { files: [file], text: `via ${canonicalUrl}` }
-}
-
-/** Fire-and-forget anonymous share pulse. Identifiers only — never client display fields. */
-function pingSharePulse(platform: string, id: string): void {
-  if (!id) return
-  try {
-    void fetch('/api/activity/share', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ platform, id }),
-      keepalive: true,
-    })
-  } catch {
-    // A pulse-write failure must never surface to the user.
-  }
 }
 
 export function useSendFile(

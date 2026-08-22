@@ -24,7 +24,8 @@ vi.mock('@/lib/db', () => ({
 
 // homepage + /trending + /trending/archive + 5 per-lens hubs (latest/videos/photos/text/articles)
 // + /leaderboard + 3 non-default leaderboard windows (today/month/all-time)
-const HUB_COUNT = 12
+// + /privacy
+const HUB_COUNT = 13
 
 describe('Dynamic Sitemap', () => {
   beforeEach(() => {
@@ -46,6 +47,7 @@ describe('Dynamic Sitemap', () => {
     expect(entries.find((e) => e.url === 'https://adhx.com/trending')).toBeDefined()
     expect(entries.find((e) => e.url === 'https://adhx.com/trending/videos')).toBeDefined()
     expect(entries.find((e) => e.url === 'https://adhx.com/leaderboard')).toBeDefined()
+    expect(entries.find((e) => e.url === 'https://adhx.com/privacy')).toBeDefined()
     // No tag pages
     expect(entries.find((e) => e.url.includes('/t/'))).toBeUndefined()
   })
