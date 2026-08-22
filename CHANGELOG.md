@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.55.1](https://github.com/itsmemeworks/adhx/compare/v1.55.0...v1.55.1) (2026-08-22)
+
+
+### Bug Fixes
+
+* translation-safe theater, added-to-ADHX ordering, live 24h queue, authed home = theater ([#390](https://github.com/itsmemeworks/adhx/issues/390)) ([c7e8554](https://github.com/itsmemeworks/adhx/commit/c7e8554be95e347676730f2731e98e6c2f4a3fb1))
+
 ## [1.55.0](https://github.com/itsmemeworks/adhx/compare/v1.54.0...v1.55.0) (2026-08-22)
 
 
