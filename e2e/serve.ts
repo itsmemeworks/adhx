@@ -1,11 +1,19 @@
 /**
  * Dedicated e2e Next process on :3002 plus the FxTwitter mock.
  * Does not touch the owner's `pnpm dev` on :3001.
+ *
+ * Migrate/seed happens HERE, before Next is spawned. Do not wipe the
+ * sqlite file from a Playwright globalSetup — that hook can run in
+ * parallel with webServer and leaves Next holding an empty inode
+ * (`SELECT 1` still passes, `activity` / `users` do not).
  */
 import { spawn } from 'node:child_process'
 import { E2E_FX_PORT, E2E_PORT } from './constants'
 import { E2E_ROOT, e2eProcessEnv } from './env'
 import { startFxMock } from './fx-mock'
+import { prepareE2eDatabase } from './prepare-db'
+
+prepareE2eDatabase()
 
 const fx = startFxMock(E2E_FX_PORT)
 const env = e2eProcessEnv()

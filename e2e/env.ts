@@ -28,6 +28,8 @@ export function e2eProcessEnv(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv 
   return {
     ...process.env,
     DATABASE_PATH: E2E_DB_PATH,
+    // Next `env` inlines `process.env.ADHX_DATABASE_PATH` (dot access).
+    ADHX_DATABASE_PATH: E2E_DB_PATH,
     SESSION_SECRET: E2E_SESSION_SECRET,
     TWITTER_CLIENT_ID: 'e2e-twitter-client',
     TWITTER_CLIENT_SECRET: 'e2e-twitter-secret',

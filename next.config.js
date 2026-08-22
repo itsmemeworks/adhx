@@ -22,8 +22,8 @@ const nextConfig = {
   // Expose app version to client
   env: {
     NEXT_PUBLIC_APP_VERSION: packageJson.version,
-    // Inlined into the server bundle so Turbopack workers still see it.
-    // Only set for the Playwright Next (`.next-e2e`); never the owner's `:3001`.
+    // Inlined into the server bundle as `process.env.ADHX_DATABASE_PATH`
+    // (dot access only — brackets are not replaced). Playwright-only.
     ...(process.env.NEXT_DIST_DIR === '.next-e2e' && process.env.DATABASE_PATH
       ? { ADHX_DATABASE_PATH: process.env.DATABASE_PATH }
       : {}),

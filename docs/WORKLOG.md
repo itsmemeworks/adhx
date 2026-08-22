@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-22 — E2E migrate before Next spawn
+
+CI migrated and seeded `/…/data/adhdone.db` then Next queried the same path with no `activity`/`users` tables. Playwright can start `webServer` in parallel with `globalSetup`; Next opened the file, setup `rm`'d it, migrate wrote a new inode, Next kept the empty one. `/api/health` is `SELECT 1` so the suite started anyway.
+
+Migrate/seed now runs in `e2e/serve.ts` **before** `next dev`. Next inlines `process.env.ADHX_DATABASE_PATH` (dot access). An explicit path with no `users` table throws instead of serving empty.
+
+---
+
 ## 2026-08-22 — Inline e2e DB path for Next workers
 
 `next.config` now inlines `ADHX_DATABASE_PATH` when `NEXT_DIST_DIR=.next-e2e`. CI also sets `DATABASE_PATH` on the e2e step. First sqlite open logs the path.

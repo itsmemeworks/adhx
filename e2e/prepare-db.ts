@@ -1,6 +1,10 @@
+/**
+ * Wipe + migrate + seed the e2e sqlite file. Called from `e2e/serve.ts`
+ * BEFORE Next starts so the server cannot open a deleted/recreated inode.
+ */
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
-import { E2E_ROOT, E2E_DB_PATH, e2eProcessEnv } from './env'
+import { E2E_DB_PATH, E2E_ROOT, e2eProcessEnv } from './env'
 
 function rmIfExists(file: string) {
   try {
@@ -10,7 +14,7 @@ function rmIfExists(file: string) {
   }
 }
 
-export default function globalSetup(): void {
+export function prepareE2eDatabase(): void {
   console.log(`[e2e] migrate/seed ${E2E_DB_PATH}`)
   fs.mkdirSync(`${E2E_ROOT}/data`, { recursive: true })
   rmIfExists(E2E_DB_PATH)

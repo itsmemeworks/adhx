@@ -12,7 +12,6 @@ export default defineConfig({
   timeout: 60_000,
   expect: { timeout: 15_000 },
   reporter: process.env.CI ? [['github'], ['list']] : 'list',
-  globalSetup: './e2e/global-setup.ts',
   use: {
     baseURL: E2E_ORIGIN,
     viewport: { width: 1440, height: 900 },

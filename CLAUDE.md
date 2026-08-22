@@ -1141,7 +1141,7 @@ pnpm test:e2e     # Playwright against an isolated Next on :3002 (not `pnpm dev`
 pnpm test:e2e:install  # download Chromium once
 ```
 
-Browser tests live in `e2e/*.spec.ts` and are **not** part of `pnpm test`. They seed `data/e2e.db`, mint a session JWT, and start their own Next + FxTwitter mock (`FXTWITTER_API_BASE`). Do not point them at the owner's `:3001` / `adhdone.db`.
+Browser tests live in `e2e/*.spec.ts` and are **not** part of `pnpm test`. `e2e/serve.ts` migrates + seeds `data/e2e.db` (or `data/adhdone.db` on GitHub Actions) **before** spawning Next on :3002, then mints a session JWT against that file. Do not point them at the owner's `:3001` / `adhdone.db`.
 
 Test files in `src/__tests__/`:
 
