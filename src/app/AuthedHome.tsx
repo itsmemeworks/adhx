@@ -65,6 +65,8 @@ function FeedPageContent(): React.ReactElement {
   const { resolvedTheme, setTheme } = useTheme()
 
   const [items, setItems] = useState<FeedItem[]>([])
+  /** Monotonic id of the newest feed request — older responses are dropped. */
+  const feedRequestRef = useRef(0)
   const [loading, setLoading] = useState(true)
   /**
    * Paste-to-add status. A paste adds the post to the collection in place
@@ -165,63 +167,72 @@ function FeedPageContent(): React.ReactElement {
   }, [])
 
   /**
+   * Place a just-added post at the top of the grid. Shared by paste-to-add and
+   * the theater's Live-tab Save, and deduped so re-adding something already
+   * listed moves that card up instead of rendering it twice.
+   */
+  const placeAddedItem = useCallback((added: FeedItem) => {
+    const platform = added.platform ?? 'twitter'
+    setItems((prev) => [
+      added,
+      ...prev.filter((f) => !((f.platform ?? 'twitter') === platform && f.id === added.id)),
+    ])
+  }, [])
+
+  /**
    * Paste a post link while on the library → add it and put it at the top,
    * without leaving the page (owner). The card is pulled from `/api/feed?id=`
    * rather than built from the add endpoint's raw DB row, so it renders
    * identically to every other card (media, links, tags, read state) — the
    * same trick `handleTriageLiveSave` uses to pull a save into an open queue.
    */
-  const addPastedPost = useCallback(async (url: string) => {
-    setPasteAdd({ status: 'adding' })
-    try {
-      const res = await fetch('/api/bookmarks/add', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, source: 'manual' }),
-      })
-      const data = await res.json().catch(() => null)
-      if (!res.ok) {
-        setPasteAdd({
-          status: 'error',
-          message: typeof data?.error === 'string' ? data.error : "Couldn't add that link",
+  const addPastedPost = useCallback(
+    async (url: string) => {
+      setPasteAdd({ status: 'adding' })
+      try {
+        const res = await fetch('/api/bookmarks/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, source: 'manual' }),
         })
-        return
-      }
+        const data = await res.json().catch(() => null)
+        if (!res.ok) {
+          setPasteAdd({
+            status: 'error',
+            message: typeof data?.error === 'string' ? data.error : "Couldn't add that link",
+          })
+          return
+        }
 
-      const platform: string = data?.platform ?? 'twitter'
-      const id: string | undefined = data?.bookmark?.id
-      const duplicate = data?.isDuplicate === true
+        const platform: string = data?.platform ?? 'twitter'
+        const id: string | undefined = data?.bookmark?.id
+        const duplicate = data?.isDuplicate === true
 
-      if (id) {
-        const q = new URLSearchParams({ unreadOnly: 'false', filter: 'all', limit: '5' })
-        q.append('id', id)
-        const fres = await fetch(`/api/feed?${q}`)
-        if (fres.ok) {
-          const feed = await fres.json()
-          const added: FeedItem | undefined = (feed.items ?? []).find(
-            (f: FeedItem) => (f.platform ?? 'twitter') === platform && f.id === id,
-          )
-          if (added) {
-            // Newest-first, and deduped: a re-paste of something already saved
-            // moves the existing card to the top rather than showing it twice.
-            setItems((prev) => [
-              added,
-              ...prev.filter((f) => !((f.platform ?? 'twitter') === platform && f.id === id)),
-            ])
+        if (id) {
+          const q = new URLSearchParams({ unreadOnly: 'false', filter: 'all', limit: '5' })
+          q.append('id', id)
+          const fres = await fetch(`/api/feed?${q}`)
+          if (fres.ok) {
+            const feed = await fres.json()
+            const added: FeedItem | undefined = (feed.items ?? []).find(
+              (f: FeedItem) => (f.platform ?? 'twitter') === platform && f.id === id,
+            )
+            if (added) placeAddedItem(added)
           }
         }
-      }
 
-      setPasteAdd({ status: duplicate ? 'duplicate' : 'added' })
-      // Refresh the header's counts only. Deliberately NOT `tweet-added`,
-      // which `useSyncListener` turns into a full `fetchFeed(true)` — that
-      // would throw away the prepend above and, with a filter or search
-      // active, drop the just-added post out of view entirely.
-      window.dispatchEvent(new CustomEvent('stats-updated'))
-    } catch {
-      setPasteAdd({ status: 'error', message: "Couldn't add that link" })
-    }
-  }, [])
+        setPasteAdd({ status: duplicate ? 'duplicate' : 'added' })
+        // Refresh the header's counts only. Deliberately NOT `tweet-added`,
+        // which `useSyncListener` turns into a full `fetchFeed(true)` — that
+        // would throw away the prepend above and, with a filter or search
+        // active, drop the just-added post out of view entirely.
+        window.dispatchEvent(new CustomEvent('stats-updated'))
+      } catch {
+        setPasteAdd({ status: 'error', message: "Couldn't add that link" })
+      }
+    },
+    [placeAddedItem],
+  )
 
   // Open the unified triage viewer on a snapshot of the queue at a given index.
   const openTriage = useCallback(
@@ -483,6 +494,11 @@ function FeedPageContent(): React.ReactElement {
     async (resetPage = false) => {
       const currentPage = resetPage ? 1 : page
       if (resetPage) setPage(1)
+      // Request token: a filter change and an in-flight `loadMore` used to be
+      // able to interleave, appending the OLD filter's page 2 onto the new
+      // filter's freshly reset list (state review). Only the newest request
+      // may write to `items`.
+      const requestId = ++feedRequestRef.current
 
       try {
         setLoading(true)
@@ -510,11 +526,23 @@ function FeedPageContent(): React.ReactElement {
 
         const response = await fetch(`/api/feed?${params}`)
         const data = await response.json()
+        if (requestId !== feedRequestRef.current) return
 
         if (resetPage) {
           setItems(data.items || [])
         } else {
-          setItems((prev) => [...prev, ...(data.items || [])])
+          // Dedupe on append. The server pages by OFFSET, so every item this
+          // session removed locally (a Done while unread-only, a delete)
+          // shifts the boundary and page N+1 re-sends a row already on
+          // screen — React then renders two cards with the same key (state
+          // review). Filtering by (platform, id) is the cheap correct fix.
+          setItems((prev) => {
+            const seen = new Set(prev.map((f) => `${f.platform ?? 'twitter'}:${f.id}`))
+            const fresh = ((data.items || []) as FeedItem[]).filter(
+              (f) => !seen.has(`${f.platform ?? 'twitter'}:${f.id}`),
+            )
+            return fresh.length ? [...prev, ...fresh] : prev
+          })
         }
 
         setHasMore(data.pagination?.page < data.pagination?.totalPages)
@@ -575,13 +603,40 @@ function FeedPageContent(): React.ReactElement {
 
   // Any surface that changes a post's tags (grid Add-posts toggles, the
   // triage TagQuickPicker) announces it — refetch tag counts so the toolbar
-  // "{n} posts" and the Tags dropdown never go stale.
+  // "{n} posts" and the Tags dropdown never go stale, AND patch the affected
+  // card's own tags.
+  //
+  // The patch is the fix for a real staleness bug (state review, 2026-08-22):
+  // the event has always carried the post's complete new tag list in `detail`,
+  // and this listener ignored it, refetching only the tag COUNTS. So a tag
+  // added in the theater showed there (the theater patches its own snapshot)
+  // and then vanished the moment the overlay closed and the grid's untouched
+  // `items` re-rendered — the tag was saved, but the UI said otherwise until a
+  // filter change or reload.
   useEffect(() => {
     if (!isAuthenticated) return
-    const handler = () => fetchTags()
+    const handler = (e: Event) => {
+      void fetchTags()
+      const detail = (e as CustomEvent).detail as
+        { platform?: string; bookmarkId?: string; tags?: string[] } | undefined
+      if (!detail?.bookmarkId || !Array.isArray(detail.tags)) return
+      const platform = detail.platform ?? 'twitter'
+      const tags = detail.tags
+      setItems((prev) => {
+        let changed = false
+        const next = prev.map((item) => {
+          if (item.id !== detail.bookmarkId || (item.platform ?? 'twitter') !== platform) {
+            return item
+          }
+          changed = true
+          return { ...item, tags }
+        })
+        return changed ? next : prev
+      })
+    }
     window.addEventListener('bookmark-tags-changed', handler)
     return () => window.removeEventListener('bookmark-tags-changed', handler)
-  }, [isAuthenticated])
+  }, [isAuthenticated, fetchTags])
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -1200,6 +1255,7 @@ function FeedPageContent(): React.ReactElement {
             initialTriageTab={triageInitialTab}
             onTriageResolved={handleTriageResolved}
             onTriageRestored={handleTriageRestored}
+            onCollectionAdded={placeAddedItem}
             onClose={() => {
               setTriageOpen(false)
               // Refresh the top-bar streak + counts after a triage session.

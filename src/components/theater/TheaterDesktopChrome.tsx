@@ -1041,6 +1041,10 @@ export function DesktopDock({
 
   useEffect(() => {
     setTimedPaused(false)
+    // Same reason as the mobile chrome: `liveMuted` is a report about the
+    // element that WAS on stage, so carrying it across items shows the
+    // previous post's mute state on the new one (state review, 2026-08-22).
+    setLiveMuted(null)
   }, [currentKey])
 
   useEffect(() => {

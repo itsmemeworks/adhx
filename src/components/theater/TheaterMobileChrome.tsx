@@ -286,6 +286,14 @@ export function TheaterMobileChrome({
   useEffect(() => {
     setSheetOpen(false)
     setTimedPaused(false)
+    // `liveMuted` describes the ELEMENT that was on stage, so it must not
+    // outlive the item — the sibling `timedPaused` was reset here and this
+    // wasn't (state review, 2026-08-22). Carried over, the audio icon showed
+    // the previous post's real mute state until the new stage happened to
+    // re-broadcast, which is the intermittent "mute flicks on and off while
+    // watching" the owner reported. Null falls back to the shell's `muted`,
+    // the intended state for a post that hasn't reported yet.
+    setLiveMuted(null)
   }, [currentKey])
 
   const paused = mediaKind === 'video' ? !videoPlaying : timedPaused

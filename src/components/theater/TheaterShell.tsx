@@ -32,6 +32,7 @@ import {
   collectionTabProgressKind,
 } from './TheaterProgressLine'
 import { feedItemToTheaterItem } from './collection-item'
+import { notifyCollectionChanged } from '@/lib/client-events'
 import { theaterItemKey } from './types'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { hasKnownTimestamp } from '@/lib/utils/format'
@@ -185,6 +186,13 @@ export interface TheaterShellProps {
   onTriageResolved?: (id: string, action: 'archive' | 'delete') => void
   /** Notify the Collection feed an archive was undone, so it can restore the item + unread count. */
   onTriageRestored?: (item: FeedItem) => void
+  /**
+   * A post was added to the collection from the theater (the Live tab's Save).
+   * Hands the grid the ready-made row so it can place it in-line, instead of
+   * the old `tweet-added` broadcast that made the grid throw away its whole
+   * list — and its scroll position — to refetch page 1.
+   */
+  onCollectionAdded?: (item: FeedItem) => void
   /** Triage mode only — closes the overlay (it lives over `/`, there is no page to navigate back to). */
   onClose?: () => void
 }
@@ -588,6 +596,7 @@ export function TheaterShell({
   onTriageTabChange,
   onTriageResolved,
   onTriageRestored,
+  onCollectionAdded,
   onClose,
 }: TheaterShellProps) {
   const isTriage = mode === 'triage'
@@ -629,6 +638,11 @@ export function TheaterShell({
     longest: 0,
   })
   const [triageUndo, setTriageUndo] = useState<TriageUndoAction | null>(null)
+  // Ref-backed so `handleTriageLiveSave` (registered once) always sees the
+  // current handler without re-creating itself on every grid render.
+  const onCollectionAddedRef = useRef(onCollectionAdded)
+  onCollectionAddedRef.current = onCollectionAdded
+
   const [triageSavedKeys, setTriageSavedKeys] = useState<Set<string>>(new Set())
   const triageSavedKeysRef = useRef(triageSavedKeys)
   useEffect(() => {
@@ -932,7 +946,6 @@ export function TheaterShell({
       })
       if (res.ok) {
         setTriageSavedKeys((prev) => new Set(prev).add(key))
-        window.dispatchEvent(new CustomEvent('tweet-added'))
         // Pull the freshly saved bookmark into the OPEN triage queue too, so
         // switching to the Collection tab shows it without a page reload
         // (the queue is a snapshot taken when the overlay opened).
@@ -957,12 +970,20 @@ export function TheaterShell({
                     ? prev
                     : [...prev, saved],
                 )
+                // Hand the same row to the grid behind the overlay. It used to
+                // fire `tweet-added`, whose only listener refetches the WHOLE
+                // feed — resetting the grid to page 1 and losing however far
+                // the viewer had scrolled, for one added post (state review).
+                onCollectionAddedRef.current?.(saved)
               }
             }
           } catch {
-            // Queue update is best-effort; the grid behind refreshes anyway.
+            // Queue/grid update is best-effort; the save itself succeeded.
           }
         }
+        // Either way the Header's counts must move — this path only ever told
+        // the local Save button.
+        notifyCollectionChanged({ refetchFeed: !onCollectionAddedRef.current })
       }
       return res.ok
     } catch {
@@ -1179,8 +1200,9 @@ export function TheaterShell({
     unknown.forEach((it) => membershipCheckedRef.current.add(theaterItemKey(it)))
     const params = new URLSearchParams({ unreadOnly: 'false', filter: 'all', limit: '50' })
     unknown.forEach((it) => params.append('id', it.bookmarkId as string))
+    const attempted = unknown.map((it) => theaterItemKey(it))
     fetch(`/api/feed?${params}`)
-      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('lookup failed'))))
       .then((d) => {
         const owned: FeedItem[] = d?.items ?? []
         if (!owned.length) return
@@ -1190,7 +1212,13 @@ export function TheaterShell({
           return next
         })
       })
-      .catch(() => {})
+      .catch(() => {
+        // The ids were marked "checked" BEFORE the request so a re-render
+        // can't double-fetch them — but a failed lookup must not mark them
+        // checked forever, or an already-saved post shows "Save" for the rest
+        // of the session (state review). Un-mark so the next render retries.
+        for (const k of attempted) membershipCheckedRef.current.delete(k)
+      })
   }, [isTriage, triageTab, displayItems])
 
   // Kept in a ref (rather than effect deps) so goNext/goPrev/the dwell timer
@@ -1774,6 +1802,9 @@ export function TheaterShell({
             detail: { key: theaterItemKey(sharedItem) },
           }),
         )
+        // …and tell the rest of the app a post was added, which this path
+        // never did: only the local Save button knew (state review).
+        notifyCollectionChanged()
       })
       .catch(() => {})
   }, [saveIntentOnLoad, mode, sharedItem, authMe.loading, authMe.me])
@@ -1799,6 +1830,11 @@ export function TheaterShell({
       }
       if (!res.ok) throw new Error('clone failed')
       setSaveStatus('saved')
+      // Cloning a playlist adds a pile of posts AND a tag to this account. It
+      // used to announce none of that, so the Header's counts, the library
+      // grid and the tags page all silently missed the whole import until a
+      // reload (state review, 2026-08-22).
+      notifyCollectionChanged({ tagsChanged: true })
     } catch {
       setSaveStatus('error')
     }

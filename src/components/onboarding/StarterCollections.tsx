@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { notifyCollectionChanged } from '@/lib/client-events'
 import { useAuthMe } from '@/components/auth'
 import { CollectionPosterCard, type PosterTile } from '@/components/tags'
 import { cn } from '@/lib/utils'
@@ -119,7 +120,7 @@ function StarterCard({ entry }: { entry: StarterEntry }) {
       // AuthedHome's useSyncListener refetches the feed/tags on this event.
       // Harmless where nothing is listening (e.g. the /welcome flow, which
       // lands on a fresh `/` after this page anyway).
-      window.dispatchEvent(new CustomEvent('tweet-added'))
+      notifyCollectionChanged({ tagsChanged: true })
     } catch {
       setState('error')
     }

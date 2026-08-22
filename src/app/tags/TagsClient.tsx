@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
   AlertCircle,
@@ -15,6 +15,7 @@ import {
   Tag as TagIcon,
 } from 'lucide-react'
 import type { FeedItem, TagItem } from '@/components/feed/types'
+import { CLIENT_EVENTS } from '@/lib/client-events'
 import { CollectionPosterCard, type PosterTile } from '@/components/tags'
 
 /** Owner-level Discovery totals for the "This week" summary card (docs/specs/discovery-leaderboards.md §6). */
@@ -50,20 +51,37 @@ export function TagsClient() {
   const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const copyHintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    fetch('/api/tags')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (cancelled) return
-        setTags(d?.tags ?? [])
-        setOwnerStats(d?.stats ?? null)
-      })
-      .catch(() => !cancelled && setTags([]))
-    return () => {
-      cancelled = true
+  const loadTags = useCallback(async () => {
+    try {
+      const r = await fetch('/api/tags')
+      const d = r.ok ? await r.json() : null
+      setTags(d?.tags ?? [])
+      setOwnerStats(d?.stats ?? null)
+    } catch {
+      setTags((prev) => prev ?? [])
     }
   }, [])
+
+  useEffect(() => {
+    void loadTags()
+  }, [loadTags])
+
+  /**
+   * Stay live while mounted. This page used to fetch once and subscribe to
+   * nothing (state review, 2026-08-22), so tagging a post in the theater — or
+   * cloning a playlist, which adds a whole tag — left these counts, and even
+   * the presence of a brand-new tag, wrong until a reload. Every tag/collection
+   * mutation in the app announces itself; listen for it.
+   */
+  useEffect(() => {
+    const refresh = () => void loadTags()
+    window.addEventListener(CLIENT_EVENTS.tagsChanged, refresh)
+    window.addEventListener(CLIENT_EVENTS.feedChanged, refresh)
+    return () => {
+      window.removeEventListener(CLIENT_EVENTS.tagsChanged, refresh)
+      window.removeEventListener(CLIENT_EVENTS.feedChanged, refresh)
+    }
+  }, [loadTags])
 
   // Fetch a small content preview per tag once the tag list is known. Keyed
   // off the set of tag names (not the `tags` array itself) so re-fetching

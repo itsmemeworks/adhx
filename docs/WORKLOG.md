@@ -4,6 +4,20 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-22 — Global-state review: seven places the UI disagreed with the database
+
+Owner: "certain areas of the website don't update when things happen… do a full review of that." Three parallel read-only reviews (library grid / global chrome / theater internals) cross-checked each other; these are the findings that were REAL, all now fixed. The reviews also cleared several suspects — preferences context, `useSeenSet`, `mergeFeedItems`, the triage index/undo bookkeeping and the read/delete paths are all correct as written; don't "fix" them.
+
+- **`src/lib/client-events.ts` is new**, and is the point of the exercise. Cross-component refreshes were hand-dispatched window events from a dozen call sites, so most sites fired SOME of them — that IS the owner's complaint, in one sentence. Mutations now call `notifyCollectionChanged()` / `notifyTagsChanged()`, which document who listens. **`notifyCollectionChanged({ refetchFeed: false })` matters**: the `tweet-added` event's only listener refetches the WHOLE feed, so a caller that already placed its item in the grid must not fire it or its item vanishes behind the active filter.
+- **Cloning a playlist announced nothing at all** — Header counts, library grid and `/tags` all silently missed a bulk import until reload. Now `notifyCollectionChanged({ tagsChanged: true })` (a clone adds a tag too).
+- **Live-tab Save** fired only `tweet-added`, which the Header doesn't listen for (counts stale) and whose listener nukes the grid's list and scroll position to refetch page 1 — for one post. It now hands the row it ALREADY fetched to the grid via the new `onCollectionAdded` prop and skips the refetch. Deferred post-sign-in save and the starter-collection clone were likewise silent; both notify now.
+- **Tag pills never reached the grid.** `bookmark-tags-changed` has always carried the post's complete new tag list in `detail`; `AuthedHome`'s listener ignored it and refetched only the tag COUNTS. So a tag added in the theater showed there (the theater patches its own snapshot) and vanished when the overlay closed. Now patched in place, matched on **platform AND id** (the same numeric id exists across platforms), and a detail-less dispatch is treated as "refresh counts", never as "this post has no tags".
+- **`/tags` fetched once and subscribed to nothing** — counts and even the existence of a brand-new tag were wrong until reload. Now listens for tags-changed + feed-changed.
+- **Pagination drift**: the server pages by OFFSET, so every locally-removed row (a Done under unread-only, a delete) shifted the boundary and page N+1 re-sent a row already on screen → two cards with the same React key. Appends now dedupe by `(platform, id)`. A monotonic request token also drops stale responses, so a filter change racing an in-flight `loadMore` can't append the old filter's page 2 onto the new list.
+- **The mute flicker the owner reported earlier has a cause**: `liveMuted` — a report about the element that WAS on stage — was not reset on `currentKey`, though its sibling `timedPaused` was. Carried over, the audio icon showed the previous post's real mute state until the next broadcast. Reset in both chromes.
+- **A failed membership lookup was permanent**: ids were marked "checked" before the request (correctly, to avoid double-fetching) but never un-marked on failure, so one network blip left an already-saved live post showing "Save" all session. The catch now un-marks them.
+- **State**: 2395 tests / 189 files green, typecheck + lint + prettier + `pnpm build` all clean. New: `client-events.test.ts`, `TagsClient-live.component.test.tsx`, `AuthedHome-state-freshness.component.test.tsx`.
+
 ## 2026-08-22 — Send actually sends the file (the tap now waits for it)
 
 Owner, from a PRODUCTION preview page (so this predates this branch): the mobile Send/Download button put a URL into WhatsApp instead of attaching the video. "It needs to be smart enough that when you tap download, it keeps the spinner going until it has the file to send."
