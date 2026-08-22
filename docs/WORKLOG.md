@@ -62,7 +62,7 @@ The mobile iOS banner now says it installs a Shortcuts.app shortcut so sharing p
 
 ## 2026-08-22 — Mobile collection Archive + photo caption
 
-Phone-width pass: Live / trending / leaderboard / sign-in / shorts were fine. Collection Archive still used the old Later/Delete column (`flex-col bg-done/25`) in the Live action row — now a 44px glass circle like Tag/Share/Open. Collection photos also painted the caption on the stage *and* in the chrome; stage `photoCaption` is off, matching Live. The iOS “Add to Share” banner sat on `/collection`’s peek bar (same z-60 as TheaterShell); AppShell now treats `/` `/collection` `/t/` as theater surfaces and skips Header + PWA there.
+Phone-width pass: Live / trending / leaderboard / sign-in / shorts were fine. Collection Archive still used the old Later/Delete column (`flex-col bg-done/25`) in the Live action row — now a 44px glass circle like Tag/Share/Open. Collection photos also painted the caption on the stage _and_ in the chrome; stage `photoCaption` is off, matching Live. The iOS “Add to Share” banner sat on `/collection`’s peek bar (same z-60 as TheaterShell); AppShell now treats `/` `/collection` `/t/` as theater surfaces and skips Header + PWA there.
 
 ---
 
