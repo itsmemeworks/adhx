@@ -291,10 +291,6 @@ export function UpNextList({
     const pinnedIndex = items.findIndex((item) => theaterItemKey(item) === pinnedKey)
     if (pinnedIndex !== -1) headingAt.set(pinnedIndex, { label: 'Shared post' })
   }
-  // "Caught up" means nothing is PENDING, live — not that the arrival queue
-  // was empty. Watching the last row flips it without moving anything.
-  const unwatchedTotal = (groupRemaining.arrived ?? 0) + (groupRemaining.unwatched ?? 0)
-
   const currentIndex = currentKey ? items.findIndex((it) => theaterItemKey(it) === currentKey) : -1
 
   // Collapsed cutoff always covers the current row + its "next ↓" row, even
@@ -308,18 +304,13 @@ export function UpNextList({
 
   return (
     <div className={cn(ownScroll && 'overflow-y-auto', className)}>
-      {/* Only the caught-up case gets a line of its own. The old header read
-          `newCount` (unseen AND newer than the last visit), so with no stored
-          last-visit it claimed "You're all caught up — Top today" while rows
-          sat unwatched (owner report). The counts that replaced it live in the
-          group headings below instead of here — "show a fact once": a summary
-          line saying "12 to watch" directly above a "NOT WATCHED YET 12"
-          heading is the same fact twice. Nothing else states caught-up, so
-          that one stays. */}
-      {seenReady && wasSeenOnEntry && items.length > 0 && unwatchedTotal === 0 && (
-        <div className="px-3 pb-2 pt-3 text-[11.5px] text-ink-3">You&rsquo;re all caught up</div>
-      )}
-
+      {/* No summary line above the rows. The group headings ARE the summary —
+          a list whose only sections are "Watched earlier 19" (and, on a
+          preview page, "Shared post") already says there is nothing left to
+          watch, so a "You're all caught up" line above it was the same fact
+          twice (owner: "I don't think there's any point"). The end-of-queue
+          STAGE still says it, where it's the whole message rather than a
+          caption on a list that contradicts it with a "next ↓" row. */}
       <div className="flex flex-col gap-1 px-2">
         {visibleItems.map((item, i) => {
           const key = theaterItemKey(item)

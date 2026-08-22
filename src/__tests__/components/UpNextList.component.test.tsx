@@ -103,19 +103,29 @@ describe('UpNextList grouping headings', () => {
     expect(screen.queryByText(/all caught up/i)).not.toBeInTheDocument()
   })
 
-  it('only claims caught-up when nothing is unwatched', () => {
+  /**
+   * The list never states caught-up in words — owner, on a preview page whose
+   * only sections were "Shared post" and "Watched earlier 19": "I don't think
+   * there's a need for [the caught-up line], just additional text. I don't
+   * think there's any point." The headings already carry it: no unwatched
+   * section IS nothing left to watch. The end-of-queue STAGE still says it.
+   */
+  it('never states caught-up in words — the headings carry it', () => {
     const { rerender } = render(
       <UpNextList {...base} items={[post('a', 1), post('b', 2)]} wasSeenOnEntry={() => false} />,
     )
-    // Two unwatched rows: the old code showed "all caught up" here whenever
-    // there was no stored last-visit timestamp.
     expect(screen.getByText('Up next')).toBeInTheDocument()
     expect(screen.queryByText(/all caught up/i)).not.toBeInTheDocument()
 
+    // Everything watched: still no line, and no "Up next" heading to imply
+    // otherwise — the only section left is the watched block.
     rerender(
       <UpNextList {...base} items={[post('a', 1), post('b', 2)]} wasSeenOnEntry={() => true} />,
     )
-    expect(screen.getByText('You\u2019re all caught up')).toBeInTheDocument()
+    expect(screen.queryByText(/all caught up/i)).not.toBeInTheDocument()
+    expect(screen.getAllByRole('separator').map((el) => el.textContent)).toEqual([
+      'Watched earlier2',
+    ])
   })
 
   it('renders no headings at all in playlist/shared mode (ungrouped queue)', () => {
@@ -163,13 +173,15 @@ describe('UpNextList — watching a row updates the heading, not the layout', ()
     expect(screen.queryByText('Watched earlier')).not.toBeInTheDocument()
   })
 
-  it('goes caught-up once every row has been watched, without regrouping', () => {
+  it('drops the heading count to nothing once every row is watched, without regrouping', () => {
     render(
       <UpNextList {...base} items={items} isSeen={() => true} wasSeenOnEntry={wasSeenOnEntry} />,
     )
-    expect(screen.getByText('You\u2019re all caught up')).toBeInTheDocument()
-    // Heading loses its count entirely rather than showing a bare 0.
+    // Rows stay put under their arrival grouping; the heading just loses its
+    // count entirely rather than showing a bare 0. No caught-up line — the
+    // absent count is the signal (owner: the line was "just additional text").
     expect(screen.getAllByRole('separator').map((el) => el.textContent)).toEqual(['Up next'])
+    expect(screen.queryByText(/all caught up/i)).not.toBeInTheDocument()
   })
 })
 
@@ -217,10 +229,11 @@ describe('UpNextList — the pinned shared post sits outside the groups', () => 
     expect(upNext.textContent?.replace(/\s+/g, ' ').trim()).toBe('Up next2')
   })
 
-  it('does not count the shared post toward caught-up', () => {
+  it('does not invent an "Up next" section for the shared post alone', () => {
     // Everything in the live queue is watched; only the pinned post is not.
-    // The visitor IS caught up on the feed — the shared post is why they're
-    // here, not something they're behind on.
+    // Being caught up is a fact about the FEED — the shared post is why the
+    // visitor is here, not something they're behind on — so it must not
+    // produce a pending section of its own.
     render(
       <UpNextList
         {...base}
@@ -229,7 +242,11 @@ describe('UpNextList — the pinned shared post sits outside the groups', () => 
         wasSeenOnEntry={(k) => k === 'twitter:seen'}
       />,
     )
-    expect(screen.getByText(/all caught up/i)).toBeInTheDocument()
+    expect(screen.getAllByRole('separator').map((el) => el.textContent)).toEqual([
+      'Shared post',
+      'Watched earlier1',
+    ])
+    expect(screen.queryByText(/all caught up/i)).not.toBeInTheDocument()
   })
 
   it('groups normally when there is no pinned post (home)', () => {
