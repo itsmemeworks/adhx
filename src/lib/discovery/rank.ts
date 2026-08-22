@@ -15,8 +15,16 @@ import { getThumbnailUrl } from '@/lib/media/fxembed'
 /**
  * Discovery leaderboard ranking — the SINGLE audited read choke point over
  * `collection_events` (docs/specs/discovery-leaderboards.md §5–§7), playing
- * the same role for public collections that `src/lib/trending/query.ts` plays
+ * the same role for public playlists that `src/lib/trending/query.ts` plays
  * for posts.
+ *
+ * VOCABULARY: what users call a **playlist** is one publicly shared tag. The
+ * storage layer here still says "collection" — `collection_events`,
+ * `collectionEvents`, `OwnerCollectionStats` — because the table, the API
+ * paths and the indexed URLs are public contracts that were deliberately not
+ * renamed. Comments below name the product concept (playlist) and the
+ * identifiers as they are; see CLAUDE.md's "Home routing & the Theater" for
+ * the full playlist / collection / library split.
  *
  * ANONYMITY INVARIANT: `collectionEvents.viewerId` is NEVER selected here.
  * It exists in the table only so `src/lib/discovery/record.ts` can dedupe
@@ -27,7 +35,7 @@ import { getThumbnailUrl } from '@/lib/media/fxembed'
  *
  * Score = views + 5×clones, computed within the selected rolling window over
  * events where `hidden = 0`. An INNER JOIN against `tag_shares` (`isPublic =
- * 1`) means a collection made private drops off the board on its next read —
+ * 1`) means a playlist made private drops off the board on its next read —
  * there is no separate "unpublish" step to remember.
  */
 
@@ -82,7 +90,7 @@ export interface LeaderboardEntry {
   score: number
   viewCount: number
   cloneCount: number
-  /** Distinct posts tagged into this collection. */
+  /** Distinct posts tagged into this playlist. */
   itemCount: number
   /** Up to `TILES_PER_COLLECTION` poster tiles for the mosaic. */
   tiles: LeaderboardTile[]
@@ -339,7 +347,7 @@ function computeLeaderboard(window: RankWindow, mode: RankMode): LeaderboardEntr
       lastEventAt: sql<string>`max(${collectionEvents.createdAt})`,
     })
     .from(collectionEvents)
-    // A collection made private drops off the board immediately — there is
+    // A playlist made private drops off the board immediately — there is
     // no separate "unpublish" bookkeeping, this join is the enforcement.
     .innerJoin(
       tagShares,
@@ -377,7 +385,7 @@ function computeLeaderboard(window: RankWindow, mode: RankMode): LeaderboardEntr
 
   scored.sort((a, b) => {
     // 'new' ranks by recency alone; 'top' ranks by score, ties broken by the
-    // most recently active collection.
+    // most recently active playlist.
     if (mode === 'new') return b.lastEventAt.localeCompare(a.lastEventAt)
     if (b.score !== a.score) return b.score - a.score
     return b.lastEventAt.localeCompare(a.lastEventAt)
@@ -441,7 +449,7 @@ function getCachedLeaderboard(window: RankWindow, mode: RankMode): LeaderboardEn
 }
 
 /**
- * Public collections leaderboard for a window, ranked by `mode` (default
+ * Public playlists leaderboard for a window, ranked by `mode` (default
  * `'top'`). `hot`/`rising` are reserved for a future velocity-based ranking
  * and throw until implemented; `new` ranks by most recent activity.
  */
