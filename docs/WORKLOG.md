@@ -4,6 +4,17 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-22 — "Caught up" now means nothing unwatched ANYWHERE (+ watched state, panel title, dead-video skip)
+
+Four owner reports, all versions of the queue misdescribing itself.
+
+- **A new arrival wasn't auto-playing** ("I shouldn't have to click re-watch because I haven't seen the new video yet"). A fresh arrival PREPENDS at index 0, but auto-advance only moves forward — a viewer at index 13 sailed past it, and the boundary then announced "you're all caught up" with 14 unwatched posts sitting BEHIND the cursor. `computeLiveNext` now takes `nextUnwatchedIndex` and diverts there instead of waiting; waiting means nothing unwatched anywhere, which is what the words claim. The index is recomputed each render from the LIVE seen set (not the arrival snapshot the group order uses, which is deliberately frozen so rows don't jump while you watch) and excludes the current item. `shouldRewaitAfterArrival` is also gated on it, so an arrival can't re-arm waiting while there's something to play.
+- **Show-all panel title ignored the repeat selection** ("shouldn't the title be relevant to the selection?"). It was hard-coded "Up next" while the control right next to it said "Keeps playing". Both now read `REPEAT_MODE_LABEL[mode].queue` — a third phrasing per mode, added alongside `.action`/`.state`, because a panel heading wants "Keeps playing", not the button's imperative "Keep playing". Only ONE panel needed it: the mobile sheet has no title of its own (its peek bar shows the position instead), so the screenshot's ✕ panel is the desktop one at a narrow width.
+- **Watched rows weren't obviously watched.** `opacity-70` + a faint check read as "slightly dimmer", not a state. Now `opacity-45`, a `grayscale` thumbnail, and a larger titled `Check` — colour drained is the strongest at-a-glance signal in a list of posters, and it doesn't depend on noticing a tint.
+- **A failed video stopped the playlist dead** (owner screenshot: the proxy not streaming). It now costs the same ~10s a text post does and then advances, unless the post is deliberately repeating. The guard hangs off the element's own `error` event, NOT a rejected `play()` — that path is the tap-to-play overlay and must keep waiting for the tap.
+- **State**: 2348 tests / 186 files green, typecheck + prettier clean. Verified live at localhost: panel title tracks the cycle (off → "Stops when caught up", all → "Keeps playing"), 12 greyscale thumbnails on watched rows.
+- **Test gotcha worth keeping**: in a jsdom component test, `render()` wrapped in `act()` while `vi.useFakeTimers()` is already installed leaves React uncommitted and the container EMPTY (the scheduler never flushes). Install fake timers before render, but don't nest act around the render itself — only around the events and `advanceTimersByTime`.
+
 ## 2026-08-22 — The repeat control IS the auto-advance switch (named, remembered, and reflected in the count)
 
 Owner asked whether the auto-advance boundary needed a switch of its own. It doesn't — repeat already encodes it (`off` = stop when caught up, `all` = keep going through watched posts and round again). A second toggle would be two controls for one decision, against the "one control = state + action" rule. What it needed was to LOOK like a switch:
