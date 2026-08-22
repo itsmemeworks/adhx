@@ -175,4 +175,7 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run browser tests
+        env:
+          # Same file Next falls back to when workers drop DATABASE_PATH.
+          DATABASE_PATH: ${{ github.workspace }}/data/adhdone.db
         run: pnpm test:e2e

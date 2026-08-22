@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-22 — Inline e2e DB path for Next workers
+
+`next.config` now inlines `ADHX_DATABASE_PATH` when `NEXT_DIST_DIR=.next-e2e`. CI also sets `DATABASE_PATH` on the e2e step. First sqlite open logs the path.
+
+---
+
 ## 2026-08-22 — E2E CI uses the default sqlite path
 
 GitHub Actions e2e now migrates `data/adhdone.db` (Next's fallback when Turbopack workers drop `DATABASE_PATH`). Local `pnpm test:e2e` still uses `data/e2e.db` so it cannot clobber the owner's DB. Gated on `GITHUB_ACTIONS`, not `CI`.

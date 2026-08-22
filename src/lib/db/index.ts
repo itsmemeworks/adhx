@@ -24,7 +24,7 @@ const globalForDb = globalThis as unknown as {
 }
 
 function resolveDbPath(): string {
-  const fromEnv = process.env['DATABASE_PATH']
+  const fromEnv = process.env['DATABASE_PATH'] || process.env['ADHX_DATABASE_PATH']
   if (fromEnv) return fromEnv
   // Only the Playwright Next (distDir `.next-e2e`) reads the sidecar — never
   // the owner's `pnpm dev` on `.next`.
@@ -73,6 +73,7 @@ function getSqlite(): Database.Database {
   sqlite.pragma('foreign_keys = ON')
   globalForDb.__adhxSqlite = sqlite
   globalForDb.__adhxSqlitePath = dbPath
+  console.info(`[db] opened ${dbPath}`)
   return sqlite
 }
 
