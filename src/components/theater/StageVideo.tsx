@@ -3,10 +3,14 @@
 /**
  * <video> stage for twitter/tiktok MP4s (spec §6): poster-first, muted
  * autoplay, a whole-stage tap to unmute plus the rail/peek-bar audio button
- * as the sound affordance, replay + next
- * nudge on end. Falls back to a big centered play button when autoplay is
- * rejected even muted (iOS low-power mode blocks even muted autoplay — spec
- * §11).
+ * as the sound affordance. Falls back to a big centered play button when
+ * autoplay is rejected even muted (iOS low-power mode blocks even muted
+ * autoplay — spec §11). There is NO end-of-video replay/next overlay anymore
+ * (owner: legacy — it predated auto-advance and leaked over the next item
+ * after the waiting stage's "Start from the beginning"): every playlist now
+ * auto-advances or loops on `ended`, and an ended video that somehow has
+ * nowhere to go replays via the transport/stage-tap instead (the `ended`
+ * branches in the play handlers below).
  *
  * The <video> element is intentionally NEVER remounted on a src change (no
  * `key={src}`) — mobile browsers grant unmuted-autoplay permission to the
@@ -25,7 +29,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { Play, RotateCcw, ArrowDown } from 'lucide-react'
+import { Play, RotateCcw } from 'lucide-react'
 import { logSV } from './YtDebugOverlay'
 import type { TheaterItem } from './types'
 
@@ -196,7 +200,14 @@ export function StageVideo({
   useEffect(() => {
     const handler = () => {
       const video = videoRef.current
-      if (!video || ended) return
+      if (!video) return
+      // Ended with nowhere auto-advance took it (e.g. behind the waiting
+      // overlay): the transport's play means "watch it again" — there's no
+      // end-overlay replay button anymore.
+      if (ended) {
+        handleReplay()
+        return
+      }
       if (needsGesture) {
         handleStartTap()
         return
@@ -237,7 +248,12 @@ export function StageVideo({
     }
     const handleResume = () => {
       const video = videoRef.current
-      if (!video || ended) return
+      if (!video) return
+      // Same ended-means-replay rule as the toggle handler above.
+      if (ended) {
+        handleReplay()
+        return
+      }
       if (needsGesture) {
         handleStartTap()
         return
@@ -318,6 +334,11 @@ export function StageVideo({
   const handleVideoPlaying = () => {
     setPlaying(true)
     setNeedsGesture(false)
+    // A playing element is by definition not at its end — clears any stale
+    // ended state left by a playback path that didn't reset it explicitly
+    // (this is what let the legacy end overlay float over the NEXT item
+    // after the waiting stage's "Start from the beginning", owner report).
+    setEnded(false)
     // Instagram catch-up unmute (see `catchUpAttemptedRef`'s doc comment
     // above): only once playback is CONFIRMED — never before, that's
     // exactly the gesture-less-unmuted-autoplay rejection this whole file
@@ -401,6 +422,12 @@ export function StageVideo({
   }
 
   const handleStageTap = () => {
+    // Ended-means-replay (no end overlay anymore) — checked before the
+    // unmute/pause branches; an ended video has nothing to unmute or pause.
+    if (ended) {
+      handleReplay()
+      return
+    }
     if (needsGesture) {
       handleStartTap()
       return
@@ -495,27 +522,6 @@ export function StageVideo({
             <RotateCcw size={15} />
             Try again
           </button>
-        </div>
-      )}
-
-      {/* Replay + next nudge on end. No auto-advance (spec §6). */}
-      {ended && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[#08070a]/60">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              handleReplay()
-            }}
-            className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-md"
-            aria-label="Replay"
-          >
-            <RotateCcw size={24} />
-          </button>
-          <span className="inline-flex items-center gap-1.5 text-sm font-medium text-white/70">
-            <ArrowDown size={14} />
-            next
-          </span>
         </div>
       )}
 
