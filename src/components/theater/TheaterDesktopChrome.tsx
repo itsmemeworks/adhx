@@ -107,6 +107,8 @@ export interface DesktopDockProps {
   seenReady: boolean
   freshKeys: ReadonlySet<string>
   newCount: number
+  /** Passed straight through to `UpNextList` for its section headings — the arrival snapshot the queue was grouped by. Absent in playlist/shared mode. */
+  wasSeenOnEntry?: (key: string) => boolean
   savedToday: number
   onSelect: (key: string) => void
   waiting?: boolean
@@ -959,6 +961,7 @@ export function DesktopDock({
   seenReady,
   freshKeys,
   newCount,
+  wasSeenOnEntry,
   savedToday,
   onSelect,
   waiting,
@@ -1379,7 +1382,7 @@ export function DesktopDock({
               isSeen={isSeen}
               seenReady={seenReady}
               freshKeys={freshKeys}
-              newCount={newCount}
+              wasSeenOnEntry={wasSeenOnEntry}
               onSelect={handlePanelSelect}
               repeatCurrent={repeatCurrent}
               className="min-h-0 flex-1 pb-2"

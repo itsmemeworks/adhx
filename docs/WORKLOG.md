@@ -4,6 +4,17 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-22 — Up-next: sort by the timestamp we DISPLAY, and label the three groups
+
+- **Owner report** (staging, screenshot): "look at these time stamps in the playlist. They're not right. They're out of order. I'm saying two hours that are after one that says one week." Plus: the panel said "You're all caught up — Top today" with unwatched rows still listed. Plus a design ask: "do we need to be clear about what's been seen, what hasn't been seen yet, and then new things that have come in as we've been watching?"
+- **Out-of-order chips — root cause**: the queue was ordered by `createdAt` (the pulse EVENT time) while the rows render `addedAt` (first added to ADHX). Two different fields, so the visible sequence could never be monotonic — "14h, 14h, 2h, 2h, 4h, 4h, 1d, 2d, 1w" in the report. Fixed by sorting on the value we display (`queueSortMs` → `addedAt`, falling back to `createdAt` when it's absent or an epoch sentinel). `createdAt` is still what decides whether a polled item counts as a fresh arrival; it just no longer orders the queue.
+- **The lying header**: `newCount` required BOTH unseen AND `createdAt > lastVisitAt`, and `lastVisitAt` is only written on pagehide — so with no stored last-visit it was 0 and the panel claimed "all caught up" over a list of unwatched posts. Gone; the panel now reasons about what's actually unwatched.
+- **Three labelled groups** (`orderLiveQueue` + `liveQueueGroupOf`, replacing `orderUnseenFirst`): **New since you opened** → **Not watched yet** → **Watched**, each heading carrying its count, and the settled groups sorted newest-added first. Arrivals deliberately keep the order the poll merge gave them rather than being re-sorted — a resurfacing post can be weeks old and still be the thing that just landed. Ordering, the `unseenBlockLength` auto-advance boundary and the headings all read the SAME `liveQueueGroupOf`, so labels can't drift from playback order. Grouping keys off `SeenSet.seenOnEntry` (the arrival snapshot), so a post watched mid-session keeps its slot instead of jumping to the back.
+- **Dropped the summary line** ("12 to watch · 1 new") once the headings carried the counts — it was the same fact twice, directly above "NOT WATCHED YET 12", which the owner's own "show a fact once" rule rules out. The caught-up line stays, since no heading says that.
+- **Verified live** at desktop width on the seeded staging-like data: chips now read 2h → 1d → 2d → 3d → 3w → 2mo, headings "NOT WATCHED YET 12" / "WATCHED 5", and no duplicate count line. 2319 tests / 185 files green.
+
+---
+
 ## 2026-08-22 — "Tagged collection" → **playlist** (terminology rename)
 
 - **Owner**: "users have no idea what a tagged collection is so let's call them playlists. The leaderboard is showing the most popular playlists and a playlist is comprised of a single tag… Instead of 'save collection' it's 'save playlist'."

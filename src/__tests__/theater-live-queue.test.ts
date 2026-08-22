@@ -1,68 +1,136 @@
 import { describe, it, expect } from 'vitest'
 import {
-  orderUnseenFirst,
+  orderLiveQueue,
+  liveQueueGroupOf,
   unseenBlockLength,
   computeLiveNext,
+  LIVE_QUEUE_GROUP_LABEL,
 } from '@/components/theater/TheaterShell'
 
 /**
  * Live mode is "the last 24 hours of community activity", and what plays is
  * what you HAVEN'T watched (owner):
- *   - unseen posts sort to the front, so index 0 is always the next unwatched
- *     post and a refresh resumes there with nothing persisted;
- *   - auto-advance stops at the end of the unseen block instead of replaying
- *     watched posts;
- *   - browsing on, repeat 'all', and the explicit re-watch button all pass
- *     through that boundary.
+ *   - new arrivals lead, then unwatched, then watched;
+ *   - each settled group is newest-ADDED first, using the SAME timestamp the
+ *     row chips display, because ordering by the pulse event time while
+ *     displaying `addedAt` made the list read "14h, 2h, 4h, 1d, 1w" (owner:
+ *     "these time stamps are not right, they're out of order");
+ *   - auto-advance stops at the end of the unwatched run instead of replaying;
+ *   - browsing on, repeat 'all', and the explicit re-watch button pass through.
  */
 
-type Item = { platform: string; bookmarkId: string; url: string }
-const item = (id: string): Item => ({ platform: 'twitter', bookmarkId: id, url: `/a/status/${id}` })
-const key = (id: string) => `twitter:${id}`
-const seenSet = (...ids: string[]) => {
-  const set = new Set(ids.map(key))
-  return (k: string) => set.has(k)
+type Item = {
+  platform: string
+  bookmarkId: string
+  url: string
+  addedAt?: string | null
+  createdAt: string
 }
 
-describe('orderUnseenFirst', () => {
-  it('moves watched posts behind unwatched ones, preserving recency within each block', () => {
-    const items = ['a', 'b', 'c', 'd', 'e'].map(item)
-    const ordered = orderUnseenFirst(items, seenSet('a', 'c'))
-    expect(ordered.map((i) => i.bookmarkId)).toEqual(['b', 'd', 'e', 'a', 'c'])
+const hoursAgo = (h: number) => new Date(Date.now() - h * 3600_000).toISOString()
+
+/** `added` in hours ago; `event` (the pulse time) deliberately unrelated to it. */
+const item = (id: string, added: number | null, event = 1): Item => ({
+  platform: 'twitter',
+  bookmarkId: id,
+  url: `/a/status/${id}`,
+  addedAt: added === null ? null : hoursAgo(added),
+  createdAt: hoursAgo(event),
+})
+const key = (id: string) => `twitter:${id}`
+const setOf = (...ids: string[]) => {
+  const s = new Set(ids.map(key))
+  return (k: string) => s.has(k)
+}
+const none = () => false
+const ids = (list: Item[]) => list.map((i) => i.bookmarkId)
+
+describe('liveQueueGroupOf', () => {
+  it('classifies arrived / unwatched / watched', () => {
+    expect(liveQueueGroupOf(key('a'), setOf('a'), none)).toBe('watched')
+    expect(liveQueueGroupOf(key('b'), none, none)).toBe('unwatched')
+    expect(liveQueueGroupOf(key('c'), none, setOf('c'))).toBe('arrived')
   })
 
-  it('returns the same reference when nothing needs reordering', () => {
-    const items = ['a', 'b'].map(item)
-    expect(orderUnseenFirst(items, seenSet())).toBe(items)
-    expect(orderUnseenFirst(items, seenSet('a', 'b'))).toBe(items)
+  it('calls a fresh arrival "arrived" even if it was watched before', () => {
+    // A resurfacing post the viewer saw days ago still just landed.
+    expect(liveQueueGroupOf(key('d'), setOf('d'), setOf('d'))).toBe('arrived')
+  })
+
+  it('has a label for every group', () => {
+    expect(LIVE_QUEUE_GROUP_LABEL.arrived).toBeTruthy()
+    expect(LIVE_QUEUE_GROUP_LABEL.unwatched).toBeTruthy()
+    expect(LIVE_QUEUE_GROUP_LABEL.watched).toBeTruthy()
+  })
+})
+
+describe('orderLiveQueue', () => {
+  it('puts arrivals first, then unwatched, then watched', () => {
+    const items = [item('seen', 5), item('fresh', 90), item('todo', 3)]
+    const ordered = orderLiveQueue(items, setOf('seen'), setOf('fresh'))
+    expect(ids(ordered)).toEqual(['fresh', 'todo', 'seen'])
+  })
+
+  it('sorts each settled group newest-ADDED first, so the chips read in order', () => {
+    // Deliberately shuffled input, and the pulse event times are all equal —
+    // only `addedAt` may decide the order.
+    const items = [item('14h', 14), item('2h', 2), item('4h', 4), item('1w', 168), item('1d', 24)]
+    const ordered = orderLiveQueue(items, none, none)
+    expect(ids(ordered)).toEqual(['2h', '4h', '14h', '1d', '1w'])
+  })
+
+  it('does NOT order by the pulse event time', () => {
+    // `stale` has the most recent event but the oldest addedAt; ordering by
+    // event time would put it first, which is the reported bug.
+    const items = [item('stale', 168, 0.1), item('fresh-add', 1, 20)]
+    expect(ids(orderLiveQueue(items, none, none))).toEqual(['fresh-add', 'stale'])
+  })
+
+  it('keeps arrivals in the order the merge gave them, not by addedAt', () => {
+    // Both just landed; the newest arrival is prepended by mergeFeedItems, and
+    // a resurfacing post can be weeks old yet be the thing that just arrived.
+    const items = [item('justIn', 200), item('alsoNew', 1)]
+    const ordered = orderLiveQueue(items, none, setOf('justIn', 'alsoNew'))
+    expect(ids(ordered)).toEqual(['justIn', 'alsoNew'])
+  })
+
+  it('falls back to the event time when addedAt is missing or an epoch sentinel', () => {
+    const missing = item('missing', null, 1)
+    const older = item('older', null, 50)
+    expect(ids(orderLiveQueue([older, missing], none, none))).toEqual(['missing', 'older'])
+  })
+
+  it('returns the same reference when nothing moves', () => {
+    const items = [item('a', 1), item('b', 2)]
+    expect(orderLiveQueue(items, none, none)).toBe(items)
   })
 
   it('handles an empty queue', () => {
-    expect(orderUnseenFirst([], seenSet('a'))).toEqual([])
+    expect(orderLiveQueue([], setOf('a'), none)).toEqual([])
   })
 })
 
 describe('unseenBlockLength', () => {
-  it('counts the leading unwatched run — the index the watched block starts at', () => {
-    const ordered = orderUnseenFirst(['a', 'b', 'c'].map(item), seenSet('a'))
-    expect(unseenBlockLength(ordered, seenSet('a'))).toBe(2)
+  it('counts arrivals AND unwatched as the leading not-watched run', () => {
+    const items = [item('fresh', 1), item('todo', 2), item('seen', 3)]
+    const ordered = orderLiveQueue(items, setOf('seen'), setOf('fresh'))
+    expect(unseenBlockLength(ordered, setOf('seen'))).toBe(2)
   })
 
-  it('is 0 when everything has been watched (the caught-up case)', () => {
-    const items = ['a', 'b'].map(item)
-    expect(unseenBlockLength(items, seenSet('a', 'b'))).toBe(0)
+  it('is 0 when everything was already watched (the caught-up case)', () => {
+    const items = [item('a', 1), item('b', 2)]
+    expect(unseenBlockLength(items, setOf('a', 'b'))).toBe(0)
   })
 
   it('is the whole length on a first visit', () => {
-    const items = ['a', 'b', 'c'].map(item)
-    expect(unseenBlockLength(items, seenSet())).toBe(3)
+    expect(unseenBlockLength([item('a', 1), item('b', 2), item('c', 3)], none)).toBe(3)
   })
 })
 
 describe('computeLiveNext', () => {
   const base = { length: 5, unseenCount: 2, loop: false, userInitiated: false }
 
-  it('advances inside the unseen block', () => {
+  it('advances inside the unwatched run', () => {
     expect(computeLiveNext({ ...base, index: 0 })).toBe(1)
   })
 
@@ -79,7 +147,7 @@ describe('computeLiveNext', () => {
     expect(computeLiveNext({ ...base, index: 4, loop: true })).toBe(0)
   })
 
-  it('applies no boundary once nothing is unseen (a re-watch, or all watched)', () => {
+  it('applies no boundary once nothing is unwatched (a re-watch, or all watched)', () => {
     expect(computeLiveNext({ ...base, index: 1, unseenCount: 0 })).toBe(2)
     expect(computeLiveNext({ ...base, index: 3, unseenCount: 0 })).toBe(4)
   })
@@ -96,10 +164,8 @@ describe('computeLiveNext', () => {
     expect(computeLiveNext({ ...base, length: 0, index: 0 })).toBeNull()
   })
 
-  it('never strands a first-time visitor: a whole-queue unseen block plays through', () => {
-    const unseenCount = 5
-    const path: (number | string | null)[] = []
-    for (let i = 0; i < 5; i++) path.push(computeLiveNext({ ...base, index: i, unseenCount }))
+  it('never strands a first-time visitor: a whole-queue unwatched run plays through', () => {
+    const path = [0, 1, 2, 3, 4].map((index) => computeLiveNext({ ...base, index, unseenCount: 5 }))
     expect(path).toEqual([1, 2, 3, 4, 'waiting'])
   })
 })

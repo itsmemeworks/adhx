@@ -18,6 +18,9 @@ import { instagramWarmSrc, prefetchPlayback } from './usePlaybackSource'
 import { stripShortLinksForPreview } from './TheaterText'
 import type { TheaterItem } from './types'
 import { theaterItemKey } from './types'
+// Grouping comes from the shell so the headings below can never disagree with
+// the order the queue was built in.
+import { liveQueueGroupOf, LIVE_QUEUE_GROUP_LABEL, type LiveQueueGroup } from './TheaterShell'
 
 /** Instagram rows warmed this session (by key) — hover-warm fires at most once per row. */
 const warmedRows = new Set<string>()
@@ -46,8 +49,14 @@ export interface UpNextListProps {
   seenReady: boolean
   /** Keys that arrived via polling after mount (accent treatment). */
   freshKeys: ReadonlySet<string>
-  /** Items newer than last visit and unseen. 0 = show "you're all caught up". */
-  newCount: number
+  /**
+   * Was this key already watched when the session STARTED
+   * (`SeenSet.seenOnEntry`)? Drives the section headings, and must be the same
+   * snapshot `orderLiveQueue` grouped by — grouping off live seen state would
+   * move rows under the viewer as their dwell timers fire. Absent in
+   * playlist/shared mode, where the queue isn't grouped at all.
+   */
+  wasSeenOnEntry?: (key: string) => boolean
   onSelect: (key: string) => void
   /** Optional layout override for the scroll container — Rail passes `flex-1`. */
   className?: string
@@ -182,7 +191,7 @@ export function UpNextList({
   isSeen,
   seenReady,
   freshKeys,
-  newCount,
+  wasSeenOnEntry,
   onSelect,
   className,
   ownScroll = true,
@@ -194,17 +203,31 @@ export function UpNextList({
   // Per-row seen flags (SSR-safe: everything false until seenReady).
   const seenFlags = items.map((item) => seenReady && isSeen(theaterItemKey(item)))
 
-  // Divider goes right after the LAST unseen row, not necessarily contiguous —
-  // an older item can stay unseen while a newer one gets marked seen out of order.
-  let lastUnseenIndex = -1
-  if (seenReady && newCount > 0) {
-    for (let i = seenFlags.length - 1; i >= 0; i--) {
-      if (!seenFlags[i]) {
-        lastUnseenIndex = i
-        break
-      }
-    }
-  }
+  // Section headings, from the SAME grouping the queue was ordered by. A
+  // heading renders on the first row of each group, so the list reads
+  // "New since you opened / Not watched yet / Watched" instead of one
+  // undifferentiated run — owner: "do we need to be clear about what's been
+  // seen, what hasn't been seen yet, and then new things that have come in as
+  // we've been watching?". Only in grouped (live) mode: `wasSeenOnEntry`
+  // absent means playlist/shared, which has one curated order and no groups.
+  const groups: (LiveQueueGroup | null)[] = items.map((item) =>
+    seenReady && wasSeenOnEntry
+      ? liveQueueGroupOf(theaterItemKey(item), wasSeenOnEntry, (k) => freshKeys.has(k))
+      : null,
+  )
+  const groupCounts = groups.reduce<Partial<Record<LiveQueueGroup, number>>>((acc, g) => {
+    if (g) acc[g] = (acc[g] ?? 0) + 1
+    return acc
+  }, {})
+  /** Index of each group's first row — where its heading goes. */
+  const headingAt = new Map<number, LiveQueueGroup>()
+  const started = new Set<LiveQueueGroup>()
+  groups.forEach((g, i) => {
+    if (!g || started.has(g)) return
+    started.add(g)
+    headingAt.set(i, g)
+  })
+  const unwatchedTotal = (groupCounts.arrived ?? 0) + (groupCounts.unwatched ?? 0)
 
   const currentIndex = currentKey ? items.findIndex((it) => theaterItemKey(it) === currentKey) : -1
 
@@ -219,15 +242,16 @@ export function UpNextList({
 
   return (
     <div className={cn(ownScroll && 'overflow-y-auto', className)}>
-      {seenReady && newCount > 0 && (
-        <div className="px-3 pb-2 pt-3 text-[11.5px] font-semibold text-ink-2">
-          {newCount} new since your last visit
-        </div>
-      )}
-      {seenReady && newCount === 0 && items.length > 0 && (
-        <div className="px-3 pb-2 pt-3 text-[11.5px] text-ink-3">
-          You&rsquo;re all caught up — Top today
-        </div>
+      {/* Only the caught-up case gets a line of its own. The old header read
+          `newCount` (unseen AND newer than the last visit), so with no stored
+          last-visit it claimed "You're all caught up — Top today" while rows
+          sat unwatched (owner report). The counts that replaced it live in the
+          group headings below instead of here — "show a fact once": a summary
+          line saying "12 to watch" directly above a "NOT WATCHED YET 12"
+          heading is the same fact twice. Nothing else states caught-up, so
+          that one stays. */}
+      {seenReady && wasSeenOnEntry && items.length > 0 && unwatchedTotal === 0 && (
+        <div className="px-3 pb-2 pt-3 text-[11.5px] text-ink-3">You&rsquo;re all caught up</div>
       )}
 
       <div className="flex flex-col gap-1 px-2">
@@ -235,6 +259,7 @@ export function UpNextList({
           const key = theaterItemKey(item)
           const isCurrent = i === currentIndex
           const isNext = currentIndex >= 0 && i === currentIndex + 1
+          const heading = headingAt.get(i)
           const row = (
             <Row
               key={key}
@@ -247,18 +272,20 @@ export function UpNextList({
               repeatCurrent={isCurrent && repeatCurrent}
             />
           )
-          if (i === lastUnseenIndex) {
+          if (heading) {
             return (
-              <div key={`${key}-divider`} className="contents">
-                {row}
+              <div key={`${key}-group`} className="contents">
                 <div
                   role="separator"
-                  className="my-1 flex items-center gap-2 px-2.5 text-[10.5px] font-medium uppercase tracking-wide text-ink-3"
+                  className="mt-1 flex items-center gap-2 px-2.5 pb-0.5 text-[10.5px] font-medium uppercase tracking-wide text-ink-3"
                 >
-                  <span className="h-px flex-1 bg-hairline" />
-                  <span>You&rsquo;re caught up</span>
+                  <span>{LIVE_QUEUE_GROUP_LABEL[heading]}</span>
+                  <span className="font-mono normal-case tracking-normal">
+                    {groupCounts[heading]}
+                  </span>
                   <span className="h-px flex-1 bg-hairline" />
                 </div>
+                {row}
               </div>
             )
           }

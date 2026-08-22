@@ -80,6 +80,8 @@ export interface TheaterMobileChromeProps {
   seenReady: boolean
   freshKeys: ReadonlySet<string>
   newCount: number
+  /** Passed straight through to `UpNextList` for its section headings — the arrival snapshot the queue was grouped by. Absent in playlist/shared mode. */
+  wasSeenOnEntry?: (key: string) => boolean
   onSelect: (key: string) => void
   /** Prev/next navigation for the peek bar's chevrons — the only mobile nav besides keyboard and video-ended auto-advance. */
   onPrev: () => void
@@ -175,6 +177,7 @@ export function TheaterMobileChrome({
   seenReady,
   freshKeys,
   newCount,
+  wasSeenOnEntry,
   onSelect,
   onPrev,
   onNext,
@@ -1063,7 +1066,7 @@ export function TheaterMobileChrome({
           isSeen={isSeen}
           seenReady={seenReady}
           freshKeys={freshKeys}
-          newCount={newCount}
+          wasSeenOnEntry={wasSeenOnEntry}
           onSelect={handleSelect}
           repeatCurrent={repeatCurrent}
           className="min-h-0 flex-1 pb-[max(1rem,env(safe-area-inset-bottom))]"

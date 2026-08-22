@@ -34,6 +34,7 @@ import {
 import { feedItemToTheaterItem } from './collection-item'
 import { theaterItemKey } from './types'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
+import { hasKnownTimestamp } from '@/lib/utils/format'
 // SignInModal + useAuthMe are built by a parallel agent under the same
 // accounts/magic-link PR — imported per the shared contract even though the
 // module may not exist yet at review time; see the "Save playlist" CTA
@@ -209,38 +210,105 @@ export function pinKeyFirst<
 }
 
 /**
- * Pure: the live queue's playback order — everything the viewer has NOT
- * watched yet first (recency order preserved), then everything they have.
+ * Which of the three groups a live-queue item belongs to. The queue is built,
+ * ordered and LABELLED off this one function so the section headings in
+ * `UpNextList` can never disagree with the playback order (owner: "do we need
+ * to be clear about what's been seen, what hasn't been seen yet, and then new
+ * things that have come in as we've been watching?").
  *
- * Live mode is "what the community previewed, saved and sent in the last 24
- * hours" (owner), and the point of opening it is to watch what you haven't
- * seen: unseen posts are always what plays, a refresh resumes at the next
- * unwatched post (their keys sorted to the front, so index 0 IS that post),
- * and already-watched posts stay in the queue — reachable by browsing, or
- * wholesale via the waiting stage's re-watch button / repeat — but nothing
- * auto-plays them.
- *
- * `wasSeen` MUST be the arrival snapshot (`SeenSet.seenOnEntry`), not the live
- * seen state: ordering off the live state would yank the post you're watching
- * to the back of the queue the moment its dwell timer marks it seen.
- * Playlist and shared modes never call this — a curated playlist has its
- * own order, and a shared post always leads.
+ * - `arrived` — showed up from a poll while this session was open. Genuinely
+ *   new, so it leads regardless of when it was added to ADHX.
+ * - `unwatched` — was already in the feed and the viewer hasn't seen it.
+ * - `watched` — seen BEFORE this session started. An item watched during the
+ *   session keeps its group (see `wasSeen`), so nothing jumps under the
+ *   viewer mid-watch.
  */
-export function orderUnseenFirst<
-  T extends { platform: string; bookmarkId?: string | null; url: string },
->(items: T[], wasSeen: (key: string) => boolean): T[] {
-  const unseen: T[] = []
-  const seen: T[] = []
-  for (const item of items) {
-    ;(wasSeen(theaterItemKey(item)) ? seen : unseen).push(item)
-  }
-  // Same reference back when there's nothing to reorder — cheap re-renders.
-  if (seen.length === 0 || unseen.length === 0) return items
-  return [...unseen, ...seen]
+export type LiveQueueGroup = 'arrived' | 'unwatched' | 'watched'
+
+export const LIVE_QUEUE_GROUP_ORDER: readonly LiveQueueGroup[] = ['arrived', 'unwatched', 'watched']
+
+/** Human labels for the section headings, kept next to the order they follow. */
+export const LIVE_QUEUE_GROUP_LABEL: Record<LiveQueueGroup, string> = {
+  arrived: 'New since you opened',
+  unwatched: 'Not watched yet',
+  watched: 'Watched',
 }
 
 /**
- * Pure: how many items at the front of an `orderUnseenFirst` queue are unseen
+ * Pure: an item's group.
+ *
+ * `wasSeen` MUST be the arrival snapshot (`SeenSet.seenOnEntry`), not the live
+ * seen state — grouping off the live state would yank the post you're watching
+ * to the back of the queue the moment its dwell timer marks it seen.
+ */
+export function liveQueueGroupOf(
+  key: string,
+  wasSeen: (key: string) => boolean,
+  isFresh: (key: string) => boolean,
+): LiveQueueGroup {
+  if (isFresh(key)) return 'arrived'
+  return wasSeen(key) ? 'watched' : 'unwatched'
+}
+
+/**
+ * Pure: the timestamp the live queue SORTS by — deliberately the same value
+ * the row chips DISPLAY (`addedAt`, when the post first hit ADHX).
+ *
+ * They used to differ: the queue was ordered by `createdAt` (the moving pulse
+ * event time) while the chips rendered `addedAt`, so the list read "14h, 2h,
+ * 4h, 1d, 1w" — owner report, "these time stamps are not right, they're out of
+ * order". Sorting by the displayed value makes the list monotonic by
+ * construction. `createdAt` is still what decides whether a polled item is a
+ * fresh arrival; it's just no longer what orders the queue.
+ */
+function queueSortMs(item: { addedAt?: string | null; createdAt: string }): number {
+  const added = hasKnownTimestamp(item.addedAt) ? Date.parse(item.addedAt as string) : NaN
+  if (Number.isFinite(added)) return added
+  const created = Date.parse(item.createdAt)
+  return Number.isFinite(created) ? created : 0
+}
+
+/**
+ * Pure: the live queue's playback order — new arrivals, then unwatched, then
+ * watched; newest-added first inside each group.
+ *
+ * Live mode is "what the community previewed, saved and sent in the last 24
+ * hours" (owner), and the point of opening it is to watch what you haven't
+ * seen: index 0 is always the next thing to play, so a refresh resumes there
+ * with nothing persisted. Watched posts stay in the queue — reachable by
+ * browsing, or wholesale via the waiting stage's re-watch button / repeat —
+ * but nothing auto-plays them.
+ *
+ * Arrivals keep their incoming order (the poll merge already prepends newest
+ * first) rather than being re-sorted by `addedAt`: a resurfacing post can be
+ * weeks old and still be the thing that just landed.
+ *
+ * Playlist and shared modes never call this — a curated playlist has its own
+ * order, and a shared post always leads.
+ */
+export function orderLiveQueue<
+  T extends { platform: string; bookmarkId?: string | null; url: string } & {
+    addedAt?: string | null
+    createdAt: string
+  },
+>(items: T[], wasSeen: (key: string) => boolean, isFresh: (key: string) => boolean): T[] {
+  const groups: Record<LiveQueueGroup, T[]> = { arrived: [], unwatched: [], watched: [] }
+  for (const item of items) {
+    groups[liveQueueGroupOf(theaterItemKey(item), wasSeen, isFresh)].push(item)
+  }
+  // Newest-added first within the two settled groups; arrivals keep the order
+  // the merge gave them. Array.prototype.sort is stable, so equal stamps hold
+  // their relative position.
+  for (const g of ['unwatched', 'watched'] as const) {
+    groups[g].sort((a, b) => queueSortMs(b) - queueSortMs(a))
+  }
+  const ordered = LIVE_QUEUE_GROUP_ORDER.flatMap((g) => groups[g])
+  // Same reference back when nothing actually moved — cheap re-renders.
+  return ordered.every((item, i) => item === items[i]) ? items : ordered
+}
+
+/**
+ * Pure: how many items at the front of an `orderLiveQueue` queue are unwatched
  * — i.e. the index where the already-watched block starts. `0` means the
  * viewer has watched everything in the window (the caught-up case).
  */
@@ -980,7 +1048,7 @@ export function TheaterShell({
   // playlist keeps its curated order — neither is a "what's new" queue.
   const liveOrdering = !sharedItem && !loop
   // ORDERING uses the arrival snapshot, never the live seen state — see
-  // `orderUnseenFirst`. Identity is stable per snapshot so the memos below
+  // `orderLiveQueue`. Identity is stable per snapshot so the memos below
   // don't recompute as the viewer marks things seen.
   const seenOnEntry = seenSet.seenOnEntry
   const wasSeenOnEntry = useCallback((key: string) => seenOnEntry.includes(key), [seenOnEntry])
@@ -989,9 +1057,14 @@ export function TheaterShell({
   // ordered unseen-first, then the pinned key (if any) moved to the front.
   // Keep this as THE list used everywhere so the rail/mobile-chrome render
   // order matches keyboard order.
+  // Fresh arrivals (polled in while this session was open) lead the queue —
+  // read through a ref-free callback so the memo below re-runs when a poll
+  // lands, which is exactly when the grouping changes.
+  const isFreshKey = useCallback((key: string) => feed.freshKeys.has(key), [feed.freshKeys])
   const orderedItems = useMemo(
-    () => (liveOrdering && seenSet.ready ? orderUnseenFirst(items, wasSeenOnEntry) : items),
-    [items, liveOrdering, seenSet.ready, wasSeenOnEntry],
+    () =>
+      liveOrdering && seenSet.ready ? orderLiveQueue(items, wasSeenOnEntry, isFreshKey) : items,
+    [items, liveOrdering, seenSet.ready, wasSeenOnEntry, isFreshKey],
   )
   const displayItems = useMemo(
     () => pinKeyFirst(orderedItems, pinnedKey),
@@ -1815,6 +1888,7 @@ export function TheaterShell({
           seenReady={chromeSeenReady}
           freshKeys={chromeFreshKeys}
           newCount={chromeNewCount}
+          wasSeenOnEntry={liveOrdering ? wasSeenOnEntry : undefined}
           onSelect={chromeOnSelect}
           onPrev={chromeOnPrev}
           onNext={chromeOnNext}
@@ -1888,6 +1962,7 @@ export function TheaterShell({
         seenReady={chromeSeenReady}
         freshKeys={chromeFreshKeys}
         newCount={chromeNewCount}
+        wasSeenOnEntry={liveOrdering ? wasSeenOnEntry : undefined}
         savedToday={feed.savedToday}
         onSelect={chromeOnSelect}
         waiting={isTriageCollection ? false : waiting}
