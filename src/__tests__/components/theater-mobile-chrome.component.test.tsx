@@ -196,6 +196,42 @@ describe('TheaterMobileChrome: text posts', () => {
   })
 })
 
+/**
+ * Owner report: the collection theater rendered "56y" for a saved TikTok
+ * whose `createdAt` fell back to an epoch sentinel. The chip renders
+ * `addedAt` (when the post was first saved to ADHX — never the source
+ * platform's own publish date), gated by `hasKnownTimestamp` — a
+ * missing/unknown `addedAt` hides the relative-time span but the platform
+ * glyph must still render either way.
+ */
+describe('TheaterMobileChrome: hides the time text for an unknown addedAt', () => {
+  it('omits the relative-time span but keeps the platform glyph when addedAt is null', () => {
+    const { container } = render(
+      <TheaterMobileChrome {...base} current={videoItem({ addedAt: null })} />,
+    )
+    const chip = container.querySelector('a[href="https://x.com/alice/status/1"]')
+    expect(chip).toBeInTheDocument()
+    expect(chip!.querySelector('svg')).toBeInTheDocument()
+    expect(chip!.querySelector('span')).not.toBeInTheDocument()
+  })
+
+  it('omits the relative-time span when addedAt is the epoch sentinel', () => {
+    const { container } = render(
+      <TheaterMobileChrome {...base} current={videoItem({ addedAt: new Date(0).toISOString() })} />,
+    )
+    const chip = container.querySelector('a[href="https://x.com/alice/status/1"]')
+    expect(chip!.querySelector('span')).not.toBeInTheDocument()
+  })
+
+  it('shows the relative-time span for a real addedAt', () => {
+    const { container } = render(
+      <TheaterMobileChrome {...base} current={videoItem({ addedAt: '2026-08-18T00:00:00Z' })} />,
+    )
+    const chip = container.querySelector('a[href="https://x.com/alice/status/1"]')
+    expect(chip!.querySelector('span')).toBeInTheDocument()
+  })
+})
+
 // De-cluttering EXPANDS the stage (owner review: the previous icon was
 // backwards) — entering it reads outward (Maximize2); exiting reads inward
 // (Minimize2).
@@ -239,6 +275,21 @@ describe('TheaterMobileChrome: Up-next sheet drag handle wiring', () => {
 
     fireEvent.click(findHandle())
     expect(findHandle()).toHaveAttribute('aria-label', 'Expand up next')
+  })
+
+  // Owner report: the collapsed peek bar floated a few px too short, letting
+  // the top of the Up-next list peek through underneath it. The wrapper is
+  // now pinned to exactly PEEK_H (4.25rem) so the collapse transform's
+  // visible window and the peek content's actual height match.
+  it('the peek wrapper is pinned to a fixed 4.25rem height (no auto-height gap)', () => {
+    render(<TheaterMobileChrome {...base} current={videoItem()} />)
+    const handle = screen
+      .getAllByLabelText(/(Expand|Collapse) up next/)
+      .find((el) => el.querySelector('span[aria-hidden]'))!
+    const wrapper = handle.parentElement!
+    expect(wrapper.className).toContain('h-[4.25rem]')
+    expect(wrapper.className).toContain('flex-none')
+    expect(wrapper.className).toContain('overflow-hidden')
   })
 })
 

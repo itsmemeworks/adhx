@@ -98,6 +98,10 @@ export function feedItemToTheaterItem(item: FeedItem): TheaterItem {
     thumbnailUrl: heroThumbnail(item),
     url: item.tweetUrl,
     createdAt: item.createdAt || item.processedAt,
+    // Stable display time (owner decision — chips render addedAt, never
+    // createdAt): when the post was saved to ADHX, never the source
+    // platform's own publish date.
+    addedAt: item.processedAt || null,
     contentType,
     textLinks: toTextLinks(item.links),
   }

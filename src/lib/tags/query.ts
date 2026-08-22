@@ -32,6 +32,8 @@ export interface TagItem {
   extraMediaCount: number
   contentType: ContentType
   createdAt: string | null
+  /** When the bookmark was saved to ADHX — THE displayed time in the theater (owner decision: never the source platform's own publish date). Optional so older fixtures/consumers don't break; absent reads as unknown. */
+  addedAt?: string | null
   /** On-ADHX preview path — the primary, on-site link for the card. */
   url: string
   /** Original platform URL — demoted to a small secondary icon on the card. */
@@ -239,6 +241,7 @@ async function fetchTagCollection(username: string, tagName: string): Promise<Ta
       extraMediaCount: Math.max(0, media.length - 1),
       contentType,
       createdAt: b.createdAt,
+      addedAt: b.processedAt ?? null,
       url: previewPath(b.platform, b.author, b.id),
       externalUrl: sourceUrl(b.platform, b.author, b.id),
     }

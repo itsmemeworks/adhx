@@ -7,6 +7,7 @@ import { metrics } from '@/lib/sentry'
 import { handleRouteError } from '@/lib/api/response'
 import { fetchReelMetadata } from '@/lib/media/instafix'
 import { fetchTikTokMetadata, resolveTikTokUrl, isTikTokShortLink } from '@/lib/media/tnktok'
+import { tiktokCreatedAtFromId } from '@/lib/media/tiktok-id'
 import { fetchYouTubeMetadata, youtubeThumbnail, youtubeShortUrl } from '@/lib/media/youtube'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 import { detectPlatformPost } from '@/lib/platform/url'
@@ -265,6 +266,12 @@ async function addTikTokVideo(userId: string, handle: string, videoId: string, s
     authorProfileImageUrl: null,
     text: meta.description || meta.title || '',
     tweetUrl: tiktokUrl,
+    // tnktok metadata carries no date, but TikTok ids are Snowflake-style —
+    // the real post time is encoded in the id itself. Data enrichment only:
+    // the theater's displayed time is deliberately `addedAt` (when the post
+    // first hit ADHX, owner decision), so this column is metadata for future
+    // use, not what the chips render.
+    createdAt: tiktokCreatedAtFromId(videoId),
     processedAt: now,
     category: 'video',
     source,

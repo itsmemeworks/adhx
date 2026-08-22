@@ -4,6 +4,7 @@ import {
   formatRelativeTime,
   formatCompactRelativeTime,
   truncate,
+  hasKnownTimestamp,
 } from '@/lib/utils/format'
 
 /**
@@ -173,18 +174,18 @@ describe('truncate', () => {
   })
 
   it('truncates text at max length with ellipsis', () => {
-    expect(truncate('Hello World', 8)).toBe('Hello W\u2026')
-    expect(truncate('Hello World', 6)).toBe('Hello\u2026')
+    expect(truncate('Hello World', 8)).toBe('Hello W…')
+    expect(truncate('Hello World', 6)).toBe('Hello…')
   })
 
   it('uses Unicode ellipsis character', () => {
     const result = truncate('Long text here', 10)
-    expect(result).toContain('\u2026') // Unicode ellipsis
+    expect(result).toContain('…') // Unicode ellipsis
     expect(result).not.toContain('...') // Not ASCII ellipsis
   })
 
   it('trims whitespace before ellipsis', () => {
-    expect(truncate('Hello World', 7)).toBe('Hello\u2026')
+    expect(truncate('Hello World', 7)).toBe('Hello…')
   })
 
   it('handles empty string', () => {
@@ -202,13 +203,50 @@ describe('truncate', () => {
   })
 
   it('handles very short max length', () => {
-    expect(truncate('Hello', 2)).toBe('H\u2026')
-    expect(truncate('Hello', 1)).toBe('\u2026')
+    expect(truncate('Hello', 2)).toBe('H…')
+    expect(truncate('Hello', 1)).toBe('…')
   })
 
   it('preserves Unicode characters', () => {
     // Note: emoji 🌍 counts as 2 characters in JS string length (surrogate pair)
     // 'Hello 🌍 ' = 9 chars (5 + 1 + 2 + 1), so maxLength=10 gives 'Hello 🌍' + ellipsis
-    expect(truncate('Hello 🌍 World', 10)).toBe('Hello 🌍\u2026')
+    expect(truncate('Hello 🌍 World', 10)).toBe('Hello 🌍…')
+  })
+})
+
+/**
+ * Owner report: the collection theater showed "56y" as a saved TikTok's post
+ * age — the epoch sentinel (`new Date(0)`) that seed mappers backfill when a
+ * platform's original post date is unknown, rendered through
+ * `formatCompactRelativeTime` as if it were a real date. `hasKnownTimestamp`
+ * is the gate the chromes now check before rendering any relative-time text
+ * at all (against `postedAt`, the display-only real-publish-time field).
+ */
+describe('hasKnownTimestamp', () => {
+  it('is false for null/undefined', () => {
+    expect(hasKnownTimestamp(null)).toBe(false)
+    expect(hasKnownTimestamp(undefined)).toBe(false)
+  })
+
+  it('is false for an unparseable string', () => {
+    expect(hasKnownTimestamp('not a date')).toBe(false)
+    expect(hasKnownTimestamp('')).toBe(false)
+  })
+
+  it('is false for the epoch sentinel (new Date(0))', () => {
+    expect(hasKnownTimestamp(new Date(0).toISOString())).toBe(false)
+  })
+
+  it('is false for any date before 2006 (nothing in the app predates Twitter)', () => {
+    expect(hasKnownTimestamp('2005-12-31T23:59:59.000Z')).toBe(false)
+    expect(hasKnownTimestamp('1999-01-01T00:00:00.000Z')).toBe(false)
+  })
+
+  it('is true for a real, recent date', () => {
+    expect(hasKnownTimestamp('2026-08-13T07:28:42.000Z')).toBe(true)
+  })
+
+  it('is true right at the 2006 boundary', () => {
+    expect(hasKnownTimestamp('2006-01-01T00:00:00.000Z')).toBe(true)
   })
 })

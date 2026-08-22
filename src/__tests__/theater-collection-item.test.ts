@@ -56,6 +56,39 @@ describe('feedItemToTheaterItem', () => {
     expect(t.createdAt).toBe('2026-06-08T00:00:00Z')
   })
 
+  /**
+   * Owner report: the collection theater showed "56y" for a saved TikTok
+   * with no stored `createdAt`. `addedAt` is the display-only field the
+   * chromes render instead: when the post was saved to ADHX (`processedAt`)
+   * — deliberately never the source platform's own publish date, for any
+   * platform.
+   */
+  describe('addedAt (display-only "first saved to ADHX" time)', () => {
+    it('is the item processedAt, regardless of platform or whether createdAt is known', () => {
+      const t = feedItemToTheaterItem(item({ createdAt: '2026-06-08T00:00:00Z' }))
+      expect(t.addedAt).toBe('2026-06-08T00:00:00Z')
+    })
+
+    it('is still processedAt even for a TikTok item with a real createdAt — never the source date', () => {
+      const t = feedItemToTheaterItem(
+        item({
+          id: '7673414867981831440',
+          platform: 'tiktok',
+          createdAt: '2020-01-01T00:00:00Z',
+          processedAt: '2026-06-08T00:00:00Z',
+        }),
+      )
+      expect(t.addedAt).toBe('2026-06-08T00:00:00Z')
+    })
+
+    it('is null when processedAt is null/empty (nothing to show)', () => {
+      const t = feedItemToTheaterItem(
+        item({ platform: 'instagram', createdAt: null, processedAt: null as unknown as string }),
+      )
+      expect(t.addedAt).toBe(null)
+    })
+  })
+
   describe('inferCollectionContentType', () => {
     it('tiktok/youtube/instagram are always video, even with no media row', () => {
       expect(inferCollectionContentType(item({ platform: 'tiktok', media: null }))).toBe('video')

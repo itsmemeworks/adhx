@@ -11,7 +11,7 @@ import {
   Repeat,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatCompactRelativeTime } from '@/lib/utils/format'
+import { formatCompactRelativeTime, hasKnownTimestamp } from '@/lib/utils/format'
 import { PlatformGlyph, type ContentType } from '@/components/matter'
 import { inferType } from '@/lib/trending/filter'
 import { instagramWarmSrc, prefetchPlayback } from './usePlaybackSource'
@@ -148,9 +148,11 @@ function Row({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <PlatformGlyph platform={item.platform} size={11} className="text-ink-3 flex-none" />
-          <span className="font-mono text-[10.5px] text-ink-3" suppressHydrationWarning>
-            {formatCompactRelativeTime(item.createdAt)}
-          </span>
+          {hasKnownTimestamp(item.addedAt) && (
+            <span className="font-mono text-[10.5px] text-ink-3" suppressHydrationWarning>
+              {formatCompactRelativeTime(item.addedAt as string)}
+            </span>
+          )}
           <div className="ml-auto flex flex-none items-center gap-1.5">
             {isCurrent && repeatCurrent ? (
               <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-clay">

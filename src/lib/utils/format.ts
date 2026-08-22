@@ -40,6 +40,20 @@ export function truncate(text: string, maxLength: number): string {
 }
 
 /**
+ * Whether an ISO timestamp is a real, displayable post date. Platforms that
+ * don't expose an original post date (Instagram saves) store a null
+ * `createdAt` that seed mappers backfill with an epoch sentinel — rendering
+ * that as "56y" is worse than showing no time at all (owner report, the
+ * collection theater). Unparseable values, or anything before 2006 (nothing
+ * in the app predates Twitter), read as unknown.
+ */
+export function hasKnownTimestamp(dateStr: string | null | undefined): boolean {
+  if (!dateStr) return false
+  const t = new Date(dateStr).getTime()
+  return Number.isFinite(t) && t >= Date.UTC(2006, 0, 1)
+}
+
+/**
  * Format a date as compact relative time (no "ago" suffix)
  * @example formatCompactRelativeTime('2024-01-10T12:00:00Z') // "5d"
  */

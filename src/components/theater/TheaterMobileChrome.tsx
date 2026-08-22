@@ -40,7 +40,7 @@ import {
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatCompactRelativeTime } from '@/lib/utils/format'
+import { formatCompactRelativeTime, hasKnownTimestamp } from '@/lib/utils/format'
 import { MatterLogo, PlatformGlyph } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { PasteLinkButton } from '@/components/PasteLinkButton'
@@ -58,6 +58,7 @@ import {
 } from './TheaterProgressLine'
 import { UpNextList } from './UpNextList'
 import { SaveCollectionButton } from './SaveCollectionButton'
+import { SavePostButton } from './TheaterDesktopChrome'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
 import { StageIconButton } from './stage-primitives'
 import { logAV } from './YtDebugOverlay'
@@ -103,6 +104,14 @@ export interface TheaterMobileChromeProps {
   onSaveCollection?: () => void
   /** The signed-in viewer IS this collection's curator — hide the clone CTA, show Manage. */
   isCollectionOwner?: boolean
+  /**
+   * Whether the visiting user is signed in (verification-agent finding: at
+   * mobile width, a signed-in viewer's Save on a shared page opened the
+   * SIGN-IN modal — this chrome never had the authed branch the desktop
+   * chrome's `(mode === 'shared' && authed)` SavePostButton covers). Shared
+   * mode + authed renders the direct-save button instead.
+   */
+  authed?: boolean
   onRequestSignIn?: () => void
   /**
    * Shared mode: the shared post is pinned + repeating (no auto-advance), so
@@ -177,6 +186,7 @@ export function TheaterMobileChrome({
   saveStatus = 'idle',
   onSaveCollection,
   isCollectionOwner = false,
+  authed = false,
   onRequestSignIn,
   repeatCurrent = false,
   repeatMode,
@@ -448,9 +458,14 @@ export function TheaterMobileChrome({
                   const inner = (
                     <>
                       <PlatformGlyph platform={current.platform} size={12} />
-                      <span className="font-mono text-[11px]" suppressHydrationWarning>
-                        {formatCompactRelativeTime(current.createdAt)}
-                      </span>
+                      {/* `addedAt` = when the post was first added to ADHX
+                          (owner decision — never the source platform's date,
+                          never the moving event time). Unknown → no time. */}
+                      {hasKnownTimestamp(current.addedAt) && (
+                        <span className="font-mono text-[11px]" suppressHydrationWarning>
+                          {formatCompactRelativeTime(current.addedAt as string)}
+                        </span>
+                      )}
                     </>
                   )
                   const cls =
@@ -737,6 +752,11 @@ export function TheaterMobileChrome({
                         {triage.savedKeys.has(theaterItemKey(current)) ? 'Saved' : 'Save'}
                       </button>
                     </>
+                  ) : mode === 'shared' && authed ? (
+                    // Signed-in viewers save directly — same branch the
+                    // desktop chrome has always had (see `authed`'s doc
+                    // comment above).
+                    <SavePostButton current={current} className={PILL_SAVE} />
                   ) : (
                     <button type="button" onClick={() => onRequestSignIn?.()} className={PILL_SAVE}>
                       <Bookmark size={15} />
@@ -811,7 +831,13 @@ export function TheaterMobileChrome({
             prev/pause/next on the right. All non-drag-handle buttons stop
             propagation on click AND touchend so pressing them never also
             toggles the sheet open/closed. */}
-        <div ref={peekRef} className="flex-none">
+        {/* Exactly PEEK_H tall (owner: the collapsed bar floated a few px
+            high with list content peeking below it — the natural content
+            height is ~6px shorter than the 4.25rem window the collapse
+            transform reveals, so the top of UpNextList showed through).
+            Pinning the wrapper to the same height the transform uses makes
+            the visible window and the peek content one and the same. */}
+        <div ref={peekRef} className="h-[4.25rem] flex-none overflow-hidden">
           <button
             type="button"
             {...sheetDrag.handlers}

@@ -7,6 +7,7 @@ import type {
   TheaterQuoteRef,
 } from '@/components/theater/types'
 import { sourceUrl } from '@/lib/activity/preview-path'
+import { tiktokCreatedAtFromId } from '@/lib/media/tiktok-id'
 import { youtubeThumbnail } from '@/lib/media/youtube'
 
 /**
@@ -34,10 +35,18 @@ export async function buildSharedSeed(
   try {
     const feed = await getTheaterFeed()
     const rest = feed.items.filter((item) => theaterItemKey(item) !== sharedKey)
+    // Backfill the lead's display time from the pulse's enriched copy of the
+    // SAME post — the mappers below can't know when a post was first linked
+    // to ADHX (owner decision: that IS the displayed time, never the source
+    // platform's own date). The page's `recordActivity('preview')` runs
+    // before this, so the post is in the pulse and `getTrendingItems`'s
+    // first-added time (min of earliest save / earliest activity) applies.
+    const pulseCopy = feed.items.find((item) => theaterItemKey(item) === sharedKey)
+    const sharedWithTime = pulseCopy?.addedAt ? { ...shared, addedAt: pulseCopy.addedAt } : shared
     return {
-      sharedItem: shared,
+      sharedItem: sharedWithTime,
       seed: {
-        items: [shared, ...rest],
+        items: [sharedWithTime, ...rest],
         savedToday: feed.savedToday,
         recentActivity: feed.recentActivity,
       },
@@ -48,17 +57,6 @@ export async function buildSharedSeed(
       sharedItem: shared,
       seed: { items: [shared], savedToday: 0, recentActivity: 0 },
     }
-  }
-}
-
-/** TikTok video ids are Snowflake-style: the high 32 bits are the Unix creation time (seconds). */
-function tiktokCreatedAtFromId(id: string): string | null {
-  try {
-    const secs = Number(BigInt(id) >> BigInt(32))
-    if (secs < 1_400_000_000 || secs > 4_000_000_000) return null // ~2014–2096 sanity check
-    return new Date(secs * 1000).toISOString()
-  } catch {
-    return null
   }
 }
 
@@ -123,6 +121,8 @@ export function reelToTheaterItem(input: ReelSharedInput): TheaterItem {
     text: input.text ?? null,
     thumbnailUrl: input.thumbnailUrl ?? null,
     url: sourceUrl('instagram', author, input.id) ?? `https://www.instagram.com/reel/${input.id}/`,
+    // Ordering slot only — never displayed; `buildSharedSeed` backfills the
+    // displayed `addedAt` from the pulse.
     createdAt: new Date().toISOString(),
     contentType: 'video',
   }
@@ -176,6 +176,8 @@ export function youtubeToTheaterItem(input: YouTubeSharedInput): TheaterItem {
     text: input.text ?? null,
     thumbnailUrl: youtubeThumbnail(input.id),
     url: sourceUrl('youtube', author, input.id) ?? `https://www.youtube.com/shorts/${input.id}`,
+    // Ordering slot only — never displayed; `buildSharedSeed` backfills the
+    // displayed `addedAt` from the pulse.
     createdAt: new Date().toISOString(),
     contentType: 'video',
   }

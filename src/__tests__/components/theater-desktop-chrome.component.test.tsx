@@ -193,14 +193,17 @@ describe('DesktopDock: end cap restructure', () => {
     expect(screen.getByText('2 posts')).toBeInTheDocument()
   })
 
-  it('appends the clay new-count suffix on the count line when newCount > 0 and not collection mode', () => {
+  it('stacks the clay new-count on its own line below the posts count when newCount > 0 and not collection mode', () => {
     const items = [videoItem({ bookmarkId: '1' })]
     render(
       <DesktopDock {...dockBase} items={items} current={items[0]} currentKey={null} newCount={5} />,
     )
-    const suffix = screen.getByText('· 5 new')
-    expect(suffix).toBeInTheDocument()
-    expect(suffix.className).toContain('text-clay')
+    // Owner follow-up: "5 new" is its own stacked line (narrower end cap),
+    // never a suffix on the "N posts" line.
+    const newLine = screen.getByText('5 new')
+    expect(newLine).toBeInTheDocument()
+    expect(newLine.className).toContain('text-clay')
+    expect(screen.getByText('1 posts').textContent).toBe('1 posts')
   })
 
   it('omits the new-count suffix when newCount is 0', () => {
@@ -854,6 +857,106 @@ describe('DesktopDock: repeat control', () => {
     )
     const btn = screen.getByLabelText('Repeat: whole queue')
     expect(btn.className).toContain('text-clay')
+  })
+})
+
+/**
+ * Owner report: the collection theater rendered "56y" for a saved TikTok
+ * whose `createdAt` fell back to an epoch sentinel. Every time-chip site now
+ * renders `addedAt` (when the post was first saved to ADHX — never the
+ * source platform's own publish date) gated by `hasKnownTimestamp` — a
+ * missing/unknown `addedAt` hides the relative-time span but the platform
+ * glyph must still render either way.
+ */
+describe('DesktopStageChrome: hides the time text for an unknown addedAt (PlatformTimeChip)', () => {
+  const stageBase = {
+    mode: 'home' as const,
+    declutter: false,
+    onToggleDeclutter: vi.fn(),
+  }
+
+  // Two elements share the "Open on X" title (this chip AND the bottom-right
+  // "Open" link-out button) — the chip is the one with the dark pill
+  // background (`bg-black/40`), distinct from the glass `Open` button.
+  function findChip() {
+    return screen.getAllByTitle('Open on X').find((el) => el.className.includes('bg-black/40'))!
+  }
+
+  it('omits the relative-time span but keeps the platform glyph when addedAt is null', () => {
+    render(<DesktopStageChrome {...stageBase} current={videoItem({ addedAt: null })} />)
+    const chip = findChip()
+    expect(chip.querySelector('svg')).toBeInTheDocument()
+    expect(chip.querySelector('span')).not.toBeInTheDocument()
+  })
+
+  it('omits the relative-time span when addedAt is the epoch sentinel', () => {
+    render(
+      <DesktopStageChrome
+        {...stageBase}
+        current={videoItem({ addedAt: new Date(0).toISOString() })}
+      />,
+    )
+    expect(findChip().querySelector('span')).not.toBeInTheDocument()
+  })
+
+  it('shows the relative-time span for a real addedAt', () => {
+    render(
+      <DesktopStageChrome
+        {...stageBase}
+        current={videoItem({ addedAt: '2026-08-18T00:00:00Z' })}
+      />,
+    )
+    expect(findChip().querySelector('span')).toBeInTheDocument()
+  })
+})
+
+describe('DesktopDock: hides the time text for an unknown addedAt (filmstrip card)', () => {
+  it('omits the relative-time span on the current filmstrip card when addedAt is unset', () => {
+    const items = [videoItem({ bookmarkId: '1', addedAt: null })]
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+      />,
+    )
+    const card = screen.getByText('NOW').closest('button')!
+    expect(card.querySelector('svg')).toBeInTheDocument()
+    expect(card.querySelector('span.font-mono')).not.toBeInTheDocument()
+  })
+
+  it('shows the relative-time span on the current filmstrip card for a real addedAt', () => {
+    const items = [videoItem({ bookmarkId: '1', addedAt: '2026-08-18T00:00:00Z' })]
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+      />,
+    )
+    const card = screen.getByText('NOW').closest('button')!
+    expect(card.querySelector('span.font-mono')).toBeInTheDocument()
+  })
+
+  it('same gating applies to the collection-mode ghost first card', () => {
+    const items = [
+      videoItem({ bookmarkId: '1', addedAt: null }),
+      videoItem({ bookmarkId: '2', addedAt: null }),
+    ]
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 2 }}
+      />,
+    )
+    const ghost = screen.getByLabelText('Back to the first post')
+    expect(ghost.querySelector('svg')).toBeInTheDocument()
+    expect(ghost.querySelector('span.font-mono')).not.toBeInTheDocument()
   })
 })
 

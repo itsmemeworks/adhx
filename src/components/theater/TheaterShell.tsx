@@ -1194,6 +1194,10 @@ export function TheaterShell({
     }
   }, [])
 
+  // Space must never resume the paused stage hidden behind the waiting
+  // overlay — ref-backed so the keyboard listener never re-registers.
+  const isPlaybackHidden = useCallback(() => waitingRef.current, [])
+
   // Keyboard nav (extracted to useTheaterKeyboard.ts — see its doc comment
   // for the full ↓/→/j vs. triage-collection-tab keymap rationale).
   useTheaterKeyboard({
@@ -1208,6 +1212,7 @@ export function TheaterShell({
     triageStepBack,
     triageDoUndo,
     onClose,
+    isPlaybackHidden,
   })
 
   // Mark seen + fire the preview pulse once the current post has been staged
@@ -1296,9 +1301,23 @@ export function TheaterShell({
     // instead of continuing into the already-browsed queue (round 8).
     waitingBaselineFreshKeysRef.current.add(arrived)
     stagedFromWaitingKeyRef.current = arrived
+    // Pin the arrival to the FRONT of the display order (owner: the fresh
+    // video read as "2 / 21" — the session's original lead-pick was still
+    // occupying slot 1). The viewer has been through the whole queue by now,
+    // so newest-first is the honest order.
+    setPinnedKey(arrived)
     setCurrentKey(arrived)
     setWaiting(false)
   }, [waiting, feed.freshKeys])
+
+  // Entering the waiting stage pauses the (still-mounted, now-hidden) stage
+  // — see the render comment above the <Stage/> below. Uses the same
+  // deliberate-pause event the transport buttons use, so StageVideo's
+  // catch-up attribution is disarmed correctly. On the next arrival the
+  // src-change effect calls play() itself; no resume event needed.
+  useEffect(() => {
+    if (waiting) window.dispatchEvent(new CustomEvent('theater-pause'))
+  }, [waiting])
 
   // Items newer than the last visit and not yet seen. Zero on a first-ever
   // visit (no `lastVisitAt` to compare against) — the caught-up state is the
@@ -1568,22 +1587,34 @@ export function TheaterShell({
             ) : null
           ) : isSharedUnavailableOnCurrent && current ? (
             <StageUnavailable item={current} />
-          ) : waiting ? (
-            <StageWaiting
-              savedToday={feed.savedToday}
-              onReplay={displayItems.length > 0 ? replayFromStart : undefined}
-            />
           ) : (
-            <Stage
-              item={current}
-              muted={muted}
-              onRequestUnmute={onRequestUnmute}
-              onEnded={() => {
-                if (!showSignInRef.current) goNext()
-              }}
-              photoCaption={false}
-              repeat={repeatCurrentActive}
-            />
+            <>
+              {/* The stage stays MOUNTED (paused — see the waiting-pause
+                  effect) underneath the waiting overlay, never swapped out:
+                  StageVideo's persistent <video> element carries the user's
+                  iOS unmuted-playback grant, and unmounting it across the
+                  waiting stage is exactly what made a fresh arrival start
+                  muted for a viewer whose sound was on (owner report). The
+                  overlay's opaque #08070a covers it completely. */}
+              <Stage
+                item={current}
+                muted={muted}
+                onRequestUnmute={onRequestUnmute}
+                onEnded={() => {
+                  if (!showSignInRef.current) goNext()
+                }}
+                photoCaption={false}
+                repeat={repeatCurrentActive}
+              />
+              {waiting && (
+                <div className="absolute inset-0 z-10">
+                  <StageWaiting
+                    savedToday={feed.savedToday}
+                    onReplay={displayItems.length > 0 ? replayFromStart : undefined}
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
         {/* Desktop counterpart to the mobile chrome's top progress line
@@ -1640,6 +1671,7 @@ export function TheaterShell({
           isCollectionOwner={isCollectionOwner}
           saveStatus={saveStatus}
           onSaveCollection={handleSaveCollection}
+          authed={authed}
           onRequestSignIn={openSignIn}
           repeatCurrent={repeatCurrentActive}
           repeatMode={repeatEnabled ? displayRepeatMode : undefined}

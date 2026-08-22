@@ -50,7 +50,7 @@ import {
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatCompactRelativeTime } from '@/lib/utils/format'
+import { formatCompactRelativeTime, hasKnownTimestamp } from '@/lib/utils/format'
 import { MatterLogo, PlatformGlyph } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { authorProfileUrl, previewPath, sourceUrl } from '@/lib/activity/preview-path'
@@ -300,9 +300,14 @@ function PlatformTimeChip({ item }: { item: TheaterItem }) {
   const inner = (
     <>
       <PlatformGlyph platform={item.platform} size={12} />
-      <span className="font-mono text-[11px]" suppressHydrationWarning>
-        {formatCompactRelativeTime(item.createdAt)}
-      </span>
+      {/* `addedAt` = when the post was first added to ADHX (owner decision —
+          never the source platform's date, never the moving event time).
+          Unknown → no time, just the glyph. */}
+      {hasKnownTimestamp(item.addedAt) && (
+        <span className="font-mono text-[11px]" suppressHydrationWarning>
+          {formatCompactRelativeTime(item.addedAt as string)}
+        </span>
+      )}
     </>
   )
   const cls =
@@ -1194,9 +1199,11 @@ export function DesktopDock({
                   size={10}
                   className="flex-none text-ink-3"
                 />
-                <span className="font-mono text-[10px] text-ink-3" suppressHydrationWarning>
-                  {formatCompactRelativeTime(item.createdAt)}
-                </span>
+                {hasKnownTimestamp(item.addedAt) && (
+                  <span className="font-mono text-[10px] text-ink-3" suppressHydrationWarning>
+                    {formatCompactRelativeTime(item.addedAt as string)}
+                  </span>
+                )}
                 <span className="ml-auto flex-none">
                   {/* shared-post-repeat (owner: the desktop filmstrip's NOW
                       tag sitting near a separate repeat glyph elsewhere read
@@ -1280,9 +1287,11 @@ export function DesktopDock({
                       size={10}
                       className="flex-none text-ink-3"
                     />
-                    <span className="font-mono text-[10px] text-ink-3" suppressHydrationWarning>
-                      {formatCompactRelativeTime(first.createdAt)}
-                    </span>
+                    {hasKnownTimestamp(first.addedAt) && (
+                      <span className="font-mono text-[10px] text-ink-3" suppressHydrationWarning>
+                        {formatCompactRelativeTime(first.addedAt as string)}
+                      </span>
+                    )}
                   </div>
                   <p className="truncate text-[11.5px] leading-tight text-ink">
                     {caption || (handle ? `@${handle}` : 'Saved post')}
@@ -1306,12 +1315,10 @@ export function DesktopDock({
           {showAll ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
           Show all
         </button>
-        <span className="text-[10.5px] text-ink-3">
-          <span className="font-mono">{items.length} posts</span>
-          {!collection && newCount > 0 && (
-            <span className="font-semibold text-clay"> · {newCount} new</span>
-          )}
-        </span>
+        <span className="font-mono text-[10.5px] text-ink-3">{items.length} posts</span>
+        {!collection && newCount > 0 && (
+          <span className="text-[10.5px] font-semibold text-clay">{newCount} new</span>
+        )}
         {/* savedToday/newCount are live-pulse concepts — collection mode is a
             static curated queue, and triage's Collection tab is the user's
             own backlog, so neither line is meaningful for either. Triage
