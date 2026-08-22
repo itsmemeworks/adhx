@@ -101,6 +101,18 @@ function pressArrowDown() {
   fireEvent.keyDown(window, { key: 'ArrowDown' })
 }
 
+/**
+ * "Caught up" now means nothing unwatched remains ANYWHERE, not just nothing
+ * ahead of the cursor — a fresh arrival prepends to index 0, so a forward-only
+ * advance used to sail past it and then claim the viewer was caught up (owner
+ * report). These tests therefore have to mark the seed watched to reach the
+ * waiting stage at all; advancing through unwatched posts now goes to them
+ * instead, which is the point.
+ */
+function markWatched(items: TheaterItem[]) {
+  window.localStorage.setItem('adhx-seen-v1', JSON.stringify(items.map(theaterItemKey)))
+}
+
 describe('TheaterShell: waiting-stage fixes', () => {
   beforeEach(() => {
     pushArrival = null
@@ -110,6 +122,7 @@ describe('TheaterShell: waiting-stage fixes', () => {
 
   it('keeps the Stage mounted (not swapped for StageWaiting) once the queue reaches the end, and pauses it', async () => {
     const items = [textItem('1'), textItem('2')]
+    markWatched(items)
     const pauseHeard = vi.fn()
     window.addEventListener('theater-pause', pauseHeard)
     try {
@@ -130,6 +143,7 @@ describe('TheaterShell: waiting-stage fixes', () => {
 
   it('pins a fresh arrival to the front of the queue while waiting (queue position 1, not wherever the prior lead-pick sat)', async () => {
     const items = [textItem('1'), textItem('2')]
+    markWatched(items)
     render(<TheaterShell seed={seed(items)} />)
 
     await act(async () => pressArrowDown())

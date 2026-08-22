@@ -59,10 +59,25 @@ export type RepeatMode = 'off' | 'all' | 'one'
  *
  * Lives here rather than in either chrome so the two can't drift apart.
  */
-export const REPEAT_MODE_LABEL: Record<RepeatMode, { action: string; state: string }> = {
-  off: { action: 'Stop when caught up', state: 'Stops when you’re caught up' },
-  all: { action: 'Keep playing', state: 'Keeps playing — watched posts too, then round again' },
-  one: { action: 'Repeat this post', state: 'Repeating this post' },
+export const REPEAT_MODE_LABEL: Record<
+  RepeatMode,
+  { action: string; state: string; queue: string }
+> = {
+  off: {
+    action: 'Stop when caught up',
+    state: 'Stops when you’re caught up',
+    queue: 'Stops when caught up',
+  },
+  all: {
+    action: 'Keep playing',
+    state: 'Keeps playing — watched posts too, then round again',
+    queue: 'Keeps playing',
+  },
+  one: {
+    action: 'Repeat this post',
+    state: 'Repeating this post',
+    queue: 'Repeating this post',
+  },
 }
 
 /** Left-to-right render order for the Live/My-Collection tab switcher —

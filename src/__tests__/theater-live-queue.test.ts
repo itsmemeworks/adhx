@@ -219,3 +219,45 @@ describe('REPEAT_MODE_LABEL', () => {
     }
   })
 })
+
+/**
+ * Owner report: "a new video came in but it's not automatically playing that…
+ * I shouldn't have to click re-watch because I haven't seen the new video
+ * yet." A fresh arrival PREPENDS to index 0, but auto-advance only moves
+ * forward, so a viewer at index 13 sailed past it and the boundary then
+ * claimed they were caught up while 14 unwatched posts sat behind the cursor.
+ * "Caught up" now means nothing unwatched ANYWHERE.
+ */
+describe('computeLiveNext — nothing unwatched anywhere', () => {
+  const base = { length: 5, unseenCount: 2, loop: false, userInitiated: false }
+
+  it('goes BACK to an arrival that landed behind the cursor instead of waiting', () => {
+    // At the end of the unwatched run, but index 0 just arrived and is unseen.
+    expect(computeLiveNext({ ...base, index: 1, nextUnwatchedIndex: 0 })).toBe(0)
+  })
+
+  it('still waits when there is genuinely nothing unwatched left', () => {
+    expect(computeLiveNext({ ...base, index: 1, nextUnwatchedIndex: null })).toBe('waiting')
+    expect(computeLiveNext({ ...base, index: 1 })).toBe('waiting')
+  })
+
+  it('rescues the true end of the queue too, not just the run boundary', () => {
+    // Last item, nothing ahead — but something unwatched sits behind.
+    expect(computeLiveNext({ ...base, index: 4, unseenCount: 0, nextUnwatchedIndex: 2 })).toBe(2)
+    expect(computeLiveNext({ ...base, index: 4, unseenCount: 0, nextUnwatchedIndex: null })).toBe(
+      'waiting',
+    )
+  })
+
+  it('never diverts a normal in-run advance', () => {
+    // Plenty of run left: go to the next item, not to the pending index.
+    expect(computeLiveNext({ ...base, index: 0, nextUnwatchedIndex: 4 })).toBe(1)
+  })
+
+  it('leaves repeat and user navigation alone', () => {
+    expect(computeLiveNext({ ...base, index: 4, loop: true, nextUnwatchedIndex: 1 })).toBe(0)
+    expect(computeLiveNext({ ...base, index: 1, userInitiated: true, nextUnwatchedIndex: 0 })).toBe(
+      2,
+    )
+  })
+})

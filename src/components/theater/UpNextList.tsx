@@ -93,12 +93,22 @@ export const TYPE_TILE: Record<
   quote: { bg: 'bg-type-quote/15 text-type-quote', icon: Quote },
 }
 
-function Thumb({ item, fresh }: { item: TheaterItem; fresh: boolean }) {
+function Thumb({ item, fresh, seen }: { item: TheaterItem; fresh: boolean; seen: boolean }) {
   const type = inferType(item)
   const tile = TYPE_TILE[type]
   const Icon = tile.icon
   return (
-    <div className="relative h-12 w-[72px] flex-none overflow-hidden rounded-md bg-inset">
+    <div
+      className={cn(
+        'relative h-12 w-[72px] flex-none overflow-hidden rounded-md bg-inset',
+        // Watched rows go grey. In a list of thumbnails this is the only cue
+        // that reads without being read — owner: "it's not immediately obvious
+        // to me, after I've watched something in the queue, that it's been
+        // watched". The row dim + the ✓ are the supporting detail, not the
+        // signal.
+        seen && 'grayscale',
+      )}
+    >
       {item.thumbnailUrl ? (
         <img
           src={item.thumbnailUrl}
@@ -149,11 +159,11 @@ function Row({
       className={cn(
         'group flex w-full items-start gap-2.5 rounded-lg border-l-2 px-2.5 py-2.5 text-left transition-colors',
         isCurrent ? 'border-clay bg-inset' : 'border-transparent hover:bg-inset/60',
-        !isCurrent && seen && 'opacity-60',
+        !isCurrent && seen && 'opacity-45',
         !isCurrent && fresh && 'bg-clay/[0.07]',
       )}
     >
-      <Thumb item={item} fresh={fresh && !isCurrent} />
+      <Thumb item={item} fresh={fresh && !isCurrent} seen={!isCurrent && seen} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <PlatformGlyph platform={item.platform} size={11} className="text-ink-3 flex-none" />
@@ -182,7 +192,16 @@ function Row({
                 next ↓
               </span>
             ) : (
-              !isCurrent && seen && <Check size={11} className="text-done" />
+              !isCurrent &&
+              seen && (
+                <span
+                  className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-done"
+                  title="Watched"
+                >
+                  <Check size={12} aria-hidden />
+                  <span className="sr-only">Watched</span>
+                </span>
+              )
             )}
           </div>
         </div>

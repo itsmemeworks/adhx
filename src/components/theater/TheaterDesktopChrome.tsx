@@ -1383,8 +1383,14 @@ export function DesktopDock({
         {showAll && (
           <div className="absolute bottom-full right-4 z-20 mb-2 flex max-h-[62vh] w-[380px] flex-col overflow-hidden rounded-xl border border-hairline bg-surface shadow-m-lg">
             <div className="flex items-center justify-between px-4 pb-1 pt-3">
+              {/* The panel's title states what happens when the queue runs out
+                  — the one thing the list itself can't show (owner: "shouldn't
+                  the title of Show all be relevant to the selection?"). It also
+                  stops the header repeating the "Up next" group heading
+                  directly below it. Falls back to "Up next" where repeat isn't
+                  offered (triage's Collection tab). */}
               <span className="text-[11px] font-bold uppercase tracking-wide text-ink-3">
-                Up next
+                {repeatMode ? REPEAT_MODE_LABEL[repeatMode].queue : 'Up next'}
               </span>
               <button
                 type="button"

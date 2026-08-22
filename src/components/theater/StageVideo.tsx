@@ -33,6 +33,13 @@ import { Play, RotateCcw } from 'lucide-react'
 import { logSV } from './YtDebugOverlay'
 import type { TheaterItem } from './types'
 
+/**
+ * How long a failed video stays on screen before the queue moves on. Matches
+ * the timed-dwell advance a non-video item gets, so a dead post costs the same
+ * ~10s as a text post rather than ending the session.
+ */
+const ERRORED_ADVANCE_MS = 10_000
+
 export interface StageVideoProps {
   item: TheaterItem
   src: string
@@ -219,6 +226,26 @@ export function StageVideo({
       )
     }
   }, [covered])
+
+  /**
+   * A dead video must not stop the playlist. When playback errors out — the
+   * mirror/proxy 404s, the post is gone at the source — the queue moves on
+   * after the same ~10s a non-video item gets from the timed dwell, so the
+   * viewer sees what happened (and can hit "Try again", which clears `errored`
+   * and cancels this) but isn't stranded. Owner: "we should apply the same
+   * 10-second rule we use with a non-video so it at least skips and doesn't
+   * stop the playlist."
+   *
+   * Skipped while `repeat` is on — a pinned or looping post is deliberately
+   * parked on, error or not — and when there's nowhere to advance to (`onEnded`
+   * absent, e.g. triage, where Delete is the way past a dead post).
+   */
+  useEffect(() => {
+    if (!errored || !onEnded || repeat) return
+    logSV(`errored — advancing in ${ERRORED_ADVANCE_MS}ms rather than stalling the queue`)
+    const timer = setTimeout(() => onEnded(), ERRORED_ADVANCE_MS)
+    return () => clearTimeout(timer)
+  }, [errored, onEnded, repeat])
 
   // The ONE start path for a not-yet-started video (autoplay rejected, the
   // tap-to-play overlay showing): used by the overlay's own tap AND — via the
@@ -539,9 +566,11 @@ export function StageVideo({
 
       {/* Gone-for-good fallback (post deleted/private/suspended on X): poster
           stays visible, no retry — retrying can't bring back content that's
-          been removed at the source. The user's own next/prev navigation
-          (or, in triage, Delete) is how they move past it — we never
-          auto-skip. */}
+          been removed at the source. The viewer gets ~10s to read why, then the
+          errored-advance effect above moves the queue on; it used to sit here
+          forever waiting for manual navigation, which stalls a playlist just as
+          badly as a failed load does. In triage (no `onEnded`) Delete is still
+          the way past it. */}
       {errored && unavailableReason && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#08070a]/70 px-6 text-center">
           <p className="max-w-xs text-sm text-white/70">{unavailableReason}</p>

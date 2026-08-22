@@ -351,12 +351,31 @@ export function computeLiveNext(opts: {
   unseenCount: number
   loop: boolean
   userInitiated: boolean
+  /**
+   * First index that is STILL unwatched (live seen state), excluding the
+   * current one — or null when nothing is left.
+   *
+   * This is what stops "caught up" from lying. Auto-advance only moves
+   * forward, but a fresh arrival PREPENDS to index 0, so a viewer who is
+   * already at index 13 never reaches it: the run ahead of them ends, the
+   * boundary fires, and the stage claims they're caught up while unwatched
+   * posts — including the one that just landed — sit behind the cursor. Owner
+   * report: "a new video came in but it's not automatically playing that…
+   * I shouldn't have to click re-watch because I haven't seen the new video
+   * yet." So the boundary means "nothing unwatched anywhere", not "nothing
+   * ahead of me".
+   */
+  nextUnwatchedIndex?: number | null
 }): number | 'waiting' | null {
-  const { length, index, unseenCount, loop, userInitiated } = opts
+  const { length, index, unseenCount, loop, userInitiated, nextUnwatchedIndex } = opts
   const next = computeLoopedNext(length, index, loop)
-  if (typeof next !== 'number') return next
-  if (loop || userInitiated || unseenCount <= 0) return next
-  return next >= unseenCount ? 'waiting' : next
+  if (next === null) return null
+  const wouldStop =
+    next === 'waiting' || (!loop && !userInitiated && unseenCount > 0 && next >= unseenCount)
+  if (!wouldStop) return next
+  // About to stop — but only actually stop if there's nothing left unwatched.
+  if (typeof nextUnwatchedIndex === 'number' && nextUnwatchedIndex >= 0) return nextUnwatchedIndex
+  return 'waiting'
 }
 
 /**
@@ -1284,6 +1303,17 @@ export function TheaterShell({
   unseenCountRef.current = unseenCount
   const currentKeyRef = useRef(currentKey)
   currentKeyRef.current = currentKey
+  // First still-unwatched index (LIVE seen state, not the arrival snapshot),
+  // excluding the current item — see `computeLiveNext`'s `nextUnwatchedIndex`.
+  // Kept in a ref because goNext is an empty-deps callback.
+  const nextUnwatchedIndexRef = useRef<number | null>(null)
+  nextUnwatchedIndexRef.current = (() => {
+    if (!liveOrdering || !seenSet.ready) return null
+    const found = displayItems.findIndex(
+      (it, i) => i !== currentIndex && !seenSet.isSeen(theaterItemKey(it)),
+    )
+    return found === -1 ? null : found
+  })()
 
   // `userInitiated` is passed as an ARGUMENT (not read from a ref) because the
   // updater below runs in React's render phase, long after the call returned —
@@ -1300,7 +1330,14 @@ export function TheaterShell({
         // staged), so anything that arrived in the meantime is picked up by
         // the arrival effect immediately. User navigation never lands here —
         // `goNextUser` clears the staged key first.
-        if (shouldRewaitAfterArrival(stagedFromWaitingKeyRef.current, key, repeatModeRef.current)) {
+        // Round 8's re-wait assumed everything behind the arrival was already
+        // watched ("don't dump me back into the old playlist"). That holds only
+        // while nothing is pending — otherwise re-waiting hides genuinely
+        // unwatched posts, which is the same lie the boundary used to tell.
+        if (
+          shouldRewaitAfterArrival(stagedFromWaitingKeyRef.current, key, repeatModeRef.current) &&
+          nextUnwatchedIndexRef.current === null
+        ) {
           stagedFromWaitingKeyRef.current = null
           setWaiting(true)
           return key
@@ -1312,6 +1349,7 @@ export function TheaterShell({
           unseenCount: unseenCountRef.current,
           loop: loop || repeatModeRef.current === 'all',
           userInitiated,
+          nextUnwatchedIndex: nextUnwatchedIndexRef.current,
         })
         if (next === null) return key
         if (next === 'waiting') {
