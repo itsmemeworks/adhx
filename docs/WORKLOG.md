@@ -4,6 +4,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-22 — Repeat button regression + one shared <video> for every MP4 platform
+
+- **Repeat icon gone from the authed live theater** (owner, desktop). Regression I caused earlier the same day: the button was gated on `!isTriage`, which was correct while triage was an overlay over the grid — but the moment authed `/` became `mode="triage"` on the Live tab, that silently removed repeat for every signed-in viewer. Now gated on `!isTriageCollection`, so only the finite Done/Later backlog hides it. Verified live: the cycle reads off → whole queue → this post → off.
+- **Sound lost on X video → text → Instagram reel** (owner, after the previous round fixed video → text → X video). Same position-reconciliation cause, one level deeper: `StageInstagram` rendered its OWN `<StageVideo>` once its Range probe came back, so that element sat at a different tree path than the one `Stage` renders — a fresh element, and iOS grants unmuted playback per element. Fixed by hoisting the probe into **`useInstagramStage`** (status/slow/src/poster + both auto-advance guards) so `Stage` plays the confirmed reel through its own shared video slot. `StageInstagram` is presentational now (probing poster / embed fallback, never a player), and `TriageStage` grew a small local wrapper that does the same pick. **One `<video>` element now serves X, TikTok AND Instagram** — one iOS unmute grant for all of them. YouTube stays a genuine ceiling (iframe, not a media element).
+- **Regression the existing tests caught**, worth remembering: the hoisted hook ran for EVERY item, and its `!id` branch set status to `'failed'`, which armed the embed-fallback guard and auto-advanced any item that happened to be on stage. The YouTube stall-watchdog test in `Stage.component.test.tsx` failed immediately. The hook is now inert unless `active`, checked FIRST in every effect.
+- **"It stopped before the end of the list"** — working as designed, not a bug: auto-advance stops at the end of the UNWATCHED run rather than replaying watched posts, and the dock still shows the watched ones after the current item (the previous mobile screenshot read "NOT WATCHED YET 1 / WATCHED 25"). The restored repeat button and "Re-watch all N" are the ways past it. Flagged to the owner in case they'd rather auto-advance ran to the true end of the queue.
+- **State**: 2329 tests / 185 files green, typecheck + prettier clean. The Instagram stage's own test file was migrated to drive `<Stage>` (the real production path) instead of the old component contract.
+
 ## 2026-08-22 — Live-theater round: waiting-stage resume, honest group labels, and the <video> element survives non-video items
 
 Three owner reports off staging.

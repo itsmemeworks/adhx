@@ -14,7 +14,7 @@ import { usePlaybackSource } from './usePlaybackSource'
 import { StageFrame, StageHeadline, StageCTA } from './stage-primitives'
 import { StageVideo } from './StageVideo'
 import { StageText } from './StageText'
-import { StageInstagram } from './StageInstagram'
+import { StageInstagram, useInstagramStage } from './StageInstagram'
 import { StageYouTube } from './StageYouTube'
 import { StageArticle } from './StageArticle'
 import type { TheaterItem } from './types'
@@ -48,14 +48,22 @@ export interface StageProps {
 export function Stage({ item, muted, onRequestUnmute, onEnded, photoCaption, repeat }: StageProps) {
   const playback = usePlaybackSource(item)
 
-  // Does THIS item render through StageVideo (the reusable <video> element)?
-  // Instagram and YouTube bring their own players, so they don't count.
+  // Instagram's mirror MP4 has to be Range-probed before a <video src> is
+  // attached (cold-cache 404s). The probe lives in a hook rather than inside
+  // StageInstagram so the confirmed reel can play through the SAME video slot
+  // below as X and TikTok — one element, one iOS unmute grant, for every MP4
+  // platform. Called unconditionally (hooks rules); `active` gates the work.
+  const isInstagram = !!item && item.platform === 'instagram'
+  const instagram = useInstagramStage({ item, active: isInstagram, onEnded, repeat })
+
+  // Does THIS item render through the shared <video> element? YouTube never
+  // does — it's an iframe, which is a genuine platform ceiling for the grant.
   const isStageVideoItem =
     !!item &&
-    item.platform !== 'instagram' &&
     item.platform !== 'youtube' &&
-    playback.kind === 'video' &&
-    !!playback.src
+    (isInstagram ? instagram.status === 'ready' : playback.kind === 'video' && !!playback.src)
+  const videoSrc = isInstagram ? instagram.src : playback.src
+  const videoPoster = isInstagram ? instagram.poster : playback.poster
 
   // Remember the last item that DID, so every other kind of item can keep that
   // element alive underneath itself instead of unmounting it. iOS grants
@@ -69,8 +77,8 @@ export function Stage({ item, muted, onRequestUnmute, onEnded, photoCaption, rep
   const retainedVideo = useRef<{ item: TheaterItem; src: string; poster: string | null } | null>(
     null,
   )
-  if (isStageVideoItem && item && playback.src) {
-    retainedVideo.current = { item, src: playback.src, poster: playback.poster }
+  if (isStageVideoItem && item && videoSrc) {
+    retainedVideo.current = { item, src: videoSrc, poster: videoPoster }
   }
 
   if (!item) {
@@ -85,18 +93,10 @@ export function Stage({ item, muted, onRequestUnmute, onEnded, photoCaption, rep
   let overlay: React.ReactNode = null
   if (!isStageVideoItem) {
     const type = inferType(item)
-    if (item.platform === 'instagram') {
-      // Instagram's mirror MP4 must be Range-probed before a <video src> is
-      // attached (cold-cache 404s), so it can't share StageVideo.
-      overlay = (
-        <StageInstagram
-          item={item}
-          muted={muted}
-          onRequestUnmute={onRequestUnmute}
-          onEnded={onEnded}
-          repeat={repeat}
-        />
-      )
+    if (isInstagram) {
+      // Not ready yet (or the mirror never answered): poster + spinner, or the
+      // official-embed fallback. No player here — see `useInstagramStage`.
+      overlay = <StageInstagram item={item} status={instagram.status} slow={instagram.slow} />
     } else if (item.platform === 'youtube') {
       // No MP4 — official youtube-nocookie iframe only, driven by the raw
       // postMessage protocol for autoplay/ended/transport.
@@ -130,12 +130,12 @@ export function Stage({ item, muted, onRequestUnmute, onEnded, photoCaption, rep
   // layer is always this slot, and everything else is an overlay above it.
   return (
     <div className="relative h-full w-full">
-      {isStageVideoItem && playback.src ? (
+      {isStageVideoItem && videoSrc ? (
         <div className="absolute inset-0">
           <StageVideo
             item={item}
-            src={playback.src}
-            poster={playback.poster}
+            src={videoSrc}
+            poster={videoPoster}
             muted={muted}
             onRequestUnmute={onRequestUnmute}
             onEnded={onEnded}

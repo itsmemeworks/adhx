@@ -965,18 +965,23 @@ export function TheaterShell({
 
   // Repeat mode (round 8): session-persisted like the sound preference —
   // read on mount (not the initializer, for the same SSR-hydration reason),
-  // written on change. Triage never exposes the button (`effectiveRepeatMode`
-  // neutralizes a session-carried value there — a finite backlog with its
-  // own Done/Later semantics; a stale 'one'/'all' leaking in would
-  // repeat/wrap a queue with no visible control to turn it off). Collection
-  // mode DOES expose it (owner: the playlist player should show the
-  // repeat icon, selected): it opens on 'all' — looping IS the playlist's
-  // resting state — and toggles all ⇄ one (`nextRepeatMode`'s wrapOnly), so
-  // it deliberately skips the sessionStorage read/write below: a playlist
-  // page's toggle is per-visit and must never bleed into the home theater's
-  // persisted preference (or vice versa).
+  // written on change. Playlist mode DOES expose it (owner: the playlist
+  // player should show the repeat icon, selected): it opens on 'all' — looping
+  // IS the playlist's resting state — and toggles all ⇄ one
+  // (`nextRepeatMode`'s wrapOnly), so it deliberately skips the sessionStorage
+  // read/write below: a playlist page's toggle is per-visit and must never
+  // bleed into the home theater's persisted preference (or vice versa).
+  //
+  // Only the triage COLLECTION tab hides it — a finite backlog with its own
+  // Done/Later semantics, where a stale 'one'/'all' would repeat or wrap a
+  // queue with no visible control to turn it off. It used to be gated on
+  // `!isTriage`, which was fine while triage was an overlay over the grid; the
+  // moment authed `/` became `mode="triage"` on the LIVE tab, that silently
+  // took the repeat button off the live theater for every signed-in viewer
+  // (owner report: "the repeat icon isn't there anymore… I should be able to
+  // continually repeat the whole live playlist or just repeat a single post").
   const [repeatMode, setRepeatMode] = useState<RepeatMode>(loop ? 'all' : 'off')
-  const repeatEnabled = !isTriage
+  const repeatEnabled = !isTriageCollection
   const effectiveRepeatMode: RepeatMode = repeatEnabled ? repeatMode : 'off'
   const repeatModeRef = useRef(effectiveRepeatMode)
   repeatModeRef.current = effectiveRepeatMode

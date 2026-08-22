@@ -17,9 +17,10 @@ import { Stage } from './Stage'
 import { StageText } from './StageText'
 import { TheaterLinkedText } from './TheaterText'
 import { StageArticle } from './StageArticle'
-import { StageInstagram } from './StageInstagram'
+import { StageInstagram, useInstagramStage } from './StageInstagram'
 import { StageYouTube } from './StageYouTube'
 import { StageVideo } from './StageVideo'
+import type { TheaterItem } from './types'
 import { feedItemToTheaterItem } from './collection-item'
 
 /** Subtle tag-chip row (unified-theater-triage.md §B) for the text/quote
@@ -103,7 +104,7 @@ export function TriageStage({ feedItem, muted, onRequestUnmute, onEnded, tags }:
 
   if (platform === 'instagram') {
     return (
-      <StageInstagram
+      <TriageInstagramStage
         item={theaterItem}
         muted={muted}
         onRequestUnmute={onRequestUnmute}
@@ -195,3 +196,36 @@ export function TriageStage({ feedItem, muted, onRequestUnmute, onEnded, tags }:
 /** Re-exported so callers never need to import the generic `<Stage/>` just to
  * fall back to it for the triage "All caught up" / null-item case. */
 export { Stage }
+
+/**
+ * Instagram in the collection tab. The probe now lives in `useInstagramStage`
+ * (so the main theater can play a confirmed reel through its shared <video>
+ * element — see that hook), which means this stage has to own the hook and
+ * pick between the player and the probing/embed UI itself.
+ */
+function TriageInstagramStage({
+  item,
+  muted,
+  onRequestUnmute,
+  onEnded,
+}: {
+  item: TheaterItem
+  muted: boolean
+  onRequestUnmute: () => void
+  onEnded?: () => void
+}) {
+  const instagram = useInstagramStage({ item, active: true, onEnded })
+  if (instagram.status === 'ready' && instagram.src) {
+    return (
+      <StageVideo
+        item={item}
+        src={instagram.src}
+        poster={instagram.poster}
+        muted={muted}
+        onRequestUnmute={onRequestUnmute}
+        onEnded={onEnded}
+      />
+    )
+  }
+  return <StageInstagram item={item} status={instagram.status} slow={instagram.slow} />
+}

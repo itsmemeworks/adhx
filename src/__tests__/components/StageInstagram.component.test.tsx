@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, act } from '@testing-library/react'
-import { StageInstagram } from '@/components/theater/StageInstagram'
+import { Stage } from '@/components/theater/Stage'
 import { probeInstagramVideo } from '@/lib/media/instagram-playback'
 import type { TheaterItem } from '@/components/theater/types'
 
@@ -15,6 +15,12 @@ import type { TheaterItem } from '@/components/theater/types'
  * auto-advance guards that keep the queue moving in that situation (spec:
  * see StageInstagram.tsx comments) — they're no-ops outside auto-advance
  * contexts (no `onEnded`, or `repeat` pinning a shared post).
+ *
+ * The probe + guards live in `useInstagramStage` (StageInstagram.tsx), a hook
+ * `Stage` calls directly so a confirmed reel plays through Stage's own shared
+ * `<video>` slot rather than one owned by `StageInstagram` — see that file's
+ * doc comment. These tests exercise the guards through `Stage`, the same way
+ * a real Instagram item in the theater reaches them.
  */
 
 vi.mock('@/lib/media/instagram-playback', async (importOriginal) => {
@@ -23,8 +29,8 @@ vi.mock('@/lib/media/instagram-playback', async (importOriginal) => {
 })
 
 // jsdom doesn't implement HTMLMediaElement.play()/load() — a probe resolving
-// 'ready' renders StageVideo, whose mount effect calls video.play()
-// unconditionally.
+// 'ready' renders Stage's shared video slot, whose mount effect calls
+// video.play() unconditionally.
 HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue(undefined)
 HTMLMediaElement.prototype.load = vi.fn()
 
@@ -55,7 +61,7 @@ describe('StageInstagram auto-advance guards', () => {
     const onEnded = vi.fn()
 
     render(
-      <StageInstagram
+      <Stage
         item={makeItem({ bookmarkId: 'reel-fallback' })}
         muted
         onRequestUnmute={vi.fn()}
@@ -81,7 +87,7 @@ describe('StageInstagram auto-advance guards', () => {
     const onEnded = vi.fn()
 
     render(
-      <StageInstagram
+      <Stage
         item={makeItem({ bookmarkId: 'reel-repeat' })}
         muted
         onRequestUnmute={vi.fn()}
@@ -105,7 +111,7 @@ describe('StageInstagram auto-advance guards', () => {
 
     expect(() => {
       render(
-        <StageInstagram
+        <Stage
           item={makeItem({ bookmarkId: 'reel-no-onended' })}
           muted
           onRequestUnmute={vi.fn()}
@@ -128,7 +134,7 @@ describe('StageInstagram auto-advance guards', () => {
     const onEnded = vi.fn()
 
     render(
-      <StageInstagram
+      <Stage
         item={makeItem({ bookmarkId: 'reel-never-started' })}
         muted
         onRequestUnmute={vi.fn()}
@@ -152,7 +158,7 @@ describe('StageInstagram auto-advance guards', () => {
     const onEnded = vi.fn()
 
     render(
-      <StageInstagram
+      <Stage
         item={makeItem({ bookmarkId: 'reel-ready-in-time' })}
         muted
         onRequestUnmute={vi.fn()}
@@ -160,8 +166,8 @@ describe('StageInstagram auto-advance guards', () => {
       />,
     )
 
-    // Probe resolves quickly — status flips to 'ready' and StageVideo takes
-    // over `onEnded` from here.
+    // Probe resolves quickly — status flips to 'ready' and Stage's shared
+    // video slot takes over `onEnded` from here.
     await act(async () => {
       await Promise.resolve()
     })
@@ -181,7 +187,7 @@ describe('StageInstagram auto-advance guards', () => {
     const onEnded = vi.fn()
 
     const { rerender } = render(
-      <StageInstagram
+      <Stage
         item={makeItem({ bookmarkId: 'reel-status-flip' })}
         muted
         onRequestUnmute={vi.fn()}
@@ -196,7 +202,7 @@ describe('StageInstagram auto-advance guards', () => {
     // the effect's id-change cleanup must cancel the stale timer.
     vi.mocked(probeInstagramVideo).mockResolvedValue(true)
     rerender(
-      <StageInstagram
+      <Stage
         item={makeItem({ bookmarkId: 'reel-status-flip-2' })}
         muted
         onRequestUnmute={vi.fn()}
@@ -222,8 +228,9 @@ describe('StageInstagram auto-advance guards', () => {
  * FRESH `StageVideo` mount, created only once `probeInstagramVideo` resolves
  * (real-world: seconds after the item became current, well outside any
  * user-gesture window). These tests exercise that "late attach" path
- * directly through `StageInstagram` rather than `StageVideo` in isolation,
- * since that's the actual shape of the bug.
+ * through `Stage` (which mounts the shared video slot the moment the probe
+ * confirms the mirror) rather than `StageVideo` in isolation, since that's
+ * the actual shape of the bug.
  */
 describe('StageInstagram late-attach playback (mount happens after the probe resolves)', () => {
   beforeEach(() => {
@@ -242,7 +249,7 @@ describe('StageInstagram late-attach playback (mount happens after the probe res
     HTMLMediaElement.prototype.play = playMock
 
     const { container } = render(
-      <StageInstagram
+      <Stage
         item={makeItem({ bookmarkId: 'reel-late-attach-muted' })}
         muted
         onRequestUnmute={vi.fn()}
@@ -254,8 +261,9 @@ describe('StageInstagram late-attach playback (mount happens after the probe res
       await Promise.resolve()
     })
 
-    const video = container.querySelector('video') as HTMLVideoElement
-    expect(video).not.toBeNull()
+    const videos = container.querySelectorAll('video')
+    expect(videos.length).toBe(1)
+    const video = videos[0]
     expect(video.muted).toBe(true)
     expect(container.querySelector('[aria-label="Play video"]')).toBeNull()
     expect(playMock).toHaveBeenCalledTimes(1)
@@ -270,23 +278,24 @@ describe('StageInstagram late-attach playback (mount happens after the probe res
     HTMLMediaElement.prototype.play = playMock
 
     const { container } = render(
-      <StageInstagram
+      <Stage
         item={makeItem({ bookmarkId: 'reel-late-attach-unmuted' })}
         muted={false}
         onRequestUnmute={vi.fn()}
       />,
     )
 
-    // Flush the probe resolving 'ready' (mounts a fresh StageVideo) and the
-    // resulting rejected-unmuted → muted-retry play() chain.
+    // Flush the probe resolving 'ready' (mounts Stage's shared video slot)
+    // and the resulting rejected-unmuted → muted-retry play() chain.
     await act(async () => {
       await Promise.resolve()
       await Promise.resolve()
       await Promise.resolve()
     })
 
-    const video = container.querySelector('video') as HTMLVideoElement
-    expect(video).not.toBeNull()
+    const videos = container.querySelectorAll('video')
+    expect(videos.length).toBe(1)
+    const video = videos[0]
     expect(video.muted).toBe(true)
     expect(container.querySelector('[aria-label="Play video"]')).toBeNull()
     expect(playMock).toHaveBeenCalledTimes(2)

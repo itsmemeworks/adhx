@@ -20,10 +20,18 @@ vi.mock('@/components/theater/StageVideo', () => ({
     <div data-testid="stage-video" data-has-onended={String(!!props.onEnded)} />
   ),
 }))
+// The probe + auto-advance guards live in `useInstagramStage` now, so that's
+// where `onEnded` has to land for an Instagram item; StageInstagram itself is
+// presentational (probing poster / embed fallback) and never gets it.
+const useInstagramStageSpy = vi.fn((_args: unknown) => ({
+  status: 'probing' as const,
+  slow: false,
+  src: null as string | null,
+  poster: null as string | null,
+}))
 vi.mock('@/components/theater/StageInstagram', () => ({
-  StageInstagram: (props: { onEnded?: () => void }) => (
-    <div data-testid="stage-instagram" data-has-onended={String(!!props.onEnded)} />
-  ),
+  useInstagramStage: (args: unknown) => useInstagramStageSpy(args),
+  StageInstagram: () => <div data-testid="stage-instagram" />,
 }))
 vi.mock('@/components/theater/StageYouTube', () => ({
   StageYouTube: (props: { onEnded?: () => void }) => (
@@ -79,16 +87,21 @@ describe('TriageStage: onEnded wiring to the video-capable stages', () => {
     expect(getByTestId('stage-video').dataset.hasOnended).toBe('true')
   })
 
-  it('forwards onEnded to StageInstagram', () => {
+  it('forwards onEnded to the Instagram probe hook (which owns the advance guards)', () => {
+    useInstagramStageSpy.mockClear()
+    const onEnded = vi.fn()
     const { getByTestId } = render(
       <TriageStage
         feedItem={feedItem({ platform: 'instagram' })}
         muted
         onRequestUnmute={vi.fn()}
-        onEnded={vi.fn()}
+        onEnded={onEnded}
       />,
     )
-    expect(getByTestId('stage-instagram').dataset.hasOnended).toBe('true')
+    // Still probing, so the presentational stage is what renders...
+    expect(getByTestId('stage-instagram')).toBeInTheDocument()
+    // ...and the hook got the callback its guards need.
+    expect(useInstagramStageSpy).toHaveBeenCalledWith(expect.objectContaining({ onEnded }))
   })
 
   it('forwards onEnded to StageYouTube', () => {
