@@ -30,6 +30,9 @@ vi.mock('@/lib/db', () => ({
 
 import { getTheaterFeed } from '@/lib/theater/feed'
 
+/** getTheaterFeed's live pulse now restricts to the last 24h (LIVE_WINDOW_HOURS) — seed relative to now. */
+const minsAgo = (n: number) => new Date(Date.now() - n * 60_000).toISOString()
+
 function seedActivity(overrides: Partial<NewActivity> & { createdAt: string; bookmarkId: string }) {
   const row: NewActivity = {
     action: 'save',
@@ -85,7 +88,7 @@ describe('getTheaterFeed', () => {
 
   it('returns the live trending items unchanged when there are enough of them', async () => {
     for (let i = 0; i < 15; i++) {
-      seedActivity({ bookmarkId: `t${i}`, createdAt: `2026-06-06T10:0${i % 10}:00Z` })
+      seedActivity({ bookmarkId: `t${i}`, createdAt: minsAgo(i + 1) })
     }
 
     const seed = await getTheaterFeed()
@@ -160,7 +163,7 @@ describe('getTheaterFeed', () => {
   })
 
   it('degrades to the plain trending items when the backfill query fails', async () => {
-    seedActivity({ bookmarkId: 'live1', createdAt: '2026-06-06T10:00:00Z' })
+    seedActivity({ bookmarkId: 'live1', createdAt: minsAgo(5) })
     // Drop a table the backfill query depends on so it throws.
     testInstance.sqlite.exec('DROP TABLE tag_shares')
 
@@ -235,7 +238,7 @@ describe('getTheaterFeed', () => {
   // spec §6b — link expansions attached via the live getTrendingItems() path
   // (getTheaterFeed passes live items through unchanged).
   it('attaches textLinks from bookmark_links for a saved post', async () => {
-    seedActivity({ bookmarkId: 'linked1', createdAt: '2026-06-06T10:00:00Z' })
+    seedActivity({ bookmarkId: 'linked1', createdAt: minsAgo(5) })
     testInstance.db
       .insert(bookmarks)
       .values(createTestBookmark('owner-1', 'linked1', { platform: 'twitter' }))

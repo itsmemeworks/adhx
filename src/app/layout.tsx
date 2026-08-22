@@ -180,20 +180,15 @@ const websiteJsonLd = {
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  // translate="no" + the notranslate meta below: mobile Chrome/Safari offered
-  // to auto-translate any non-English page (a Spanish/Portuguese collection
-  // theater, say), and browser translation REPLACES the text nodes React owns
-  // with its own <font> wrappers. The next render that removes one of those
-  // nodes — advancing to the next post in a playlist — throws "Failed to
-  // execute 'removeChild' on 'Node'" and takes the whole theater down. This is
-  // an interactive React app on every route, so the offer is suppressed
-  // sitewide rather than per-surface. TheaterLinkedText also wraps its text
-  // runs in elements so a translation *extension* (which ignores this
-  // attribute) can't crash the same way.
+  // Browser translation stays ENABLED on purpose (owner decision): reading a
+  // Spanish tweet in English is a feature, not a hazard to be switched off.
+  // What it costs us is that Chrome/Safari replace the text nodes React owns
+  // with their own <font> wrappers, so React must never keep a bare text node
+  // as the SIBLING of an element — see the note in TheaterLinkedText and
+  // `docs/specs/translation-safety.md`.
   return (
-    <html lang="en" translate="no" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
-        <meta name="google" content="notranslate" />
         {/* Blocking script to prevent theme FOUC - runs before React hydrates */}
         <script
           dangerouslySetInnerHTML={{

@@ -171,7 +171,19 @@ export interface GetTrendingOptions {
    * to 0. Used by `/api/activity` to fetch older pages for infinite scroll.
    */
   offset?: number
+  /**
+   * Only consider activity from the last N hours. Opt-in, and deliberately
+   * NOT applied to `/trending`: the theater's live mode is defined as "what
+   * the community previewed, saved and sent in the last 24 hours" (owner), so
+   * a quiet night must leave the queue short rather than backfilling it with
+   * last week's posts. The `/trending` hubs are a ranked all-time-ish board
+   * and keep their unbounded window so a quiet day can't empty an SEO page.
+   */
+  withinHours?: number
 }
+
+/** The live window for the theater + `/api/activity` (see `withinHours`). */
+export const LIVE_WINDOW_HOURS = 24
 
 export interface TrendingResult {
   items: TrendingItem[]
@@ -223,7 +235,17 @@ function getCache(): TrendingCache {
 }
 
 function cacheKey(opts: GetTrendingOptions): string {
-  return `${opts.platform ?? '*'}:${opts.limit ?? LIMIT}:${opts.minTrend ?? '*'}:${opts.offset ?? 0}`
+  // `withinHours` MUST be part of the key — the windowed live feed and the
+  // unbounded /trending board otherwise share a cache entry and one serves
+  // the other's rows. The key carries the hours, not the derived cutoff
+  // timestamp, so the entry stays hittable for its whole TTL.
+  return [
+    opts.platform ?? '*',
+    opts.limit ?? LIMIT,
+    opts.minTrend ?? '*',
+    opts.offset ?? 0,
+    opts.withinHours ?? '*',
+  ].join(':')
 }
 
 /**
@@ -258,6 +280,13 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
   // what happens if a very deep offset outruns this window.
   const rawFetchSize = Math.min(600, Math.max(FETCH, (offset + limit) * 3))
 
+  // Live window (opt-in, see `withinHours`). ISO strings compare lexically,
+  // which is what every other date filter in this file relies on.
+  const since =
+    opts.withinHours && opts.withinHours > 0
+      ? new Date(Date.now() - opts.withinHours * 60 * 60 * 1000).toISOString()
+      : null
+
   // ANONYMITY CHOKE POINT: this select lists ONLY public columns. `userId` is
   // intentionally absent and must stay that way.
   const rows = db
@@ -278,9 +307,11 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
     })
     .from(activity)
     .where(
-      platformFilter
-        ? and(eq(activity.hidden, 0), eq(activity.platform, platformFilter))
-        : eq(activity.hidden, 0),
+      and(
+        eq(activity.hidden, 0),
+        ...(platformFilter ? [eq(activity.platform, platformFilter)] : []),
+        ...(since ? [gte(activity.createdAt, since)] : []),
+      ),
     )
     .orderBy(desc(activity.createdAt))
     .limit(rawFetchSize)

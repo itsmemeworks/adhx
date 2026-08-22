@@ -1,7 +1,7 @@
 import { db } from '@/lib/db'
 import { tagShares, bookmarkTags, bookmarks, bookmarkMedia } from '@/lib/db/schema'
 import { and, desc, eq, inArray } from 'drizzle-orm'
-import { getTrendingItems } from '@/lib/trending/query'
+import { getTrendingItems, LIVE_WINDOW_HOURS } from '@/lib/trending/query'
 import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
 
@@ -24,7 +24,14 @@ const THEATER_MIN_ITEMS = 12
 const THEATER_MAX_ITEMS = 30
 
 export async function getTheaterFeed(): Promise<TheaterFeedSeed> {
-  const { items, savedToday, recentActivity } = await getTrendingItems({ limit: THEATER_MAX_ITEMS })
+  // Live mode is "the last 24 hours of community activity" (owner) — the same
+  // window `/api/activity` polls with, so the poll never surfaces a post the
+  // seed excluded. When that window is thin the public-tag backfill below
+  // still keeps the stage from opening empty.
+  const { items, savedToday, recentActivity } = await getTrendingItems({
+    limit: THEATER_MAX_ITEMS,
+    withinHours: LIVE_WINDOW_HOURS,
+  })
 
   let combined: TheaterItem[] = items
 

@@ -362,8 +362,10 @@ export interface TheaterLinkedTextProps {
  * 'removeChild' on 'Node'"), which killed the whole theater when advancing to
  * the next post. With each run inside an element, translation only ever mutates
  * that element's children, and React's removes/text-sets still target a node
- * that is really there. (`translate="no"` in the root layout stops the
- * built-in translators; this is what covers extensions, which ignore it.)
+ * that is really there. Browser translation is deliberately left ENABLED
+ * app-wide (reading a Spanish tweet in English is the point), so this is the
+ * only thing standing between a translated caption and a dead theater — see
+ * `docs/specs/translation-safety.md`.
  */
 export function TheaterLinkedText({
   text,

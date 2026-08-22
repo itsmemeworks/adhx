@@ -19,9 +19,9 @@ import { TheaterLinkedText } from '@/components/theater/TheaterText'
  *   2. after simulating a translation pass, re-rendering with the next post's
  *      text still works instead of throwing.
  *
- * `translate="no"` in the root layout stops the *built-in* translators; this
- * component-level hardening is what covers translation extensions, which
- * ignore the attribute.
+ * Translation is deliberately left enabled app-wide (owner decision — reading
+ * a Spanish tweet in English is a feature), so this hardening is the actual
+ * fix, not a backstop. See `docs/specs/translation-safety.md`.
  */
 
 /**

@@ -28,6 +28,16 @@ export interface SeenSet {
   markSeen(key: string): void
   /** Previous visit timestamp (ms epoch), null on first ever visit. */
   lastVisitAt: number | null
+  /**
+   * The seen list as it was the moment this session read storage — what the
+   * viewer had ALREADY watched when they arrived. Unlike `isSeen`, it does not
+   * grow as they watch, which is exactly what queue ORDERING needs: the live
+   * queue is sorted unseen-first once, on arrival, so the post you're watching
+   * doesn't jump to the back of the queue the instant its dwell timer marks it
+   * seen. Use `isSeen` for "is it seen NOW" (the ✓ on a card), this for "was it
+   * already seen when we built the queue".
+   */
+  seenOnEntry: readonly string[]
 }
 
 /** Parse the persisted seen-list. Missing/corrupt/wrong-shaped storage → `[]`, never throws. */
@@ -73,13 +83,17 @@ export function useSeenSet(): SeenSet {
 
   // Guards against writing adhx-last-visit more than once per hide/unload.
   const visitRecordedRef = useRef(false)
+  // Frozen copy of what storage held on arrival — see `seenOnEntry`.
+  const [seenOnEntry, setSeenOnEntry] = useState<readonly string[]>([])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
 
     try {
       setLastVisitAt(parseLastVisit(window.localStorage.getItem(LAST_VISIT_KEY)))
-      setSeen(parseSeenList(window.localStorage.getItem(SEEN_KEY)))
+      const stored = parseSeenList(window.localStorage.getItem(SEEN_KEY))
+      setSeen(stored)
+      setSeenOnEntry(stored)
     } catch {
       // localStorage inaccessible (private mode, disabled storage, etc.) —
       // degrade to "nothing seen yet" rather than crash.
@@ -124,5 +138,5 @@ export function useSeenSet(): SeenSet {
     })
   }, [])
 
-  return { ready, isSeen, markSeen, lastVisitAt }
+  return { ready, isSeen, markSeen, lastVisitAt, seenOnEntry }
 }

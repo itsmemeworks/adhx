@@ -28,6 +28,9 @@ import { GET as activityGET } from '@/app/api/activity/route'
 
 const SECRET_USER = 'secret-user-should-never-leak'
 
+/** `GET /api/activity` now restricts to the last 24h (LIVE_WINDOW_HOURS) — seed relative to now. */
+const minsAgo = (n: number) => new Date(Date.now() - n * 60_000).toISOString()
+
 function seedActivity(overrides: Partial<NewActivity> & { createdAt: string; bookmarkId: string }) {
   const row: NewActivity = {
     action: 'save',
@@ -114,7 +117,7 @@ describe('trending offset pagination', () => {
       seedActivity({
         bookmarkId: String(i),
         userId: SECRET_USER,
-        createdAt: `2026-06-06T10:0${i}:00Z`,
+        createdAt: minsAgo(5 - i),
       })
     }
 
@@ -131,7 +134,7 @@ describe('trending offset pagination', () => {
 
   it('GET /api/activity paginates via ?offset= consistently with getTrendingItems, with no page overlap', async () => {
     for (let i = 1; i <= 5; i++) {
-      seedActivity({ bookmarkId: String(i), createdAt: `2026-06-06T10:0${i}:00Z` })
+      seedActivity({ bookmarkId: String(i), createdAt: minsAgo(6 - i) })
     }
 
     const page1Res = await activityGET(new NextRequest('http://localhost/api/activity'))
@@ -149,7 +152,7 @@ describe('trending offset pagination', () => {
 
   it('ignores a negative or non-numeric offset (treats it as 0) rather than erroring', async () => {
     for (let i = 1; i <= 3; i++) {
-      seedActivity({ bookmarkId: String(i), createdAt: `2026-06-06T10:0${i}:00Z` })
+      seedActivity({ bookmarkId: String(i), createdAt: minsAgo(4 - i) })
     }
 
     const res = await activityGET(new NextRequest('http://localhost/api/activity?offset=-5'))

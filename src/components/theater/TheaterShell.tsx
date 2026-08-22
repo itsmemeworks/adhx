@@ -200,6 +200,78 @@ export function pinKeyFirst<
 }
 
 /**
+ * Pure: the live queue's playback order — everything the viewer has NOT
+ * watched yet first (recency order preserved), then everything they have.
+ *
+ * Live mode is "what the community previewed, saved and sent in the last 24
+ * hours" (owner), and the point of opening it is to watch what you haven't
+ * seen: unseen posts are always what plays, a refresh resumes at the next
+ * unwatched post (their keys sorted to the front, so index 0 IS that post),
+ * and already-watched posts stay in the queue — reachable by browsing, or
+ * wholesale via the waiting stage's re-watch button / repeat — but nothing
+ * auto-plays them.
+ *
+ * `wasSeen` MUST be the arrival snapshot (`SeenSet.seenOnEntry`), not the live
+ * seen state: ordering off the live state would yank the post you're watching
+ * to the back of the queue the moment its dwell timer marks it seen.
+ * Collection and shared modes never call this — a curated collection has its
+ * own order, and a shared post always leads.
+ */
+export function orderUnseenFirst<
+  T extends { platform: string; bookmarkId?: string | null; url: string },
+>(items: T[], wasSeen: (key: string) => boolean): T[] {
+  const unseen: T[] = []
+  const seen: T[] = []
+  for (const item of items) {
+    ;(wasSeen(theaterItemKey(item)) ? seen : unseen).push(item)
+  }
+  // Same reference back when there's nothing to reorder — cheap re-renders.
+  if (seen.length === 0 || unseen.length === 0) return items
+  return [...unseen, ...seen]
+}
+
+/**
+ * Pure: how many items at the front of an `orderUnseenFirst` queue are unseen
+ * — i.e. the index where the already-watched block starts. `0` means the
+ * viewer has watched everything in the window (the caught-up case).
+ */
+export function unseenBlockLength<
+  T extends { platform: string; bookmarkId?: string | null; url: string },
+>(items: T[], wasSeen: (key: string) => boolean): number {
+  let n = 0
+  while (n < items.length && !wasSeen(theaterItemKey(items[n]))) n++
+  return n
+}
+
+/**
+ * Pure: where a `goNext` lands, folding in the unseen boundary on top of
+ * `computeLoopedNext`.
+ *
+ * An AUTO advance (a video ending, the timed dwell) stops at the end of the
+ * unseen block and hands over to the waiting stage rather than rolling into
+ * posts the viewer already watched — "you would need to specifically click
+ * the re-watch button or hit repeat" (owner). Three things deliberately
+ * bypass the boundary: user-initiated navigation (browsing on is always
+ * allowed), `loop` (collection mode, or repeat 'all' — an explicit opt-in to
+ * going round again), and `unseenCount === 0` (nothing unseen to protect, so
+ * end-of-feed behaviour applies as before; the caught-up stage is entered up
+ * front in that case instead).
+ */
+export function computeLiveNext(opts: {
+  length: number
+  index: number
+  unseenCount: number
+  loop: boolean
+  userInitiated: boolean
+}): number | 'waiting' | null {
+  const { length, index, unseenCount, loop, userInitiated } = opts
+  const next = computeLoopedNext(length, index, loop)
+  if (typeof next !== 'number') return next
+  if (loop || userInitiated || unseenCount <= 0) return next
+  return next >= unseenCount ? 'waiting' : next
+}
+
+/**
  * Pure: the canonical preview path to sync the address bar to for the given
  * item, or null when there isn't a well-formed one to sync to. `previewPath()`
  * happily builds a malformed path (e.g. `//status/123`) from an empty author,
@@ -873,15 +945,50 @@ export function TheaterShell({
   const sharedItemKey = mode === 'shared' && sharedItem ? theaterItemKey(sharedItem) : null
 
   // Set once a user has navigated (keyboard/rail click) — after that, the
-  // "lead item = max trendCount among unseen" pick below never overrides
-  // their choice.
+  // opening pick below never overrides their choice.
   const hasNavigatedRef = useRef(false)
   const leadAppliedRef = useRef(false)
 
-  // The list every index/nav computation below operates on — `items` with
-  // the pinned key (if any) moved to the front. Keep this as THE list used
-  // everywhere so the rail/mobile-chrome render order matches keyboard order.
-  const displayItems = useMemo(() => pinKeyFirst(items, pinnedKey), [items, pinnedKey])
+  // Set by the waiting stage's re-watch button: the viewer has explicitly
+  // asked to go round the already-watched queue again, so the unseen boundary
+  // stops applying for the rest of the session (repeat 'all' is the other
+  // opt-in, handled via `loop`). Never set implicitly — that's the whole
+  // point of the owner's "you would need to specifically click it".
+  const [rewatching, setRewatching] = useState(false)
+
+  // Does this surface order its queue unseen-first? The live feed does (home,
+  // and the authed Live tab). A shared post always leads, and a curated tag
+  // collection keeps its curated order — neither is a "what's new" queue.
+  const liveOrdering = !sharedItem && !loop
+  // ORDERING uses the arrival snapshot, never the live seen state — see
+  // `orderUnseenFirst`. Identity is stable per snapshot so the memos below
+  // don't recompute as the viewer marks things seen.
+  const seenOnEntry = seenSet.seenOnEntry
+  const wasSeenOnEntry = useCallback((key: string) => seenOnEntry.includes(key), [seenOnEntry])
+
+  // The list every index/nav computation below operates on: the live queue
+  // ordered unseen-first, then the pinned key (if any) moved to the front.
+  // Keep this as THE list used everywhere so the rail/mobile-chrome render
+  // order matches keyboard order.
+  const orderedItems = useMemo(
+    () => (liveOrdering && seenSet.ready ? orderUnseenFirst(items, wasSeenOnEntry) : items),
+    [items, liveOrdering, seenSet.ready, wasSeenOnEntry],
+  )
+  const displayItems = useMemo(
+    () => pinKeyFirst(orderedItems, pinnedKey),
+    [orderedItems, pinnedKey],
+  )
+
+  // Where the already-watched block starts. 0 disables the boundary entirely
+  // (nothing unseen, or the viewer opted into a re-watch / repeat 'all'), which
+  // is exactly what `computeLiveNext` treats as "no boundary".
+  const unseenCount = useMemo(
+    () =>
+      liveOrdering && seenSet.ready && !rewatching
+        ? unseenBlockLength(displayItems, wasSeenOnEntry)
+        : 0,
+    [displayItems, liveOrdering, seenSet.ready, rewatching, wasSeenOnEntry],
+  )
 
   // Seed savedKeys with EXISTING collection membership: a live-tab post the
   // viewer already saved (this session or any other) must show "Saved", not
@@ -938,8 +1045,8 @@ export function TheaterShell({
   const stagedFromWaitingKeyRef = useRef<string | null>(null)
 
   // Land on the first item immediately (no flash of an empty stage); a
-  // moment later, once localStorage seen-state has hydrated, jump to the
-  // best unseen lead — but only if the user hasn't already moved on their own.
+  // moment later, once localStorage seen-state has hydrated, the queue
+  // reorders unseen-first and the effect below re-points at its head.
   // In shared mode the seed's first item IS the shared post (buildSharedSeed
   // puts it first), so this already lands on it with no extra branching.
   useEffect(() => {
@@ -949,28 +1056,32 @@ export function TheaterShell({
   }, [displayItems, currentKey])
 
   useEffect(() => {
-    // Shared mode never re-picks a "best" lead — the shared post is ALWAYS
-    // the initial current item, regardless of trendCount or seen-state.
-    // Collection mode never re-picks either — a curated tag collection
-    // always opens on its first item (curated order), never reshuffled by
-    // trendCount (mostly 0/absent for saved items anyway) or by whatever
-    // this viewer happens to have already seen elsewhere on the site.
+    // Shared mode never re-picks — the shared post is ALWAYS the initial
+    // current item, whatever this viewer has seen elsewhere. Collection mode
+    // never re-picks either: a curated tag collection always opens on its
+    // first item, in curated order.
     if (sharedItem || loop) return
     if (!seenSet.ready || leadAppliedRef.current || hasNavigatedRef.current) return
     leadAppliedRef.current = true
     if (items.length === 0) return
-    const unseen = items.filter((it) => !seenSet.isSeen(theaterItemKey(it)))
-    const pool = unseen.length > 0 ? unseen : items
-    const lead = pool.reduce(
-      (best, it) => ((it.trendCount ?? 0) > (best.trendCount ?? 0) ? it : best),
-      pool[0],
-    )
-    const leadKey = theaterItemKey(lead)
-    // Pin the pick to the front of the display order — otherwise a lead that
-    // sits near the end of the recency-ordered feed clamps goNext right away.
-    setPinnedKey(leadKey)
-    setCurrentKey(leadKey)
-  }, [seenSet, items])
+    // `displayItems` is already ordered unseen-first by the time seen-state is
+    // ready, so its head IS "the next post you haven't watched" — which is
+    // also what makes a refresh resume where the viewer left off (owner), with
+    // no session bookkeeping to persist. This replaced a "highest trendCount
+    // among unseen" lead pick: the queue's own recency order is what the
+    // viewer can predict, and playback now walks the whole unseen block rather
+    // than one hand-picked post.
+    const head = displayItems[0]
+    if (!head) return
+    if (unseenCount === 0) {
+      // Everything in the live window has already been watched: park on the
+      // caught-up stage rather than silently replaying. Getting out of it is
+      // the explicit re-watch button (or repeat), never an auto-advance.
+      waitingBaselineFreshKeysRef.current = new Set(freshKeysRef.current)
+      setWaiting(true)
+    }
+    setCurrentKey(theaterItemKey(head))
+  }, [seenSet.ready, items, displayItems, unseenCount, sharedItem, loop])
 
   const currentIndex = useMemo(
     () => displayItems.findIndex((it) => theaterItemKey(it) === currentKey),
@@ -1024,46 +1135,60 @@ export function TheaterShell({
   // re-registering that listener on every navigation (mirrors itemsRef).
   const currentRef = useRef(current)
   currentRef.current = current
+  // Same trick for the unseen boundary — goNext is an empty-deps callback.
+  const unseenCountRef = useRef(unseenCount)
+  unseenCountRef.current = unseenCount
 
-  const goNext = useCallback(() => {
-    setCurrentKey((key) => {
-      // Round 8: an auto-advance off the waiting stage's auto-played fresh
-      // arrival goes back to waiting for the NEXT new send, never onward
-      // into the queue the viewer already sat through. The accumulated
-      // baseline already contains this arrival's key (added when it was
-      // staged), so anything that arrived in the meantime is picked up by
-      // the arrival effect immediately. User navigation never lands here —
-      // `goNextUser` clears the staged key first.
-      if (shouldRewaitAfterArrival(stagedFromWaitingKeyRef.current, key, repeatModeRef.current)) {
-        stagedFromWaitingKeyRef.current = null
-        setWaiting(true)
-        return key
-      }
-      const idx = itemsRef.current.findIndex((it) => theaterItemKey(it) === key)
-      const next = computeLoopedNext(
-        itemsRef.current.length,
-        idx,
-        loop || repeatModeRef.current === 'all',
-      )
-      if (next === null) return key
-      if (next === 'waiting') {
-        // Advancing past the last post enters the waiting stage instead of
-        // clamping silently. Idempotent: a repeat advance (e.g. another
-        // keypress) while already waiting must not reset the baseline —
-        // that would make an item that arrived a moment ago look "not new"
-        // and get missed by the fresh-arrival effect below. Collection mode
-        // never reaches this branch (computeLoopedNext never returns
-        // 'waiting' when `loop` is true).
-        if (!waitingRef.current) {
-          waitingBaselineFreshKeysRef.current = new Set(freshKeysRef.current)
+  // `userInitiated` is passed as an ARGUMENT (not read from a ref) because the
+  // updater below runs in React's render phase, long after the call returned —
+  // a ref would already have been reset. Only `goNextUser` passes true; every
+  // auto-advance path (video ended, timed dwell, arrival staging) leaves it
+  // false, which is what makes the unseen boundary a boundary.
+  const goNext = useCallback(
+    (userInitiated = false) => {
+      setCurrentKey((key) => {
+        // Round 8: an auto-advance off the waiting stage's auto-played fresh
+        // arrival goes back to waiting for the NEXT new send, never onward
+        // into the queue the viewer already sat through. The accumulated
+        // baseline already contains this arrival's key (added when it was
+        // staged), so anything that arrived in the meantime is picked up by
+        // the arrival effect immediately. User navigation never lands here —
+        // `goNextUser` clears the staged key first.
+        if (shouldRewaitAfterArrival(stagedFromWaitingKeyRef.current, key, repeatModeRef.current)) {
+          stagedFromWaitingKeyRef.current = null
           setWaiting(true)
+          return key
         }
-        return key
-      }
-      hasNavigatedRef.current = true
-      return theaterItemKey(itemsRef.current[next])
-    })
-  }, [loop])
+        const idx = itemsRef.current.findIndex((it) => theaterItemKey(it) === key)
+        const next = computeLiveNext({
+          length: itemsRef.current.length,
+          index: idx,
+          unseenCount: unseenCountRef.current,
+          loop: loop || repeatModeRef.current === 'all',
+          userInitiated,
+        })
+        if (next === null) return key
+        if (next === 'waiting') {
+          // Either the last post in the queue, or (auto-advance only) the end
+          // of the unseen block — both hand over to the waiting stage instead
+          // of clamping silently or replaying watched posts. Idempotent: a
+          // repeat advance (e.g. another keypress) while already waiting must
+          // not reset the baseline — that would make an item that arrived a
+          // moment ago look "not new" and get missed by the fresh-arrival
+          // effect below. Collection mode never reaches this branch
+          // (computeLiveNext never returns 'waiting' when `loop` is true).
+          if (!waitingRef.current) {
+            waitingBaselineFreshKeysRef.current = new Set(freshKeysRef.current)
+            setWaiting(true)
+          }
+          return key
+        }
+        hasNavigatedRef.current = true
+        return theaterItemKey(itemsRef.current[next])
+      })
+    },
+    [loop],
+  )
 
   const goPrev = useCallback(() => {
     // While waiting, "back" just returns to the last post it's already
@@ -1104,7 +1229,10 @@ export function TheaterShell({
     // viewer choosing to continue past the arrival means "browse the queue",
     // not "wait again after this one".
     stagedFromWaitingKeyRef.current = null
-    goNext()
+    // `true` = user-initiated: browsing on past the unseen block into
+    // already-watched posts is always allowed, it's only AUTO-advance that
+    // stops at the boundary.
+    goNext(true)
   }, [clearSharedPin, goNext])
 
   const goPrevUser = useCallback(() => {
@@ -1149,14 +1277,18 @@ export function TheaterShell({
     setRepeatMode(next)
   }, [clearSharedPin, loop])
 
-  // "Start from the beginning" on the waiting stage (round 8) — a deliberate
-  // navigation back to the top of the queue.
+  // The waiting stage's re-watch button — a deliberate navigation back to the
+  // top of the queue. This is the explicit opt-in the owner asked for: it also
+  // lifts the unseen boundary for the rest of the session (`rewatching`), so
+  // auto-advance carries on through posts already watched instead of bouncing
+  // straight back to the caught-up stage after one post.
   const replayFromStart = useCallback(() => {
     const first = itemsRef.current[0]
     if (!first) return
     hasNavigatedRef.current = true
     clearSharedPin()
     stagedFromWaitingKeyRef.current = null
+    setRewatching(true)
     setWaiting(false)
     setCurrentKey(theaterItemKey(first))
   }, [clearSharedPin])
@@ -1611,6 +1743,7 @@ export function TheaterShell({
                   <StageWaiting
                     savedToday={feed.savedToday}
                     onReplay={displayItems.length > 0 ? replayFromStart : undefined}
+                    replayCount={displayItems.length}
                   />
                 </div>
               )}
