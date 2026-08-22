@@ -71,6 +71,14 @@ COPY --from=builder --chown=nextjs:nodejs /app/src/lib/db/migrate.ts ./src/lib/d
 COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
+# One-off maintenance scripts, run by hand against a deployed volume:
+#   fly ssh console --app adhx -C "tsx /app/scripts/<name>.ts"
+# `tsx` is already global (above) and these are dry-run-by-default, so shipping
+# them costs nothing at runtime and beats pasting untested code into a live
+# container. Their `src/lib` imports are relative, hence the second COPY.
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
+COPY --from=builder --chown=nextjs:nodejs /app/src/lib/sync/added-at.ts ./src/lib/sync/added-at.ts
+
 # Create data directory for SQLite (will be mounted as volume)
 RUN mkdir -p /data && chown nextjs:nodejs /data
 
