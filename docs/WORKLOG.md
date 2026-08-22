@@ -4,6 +4,16 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-22 — Mobile's Live/Collection switch moves into the burger
+
+Round trip worth recording, because the first answer was wrong. Owner asked for the mobile tab switcher to go "to the top, just like it is on desktop"; I mirrored the desktop pill into the mobile top scrim, and the owner immediately called the real constraint: "that is going to definitely cause overlap with the logo, the play stats, and the paste and burger menu — why not just put it in the burger menu for mobile? Theater just has two sub options: live and collection and we can just highlight which one is selected." Correct: the scrim carries logo + flame/trend chip + platform/time chip + paste + burger, and the pill wants ~190 of ~390px.
+
+- **`TheaterTabsGroup`** in `TheaterAvatarMenu.tsx`: a THEATER heading, then Live / My Collection as indented rows, selected one marked with the bright ink + clay dot + `aria-current="page"` the other rows already use. Buttons, not anchors — `onTabChange` flips the tab locally before navigating, where a link would reload the stage mid-watch. Gated on a new opt-in `theaterTabs` prop: mobile passes it, **desktop does not** and keeps its top-bar pill, so the control is never rendered twice.
+- **"Your collection" → "Library"** in the same menu. My change created the collision (a "My Collection" sub-option one row below a "Your collection" row pointing at `/library`), and Library is the repo's own word for that grid.
+- **The vacated peek-bar centre** now carries the queue position in triage too — closing the gap flagged the round before, where triage was the one mode with nowhere to show the boundary-aware count. `· N new` is suppressed on the Collection tab: nothing arrives into a finite backlog mid-session.
+- **Harness limitation, remember this**: `resize_window` reports success but `window.innerWidth` stays pinned at 1440 in this Chrome MCP setup (`outerWidth` does change — 728 — so the OS window shrinks while the layout viewport doesn't). Tailwind breakpoints therefore never flip and a true mobile render is unavailable locally. Workaround used: both chromes are always in the DOM (`lg:hidden` is display:none, not unmounted), so force the mobile root visible with an inline `width:390px` and measure real rects. Got: logo 16→104, burger 292→332, close 338→374, dropdown 240px wide at left 92, no overflow, no stray tab buttons; switching to My Collection routed to `/collection`, moved the dot, and the peek bar read "1 / 9". That measures fit and wiring honestly but NOT media-query-dependent styling — device eyeballing still belongs to the owner.
+- **State**: 2356 tests / 186 files green, typecheck + lint + prettier clean. The old mobile-chrome tab-order test became a wiring test (chrome hands `theaterTabs` to the menu, draws no tabs itself), and `TheaterAvatarMenu.component.test.tsx` gained a 6-test group for the sub-options.
+
 ## 2026-08-22 — "Caught up" now means nothing unwatched ANYWHERE (+ watched state, panel title, dead-video skip)
 
 Four owner reports, all versions of the queue misdescribing itself.
