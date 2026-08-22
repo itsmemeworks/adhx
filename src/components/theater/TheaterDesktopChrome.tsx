@@ -1333,7 +1333,7 @@ export function DesktopDock({
             {triage.streak.current > 0 && (
               <span className="inline-flex items-center gap-0.5 font-semibold text-flame">
                 <Flame size={10} fill="currentColor" />
-                {triage.streak.current}
+                <span>{triage.streak.current}</span>
               </span>
             )}
           </span>
