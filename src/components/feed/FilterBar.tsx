@@ -593,9 +593,15 @@ export function FilterBar({
           </AnchoredMenu>
         </div>
 
-        {/* Unread only toggle — hidden while a tag is selected: a tag is a
-            deliberately curated set, so read state doesn't apply there (the
-            feed fetch ignores unreadOnly for tag views too). */}
+        {/* Hide-archived toggle — hidden while a tag is selected: a tag is a
+            deliberately curated set, so this doesn't apply there (the feed
+            fetch ignores unreadOnly for tag views too).
+            NOTE the vocabulary: the underlying flag is still `unreadOnly` and
+            the column is still read_status, because renaming a shipped API and
+            DB column is a separate job — but the USER-FACING idea is archiving
+            (owner: "'marking as unread' is the wrong nomenclature… what this
+            allows you to do is archive older posts you're no longer interested
+            in being part of your collection"). On = active posts only. */}
         {selectedTags.length === 0 && (
           <button
             onClick={() => onUnreadOnlyChange(!unreadOnly)}
@@ -607,7 +613,7 @@ export function FilterBar({
             )}
           >
             <EyeOff className="w-3.5 h-3.5" />
-            <span>Unread only</span>
+            <span>Hide archived</span>
             <span
               className={cn(
                 'text-[11.5px] rounded-full px-[7px] py-px',

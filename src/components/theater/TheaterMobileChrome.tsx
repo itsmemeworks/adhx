@@ -29,6 +29,7 @@ import {
   Clock,
   Tag as TagIcon,
   Trash2,
+  Archive as ArchiveIcon,
   ChevronUp,
   ChevronDown,
   Pause,
@@ -632,7 +633,7 @@ export function TheaterMobileChrome({
             {/* Tag chips (unified-theater-triage.md §B) — the Collection
                 tab's current item only; display-only, nothing renders
                 without tags. */}
-            {triage?.tab === 'collection' && triage.tags && triage.tags.length > 0 && (
+            {triage?.tags && triage.tags.length > 0 && (
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                 {triage.tags.map((t) => (
                   <span
@@ -678,10 +679,11 @@ export function TheaterMobileChrome({
               <button
                 type="button"
                 onClick={triage.onDone}
+                title="Archive — take it out of your collection queue"
                 className="inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl bg-done/25 text-[11px] font-semibold text-done"
               >
-                <Check size={16} />
-                <span>Done</span>
+                <ArchiveIcon size={16} />
+                <span>Archive</span>
               </button>
               {(() => {
                 const openUrl = sourceUrl(
@@ -746,8 +748,6 @@ export function TheaterMobileChrome({
                           rather than silently sharing a link. */}
                       {sendFile.sending ? (
                         <Loader2 size={15} className="animate-spin" />
-                      ) : sendFile.mode === 'share' ? (
-                        <Share2 size={15} />
                       ) : (
                         <DownloadIcon size={15} />
                       )}
@@ -755,10 +755,8 @@ export function TheaterMobileChrome({
                         {sendFile.sending
                           ? 'Getting file'
                           : sendFile.primed
-                            ? 'Send now'
-                            : sendFile.mode === 'share'
-                              ? 'Send'
-                              : 'Download'}
+                            ? 'Tap again'
+                            : 'Download'}
                       </span>
                     </button>
                   ) : textLike && (current.text || '').trim() ? (
@@ -789,23 +787,21 @@ export function TheaterMobileChrome({
                       >
                         <TagIcon size={16} />
                       </StageIconButton>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!triage.savedKeys.has(theaterItemKey(current))) triage.onSave(current)
-                        }}
-                        disabled={triage.savedKeys.has(theaterItemKey(current))}
-                        className={PILL_SAVE}
-                      >
-                        {triage.savedKeys.has(theaterItemKey(current)) ? (
-                          <Check size={15} />
-                        ) : (
+                      {/* Once it's saved the button goes away entirely (owner:
+                          "there's no point in showing 'Saved' for a post —
+                          simply show the tag icon because that denotes that
+                          it's already saved"). The tag icon beside it is both
+                          the affordance and the state. */}
+                      {!triage.savedKeys.has(theaterItemKey(current)) && (
+                        <button
+                          type="button"
+                          onClick={() => triage.onSave(current)}
+                          className={PILL_SAVE}
+                        >
                           <Bookmark size={15} />
-                        )}
-                        <span>
-                          {triage.savedKeys.has(theaterItemKey(current)) ? 'Saved' : 'Save'}
-                        </span>
-                      </button>
+                          <span>Save</span>
+                        </button>
+                      )}
                     </>
                   ) : mode === 'shared' && authed ? (
                     // Signed-in viewers save directly — same branch the

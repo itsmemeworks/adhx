@@ -32,7 +32,6 @@ import {
   Copy as CopyIcon,
   Maximize2,
   Download as DownloadIcon,
-  Share2,
   Link as LinkIcon,
   ExternalLink,
   Flame,
@@ -40,6 +39,7 @@ import {
   Repeat1,
   Tag as TagIcon,
   Trash2,
+  Archive as ArchiveIcon,
   ChevronLeft,
   ChevronRight,
   ChevronUp,
@@ -783,7 +783,7 @@ export function DesktopStageChrome({
               Text/quote/article posts render their own composition on the
               stage (no media overlay here), so their chips are rendered by
               `TriageStage` itself, aligned to the text column instead. */}
-          {triage?.tab === 'collection' && triage.tags && triage.tags.length > 0 && (
+          {triage?.tags && triage.tags.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5">
               {triage.tags.map((t) => (
                 <span
@@ -824,9 +824,14 @@ export function DesktopStageChrome({
             <Trash2 size={14} />
             <span>Delete</span>
           </button>
-          <button type="button" onClick={triage.onDone} className={PRIMARY}>
-            <Check size={14} />
-            <span>Done</span>
+          <button
+            type="button"
+            onClick={triage.onDone}
+            title="Archive — take it out of your collection queue"
+            className={PRIMARY}
+          >
+            <ArchiveIcon size={14} />
+            <span>Archive</span>
           </button>
           {openUrl && (
             <a
@@ -866,19 +871,11 @@ export function DesktopStageChrome({
                   here on a tablet, which gets this chrome at lg+ widths. */}
               {sendFile.sending ? (
                 <Loader2 size={14} className="animate-spin" />
-              ) : sendFile.mode === 'share' ? (
-                <Share2 size={14} />
               ) : (
                 <DownloadIcon size={14} />
               )}
               <span>
-                {sendFile.sending
-                  ? 'Getting file'
-                  : sendFile.primed
-                    ? 'Send now'
-                    : sendFile.mode === 'share'
-                      ? 'Send'
-                      : 'Download'}
+                {sendFile.sending ? 'Getting file' : sendFile.primed ? 'Tap again' : 'Download'}
               </span>
             </button>
           ) : textLike && caption ? (

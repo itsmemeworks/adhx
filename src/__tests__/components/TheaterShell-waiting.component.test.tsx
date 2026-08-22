@@ -30,10 +30,12 @@ import { TheaterShell } from '@/components/theater/TheaterShell'
 import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
 
+const mockStage = vi.fn((_props: Record<string, unknown>) => null)
 vi.mock('@/components/theater/Stage', () => ({
-  Stage: (props: { item: TheaterItem | null }) => (
-    <div data-testid="stage" data-item-key={props.item ? theaterItemKey(props.item) : ''} />
-  ),
+  Stage: (props: { item: TheaterItem | null; onEnded?: () => void }) => {
+    mockStage(props as unknown as Record<string, unknown>)
+    return <div data-testid="stage" data-item-key={props.item ? theaterItemKey(props.item) : ''} />
+  },
 }))
 
 const mockMobileChrome = vi.fn((_props: Record<string, unknown>) => null)
@@ -274,5 +276,47 @@ describe('TheaterShell: resuming from a caught-up arrival starts on item 1', () 
     })
 
     expect(queuePosition()).toEqual({ index: 0, length: 3 })
+  })
+})
+
+/**
+ * Owner report, with a screenshot: watching the Live theater, a post added from
+ * ANOTHER device arrived and went to the top ("New since you opened", 1/20).
+ * It played — and then the theater just stopped on a black stage instead of
+ * showing the caught-up screen.
+ */
+describe('TheaterShell: finishing a fresh arrival lands on the caught-up stage', () => {
+  beforeEach(() => {
+    pushArrival = null
+    mockMobileChrome.mockClear()
+    window.localStorage.clear()
+  })
+
+  /** Fire the video-ended handler the Stage stub was given. */
+  async function endCurrentItem() {
+    const onEnded = (mockStage.mock.calls.at(-1)![0] as { onEnded?: () => void }).onEnded
+    if (!onEnded) throw new Error('stage has no onEnded')
+    await act(async () => onEnded())
+  }
+
+  it('shows the caught-up stage after the arrival plays out', async () => {
+    // The whole window is already watched, so the shell parks on caught-up.
+    const items = [textItem('1'), textItem('2')]
+    markWatched(items)
+    await act(async () => {
+      render(<TheaterShell seed={seed(items)} />)
+    })
+    expect(screen.getByText('You’re all caught up')).toBeInTheDocument()
+
+    // A post added elsewhere arrives and takes over the stage.
+    const arrival = textItem('arrival')
+    await act(async () => pushArrival?.(arrival))
+    expect(screen.queryByText('You’re all caught up')).not.toBeInTheDocument()
+
+    // It finishes. Nothing else is unwatched, so the only correct next state
+    // is the caught-up stage — not a silent stop.
+    await endCurrentItem()
+
+    expect(screen.getByText('You’re all caught up')).toBeInTheDocument()
   })
 })

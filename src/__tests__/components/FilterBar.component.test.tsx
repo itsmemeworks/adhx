@@ -209,17 +209,19 @@ describe('FilterBar Component', () => {
   })
 
   describe('Unread Toggle', () => {
-    it('renders an "Unread only" toggle', () => {
+    // The user-facing idea is archiving, not read state (owner) — the
+    // underlying `unreadOnly` flag keeps its name.
+    it('renders the "Hide archived" toggle', () => {
       render(<FilterBar {...defaultProps} unreadOnly={false} />)
 
-      expect(screen.getByText(/unread only/i)).toBeTruthy()
+      expect(screen.getByText(/hide archived/i)).toBeTruthy()
     })
 
     it('shows the unread count when unreadOnly is true', () => {
       render(<FilterBar {...defaultProps} unreadOnly={true} />)
 
       const buttons = screen.getAllByRole('button')
-      const toggleButton = buttons.find((b) => b.textContent?.includes('Unread only'))
+      const toggleButton = buttons.find((b) => b.textContent?.includes('Hide archived'))
       expect(toggleButton?.textContent).toContain('50')
     })
 
@@ -227,7 +229,7 @@ describe('FilterBar Component', () => {
       render(<FilterBar {...defaultProps} unreadOnly={false} />)
 
       const buttons = screen.getAllByRole('button')
-      const toggleButton = buttons.find((b) => b.textContent?.includes('Unread only'))
+      const toggleButton = buttons.find((b) => b.textContent?.includes('Hide archived'))
       expect(toggleButton?.textContent).toContain('100')
     })
 
@@ -235,7 +237,7 @@ describe('FilterBar Component', () => {
       render(<FilterBar {...defaultProps} unreadOnly={true} />)
 
       const buttons = screen.getAllByRole('button')
-      const toggleButton = buttons.find((b) => b.textContent?.includes('Unread only'))
+      const toggleButton = buttons.find((b) => b.textContent?.includes('Hide archived'))
       expect(toggleButton?.className).toContain('bg-clay-grad')
     })
 
@@ -244,7 +246,7 @@ describe('FilterBar Component', () => {
       render(<FilterBar {...defaultProps} onUnreadOnlyChange={onUnreadOnlyChange} />)
 
       const buttons = screen.getAllByRole('button')
-      const toggleButton = buttons.find((b) => b.textContent?.includes('Unread only'))
+      const toggleButton = buttons.find((b) => b.textContent?.includes('Hide archived'))
       fireEvent.click(toggleButton!)
 
       expect(onUnreadOnlyChange).toHaveBeenCalledWith(true)

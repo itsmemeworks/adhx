@@ -17,7 +17,7 @@ import {
 } from '@/components/feed'
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { Loader2, CheckCircle2, MessageSquare, Check } from 'lucide-react'
+import { Loader2, CheckCircle2, MessageSquare } from 'lucide-react'
 import { TheaterShell } from '@/components/theater/TheaterShell'
 import type { TriageTab } from '@/components/theater/types'
 import { PasteToPreview } from '@/components/PasteToPreview'
@@ -69,17 +69,18 @@ function FeedPageContent(): React.ReactElement {
   const feedRequestRef = useRef(0)
   const [loading, setLoading] = useState(true)
   /**
-   * Paste-to-add status. A paste adds the post to the collection in place
-   * (owner: "it should simply just add it straight away at the top of my
-   * library. Nothing else needs to happen") — but adding involves a network
-   * round trip to the platform's resolver, so the wait and any failure need
-   * SOME acknowledgement or the paste reads as ignored. One transient pill,
-   * no modal, no navigation.
+   * Paste-to-add status. Success is NOT announced in words — the post appears
+   * at the top with a brief glow (`justAddedKey` below), because a banner
+   * saying "Added" pushed the entire grid down to state what the new card
+   * already shows (owner: "just something subtle"). Only the WAIT and a
+   * FAILURE get text, and it's positioned so it can't move the grid either.
    */
   const [pasteAdd, setPasteAdd] = useState<{
-    status: 'adding' | 'added' | 'duplicate' | 'error'
+    status: 'adding' | 'error'
     message?: string
   } | null>(null)
+  /** `platform:id` of the just-pasted post, held long enough to be noticed. */
+  const [justAddedKey, setJustAddedKey] = useState<string | null>(null)
   const [filter, setFilter] = useState<FilterType>(
     (searchParams.get('filter') as FilterType) || 'all',
   )
@@ -177,6 +178,7 @@ function FeedPageContent(): React.ReactElement {
       added,
       ...prev.filter((f) => !((f.platform ?? 'twitter') === platform && f.id === added.id)),
     ])
+    setJustAddedKey(`${platform}:${added.id}`)
   }, [])
 
   /**
@@ -206,7 +208,6 @@ function FeedPageContent(): React.ReactElement {
 
         const platform: string = data?.platform ?? 'twitter'
         const id: string | undefined = data?.bookmark?.id
-        const duplicate = data?.isDuplicate === true
 
         if (id) {
           const q = new URLSearchParams({ unreadOnly: 'false', filter: 'all', limit: '5' })
@@ -221,7 +222,9 @@ function FeedPageContent(): React.ReactElement {
           }
         }
 
-        setPasteAdd({ status: duplicate ? 'duplicate' : 'added' })
+        // No success text: the glowing card at the top IS the confirmation —
+        // for a fresh add, and for a re-paste that moved an existing card up.
+        setPasteAdd(null)
         // Refresh the header's counts only. Deliberately NOT `tweet-added`,
         // which `useSyncListener` turns into a full `fetchFeed(true)` — that
         // would throw away the prepend above and, with a filter or search
@@ -653,10 +656,19 @@ function FeedPageContent(): React.ReactElement {
   // grid is its own confirmation, but a failure is the only signal there is.
   useEffect(() => {
     if (!pasteAdd) return
-    const ms = pasteAdd.status === 'error' ? 6_000 : pasteAdd.status === 'adding' ? 30_000 : 2_500
+    // 'adding' is cleared by the request finishing; the long timeout is only a
+    // backstop so a hung request can't leave a spinner up forever.
+    const ms = pasteAdd.status === 'error' ? 6_000 : 30_000
     const timer = setTimeout(() => setPasteAdd(null), ms)
     return () => clearTimeout(timer)
   }, [pasteAdd])
+
+  // Hold the glow long enough to catch the eye, then let the card settle in.
+  useEffect(() => {
+    if (!justAddedKey) return
+    const timer = setTimeout(() => setJustAddedKey(null), 2_600)
+    return () => clearTimeout(timer)
+  }, [justAddedKey])
 
   // Listen for sync-complete (Header's SyncProgress component) and
   // tweet-added (URL-prefix add flow) events and refresh the feed/tags.
@@ -1156,30 +1168,29 @@ function FeedPageContent(): React.ReactElement {
           else PasteToPreview still routes to the preview page. */}
       <PasteToPreview onPastePost={addPastedPost} />
 
+      {/* Fixed, not in flow: this used to sit above the grid and shove every
+          card down the moment you pasted (owner). Only the wait and a failure
+          are worth words at all — a successful add is announced by the new
+          card's glow, not by text. */}
       {pasteAdd && (
         <div
           role="status"
           aria-live="polite"
-          className="flex items-center justify-center gap-2 px-4 pb-2 text-[12.5px]"
+          className="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center px-4"
         >
           <span
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5',
+              'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] shadow-m-sm backdrop-blur',
               pasteAdd.status === 'error'
-                ? 'border-clay/40 text-ink-2'
-                : 'border-hairline text-ink-3',
+                ? 'border-clay/40 bg-surface/95 text-ink-2'
+                : 'border-hairline bg-surface/95 text-ink-3',
             )}
           >
             {pasteAdd.status === 'adding' && <Loader2 size={13} className="animate-spin" />}
-            {pasteAdd.status === 'added' && <Check size={13} className="text-done" />}
             <span>
               {pasteAdd.status === 'adding'
-                ? 'Adding to your library\u2026'
-                : pasteAdd.status === 'added'
-                  ? 'Added'
-                  : pasteAdd.status === 'duplicate'
-                    ? 'Already in your library \u2014 moved to the top'
-                    : (pasteAdd.message ?? "Couldn't add that link")}
+                ? 'Adding\u2026'
+                : (pasteAdd.message ?? "Couldn't add that link")}
             </span>
           </span>
         </div>
@@ -1241,6 +1252,7 @@ function FeedPageContent(): React.ReactElement {
             onLoadMore={loadMore}
             onShowAll={() => setUnreadOnly(false)}
             tagSelectTag={tagSelectTag}
+            justAddedKey={justAddedKey}
           />
         </ErrorBoundary>
       </div>

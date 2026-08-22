@@ -21,13 +21,13 @@ export function TriageAllClear({ total, streak, onClose }: TriageAllClearProps) 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-[#08070a] px-6 text-center">
       <PartyPopper className="h-10 w-10 text-clay" />
-      <StageHeadline>{total > 0 ? 'All caught up' : 'Nothing to triage'}</StageHeadline>
+      <StageHeadline>{total > 0 ? 'All caught up' : 'Nothing to review'}</StageHeadline>
       {total > 0 ? (
         <p className="text-sm text-white/60">
-          You processed {total} {total === 1 ? 'item' : 'items'}.
+          You cleared {total} {total === 1 ? 'post' : 'posts'}.
         </p>
       ) : (
-        <p className="text-sm text-white/60">Your unread queue is empty. Nice.</p>
+        <p className="text-sm text-white/60">Nothing waiting in your collection. Nice.</p>
       )}
       {streak.current > 0 && (
         <p className="flex items-center justify-center gap-1.5 font-semibold text-orange-300">

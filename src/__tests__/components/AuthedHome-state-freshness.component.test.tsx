@@ -42,14 +42,16 @@ vi.mock('@/lib/theme/context', () => ({
   useThemeOptional: () => ({ theme: 'light', resolvedTheme: 'light', setTheme: vi.fn() }),
 }))
 
-/** Last `items` array the grid was rendered with. */
+/** Last props the grid was rendered with. */
 let renderedItems: FeedItem[] = []
+let renderedJustAddedKey: string | null | undefined
 vi.mock('@/components/feed', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/feed')>()
   return {
     ...actual,
-    FeedGrid: (props: { items: FeedItem[] }) => {
+    FeedGrid: (props: { items: FeedItem[]; justAddedKey?: string | null }) => {
       renderedItems = props.items
+      renderedJustAddedKey = props.justAddedKey
       return null
     },
     FilterBar: () => null,
@@ -97,6 +99,7 @@ beforeEach(() => {
   currentParamsObj = new URLSearchParams(currentQuery)
   urlListeners.clear()
   renderedItems = []
+  renderedJustAddedKey = undefined
   feedRequests = []
   tagsRequests = 0
   feedPages = [[feedItem('1'), feedItem('2')]]
@@ -245,6 +248,42 @@ describe('AuthedHome: pasting a link adds the post in place', () => {
     // One lookup for the added post; no page-1 reset behind it.
     expect(feedRequests.length).toBe(requestsBefore + 1)
     expect(feedRequests[feedRequests.length - 1]).toContain('id=')
+  })
+
+  /**
+   * Owner: "the added notification pushes all the content down — I don't think
+   * we need a specific temporary badge. Maybe just pulse the row… or have the
+   * orange glow around it." So success says nothing in words: the grid is told
+   * which card to glow, and no banner is added to the layout.
+   */
+  it('marks the new card for a glow instead of announcing it in the layout', async () => {
+    await mountGrid()
+    feedPages = [[feedItem('new')], feedPages[0]]
+
+    paste('https://x.com/alice/status/999')
+
+    await waitFor(() => expect(renderedJustAddedKey).toBe('twitter:new'))
+    // No "Added" text anywhere — the card is the confirmation.
+    expect(document.body.textContent).not.toMatch(/\bAdded\b/)
+  })
+
+  it('clears the glow so it does not become permanent decoration', async () => {
+    vi.useFakeTimers()
+    try {
+      render(<FeedPage />)
+      await vi.waitFor(() => expect(renderedItems.length).toBeGreaterThan(0))
+      feedPages = [[feedItem('new')], feedPages[0]]
+
+      paste('https://x.com/alice/status/999')
+      await vi.waitFor(() => expect(renderedJustAddedKey).toBe('twitter:new'))
+
+      await act(async () => {
+        vi.advanceTimersByTime(3_000)
+      })
+      expect(renderedJustAddedKey).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('does nothing for a link that is not a post', async () => {

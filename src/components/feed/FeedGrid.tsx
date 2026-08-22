@@ -27,11 +27,26 @@ interface FeedGridProps {
   // toggle/exit (Escape + the toolbar's "Done adding" button) — this prop is
   // display + membership-toggling only.
   tagSelectTag?: string | null
+  /**
+   * `platform:id` of a post to highlight briefly — what the library shows
+   * after a paste instead of a transient banner, which pushed the whole grid
+   * down (owner: "just something subtle").
+   */
+  justAddedKey?: string | null
 }
 
 /** `platform:id` key for the optimistic tag-membership overlay below. */
 function tagOverlayKey(item: FeedItem): string {
   return `${item.platform || 'twitter'}:${item.id}`
+}
+
+/**
+ * React key AND highlight key. Deliberately not the bare `item.id`: ids are
+ * only unique per platform (a TikTok video id and a tweet id can both be 19
+ * digits), so two platforms sharing one id rendered duplicate React keys.
+ */
+function cardKey(item: FeedItem): string {
+  return tagOverlayKey(item)
 }
 
 // Calm Matter grid: mobile 1 col → tablet 2 col (≥640) → 3 col (≥820) →
@@ -53,6 +68,7 @@ export function FeedGrid({
   onLoadMore,
   onShowAll,
   tagSelectTag = null,
+  justAddedKey = null,
 }: FeedGridProps): React.ReactElement {
   // Optimistic overlay for tag-membership toggles, keyed by `platform:id` —
   // items arrive via props, so membership changes are tracked here rather
@@ -165,7 +181,7 @@ export function FeedGrid({
               : false
             return (
               <FeedCard
-                key={item.id}
+                key={cardKey(item)}
                 item={item}
                 lastSyncAt={lastSyncAt}
                 sortField={sortField}
@@ -173,6 +189,7 @@ export function FeedGrid({
                 selectionMode={!!tagSelectTag}
                 selected={selected}
                 onToggleSelect={() => toggleTagMembership(item)}
+                justAdded={cardKey(item) === justAddedKey}
               />
             )
           })}
@@ -188,12 +205,13 @@ export function FeedGrid({
               : false
             return (
               <FeedListRow
-                key={item.id}
+                key={cardKey(item)}
                 item={item}
                 onClick={() => onExpand(index)}
                 selectionMode={!!tagSelectTag}
                 selected={selected}
                 onToggleSelect={() => toggleTagMembership(item)}
+                justAdded={cardKey(item) === justAddedKey}
               />
             )
           })}
@@ -210,7 +228,7 @@ export function FeedGrid({
               : false
             return (
               <FeedBentoTile
-                key={item.id}
+                key={cardKey(item)}
                 item={item}
                 cs={cs}
                 rs={rs}
@@ -218,6 +236,7 @@ export function FeedGrid({
                 selectionMode={!!tagSelectTag}
                 selected={selected}
                 onToggleSelect={() => toggleTagMembership(item)}
+                justAdded={cardKey(item) === justAddedKey}
               />
             )
           })}

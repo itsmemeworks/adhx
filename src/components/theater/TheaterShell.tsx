@@ -901,6 +901,11 @@ export function TheaterShell({
             : item,
         ),
       )
+      // …and the live tab's own tag map, which is what renders the chips there.
+      setLiveTagsByKey((prev) => ({
+        ...prev,
+        [`${platform}:${detail.bookmarkId}`]: detail.tags ?? [],
+      }))
     }
     window.addEventListener('bookmark-tags-changed', handleTagsChanged)
     return () => window.removeEventListener('bookmark-tags-changed', handleTagsChanged)
@@ -1211,6 +1216,16 @@ export function TheaterShell({
   // viewer already saved (this session or any other) must show "Saved", not
   // "Save". One bulk `/api/feed?id=…&id=…` lookup per batch of unseen items;
   // each id is checked at most once per mount.
+  /**
+   * Tags of posts on the LIVE tab, keyed `platform:bookmarkId`. The Collection
+   * tab reads tags off its queue snapshot, but the live feed carries no tags at
+   * all — so a tag added from the live tab had nothing to render (owner: "when
+   * I tap the tag icon, it's not showing the tag under the description").
+   * Seeded from the membership lookup below, which already fetches the saved
+   * FeedItem (tags included), and kept current by the tags-changed listener.
+   */
+  const [liveTagsByKey, setLiveTagsByKey] = useState<Record<string, string[]>>({})
+
   const membershipCheckedRef = useRef<Set<string>>(new Set())
   useEffect(() => {
     if (!isTriage || triageTab !== 'live') return
@@ -1230,6 +1245,11 @@ export function TheaterShell({
         setTriageSavedKeys((prev) => {
           const next = new Set(prev)
           for (const f of owned) next.add(`${f.platform ?? 'twitter'}:${f.id}`)
+          return next
+        })
+        setLiveTagsByKey((prev) => {
+          const next = { ...prev }
+          for (const f of owned) next[`${f.platform ?? 'twitter'}:${f.id}`] = f.tags ?? []
           return next
         })
       })
@@ -1951,12 +1971,21 @@ export function TheaterShell({
   const chromeNewCount = isTriageCollection ? 0 : newCount
   // What the mobile peek bar's "3 / N" is out of: the unwatched run while
   // repeat is off, the whole queue once it isn't.
-  const queueTotal = computeQueueTotal({
-    index: currentIndex,
-    length: displayItems.length,
-    unseenCount,
-    repeatMode: effectiveRepeatMode,
-  })
+  //
+  // Computed from the LIVE feed, which is the wrong list in triage's Collection
+  // tab — that tab shows `triageQueue`. With no live feed loaded the length was
+  // 0 and the counter read "1 / 0" over a queue with items in it (owner
+  // report). The Collection tab has no unwatched-run notion anyway (no repeat,
+  // no boundary — it's a finite backlog), so it passes nothing and the chrome
+  // falls back to the length of the list it is actually rendering.
+  const queueTotal = isTriageCollection
+    ? undefined
+    : computeQueueTotal({
+        index: currentIndex,
+        length: displayItems.length,
+        unseenCount,
+        repeatMode: effectiveRepeatMode,
+      })
   const chromeCanPrev = isTriageCollection ? triageIndex > 0 : canPrev
   const chromeCanNext = isTriageCollection ? !triageFinished : canNext
   // The transport chevrons in triage's Collection tab are pure skip/back —
@@ -1989,7 +2018,7 @@ export function TheaterShell({
         },
         onSave: handleTriageLiveSave,
         onLiveTag: handleTriageLiveTag,
-        tags: triageCurrentFeedItem?.tags,
+        tags: isTriageCollection ? triageCurrentFeedItem?.tags : liveTagsByKey[currentKey ?? ''],
         savedKeys: triageSavedKeys,
         remaining: triageRemaining,
         streak: triageStreak,

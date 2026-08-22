@@ -3,7 +3,12 @@
 import { useState, useEffect } from 'react'
 import { Image, Play, FileText, Check } from 'lucide-react'
 import { AuthorAvatar } from './AuthorAvatar'
-import { renderTextWithLinks, renderBionicTextWithLinks, stripMediaUrls } from './utils'
+import {
+  renderTextWithLinks,
+  renderBionicTextWithLinks,
+  stripMediaUrls,
+  RECENT_GLOW,
+} from './utils'
 import { usePreferences } from '@/lib/preferences-context'
 import { formatDurationMs, formatCompactRelativeTime } from '@/lib/utils/format'
 import { TypeBadge, PlatformChip, type ContentType, type PlatformId } from '@/components/matter'
@@ -21,6 +26,8 @@ interface FeedCardProps {
   selectionMode?: boolean
   selected?: boolean
   onToggleSelect?: () => void
+  /** Briefly glow: this is the post the viewer just pasted in. */
+  justAdded?: boolean
 }
 
 /** Time pill — mono white on translucent black, for media/article overlays. */
@@ -45,6 +52,7 @@ export function FeedCard({
   selectionMode = false,
   selected = false,
   onToggleSelect,
+  justAdded = false,
 }: FeedCardProps): React.ReactElement {
   const [error, setError] = useState(false)
   const [loaded, setLoaded] = useState(false)
@@ -74,9 +82,9 @@ export function FeedCard({
   const aspectRatio =
     primaryMedia?.width && primaryMedia?.height ? primaryMedia.width / primaryMedia.height : 1
 
-  const newGlowClass = isNew
-    ? 'shadow-[0_0_8px_2px_rgba(194,96,63,0.4),0_0_20px_4px_rgba(194,96,63,0.22),0_0_35px_8px_rgba(194,96,63,0.1)]'
-    : ''
+  // `justAdded` is the same glow held briefly on a post the viewer just
+  // pasted in — the confirmation that replaced the layout-shifting pill.
+  const newGlowClass = isNew || justAdded ? RECENT_GLOW : ''
 
   const timeDate = sortField === 'createdAt' && item.createdAt ? item.createdAt : item.processedAt
   const timeBadge = formatCompactRelativeTime(timeDate)
