@@ -4,6 +4,16 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-22 — Shared preview pages group their queue like home
+
+Owner spotted the inconsistency from a real URL (`/WireSpy92/status/…`): the queue on a preview page had no sections at all, while the same queue on `/` showed New-since / Up-next / Watched-earlier. "We just need to be always consistent here."
+
+- **One flag caused it**: `liveOrdering = !sharedItem && !loop`, which withheld both the unseen-first ordering AND `wasSeenOnEntry` (the headings' input) from shared mode. But the queue beneath a shared post IS the live pulse — same feed, same items, same seen state. Now `liveOrdering = !loop`: only a curated tag playlist opts out, because it alone has an authored order and no notion of "what's new".
+- **The shared post is the exception inside the exception.** It leads because the visitor followed a link to it, not because it's new or unwatched. New `pinnedKey` prop on `UpNextList` puts it outside the grouping under its own **"Shared post"** heading (no count — it's one post) and excludes it from every group count. This carve-out is load-bearing, not cosmetic: without it the pinned lead consumed the first group's heading (`started` set → one heading per group) and the real unwatched run below rendered UNLABELLED, which is worse than no sections at all. `headingAt` therefore maps index → `{label, count}` rather than index → group.
+- **Boundary**: a re-visited shared post is counted as pending (`wasSeenForRun` exempts `sharedItemKey`). A watched lead would otherwise make `unseenBlockLength` return 0 from index 0, which `computeLiveNext` reads as "no boundary" — silently switching stop-when-caught-up off for the entire queue behind it. Caught-up likewise ignores the pinned row: it's a fact about the live feed, not about the link you opened.
+- Infrastructure that already existed and did the heavy lifting: `pinnedKey`/`pinKeyFirst` in the shell already pinned the shared post to the front of the display order, so no ordering work was needed — only letting the tail be grouped.
+- **State**: 2365 tests / 186 files green, typecheck + lint clean. 6 new `UpNextList` tests (incl. the no-carve-out home case and playlist staying ungrouped) + 4 shell-level wiring tests. Verified live on the reported URL: `Shared post / Up next 9 / Watched earlier 5`.
+
 ## 2026-08-22 — Mobile's Live/Collection switch moves into the burger
 
 Round trip worth recording, because the first answer was wrong. Owner asked for the mobile tab switcher to go "to the top, just like it is on desktop"; I mirrored the desktop pill into the mobile top scrim, and the owner immediately called the real constraint: "that is going to definitely cause overlap with the logo, the play stats, and the paste and burger menu — why not just put it in the burger menu for mobile? Theater just has two sub options: live and collection and we can just highlight which one is selected." Correct: the scrim carries logo + flame/trend chip + platform/time chip + paste + burger, and the pill wants ~190 of ~390px.
