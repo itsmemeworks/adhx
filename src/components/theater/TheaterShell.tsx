@@ -64,12 +64,6 @@ export interface TriageUndoAction {
   index: number
 }
 
-/** User's LOCAL calendar day as YYYY-MM-DD (streaks are per the user's days). */
-function localToday(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
 // `triageKeyAction` and its `TriageKeyAction` type now live in
 // `useTheaterKeyboard.ts` (the keyboard-handling hook that's their only
 // caller) — re-exported here so existing imports (incl. theater-triage.test.ts)
@@ -652,10 +646,6 @@ export function TheaterShell({
   // `CollectionTheater` (which never spliced/replaced its `queue` either).
   const [triageQueue, setTriageQueue] = useState<FeedItem[]>(() => triageItems ?? [])
   const [triageIndex, setTriageIndex] = useState(() => Math.max(0, initialTriageIndex ?? 0))
-  const [triageStreak, setTriageStreak] = useState<{ current: number; longest: number }>({
-    current: 0,
-    longest: 0,
-  })
   const [triageUndo, setTriageUndo] = useState<TriageUndoAction | null>(null)
   // Ref-backed so `handleTriageLiveSave` (registered once) always sees the
   // current handler without re-creating itself on every grid render.
@@ -671,7 +661,6 @@ export function TheaterShell({
     platform: string
     bookmarkId: string
   } | null>(null)
-  const triageRecordedRef = useRef(false)
   const triageUndoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Separate from `triageUndoTimerRef` (which defers the server DELETE for a
   // 'delete' undo): this one just auto-dismisses the "Done/Later · Undo"
@@ -698,39 +687,6 @@ export function TheaterShell({
     (key: string) => triageProcessedKeys.has(key),
     [triageProcessedKeys],
   )
-
-  // Triage streak card (Settings has the full version; this is the same
-  // read/write pair CollectionTheater used).
-  useEffect(() => {
-    if (!isTriage) return
-    let cancelled = false
-    fetch(`/api/triage/streak?today=${localToday()}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then(
-        (s) =>
-          !cancelled && s && setTriageStreak({ current: s.current ?? 0, longest: s.longest ?? 0 }),
-      )
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [isTriage])
-
-  const recordTriageStreak = useCallback(() => {
-    if (triageRecordedRef.current) return
-    triageRecordedRef.current = true
-    fetch('/api/triage/streak', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ today: localToday() }),
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((s) => {
-        if (!s) return
-        setTriageStreak({ current: s.current, longest: s.longest })
-      })
-      .catch(() => {})
-  }, [])
 
   const clearTriageUndoTimer = useCallback(() => {
     if (triageUndoTimerRef.current) clearTimeout(triageUndoTimerRef.current)
@@ -794,7 +750,6 @@ export function TheaterShell({
 
   const triageDone = useCallback(() => {
     if (!triageCurrentFeedItem) return
-    recordTriageStreak()
     const item = triageCurrentFeedItem
     const idx = triageIndex
     fetch(`/api/bookmarks/${item.id}/read?platform=${item.platform ?? 'twitter'}`, {
@@ -809,7 +764,6 @@ export function TheaterShell({
   }, [
     triageCurrentFeedItem,
     triageIndex,
-    recordTriageStreak,
     onTriageResolved,
     commitPendingTriageDelete,
     armUndoDismiss,
@@ -819,7 +773,6 @@ export function TheaterShell({
   // Later: defer — advance without changing read state.
   const triageLater = useCallback(() => {
     if (!triageCurrentFeedItem) return
-    recordTriageStreak()
     commitPendingTriageDelete()
     const action: TriageUndoAction = {
       type: 'keep',
@@ -829,17 +782,10 @@ export function TheaterShell({
     setTriageUndo(action)
     armUndoDismiss(action)
     setTriageIndex(triageAdvance)
-  }, [
-    triageCurrentFeedItem,
-    triageIndex,
-    recordTriageStreak,
-    commitPendingTriageDelete,
-    armUndoDismiss,
-  ])
+  }, [triageCurrentFeedItem, triageIndex, commitPendingTriageDelete, armUndoDismiss])
 
   const triageDelete = useCallback(() => {
     if (!triageCurrentFeedItem) return
-    recordTriageStreak()
     const item = triageCurrentFeedItem
     commitPendingTriageDelete()
     // A pending delete has its own 5s expiry (the commit timer above), so it
@@ -859,7 +805,6 @@ export function TheaterShell({
   }, [
     triageCurrentFeedItem,
     triageIndex,
-    recordTriageStreak,
     onTriageResolved,
     commitPendingTriageDelete,
     clearUndoDismissTimer,
@@ -906,8 +851,8 @@ export function TheaterShell({
   // just a different playlist in that same theater" — the owner's standing
   // directive, reversing the earlier "videos never auto-advance there"
   // rule). Deliberately NOT `triageLater`: finishing a video isn't a
-  // decision the way tapping Later is — `triageLater` also records a streak
-  // beat and pops the "Later · Undo" toast, both of which would misrepresent
+  // decision the way tapping Later is — `triageLater` also pops the
+  // "Later · Undo" toast, which would misrepresent
   // a post the viewer simply watched to the end as one they consciously
   // deferred. This is pure navigation, exactly like `triageStepBack` but
   // forward — Done/Later/Delete remain the only ways to actually resolve an
@@ -2090,7 +2035,6 @@ export function TheaterShell({
         tags: isTriageCollection ? triageCurrentFeedItem?.tags : liveTagsByKey[currentKey ?? ''],
         savedKeys: triageSavedKeys,
         remaining: triageRemaining,
-        streak: triageStreak,
         onClose: () => onClose?.(),
       }
     : undefined
@@ -2113,11 +2057,7 @@ export function TheaterShell({
         <div className="absolute inset-0">
           {isTriageCollection ? (
             triageFinished ? (
-              <TriageAllClear
-                total={triageTotal}
-                streak={triageStreak}
-                onClose={() => onClose?.()}
-              />
+              <TriageAllClear total={triageTotal} onClose={() => onClose?.()} />
             ) : triageCurrentFeedItem ? (
               <TriageStage
                 feedItem={triageCurrentFeedItem}

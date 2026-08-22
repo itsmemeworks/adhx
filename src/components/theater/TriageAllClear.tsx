@@ -8,16 +8,15 @@
  * `FinishedPanel`.
  */
 
-import { Flame, PartyPopper } from 'lucide-react'
+import { PartyPopper } from 'lucide-react'
 import { StageHeadline } from './stage-primitives'
 
 export interface TriageAllClearProps {
   total: number
-  streak: { current: number; longest: number }
   onClose: () => void
 }
 
-export function TriageAllClear({ total, streak, onClose }: TriageAllClearProps) {
+export function TriageAllClear({ total, onClose }: TriageAllClearProps) {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-[#08070a] px-6 text-center">
       <PartyPopper className="h-10 w-10 text-clay" />
@@ -28,11 +27,6 @@ export function TriageAllClear({ total, streak, onClose }: TriageAllClearProps) 
         </p>
       ) : (
         <p className="text-sm text-white/60">Nothing waiting in your collection. Nice.</p>
-      )}
-      {streak.current > 0 && (
-        <p className="flex items-center justify-center gap-1.5 font-semibold text-orange-300">
-          <Flame className="h-4 w-4" fill="currentColor" /> {streak.current}-day streak
-        </p>
       )}
       <button
         type="button"

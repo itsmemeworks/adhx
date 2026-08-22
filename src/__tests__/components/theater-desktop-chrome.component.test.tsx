@@ -577,7 +577,7 @@ describe('DesktopStageChrome', () => {
     }
     render(<DesktopStageChrome {...stageBase} current={videoItem()} triage={triage} />)
 
-    const closeBtn = screen.getByLabelText('Close triage')
+    const closeBtn = screen.getByLabelText('Close')
     const liveTab = screen.getByText('Live', { selector: 'button' })
     // Same immediate pill container as the tab buttons (contained cluster).
     expect(closeBtn.parentElement).toBe(liveTab.parentElement)
@@ -588,7 +588,7 @@ describe('DesktopStageChrome', () => {
     // menu and the de-clutter toggle — no stray close button there.
     const declutterBtn = screen.getByLabelText('Hide controls')
     const rightCluster = declutterBtn.parentElement!
-    expect(rightCluster.querySelector('[aria-label="Close triage"]')).toBeNull()
+    expect(rightCluster.querySelector('[aria-label="Close"]')).toBeNull()
   })
 
   it('collection mode: "Make your own" opens the sign-in modal in place instead of navigating', () => {

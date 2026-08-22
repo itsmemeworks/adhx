@@ -157,7 +157,7 @@ const jsonLd = {
     'Sync hundreds of X/Twitter bookmarks',
     'Discover what people are watching and sending in real time',
     'Full-text search across everything you save',
-    'One-card-at-a-time triage with streaks',
+    'One post at a time — archive what you are done with',
     'Text-to-speech for any post or article',
     'Save Reels, TikToks and Shorts alongside tweets',
     'Bionic reading and reader-friendly fonts',

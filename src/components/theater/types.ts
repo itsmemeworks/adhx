@@ -131,7 +131,6 @@ export interface TheaterTriageChrome {
   savedKeys: ReadonlySet<string>
   /** Items left in the Collection queue. */
   remaining: number
-  streak: { current: number; longest: number }
   /** Closes the whole triage overlay. */
   onClose: () => void
 }

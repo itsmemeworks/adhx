@@ -234,19 +234,17 @@ describe('Header', () => {
     expect(menuTagsLinks.some((l) => l.getAttribute('href') === '/tags')).toBe(true)
   })
 
-  it('sends the Triage pill to /collection — the theater tab that triages', async () => {
+  // The Triage pill is gone with the concept it was named for (owner: "remove
+  // the concept of triage… it's essentially 'show me everything that's not
+  // archived'"). Its job — reach your collection — is the nav's own entries,
+  // and it carried both the gamified streak and an accent CTA.
+  it('no longer renders a Triage pill', async () => {
     mockFetch(true)
     render(<Header />)
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
-    const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
-    screen.getByTitle('Triage your unread').click()
-
-    expect(pushSpy).toHaveBeenCalledWith('/collection')
-    // No overlay events any more — the pill navigates.
-    const dispatchedTypes = dispatchSpy.mock.calls.map((call) => (call[0] as CustomEvent).type)
-    expect(dispatchedTypes).not.toContain('open-triage')
-    expect(dispatchedTypes).not.toContain('open-theater')
+    expect(screen.queryByTitle('Triage your unread')).not.toBeInTheDocument()
+    expect(screen.queryByText('Triage')).not.toBeInTheDocument()
   })
 
   it('keeps Theater pointing at `/` from any route (no ?live=1 hand-off)', async () => {

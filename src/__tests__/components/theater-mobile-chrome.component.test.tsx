@@ -164,7 +164,6 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
       onLiveTag: vi.fn(),
       savedKeys: new Set<string>(),
       remaining: 0,
-      streak: { current: 0, longest: 0 },
       onClose: vi.fn(),
     }
     render(<TheaterMobileChrome {...base} current={videoItem()} triage={triage} />)
@@ -196,7 +195,6 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
       onLiveTag: vi.fn(),
       savedKeys: new Set<string>(),
       remaining: 0,
-      streak: { current: 0, longest: 0 },
       onClose: vi.fn(),
     }
     render(<TheaterMobileChrome {...base} current={videoItem()} triage={triage} />)
@@ -227,7 +225,6 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
       onLiveTag: vi.fn(),
       savedKeys: new Set<string>(),
       remaining: 0,
-      streak: { current: 0, longest: 0 },
       onClose: vi.fn(),
     }
     const items = [videoItem({ bookmarkId: '1' }), videoItem({ bookmarkId: '2' })]
@@ -262,7 +259,6 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
       onLiveTag: vi.fn(),
       savedKeys: new Set<string>(),
       remaining: 0,
-      streak: { current: 0, longest: 0 },
       onClose: vi.fn(),
     }
     const items = [videoItem({ bookmarkId: '1' })]
@@ -641,7 +637,6 @@ describe('TheaterMobileChrome: theaterActive prop wiring', () => {
       onLiveTag: vi.fn(),
       savedKeys: new Set<string>(),
       remaining: 0,
-      streak: { current: 0, longest: 0 },
       onClose: vi.fn(),
     }
     render(<TheaterMobileChrome {...base} mode="shared" current={videoItem()} triage={triage} />)
@@ -687,7 +682,6 @@ function collectionTriage(overrides: Partial<TheaterTriageChrome> = {}): Theater
     onLiveTag: vi.fn(),
     savedKeys: new Set<string>(),
     remaining: 0,
-    streak: { current: 0, longest: 0 },
     onClose: vi.fn(),
     ...overrides,
   }

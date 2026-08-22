@@ -430,7 +430,7 @@ export function TheaterMobileChrome({
             <button
               type="button"
               onClick={triage.onClose}
-              aria-label="Close triage"
+              aria-label="Close"
               className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full border border-white/25 bg-white/[0.14] text-white"
             >
               <X size={16} />

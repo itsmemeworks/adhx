@@ -16,7 +16,7 @@
  * comment rather than auditing every call site.
  */
 
-/** Header refreshes its stats + streak. Listener: `src/components/Header.tsx`. */
+/** Header refreshes its saved/active counts. Listener: `src/components/Header.tsx`. */
 const STATS_UPDATED = 'stats-updated'
 /**
  * The library grid refetches its feed from scratch. Listener:

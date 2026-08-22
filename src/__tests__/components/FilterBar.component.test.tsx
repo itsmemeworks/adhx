@@ -217,11 +217,13 @@ describe('FilterBar Component', () => {
       expect(screen.getByText(/hide archived/i)).toBeTruthy()
     })
 
-    it('shows the unread count when unreadOnly is true', () => {
+    it('shows the active count, and offers to show archived, when archived are hidden', () => {
       render(<FilterBar {...defaultProps} unreadOnly={true} />)
 
       const buttons = screen.getAllByRole('button')
-      const toggleButton = buttons.find((b) => b.textContent?.includes('Hide archived'))
+      // The label names the view the press will TAKE you to, since there are
+      // only two views and neither is a mode you switch on.
+      const toggleButton = buttons.find((b) => b.textContent?.includes('Show archived'))
       expect(toggleButton?.textContent).toContain('50')
     })
 
@@ -233,12 +235,30 @@ describe('FilterBar Component', () => {
       expect(toggleButton?.textContent).toContain('100')
     })
 
-    it('applies active gradient styling when unreadOnly is true', () => {
-      render(<FilterBar {...defaultProps} unreadOnly={true} />)
+    // Owner: "there's no need for it to have an orange CTA. You're either
+    // viewing your collection with archive or without." A view switch is not a
+    // call to action, so neither state gets the accent treatment.
+    it('never uses the accent CTA styling in either state', () => {
+      const { rerender } = render(<FilterBar {...defaultProps} unreadOnly={true} />)
+      const find = (label: string) =>
+        screen.getAllByRole('button').find((b) => b.textContent?.includes(label))
 
-      const buttons = screen.getAllByRole('button')
-      const toggleButton = buttons.find((b) => b.textContent?.includes('Hide archived'))
-      expect(toggleButton?.className).toContain('bg-clay-grad')
+      expect(find('Show archived')?.className).not.toContain('bg-clay-grad')
+      expect(find('Show archived')?.className).not.toContain('shadow-glow')
+
+      rerender(<FilterBar {...defaultProps} unreadOnly={false} />)
+      expect(find('Hide archived')?.className).not.toContain('bg-clay-grad')
+      expect(find('Hide archived')?.className).not.toContain('shadow-glow')
+    })
+
+    it('reflects which view is active for assistive tech', () => {
+      const { rerender } = render(<FilterBar {...defaultProps} unreadOnly={true} />)
+      const btn = () =>
+        screen.getAllByRole('button').find((b) => /archived/.test(b.textContent ?? ''))
+      // Pressed = showing everything, including archived.
+      expect(btn()?.getAttribute('aria-pressed')).toBe('false')
+      rerender(<FilterBar {...defaultProps} unreadOnly={false} />)
+      expect(btn()?.getAttribute('aria-pressed')).toBe('true')
     })
 
     it('calls onUnreadOnlyChange on toggle', () => {

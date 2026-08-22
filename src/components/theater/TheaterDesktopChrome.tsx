@@ -141,7 +141,7 @@ export interface DesktopDockProps {
   declutter: boolean
   /** Collection mode: appends a "loops" divider + a ghosted copy of the first card after the filmstrip, and hides the live-pulse-only savedToday/newCount lines in the end cap. */
   playlist?: TheaterPlaylistMeta
-  /** Triage mode: end cap shows "{remaining} left" + streak instead of savedToday/newCount. */
+  /** Triage mode: end cap shows "{remaining} left" instead of savedToday/newCount. */
   triage?: TheaterTriageChrome
   /**
    * shared-post-repeat (desktop parity with TheaterMobileChrome): the shared
@@ -566,7 +566,7 @@ export function DesktopStageChrome({
                 <button
                   type="button"
                   onClick={triage.onClose}
-                  aria-label="Close triage"
+                  aria-label="Close"
                   className="ml-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full text-white/60 transition-colors hover:bg-white/15 hover:text-white"
                 >
                   <X size={14} />
@@ -1372,16 +1372,10 @@ export function DesktopDock({
         {/* savedToday/newCount are live-pulse concepts — collection mode is a
             static curated queue, and triage's Collection tab is the user's
             own backlog, so neither line is meaningful for either. Triage
-            shows "{remaining} left" + streak instead. */}
+            shows "{remaining} left" instead. */}
         {triage && triage.tab === 'collection' ? (
           <span className="flex items-center gap-1.5 text-[10.5px] text-ink-3">
             <span className="font-mono">{triage.remaining} left</span>
-            {triage.streak.current > 0 && (
-              <span className="inline-flex items-center gap-0.5 font-semibold text-flame">
-                <Flame size={10} fill="currentColor" />
-                <span>{triage.streak.current}</span>
-              </span>
-            )}
           </span>
         ) : (
           <>

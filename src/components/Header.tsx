@@ -10,8 +10,6 @@ import {
   Moon,
   X,
   RefreshCw,
-  Zap,
-  Flame,
   Bookmark,
   Radio,
   LogOut,
@@ -83,7 +81,6 @@ export function Header() {
   // no bookmarks to sync, so sync affordances are hidden entirely for them.
   const [xConnected, setXConnected] = useState(false)
   const [stats, setStats] = useState<Stats>({ total: 0, unread: 0 })
-  const [streak, setStreak] = useState(0)
   const [cooldown, setCooldown] = useState<CooldownStatus>({
     canSync: true,
     cooldownRemaining: 0,
@@ -103,7 +100,6 @@ export function Header() {
     const handleStatsUpdate = () => {
       if (authStatus?.authenticated) {
         fetchStats()
-        fetchStreak()
       }
     }
     window.addEventListener('stats-updated', handleStatsUpdate)
@@ -145,7 +141,6 @@ export function Header() {
     if (authStatus?.authenticated) {
       fetchStats()
       fetchCooldown()
-      fetchStreak()
 
       // Update cooldown timer every minute (only when authenticated)
       const cooldownInterval = setInterval(fetchCooldown, 60000)
@@ -291,16 +286,6 @@ export function Header() {
     }
   }
 
-  async function fetchStreak() {
-    try {
-      const response = await fetch('/api/triage/streak')
-      const data = await response.json()
-      setStreak(data.current || 0)
-    } catch (error) {
-      console.error('Failed to fetch streak:', error)
-    }
-  }
-
   async function fetchCooldown() {
     try {
       const response = await fetch('/api/sync/cooldown')
@@ -355,15 +340,6 @@ export function Header() {
     fetchStats()
     fetchCooldown()
     router.refresh()
-  }
-
-  const openTriage = () => {
-    // Triaging your unread queue IS the theater's My Collection tab, which now
-    // has its own route — so this is a plain navigation. (It used to dispatch
-    // `open-theater`/`open-triage` at the grid on `/`, which owned the theater
-    // as an overlay; the grid still listens for those events for its own
-    // in-page triage session, opened by clicking a card.)
-    router.push('/collection')
   }
 
   const toggleTheme = () => {
@@ -519,25 +495,6 @@ export function Header() {
               >
                 <Search className="w-[18px] h-[18px]" />
               </button>
-              {/* Triage pill */}
-              <button
-                onClick={openTriage}
-                className="inline-flex items-center gap-1.5 bg-clay-grad text-white shadow-glow rounded-full font-semibold text-[13.5px] h-9 px-3 sm:px-3.5 whitespace-nowrap"
-                title="Triage your unread"
-              >
-                <Zap className="w-[15px] h-[15px]" fill="currentColor" />
-                <span className="hidden sm:inline">Triage</span>
-                <span className="bg-white/[0.28] rounded-md px-1.5 py-px text-xs leading-none">
-                  {stats.unread}
-                </span>
-                {streak > 0 && (
-                  <span className="hidden sm:inline-flex items-center gap-1 ml-1 pl-2.5 border-l border-white/30">
-                    <Flame className="w-3.5 h-3.5 text-flame" fill="currentColor" />
-                    <span className="text-xs leading-none">{streak}</span>
-                  </span>
-                )}
-              </button>
-
               {/* Theme toggle + Sync are secondary actions — they live in the
                   avatar menu (all viewports), not the main nav bar. Adding by
                   URL is paste-first now (PasteToPreview) — no Add button. */}
