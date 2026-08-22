@@ -166,3 +166,113 @@ describe('TheaterShell: waiting-stage fixes', () => {
     expect(theaterItemKey(lastCallProps.items[0])).toBe(theaterItemKey(arrival))
   })
 })
+
+/**
+ * Owner report: "I loaded the theatre and it went straight to 'You've watched
+ * everything.' I hit Continue Watching and it started from 2 out of 19. Why
+ * not 1 out of 19?"
+ *
+ * Right question. Landing on a fully-watched window PARKS on item 1 and shows
+ * the caught-up stage — without ever playing it. `keepPlaying` then advanced
+ * unconditionally, so item 1 was skipped. Advancing IS correct in the usual
+ * case, where you reach the stage because the current item just finished; the
+ * two cases had never been distinguished.
+ */
+describe('TheaterShell: resuming from a caught-up arrival starts on item 1', () => {
+  beforeEach(() => {
+    pushArrival = null
+    mockMobileChrome.mockClear()
+    window.localStorage.clear()
+  })
+
+  /** The queue the chrome was last handed, plus where the cursor sits in it. */
+  function queuePosition() {
+    const props = mockMobileChrome.mock.calls.at(-1)![0] as {
+      items: TheaterItem[]
+      currentKey: string | null
+    }
+    return {
+      index: props.items.findIndex((it) => theaterItemKey(it) === props.currentKey),
+      length: props.items.length,
+    }
+  }
+
+  async function keepPlaying() {
+    const btn = screen.getByRole('button', { name: /keep playing/i })
+    await act(async () => {
+      fireEvent.click(btn)
+    })
+  }
+
+  it('resumes ON the parked item, not after it', async () => {
+    const items = [textItem('1'), textItem('2'), textItem('3')]
+    markWatched(items)
+
+    await act(async () => {
+      render(<TheaterShell seed={seed(items)} />)
+    })
+
+    // Straight to caught-up, parked on item 1 without playing it.
+    expect(screen.getByText('You’re all caught up')).toBeInTheDocument()
+    expect(queuePosition()).toEqual({ index: 0, length: 3 })
+
+    await keepPlaying()
+
+    // "1 of 3", not "2 of 3" — item 1 never played, so it is not behind us.
+    expect(queuePosition()).toEqual({ index: 0, length: 3 })
+    expect(screen.queryByText('You’re all caught up')).not.toBeInTheDocument()
+  })
+
+  it('still ADVANCES when the stage was reached by finishing a post', async () => {
+    const items = [textItem('1'), textItem('2')]
+    markWatched(items)
+    render(<TheaterShell seed={seed(items)} />)
+
+    // Walk to the end: each press plays out an item, so the last one IS behind
+    // us by the time the stage appears.
+    await act(async () => pressArrowDown())
+    await act(async () => pressArrowDown())
+    expect(screen.getByText('You’re all caught up')).toBeInTheDocument()
+    const before = queuePosition()
+
+    await keepPlaying()
+
+    // Wraps forward rather than replaying the post just watched.
+    expect(queuePosition().index).not.toBe(before.index)
+  })
+
+  it('advances normally when the viewer browsed away from the parked item first', async () => {
+    const items = [textItem('1'), textItem('2'), textItem('3')]
+    markWatched(items)
+    await act(async () => {
+      render(<TheaterShell seed={seed(items)} />)
+    })
+    expect(queuePosition()).toEqual({ index: 0, length: 3 })
+
+    // Browsing past item 1 means it is no longer the unplayed post we parked
+    // on — the parked key self-clears by no longer matching.
+    await act(async () => pressArrowDown())
+    const browsed = queuePosition().index
+    expect(browsed).toBe(1)
+
+    await keepPlaying()
+    expect(queuePosition().index).not.toBe(browsed)
+  })
+
+  it('re-watch from the caught-up stage also starts at item 1', async () => {
+    const items = [textItem('1'), textItem('2'), textItem('3')]
+    markWatched(items)
+    await act(async () => {
+      render(<TheaterShell seed={seed(items)} />)
+    })
+
+    const btn = screen.getByRole('button', {
+      name: /re-watch all|start from the beginning/i,
+    })
+    await act(async () => {
+      fireEvent.click(btn)
+    })
+
+    expect(queuePosition()).toEqual({ index: 0, length: 3 })
+  })
+})

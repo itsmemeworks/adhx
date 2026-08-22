@@ -1108,6 +1108,19 @@ export function TheaterShell({
   // the recency-ordered feed — is what keeps ↓/keyboard nav and the rail's
   // visual order in agreement; without it, a lead-pick that lands near the
   // end of `items` clamps goNext immediately.
+  /**
+   * The item the caught-up stage is parked on WITHOUT having played it — set
+   * only by the mount-time "everything in the window is already watched" path.
+   * Resuming from there must start ON this item, not after it (owner: loading
+   * the theater went straight to caught-up and "Keep playing" started at
+   * "2 out of 19" — item 1 was skipped, having never played).
+   *
+   * Holds the key rather than a boolean so it self-clears: if the viewer
+   * browses somewhere else first, the keys no longer match and resuming
+   * advances normally.
+   */
+  const parkedUnplayedKeyRef = useRef<string | null>(null)
+
   const [pinnedKey, setPinnedKey] = useState<string | null>(() =>
     sharedItem ? theaterItemKey(sharedItem) : null,
   )
@@ -1289,6 +1302,9 @@ export function TheaterShell({
       // caught-up stage rather than silently replaying. Getting out of it is
       // the explicit re-watch button (or repeat), never an auto-advance.
       waitingBaselineFreshKeysRef.current = new Set(freshKeysRef.current)
+      // Parked, not finished: this item has not played, so a resume belongs on
+      // it rather than after it.
+      parkedUnplayedKeyRef.current = theaterItemKey(head)
       setWaiting(true)
     }
     setCurrentKey(theaterItemKey(head))
@@ -1410,6 +1426,8 @@ export function TheaterShell({
           // effect below. Collection mode never reaches this branch
           // (computeLiveNext never returns 'waiting' when `loop` is true).
           if (!waitingRef.current) {
+            // Got here by finishing the current item, so a resume advances.
+            parkedUnplayedKeyRef.current = null
             waitingBaselineFreshKeysRef.current = new Set(freshKeysRef.current)
             setWaiting(true)
           }
@@ -1523,6 +1541,7 @@ export function TheaterShell({
     hasNavigatedRef.current = true
     clearSharedPin()
     stagedFromWaitingKeyRef.current = null
+    parkedUnplayedKeyRef.current = null
     setRewatching(true)
     setWaiting(false)
     setCurrentKey(theaterItemKey(first))
@@ -1553,8 +1572,13 @@ export function TheaterShell({
     stagedFromWaitingKeyRef.current = null
     setRepeatMode('all')
     setWaiting(false)
+    // Parked on an unplayed item (the caught-up-on-arrival case)? Start THERE.
+    // Advancing would skip it, which is what produced "2 out of 19" on a
+    // 19-post queue where nothing had played yet.
+    const resumeOnCurrent = parkedUnplayedKeyRef.current === currentKeyRef.current
+    parkedUnplayedKeyRef.current = null
     const list = itemsRef.current
-    if (list.length > 0) {
+    if (!resumeOnCurrent && list.length > 0) {
       const idx = list.findIndex((it) => theaterItemKey(it) === currentKeyRef.current)
       const next = list[(idx + 1 + list.length) % list.length]
       if (next) setCurrentKey(theaterItemKey(next))
