@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-22 — Repeat on /collection
+
+My Collection hid the repeat control (`repeatEnabled = !isCollectionTab`) and video-end always walked off the queue. Same off → all → one switch as Live now. Playback wrap is `personalAdvanceOnEndedIndex`; All Clear offers Keep playing.
+
+---
+
 ## 2026-08-22 — Signed-out e2e URL assertion
 
 `/collection` and `/library` bounce signed-out visitors to `/`. Live then replaceStates to the current preview path, so `toHaveURL(/\/$/)` raced. The test now waits for theater chrome and asserts we left the authed routes.

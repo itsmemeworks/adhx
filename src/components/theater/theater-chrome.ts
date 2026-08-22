@@ -66,7 +66,12 @@ export function resolveTheaterChrome(input: TheaterChromeInput): TheaterChromeMo
     chromeFreshKeys: input.isCollectionTab ? EMPTY_KEY_SET : input.freshKeys,
     chromeNewCount: input.isCollectionTab ? 0 : input.newCount,
     queueTotal: input.isCollectionTab
-      ? undefined
+      ? computeQueueTotal({
+          index: input.personalIndex,
+          length: input.personalDisplayItems.length,
+          unseenCount: Math.max(0, input.personalDisplayItems.length - input.personalIndex),
+          repeatMode: input.effectiveRepeatMode,
+        })
       : computeQueueTotal({
           index: input.currentIndex,
           length: input.displayItems.length,

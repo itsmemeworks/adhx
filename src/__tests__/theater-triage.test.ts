@@ -14,6 +14,7 @@ import {
   shouldCommitDelete,
   shouldDismissUndo,
   personalAdvance,
+  personalAdvanceOnEndedIndex,
   personalStepBackIndex,
   type PersonalUndoAction,
 } from '@/components/theater/TheaterShell'
@@ -111,5 +112,20 @@ describe('personalAdvance / personalStepBackIndex', () => {
   it('back steps to the previous item but never below 0', () => {
     expect(personalStepBackIndex(3)).toBe(2)
     expect(personalStepBackIndex(0)).toBe(0)
+  })
+})
+
+describe('personalAdvanceOnEndedIndex', () => {
+  it('walks past the last item when repeat is off so All Clear can render', () => {
+    expect(personalAdvanceOnEndedIndex(2, 3, 'off')).toBe(3)
+  })
+
+  it('wraps to the start when repeat is the whole queue', () => {
+    expect(personalAdvanceOnEndedIndex(2, 3, 'all')).toBe(0)
+    expect(personalAdvanceOnEndedIndex(0, 3, 'all')).toBe(1)
+  })
+
+  it('stays on the current post when repeat is one', () => {
+    expect(personalAdvanceOnEndedIndex(1, 3, 'one')).toBe(1)
   })
 })

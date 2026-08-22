@@ -39,6 +39,7 @@ import {
   shouldCommitDelete,
   shouldDismissUndo,
   personalAdvance,
+  personalAdvanceOnEndedIndex,
   personalStepBackIndex,
   pinKeyFirst,
   orderLiveQueue,
@@ -84,6 +85,7 @@ export {
   shouldCommitDelete,
   shouldDismissUndo,
   personalAdvance,
+  personalAdvanceOnEndedIndex,
   personalStepBackIndex,
   pinKeyFirst,
   liveQueueGroupOf,
@@ -186,10 +188,10 @@ export function TheaterShell({
   onClose,
 }: TheaterShellProps) {
   const isPersonal = mode === 'personal'
-  // Collection mode (`/t/{username}/{tag}`) is a fixed, curated queue to loop
-  // through — never a live blend with the anonymous community pulse. Collection
-  // mode never loops either — its queue is a finite backlog with a real end
-  // ("All caught up"), not a wraparound.
+  // Playlist mode (`/t/{username}/{tag}`) is a fixed curated queue that loops.
+  // My Collection (`/collection`) is also a playlist, but its default is still
+  // a finite backlog ("All caught up") — wrap only when the viewer turns
+  // repeat on.
   const loop = mode === 'playlist'
   // The personal theater's Collection tab never blends the live pulse in; its Live tab
   // reuses the exact same live feed home/shared mode does.
@@ -454,11 +456,23 @@ export function TheaterShell({
   // deferred. This is pure navigation, exactly like `personalStepBack` but
   // forward — Done/Later/Delete remain the only ways to actually resolve an
   // item's read state; finishing playback just moves the queue along.
-  // Landing past the last item is already handled for free: `personalFinished`
-  // (`personalIndex >= personalQueue.length`) flips true and the Collection tab
-  // renders `CollectionAllClear`, same as after a real Done/Later/Delete.
+  // Repeat 'off' walks past the last item (`personalFinished`) and shows
+  // CollectionAllClear. Repeat 'all' wraps to 0; 'one' stays on the post
+  // (Stage `repeat` loops the player).
+  const personalQueueLengthRef = useRef(personalQueue.length)
+  personalQueueLengthRef.current = personalQueue.length
+  const personalFinishedRef = useRef(personalFinished)
+  personalFinishedRef.current = personalFinished
+
   const personalAdvanceOnEnded = useCallback(() => {
-    setPersonalIndex(personalAdvance)
+    setPersonalIndex((i) =>
+      personalAdvanceOnEndedIndex(i, personalQueueLengthRef.current, repeatModeRef.current),
+    )
+  }, [])
+
+  const keepPlayingCollection = useCallback(() => {
+    setRepeatMode('all')
+    setPersonalIndex(0)
   }, [])
 
   // Flush any pending delete, and cancel the undo-toast dismiss timer, when
@@ -636,26 +650,17 @@ export function TheaterShell({
     }
   }, [muted])
 
-  // Repeat mode (round 8): session-persisted like the sound preference —
-  // read on mount (not the initializer, for the same SSR-hydration reason),
-  // written on change. Playlist mode DOES expose it (owner: the playlist
-  // player should show the repeat icon, selected): it opens on 'all' — looping
-  // IS the playlist's resting state — and toggles all ⇄ one
-  // (`nextRepeatMode`'s wrapOnly), so it deliberately skips the sessionStorage
-  // read/write below: a playlist page's toggle is per-visit and must never
-  // bleed into the home theater's persisted preference (or vice versa).
+  // Repeat mode (round 8): persisted like the sound preference — read on
+  // mount (not the initializer, for the same SSR-hydration reason), written
+  // on change. Playlist mode (`/t/...`) opens on 'all' and toggles all ⇄ one
+  // (`nextRepeatMode`'s wrapOnly); it skips the localStorage read/write so a
+  // playlist toggle never bleeds into the home/collection preference.
   //
-  // Only the collection COLLECTION tab hides it — a finite backlog with its own
-  // Done/Later semantics, where a stale 'one'/'all' would repeat or wrap a
-  // queue with no visible control to turn it off. It used to be gated on
-  // `!isPersonal`, which was fine while collection was an overlay over the grid; the
-  // moment authed `/` became `mode="personal"` on the LIVE tab, that silently
-  // took the repeat button off the live theater for every signed-in viewer
-  // (owner report: "the repeat icon isn't there anymore… I should be able to
-  // continually repeat the whole live playlist or just repeat a single post").
+  // My Collection (`/collection`) uses the same off → all → one control as
+  // Live. Default stays 'off' (All Clear at the end of the backlog). 'all'
+  // and 'one' wrap or loop through `personalAdvanceOnEndedIndex`.
   const [repeatMode, setRepeatMode] = useState<RepeatMode>(loop ? 'all' : 'off')
-  const repeatEnabled = !isCollectionTab
-  const effectiveRepeatMode: RepeatMode = repeatEnabled ? repeatMode : 'off'
+  const effectiveRepeatMode: RepeatMode = repeatMode
   const repeatModeRef = useRef(effectiveRepeatMode)
   repeatModeRef.current = effectiveRepeatMode
   // Persisted ACROSS visits (localStorage), not per-session: "keep playing" is
@@ -939,7 +944,9 @@ export function TheaterShell({
    * than teaching navigation to re-fire a no-op. Covers a one-post playlist
    * and repeat-all over a one-post queue alike.
    */
-  const loopingSingleItem = displayItems.length === 1 && (loop || effectiveRepeatMode === 'all')
+  const loopingSingleItem =
+    (isCollectionTab ? personalQueue.length : displayItems.length) === 1 &&
+    (loop || effectiveRepeatMode === 'all')
   const repeatCurrentActive =
     isSharedPinnedOnCurrent || effectiveRepeatMode === 'one' || loopingSingleItem
   // Read fresh inside the `theater-advance` listener (empty-deps-registered
@@ -1143,8 +1150,16 @@ export function TheaterShell({
       // paused stage needs telling explicitly.
       window.dispatchEvent(new CustomEvent('theater-resume'))
     }
+    if (
+      next === 'all' &&
+      isCollectionTab &&
+      personalFinishedRef.current &&
+      personalQueueLengthRef.current > 0
+    ) {
+      setPersonalIndex(0)
+    }
     setRepeatMode(next)
-  }, [clearSharedPin, loop])
+  }, [clearSharedPin, loop, isCollectionTab])
 
   // The waiting stage's re-watch button — a deliberate navigation back to the
   // top of the queue. This is the explicit opt-in the owner asked for: it also
@@ -1619,7 +1634,11 @@ export function TheaterShell({
         <div className="absolute inset-0">
           {isCollectionTab ? (
             personalFinished ? (
-              <CollectionAllClear total={personalTotal} onClose={() => onClose?.()} />
+              <CollectionAllClear
+                total={personalTotal}
+                onClose={() => onClose?.()}
+                onKeepPlaying={personalTotal > 0 ? keepPlayingCollection : undefined}
+              />
             ) : personalCurrentFeedItem ? (
               <CollectionStage
                 feedItem={personalCurrentFeedItem}
@@ -1627,6 +1646,7 @@ export function TheaterShell({
                 onRequestUnmute={onRequestUnmute}
                 onEnded={personalAdvanceOnEnded}
                 tags={personalCurrentFeedItem.tags}
+                repeat={repeatCurrentActive}
               />
             ) : null
           ) : isSharedUnavailableOnCurrent && current ? (
@@ -1656,9 +1676,7 @@ export function TheaterShell({
                     savedToday={feed.savedToday}
                     onReplay={displayItems.length > 0 ? replayFromStart : undefined}
                     replayCount={displayItems.length}
-                    onKeepPlaying={
-                      repeatEnabled && displayItems.length > 0 ? keepPlaying : undefined
-                    }
+                    onKeepPlaying={displayItems.length > 0 ? keepPlaying : undefined}
                   />
                 </div>
               )}
@@ -1725,8 +1743,8 @@ export function TheaterShell({
           authed={authed}
           onRequestSignIn={openSignIn}
           repeatCurrent={repeatCurrentActive}
-          repeatMode={repeatEnabled ? displayRepeatMode : undefined}
-          onCycleRepeat={repeatEnabled ? cycleRepeatMode : undefined}
+          repeatMode={displayRepeatMode}
+          onCycleRepeat={cycleRepeatMode}
           collection={personalChrome}
         />
         <DesktopStageChrome
@@ -1799,8 +1817,8 @@ export function TheaterShell({
         playlist={playlist}
         collection={personalChrome}
         repeatCurrent={repeatCurrentActive}
-        repeatMode={repeatEnabled ? displayRepeatMode : undefined}
-        onCycleRepeat={repeatEnabled ? cycleRepeatMode : undefined}
+        repeatMode={displayRepeatMode}
+        onCycleRepeat={cycleRepeatMode}
       />
       {/* `?ytdebug=1`/`?avdebug=1` diagnostics overlay (YtDebugOverlay.tsx) —
           mounted ONCE here so it serves every stage (StageVideo/StageYouTube/
