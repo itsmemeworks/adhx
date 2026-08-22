@@ -1,6 +1,12 @@
 import type { Config } from 'tailwindcss'
 
 const config: Config = {
+  // Owner report (mobile round 8): tapped buttons (mute/unmute, transport)
+  // stayed visually "selected" — that's iOS/Android retaining `:hover` after
+  // a tap. This compiles every `hover:` variant inside
+  // `@media (hover: hover) and (pointer: fine)`, so touch devices never get
+  // sticky hover styles; real pointers are unaffected.
+  future: { hoverOnlyWhenSupported: true },
   darkMode: 'class',
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',

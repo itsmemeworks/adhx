@@ -38,25 +38,43 @@ const THEATER_SHORTCUT_KEYS = new Set([
   'K',
 ])
 
-/** A plain `<a>` menu item — shared shape for every nav link in both the signed-in and signed-out menus. */
+/** The "you are here" marker for the current screen's menu row (round 8,
+ * owner: it wasn't obvious from the burger which screen was loaded). */
+function CurrentDot() {
+  return (
+    <span
+      className="ml-auto h-1.5 w-1.5 flex-none rounded-full bg-clay"
+      aria-hidden
+      data-testid="menu-current-dot"
+    />
+  )
+}
+
+/** A plain `<a>` menu item — shared shape for every nav link in both the
+ * signed-in and signed-out menus. `current` marks the screen the visitor is
+ * already on: bright ink + a clay dot + `aria-current="page"`. */
 function MenuLink({
   href,
   onClick,
+  current = false,
   children,
 }: {
   href: string
   onClick: () => void
+  current?: boolean
   children: ReactNode
 }) {
   return (
     <a
       href={href}
       role="menuitem"
+      aria-current={current ? 'page' : undefined}
       onClick={onClick}
       className="flex items-center gap-2.5 px-4 py-2.5 text-[13px] transition-colors hover:bg-white/[.06]"
-      style={{ color: SUBTLE }}
+      style={{ color: current ? INK : SUBTLE }}
     >
       {children}
+      {current && <CurrentDot />}
     </a>
   )
 }
@@ -65,8 +83,10 @@ function MenuLink({
  * The "Theater" nav entry — identical in the signed-in and signed-out
  * menus, and identical semantics to the Header's own Theater nav item:
  * already on the home theater (`/`), it just closes the menu (a real
- * navigation would restart the stage the visitor is already watching);
- * anywhere else (a shared preview page), it's a real link home.
+ * navigation would restart the stage the visitor is already watching) and
+ * carries the current-screen marker — the front page IS the theater;
+ * anywhere else (a shared preview page, the leaderboard), it's a real link
+ * home.
  */
 function TheaterMenuEntry({ isHome, onClose }: { isHome: boolean; onClose: () => void }) {
   if (isHome) {
@@ -74,12 +94,14 @@ function TheaterMenuEntry({ isHome, onClose }: { isHome: boolean; onClose: () =>
       <button
         type="button"
         role="menuitem"
+        aria-current="page"
         onClick={onClose}
         className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13px] transition-colors hover:bg-white/[.06]"
-        style={{ color: SUBTLE }}
+        style={{ color: INK }}
       >
         <Radio size={15} />
         Theater
+        <CurrentDot />
       </button>
     )
   }
@@ -173,6 +195,11 @@ export function TheaterAvatarMenu({
   // page), it's a real link home. Shared by both the signed-in and
   // signed-out menus below.
   const isHome = pathname === '/'
+  // Current-screen markers for the other nav entries (round 8). Prefix match
+  // so /leaderboard/[window] etc. still count.
+  const isLeaderboard = pathname === '/leaderboard' || pathname?.startsWith('/leaderboard/')
+  const isTags = pathname === '/tags' || pathname?.startsWith('/tags/')
+  const isSettings = pathname === '/settings' || pathname?.startsWith('/settings/')
   const close = () => setOpen(false)
 
   if (!me?.authenticated || !me.user) {
@@ -202,7 +229,7 @@ export function TheaterAvatarMenu({
             style={{ backgroundColor: PANEL, borderColor: BORDER }}
           >
             <TheaterMenuEntry isHome={isHome} onClose={close} />
-            <MenuLink href="/leaderboard" onClick={close}>
+            <MenuLink href="/leaderboard" onClick={close} current={isLeaderboard}>
               <Trophy size={15} />
               Leaderboard
             </MenuLink>
@@ -321,15 +348,15 @@ export function TheaterAvatarMenu({
             Your collection
           </MenuLink>
           <TheaterMenuEntry isHome={isHome} onClose={close} />
-          <MenuLink href="/tags" onClick={close}>
+          <MenuLink href="/tags" onClick={close} current={isTags}>
             <Tag size={15} />
             Tags
           </MenuLink>
-          <MenuLink href="/leaderboard" onClick={close}>
+          <MenuLink href="/leaderboard" onClick={close} current={isLeaderboard}>
             <Trophy size={15} />
             Leaderboard
           </MenuLink>
-          <MenuLink href="/settings" onClick={close}>
+          <MenuLink href="/settings" onClick={close} current={isSettings}>
             <Settings size={15} />
             Settings
           </MenuLink>

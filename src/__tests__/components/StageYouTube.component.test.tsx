@@ -169,7 +169,7 @@ describe('StageYouTube', () => {
     expect(funcs).toEqual(['mute', 'playVideo'])
   })
 
-  it('stops the retry ladder once state 1 is confirmed', () => {
+  it('stops the mute/playVideo retry ladder once state 1 is confirmed (round 8: the progress-starvation poll is a separate, unrelated mechanism)', () => {
     const { container } = render(<StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />)
     const iframe = container.querySelector('iframe') as HTMLIFrameElement
     const { postMessage, fakeWindow } = stubContentWindow(iframe)
@@ -182,7 +182,20 @@ describe('StageYouTube', () => {
       vi.advanceTimersByTime(10_000)
     })
 
-    expect(postMessage).not.toHaveBeenCalled()
+    // No more startup-retry-ladder mute/playVideo commands once state 1 has
+    // confirmed the player actually started.
+    const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+    expect(funcs).not.toContain('mute')
+    expect(funcs).not.toContain('playVideo')
+    // Round 8: the progress-starvation poll DOES fire `listening` handshakes
+    // here — this test never sends a currentTime-bearing payload, so every
+    // post-state-1 poll tick (every 750ms, once >1500ms since the last
+    // time signal) re-asks for an `initialDelivery`. That's the intended
+    // behavior this round adds, not a regression of this test's original
+    // intent (which was only ever about the mute/playVideo ladder above).
+    const events = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).event)
+    expect(events.every((e) => e === 'listening')).toBe(true)
+    expect(events.length).toBeGreaterThan(0)
   })
 
   it('cleans up the retry ladder on unmount (no post-unmount postMessage calls)', () => {
@@ -1180,6 +1193,104 @@ describe('StageYouTube', () => {
       })
       expect(onEnded).not.toHaveBeenCalled() // stall watchdog correctly disarmed
       stop()
+    })
+  })
+
+  // Round 8 (owner on-device report: the clay progress bar never fills on
+  // plain autoplay on iOS — only after an in-iframe gesture wakes YouTube's
+  // own progress reporter). `initialDelivery` is the player's snapshot
+  // answer to a `listening` handshake and is parsed through the exact same
+  // handler as `infoDelivery`; a starvation poll re-sends that handshake
+  // while confirmed-playing and no currentTime-bearing payload has arrived
+  // recently, but stays silent when heartbeats already flow normally.
+  describe('round 8: initialDelivery parsing + progress-starvation poll', () => {
+    function captureProgressEvents() {
+      const progress: number[] = []
+      const handler = (e: Event) =>
+        progress.push((e as CustomEvent<{ progress: number }>).detail.progress)
+      window.addEventListener('theater-video-progress', handler)
+      return {
+        progress,
+        stop: () => window.removeEventListener('theater-video-progress', handler),
+      }
+    }
+
+    it('parses an initialDelivery payload exactly like infoDelivery, dispatching theater-video-progress', () => {
+      const { progress, stop } = captureProgressEvents()
+      const { container } = render(
+        <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+
+      postFromPlayer(fakeWindow, {
+        event: 'initialDelivery',
+        info: { playerState: 1, currentTime: 5, duration: 20 },
+      })
+
+      expect(progress).toEqual([0.25])
+      stop()
+    })
+
+    it('re-sends the listening handshake once starved (state 1 confirmed, no currentTime for >1.5s)', () => {
+      const { container } = render(
+        <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { postMessage, fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+      postFromPlayer(fakeWindow, { event: 'onReady' })
+      // Confirm state 1 WITHOUT any currentTime — this is the iOS-starved
+      // case the poll exists for.
+      postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
+      postMessage.mockClear()
+
+      // Under the 1.5s starvation window (first poll tick, at 750ms) — no
+      // poll message yet.
+      act(() => {
+        vi.advanceTimersByTime(1_000)
+      })
+      expect(postMessage).not.toHaveBeenCalled()
+
+      // The next poll tick lands at 1500ms (still <= the starvation window,
+      // a no-op); the one after that, at 2250ms, is the first to actually
+      // exceed 1500ms since the last time signal and fires the handshake.
+      act(() => {
+        vi.advanceTimersByTime(1_300)
+      })
+      const calls = postMessage.mock.calls.map(([payload]) => JSON.parse(payload))
+      expect(calls.some((c) => c.event === 'listening')).toBe(true)
+    })
+
+    it('never sends an extra listening handshake while currentTime heartbeats keep arriving', () => {
+      const { container } = render(
+        <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { postMessage, fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+      postFromPlayer(fakeWindow, { event: 'onReady' })
+      postFromPlayer(fakeWindow, {
+        event: 'infoDelivery',
+        info: { playerState: 1, currentTime: 0, duration: 20 },
+      })
+      postMessage.mockClear()
+
+      // Send a fresh currentTime-bearing heartbeat every 1s (well under the
+      // 1.5s starvation window) for 6s of poll ticks.
+      for (let t = 1; t <= 6; t++) {
+        act(() => {
+          vi.advanceTimersByTime(1_000)
+        })
+        postFromPlayer(fakeWindow, {
+          event: 'infoDelivery',
+          info: { playerState: 1, currentTime: t, duration: 20 },
+        })
+      }
+
+      const calls = postMessage.mock.calls.map(([payload]) => JSON.parse(payload))
+      expect(calls.some((c) => c.event === 'listening')).toBe(false)
     })
   })
 })

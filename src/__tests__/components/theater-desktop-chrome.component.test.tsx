@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import {
   DesktopStageChrome,
   DesktopDock,
@@ -488,11 +488,11 @@ describe('DesktopStageChrome', () => {
 })
 
 /**
- * Save-is-always-primary / Download-is-secondary (product decision: Save
- * drives account signups, so it must always carry the clay-grad primary
- * treatment; Download is a power-user affordance and stays on the glass
- * secondary style, matching Link/Open) — see TASK 1 of the
- * save-primary-image-download PR.
+ * Save/Download button hierarchy (round 8, owner: the solid clay-grad Save
+ * fill was "too much") — Save now uses SAVE_OUTLINE (a clay border on the
+ * same glass background every other pill uses, distinguished from Download/
+ * Link/Open only by that border accent), never the old solid `bg-clay-grad`
+ * PRIMARY treatment. Download stays on plain GLASS (`border-white/25`).
  */
 describe('DesktopStageChrome: Save/Download button hierarchy', () => {
   const stageBase = {
@@ -505,13 +505,14 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: false })
   })
 
-  it('signed-out Save (sign-in prompt) is primary (bg-clay-grad)', () => {
+  it('signed-out Save (sign-in prompt) is outlined with a clay border, never the old solid fill', () => {
     render(<DesktopStageChrome {...stageBase} current={videoItem()} />)
     const saveBtn = screen.getByText('Save').closest('button')!
-    expect(saveBtn.className).toContain('bg-clay-grad')
+    expect(saveBtn.className).toContain('border-clay')
+    expect(saveBtn.className).not.toContain('bg-clay-grad')
   })
 
-  it('Download is secondary (glass), never bg-clay-grad, even when it is the only sendable action', () => {
+  it("Download is secondary (glass, border-white/25), distinct from Save's clay border", () => {
     mockUseSendFile.mockReturnValue({
       supported: true,
       ready: true,
@@ -522,20 +523,21 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
     render(<DesktopStageChrome {...stageBase} current={videoItem()} />)
     const downloadBtn = screen.getByText('Download').closest('button')!
     expect(downloadBtn.className).not.toContain('bg-clay-grad')
+    expect(downloadBtn.className).not.toContain('border-clay')
     expect(downloadBtn.className).toContain('border-white/25')
 
-    // Save must still be primary alongside it.
+    // Save must still carry the clay-border outline alongside it.
     const saveBtn = screen.getByText('Save').closest('button')!
-    expect(saveBtn.className).toContain('bg-clay-grad')
+    expect(saveBtn.className).toContain('border-clay')
   })
 
-  it('shared+authed SavePostButton is primary', async () => {
+  it('shared+authed SavePostButton carries the clay-border outline', async () => {
     render(<DesktopStageChrome {...stageBase} mode="shared" authed current={videoItem()} />)
     const saveBtn = await screen.findByText('Save')
-    expect(saveBtn.closest('button')!.className).toContain('bg-clay-grad')
+    expect(saveBtn.closest('button')!.className).toContain('border-clay')
   })
 
-  it('triage live-tab Save is primary, Download (when present) stays secondary', () => {
+  it('triage live-tab Save carries the clay-border outline, Download (when present) stays plain glass', () => {
     mockUseSendFile.mockReturnValue({
       supported: true,
       ready: true,
@@ -560,10 +562,10 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
     render(<DesktopStageChrome {...stageBase} current={videoItem()} triage={triage} />)
 
     const saveBtn = screen.getByText('Save').closest('button')!
-    expect(saveBtn.className).toContain('bg-clay-grad')
+    expect(saveBtn.className).toContain('border-clay')
 
     const downloadBtn = screen.getByText('Download').closest('button')!
-    expect(downloadBtn.className).not.toContain('bg-clay-grad')
+    expect(downloadBtn.className).not.toContain('border-clay')
   })
 
   it('text posts never show Download (nothing sendable)', () => {
@@ -601,5 +603,179 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
     expect(
       liveTab.compareDocumentPosition(collectionTab) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
+  })
+})
+
+/**
+ * Round 8: the Spotify-style repeat control in the transport cluster, after
+ * the audio button and before the divider. Only renders when BOTH
+ * `repeatMode` and `onCycleRepeat` are provided (home/shared mode) —
+ * collection mode always loops on its own and triage is a finite backlog,
+ * so neither passes these props.
+ */
+describe('DesktopDock: repeat control', () => {
+  const items = [videoItem({ bookmarkId: '1' })]
+  const currentKey = theaterItemKey(items[0])
+
+  it('does not render when repeatMode/onCycleRepeat are both absent', () => {
+    render(<DesktopDock {...dockBase} items={items} current={items[0]} currentKey={currentKey} />)
+    expect(screen.queryByLabelText(/^Repeat:/)).not.toBeInTheDocument()
+  })
+
+  it('renders "Repeat: off" with the plain Repeat glyph by default', () => {
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={currentKey}
+        repeatMode="off"
+        onCycleRepeat={vi.fn()}
+      />,
+    )
+    const btn = screen.getByLabelText('Repeat: off')
+    expect(btn.querySelector('.lucide-repeat')).toBeInTheDocument()
+    expect(btn.querySelector('.lucide-repeat-1')).not.toBeInTheDocument()
+    expect(btn.className).not.toContain('text-clay')
+  })
+
+  it('renders "Repeat: whole queue" (clay) for mode "all"', () => {
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={currentKey}
+        repeatMode="all"
+        onCycleRepeat={vi.fn()}
+      />,
+    )
+    const btn = screen.getByLabelText('Repeat: whole queue')
+    expect(btn.className).toContain('text-clay')
+  })
+
+  it('renders "Repeat: this post" (clay, Repeat1 glyph) for mode "one"', () => {
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={currentKey}
+        repeatMode="one"
+        onCycleRepeat={vi.fn()}
+      />,
+    )
+    const btn = screen.getByLabelText('Repeat: this post')
+    expect(btn.querySelector('.lucide-repeat-1')).toBeInTheDocument()
+    expect(btn.className).toContain('text-clay')
+  })
+
+  it('calls onCycleRepeat on click', () => {
+    const onCycleRepeat = vi.fn()
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={currentKey}
+        repeatMode="off"
+        onCycleRepeat={onCycleRepeat}
+      />,
+    )
+    fireEvent.click(screen.getByLabelText('Repeat: off'))
+    expect(onCycleRepeat).toHaveBeenCalledTimes(1)
+  })
+})
+
+/**
+ * Round 8: text-like posts (text/quote/article) have no file to download,
+ * so the Download slot carries a "Copy" pill (copies the post's full text)
+ * instead of vanishing.
+ */
+describe('DesktopStageChrome: Copy button for text-like posts', () => {
+  const stageBase = {
+    mode: 'home' as const,
+    declutter: false,
+    onToggleDeclutter: vi.fn(),
+  }
+
+  const writeText = vi.fn().mockResolvedValue(undefined)
+
+  beforeEach(() => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: false })
+    writeText.mockClear()
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+  })
+
+  it('shows a Copy pill (not Download) for a text-like post with no sendable file', () => {
+    render(<DesktopStageChrome {...stageBase} current={textItem()} />)
+    expect(screen.getByText('Copy')).toBeInTheDocument()
+    expect(screen.queryByText('Download')).not.toBeInTheDocument()
+  })
+
+  it('copies the post\'s full text and flashes "Copied" on click', async () => {
+    render(<DesktopStageChrome {...stageBase} current={textItem({ text: 'the full post body' })} />)
+    fireEvent.click(screen.getByText('Copy'))
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith('the full post body'))
+    expect(await screen.findByText('Copied')).toBeInTheDocument()
+  })
+
+  it('renders no Copy pill for a text-like post with empty text', () => {
+    render(<DesktopStageChrome {...stageBase} current={textItem({ text: '' })} />)
+    expect(screen.queryByText('Copy')).not.toBeInTheDocument()
+    expect(screen.queryByText('Download')).not.toBeInTheDocument()
+  })
+})
+
+/**
+ * Round 8: the bottom-left post overlay's author row is tappable — jumps to
+ * the creator's profile on their own platform, via `authorProfileUrl()`.
+ * Media posts only (text/quote/article render their own composition on the
+ * stage, with no media overlay at all).
+ */
+describe('DesktopStageChrome: tappable author row', () => {
+  const stageBase = {
+    mode: 'home' as const,
+    declutter: false,
+    onToggleDeclutter: vi.fn(),
+  }
+
+  beforeEach(() => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: false })
+  })
+
+  it('links the author row to their profile URL for a media post', () => {
+    render(<DesktopStageChrome {...stageBase} current={videoItem({ author: 'alice' })} />)
+    const link = screen.getByTitle('View @alice on X')
+    expect(link.tagName).toBe('A')
+    expect(link).toHaveAttribute('href', 'https://x.com/alice')
+    expect(link).toHaveAttribute('target', '_blank')
+  })
+
+  it('resolves the profile URL per-platform (youtube)', () => {
+    render(
+      <DesktopStageChrome
+        {...stageBase}
+        current={videoItem({ platform: 'youtube', author: 'dana' })}
+      />,
+    )
+    expect(screen.getByTitle('View @dana on YouTube')).toHaveAttribute(
+      'href',
+      'https://www.youtube.com/@dana',
+    )
+  })
+
+  it('renders a plain (non-link) row when there is no author handle', () => {
+    render(
+      <DesktopStageChrome
+        {...stageBase}
+        current={videoItem({ author: '', authorName: undefined })}
+      />,
+    )
+    expect(screen.queryByTitle(/^View @/)).not.toBeInTheDocument()
+    expect(screen.getByText('Saved post')).toBeInTheDocument()
   })
 })

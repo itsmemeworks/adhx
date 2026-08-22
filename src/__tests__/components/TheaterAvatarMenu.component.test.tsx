@@ -153,6 +153,31 @@ describe('TheaterAvatarMenu', () => {
     })
   })
 
+  it('marks Tags as current (clay dot + aria-current) when on /tags', async () => {
+    mockPathname = '/tags'
+    mockAuthMe(AUTHED_ME)
+    render(<TheaterAvatarMenu />)
+    fireEvent.click(await screen.findByLabelText('Account menu'))
+
+    const tagsLink = screen.getByText('Tags').closest('a')!
+    expect(tagsLink).toHaveAttribute('aria-current', 'page')
+    expect(tagsLink.querySelector('[data-testid="menu-current-dot"]')).toBeInTheDocument()
+
+    // Not the currently-viewed entries.
+    expect(screen.getByText('Settings').closest('a')).not.toHaveAttribute('aria-current')
+  })
+
+  it('marks Settings as current when on /settings', async () => {
+    mockPathname = '/settings'
+    mockAuthMe(AUTHED_ME)
+    render(<TheaterAvatarMenu />)
+    fireEvent.click(await screen.findByLabelText('Account menu'))
+
+    const settingsLink = screen.getByText('Settings').closest('a')!
+    expect(settingsLink).toHaveAttribute('aria-current', 'page')
+    expect(settingsLink.querySelector('[data-testid="menu-current-dot"]')).toBeInTheDocument()
+  })
+
   it('closes the menu on Escape', async () => {
     mockAuthMe(AUTHED_ME)
     render(<TheaterAvatarMenu />)
@@ -227,6 +252,30 @@ describe('TheaterAvatarMenu — signed-out burger (allowSignedOut)', () => {
     fireEvent.click(await screen.findByLabelText('Menu'))
 
     expect(screen.getByText('Theater').closest('a')).toHaveAttribute('href', '/')
+  })
+
+  it('marks Leaderboard as current (clay dot + aria-current) when on /leaderboard, including sub-paths', async () => {
+    mockPathname = '/leaderboard/week'
+    mockAuthMe(SIGNED_OUT_ME)
+    render(<TheaterAvatarMenu allowSignedOut />)
+    fireEvent.click(await screen.findByLabelText('Menu'))
+
+    const leaderboardLink = screen.getByText('Leaderboard').closest('a')!
+    expect(leaderboardLink).toHaveAttribute('aria-current', 'page')
+    expect(leaderboardLink.querySelector('[data-testid="menu-current-dot"]')).toBeInTheDocument()
+  })
+
+  it('does not mark Leaderboard current when elsewhere', async () => {
+    mockPathname = '/naval/status/123'
+    mockAuthMe(SIGNED_OUT_ME)
+    render(<TheaterAvatarMenu allowSignedOut />)
+    fireEvent.click(await screen.findByLabelText('Menu'))
+
+    const leaderboardLink = screen.getByText('Leaderboard').closest('a')!
+    expect(leaderboardLink).not.toHaveAttribute('aria-current')
+    expect(
+      leaderboardLink.querySelector('[data-testid="menu-current-dot"]'),
+    ).not.toBeInTheDocument()
   })
 
   it('the Sign in entry closes the menu and calls onRequestSignIn', async () => {

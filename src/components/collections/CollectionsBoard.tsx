@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { MatterLogo, LiveDot } from '@/components/matter'
 import { CollectionPosterCard } from '@/components/tags'
+import { LeaderboardMenu } from './LeaderboardMenu'
 import {
   RANK_WINDOWS,
   windowToPath,
@@ -105,6 +106,11 @@ export function CollectionsBoard({
             <LiveDot />
             <span className="text-[12.5px] font-semibold text-white/60">Collections</span>
           </span>
+          {/* Signed-out nav (round 8): the same burger menu the theater's
+              public surfaces carry — Theater / Leaderboard / Sign in. */}
+          <div className="ml-auto">
+            <LeaderboardMenu />
+          </div>
         </header>
       )}
 

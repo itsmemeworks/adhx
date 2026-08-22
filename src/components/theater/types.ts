@@ -42,6 +42,13 @@ export type TheaterMode = 'home' | 'shared' | 'collection' | 'triage'
  * single source of truth for both. */
 export type TriageTab = 'collection' | 'live'
 
+/**
+ * Spotify-style repeat control (mobile round 8): 'off' waits for new content
+ * at the end of the queue, 'all' loops the whole queue, 'one' repeats the
+ * current post. Owned by TheaterShell; the chromes render the cycling button.
+ */
+export type RepeatMode = 'off' | 'all' | 'one'
+
 /** Left-to-right render order for the Live/My-Collection tab switcher —
  * Live first, matching the default in TheaterShell's `useState`. */
 export const TRIAGE_TAB_ORDER: readonly TriageTab[] = ['live', 'collection']
