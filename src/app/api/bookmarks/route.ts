@@ -86,7 +86,7 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
     const compositeKey = (platform: string, id: string) => `${platform}:${id}`
 
     // Fetch all related data in parallel batches instead of per-bookmark
-    const [allLinks, allTags, allMedia, allArchivedPostes] =
+    const [allLinks, allTags, allMedia, allArchivedPosts] =
       bookmarkIds.length > 0
         ? await Promise.all([
             db
@@ -151,7 +151,7 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
     }
 
     const archivedPostsMap = new Map(
-      allArchivedPostes.map((r) => [compositeKey(r.platform, r.bookmarkId), r.archivedAt]),
+      allArchivedPosts.map((r) => [compositeKey(r.platform, r.bookmarkId), r.archivedAt]),
     )
 
     // Transform bookmarks with related data (no additional queries)

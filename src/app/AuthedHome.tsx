@@ -827,13 +827,14 @@ function FeedPageContent(): React.ReactElement {
   // `?collection=1` — the Collection entry was pressed from another route (e.g. Discover),
   // so we navigated here to open collection. Flag it, then clear the param.
   useEffect(() => {
-    // `?collection=1` is the current name; `?collection=1` is still honoured so
-    // links people already have keep working.
-    if (searchParams.get('collection') !== '1' && searchParams.get('collection') !== '1') return
+    // `?collection=1` is the current name; the superseded `?triage=1` is still
+    // honoured so links people already have keep working. (The rename's own sed
+    // collapsed these two into the same param — caught in review.)
+    if (searchParams.get('collection') !== '1' && searchParams.get('triage') !== '1') return
     setPendingCollection(true)
     const params = new URLSearchParams(searchParams.toString())
     params.delete('collection')
-    params.delete('collection')
+    params.delete('triage')
     const qs = params.toString()
     router.replace(qs ? `?${qs}` : pathname, { scroll: false })
   }, [searchParams, router, pathname])

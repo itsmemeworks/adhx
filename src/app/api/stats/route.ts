@@ -21,8 +21,8 @@ export const GET = withAuth(async (_req, userId) => {
       .where(eq(archivedPosts.userId, userId))
     const archivedCount = readResult?.count || 0
 
-    // Calculate unread
-    const unread = Math.max(0, total - archivedCount)
+    // Posts still in the active collection — everything not archived.
+    const active = Math.max(0, total - archivedCount)
 
     // By category for this user (strict userId check)
     const categoryCounts = await db
@@ -65,7 +65,11 @@ export const GET = withAuth(async (_req, userId) => {
 
     return NextResponse.json({
       total,
-      unread,
+      active,
+      archived: archivedCount,
+      // The superseded names, kept so nothing that reads this endpoint breaks
+      // mid-deploy. Remove once no caller wants them.
+      unread: active,
       read: archivedCount,
       categories,
       withMedia: withMediaResult?.count || 0,

@@ -68,6 +68,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Copy migration files for npm run db:migrate
 COPY --from=builder --chown=nextjs:nodejs /app/src/lib/db/migrate.ts ./src/lib/db/migrate.ts
+# Anything migrate.ts IMPORTS has to be copied too — the runner only gets the
+# files listed here, so a new module is a module-not-found crash at boot, which
+# looks like "machine never became reachable on 0.0.0.0:3000".
+COPY --from=builder --chown=nextjs:nodejs /app/src/lib/db/rename-read-status.ts ./src/lib/db/rename-read-status.ts
 COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 

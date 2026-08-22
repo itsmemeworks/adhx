@@ -5,10 +5,10 @@
  * (CLAUDE.md "Main Feed" / AuthedHome.tsx comment above `buildActiveQueueQuery`):
  * a previous iteration (#342) seeded the collection queue from the CURRENT
  * filter/platform/tag/search state, so opening collection while e.g. viewing
- * "photos only" or a specific tag only collectiond that subset. The owner
- * reversed that — the collection theater is strictly the full unread backlog, every time.
+ * "photos only" or a specific tag only worked through that subset. The owner
+ * reversed that — the collection theater is strictly the full active backlog, every time.
  * This verifies opening the theater's collection tab while the grid has a
- * non-default filter/platform/tag active still requests the FULL unread
+ * non-default filter/platform/tag active still requests the FULL active
  * queue (hideArchived=true, filter=all, no platform/tag/search params).
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
@@ -130,5 +130,45 @@ describe('AuthedHome collection seeding ignores active filters', () => {
     expect(collectionRequest).not.toContain('platform=')
     expect(collectionRequest).not.toContain('tag=')
     expect(collectionRequest).not.toContain('search=')
+  })
+})
+
+/**
+ * The deep link that opens the collection theater from another route. It was
+ * `?triage=1` and is now `?collection=1`; the old name has to keep working
+ * because it is in links people have already shared.
+ *
+ * This exists because the rename's own search-and-replace collapsed the two
+ * checks into the SAME param — leaving `?triage=1` silently dead, with no
+ * error, and nothing testing it. Caught in review, not by the suite.
+ */
+describe('AuthedHome collection deep link', () => {
+  async function opensCollection(query: string): Promise<boolean> {
+    currentQuery = query
+    currentParamsObj = new URLSearchParams(query)
+    feedRequests = []
+    const { unmount } = render(<FeedPage />)
+    try {
+      await waitFor(() => expect(feedRequests.length).toBeGreaterThan(0))
+      // The theater mounts only once the active queue has been fetched.
+      await waitFor(() => expect(screen.queryByTestId('theater-shell')).toBeInTheDocument(), {
+        timeout: 2000,
+      }).catch(() => {})
+      return !!screen.queryByTestId('theater-shell')
+    } finally {
+      unmount()
+    }
+  }
+
+  it('opens on ?collection=1', async () => {
+    expect(await opensCollection('collection=1')).toBe(true)
+  })
+
+  it('still opens on the superseded ?triage=1', async () => {
+    expect(await opensCollection('triage=1')).toBe(true)
+  })
+
+  it('does not open without either param', async () => {
+    expect(await opensCollection('filter=all')).toBe(false)
   })
 })
