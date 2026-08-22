@@ -227,11 +227,22 @@ export type LiveQueueGroup = 'arrived' | 'unwatched' | 'watched'
 
 export const LIVE_QUEUE_GROUP_ORDER: readonly LiveQueueGroup[] = ['arrived', 'unwatched', 'watched']
 
-/** Human labels for the section headings, kept next to the order they follow. */
+/**
+ * Human labels for the section headings, kept next to the order they follow.
+ *
+ * These name the queue as it was WHEN YOU ARRIVED, because that's what the
+ * grouping is (see `wasSeen` below) — positions stay put while you watch, so
+ * the position counter means something and nothing slides out from under you.
+ * The labels have to say that, though: "Not watched yet" over a row you just
+ * finished (and which now carries a ✓) reads as a bug — owner report, "it's
+ * categorizing a video that I've not watched yet but when I watch it, it stays
+ * in that section". "Up next" is true either way, and the ✓ plus the live
+ * remaining-count in the heading are what show progress within it.
+ */
 export const LIVE_QUEUE_GROUP_LABEL: Record<LiveQueueGroup, string> = {
   arrived: 'New since you opened',
-  unwatched: 'Not watched yet',
-  watched: 'Watched',
+  unwatched: 'Up next',
+  watched: 'Watched earlier',
 }
 
 /**
@@ -1365,6 +1376,9 @@ export function TheaterShell({
       setWaiting(false)
       const first = itemsRef.current[0]
       if (first) setCurrentKey(theaterItemKey(first))
+      // Same reason as `replayFromStart` — the key may not change, so the
+      // paused stage needs telling explicitly.
+      window.dispatchEvent(new CustomEvent('theater-resume'))
     }
     setRepeatMode(next)
   }, [clearSharedPin, loop])
@@ -1383,6 +1397,14 @@ export function TheaterShell({
     setRewatching(true)
     setWaiting(false)
     setCurrentKey(theaterItemKey(first))
+    // Resume explicitly. Entering the waiting stage fired `theater-pause` at a
+    // still-mounted stage, and the auto-advance that got us here left
+    // `currentKey` ON the last item — so when that item IS `items[0]` (the
+    // common case: the unwatched run ended, nothing moved), this sets the key
+    // it already had, `src` never changes, StageVideo's `[src]` effect never
+    // re-runs, and nothing ever calls play() again. Owner report: "I click
+    // rewatch all… it wasn't auto-playing for me."
+    window.dispatchEvent(new CustomEvent('theater-resume'))
   }, [clearSharedPin])
 
   const onRequestUnmute = useCallback(() => setMuted(false), [])

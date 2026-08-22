@@ -6,6 +6,7 @@
  * themes — hardcoded, does not follow theme tokens.
  */
 
+import { useRef } from 'react'
 import { PlatformGlyph } from '@/components/matter'
 import { inferType } from '@/lib/trending/filter'
 import { previewPath } from '@/lib/activity/preview-path'
@@ -47,6 +48,31 @@ export interface StageProps {
 export function Stage({ item, muted, onRequestUnmute, onEnded, photoCaption, repeat }: StageProps) {
   const playback = usePlaybackSource(item)
 
+  // Does THIS item render through StageVideo (the reusable <video> element)?
+  // Instagram and YouTube bring their own players, so they don't count.
+  const isStageVideoItem =
+    !!item &&
+    item.platform !== 'instagram' &&
+    item.platform !== 'youtube' &&
+    playback.kind === 'video' &&
+    !!playback.src
+
+  // Remember the last item that DID, so every other kind of item can keep that
+  // element alive underneath itself instead of unmounting it. iOS grants
+  // unmuted playback to the ELEMENT the viewer gestured on, so dropping it
+  // silently kills sound for the rest of the session — owner report: "it goes
+  // from a video to an image or a text post, and then back to a video. It's
+  // actually muted for me again." Same trick round 8 used for the waiting
+  // stage: keep it mounted, cover it, pause it. Writing a ref during render is
+  // fine here — it's idempotent, so a StrictMode double-render stores the same
+  // value twice.
+  const retainedVideo = useRef<{ item: TheaterItem; src: string; poster: string | null } | null>(
+    null,
+  )
+  if (isStageVideoItem && item && playback.src) {
+    retainedVideo.current = { item, src: playback.src, poster: playback.poster }
+  }
+
   if (!item) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-[#08070a]">
@@ -55,64 +81,86 @@ export function Stage({ item, muted, onRequestUnmute, onEnded, photoCaption, rep
     )
   }
 
-  // Instagram gets its own stage: the mirror MP4 must be Range-probed before
-  // a <video src> is attached (cold-cache 404s), so it can't share StageVideo.
-  if (item.platform === 'instagram') {
-    return (
-      <StageInstagram
-        item={item}
-        muted={muted}
-        onRequestUnmute={onRequestUnmute}
-        onEnded={onEnded}
-        repeat={repeat}
-      />
-    )
+  // What goes ON TOP of the video layer — null when the video IS the stage.
+  let overlay: React.ReactNode = null
+  if (!isStageVideoItem) {
+    const type = inferType(item)
+    if (item.platform === 'instagram') {
+      // Instagram's mirror MP4 must be Range-probed before a <video src> is
+      // attached (cold-cache 404s), so it can't share StageVideo.
+      overlay = (
+        <StageInstagram
+          item={item}
+          muted={muted}
+          onRequestUnmute={onRequestUnmute}
+          onEnded={onEnded}
+          repeat={repeat}
+        />
+      )
+    } else if (item.platform === 'youtube') {
+      // No MP4 — official youtube-nocookie iframe only, driven by the raw
+      // postMessage protocol for autoplay/ended/transport.
+      overlay = (
+        <StageYouTube
+          item={item}
+          muted={muted}
+          onRequestUnmute={onRequestUnmute}
+          onEnded={onEnded}
+          repeat={repeat}
+        />
+      )
+    } else if (type === 'article') {
+      overlay = <StageArticle item={item} />
+    } else if (type === 'photo') {
+      overlay = <StageText item={item} photo photoCaption={photoCaption} />
+    } else if (type === 'text' || type === 'quote') {
+      overlay = <StageText item={item} />
+    } else {
+      // Anything unresolvable: a graceful poster fallback — never a dead stage.
+      overlay = <StagePoster item={item} poster={playback.poster} />
+    }
   }
 
-  // YouTube has no MP4 — official youtube-nocookie iframe only, driven by
-  // the raw postMessage protocol for autoplay/ended/transport (StageYouTube).
-  if (item.platform === 'youtube') {
-    return (
-      <StageYouTube
-        item={item}
-        muted={muted}
-        onRequestUnmute={onRequestUnmute}
-        onEnded={onEnded}
-        repeat={repeat}
-      />
-    )
-  }
+  const retained = retainedVideo.current
 
-  if (playback.kind === 'video' && playback.src) {
-    return (
-      <StageVideo
-        item={item}
-        src={playback.src}
-        poster={playback.poster}
-        muted={muted}
-        onRequestUnmute={onRequestUnmute}
-        onEnded={onEnded}
-        repeat={repeat}
-      />
-    )
-  }
-
-  const type = inferType(item)
-
-  if (type === 'article') {
-    return <StageArticle item={item} />
-  }
-
-  if (type === 'photo') {
-    return <StageText item={item} photo photoCaption={photoCaption} />
-  }
-
-  if (type === 'text' || type === 'quote') {
-    return <StageText item={item} />
-  }
-
-  // Anything unresolvable: a graceful poster fallback — never a dead black stage.
-  return <StagePoster item={item} poster={playback.poster} />
+  // ONE tree shape for every item, because React reconciles by POSITION: if
+  // the video sat at the root for a video item and one level deeper for a text
+  // item, the <video> would be destroyed and rebuilt on every switch — which
+  // is exactly the element (and grant) this is trying to preserve. So the video
+  // layer is always this slot, and everything else is an overlay above it.
+  return (
+    <div className="relative h-full w-full">
+      {isStageVideoItem && playback.src ? (
+        <div className="absolute inset-0">
+          <StageVideo
+            item={item}
+            src={playback.src}
+            poster={playback.poster}
+            muted={muted}
+            onRequestUnmute={onRequestUnmute}
+            onEnded={onEnded}
+            repeat={repeat}
+          />
+        </div>
+      ) : retained ? (
+        <div className="absolute inset-0" aria-hidden tabIndex={-1}>
+          <StageVideo
+            item={retained.item}
+            src={retained.src}
+            poster={retained.poster}
+            muted={muted}
+            onRequestUnmute={onRequestUnmute}
+            covered
+          />
+        </div>
+      ) : null}
+      {overlay && (
+        // Opaque, above, and owns the pointer — a covered video must never be
+        // seen, heard, or tappable.
+        <div className="absolute inset-0 z-10 bg-[#08070a]">{overlay}</div>
+      )}
+    </div>
+  )
 }
 
 function StagePoster({ item, poster }: { item: TheaterItem; poster: string | null }) {

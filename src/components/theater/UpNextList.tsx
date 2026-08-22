@@ -228,6 +228,19 @@ export function UpNextList({
     if (g) acc[g] = (acc[g] ?? 0) + 1
     return acc
   }, {})
+  /**
+   * How many rows in each group are STILL unwatched, live. The group itself is
+   * frozen at arrival (so nothing moves while you watch), so this is what
+   * shows progress: finish a row and the heading's number drops even though
+   * the row stays put with its ✓. For "Watched earlier" the total is the
+   * useful number — none of it is pending.
+   */
+  const groupRemaining = groups.reduce<Partial<Record<LiveQueueGroup, number>>>((acc, g, i) => {
+    if (g && g !== 'watched' && !seenFlags[i]) acc[g] = (acc[g] ?? 0) + 1
+    return acc
+  }, {})
+  const headingCount = (g: LiveQueueGroup) =>
+    g === 'watched' ? groupCounts.watched : groupRemaining[g]
   /** Index of each group's first row — where its heading goes. */
   const headingAt = new Map<number, LiveQueueGroup>()
   const started = new Set<LiveQueueGroup>()
@@ -236,7 +249,9 @@ export function UpNextList({
     started.add(g)
     headingAt.set(i, g)
   })
-  const unwatchedTotal = (groupCounts.arrived ?? 0) + (groupCounts.unwatched ?? 0)
+  // "Caught up" means nothing is PENDING, live — not that the arrival queue
+  // was empty. Watching the last row flips it without moving anything.
+  const unwatchedTotal = (groupRemaining.arrived ?? 0) + (groupRemaining.unwatched ?? 0)
 
   const currentIndex = currentKey ? items.findIndex((it) => theaterItemKey(it) === currentKey) : -1
 
@@ -289,9 +304,11 @@ export function UpNextList({
                   className="mt-1 flex items-center gap-2 px-2.5 pb-0.5 text-[10.5px] font-medium uppercase tracking-wide text-ink-3"
                 >
                   <span>{LIVE_QUEUE_GROUP_LABEL[heading]}</span>
-                  <span className="font-mono normal-case tracking-normal">
-                    {groupCounts[heading]}
-                  </span>
+                  {!!headingCount(heading) && (
+                    <span className="font-mono normal-case tracking-normal">
+                      {headingCount(heading)}
+                    </span>
+                  )}
                   <span className="h-px flex-1 bg-hairline" />
                 </div>
                 {row}

@@ -48,6 +48,18 @@ export interface StageVideoProps {
    * it needs no coordination with the play()-call effect below.
    */
   repeat?: boolean
+  /**
+   * This element is retained but COVERED — a non-video item is on stage and
+   * this instance only exists to keep the element (and the unmute grant iOS
+   * gave it) alive underneath. Pause while covered, resume on uncover.
+   *
+   * Without this the element unmounted on every text/photo/article item, so
+   * returning to a video meant a brand-new element with no grant, and sound
+   * silently dropped mid-session — owner report: "sometimes I'm watching with
+   * volume and it goes from a video to an image or a text post, and then back
+   * to a video. It's actually muted for me again."
+   */
+  covered?: boolean
 }
 
 export function StageVideo({
@@ -58,6 +70,7 @@ export function StageVideo({
   onRequestUnmute,
   onEnded,
   repeat,
+  covered = false,
 }: StageVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [ended, setEnded] = useState(false)
@@ -178,6 +191,34 @@ export function StageVideo({
       },
     )
   }, [src])
+
+  // Cover transitions. Pausing is unconditional (a covered video must never be
+  // heard under a text post); resuming only touches a video this component
+  // actually paused, and only when the src hasn't changed underneath — a src
+  // change means the `[src]` effect above is already calling play(), and this
+  // must not become a second caller of it.
+  const pausedByCoverRef = useRef(false)
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+    if (covered) {
+      if (!video.paused) {
+        logSV('covered by a non-video item — pausing, element retained')
+        video.pause()
+        pausedByCoverRef.current = true
+      }
+      return
+    }
+    if (!pausedByCoverRef.current) return
+    pausedByCoverRef.current = false
+    if (video.paused) {
+      logSV(`uncovered — resuming (muted=${video.muted})`)
+      video.play().then(
+        () => setPlaying(true),
+        () => setNeedsGesture(true),
+      )
+    }
+  }, [covered])
 
   // The ONE start path for a not-yet-started video (autoplay rejected, the
   // tap-to-play overlay showing): used by the overlay's own tap AND — via the

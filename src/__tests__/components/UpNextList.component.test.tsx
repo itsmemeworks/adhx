@@ -85,8 +85,8 @@ describe('UpNextList grouping headings', () => {
     )
 
     expect(screen.getByText('New since you opened')).toBeInTheDocument()
-    expect(screen.getByText('Not watched yet')).toBeInTheDocument()
-    expect(screen.getByText('Watched')).toBeInTheDocument()
+    expect(screen.getByText('Up next')).toBeInTheDocument()
+    expect(screen.getByText('Watched earlier')).toBeInTheDocument()
     // Each heading carries its own count. Read them off the separators so a
     // bare "1" elsewhere in the row markup can't satisfy the assertion.
     const headings = screen
@@ -94,7 +94,9 @@ describe('UpNextList grouping headings', () => {
       .map((el) => el.textContent?.replace(/\s+/g, ' ').trim())
     // (textContent has no gap between the label and count spans; the visual
     // gap is flex `gap-2`.)
-    expect(headings).toEqual(['New since you opened1', 'Not watched yet2', 'Watched1'])
+    // Counts are what's still PENDING for the two live groups (nothing is
+    // watched yet here) and the total for the watched-earlier block.
+    expect(headings).toEqual(['New since you opened1', 'Up next2', 'Watched earlier1'])
     // Counts live in those headings — "show a fact once", so no duplicate
     // summary line above them.
     expect(screen.queryByText(/to watch/i)).not.toBeInTheDocument()
@@ -107,7 +109,7 @@ describe('UpNextList grouping headings', () => {
     )
     // Two unwatched rows: the old code showed "all caught up" here whenever
     // there was no stored last-visit timestamp.
-    expect(screen.getByText('Not watched yet')).toBeInTheDocument()
+    expect(screen.getByText('Up next')).toBeInTheDocument()
     expect(screen.queryByText(/all caught up/i)).not.toBeInTheDocument()
 
     rerender(
@@ -118,7 +120,55 @@ describe('UpNextList grouping headings', () => {
 
   it('renders no headings at all in playlist/shared mode (ungrouped queue)', () => {
     render(<UpNextList {...base} items={[post('a', 1), post('b', 2)]} />)
-    expect(screen.queryByText('Not watched yet')).not.toBeInTheDocument()
+    expect(screen.queryByText('Up next')).not.toBeInTheDocument()
     expect(screen.queryByText(/all caught up/i)).not.toBeInTheDocument()
+  })
+})
+
+/**
+ * Owner report (mobile, 2/26): a row sat under "NOT WATCHED YET" carrying a
+ * green ✓ — "it's categorizing a video that I've not watched yet but when I
+ * watch it, it stays in that section". The grouping is deliberately frozen at
+ * arrival so positions (and the position counter) stay put while you watch, so
+ * the fix is that the heading must not CLAIM the row is unwatched, and must
+ * show progress some other way: the label is "Up next" and its count is what's
+ * still pending, live.
+ */
+describe('UpNextList — watching a row updates the heading, not the layout', () => {
+  const hoursAgo = (h: number) => new Date(Date.now() - h * 3600_000).toISOString()
+  const post = (id: string, addedHoursAgo: number) =>
+    item({ bookmarkId: id, url: `/alice/status/${id}`, addedAt: hoursAgo(addedHoursAgo) })
+  const items = [post('a', 1), post('b', 2)]
+  const wasSeenOnEntry = () => false
+
+  it('keeps a just-watched row in place and drops the pending count', () => {
+    const { rerender } = render(
+      <UpNextList {...base} items={items} wasSeenOnEntry={wasSeenOnEntry} />,
+    )
+    const order = () => screen.getAllByRole('separator').map((el) => el.textContent)
+    expect(order()).toEqual(['Up next2'])
+
+    // Now 'a' has been watched THIS session: still grouped under Up next (its
+    // arrival group), but the heading's pending count drops to 1.
+    rerender(
+      <UpNextList
+        {...base}
+        items={items}
+        isSeen={(k) => k === 'twitter:a'}
+        wasSeenOnEntry={wasSeenOnEntry}
+      />,
+    )
+    expect(order()).toEqual(['Up next1'])
+    // The row did NOT move out of the group, and no second heading appeared.
+    expect(screen.queryByText('Watched earlier')).not.toBeInTheDocument()
+  })
+
+  it('goes caught-up once every row has been watched, without regrouping', () => {
+    render(
+      <UpNextList {...base} items={items} isSeen={() => true} wasSeenOnEntry={wasSeenOnEntry} />,
+    )
+    expect(screen.getByText('You\u2019re all caught up')).toBeInTheDocument()
+    // Heading loses its count entirely rather than showing a bare 0.
+    expect(screen.getAllByRole('separator').map((el) => el.textContent)).toEqual(['Up next'])
   })
 })
