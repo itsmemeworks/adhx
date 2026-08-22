@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { eq } from 'drizzle-orm'
 import { createTestDb, createTestBookmark, type TestDbInstance } from './setup'
 import {
   activity,
@@ -193,6 +194,42 @@ describe('getTheaterFeed', () => {
     const item = seed.items.find((i) => i.bookmarkId === 'pubmedia')
     expect(item?.thumbnailUrl).toBe('https://example.com/photo-preview.jpg')
     expect(item?.contentType).toBe('photo')
+  })
+
+  /**
+   * Owner report: playlist time chips looked like they showed the source
+   * network's post date. Backfilled items carried `bookmarks.createdAt` (the
+   * X publish date) as their event time and no `addedAt` at all — so the chip
+   * (which reads `addedAt`) vanished, and a post's publish date drove the
+   * merge's freshness comparison. Both times are ADHX-side now.
+   */
+  it('times a backfilled item by when it was added to ADHX, not when it was posted', async () => {
+    seedActivity({ bookmarkId: 'live1', createdAt: '2026-06-06T10:00:00Z' })
+    const postedAt = '2019-03-04T09:00:00.000Z'
+    const addedToAdhxAt = '2026-08-20T12:34:56.000Z'
+    testInstance.db
+      .insert(tagShares)
+      .values({ userId: 'curator', tag: 'faves', shareCode: 'curator-faves', isPublic: true })
+      .onConflictDoNothing()
+      .run()
+    seedPublicTagBookmark({
+      userId: 'curator',
+      tag: 'faves',
+      bookmarkId: 'oldpost',
+      processedAt: addedToAdhxAt,
+    })
+    testInstance.db
+      .update(bookmarks)
+      .set({ createdAt: postedAt })
+      .where(eq(bookmarks.id, 'oldpost'))
+      .run()
+
+    const seed = await getTheaterFeed()
+
+    const item = seed.items.find((i) => i.bookmarkId === 'oldpost')
+    expect(item?.addedAt).toBe(addedToAdhxAt)
+    expect(item?.createdAt).toBe(addedToAdhxAt)
+    expect(item?.createdAt).not.toBe(postedAt)
   })
 
   // spec §6b — link expansions attached via the live getTrendingItems() path

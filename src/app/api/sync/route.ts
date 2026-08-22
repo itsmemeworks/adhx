@@ -12,6 +12,7 @@ import { isReauthError, toTwitterCallError } from '@/lib/twitter/errors'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 import { getSyncCooldownMs } from '@/lib/sync/config'
 import { saveBookmark } from '@/lib/sync/save-bookmark'
+import { addedAtForIndex } from '@/lib/sync/added-at'
 
 /**
  * Cap on how many newly-synced tweets feed the public pulse per sync. Bookmarks
@@ -212,7 +213,15 @@ export const GET = withAuth(async (request, userId) => {
             duplicatesSkipped++
             send('duplicate', { tweetId: tweet.id, skipped: true })
           } else {
-            const savedBookmark = await saveBookmark(tweet, userId, insertedDuringSync)
+            // Count the "added" stamp backwards from the sync start so X's
+            // newest-bookmarked-first order survives the Collection's
+            // `added desc` sort — see addedAtForIndex.
+            const savedBookmark = await saveBookmark(
+              tweet,
+              userId,
+              insertedDuringSync,
+              addedAtForIndex(syncStartTime, i),
+            )
             insertedDuringSync.add(tweet.id) // Track that we inserted this ID
             newBookmarks++
 

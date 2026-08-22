@@ -3,6 +3,7 @@ import { withAuth } from '@/lib/api/with-auth'
 import { db } from '@/lib/db'
 import { tagShares, bookmarkTags, bookmarks, bookmarkMedia } from '@/lib/db/schema'
 import { eq, and, inArray } from 'drizzle-orm'
+import { addedAtForIndex } from '@/lib/sync/added-at'
 
 const MAX_CLONE_SIZE = 100
 
@@ -81,16 +82,24 @@ export const POST = withAuth(
         ).map((b) => b.id),
       )
 
-      // 7. Prepare batch inserts
-      const now = new Date().toISOString()
+      // 7. Prepare batch inserts. The clone is "added" NOW (the Collection
+      // sorts on processedAt, newest first), stamped in the source's own
+      // newest-first order and counting backwards from the clone so the whole
+      // collection doesn't land on one identical timestamp — see
+      // addedAtForIndex.
+      const clonedAtMs = Date.now()
+      const orderedSource = [...sourceBookmarks].sort((a, b) =>
+        (b.processedAt ?? '').localeCompare(a.processedAt ?? ''),
+      )
       const bookmarksToInsert: (typeof bookmarks.$inferInsert)[] = []
       const mediaToInsert: (typeof bookmarkMedia.$inferInsert)[] = []
       const tagsToInsert: (typeof bookmarkTags.$inferInsert)[] = []
       const clonedIds: string[] = []
 
-      for (const bookmark of sourceBookmarks) {
+      for (const bookmark of orderedSource) {
         if (existingBookmarkIds.has(bookmark.id)) continue
 
+        const now = addedAtForIndex(clonedAtMs, clonedIds.length)
         clonedIds.push(bookmark.id)
 
         // Explicit field mapping (not spread)

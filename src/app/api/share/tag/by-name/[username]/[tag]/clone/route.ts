@@ -5,6 +5,7 @@ import { tagShares, bookmarkTags, bookmarks, bookmarkMedia, bookmarkLinks } from
 import { eq, and, inArray } from 'drizzle-orm'
 import { withAuth } from '@/lib/api/with-auth'
 import { recordCollectionEvent } from '@/lib/discovery/record'
+import { addedAtForIndex } from '@/lib/sync/added-at'
 
 const MAX_CLONE_SIZE = 100
 
@@ -158,15 +159,27 @@ export const POST = withAuth(
         newBookmarkPairKeys.has(pairKey(l.platform, l.bookmarkId)),
       )
 
+      // The Collection sorts by "added to ADHX" (processedAt) newest-first, so
+      // a clone is added NOW — spreading the source row would import the
+      // curator's own add times and bury a just-cloned collection somewhere in
+      // the middle of the cloner's feed. The curator's newest-first order is
+      // preserved by stamping in that order and counting backwards from the
+      // clone (see addedAtForIndex).
+      const clonedAtMs = Date.now()
+      const orderedNewBookmarks = [...newBookmarks].sort((a, b) =>
+        (b.processedAt ?? '').localeCompare(a.processedAt ?? ''),
+      )
+
       // All writes happen atomically — if any insert fails, none of them persist.
       runInTransaction(() => {
-        if (newBookmarks.length > 0) {
+        if (orderedNewBookmarks.length > 0) {
           db.insert(bookmarks)
             .values(
-              newBookmarks.map((b) => ({
+              orderedNewBookmarks.map((b, i) => ({
                 ...b,
                 userId: currentUserId,
                 source: 'clone' as const,
+                processedAt: addedAtForIndex(clonedAtMs, i),
               })),
             )
             .run()

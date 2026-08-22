@@ -148,7 +148,16 @@ function fetchPublicTagBackfill(existing: TheaterItem[], needed: number): Theate
       text: row.text,
       thumbnailUrl: media?.url ?? null,
       url: row.url,
-      createdAt: row.createdAt || row.processedAt,
+      // BOTH times are ADHX-side, never the source platform's publish date
+      // (owner decision, see TrendingItem.addedAt): `processedAt` is when the
+      // curator saved it, which is both this item's "added to ADHX" chip and
+      // the event time the pulse orders/merges on. Using `row.createdAt` here
+      // leaked the post's own publish date into the queue — it dropped the
+      // time chip entirely (hasKnownTimestamp reads `addedAt`, which was
+      // absent) and made a months-old post look "fresh"/"stale" to
+      // mergeFeedItems depending on when it was posted rather than added.
+      createdAt: row.processedAt,
+      addedAt: row.processedAt,
       contentType,
     })
   }

@@ -18,13 +18,23 @@ import { normalizeEntityMap } from '@/lib/utils/article-text'
 // Note: categorizeBookmark, extractDomain, and determineLinkType are
 // imported from @/lib/tweets/processor for consistency with /api/tweets/add
 
-/** Save a single bookmark to the database with automatic enrichment. */
+/**
+ * Save a single bookmark to the database with automatic enrichment.
+ *
+ * `processedAt` is the "added to ADHX" stamp the Collection's default sort
+ * (`sort=added`, newest first) orders by. Callers that import a *batch* in a
+ * meaningful order must pass it explicitly: X returns bookmarks
+ * newest-bookmarked first, so stamping each row with `Date.now()` as the loop
+ * runs makes the last-saved (oldest) bookmark the newest "added" row and turns
+ * the whole collection upside down. See `addedAtForIndex`.
+ */
 export async function saveBookmark(
   tweet: TwitterBookmark,
   userId: string,
   insertedDuringSync: Set<string>,
+  processedAt?: string,
 ): Promise<StreamedBookmark> {
-  const now = new Date().toISOString()
+  const now = processedAt ?? new Date().toISOString()
   const authorUsername = tweet.author?.username || 'unknown'
   const tweetUrl = tweet.author
     ? `https://x.com/${authorUsername}/status/${tweet.id}`

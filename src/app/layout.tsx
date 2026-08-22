@@ -180,9 +180,20 @@ const websiteJsonLd = {
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // translate="no" + the notranslate meta below: mobile Chrome/Safari offered
+  // to auto-translate any non-English page (a Spanish/Portuguese collection
+  // theater, say), and browser translation REPLACES the text nodes React owns
+  // with its own <font> wrappers. The next render that removes one of those
+  // nodes — advancing to the next post in a playlist — throws "Failed to
+  // execute 'removeChild' on 'Node'" and takes the whole theater down. This is
+  // an interactive React app on every route, so the offer is suppressed
+  // sitewide rather than per-surface. TheaterLinkedText also wraps its text
+  // runs in elements so a translation *extension* (which ignores this
+  // attribute) can't crash the same way.
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" translate="no" suppressHydrationWarning>
       <head>
+        <meta name="google" content="notranslate" />
         {/* Blocking script to prevent theme FOUC - runs before React hydrates */}
         <script
           dangerouslySetInnerHTML={{
