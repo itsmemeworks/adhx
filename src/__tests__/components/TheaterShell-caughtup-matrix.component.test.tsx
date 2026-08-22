@@ -175,9 +175,9 @@ async function renderHome(items: TheaterItem[]) {
  * Signed-in Live tab — how `AuthedHome` mounts the shell for authed `/`
  * (`mode="triage"`, `initialTriageTab="live"`, empty `triageItems` since the
  * Live tab never reads that prop — see AuthedHome.tsx's `TRIAGE_LIVE_SEED`).
- * `global.fetch` must be stubbed before this: mount fires the triage-streak
- * GET and, once the live queue renders, a bulk `/api/feed` membership
- * lookup — both harmless no-ops against a generic `{ ok: false }`.
+ * `global.fetch` must be stubbed before this: once the live queue renders it
+ * fires a bulk `/api/feed` membership lookup — a harmless no-op against a
+ * generic `{ ok: false }`.
  */
 async function renderTriageLive(items: TheaterItem[]) {
   authMeState.me = { authenticated: true, user: { username: 'owner' } }

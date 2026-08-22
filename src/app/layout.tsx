@@ -69,7 +69,7 @@ export const metadata: Metadata = {
     template: '%s | ADHX',
   },
   description:
-    "Sync your X/Twitter bookmarks into one searchable home, discover what's trending, and triage your backlog — every tweet, thread, Reel, TikTok and YouTube Short in one place. The ADHD-friendly bookmark manager.",
+    "Sync your X/Twitter bookmarks into one searchable home, discover what's trending, and work through your backlog — every tweet, thread, Reel, TikTok and YouTube Short in one place. The ADHD-friendly bookmark manager.",
   keywords: [
     'X bookmarks',
     'Twitter bookmarks',
@@ -109,14 +109,14 @@ export const metadata: Metadata = {
     siteName: 'ADHX',
     title: 'ADHX - Save now. Read never. Find always.',
     description:
-      "Sync your X bookmarks, discover what's trending, and triage your backlog — tweets, threads, Reels, TikToks and Shorts in one searchable home.",
+      "Sync your X bookmarks, discover what's trending, and work through your backlog — tweets, threads, Reels, TikToks and Shorts in one searchable home.",
     // Images auto-generated from opengraph-image.tsx
   },
   twitter: {
     card: 'summary_large_image',
     title: 'ADHX - Save now. Read never. Find always.',
     description:
-      "Sync your X bookmarks, discover what's trending, and triage your backlog — tweets, threads, Reels, TikToks and Shorts in one searchable home.",
+      "Sync your X bookmarks, discover what's trending, and work through your backlog — tweets, threads, Reels, TikToks and Shorts in one searchable home.",
     // Images auto-generated from twitter-image.tsx
     creator: '@adhx_app',
   },
@@ -146,7 +146,7 @@ const jsonLd = {
   applicationCategory: 'ProductivityApplication',
   operatingSystem: 'Web',
   description:
-    "Sync your X/Twitter bookmarks into one searchable home, discover what's trending, and triage your backlog — every tweet, thread, Reel, TikTok and YouTube Short in one place. The ADHD-friendly bookmark manager.",
+    "Sync your X/Twitter bookmarks into one searchable home, discover what's trending, and work through your backlog — every tweet, thread, Reel, TikTok and YouTube Short in one place. The ADHD-friendly bookmark manager.",
   url: 'https://adhx.com',
   offers: {
     '@type': 'Offer',

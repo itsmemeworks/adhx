@@ -744,8 +744,22 @@ export function TheaterShell({
    * shifts the next post INTO `idx`, so staying put IS advancing. Later is
    * different and still just advances — "show me this again" means keep it.
    */
-  const removeFromTriageQueue = useCallback((idx: number) => {
-    setTriageQueue((prev) => (idx < 0 || idx >= prev.length ? prev : prev.toSpliced(idx, 1)))
+  const removeFromTriageQueue = useCallback((item: FeedItem) => {
+    const platform = item.platform ?? 'twitter'
+    // Removed by IDENTITY, not by the index the caller captured. These handlers
+    // close over `triageIndex`, and the keyboard listener re-subscribes only
+    // after a render — so two events landing in the same tick (OS key-repeat
+    // on ArrowRight, a fast double-tap) both carried the SAME stale index, and
+    // the second removal took whichever unresolved post had slid into that
+    // slot. Filtering by key makes a repeat a no-op instead (review finding).
+    //
+    // `filter`, not `toSpliced`: the latter is ES2023 and Next's compiler does
+    // not polyfill prototype methods, so on iOS 16.0-16.3 it is `undefined`
+    // and pressing Archive would throw into the error boundary. This project
+    // targets ES2017 for exactly that reason.
+    setTriageQueue((prev) =>
+      prev.filter((f) => !(f.id === item.id && (f.platform ?? 'twitter') === platform)),
+    )
   }, [])
 
   const triageDone = useCallback(() => {
@@ -760,7 +774,7 @@ export function TheaterShell({
     const action: TriageUndoAction = { type: 'archive', item, index: idx }
     setTriageUndo(action)
     armUndoDismiss(action)
-    removeFromTriageQueue(idx)
+    removeFromTriageQueue(item)
   }, [
     triageCurrentFeedItem,
     triageIndex,
@@ -801,7 +815,7 @@ export function TheaterShell({
     }, 5000)
     triageUndoTimerRef.current = timer
     setTriageUndo({ type: 'delete', item, index: triageIndex })
-    removeFromTriageQueue(triageIndex)
+    removeFromTriageQueue(item)
   }, [
     triageCurrentFeedItem,
     triageIndex,
@@ -834,7 +848,10 @@ export function TheaterShell({
           (f) => f.id === item.id && (f.platform ?? 'twitter') === (item.platform ?? 'twitter'),
         )
           ? prev
-          : prev.toSpliced(Math.min(Math.max(index, 0), prev.length), 0, item),
+          : (() => {
+              const at = Math.min(Math.max(index, 0), prev.length)
+              return [...prev.slice(0, at), item, ...prev.slice(at)]
+            })(),
       )
     }
     setTriageIndex(triageUndo.index)
@@ -2044,7 +2061,7 @@ export function TheaterShell({
       ref={shellRef}
       role={isTriage ? 'dialog' : undefined}
       aria-modal={isTriage ? true : undefined}
-      aria-label={isTriage ? 'Triage' : undefined}
+      aria-label={isTriage ? 'Your collection' : undefined}
       tabIndex={isTriage ? -1 : undefined}
       className="fixed inset-0 z-[60] flex flex-col overflow-hidden bg-[#08070a] outline-none"
     >

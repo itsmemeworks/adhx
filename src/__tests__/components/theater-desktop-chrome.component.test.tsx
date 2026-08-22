@@ -572,7 +572,6 @@ describe('DesktopStageChrome', () => {
       onLiveTag: vi.fn(),
       savedKeys: new Set<string>(),
       remaining: 0,
-      streak: { current: 0, longest: 0 },
       onClose: vi.fn(),
     }
     render(<DesktopStageChrome {...stageBase} current={videoItem()} triage={triage} />)
@@ -693,7 +692,6 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
       onLiveTag: vi.fn(),
       savedKeys: new Set<string>(),
       remaining: 0,
-      streak: { current: 0, longest: 0 },
       onClose: vi.fn(),
     }
     render(<DesktopStageChrome {...stageBase} current={videoItem()} triage={triage} />)
@@ -744,7 +742,6 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
       onLiveTag: vi.fn(),
       savedKeys: new Set<string>(),
       remaining: 0,
-      streak: { current: 0, longest: 0 },
       onClose: vi.fn(),
     }
     render(<DesktopStageChrome {...stageBase} current={videoItem()} triage={triage} />)
@@ -1079,7 +1076,6 @@ describe('DesktopStageChrome: theaterActive prop wiring', () => {
     onLiveTag: vi.fn(),
     savedKeys: new Set<string>(),
     remaining: 0,
-    streak: { current: 0, longest: 0 },
     onClose: vi.fn(),
   }
 

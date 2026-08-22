@@ -1279,7 +1279,7 @@ function FeedPageContent(): React.ReactElement {
             onCollectionAdded={placeAddedItem}
             onClose={() => {
               setTriageOpen(false)
-              // Refresh the top-bar streak + counts after a triage session.
+              // Refresh the top-bar counts after a collection session.
               window.dispatchEvent(new CustomEvent('stats-updated'))
             }}
           />

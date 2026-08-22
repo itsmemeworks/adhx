@@ -63,7 +63,6 @@ function mockFetch(authenticated: boolean, xConnected = true) {
       )
     }
     if (url.startsWith('/api/stats')) return jsonResponse({ total: 0, unread: 0 })
-    if (url.startsWith('/api/triage/streak')) return jsonResponse({ current: 0 })
     if (url.startsWith('/api/sync/cooldown')) {
       return jsonResponse({ canSync: true, cooldownRemaining: 0, lastSyncAt: null })
     }
