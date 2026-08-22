@@ -4,44 +4,85 @@ import * as schema from './schema'
 import path from 'path'
 import fs from 'fs'
 
-// Database path from env or default
-const DB_PATH = process.env.DATABASE_PATH || './data/adhdone.db'
-
-// Ensure data directory exists
-const dbDir = path.dirname(DB_PATH)
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true })
-}
+type DrizzleDb = ReturnType<typeof drizzle<typeof schema>>
 
 /**
  * One better-sqlite3 handle per process. Next can evaluate this module twice
  * (RSC graph vs route graph); two connections to the same WAL file is why
  * `/t/{user}/{tag}` could still render "Private playlist" after PATCH made
  * the tag public — the page's connection missed the route's write.
+ *
+ * Path is read lazily (bracket access so Turbopack cannot inline `undefined`
+ * at compile time). Playwright e2e migrates `data/e2e.db` then sets
+ * DATABASE_PATH; a compile-time open would stick to empty `adhdone.db` and
+ * `/api/health` would still pass (`SELECT 1` needs no tables).
  */
-const globalForDb = globalThis as unknown as { __adhxSqlite?: Database.Database }
+const globalForDb = globalThis as unknown as {
+  __adhxSqlite?: Database.Database
+  __adhxSqlitePath?: string
+  __adhxDrizzle?: DrizzleDb
+}
 
-function openSqlite(): Database.Database {
-  if (globalForDb.__adhxSqlite) return globalForDb.__adhxSqlite
+function resolveDbPath(): string {
+  return process.env['DATABASE_PATH'] || './data/adhdone.db'
+}
+
+function getSqlite(): Database.Database {
+  const dbPath = resolveDbPath()
+  if (globalForDb.__adhxSqlite && globalForDb.__adhxSqlitePath === dbPath) {
+    return globalForDb.__adhxSqlite
+  }
+  if (globalForDb.__adhxSqlite) {
+    try {
+      globalForDb.__adhxSqlite.close()
+    } catch {
+      // stale compile-time handle
+    }
+    globalForDb.__adhxSqlite = undefined
+    globalForDb.__adhxDrizzle = undefined
+  }
+
+  const dbDir = path.dirname(dbPath)
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true })
+  }
 
   // The constructor `timeout` installs the busy handler BEFORE any pragma runs:
   // `journal_mode = WAL` takes an exclusive lock, and `next build`'s parallel
   // page-data workers each import this module against a fresh db file — without
   // a pre-armed busy handler one worker throws "database is locked" and the
   // whole build dies (flaked twice in CI before this fix).
-  const sqlite = new Database(DB_PATH, { timeout: 10000 })
+  const sqlite = new Database(dbPath, { timeout: 10000 })
   sqlite.pragma('busy_timeout = 10000')
   sqlite.pragma('journal_mode = WAL')
   sqlite.pragma('foreign_keys = ON')
   globalForDb.__adhxSqlite = sqlite
+  globalForDb.__adhxSqlitePath = dbPath
   return sqlite
 }
 
-const sqlite = openSqlite()
+function getDrizzle(): DrizzleDb {
+  const sqlite = getSqlite()
+  if (!globalForDb.__adhxDrizzle) {
+    globalForDb.__adhxDrizzle = drizzle(sqlite, { schema })
+  }
+  return globalForDb.__adhxDrizzle
+}
 
-export const db = drizzle(sqlite, { schema })
+function bindProxy<T extends object>(load: () => T): T {
+  return new Proxy({} as T, {
+    get(_target, prop, _receiver) {
+      const instance = load()
+      const value = Reflect.get(instance, prop, instance)
+      return typeof value === 'function'
+        ? (value as (...args: unknown[]) => unknown).bind(instance)
+        : value
+    },
+  })
+}
 
-export const rawDb = sqlite
+export const db = bindProxy<DrizzleDb>(getDrizzle)
+export const rawDb = bindProxy<Database.Database>(getSqlite)
 
 /**
  * Create a transaction wrapper for atomic multi-table operations.
@@ -57,7 +98,7 @@ export const rawDb = sqlite
 export function createTransaction<T extends unknown[], R>(
   fn: (...args: T) => R,
 ): (...args: T) => R {
-  return sqlite.transaction(fn)
+  return getSqlite().transaction(fn)
 }
 
 /**
@@ -65,12 +106,12 @@ export function createTransaction<T extends unknown[], R>(
  * Note: The function itself must be synchronous due to SQLite's nature.
  */
 export function runInTransaction<R>(fn: () => R): R {
-  return sqlite.transaction(fn)()
+  return getSqlite().transaction(fn)()
 }
 
 if (!(globalThis as unknown as { __adhxSqliteExitHook?: boolean }).__adhxSqliteExitHook) {
   ;(globalThis as unknown as { __adhxSqliteExitHook?: boolean }).__adhxSqliteExitHook = true
   process.on('exit', () => {
-    sqlite.close()
+    globalForDb.__adhxSqlite?.close()
   })
 }

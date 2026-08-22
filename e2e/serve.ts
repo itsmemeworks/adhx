@@ -8,10 +8,12 @@ import { E2E_ROOT, e2eProcessEnv } from './env'
 import { startFxMock } from './fx-mock'
 
 const fx = startFxMock(E2E_FX_PORT)
+const env = e2eProcessEnv()
+console.log(`[e2e] next DATABASE_PATH=${env.DATABASE_PATH} distDir=${env.NEXT_DIST_DIR}`)
 
 const next = spawn('pnpm', ['exec', 'next', 'dev', '-p', String(E2E_PORT)], {
   cwd: E2E_ROOT,
-  env: e2eProcessEnv(),
+  env,
   stdio: 'inherit',
 })
 
