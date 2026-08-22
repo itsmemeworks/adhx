@@ -36,7 +36,7 @@ import { theaterItemKey } from './types'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 // SignInModal + useAuthMe are built by a parallel agent under the same
 // accounts/magic-link PR — imported per the shared contract even though the
-// module may not exist yet at review time; see the "Save collection" CTA
+// module may not exist yet at review time; see the "Save playlist" CTA
 // below (collection mode only).
 import { SignInModal, useAuthMe } from '@/components/auth'
 // TagQuickPicker is built by a parallel agent (unified-theater-triage.md §4)
@@ -44,8 +44,8 @@ import { SignInModal, useAuthMe } from '@/components/auth'
 import { TagQuickPicker } from '@/components/tags'
 import type {
   RepeatMode,
-  SaveCollectionStatus,
-  TheaterCollectionMeta,
+  SavePlaylistStatus,
+  TheaterPlaylistMeta,
   TheaterFeedSeed,
   TheaterItem,
   TheaterMode,
@@ -152,13 +152,13 @@ export interface TheaterShellProps {
   sharedUnavailable?: boolean
   /**
    * Whether the visiting user is signed in. Shared mode: swaps Connect for a
-   * direct Save. Collection mode: initial SSR hint for the Save-collection
+   * direct Save. Playlist mode: initial SSR hint for the Save-playlist
    * CTA — `useAuthMe()` inside the shell is the live source of truth (it can
    * change without a reload if sign-in completes in-modal).
    */
   authed?: boolean
-  /** Collection mode (`/t/{username}/{tag}` — tag-collections-as-theater): identity + count driving the chrome and the Save-collection CTA. */
-  collection?: TheaterCollectionMeta
+  /** Playlist mode (`/t/{username}/{tag}` — a playlist is one shared tag): identity + count driving the chrome and the Save-playlist CTA. */
+  playlist?: TheaterPlaylistMeta
   /**
    * Triage mode (`mode="triage"`, unified-theater-triage.md §2): the
    * snapshot of the authed Collection's unread queue to triage — same
@@ -223,7 +223,7 @@ export function pinKeyFirst<
  * `wasSeen` MUST be the arrival snapshot (`SeenSet.seenOnEntry`), not the live
  * seen state: ordering off the live state would yank the post you're watching
  * to the back of the queue the moment its dwell timer marks it seen.
- * Collection and shared modes never call this — a curated collection has its
+ * Playlist and shared modes never call this — a curated playlist has its
  * own order, and a shared post always leads.
  */
 export function orderUnseenFirst<
@@ -341,7 +341,7 @@ export function findFreshArrival(
 // Spotify-style repeat control (mobile round 8, owner request):
 // - 'off'  — the existing behavior: advance to the end, then the waiting
 //   stage ("You're all caught up") until something new arrives.
-// - 'all'  — the whole queue loops, exactly like collection mode's built-in
+// - 'all'  — the whole queue loops, exactly like playlist mode's built-in
 //   loop; the waiting stage is never entered.
 // - 'one'  — the current post repeats (the same player-level loop the
 //   shared-post pin uses); timed items simply stay put.
@@ -351,7 +351,7 @@ export type { RepeatMode } from './types'
 
 /**
  * Pure: the repeat button's cycle order — off → all → one → off. Collection
- * mode (`wrapOnly`) has no 'off': a curated tag collection is a loop by
+ * mode (`wrapOnly`) has no 'off': a curated playlist is a loop by
  * definition (there's no live feed to wait on), so the button just toggles
  * whole-queue ⇄ this-post there.
  */
@@ -454,7 +454,7 @@ export function TheaterShell({
   sharedItem,
   sharedUnavailable = false,
   authed = false,
-  collection,
+  playlist,
   triageItems,
   initialTriageIndex,
   initialTriageTab,
@@ -468,7 +468,7 @@ export function TheaterShell({
   // through — never a live blend with the anonymous community pulse. Triage
   // mode never loops either — its queue is a finite backlog with a real end
   // ("All caught up"), not a wraparound.
-  const loop = mode === 'collection'
+  const loop = mode === 'playlist'
   // Triage's Collection tab never blends the live pulse in; its Live tab
   // reuses the exact same live feed home/shared mode does.
   const [triageTab, setTriageTab] = useState<TriageTab>(initialTriageTab ?? 'live')
@@ -890,10 +890,10 @@ export function TheaterShell({
   // neutralizes a session-carried value there — a finite backlog with its
   // own Done/Later semantics; a stale 'one'/'all' leaking in would
   // repeat/wrap a queue with no visible control to turn it off). Collection
-  // mode DOES expose it (owner: the tag-collection player should show the
-  // repeat icon, selected): it opens on 'all' — looping IS the collection's
+  // mode DOES expose it (owner: the playlist player should show the
+  // repeat icon, selected): it opens on 'all' — looping IS the playlist's
   // resting state — and toggles all ⇄ one (`nextRepeatMode`'s wrapOnly), so
-  // it deliberately skips the sessionStorage read/write below: a collection
+  // it deliberately skips the sessionStorage read/write below: a playlist
   // page's toggle is per-visit and must never bleed into the home theater's
   // persisted preference (or vice versa).
   const [repeatMode, setRepeatMode] = useState<RepeatMode>(loop ? 'all' : 'off')
@@ -977,7 +977,7 @@ export function TheaterShell({
 
   // Does this surface order its queue unseen-first? The live feed does (home,
   // and the authed Live tab). A shared post always leads, and a curated tag
-  // collection keeps its curated order — neither is a "what's new" queue.
+  // playlist keeps its curated order — neither is a "what's new" queue.
   const liveOrdering = !sharedItem && !loop
   // ORDERING uses the arrival snapshot, never the live seen state — see
   // `orderUnseenFirst`. Identity is stable per snapshot so the memos below
@@ -1385,7 +1385,7 @@ export function TheaterShell({
   // for the whole collection; browsing within it must never rewrite the URL
   // to a per-post preview path (that's a different, off-collection surface).
   useEffect(() => {
-    if (typeof window === 'undefined' || mode === 'collection' || isTriage) return
+    if (typeof window === 'undefined' || mode === 'playlist' || isTriage) return
     const item = itemsRef.current.find((it) => theaterItemKey(it) === currentKey) ?? null
     const path = theaterUrlSyncPath(item)
     if (!path || window.location.pathname === path) return
@@ -1488,19 +1488,19 @@ export function TheaterShell({
   // prop, so a sign-in completed inside the modal (no full reload) is picked
   // up immediately via `refresh()` below.
   const authMe = useAuthMe()
-  const isCollectionAuthed = loop ? !!authMe.me?.authenticated : authed
-  // Viewing your OWN public collection: cloning it (or being told to "make
+  const isPlaylistAuthed = loop ? !!authMe.me?.authenticated : authed
+  // Viewing your OWN public playlist: cloning it (or being told to "make
   // your own") is nonsense — the chromes swap those CTAs for a Manage link.
-  const isCollectionOwner =
-    !!collection && !!authMe.me?.user?.username && authMe.me.user.username === collection.curator
-  const [saveStatus, setSaveStatus] = useState<SaveCollectionStatus>('idle')
+  const isPlaylistOwner =
+    !!playlist && !!authMe.me?.user?.username && authMe.me.user.username === playlist.curator
+  const [saveStatus, setSaveStatus] = useState<SavePlaylistStatus>('idle')
   const [showSignIn, setShowSignIn] = useState(false)
   // Which flavor of the shared sign-in modal is open — a single modal
   // instance below (mounted once) renders different copy/returnTo per
   // intent, rather than each chrome/CTA mounting its own SignInModal.
-  const [signInIntent, setSignInIntent] = useState<
-    'save-post' | 'save-collection' | 'make-your-own'
-  >('save-post')
+  const [signInIntent, setSignInIntent] = useState<'save-post' | 'save-playlist' | 'make-your-own'>(
+    'save-post',
+  )
   const pendingSaveRef = useRef(false)
   const autoSaveTriggeredRef = useRef(false)
 
@@ -1565,19 +1565,20 @@ export function TheaterShell({
   }, [saveIntentOnLoad, mode, sharedItem, authMe.loading, authMe.me])
 
   const performClone = useCallback(async () => {
-    if (!collection) return
+    if (!playlist) return
     setSaveStatus((s) => {
       if (s === 'saving' || s === 'saved') return s
       return 'saving'
     })
+    if (!playlist) return
     try {
       const res = await fetch(
-        `/api/share/tag/by-name/${encodeURIComponent(collection.curator)}/${encodeURIComponent(collection.tag)}/clone`,
+        `/api/share/tag/by-name/${encodeURIComponent(playlist.curator)}/${encodeURIComponent(playlist.tag)}/clone`,
         { method: 'POST' },
       )
       if (res.status === 401) {
         pendingSaveRef.current = true
-        setSignInIntent('save-collection')
+        setSignInIntent('save-playlist')
         setShowSignIn(true)
         setSaveStatus('idle')
         return
@@ -1587,47 +1588,49 @@ export function TheaterShell({
     } catch {
       setSaveStatus('error')
     }
-  }, [collection])
+  }, [playlist])
 
-  const handleSaveCollection = useCallback(() => {
-    if (!collection) return
-    if (!isCollectionAuthed) {
+  const handleSavePlaylist = useCallback(() => {
+    if (!playlist) return
+    if (!isPlaylistAuthed) {
       pendingSaveRef.current = true
-      setSignInIntent('save-collection')
+      setSignInIntent('save-playlist')
       setShowSignIn(true)
       return
     }
     void performClone()
-  }, [collection, isCollectionAuthed, performClone])
+  }, [playlist, isPlaylistAuthed, performClone])
 
-  // "Make your own" (collection mode, non-owner viewers): an already-authed
+  // "Make your own" (playlist mode, non-owner viewers): an already-authed
   // visitor doesn't need the sign-up pitch — that CTA just takes them home to
-  // start their own collection. A signed-out visitor gets the sign-in modal
+  // start their own playlist. A signed-out visitor gets the sign-in modal
   // IN PLACE (owner review: navigating them away to `/?start=1` left them
   // "with no idea what they're supposed to do").
   const handleMakeYourOwn = useCallback(() => {
-    if (isCollectionAuthed) {
-      window.location.assign('/')
+    if (isPlaylistAuthed) {
+      // The library grid, not `/` — making a playlist means tagging your own
+      // saved posts, and `/` serves the theater now.
+      window.location.assign('/library')
       return
     }
     setSignInIntent('make-your-own')
     setShowSignIn(true)
-  }, [isCollectionAuthed])
+  }, [isPlaylistAuthed])
 
   // If sign-in completes while the modal is open (in-modal magic link, no
   // reload), fire the deferred clone as soon as `useAuthMe()` reflects it.
   useEffect(() => {
-    if (!pendingSaveRef.current || !isCollectionAuthed) return
+    if (!pendingSaveRef.current || !isPlaylistAuthed) return
     pendingSaveRef.current = false
     void performClone()
-  }, [isCollectionAuthed, performClone])
+  }, [isPlaylistAuthed, performClone])
 
   // Cross-reload path: a sign-in flow that redirects (e.g. the X OAuth
   // round-trip) lands back on `returnTo` with `?save=1`. Auto-clone once auth
   // state has settled, then strip the param so a manual refresh never
   // re-triggers it.
   useEffect(() => {
-    if (!collection || typeof window === 'undefined' || autoSaveTriggeredRef.current) return
+    if (!playlist || typeof window === 'undefined' || autoSaveTriggeredRef.current) return
     if (authMe.loading) return
     const params = new URLSearchParams(window.location.search)
     if (params.get('save') !== '1') return
@@ -1635,8 +1638,8 @@ export function TheaterShell({
     params.delete('save')
     const qs = params.toString()
     window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''))
-    if (isCollectionAuthed) void performClone()
-  }, [collection, authMe.loading, isCollectionAuthed, performClone])
+    if (isPlaylistAuthed) void performClone()
+  }, [playlist, authMe.loading, isPlaylistAuthed, performClone])
 
   // --- Effective render inputs: triage's Collection tab is a wholly
   // separate list from the general `current`/`displayItems` (which always
@@ -1819,10 +1822,10 @@ export function TheaterShell({
           canNext={chromeCanNext}
           muted={muted}
           onSetMuted={onSetMuted}
-          collection={collection}
-          isCollectionOwner={isCollectionOwner}
+          playlist={playlist}
+          isPlaylistOwner={isPlaylistOwner}
           saveStatus={saveStatus}
-          onSaveCollection={handleSaveCollection}
+          onSavePlaylist={handleSavePlaylist}
           authed={authed}
           onRequestSignIn={openSignIn}
           repeatCurrent={repeatCurrentActive}
@@ -1837,10 +1840,10 @@ export function TheaterShell({
           authed={authed}
           declutter={desktopDeclutter}
           onToggleDeclutter={onToggleDesktopDeclutter}
-          collection={collection}
-          isCollectionOwner={isCollectionOwner}
+          playlist={playlist}
+          isPlaylistOwner={isPlaylistOwner}
           saveStatus={saveStatus}
-          onSaveCollection={handleSaveCollection}
+          onSavePlaylist={handleSavePlaylist}
           onRequestSignIn={openSignIn}
           onRequestMakeYourOwn={handleMakeYourOwn}
           triage={triageChrome}
@@ -1895,7 +1898,7 @@ export function TheaterShell({
         onPrev={chromeOnPrev}
         onNext={chromeOnNext}
         declutter={desktopDeclutter}
-        collection={collection}
+        playlist={playlist}
         triage={triageChrome}
         repeatCurrent={repeatCurrentActive}
         repeatMode={repeatEnabled ? displayRepeatMode : undefined}
@@ -1923,23 +1926,23 @@ export function TheaterShell({
         }}
         title={
           signInIntent === 'make-your-own'
-            ? 'Make your own collection'
-            : collection
-              ? 'Save this collection'
+            ? 'Make your own playlist'
+            : playlist
+              ? 'Save this playlist'
               : 'Save it to your collection'
         }
         subtitle={
           signInIntent === 'make-your-own'
-            ? 'Sign up and start saving — anything you save can be tagged into collections like this one.'
-            : collection
-              ? `${collection.count} ${collection.count === 1 ? 'post' : 'posts'} from ${collection.tag}, curated by @${collection.curator} — save them to your collection.`
+            ? 'Sign up and start saving — anything you save can be tagged into playlists like this one.'
+            : playlist
+              ? `${playlist.count} ${playlist.count === 1 ? 'post' : 'posts'} from ${playlist.tag}, curated by @${playlist.curator} — save them to your collection.`
               : 'Your saved posts stay yours — sync your X bookmarks anytime from Settings.'
         }
         returnTo={
           signInIntent === 'make-your-own'
-            ? '/'
-            : collection
-              ? `/t/${collection.curator}/${collection.tag}?save=1`
+            ? '/library'
+            : playlist
+              ? `/t/${playlist.curator}/${playlist.tag}?save=1`
               : (signInReturnTo ?? undefined)
         }
       />

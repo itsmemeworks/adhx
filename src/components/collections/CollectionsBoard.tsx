@@ -33,7 +33,7 @@ import {
  *
  * Cards are the canonical `CollectionPosterCard` (`@/components/tags`) — the
  * leaderboard used to have its own bespoke `CollectionCard`, now deleted, so
- * /leaderboard, /tags, and /t/{username} all render collections identically.
+ * /leaderboard, /tags, and /t/{username} all render playlists identically.
  * The board's own contribution on top is the rank medallion (`rank` prop,
  * safe with `wholeCardLink`) and the size hierarchy below.
  */
@@ -104,7 +104,7 @@ export function CollectionsBoard({
           </Link>
           <span className="ml-2 inline-flex items-center gap-2">
             <LiveDot />
-            <span className="text-[12.5px] font-semibold text-white/60">Collections</span>
+            <span className="text-[12.5px] font-semibold text-white/60">Playlists</span>
           </span>
           {/* Signed-out nav (round 8): the same burger menu the theater's
               public surfaces carry — Theater / Leaderboard / Sign in. */}
@@ -117,10 +117,10 @@ export function CollectionsBoard({
       <div className="mx-auto max-w-5xl px-4 pb-20 pt-10 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-clay">
-            Collection leaderboard
+            Playlist leaderboard
           </p>
           <h1 className="mt-3 font-serif text-[38px] leading-[1.05] sm:text-[52px]">
-            The most-watched collections
+            The most-watched playlists
           </h1>
           <p className="mt-4 text-[15px] text-white/55">
             What the community is saving into and sending around, ranked by views and saves.
@@ -152,9 +152,9 @@ export function CollectionsBoard({
 
         {entries.length === 0 ? (
           <div className="mt-20 flex flex-col items-center gap-2 text-center">
-            <p className="text-[16px] text-white/40">No public collections charting yet</p>
+            <p className="text-[16px] text-white/40">No public playlists charting yet</p>
             <p className="max-w-sm text-[13px] text-white/30">
-              Make one of your tag collections public from /tags to get it on the board.
+              Make one of your tag playlists public from /tags to get it on the board.
             </p>
           </div>
         ) : (
@@ -200,7 +200,7 @@ export function CollectionsBoard({
         )}
 
         <p className="mt-16 text-center font-mono text-[11px] text-white/35">
-          Updated live · views count once per person per collection · saves weigh 5×
+          Updated live · views count once per person per playlist · saves weigh 5×
         </p>
       </div>
     </div>

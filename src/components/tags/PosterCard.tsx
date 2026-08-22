@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Bookmark, Eye, Flame, Layers, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-/** Discovery view/save stats for this collection (docs/specs/discovery-leaderboards.md §6).
+/** Discovery view/save stats for this playlist (docs/specs/discovery-leaderboards.md §6).
  * `rank` is the 1-based position on this week's leaderboard, or `null`/absent when it isn't
  * charting — it renders as the small clay "#N" chip in the footer badge row. Omit the whole
  * prop (or pass `null`) for a card with nothing to show. */
@@ -53,7 +53,7 @@ export interface CollectionPosterCardProps {
    * `/tags` keeps the default (mosaic-only link + interactive footer).
    * `rank`'s medallion is non-interactive and safe to combine with this. */
   wholeCardLink?: boolean
-  /** Showcase scale for a single-collection profile: bigger tag title,
+  /** Showcase scale for a single-playlist profile: bigger tag title,
    * roomier footer padding, larger overflow-count type. */
   featured?: boolean
   /** Discovery view/save stats, rendered as icon badges in the fixed footer
@@ -61,7 +61,7 @@ export interface CollectionPosterCardProps {
    * `rank` is a number). Omit or pass `null` when there's nothing to show —
    * existing callers are unaffected. */
   stats?: PosterCardStats | null
-  /** Top-right overlay badge showing who curated this collection — a
+  /** Top-right overlay badge showing who curated this playlist — a
    * non-interactive `User` icon + handle, safe to combine with
    * `wholeCardLink` (the leaderboard's usage). Dropped when `badge` is also
    * passed (see `badge`'s doc). Usernames are capped at 15 chars, so this is
@@ -261,14 +261,14 @@ function CuratorBadge({ username }: { username: string }) {
 
 /**
  * Adaptive content mosaic — the number of real tiles (capped at 4 by every
- * caller) decides the layout, so a 1- or 3-post collection doesn't leave a
+ * caller) decides the layout, so a 1- or 3-post playlist doesn't leave a
  * dead cell or shrink into a quarter of the card:
  * - 0 tiles: one placeholder cell fills the card.
  * - 1 tile: fills the whole card.
  * - 2 tiles: two full-height columns.
  * - 3 tiles: 2×2, with the 3rd tile spanning both columns on the bottom row.
  * - 4 tiles: standard 2×2 — the 4th cell becomes a "+N" overflow ONLY when
- *   `count` (the collection's real total) is more than the 3 tiles otherwise
+ *   `count` (the playlist's real total) is more than the 3 tiles otherwise
  *   shown alongside it.
  */
 function PosterMosaic({

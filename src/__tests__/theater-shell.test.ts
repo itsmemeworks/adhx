@@ -173,7 +173,7 @@ describe('isSharedPostPinned', () => {
 
   it('is false for every other mode, even if pinned=true and the keys match', () => {
     expect(isSharedPostPinned('home', sharedKey, true, sharedKey)).toBe(false)
-    expect(isSharedPostPinned('collection', sharedKey, true, sharedKey)).toBe(false)
+    expect(isSharedPostPinned('playlist', sharedKey, true, sharedKey)).toBe(false)
     expect(isSharedPostPinned('triage', sharedKey, true, sharedKey)).toBe(false)
   })
 
@@ -213,7 +213,7 @@ describe('isSharedItemUnavailable', () => {
 
   it('is false for every other mode, even if flagged unavailable and the keys match', () => {
     expect(isSharedItemUnavailable('home', true, sharedKey, sharedKey)).toBe(false)
-    expect(isSharedItemUnavailable('collection', true, sharedKey, sharedKey)).toBe(false)
+    expect(isSharedItemUnavailable('playlist', true, sharedKey, sharedKey)).toBe(false)
     expect(isSharedItemUnavailable('triage', true, sharedKey, sharedKey)).toBe(false)
   })
 

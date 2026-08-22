@@ -2,7 +2,7 @@ import type { TagItem } from '@/lib/tags/query'
 import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
 
 /**
- * Seed assembly for the "collection" theater mode (`/t/{username}/{tag}`,
+ * Seed assembly for the "playlist" theater mode (`/t/{username}/{tag}`,
  * tag-collections-as-theater): converts the already-fetched, privacy-gated
  * `TagItem[]` (from `getPublicTagCollection()`) into `TheaterItem[]` so the
  * shared theater stage/chrome components can render a public tag collection

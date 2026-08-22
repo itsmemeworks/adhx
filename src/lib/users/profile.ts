@@ -25,7 +25,7 @@ import { getOwnerCollectionStats } from '@/lib/discovery/rank'
  * or anywhere else in the returned shape. No email, no read-state, no
  * `userId` is ever included in the result.
  *
- * A profile with zero public collections is treated the same as a
+ * A profile with zero public playlists is treated the same as a
  * nonexistent user (`not_found`) — callers should 404 either way, so
  * account existence is never confirmed for someone who hasn't published
  * anything.
@@ -99,7 +99,7 @@ function getCache(): ProfileCache {
 
 /**
  * Fetch a public curator profile by username. Returns `not_found` when the
- * user doesn't exist OR has zero public collections.
+ * user doesn't exist OR has zero public playlists.
  */
 export async function getPublicProfile(username: string): Promise<PublicProfileResult> {
   const cache = getCache()

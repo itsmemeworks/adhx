@@ -25,7 +25,7 @@ export function LeaderboardMenu() {
       <SignInModal
         open={showSignIn}
         onClose={() => setShowSignIn(false)}
-        subtitle="Save posts into collections and get them on this leaderboard."
+        subtitle="Save posts into playlists and get them on this leaderboard."
       />
     </>
   )

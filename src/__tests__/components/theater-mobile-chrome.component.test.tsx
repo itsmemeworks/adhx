@@ -305,8 +305,8 @@ describe('TheaterMobileChrome: collection mode brand logo is always home', () =>
       <TheaterMobileChrome
         {...base}
         current={videoItem()}
-        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
-        isCollectionOwner={false}
+        playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        isPlaylistOwner={false}
       />,
     )
     // The make-your-own affordance is gone from this component entirely —
@@ -322,38 +322,38 @@ describe('TheaterMobileChrome: collection mode brand logo is always home', () =>
       <TheaterMobileChrome
         {...base}
         current={videoItem()}
-        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
-        isCollectionOwner
+        playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        isPlaylistOwner
       />,
     )
     expect(screen.queryByLabelText('Make your own collection')).not.toBeInTheDocument()
     expect(screen.getByLabelText('ADHX home')).toHaveAttribute('href', '/')
   })
 
-  it('non-owner: the Save-collection CTA is still present, carrying signed-out conversion', () => {
+  it('non-owner: the Save-playlist CTA is still present, carrying signed-out conversion', () => {
     render(
       <TheaterMobileChrome
         {...base}
         current={videoItem()}
-        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
-        isCollectionOwner={false}
+        playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        isPlaylistOwner={false}
       />,
     )
-    expect(screen.getByText('Save collection · 12')).toBeInTheDocument()
+    expect(screen.getByText('Save playlist · 12')).toBeInTheDocument()
   })
 
-  it('the Save-collection CTA carries the clay-border outline (PILL_SAVE), not the old solid clay-grad fill', () => {
+  it('the Save-playlist CTA carries the clay-border outline (PILL_SAVE), not the old solid clay-grad fill', () => {
     render(
       <TheaterMobileChrome
         {...base}
         current={videoItem()}
-        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
-        isCollectionOwner={false}
+        playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        isPlaylistOwner={false}
       />,
     )
-    const saveCollectionBtn = screen.getByText('Save collection · 12').closest('button')!
-    expect(saveCollectionBtn.className).toContain('border-clay')
-    expect(saveCollectionBtn.className).not.toContain('bg-clay-grad')
+    const savePlaylistBtn = screen.getByText('Save playlist · 12').closest('button')!
+    expect(savePlaylistBtn.className).toContain('border-clay')
+    expect(savePlaylistBtn.className).not.toContain('bg-clay-grad')
   })
 })
 
@@ -490,7 +490,7 @@ describe('TheaterMobileChrome: queue position label', () => {
         items={items}
         current={items[1]}
         currentKey={theaterItemKey(items[1])}
-        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
       />,
     )
     expect(screen.getByText('#claude-code · 12')).toBeInTheDocument()
@@ -787,7 +787,7 @@ describe('TheaterMobileChrome: repeat control', () => {
       <TheaterMobileChrome
         {...base}
         current={videoItem()}
-        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
         repeatMode="all"
         onCycleRepeat={vi.fn()}
       />,

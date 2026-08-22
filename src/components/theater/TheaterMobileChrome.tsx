@@ -57,15 +57,15 @@ import {
   collectionTabProgressKind,
 } from './TheaterProgressLine'
 import { UpNextList } from './UpNextList'
-import { SaveCollectionButton } from './SaveCollectionButton'
+import { SavePlaylistButton } from './SavePlaylistButton'
 import { SavePostButton } from './TheaterDesktopChrome'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
 import { StageIconButton } from './stage-primitives'
 import { logAV } from './YtDebugOverlay'
 import type {
   RepeatMode,
-  SaveCollectionStatus,
-  TheaterCollectionMeta,
+  SavePlaylistStatus,
+  TheaterPlaylistMeta,
   TheaterItem,
   TheaterMode,
   TheaterTriageChrome,
@@ -98,12 +98,12 @@ export interface TheaterMobileChromeProps {
    * event `handleAudioTap` dispatches alongside this call.
    */
   onSetMuted: (muted: boolean) => void
-  /** Collection mode (`/t/{username}/{tag}`): identity chrome + swaps the bottom action row's Download/Save-login for the Save-collection CTA. */
-  collection?: TheaterCollectionMeta
-  saveStatus?: SaveCollectionStatus
-  onSaveCollection?: () => void
-  /** The signed-in viewer IS this collection's curator — hide the clone CTA, show Manage. */
-  isCollectionOwner?: boolean
+  /** Playlist mode (`/t/{username}/{tag}`): identity chrome + swaps the bottom action row's Download/Save-login for the Save-playlist CTA. */
+  playlist?: TheaterPlaylistMeta
+  saveStatus?: SavePlaylistStatus
+  onSavePlaylist?: () => void
+  /** The signed-in viewer IS this playlist's curator — hide the clone CTA, show Manage. */
+  isPlaylistOwner?: boolean
   /**
    * Whether the visiting user is signed in (verification-agent finding: at
    * mobile width, a signed-in viewer's Save on a shared page opened the
@@ -125,7 +125,7 @@ export interface TheaterMobileChromeProps {
   repeatCurrent?: boolean
   /**
    * The Spotify-style repeat control (round 8): current mode + the cycling
-   * handler. Both absent in collection mode (that queue always loops) and
+   * handler. Both absent in playlist mode (that queue always loops) and
    * triage (finite backlog) — the button only renders when the handler is
    * provided.
    */
@@ -149,7 +149,7 @@ const PEEK_ICON_BTN_DISABLED =
  * Save/Saved button) uses PILL_SAVE — glass with a clay border (round 8: the
  * solid clay fill was "too much"). Download/Copy are power-user affordances
  * on PILL_GLASS alongside Share/Open (mirrors GLASS/SAVE_OUTLINE in
- * TheaterDesktopChrome). SaveCollectionButton uses PILL_SAVE too (owner:
+ * TheaterDesktopChrome). SavePlaylistButton uses PILL_SAVE too (owner:
  * same orange outline as the Save button).
  */
 const PILL_GLASS =
@@ -182,10 +182,10 @@ export function TheaterMobileChrome({
   canNext,
   muted,
   onSetMuted,
-  collection,
+  playlist,
   saveStatus = 'idle',
-  onSaveCollection,
-  isCollectionOwner = false,
+  onSavePlaylist,
+  isPlaylistOwner = false,
   authed = false,
   onRequestSignIn,
   repeatCurrent = false,
@@ -404,7 +404,7 @@ export function TheaterMobileChrome({
             </button>
           </div>
         </div>
-      ) : collection ? (
+      ) : playlist ? (
         <div
           className={cn(
             'pointer-events-auto absolute inset-x-0 top-0 flex flex-col gap-1.5 px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
@@ -419,7 +419,7 @@ export function TheaterMobileChrome({
               shared tag must always be able to get back to the main theater
               (owner override: wiring it to open the "Make your own" modal
               instead left non-owners with no way home). Conversion is
-              carried entirely by the Save-collection CTA below, which
+              carried entirely by the Save-playlist CTA below, which
               already opens the sign-in modal in place for a signed-out
               visitor (`handleSaveCollection` in TheaterShell). */}
           <div className="flex items-center justify-between gap-3">
@@ -427,7 +427,7 @@ export function TheaterMobileChrome({
               <MatterLogo size={16} className="[&>span]:text-white" />
             </a>
             <span className="min-w-0 truncate text-[15px] font-bold text-white">
-              #{collection.tag}
+              #{playlist.tag}
             </span>
           </div>
         </div>
@@ -490,9 +490,9 @@ export function TheaterMobileChrome({
                 pages) get a burger fallback in this same slot — Theater /
                 Leaderboard / Sign in — instead of no navigation at all.
                 Triage above never passes this (always reached authed);
-                collection mode's top scrim doesn't mount this component at
+                playlist mode's top scrim doesn't mount this component at
                 all — its plain home logo plus the bottom scrim's
-                Save-collection CTA cover both navigation and signed-out
+                Save-playlist CTA cover both navigation and signed-out
                 conversion there. */}
             <TheaterAvatarMenu
               onRequestSignIn={onRequestSignIn}
@@ -668,19 +668,19 @@ export function TheaterMobileChrome({
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              {collection && isCollectionOwner ? (
+              {playlist && isPlaylistOwner ? (
                 <a
-                  href={`/?tag=${encodeURIComponent(collection.tag)}`}
+                  href={`/library?tag=${encodeURIComponent(playlist.tag)}`}
                   className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/[0.14] px-3 text-[13px] font-semibold text-white"
                 >
                   <TagIcon size={15} />
-                  <span>Manage collection</span>
+                  <span>Manage playlist</span>
                 </a>
-              ) : collection ? (
-                <SaveCollectionButton
-                  count={collection.count}
+              ) : playlist ? (
+                <SavePlaylistButton
+                  count={playlist.count}
                   status={saveStatus}
-                  onSave={() => onSaveCollection?.()}
+                  onSave={() => onSavePlaylist?.()}
                   className={PILL_SAVE}
                 />
               ) : (
@@ -966,11 +966,11 @@ export function TheaterMobileChrome({
                     repeatCurrent ? 'text-clay' : 'text-ink-2',
                   )}
                 >
-                  {collection ? (
+                  {playlist ? (
                     <>
                       <Repeat size={11} className="flex-none" aria-hidden />
                       <span className="truncate">
-                        #{collection.tag} · {collection.count}
+                        #{playlist.tag} · {playlist.count}
                       </span>
                     </>
                   ) : repeatCurrent ? (

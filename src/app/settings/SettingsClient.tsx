@@ -168,7 +168,7 @@ function SettingsLoadingSkeleton() {
  * Every account gets a first free username claim, plus `MAX_USERNAME_CHANGES`
  * (2) further changes — after that the row goes read-only. Every change past
  * the first records the old name as a redirect alias (see
- * `chooseUsername()` in `src/lib/auth/account.ts`), so public collection
+ * `chooseUsername()` in `src/lib/auth/account.ts`), so public playlist
  * links (`/t/{username}/...`) never dead-end after a rename.
  */
 function UsernameRow({ me, refresh }: { me: AuthMe; refresh: () => void }) {
@@ -205,7 +205,7 @@ function UsernameRow({ me, refresh }: { me: AuthMe; refresh: () => void }) {
               ? changesRemaining > 0
                 ? `${changesRemaining} change${changesRemaining === 1 ? '' : 's'} left`
                 : 'Usernames are permanent once changes run out'
-              : 'Your public handle on shared collections'}
+              : 'Your public handle on shared playlists'}
           </p>
         </div>
         {canChange && !editing && (

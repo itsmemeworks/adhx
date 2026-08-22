@@ -92,12 +92,13 @@ describe('TheaterAvatarMenu', () => {
     expect(screen.getByText('@weedauwl')).toBeInTheDocument()
   })
 
-  it('matches the authed Header avatar menu’s nav hrefs — Collection/Tags/Leaderboard/Settings', async () => {
+  it('matches the authed Header avatar menu’s nav hrefs — Library/Tags/Leaderboard/Settings', async () => {
     mockAuthMe(AUTHED_ME)
     render(<TheaterAvatarMenu />)
     fireEvent.click(await screen.findByLabelText('Account menu'))
 
-    expect(screen.getByText('Your collection').closest('a')).toHaveAttribute('href', '/')
+    // `/` is the theater now, so "Your collection" points at the library grid.
+    expect(screen.getByText('Your collection').closest('a')).toHaveAttribute('href', '/library')
     expect(screen.getByText('Tags').closest('a')).toHaveAttribute('href', '/tags')
     expect(screen.getByText('Leaderboard').closest('a')).toHaveAttribute('href', '/leaderboard')
     expect(screen.getByText('Settings').closest('a')).toHaveAttribute('href', '/settings')

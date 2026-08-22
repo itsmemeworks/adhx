@@ -17,7 +17,7 @@ import { isLikelyBot } from '@/lib/activity/bot'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
 /**
- * `/t/{username}/{tag}` — public shared-tag collection page.
+ * `/t/{username}/{tag}` — public playlist page (a playlist IS one shared tag).
  *
  * Historically this page only fetched metadata server-side and left every
  * item to a client-side `useEffect` fetch — invisible to crawlers and a
@@ -48,7 +48,7 @@ type CollectionLoadResult =
   TagCollectionResult | { status: 'redirect'; username: string; tag: string }
 
 /**
- * Resolves a collection by username + tag, falling back to
+ * Resolves a playlist by username + tag, falling back to
  * `username_aliases` when the username 404s — a curator who's since renamed
  * still resolves, via `{ status: 'redirect' }`, so the page component can
  * 308 old shared links to the current username instead of dead-ending them.
@@ -80,14 +80,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (result.status === 'redirect') {
     return {
       title: `#${tag} — ADHX`,
-      description: 'A curated collection on ADHX.',
+      description: 'A curated playlist on ADHX.',
     }
   }
 
   if (result.status === 'private') {
     return {
       title: `#${tag} — ADHX`,
-      description: 'This collection is private.',
+      description: 'This playlist is private.',
       robots: { index: false, follow: false },
     }
   }
@@ -95,7 +95,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (result.status === 'not_found') {
     return {
       title: `#${tag} — ADHX`,
-      description: 'A curated collection on ADHX.',
+      description: 'A curated playlist on ADHX.',
     }
   }
 
@@ -106,7 +106,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .slice(0, 2)
     .join(' · ')
 
-  const title = `#${data.tag} — @${data.username}'s collection on ADHX`
+  const title = `#${data.tag} — @${data.username}'s playlist on ADHX`
   const description = previewTexts
     ? `${data.tweetCount} bookmark${data.tweetCount === 1 ? '' : 's'} curated by @${data.username}. ${truncate(previewTexts, 200)}`
     : `${data.tweetCount} bookmark${data.tweetCount === 1 ? '' : 's'} curated by @${data.username}.`
@@ -124,7 +124,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       siteName: 'ADHX',
       url: canonicalUrl,
       images: ogImage
-        ? [{ url: toAbsolute(ogImage), alt: `#${data.tag} collection by @${data.username}` }]
+        ? [{ url: toAbsolute(ogImage), alt: `#${data.tag} playlist by @${data.username}` }]
         : [{ url: `${BASE_URL}/og-logo.png`, width: 1200, height: 630, alt: 'ADHX' }],
     },
     twitter: {
@@ -180,7 +180,7 @@ export default async function SharedTagPage({ params }: Props) {
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-hairline bg-inset">
               <Lock className="h-8 w-8 text-ink-3" />
             </div>
-            <h1 className="font-serif text-2xl font-semibold text-ink">Private collection</h1>
+            <h1 className="font-serif text-2xl font-semibold text-ink">Private playlist</h1>
             <p className="mt-2 text-ink-2">This tag isn&apos;t publicly shared.</p>
             <Link
               href="/"
@@ -198,7 +198,7 @@ export default async function SharedTagPage({ params }: Props) {
   const { data } = result
 
   // Discovery leaderboard signal (docs/specs/discovery-leaderboards.md §4) —
-  // record a human view of this public collection. Bot/crawler UAs are
+  // record a human view of this public playlist. Bot/crawler UAs are
   // skipped (same isLikelyBot() gate the pulse uses) so OG-unfurl requests
   // never inflate the leaderboard. Fire-and-forget; never affects rendering —
   // the try/catch also covers headers() outside a request scope (direct
@@ -223,7 +223,7 @@ export default async function SharedTagPage({ params }: Props) {
   const canonicalUrl = `${BASE_URL}/t/${data.username}/${data.tag}`
 
   const jsonLd = buildCollectionPageLd({
-    name: `#${data.tag} — @${data.username}'s collection on ADHX`,
+    name: `#${data.tag} — @${data.username}'s playlist on ADHX`,
     description: `${data.tweetCount} bookmark${data.tweetCount === 1 ? '' : 's'} curated by @${data.username} on ADHX.`,
     url: canonicalUrl,
     baseUrl: BASE_URL,
@@ -272,9 +272,9 @@ export default async function SharedTagPage({ params }: Props) {
 
       <TheaterShell
         seed={buildCollectionSeed(data.items)}
-        mode="collection"
+        mode="playlist"
         authed={!signedOut}
-        collection={{ tag: data.tag, curator: data.username, count: data.tweetCount }}
+        playlist={{ tag: data.tag, curator: data.username, count: data.tweetCount }}
       />
     </>
   )

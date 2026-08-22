@@ -120,7 +120,7 @@ describe('Curator profile route: /t/[username]', () => {
         params: Promise.resolve({ username: 'curator' }),
       })
 
-      expect(metadata.title).toBe('@curator — collections on ADHX')
+      expect(metadata.title).toBe('@curator — playlists on ADHX')
       expect(metadata.description).toContain('#cool-stuff')
       expect(metadata.description).toContain('#more-stuff')
       expect(metadata.alternates?.canonical).toContain('/t/curator')
@@ -261,10 +261,10 @@ describe('Curator profile route: /t/[username]', () => {
 
       expect(html).toContain('Make your own')
       expect(html).toContain('Start your collection')
-      expect(html).not.toContain('Manage collections')
+      expect(html).not.toContain('Manage playlists')
     })
 
-    it("signed in, own profile: top pill becomes 'Manage collections' → /tags, footer pitch is gone", async () => {
+    it("signed in, own profile: top pill becomes 'Manage playlists' → /tags, footer pitch is gone", async () => {
       const { getPublicProfile: mocked } = await import('@/lib/users/profile')
       vi.mocked(mocked).mockResolvedValue(SAMPLE_PROFILE)
       const { getCurrentUserId } = await import('@/lib/auth/session')
@@ -276,7 +276,7 @@ describe('Curator profile route: /t/[username]', () => {
       })
       const html = renderToStaticMarkup(result as React.ReactElement)
 
-      expect(html).toContain('Manage collections')
+      expect(html).toContain('Manage playlists')
       expect(html).toContain('href="/tags"')
       expect(html).not.toContain('Make your own')
       expect(html).not.toContain('Start your collection')
@@ -296,7 +296,7 @@ describe('Curator profile route: /t/[username]', () => {
       const html = renderToStaticMarkup(result as React.ReactElement)
 
       expect(html).not.toContain('Make your own')
-      expect(html).not.toContain('Manage collections')
+      expect(html).not.toContain('Manage playlists')
       expect(html).not.toContain('Start your collection')
       expect(html).not.toContain('Save now. Read never.')
     })

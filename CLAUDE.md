@@ -230,6 +230,10 @@ Security headers configured in `next.config.js`:
 
 **Do NOT add `'unsafe-eval'`** — it enables `eval()` and is a major XSS escalation vector.
 
+### Browser translation is ENABLED — and constrains how we render text
+
+`<html>` deliberately carries no `translate="no"` and there is no `notranslate` meta: reading a Spanish tweet in English is a feature (owner decision). The cost is a hard rule — **never render a bare text child as the SIBLING of an element** (wrap each run in a `<span>`). A translator replaces text nodes with its own `<font>` wrappers, so React's next `removeChild`/`insertBefore` among those children throws `NotFoundError` and the page falls to the error boundary; in the theater that meant advancing to the next post crashed. Full rule, the grey area, and the console audit that finds new offenders: **`docs/specs/translation-safety.md`**.
+
 ### SSRF Protection
 
 All media proxy endpoints validate URLs against a strict domain allowlist before fetching. **Never use `.includes()` for domain validation** — it allows bypass via `domain.evil.com`.
@@ -498,7 +502,7 @@ Other details:
 The public tweet JSON API enriches responses with ADHX curation context when the tweet exists in the local database:
 
 - `savedByCount` — number of distinct ADHX users who bookmarked this tweet (no user IDs exposed)
-- `publicTags` — list of public tag collections containing this tweet (tag name, curator username, URL)
+- `publicTags` — list of public playlists (shared tags) containing this tweet (tag name, curator username, URL)
 - `previewUrl` — canonical ADHX preview URL for the tweet
 - Only appears when `savedByCount > 0`; private tags are never included
 
@@ -516,7 +520,7 @@ Key files:
 `src/app/sitemap.ts` generates a dynamic sitemap including:
 
 - Homepage (priority 1)
-- All public tag collection pages at `/t/{username}/{tag}` (priority 0.7, daily)
+- All public playlist pages at `/t/{username}/{tag}` (priority 0.7, daily)
 - All tweet preview URLs from public tags at `/{author}/status/{id}` (priority 0.5, weekly)
 - Tweet URLs are deduplicated across multiple tags
 - Private tags and their tweets are never included
@@ -657,9 +661,23 @@ useEffect(() => {
 
 This avoids prop drilling and keeps keyboard logic centralized while allowing distributed UI responses.
 
-### Home routing & the Theater (signed-out `/`)
+### Home routing & the Theater (`/` is the theater, signed in or out)
 
-`src/app/page.tsx` is a **server component** (`force-dynamic` — reads cookies + SQLite): authed → `src/app/AuthedHome.tsx` (the client Collection, below); signed-out → the **theater** (spec: `docs/specs/theater-first.md`, Phase 1 shipped). The theater is a full-bleed near-black stage (`#08070a`, both themes) + viewport-responsive chrome, built from `src/components/theater/`:
+**Terminology (owner decision):** a **playlist** is a single shared tag — the thing at `/t/{username}/{tag}`, the thing `/leaderboard` ranks, the thing you clone with **Save playlist**. It used to be called a "tagged collection", which meant nothing to users. A user's own pile of saved posts is still their **collection** (the theater's **My Collection** tab), and the grid that browses it is the **Library**. Keep those three words straight in UI copy: playlist = one shared tag, collection = your saves, library = the grid over them. URLs, API paths, DB columns (`collection_events`, `tag_shares`) and the `/api/collections/*` endpoints deliberately still say "collection" — they're indexed, in sitemaps, and public contracts.
+
+**Routes:**
+
+| Route         | What renders                                                                                                                                                            |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`           | the theater. Signed out: public live theater + crawlable static list. Signed in: `AuthedTheater` on the **Live** tab (owner: most people want the live view on landing) |
+| `/collection` | the same theater on **My Collection** — your unread queue as a playlist, with the triage actions                                                                        |
+| `/library`    | the grid: `AuthedHome`, three view modes, FilterBar, search, tags                                                                                                       |
+
+The Live ⇄ My Collection switch is a pair of ROUTES, not local state, so each side is linkable and survives a reload — `TheaterShell`'s `onTriageTabChange` flips the tab locally (instant) then the page navigates. `TheaterShell` snapshots `triageItems` at mount, so `/collection` fetches the queue BEFORE mounting the shell; `/` never waits on it.
+
+**Gotcha:** anything that used to link to the grid with `/` or `` `/?tag=…` `` is now wrong — `/` is the theater. `AuthedHome`'s own URL syncing hit this (five `router.replace` calls whose "no query string" fallback was a hardcoded `'/'`, which bounced `/library` straight home; they take `usePathname()` now), as did "Manage playlist", "Your collection" in the avatar menu, the `/tags` poster cards, and "Make your own playlist". Use `/library` for grid destinations.
+
+`src/app/page.tsx` is a **server component** (`force-dynamic` — reads cookies + SQLite). The theater spec is `docs/specs/theater-first.md`. The theater is a full-bleed near-black stage (`#08070a`, both themes) + viewport-responsive chrome, built from `src/components/theater/`:
 
 - `TheaterShell` (`fixed inset-0 z-[60]` — deliberately overlays the global Header since AppShell can't see auth; revisit in Phase 3) owns current-item state, keyboard (↓↑/jk, ←→, space via `theater-toggle-play` custom event, m), the 2s-dwell seen-marking + `POST /api/activity/preview` pulse, and prefetch-next. Desktop (`lg+`) mounts `DesktopStageChrome` (overlays: top bar with brand + LIVE + paste-to-preview input for ⌘V, de-clutter button; stage meta/flame/caption overlays; bottom actions) + `DesktopDock` (bottom filmstrip: transport controls, horizontal queue cards auto-scrolled to keep current visible, "Show all" panel reusing `UpNextList`). Mobile (<lg) mounts `TheaterMobileChrome` (top/bottom scrims, peek bar with transport/audio/de-clutter — no swipe gesture; nav is buttons + keyboard + video-ended auto-advance).
 - `TheaterAvatarMenu` (mounted in the top bar/scrim by both chromes) is authed-only by default — signed in: the account dropdown (collection/settings/sign out). Callers that pass `allowSignedOut` get a burger-menu fallback (Menu icon, same slot/geometry) for signed-out visitors instead of nothing: **Theater** (closes the menu if already on `/`, else links home) / **Leaderboard** (`/leaderboard`) / **Sign in** (fires `onRequestSignIn`, wired to the shell's existing `openSignIn`/save-post sign-in-modal flow). Only the home/shared-mode mounts pass `allowSignedOut` — triage is always reached authed, and collection mode's own "Make your own" CTA is its signed-out conversion path, so neither does.
@@ -699,9 +717,9 @@ Files:
 - `src/components/theater/TriageStage.tsx` - quote-card rendering in the triage theater
 - `src/components/feed/types.ts` - FeedItem.quotedTweet, FeedItem.quoteContext types
 
-### Tag Sharing with Friendly URLs
+### Playlists (shared tags) with Friendly URLs
 
-Users can share tag collections publicly via human-readable URLs:
+A playlist is one tag, shared publicly at a human-readable URL:
 
 - **URL format**: `/t/{username}/{tag}` (e.g., `/t/weedauwl/claude-code`)
 - **Route**: `src/app/t/[username]/[tag]/page.tsx`
@@ -711,8 +729,8 @@ Users can share tag collections publicly via human-readable URLs:
 
 1. User selects a tag in the FilterBar Tags dropdown → a selected-tag toolbar shows (count, Public chip, **Share as theater**)
 2. Share as theater PATCHes `/api/tags` (make public), copies the friendly URL, shows a "… copied" chip
-3. `/t/{username}/{tag}` renders the **collection theater**: `TheaterShell mode="collection"` seeded with the tag's posts — the queue **loops** (wrap on next/prev and video-ended; dashed "LOOPS" divider + ghosted first card in the desktop dock; no StageWaiting, no paste-to-preview, no /api/activity polling, no address-bar rewriting). SEO is preserved: generateMetadata + CollectionPage JSON-LD + sr-only item list; private/unknown tags 404/noindex exactly as before.
-4. **Save collection · N** is the conversion CTA: authed → POSTs the clone endpoint; signed-out → opens `SignInModal` (returnTo `/t/{user}/{tag}?save=1`, which auto-clones once after sign-in and strips the param)
+3. `/t/{username}/{tag}` renders the **playlist theater**: `TheaterShell mode="playlist"` seeded with the tag's posts — the queue **loops** (wrap on next/prev and video-ended; dashed "LOOPS" divider + ghosted first card in the desktop dock; no StageWaiting, no paste-to-preview, no /api/activity polling, no address-bar rewriting). SEO is preserved: generateMetadata + CollectionPage JSON-LD + sr-only item list; private/unknown tags 404/noindex exactly as before.
+4. **Save playlist · N** is the conversion CTA (`SavePlaylistButton`): authed → POSTs the clone endpoint; signed-out → opens `SignInModal` (returnTo `/t/{user}/{tag}?save=1`, which auto-clones once after sign-in and strips the param)
 5. Seed conversion lives in `src/lib/theater/tag-seed.ts`; loop math (`computeLoopedNext/Prev`) is exported from TheaterShell and unit-tested
 
 **Clone endpoint**: `/api/share/tag/by-name/[username]/[tag]/clone`
@@ -925,7 +943,7 @@ export async function GET() {
 | `/api/tags`                                     | GET         | Yes  | List user's tags with counts and share URLs                                                                             |
 | `/api/tags`                                     | PATCH       | Yes  | Toggle tag public sharing (returns `shareUrl`)                                                                          |
 | `/api/tags`                                     | DELETE      | Yes  | Delete tag from all bookmarks                                                                                           |
-| `/api/share/tag/by-name/[username]/[tag]`       | GET         | No   | View shared tag collection (friendly URL)                                                                               |
+| `/api/share/tag/by-name/[username]/[tag]`       | GET         | No   | View a shared playlist (friendly URL)                                                                                   |
 | `/api/share/tag/by-name/[username]/[tag]/clone` | POST        | Yes  | Clone shared tag to user's account                                                                                      |
 | `/api/share/tag/[code]`                         | GET         | No   | View shared tag (legacy random code)                                                                                    |
 | `/api/share/tweet/[username]/[id]`              | GET         | No   | Public tweet JSON API (LLM-friendly, 5-min cache)                                                                       |
@@ -944,7 +962,7 @@ export async function GET() {
 
 ### Discovery leaderboards (`/leaderboard`)
 
-Public tagged collections are ranked on `/leaderboard` (+ `/leaderboard/{today|month|all-time}`;
+Public playlists (shared tags) are ranked on `/leaderboard` (+ `/leaderboard/{today|month|all-time}`;
 week is the default at the bare path) — the "podium" leaderboard per
 `docs/specs/discovery-leaderboards.md`. (This page lived at `/collections` until it was renamed
 — that path collided with the unrelated `/api/collections` custom-collections API. The old

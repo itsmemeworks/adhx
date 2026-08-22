@@ -134,7 +134,7 @@ describe('Shared tag route: /t/[username]/[tag]', () => {
         params: Promise.resolve({ username: 'curator', tag: 'cool-stuff' }),
       })
 
-      expect(metadata.title).toBe("#cool-stuff — @curator's collection on ADHX")
+      expect(metadata.title).toBe("#cool-stuff — @curator's playlist on ADHX")
       expect(metadata.description).toContain('2 bookmarks curated by @curator')
       expect(metadata.alternates?.canonical).toContain('/t/curator/cool-stuff')
     })
@@ -163,7 +163,7 @@ describe('Shared tag route: /t/[username]/[tag]', () => {
 
       expect(result).not.toBeNull()
       const html = renderToStaticMarkup(result as React.ReactElement)
-      expect(html).toContain('Private collection')
+      expect(html).toContain('Private playlist')
       expect(html).not.toContain('someauthor')
     })
 
@@ -192,12 +192,12 @@ describe('Shared tag route: /t/[username]/[tag]', () => {
       const props = theaterShellSpy.mock.calls[0][0] as {
         mode: string
         authed: boolean
-        collection: { tag: string; curator: string; count: number }
+        playlist: { tag: string; curator: string; count: number }
         seed: { items: Array<{ platform: string; bookmarkId: string | null }> }
       }
-      expect(props.mode).toBe('collection')
+      expect(props.mode).toBe('playlist')
       expect(props.authed).toBe(false)
-      expect(props.collection).toEqual({ tag: 'cool-stuff', curator: 'curator', count: 2 })
+      expect(props.playlist).toEqual({ tag: 'cool-stuff', curator: 'curator', count: 2 })
       expect(props.seed.items).toHaveLength(2)
       expect(props.seed.items.map((i) => i.bookmarkId)).toEqual(['1', '2'])
     })

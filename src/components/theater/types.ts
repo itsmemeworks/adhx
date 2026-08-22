@@ -22,7 +22,7 @@ export function theaterItemKey(item: Pick<TheaterItem, 'platform' | 'bookmarkId'
 
 /**
  * Which rail the theater carries: signed-out home, a shared preview (PR 3),
- * a public tag collection (`/t/{username}/{tag}` — tag-collections-as-
+ * a public playlist (one shared tag, `/t/{username}/{tag}` — playlists-as-
  * theater), or the authed Collection's triage queue (`unified-theater-
  * triage.md` §2). Collection mode loops (advancing past the last item wraps
  * to the first, and vice versa) and never enters the end-of-feed waiting
@@ -31,7 +31,7 @@ export function theaterItemKey(item: Pick<TheaterItem, 'platform' | 'bookmarkId'
  * Collection ↔ Live sub-tab that blends in the same live pulse feed home
  * mode uses.
  */
-export type TheaterMode = 'home' | 'shared' | 'collection' | 'triage'
+export type TheaterMode = 'home' | 'shared' | 'playlist' | 'triage'
 
 /** Triage mode's Collection ↔ Live sub-tab (unified-theater-triage.md §2).
  * Internal values are unchanged (plumbed through TheaterShell, AuthedHome,
@@ -61,18 +61,18 @@ export const TRIAGE_TAB_LABEL: Record<TriageTab, string> = {
   collection: 'My Collection',
 }
 
-/** Identity + loop metadata for a public tag collection theater (mode `'collection'`). */
-export interface TheaterCollectionMeta {
+/** Identity + loop metadata for a public playlist theater (a shared tag — mode `'playlist'`). */
+export interface TheaterPlaylistMeta {
   /** The (sanitized) tag name, e.g. `claude-code`. */
   tag: string
   /** The curator's username. */
   curator: string
-  /** Number of posts in the collection — drives the "Save collection · N" CTA label. */
+  /** Number of posts in the playlist — drives the "Save playlist · N" CTA label. */
   count: number
 }
 
 /** Save-collection CTA status, shared by the desktop and mobile chrome. */
-export type SaveCollectionStatus = 'idle' | 'saving' | 'saved' | 'error'
+export type SavePlaylistStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 /**
  * Bundled triage-mode chrome contract (unified-theater-triage.md §2) —

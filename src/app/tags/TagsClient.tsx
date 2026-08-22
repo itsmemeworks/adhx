@@ -27,7 +27,7 @@ interface OwnerStats {
 const PREVIEW_LIMIT = 4
 
 /**
- * `/tags` — a home for every tag collection (unified-theater-triage.md §4):
+ * `/tags` — a home for every tag playlist (unified-theater-triage.md §4):
  * count, public status, a content-mosaic "poster" card (Option C), and the
  * same make-public flow FilterBar's selected-tag toolbar uses (`FilterBar.tsx`
  * — PATCH `/api/tags` idempotent make-public, then copy the friendly
@@ -233,7 +233,7 @@ export function TagsClient() {
               Tags
             </h1>
             <p className="text-[15px] text-ink-2">
-              Your collections — share any of them as a looping theater
+              Your playlists — share any of them as a looping theater
             </p>
           </div>
 
@@ -439,7 +439,7 @@ function TagPosterCard({
         count={tag.count}
         tiles={tiles}
         tilesLoading={tilesLoading}
-        href={`/?tag=${encodeURIComponent(tag.tag)}`}
+        href={`/library?tag=${encodeURIComponent(tag.tag)}`}
         badge={
           <VisibilityToggle
             isPublic={!!tag.isPublic}

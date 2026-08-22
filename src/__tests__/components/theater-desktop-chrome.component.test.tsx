@@ -223,7 +223,7 @@ describe('DesktopDock: end cap restructure', () => {
         current={items[0]}
         currentKey={null}
         newCount={5}
-        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
       />,
     )
     expect(screen.queryByText(/new/)).not.toBeInTheDocument()
@@ -259,7 +259,7 @@ describe('DesktopDock: collection Loops divider hidden under repeat "one"', () =
         items={items}
         current={items[0]}
         currentKey={theaterItemKey(items[0])}
-        collection={collection}
+        playlist={collection}
       />,
     )
     expect(screen.getByText('Loops')).toBeInTheDocument()
@@ -274,7 +274,7 @@ describe('DesktopDock: collection Loops divider hidden under repeat "one"', () =
         items={items}
         current={items[0]}
         currentKey={theaterItemKey(items[0])}
-        collection={collection}
+        playlist={collection}
         repeatMode="one"
       />,
     )
@@ -290,7 +290,7 @@ describe('DesktopDock: collection Loops divider hidden under repeat "one"', () =
         items={items}
         current={items[0]}
         currentKey={theaterItemKey(items[0])}
-        collection={collection}
+        playlist={collection}
         repeatMode="all"
       />,
     )
@@ -513,9 +513,9 @@ describe('DesktopStageChrome', () => {
     render(
       <DesktopStageChrome
         {...stageBase}
-        mode="collection"
+        mode="playlist"
         current={videoItem()}
-        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
       />,
     )
     const curatorLink = screen.getByText('@weedauwl').closest('a')!
@@ -596,10 +596,10 @@ describe('DesktopStageChrome', () => {
     render(
       <DesktopStageChrome
         {...stageBase}
-        mode="collection"
+        mode="playlist"
         current={videoItem()}
-        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
-        isCollectionOwner={false}
+        playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        isPlaylistOwner={false}
         onRequestMakeYourOwn={onRequestMakeYourOwn}
       />,
     )
@@ -614,10 +614,10 @@ describe('DesktopStageChrome', () => {
     render(
       <DesktopStageChrome
         {...stageBase}
-        mode="collection"
+        mode="playlist"
         current={videoItem()}
-        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
-        isCollectionOwner
+        playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        isPlaylistOwner
       />,
     )
     expect(screen.queryByText('Make your own')).not.toBeInTheDocument()
@@ -705,19 +705,19 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
     expect(downloadBtn.className).not.toContain('border-clay')
   })
 
-  it('collection mode: the Save-collection CTA also carries the clay-border outline, not the old solid clay-grad fill', () => {
+  it('playlist mode: the Save-playlist CTA also carries the clay-border outline, not the old solid clay-grad fill', () => {
     render(
       <DesktopStageChrome
         {...stageBase}
-        mode="collection"
+        mode="playlist"
         current={videoItem()}
-        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
-        isCollectionOwner={false}
+        playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        isPlaylistOwner={false}
       />,
     )
-    const saveCollectionBtn = screen.getByText(/Save collection/).closest('button')!
-    expect(saveCollectionBtn.className).toContain('border-clay')
-    expect(saveCollectionBtn.className).not.toContain('bg-clay-grad')
+    const savePlaylistBtn = screen.getByText(/Save playlist/).closest('button')!
+    expect(savePlaylistBtn.className).toContain('border-clay')
+    expect(savePlaylistBtn.className).not.toContain('bg-clay-grad')
   })
 
   it('text posts never show Download (nothing sendable)', () => {
@@ -850,7 +850,7 @@ describe('DesktopDock: repeat control', () => {
         items={items}
         current={items[0]}
         currentKey={currentKey}
-        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
         repeatMode="all"
         onCycleRepeat={vi.fn()}
       />,
@@ -951,7 +951,7 @@ describe('DesktopDock: hides the time text for an unknown addedAt (filmstrip car
         items={items}
         current={items[0]}
         currentKey={theaterItemKey(items[0])}
-        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 2 }}
+        playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 2 }}
       />,
     )
     const ghost = screen.getByLabelText('Back to the first post')
@@ -1103,9 +1103,9 @@ describe('DesktopStageChrome: theaterActive prop wiring', () => {
     render(
       <DesktopStageChrome
         {...stageBase}
-        mode="collection"
+        mode="playlist"
         current={videoItem()}
-        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
       />,
     )
     expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(

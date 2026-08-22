@@ -75,7 +75,7 @@ describe('TagsClient', () => {
     expect(screen.getByRole('link', { name: /open/i })).toHaveAttribute('href', '/t/tester/work')
   })
 
-  it('the poster card links to /?tag={tag}', async () => {
+  it('the poster card links to /library?tag={tag} — the grid moved off `/`', async () => {
     global.fetch = vi.fn().mockImplementation((url: string) => {
       if (url === '/api/tags') {
         return jsonResponse({ tags: [{ tag: 'work', count: 2, isPublic: false, shareUrl: null }] })
@@ -86,7 +86,10 @@ describe('TagsClient', () => {
     render(<TagsClient />)
 
     await waitFor(() => expect(screen.getByText('#work')).toBeInTheDocument())
-    expect(screen.getByRole('link', { name: 'View #work' })).toHaveAttribute('href', '/?tag=work')
+    expect(screen.getByRole('link', { name: 'View #work' })).toHaveAttribute(
+      'href',
+      '/library?tag=work',
+    )
   })
 
   it('clicking the "Private" toggle PATCHes make-public and copies the friendly URL', async () => {

@@ -12,7 +12,7 @@ import { Bookmark, Eye, Flame } from 'lucide-react'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
 /** Ghost-pill styling shared by the top-right "Make your own"/"Manage
- * collections" CTA, whichever of the two renders. */
+ * playlists" CTA, whichever of the two renders. */
 const TOP_PILL_CLASS =
   'inline-flex items-center rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur transition-colors hover:bg-white/20'
 /** Clay CTA styling for the footer "Start your collection" pitch block. */
@@ -74,10 +74,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const { profile } = result
   const collectionNames = profile.collections.map((c) => `#${c.tag}`).join(', ')
-  const title = `@${profile.username} — collections on ADHX`
+  const title = `@${profile.username} — playlists on ADHX`
   const description = collectionNames
-    ? `${profile.publicTagCount} public collection${profile.publicTagCount === 1 ? '' : 's'} curated by @${profile.username}: ${collectionNames}.`
-    : `Public collections curated by @${profile.username} on ADHX.`
+    ? `${profile.publicTagCount} public playlist${profile.publicTagCount === 1 ? '' : 's'} curated by @${profile.username}: ${collectionNames}.`
+    : `Public playlists curated by @${profile.username} on ADHX.`
   const canonicalUrl = `${BASE_URL}/t/${profile.username}`
 
   return {
@@ -123,14 +123,14 @@ export default async function CuratorProfilePage({ params }: Props) {
   // Three states for both the top-right pill and the footer pitch block
   // (owner review: "why am I seeing Make your own as an authenticated
   // user?"): signed out gets the sign-up CTAs; the profile's own owner gets
-  // a "Manage collections" shortcut instead and no footer pitch; a visitor
+  // a "Manage playlists" shortcut instead and no footer pitch; a visitor
   // signed in as someone ELSE gets no substitute CTA at all.
   const isSignedOut = viewerId == null
   const isOwnProfile = viewerId != null && viewerId === profile.userId
 
   const jsonLd = buildCollectionPageLd({
-    name: `@${profile.username} — collections on ADHX`,
-    description: `${profile.publicTagCount} public collection${profile.publicTagCount === 1 ? '' : 's'} curated by @${profile.username} on ADHX.`,
+    name: `@${profile.username} — playlists on ADHX`,
+    description: `${profile.publicTagCount} public playlist${profile.publicTagCount === 1 ? '' : 's'} curated by @${profile.username} on ADHX.`,
     url: canonicalUrl,
     baseUrl: BASE_URL,
     items: profile.collections.map((c) => ({ url: c.href, name: `#${c.tag}` })),
@@ -142,7 +142,7 @@ export default async function CuratorProfilePage({ params }: Props) {
   jsonLd['@type'] = 'ProfilePage'
 
   const stats = [
-    `${profile.publicTagCount} collection${profile.publicTagCount === 1 ? '' : 's'}`,
+    `${profile.publicTagCount} playlist${profile.publicTagCount === 1 ? '' : 's'}`,
     `${profile.postCount} post${profile.postCount === 1 ? '' : 's'} shared`,
     memberSince ? `curating since ${memberSince}` : null,
   ].filter((s): s is string => Boolean(s))
@@ -182,7 +182,7 @@ export default async function CuratorProfilePage({ params }: Props) {
           </MakeYourOwnButton>
         ) : isOwnProfile ? (
           <Link href="/tags" className={TOP_PILL_CLASS}>
-            Manage collections
+            Manage playlists
           </Link>
         ) : null}
       </nav>
@@ -223,7 +223,7 @@ export default async function CuratorProfilePage({ params }: Props) {
         </header>
 
         {profile.collections.length === 1 ? (
-          // Single collection: a showcase card, centered and scaled up so it
+          // Single playlist: a showcase card, centered and scaled up so it
           // fills a meaningful share of the viewport instead of floating
           // small in a huge empty area.
           // Rank renders ONCE per card, as the corner medallion — `stats.rank`
@@ -248,7 +248,7 @@ export default async function CuratorProfilePage({ params }: Props) {
             />
           </div>
         ) : (
-          // Multiple collections: wrap in a centered flex row rather than a
+          // Multiple playlists: wrap in a centered flex row rather than a
           // fixed-column grid, so a partial last row (e.g. 3 of 4 columns)
           // still centers as a group instead of packing left.
           <div className="mt-10 flex w-full flex-wrap justify-center gap-4 sm:mt-14 sm:gap-5">

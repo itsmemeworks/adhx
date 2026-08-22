@@ -137,7 +137,7 @@ export interface TheaterAvatarMenuProps {
    * both auth states rather than a second component. Callers opt in per
    * mode: the home theater and shared preview pages pass this (signed-out
    * visitors there had no navigation at all); triage is always reached
-   * authed, and collection mode already has its own "Make your own"
+   * authed, and playlist mode already has its own "Make your own"
    * signed-out conversion CTA, so neither passes it.
    */
   allowSignedOut?: boolean
@@ -365,7 +365,7 @@ export function TheaterAvatarMenu({
               reach the rest of the app. "Your collection" keeps this
               menu's own naming convention rather than Header's plain
               "Collection". */}
-          <MenuLink href="/" onClick={close}>
+          <MenuLink href="/library" onClick={close}>
             <Bookmark size={15} />
             <span>Your collection</span>
           </MenuLink>

@@ -25,7 +25,7 @@ export function WelcomeClient({ suggestedUsername, returnTo }: WelcomeClientProp
   // the description text below can show `adhx.com/t/{live value}` exactly as
   // before the form itself was extracted into UsernameChooser.
   const [sanitized, setSanitized] = useState(sanitizeUsername(suggestedUsername))
-  // Second step: once the username is claimed, offer starter collections
+  // Second step: once the username is claimed, offer starter playlists
   // instead of navigating straight to `returnTo` — a brand-new collection is
   // otherwise empty on day one. `null` = still on step 1.
   const [claimedUsername, setClaimedUsername] = useState<string | null>(null)
@@ -75,7 +75,7 @@ export function WelcomeClient({ suggestedUsername, returnTo }: WelcomeClientProp
               You&rsquo;re in, @{claimedUsername}
             </h1>
             <p className="mt-2 text-[13.5px] leading-snug" style={{ color: MUTED }}>
-              Start with a full collection someone else already built, or skip and add your own.
+              Start with a full playlist someone else already built, or skip and add your own.
             </p>
 
             <div className="mt-6">
@@ -107,7 +107,7 @@ export function WelcomeClient({ suggestedUsername, returnTo }: WelcomeClientProp
               Choose your username
             </h1>
             <p className="mt-2 text-[13.5px] leading-snug" style={{ color: MUTED }}>
-              This is your public handle on shared collections — adhx.com/t/
+              This is your public handle on shared playlists — adhx.com/t/
               {sanitized || 'username'}. You can only set it once.
             </p>
 

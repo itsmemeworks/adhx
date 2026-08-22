@@ -123,7 +123,7 @@ describe('SettingsClient — Username row', () => {
     render(<SettingsClient />)
 
     await waitFor(() => expect(screen.getByText('@auto123')).toBeInTheDocument())
-    expect(screen.getByText('Your public handle on shared collections')).toBeInTheDocument()
+    expect(screen.getByText('Your public handle on shared playlists')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Choose' })).toBeInTheDocument()
   })
 

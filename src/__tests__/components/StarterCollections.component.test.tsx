@@ -1,10 +1,10 @@
 /**
  * @vitest-environment jsdom
  *
- * `StarterCollections` — the "start with a full collection" onboarding
+ * `StarterCollections` — the "start with a full playlist" onboarding
  * offer. Reuses `/api/collections/trending` (Discovery leaderboard) and the
  * tag clone endpoint, so this only tests the component's own logic: it
- * renders the top 3 entries, excludes the viewer's own collections, fires a
+ * renders the top 3 entries, excludes the viewer's own playlists, fires a
  * clone POST per card with a success/error state, and collapses to nothing
  * when there's nothing to offer.
  */

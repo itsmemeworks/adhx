@@ -62,13 +62,13 @@ import { theaterItemKey, PLATFORM_LABEL, TRIAGE_TAB_ORDER, TRIAGE_TAB_LABEL } fr
 import { TheaterLinkedText, stripShortLinksForPreview } from './TheaterText'
 import { progressKindFor } from './TheaterProgressLine'
 import { UpNextList, TYPE_TILE, warmOnHover } from './UpNextList'
-import { SaveCollectionButton } from './SaveCollectionButton'
+import { SavePlaylistButton } from './SavePlaylistButton'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
 import { logAV } from './YtDebugOverlay'
 import type {
   RepeatMode,
-  SaveCollectionStatus,
-  TheaterCollectionMeta,
+  SavePlaylistStatus,
+  TheaterPlaylistMeta,
   TheaterItem,
   TheaterMode,
   TheaterTriageChrome,
@@ -85,14 +85,14 @@ export interface DesktopStageChromeProps {
   /** De-clutter fades the overlays out (mobile-chrome pattern: opacity + slight translate, pointer-events-none). */
   declutter: boolean
   onToggleDeclutter: () => void
-  /** Collection mode (`/t/{username}/{tag}`): identity chrome + swaps the top bar's LIVE/paste-input right side for "Make your own", and the bottom-right Save action for the Save-collection CTA. */
-  collection?: TheaterCollectionMeta
-  saveStatus?: SaveCollectionStatus
-  onSaveCollection?: () => void
-  /** The signed-in viewer IS this collection's curator — hide clone/make-your-own, show Manage. */
-  isCollectionOwner?: boolean
+  /** Playlist mode (`/t/{username}/{tag}`): identity chrome + swaps the top bar's LIVE/paste-input right side for "Make your own", and the bottom-right Save action for the Save-playlist CTA. */
+  playlist?: TheaterPlaylistMeta
+  saveStatus?: SavePlaylistStatus
+  onSavePlaylist?: () => void
+  /** The signed-in viewer IS this playlist's curator — hide clone/make-your-own, show Manage. */
+  isPlaylistOwner?: boolean
   onRequestSignIn?: () => void
-  /** Collection mode, non-owner viewers: the "Make your own" CTA — opens the sign-in modal in place (authed non-owners are routed home instead, handled by the caller). */
+  /** Playlist mode, non-owner viewers: the "Make your own" CTA — opens the sign-in modal in place (authed non-owners are routed home instead, handled by the caller). */
   onRequestMakeYourOwn?: () => void
   /** Triage mode (unified-theater-triage.md §2): swaps the top bar's Live/paste-input for a Collection↔Live tab switcher, and the bottom-right action set for Later/Tag/Delete/Done. */
   triage?: TheaterTriageChrome
@@ -127,7 +127,7 @@ export interface DesktopDockProps {
   /** De-clutter slides the dock away entirely (the shell's floating restore button brings it back). */
   declutter: boolean
   /** Collection mode: appends a "loops" divider + a ghosted copy of the first card after the filmstrip, and hides the live-pulse-only savedToday/newCount lines in the end cap. */
-  collection?: TheaterCollectionMeta
+  playlist?: TheaterPlaylistMeta
   /** Triage mode: end cap shows "{remaining} left" + streak instead of savedToday/newCount. */
   triage?: TheaterTriageChrome
   /**
@@ -144,7 +144,7 @@ export interface DesktopDockProps {
   repeatCurrent?: boolean
   /**
    * The Spotify-style repeat control (round 8): current mode + the cycling
-   * handler. Both absent in collection mode (that queue always loops) and
+   * handler. Both absent in playlist mode (that queue always loops) and
    * triage (finite backlog) — the button only renders when the handler is
    * provided.
    */
@@ -169,7 +169,7 @@ const PRIMARY =
  * The Save buttons (round 8, owner): a Bookmark glyph on the same
  * see-through glass as GLASS, distinguished by a clay border instead of the
  * old solid clay-grad PRIMARY fill ("too much"). Covers SavePostButton,
- * TriageLiveSaveButton, the signed-out Save prompt, AND SaveCollectionButton
+ * TriageLiveSaveButton, the signed-out Save prompt, AND SavePlaylistButton
  * (owner follow-up: same outline). PRIMARY remains only for triage's Done.
  * Mirrors `PILL_SAVE` in TheaterMobileChrome.
  */
@@ -362,10 +362,10 @@ export function DesktopStageChrome({
   authed,
   declutter,
   onToggleDeclutter,
-  collection,
+  playlist,
   saveStatus = 'idle',
-  onSaveCollection,
-  isCollectionOwner = false,
+  onSavePlaylist,
+  isPlaylistOwner = false,
   onRequestSignIn,
   onRequestMakeYourOwn,
   triage,
@@ -488,10 +488,10 @@ export function DesktopStageChrome({
             // Collection mode: the wordmark, tag name and curator line sit on
             // one shared text baseline (per live review) — other modes keep
             // vertical centering for their pill controls.
-            collection && !triage ? 'items-baseline' : 'items-center',
+            playlist && !triage ? 'items-baseline' : 'items-center',
           )}
         >
-          {collection && !triage ? (
+          {playlist && !triage ? (
             // Inline-flow brand: an inline anchor's baseline is its TEXT
             // baseline, so the wordmark sits on the same ruler as the tag
             // name + curator line (MatterLogo is a nested flex whose
@@ -551,24 +551,24 @@ export function DesktopStageChrome({
                 </button>
               </div>
             </>
-          ) : collection ? (
+          ) : playlist ? (
             <>
               <span className="h-5 w-px flex-none self-center bg-white/20" aria-hidden />
               <span className="flex-none truncate text-[19px] font-bold leading-none text-white">
-                #{collection.tag}
+                #{playlist.tag}
               </span>
               <span className="min-w-0 truncate font-mono text-[11px] leading-none text-white/55">
                 <span>curated by </span>
                 <Link
-                  href={`/t/${encodeURIComponent(collection.curator)}`}
+                  href={`/t/${encodeURIComponent(playlist.curator)}`}
                   onClick={(e) => e.stopPropagation()}
                   className="underline decoration-white/30 underline-offset-2 transition-colors hover:text-white"
                 >
-                  @{collection.curator}
+                  @{playlist.curator}
                 </Link>
                 <span>
                   {' '}
-                  · {collection.count} {collection.count === 1 ? 'post' : 'posts'} ·{' '}
+                  · {playlist.count} {playlist.count === 1 ? 'post' : 'posts'} ·{' '}
                 </span>
                 <Repeat size={10} className="inline" aria-hidden />
                 <span> loops</span>
@@ -592,8 +592,8 @@ export function DesktopStageChrome({
                 <PlatformTimeChip item={current} />
               </>
             ) : null
-          ) : collection ? (
-            !isCollectionOwner && (
+          ) : playlist ? (
+            !isPlaylistOwner && (
               <button type="button" onClick={() => onRequestMakeYourOwn?.()} className={GLASS}>
                 Make your own
               </button>
@@ -650,7 +650,7 @@ export function DesktopStageChrome({
               authed — matching the mobile chrome's `allowSignedOut` gate. */}
           <TheaterAvatarMenu
             onRequestSignIn={onRequestSignIn}
-            allowSignedOut={!triage && !collection}
+            allowSignedOut={!triage && !playlist}
             theaterActive={mode === 'home' || !!triage}
           />
 
@@ -862,17 +862,17 @@ export function DesktopStageChrome({
             {linkCopied ? <Check size={14} className="text-done" /> : <LinkIcon size={14} />}
             <span>{linkCopied ? 'Copied' : 'Link'}</span>
           </button>
-          {collection ? (
-            isCollectionOwner ? (
-              <a href={`/?tag=${encodeURIComponent(collection.tag)}`} className={GLASS}>
+          {playlist ? (
+            isPlaylistOwner ? (
+              <a href={`/library?tag=${encodeURIComponent(playlist.tag)}`} className={GLASS}>
                 <TagIcon size={14} />
-                <span>Manage collection</span>
+                <span>Manage playlist</span>
               </a>
             ) : (
-              <SaveCollectionButton
-                count={collection.count}
+              <SavePlaylistButton
+                count={playlist.count}
                 status={saveStatus}
-                onSave={() => onSaveCollection?.()}
+                onSave={() => onSavePlaylist?.()}
                 className={SAVE_OUTLINE}
               />
             )
@@ -969,7 +969,7 @@ export function DesktopDock({
   onPrev,
   onNext,
   declutter,
-  collection,
+  playlist,
   triage,
   repeatCurrent = false,
   repeatMode,
@@ -1244,7 +1244,7 @@ export function DesktopDock({
             after the last item goes — matching goNext's actual wrap target.
             Hidden while the repeat button is on 'one' — the queue isn't
             wrapping then, the current post is looping. */}
-        {collection && items.length > 0 && repeatMode !== 'one' && (
+        {playlist && items.length > 0 && repeatMode !== 'one' && (
           <>
             <div
               aria-hidden
@@ -1320,7 +1320,7 @@ export function DesktopDock({
           <span>Show all</span>
         </button>
         <span className="font-mono text-[10.5px] text-ink-3">{items.length} posts</span>
-        {!collection && newCount > 0 && (
+        {!playlist && newCount > 0 && (
           <span className="text-[10.5px] font-semibold text-clay">{newCount} new</span>
         )}
         {/* savedToday/newCount are live-pulse concepts — collection mode is a
@@ -1347,7 +1347,7 @@ export function DesktopDock({
                 button; the chevron accent is the "way out" cue. */}
             {/* newCount now rides the count line under "Show all" above —
                 only the ambient savedToday/waiting line remains here. */}
-            {!collection &&
+            {!playlist &&
               (waiting ? (
                 <span className="text-[10.5px] text-ink-3">Waiting for new sends…</span>
               ) : (

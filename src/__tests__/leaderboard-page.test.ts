@@ -130,7 +130,7 @@ describe('/leaderboard pages', () => {
       const LeaderboardPage = (await import('@/app/leaderboard/page')).default
       const html = renderToStaticMarkup(await LeaderboardPage())
 
-      expect(html).toContain('No public collections charting yet')
+      expect(html).toContain('No public playlists charting yet')
     })
 
     it('never renders a private tag even with events', async () => {
