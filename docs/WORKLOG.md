@@ -4,6 +4,17 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-22 — Send actually sends the file (the tap now waits for it)
+
+Owner, from a PRODUCTION preview page (so this predates this branch): the mobile Send/Download button put a URL into WhatsApp instead of attaching the video. "It needs to be smart enough that when you tap download, it keeps the spinner going until it has the file to send."
+
+- **Cause: the tap had no wait in it.** `send()` read `blobRef.current` and, when the 2s-delayed prefetch hadn't landed, fell through to `navigator.share({ url })` — a link-only share that _looks_ like success. A 3MB MP4 on mobile data loses that race routinely. Worth stressing for future debugging: nothing was broken server-side — `curl` on the reported post's `/api/media/video` returns 200 / 3.5MB. It was purely timing.
+- **An early tap now joins the in-flight prefetch and awaits it** with `sending` still true, so the spinner covers the fetch and the share carries the real file. The link path is now reachable only on a genuine fetch failure.
+- **Activation loss is surfaced, not swallowed.** iOS and Chrome both consume transient activation across an `await`, so the post-fetch `share()` can be refused with `NotAllowedError`. Previously that fell through to the link share (the reported symptom, again). Now `primed` goes true, the file stays cached, and the button reads **"Send now"** for the one extra tap the sheet needs.
+- **Preview pages prefetch eagerly** (`useSendFile(current, { eager: mode === 'shared' })`). The 2s delay exists so skimming the live feed doesn't pull a file per item — but a shared post is pinned, repeating, and the reason the visitor is there. With the file already cached the sheet opens inside the tap's own activation and the second tap never happens.
+- **Label made honest**: "Send" + share glyph where it opens a share sheet, "Download" where it downloads. Both chromes said "Download" unconditionally, which is why a link share read as a broken download instead of the wrong action. Desktop is unchanged (always downloads, by an earlier owner decision); the desktop chrome got the same treatment because a tablet gets that chrome at lg+ with a real share sheet.
+- **State**: 2370 tests / 186 files green, typecheck + lint clean. 5 new hook tests; the mobile share path needs BOTH `getPlatformType()` mocked to 'ios' and `navigator.canShare` stubbed (jsdom is 'desktop', which is why the old tests never covered this branch — they asserted the "Download" label and still pass).
+
 ## 2026-08-22 — Shared preview pages group their queue like home
 
 Owner spotted the inconsistency from a real URL (`/WireSpy92/status/…`): the queue on a preview page had no sections at all, while the same queue on `/` showed New-since / Up-next / Watched-earlier. "We just need to be always consistent here."
