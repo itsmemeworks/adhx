@@ -4,13 +4,18 @@ import { expectSignInModal, expectTheaterReady } from './helpers'
 
 test.describe('signed out', () => {
   test('/collection and /library bounce to the public theater', async ({ page }) => {
+    // Signed-out `/` is the Live theater, which replaceStates the address bar
+    // to the current post. Assert the bounce (not still on the authed route)
+    // and that the theater mounted — not that the URL stays `/`.
     await page.goto('/collection')
-    await expect(page).toHaveURL(/\/$/)
     await expectTheaterReady(page)
+    await expect(page).not.toHaveURL(/\/collection/)
+    await expect(page).not.toHaveURL(/\/library/)
 
     await page.goto('/library')
-    await expect(page).toHaveURL(/\/$/)
     await expectTheaterReady(page)
+    await expect(page).not.toHaveURL(/\/library/)
+    await expect(page).not.toHaveURL(/\/collection/)
   })
 
   test('public playlist is watchable; private playlist stays locked', async ({ page }) => {
