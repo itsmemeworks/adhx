@@ -77,6 +77,15 @@ export interface UseTheaterKeyboardArgs {
   triageStepBack: () => void
   triageDoUndo: () => void
   onClose?: () => void
+  /**
+   * Space guard for the end-of-feed waiting stage: the stage stays MOUNTED
+   * (paused) behind the waiting overlay so the persistent <video> element —
+   * and its iOS unmuted-playback grant — survives into the next fresh
+   * arrival. Space must not resume that hidden video underneath the "You're
+   * all caught up" screen. Read at keypress time (a ref-backed callback),
+   * so the listener never re-registers on waiting flips.
+   */
+  isPlaybackHidden?: () => boolean
 }
 
 /**
@@ -99,6 +108,7 @@ export function useTheaterKeyboard({
   triageStepBack,
   triageDoUndo,
   onClose,
+  isPlaybackHidden,
 }: UseTheaterKeyboardArgs): void {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -162,7 +172,11 @@ export function useTheaterKeyboard({
           break
         case ' ':
           e.preventDefault()
-          window.dispatchEvent(new CustomEvent('theater-toggle-play'))
+          // See `isPlaybackHidden` — never resume the paused stage hiding
+          // behind the waiting overlay.
+          if (!isPlaybackHidden?.()) {
+            window.dispatchEvent(new CustomEvent('theater-toggle-play'))
+          }
           break
         case 'm':
         case 'M':
@@ -186,5 +200,6 @@ export function useTheaterKeyboard({
     triageStepBack,
     triageDoUndo,
     onClose,
+    isPlaybackHidden,
   ])
 }

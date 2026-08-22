@@ -346,9 +346,12 @@ describe('StageVideo Instagram catch-up unmute (confirmed-playing retry, evidenc
       video.dispatchEvent(new Event('ended'))
     })
 
-    // Stayed unmuted — this was a natural end, not a rejection.
+    // Stayed unmuted — this was a natural end, not a rejection. (No end
+    // overlay renders anymore — the legacy replay/next nudge was removed
+    // once every playlist auto-advanced; ended videos replay via the
+    // transport/stage-tap instead.)
     expect(video.muted).toBe(false)
-    expect(container.querySelector('[aria-label="Replay"]')).not.toBeNull()
+    expect(container.querySelector('[aria-label="Replay"]')).toBeNull()
   })
 })
 

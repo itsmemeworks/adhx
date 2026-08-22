@@ -89,6 +89,57 @@ describe('buildSharedSeed', () => {
     expect(seed.savedToday).toBe(0)
     expect(seed.recentActivity).toBe(0)
   })
+
+  /**
+   * Owner report: the display-only `addedAt` (when a post was first linked
+   * to ADHX) is never known to the per-platform mappers — they only see
+   * data the preview page itself fetched. The page's own
+   * `recordActivity('preview')` runs before this, so by the time
+   * `buildSharedSeed` reads the ambient pulse, `getTrendingItems` already
+   * carries an enriched copy of the SAME post with its `addedAt` computed —
+   * this backfills the lead item from that copy.
+   */
+  it("backfills the shared item addedAt from the pulse feed's enriched copy of the same post", async () => {
+    const shared = item({ platform: 'tiktok', bookmarkId: 'backfill-1', addedAt: null })
+    const pulseCopy = item({
+      platform: 'tiktok',
+      bookmarkId: 'backfill-1',
+      addedAt: '2026-06-01T00:00:00Z',
+    })
+    getTheaterFeedMock.mockResolvedValue({ items: [pulseCopy], savedToday: 0, recentActivity: 0 })
+
+    const { seed, sharedItem } = await buildSharedSeed(shared)
+
+    expect(sharedItem.addedAt).toBe('2026-06-01T00:00:00Z')
+    // The lead item stays otherwise identical to the page's own mapper output.
+    expect(sharedItem.text).toBe(shared.text)
+    // The rest of the feed is empty since the pulse's only item WAS the
+    // shared post (deduped out), same as any other lead-post dedupe.
+    expect(seed.items).toEqual([sharedItem])
+  })
+
+  it('leaves the shared item addedAt untouched when the pulse has no enriched copy of it', async () => {
+    const shared = item({ platform: 'instagram', bookmarkId: 'no-backfill-1', addedAt: null })
+    getTheaterFeedMock.mockResolvedValue({ items: [], savedToday: 0, recentActivity: 0 })
+
+    const { sharedItem } = await buildSharedSeed(shared)
+
+    expect(sharedItem.addedAt).toBe(null)
+  })
+
+  it("takes the pulse copy's addedAt unconditionally when present — none of the per-platform mappers set their own", async () => {
+    const shared = item({ platform: 'twitter', bookmarkId: 'has-time-1' })
+    const pulseCopy = item({
+      platform: 'twitter',
+      bookmarkId: 'has-time-1',
+      addedAt: '2026-07-01T00:00:00Z',
+    })
+    getTheaterFeedMock.mockResolvedValue({ items: [pulseCopy], savedToday: 0, recentActivity: 0 })
+
+    const { sharedItem } = await buildSharedSeed(shared)
+
+    expect(sharedItem.addedAt).toBe('2026-07-01T00:00:00Z')
+  })
 })
 
 describe('per-platform mappers', () => {

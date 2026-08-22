@@ -29,13 +29,14 @@ import {
   Clock,
   Loader2,
   Clipboard,
+  Copy as CopyIcon,
   Maximize2,
   Download as DownloadIcon,
   Link as LinkIcon,
-  LogIn,
   ExternalLink,
   Flame,
   Repeat,
+  Repeat1,
   Tag as TagIcon,
   Trash2,
   ChevronLeft,
@@ -49,10 +50,10 @@ import {
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatCompactRelativeTime } from '@/lib/utils/format'
+import { formatCompactRelativeTime, hasKnownTimestamp } from '@/lib/utils/format'
 import { MatterLogo, PlatformGlyph } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
-import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
+import { authorProfileUrl, previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { inferType } from '@/lib/trending/filter'
 import { resolvePastedLink } from '@/lib/theater/paste-preview'
 import { useSendFile } from './useSendFile'
@@ -65,6 +66,7 @@ import { SaveCollectionButton } from './SaveCollectionButton'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
 import { logAV } from './YtDebugOverlay'
 import type {
+  RepeatMode,
   SaveCollectionStatus,
   TheaterCollectionMeta,
   TheaterItem,
@@ -140,6 +142,14 @@ export interface DesktopDockProps {
    * + one accented control is enough ("facts shown once").
    */
   repeatCurrent?: boolean
+  /**
+   * The Spotify-style repeat control (round 8): current mode + the cycling
+   * handler. Both absent in collection mode (that queue always loops) and
+   * triage (finite backlog) — the button only renders when the handler is
+   * provided.
+   */
+  repeatMode?: RepeatMode
+  onCycleRepeat?: () => void
 }
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -147,13 +157,24 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 const GLASS =
   'inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/[0.14] px-4 text-[12.5px] font-semibold text-white transition-colors hover:bg-white/20 disabled:opacity-60'
 /**
- * Save drives account signups, so it's ALWAYS the visually primary action —
- * every Save variant (sign-in prompt, SavePostButton, TriageLiveSaveButton,
- * SaveCollectionButton) uses this class. Download is a power-user affordance,
- * not a headline feature, so it stays on GLASS alongside Link/Open.
+ * Solid clay-grad — since round 8 used ONLY by triage's Done button; every
+ * Save variant moved to SAVE_OUTLINE below (owner: the solid fill was "too
+ * much"). Download/Copy are power-user affordances on GLASS alongside
+ * Link/Open.
  */
 const PRIMARY =
   'inline-flex h-11 items-center justify-center gap-1.5 rounded-full bg-clay-grad px-5 text-[12.5px] font-semibold text-white shadow-glow transition-opacity hover:opacity-90 disabled:opacity-60'
+
+/**
+ * The Save buttons (round 8, owner): a Bookmark glyph on the same
+ * see-through glass as GLASS, distinguished by a clay border instead of the
+ * old solid clay-grad PRIMARY fill ("too much"). Covers SavePostButton,
+ * TriageLiveSaveButton, the signed-out Save prompt, AND SaveCollectionButton
+ * (owner follow-up: same outline). PRIMARY remains only for triage's Done.
+ * Mirrors `PILL_SAVE` in TheaterMobileChrome.
+ */
+const SAVE_OUTLINE =
+  'inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-clay bg-white/[0.14] px-5 text-[12.5px] font-semibold text-white transition-colors hover:bg-white/20 disabled:opacity-60'
 
 /**
  * Shared-mode, signed-in Save (ported verbatim from the deleted Rail.tsx):
@@ -279,9 +300,14 @@ function PlatformTimeChip({ item }: { item: TheaterItem }) {
   const inner = (
     <>
       <PlatformGlyph platform={item.platform} size={12} />
-      <span className="font-mono text-[11px]" suppressHydrationWarning>
-        {formatCompactRelativeTime(item.createdAt)}
-      </span>
+      {/* `addedAt` = when the post was first added to ADHX (owner decision —
+          never the source platform's date, never the moving event time).
+          Unknown → no time, just the glyph. */}
+      {hasKnownTimestamp(item.addedAt) && (
+        <span className="font-mono text-[11px]" suppressHydrationWarning>
+          {formatCompactRelativeTime(item.addedAt as string)}
+        </span>
+      )}
     </>
   )
   const cls =
@@ -306,7 +332,9 @@ function PlatformTimeChip({ item }: { item: TheaterItem }) {
 function FlameChip({ trendCount }: { trendCount: number }) {
   if (trendCount < 2) return null
   return (
-    <span className="inline-flex flex-none items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-[11px] font-bold text-orange-300">
+    // Same pill geometry + backdrop as PlatformTimeChip beside it (round 8:
+    // the two read as mismatched heights).
+    <span className="inline-flex min-h-[32px] flex-none items-center gap-1 rounded-full bg-black/40 px-2.5 text-[11px] font-bold text-orange-300 backdrop-blur-sm">
       <Flame size={11} className="text-orange-400" fill="currentColor" />
       {trendCount}
     </span>
@@ -347,6 +375,10 @@ export function DesktopStageChrome({
   const pasteErrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [linkCopied, setLinkCopied] = useState(false)
   const linkCopiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // "Copy" for text-like posts (round 8) — separate from `linkCopied` so the
+  // two buttons' feedback never cross-flash.
+  const [textCopied, setTextCopied] = useState(false)
+  const textCopiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const currentKey = current ? theaterItemKey(current) : null
   const { ref: captionRef, expanded, setExpanded, overflowing } = useClampExpand(currentKey)
   const sendFile = useSendFile(current)
@@ -355,6 +387,7 @@ export function DesktopStageChrome({
     () => () => {
       if (pasteErrorTimeoutRef.current) clearTimeout(pasteErrorTimeoutRef.current)
       if (linkCopiedTimeoutRef.current) clearTimeout(linkCopiedTimeoutRef.current)
+      if (textCopiedTimeoutRef.current) clearTimeout(textCopiedTimeoutRef.current)
     },
     [],
   )
@@ -419,6 +452,20 @@ export function DesktopStageChrome({
       setLinkCopied(true)
       if (linkCopiedTimeoutRef.current) clearTimeout(linkCopiedTimeoutRef.current)
       linkCopiedTimeoutRef.current = setTimeout(() => setLinkCopied(false), 1600)
+    } catch {
+      // Clipboard denial has nothing actionable to surface.
+    }
+  }
+
+  // Copy the post's full text (round 8): text-like posts have no file to
+  // download, so the Download slot carries this instead of vanishing.
+  const handleCopyText = async () => {
+    if (!caption) return
+    try {
+      await navigator.clipboard.writeText(caption)
+      setTextCopied(true)
+      if (textCopiedTimeoutRef.current) clearTimeout(textCopiedTimeoutRef.current)
+      textCopiedTimeoutRef.current = setTimeout(() => setTextCopied(false), 1600)
     } catch {
       // Clipboard denial has nothing actionable to surface.
     }
@@ -600,6 +647,7 @@ export function DesktopStageChrome({
           <TheaterAvatarMenu
             onRequestSignIn={onRequestSignIn}
             allowSignedOut={!triage && !collection}
+            theaterActive={mode === 'home' || !!triage}
           />
 
           {/* De-cluttering EXPANDS the stage, so the enter action reads
@@ -637,17 +685,39 @@ export function DesktopStageChrome({
           )}
         >
           <div className="flex min-w-0 items-center gap-2">
-            <AuthorAvatar
-              src={current.authorAvatarUrl ?? current.thumbnailUrl}
-              author={current.author}
-              size="sm"
-            />
-            <span className="truncate text-[13.5px] font-bold text-white">
-              {current.authorName || (handle ? `@${handle}` : 'Saved post')}
-            </span>
-            {handle && (
-              <span className="truncate font-mono text-[11px] text-white/50">@{handle}</span>
-            )}
+            {(() => {
+              const profileUrl = authorProfileUrl(current.platform, current.author)
+              const inner = (
+                <>
+                  <AuthorAvatar
+                    src={current.authorAvatarUrl ?? current.thumbnailUrl}
+                    author={current.author}
+                    size="sm"
+                  />
+                  <span className="truncate text-[13.5px] font-bold text-white">
+                    {current.authorName || (handle ? `@${handle}` : 'Saved post')}
+                  </span>
+                  {handle && (
+                    <span className="truncate font-mono text-[11px] text-white/50">@{handle}</span>
+                  )}
+                </>
+              )
+              // Tappable author (round 8): jump to the creator's profile on
+              // their own platform. Plain row when there's no handle.
+              return profileUrl ? (
+                <a
+                  href={profileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex min-w-0 items-center gap-2 transition-opacity hover:opacity-85"
+                  title={`View @${handle} on ${PLATFORM_LABEL[current.platform] ?? current.platform}`}
+                >
+                  {inner}
+                </a>
+              ) : (
+                <div className="flex min-w-0 items-center gap-2">{inner}</div>
+              )
+            })()}
             <span className="h-[3px] w-[3px] flex-none rounded-full bg-white/[.35]" />
             <PlatformTimeChip item={current} />
             <FlameChip trendCount={trendCount} />
@@ -752,7 +822,7 @@ export function DesktopStageChrome({
             declutter && 'translate-y-3 opacity-0 pointer-events-none',
           )}
         >
-          {sendFile.supported && (
+          {sendFile.supported ? (
             <button
               type="button"
               onClick={() => void sendFile.send()}
@@ -771,7 +841,19 @@ export function DesktopStageChrome({
               )}
               Download
             </button>
-          )}
+          ) : textLike && caption ? (
+            // Text-like posts have no file — the Download slot copies the
+            // post's full text instead (round 8, owner request).
+            <button
+              type="button"
+              onClick={() => void handleCopyText()}
+              title="Copy the post's text"
+              className={GLASS}
+            >
+              {textCopied ? <Check size={14} className="text-done" /> : <CopyIcon size={14} />}
+              {textCopied ? 'Copied' : 'Copy'}
+            </button>
+          ) : null}
           <button type="button" onClick={() => void handleCopyLink()} className={GLASS}>
             {linkCopied ? <Check size={14} className="text-done" /> : <LinkIcon size={14} />}
             {linkCopied ? 'Copied' : 'Link'}
@@ -787,7 +869,7 @@ export function DesktopStageChrome({
                 count={collection.count}
                 status={saveStatus}
                 onSave={() => onSaveCollection?.()}
-                className={PRIMARY}
+                className={SAVE_OUTLINE}
               />
             )
           ) : (mode === 'shared' && authed) || triage?.tab === 'live' ? (
@@ -802,14 +884,14 @@ export function DesktopStageChrome({
                   <TagIcon size={14} />
                   Tag
                 </button>
-                <TriageLiveSaveButton current={current} triage={triage} className={PRIMARY} />
+                <TriageLiveSaveButton current={current} triage={triage} className={SAVE_OUTLINE} />
               </>
             ) : (
-              <SavePostButton current={current} className={PRIMARY} />
+              <SavePostButton current={current} className={SAVE_OUTLINE} />
             )
           ) : (
-            <button type="button" onClick={() => onRequestSignIn?.()} className={PRIMARY}>
-              <LogIn size={14} />
+            <button type="button" onClick={() => onRequestSignIn?.()} className={SAVE_OUTLINE}>
+              <Bookmark size={14} />
               Save
             </button>
           )}
@@ -886,6 +968,8 @@ export function DesktopDock({
   collection,
   triage,
   repeatCurrent = false,
+  repeatMode,
+  onCycleRepeat,
 }: DesktopDockProps) {
   const [showAll, setShowAll] = useState(false)
   const cardRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
@@ -1027,6 +1111,30 @@ export function DesktopDock({
         >
           {displayMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
         </button>
+        {/* Spotify-style repeat (round 8): off → all → one. Clay = active. */}
+        {onCycleRepeat && repeatMode && (
+          <button
+            type="button"
+            onClick={onCycleRepeat}
+            aria-label={
+              repeatMode === 'off'
+                ? 'Repeat: off'
+                : repeatMode === 'all'
+                  ? 'Repeat: whole queue'
+                  : 'Repeat: this post'
+            }
+            title={
+              repeatMode === 'off'
+                ? 'Repeat off'
+                : repeatMode === 'all'
+                  ? 'Repeating the whole queue'
+                  : 'Repeating this post'
+            }
+            className={cn(TRANSPORT_BTN, repeatMode !== 'off' && 'text-clay hover:text-clay')}
+          >
+            {repeatMode === 'one' ? <Repeat1 size={16} /> : <Repeat size={16} />}
+          </button>
+        )}
         <span className="mx-1.5 h-6 w-px flex-none bg-hairline" />
       </div>
 
@@ -1091,9 +1199,11 @@ export function DesktopDock({
                   size={10}
                   className="flex-none text-ink-3"
                 />
-                <span className="font-mono text-[10px] text-ink-3" suppressHydrationWarning>
-                  {formatCompactRelativeTime(item.createdAt)}
-                </span>
+                {hasKnownTimestamp(item.addedAt) && (
+                  <span className="font-mono text-[10px] text-ink-3" suppressHydrationWarning>
+                    {formatCompactRelativeTime(item.addedAt as string)}
+                  </span>
+                )}
                 <span className="ml-auto flex-none">
                   {/* shared-post-repeat (owner: the desktop filmstrip's NOW
                       tag sitting near a separate repeat glyph elsewhere read
@@ -1127,8 +1237,10 @@ export function DesktopDock({
 
         {/* Collection mode loops: a dashed divider announces the wrap, then a
             ghosted (opacity-45) copy of the first card previews where "next"
-            after the last item goes — matching goNext's actual wrap target. */}
-        {collection && items.length > 0 && (
+            after the last item goes — matching goNext's actual wrap target.
+            Hidden while the repeat button is on 'one' — the queue isn't
+            wrapping then, the current post is looping. */}
+        {collection && items.length > 0 && repeatMode !== 'one' && (
           <>
             <div
               aria-hidden
@@ -1175,9 +1287,11 @@ export function DesktopDock({
                       size={10}
                       className="flex-none text-ink-3"
                     />
-                    <span className="font-mono text-[10px] text-ink-3" suppressHydrationWarning>
-                      {formatCompactRelativeTime(first.createdAt)}
-                    </span>
+                    {hasKnownTimestamp(first.addedAt) && (
+                      <span className="font-mono text-[10px] text-ink-3" suppressHydrationWarning>
+                        {formatCompactRelativeTime(first.addedAt as string)}
+                      </span>
+                    )}
                   </div>
                   <p className="truncate text-[11.5px] leading-tight text-ink">
                     {caption || (handle ? `@${handle}` : 'Saved post')}
@@ -1191,14 +1305,20 @@ export function DesktopDock({
 
       {/* End cap */}
       <div className="relative flex flex-none flex-col items-end justify-center gap-1 pl-1">
+        {/* Vertical stack (owner: the count and new-count sit BELOW the
+            "Show all" text so the end cap doesn't eat filmstrip width). */}
         <button
           type="button"
           onClick={() => setShowAll((v) => !v)}
           className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-ink-2 hover:text-ink"
         >
           {showAll ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
-          Show all · {items.length}
+          Show all
         </button>
+        <span className="font-mono text-[10.5px] text-ink-3">{items.length} posts</span>
+        {!collection && newCount > 0 && (
+          <span className="text-[10.5px] font-semibold text-clay">{newCount} new</span>
+        )}
         {/* savedToday/newCount are live-pulse concepts — collection mode is a
             static curated queue, and triage's Collection tab is the user's
             own backlog, so neither line is meaningful for either. Triage
@@ -1221,6 +1341,8 @@ export function DesktopDock({
                 "facts shown once"). The current card IS the state cue on
                 desktop, same as the mobile peek bar's relabeled center
                 button; the chevron accent is the "way out" cue. */}
+            {/* newCount now rides the count line under "Show all" above —
+                only the ambient savedToday/waiting line remains here. */}
             {!collection &&
               (waiting ? (
                 <span className="text-[10.5px] text-ink-3">Waiting for new sends…</span>
@@ -1229,9 +1351,6 @@ export function DesktopDock({
                   <span className="text-[10.5px] text-ink-3">{savedToday} saved today</span>
                 )
               ))}
-            {!collection && newCount > 0 && (
-              <span className="text-[10.5px] font-semibold text-clay">{newCount} new</span>
-            )}
           </>
         )}
 

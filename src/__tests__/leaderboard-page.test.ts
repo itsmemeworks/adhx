@@ -44,6 +44,11 @@ vi.mock('next/navigation', () => ({
   permanentRedirect: vi.fn((path: string) => {
     throw new Error(`REDIRECT:${path}`)
   }),
+  // The signed-out CollectionsBoard header now mounts `LeaderboardMenu` (round
+  // 8), which wraps `TheaterAvatarMenu` — that component calls `usePathname()`
+  // unconditionally, before its `useAuthMe()` loading check, so it must be
+  // mocked here even though this file never asserts on it.
+  usePathname: vi.fn(() => '/leaderboard'),
 }))
 
 function iso(msAgo = 0): string {

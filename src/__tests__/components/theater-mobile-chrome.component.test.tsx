@@ -2,8 +2,9 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { TheaterMobileChrome } from '@/components/theater/TheaterMobileChrome'
+import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterItem, TheaterTriageChrome } from '@/components/theater/types'
 
 /**
@@ -25,6 +26,16 @@ const mockUseSendFile = vi.fn((..._args: unknown[]) => ({
 
 vi.mock('@/components/theater/useSendFile', () => ({
   useSendFile: (...args: unknown[]) => mockUseSendFile(...args),
+}))
+
+// Captures the props TheaterMobileChrome passes down, so the `theaterActive`
+// wiring tests below can assert on it directly rather than through
+// TheaterAvatarMenu's own rendering (which the global setup-components.ts
+// mock pins `usePathname()` to '/' for, making `isHome` true regardless of
+// `theaterActive` — no observable behavioral difference to assert on there).
+const mockTheaterAvatarMenu = vi.fn((_props: Record<string, unknown>) => null)
+vi.mock('@/components/theater/TheaterAvatarMenu', () => ({
+  TheaterAvatarMenu: (props: Record<string, unknown>) => mockTheaterAvatarMenu(props),
 }))
 
 function videoItem(overrides: Partial<TheaterItem> = {}): TheaterItem {
@@ -89,16 +100,22 @@ beforeEach(() => {
     mode: 'download' as const,
     send: vi.fn(),
   })
+  mockTheaterAvatarMenu.mockClear()
 })
 
+// Round 8 (owner: the solid clay-grad Save fill was "too much") — Save now
+// uses PILL_SAVE (a clay border on the same glass background every other
+// pill uses), never the old solid `bg-clay-grad` fill. Download stays on
+// plain PILL_GLASS (`border-white/25`).
 describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
-  it('sign-in prompt Save is primary (bg-clay-grad)', () => {
+  it('sign-in prompt Save is outlined with a clay border, never the old solid fill', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
     const saveBtn = screen.getByText('Save').closest('button')!
-    expect(saveBtn.className).toContain('bg-clay-grad')
+    expect(saveBtn.className).toContain('border-clay')
+    expect(saveBtn.className).not.toContain('bg-clay-grad')
   })
 
-  it('Download is secondary (glass), never bg-clay-grad', () => {
+  it("Download is secondary (glass, border-white/25), distinct from Save's clay border", () => {
     mockUseSendFile.mockReturnValue({
       supported: true,
       ready: true,
@@ -108,14 +125,14 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     })
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
     const downloadBtn = screen.getByText('Download').closest('button')!
-    expect(downloadBtn.className).not.toContain('bg-clay-grad')
+    expect(downloadBtn.className).not.toContain('border-clay')
     expect(downloadBtn.className).toContain('border-white/25')
 
     const saveBtn = screen.getByText('Save').closest('button')!
-    expect(saveBtn.className).toContain('bg-clay-grad')
+    expect(saveBtn.className).toContain('border-clay')
   })
 
-  it('triage live-tab Save is primary, Download (when present) stays secondary', () => {
+  it('triage live-tab Save carries the clay-border outline, Download (when present) stays plain glass', () => {
     mockUseSendFile.mockReturnValue({
       supported: true,
       ready: true,
@@ -140,10 +157,10 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} triage={triage} />)
 
     const saveBtn = screen.getByText('Save').closest('button')!
-    expect(saveBtn.className).toContain('bg-clay-grad')
+    expect(saveBtn.className).toContain('border-clay')
 
     const downloadBtn = screen.getByText('Download').closest('button')!
-    expect(downloadBtn.className).not.toContain('bg-clay-grad')
+    expect(downloadBtn.className).not.toContain('border-clay')
   })
 
   it('renders Live before My Collection, not the bare "Collection" label', () => {
@@ -176,6 +193,42 @@ describe('TheaterMobileChrome: text posts', () => {
   it('text posts never show Download (nothing sendable)', () => {
     render(<TheaterMobileChrome {...base} current={textItem()} />)
     expect(screen.queryByText('Download')).not.toBeInTheDocument()
+  })
+})
+
+/**
+ * Owner report: the collection theater rendered "56y" for a saved TikTok
+ * whose `createdAt` fell back to an epoch sentinel. The chip renders
+ * `addedAt` (when the post was first saved to ADHX — never the source
+ * platform's own publish date), gated by `hasKnownTimestamp` — a
+ * missing/unknown `addedAt` hides the relative-time span but the platform
+ * glyph must still render either way.
+ */
+describe('TheaterMobileChrome: hides the time text for an unknown addedAt', () => {
+  it('omits the relative-time span but keeps the platform glyph when addedAt is null', () => {
+    const { container } = render(
+      <TheaterMobileChrome {...base} current={videoItem({ addedAt: null })} />,
+    )
+    const chip = container.querySelector('a[href="https://x.com/alice/status/1"]')
+    expect(chip).toBeInTheDocument()
+    expect(chip!.querySelector('svg')).toBeInTheDocument()
+    expect(chip!.querySelector('span')).not.toBeInTheDocument()
+  })
+
+  it('omits the relative-time span when addedAt is the epoch sentinel', () => {
+    const { container } = render(
+      <TheaterMobileChrome {...base} current={videoItem({ addedAt: new Date(0).toISOString() })} />,
+    )
+    const chip = container.querySelector('a[href="https://x.com/alice/status/1"]')
+    expect(chip!.querySelector('span')).not.toBeInTheDocument()
+  })
+
+  it('shows the relative-time span for a real addedAt', () => {
+    const { container } = render(
+      <TheaterMobileChrome {...base} current={videoItem({ addedAt: '2026-08-18T00:00:00Z' })} />,
+    )
+    const chip = container.querySelector('a[href="https://x.com/alice/status/1"]')
+    expect(chip!.querySelector('span')).toBeInTheDocument()
   })
 })
 
@@ -222,6 +275,21 @@ describe('TheaterMobileChrome: Up-next sheet drag handle wiring', () => {
 
     fireEvent.click(findHandle())
     expect(findHandle()).toHaveAttribute('aria-label', 'Expand up next')
+  })
+
+  // Owner report: the collapsed peek bar floated a few px too short, letting
+  // the top of the Up-next list peek through underneath it. The wrapper is
+  // now pinned to exactly PEEK_H (4.25rem) so the collapse transform's
+  // visible window and the peek content's actual height match.
+  it('the peek wrapper is pinned to a fixed 4.25rem height (no auto-height gap)', () => {
+    render(<TheaterMobileChrome {...base} current={videoItem()} />)
+    const handle = screen
+      .getAllByLabelText(/(Expand|Collapse) up next/)
+      .find((el) => el.querySelector('span[aria-hidden]'))!
+    const wrapper = handle.parentElement!
+    expect(wrapper.className).toContain('h-[4.25rem]')
+    expect(wrapper.className).toContain('flex-none')
+    expect(wrapper.className).toContain('overflow-hidden')
   })
 })
 
@@ -273,6 +341,20 @@ describe('TheaterMobileChrome: collection mode brand logo is always home', () =>
     )
     expect(screen.getByText('Save collection · 12')).toBeInTheDocument()
   })
+
+  it('the Save-collection CTA carries the clay-border outline (PILL_SAVE), not the old solid clay-grad fill', () => {
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={videoItem()}
+        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        isCollectionOwner={false}
+      />,
+    )
+    const saveCollectionBtn = screen.getByText('Save collection · 12').closest('button')!
+    expect(saveCollectionBtn.className).toContain('border-clay')
+    expect(saveCollectionBtn.className).not.toContain('bg-clay-grad')
+  })
 })
 
 // Owner (mobile screenshot): a shared post repeats until deliberate
@@ -313,6 +395,169 @@ describe('TheaterMobileChrome: shared-post-repeat cue', () => {
   it('does not accent a disabled next chevron even while pinned (nowhere to go)', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} repeatCurrent canNext={false} />)
     expect(screen.getByLabelText('Next post').className).not.toContain('text-clay')
+  })
+})
+
+/**
+ * Owner follow-up: the peek bar's center label used to always read "Up
+ * next" (or "N new") — now it shows the viewer's actual position in the
+ * queue ("3 / 17"), with the fresh-arrival count folded in as a suffix.
+ * Collection ("#tag · count") and repeatCurrent ("On repeat") stay
+ * unchanged and still take priority. Falls back to the old "N new"/"Up
+ * next" copy only when the current key doesn't resolve into `items`.
+ */
+describe('TheaterMobileChrome: queue position label', () => {
+  function buildItems(count: number): TheaterItem[] {
+    return Array.from({ length: count }, (_, i) => videoItem({ bookmarkId: String(i + 1) }))
+  }
+
+  it('renders the 1-based queue position (e.g. "2 / 5") for the current item', () => {
+    const items = buildItems(5)
+    render(
+      <TheaterMobileChrome
+        {...base}
+        items={items}
+        current={items[1]}
+        currentKey={theaterItemKey(items[1])}
+      />,
+    )
+    expect(screen.getByText('2 / 5')).toBeInTheDocument()
+    expect(screen.queryByText('Up next')).not.toBeInTheDocument()
+  })
+
+  it('appends the new-count suffix when newCount > 0', () => {
+    const items = buildItems(5)
+    render(
+      <TheaterMobileChrome
+        {...base}
+        items={items}
+        current={items[1]}
+        currentKey={theaterItemKey(items[1])}
+        newCount={3}
+      />,
+    )
+    expect(screen.getByText('2 / 5 · 3 new')).toBeInTheDocument()
+  })
+
+  it('omits the new-count suffix when newCount is 0', () => {
+    const items = buildItems(5)
+    render(
+      <TheaterMobileChrome
+        {...base}
+        items={items}
+        current={items[1]}
+        currentKey={theaterItemKey(items[1])}
+        newCount={0}
+      />,
+    )
+    expect(screen.getByText('2 / 5')).toBeInTheDocument()
+    expect(screen.queryByText(/new/)).not.toBeInTheDocument()
+  })
+
+  it('falls back to "N new" when the current key does not resolve into items', () => {
+    const items = buildItems(5)
+    render(
+      <TheaterMobileChrome
+        {...base}
+        items={items}
+        current={null}
+        currentKey="twitter:does-not-exist"
+        newCount={4}
+      />,
+    )
+    expect(screen.getByText('4 new')).toBeInTheDocument()
+    expect(screen.queryByText(/\d+ \/ \d+/)).not.toBeInTheDocument()
+  })
+
+  it('falls back to "Up next" when the current key does not resolve and there is no new count', () => {
+    const items = buildItems(5)
+    render(
+      <TheaterMobileChrome
+        {...base}
+        items={items}
+        current={null}
+        currentKey="twitter:does-not-exist"
+      />,
+    )
+    expect(screen.getByText('Up next')).toBeInTheDocument()
+  })
+
+  it('collection mode still shows the tag/count label, not the queue position', () => {
+    const items = buildItems(5)
+    render(
+      <TheaterMobileChrome
+        {...base}
+        items={items}
+        current={items[1]}
+        currentKey={theaterItemKey(items[1])}
+        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+      />,
+    )
+    expect(screen.getByText('#claude-code · 12')).toBeInTheDocument()
+    expect(screen.queryByText('2 / 5')).not.toBeInTheDocument()
+  })
+
+  it('repeatCurrent still shows "On repeat", not the queue position', () => {
+    const items = buildItems(5)
+    render(
+      <TheaterMobileChrome
+        {...base}
+        items={items}
+        current={items[1]}
+        currentKey={theaterItemKey(items[1])}
+        repeatCurrent
+      />,
+    )
+    expect(screen.getByText('On repeat')).toBeInTheDocument()
+    expect(screen.queryByText('2 / 5')).not.toBeInTheDocument()
+  })
+})
+
+/**
+ * Owner follow-up: the theater's URL-sync effect rewrites the address bar to
+ * per-post preview paths mid-session, so `usePathname` alone can't tell the
+ * chrome it's still inside the home theater — `theaterActive` is passed to
+ * `TheaterAvatarMenu` explicitly instead. Triage's scrim always mounts
+ * inside the theater (always true, regardless of `mode`); the home/shared
+ * scrim only mounts it truthy in home mode. Asserted directly on the mocked
+ * `TheaterAvatarMenu`'s captured props (see the module mock above) — the
+ * real component's own `isHome` derivation is covered by
+ * TheaterAvatarMenu.component.test.tsx.
+ */
+describe('TheaterMobileChrome: theaterActive prop wiring', () => {
+  it('passes theaterActive: true to the triage scrim unconditionally, even in shared mode', () => {
+    const triage: TheaterTriageChrome = {
+      tab: 'live',
+      onTabChange: vi.fn(),
+      onDone: vi.fn(),
+      onLater: vi.fn(),
+      onDelete: vi.fn(),
+      onTag: vi.fn(),
+      onSave: vi.fn(),
+      onLiveTag: vi.fn(),
+      savedKeys: new Set<string>(),
+      remaining: 0,
+      streak: { current: 0, longest: 0 },
+      onClose: vi.fn(),
+    }
+    render(<TheaterMobileChrome {...base} mode="shared" current={videoItem()} triage={triage} />)
+    expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
+      expect.objectContaining({ theaterActive: true }),
+    )
+  })
+
+  it('passes theaterActive: true in home mode', () => {
+    render(<TheaterMobileChrome {...base} mode="home" current={videoItem()} />)
+    expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
+      expect.objectContaining({ theaterActive: true }),
+    )
+  })
+
+  it('passes theaterActive: false in shared mode (no triage)', () => {
+    render(<TheaterMobileChrome {...base} mode="shared" current={videoItem()} />)
+    expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
+      expect.objectContaining({ theaterActive: false }),
+    )
   })
 })
 
@@ -455,5 +700,177 @@ describe('TheaterMobileChrome: audio button gesture-context unmute', () => {
     } finally {
       window.removeEventListener('theater-set-muted', listener)
     }
+  })
+})
+
+/**
+ * Round 8 (owner request): a Spotify-style repeat control in the peek bar,
+ * between de-clutter and the (video-only) audio button so neither ever
+ * shifts. Only renders when BOTH `repeatMode` and `onCycleRepeat` are
+ * provided — home/shared mode; collection mode always loops on its own and
+ * triage is a finite backlog, so neither passes these props.
+ */
+describe('TheaterMobileChrome: repeat control', () => {
+  it('does not render when repeatMode/onCycleRepeat are both absent', () => {
+    render(<TheaterMobileChrome {...base} current={videoItem()} />)
+    expect(screen.queryByLabelText(/^Repeat:/)).not.toBeInTheDocument()
+  })
+
+  it('renders "Repeat: off" with the plain Repeat glyph by default', () => {
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={videoItem()}
+        repeatMode="off"
+        onCycleRepeat={vi.fn()}
+      />,
+    )
+    const btn = screen.getByLabelText('Repeat: off')
+    expect(btn.querySelector('.lucide-repeat')).toBeInTheDocument()
+    expect(btn.querySelector('.lucide-repeat-1')).not.toBeInTheDocument()
+    expect(btn.className).not.toContain('text-clay')
+  })
+
+  it('renders "Repeat: whole queue" (clay, plain glyph) for mode "all"', () => {
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={videoItem()}
+        repeatMode="all"
+        onCycleRepeat={vi.fn()}
+      />,
+    )
+    const btn = screen.getByLabelText('Repeat: whole queue')
+    expect(btn.querySelector('.lucide-repeat')).toBeInTheDocument()
+    expect(btn.className).toContain('text-clay')
+  })
+
+  it('renders "Repeat: this post" (clay, Repeat1 glyph) for mode "one"', () => {
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={videoItem()}
+        repeatMode="one"
+        onCycleRepeat={vi.fn()}
+      />,
+    )
+    const btn = screen.getByLabelText('Repeat: this post')
+    expect(btn.querySelector('.lucide-repeat-1')).toBeInTheDocument()
+    expect(btn.className).toContain('text-clay')
+  })
+
+  it('calls onCycleRepeat on tap, without toggling the up-next sheet', () => {
+    const onCycleRepeat = vi.fn()
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={videoItem()}
+        repeatMode="off"
+        onCycleRepeat={onCycleRepeat}
+      />,
+    )
+    fireEvent.click(screen.getByLabelText('Repeat: off'))
+    expect(onCycleRepeat).toHaveBeenCalledTimes(1)
+    // Sheet stays collapsed — the repeat button stops propagation so it
+    // never also toggles the drag-handle's open/closed state.
+    expect(screen.queryAllByLabelText('Collapse up next')).toHaveLength(0)
+  })
+
+  // Owner follow-up: collection mode now exposes the repeat control too
+  // (TheaterShell defaults it to 'all' there, and wires cycling through
+  // `nextRepeatMode`'s `wrapOnly`) — the chrome itself doesn't gate the
+  // button on `collection` at all, it just renders whatever `repeatMode`/
+  // `onCycleRepeat` it's given, so a collection-mode mount showing 'all'
+  // active is the same rendering path as home/shared.
+  it('renders active ("Repeat: whole queue") when mounted in collection mode with repeatMode "all"', () => {
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={videoItem()}
+        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        repeatMode="all"
+        onCycleRepeat={vi.fn()}
+      />,
+    )
+    const btn = screen.getByLabelText('Repeat: whole queue')
+    expect(btn.className).toContain('text-clay')
+  })
+})
+
+/**
+ * Round 8 (owner request): text-like posts (text/quote/article) have no
+ * file to download, so the Download slot in the bottom scrim carries a
+ * "Copy" pill (copies the post's full text) instead of vanishing.
+ */
+describe('TheaterMobileChrome: Copy button for text-like posts', () => {
+  const writeText = vi.fn().mockResolvedValue(undefined)
+
+  beforeEach(() => {
+    writeText.mockClear()
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+  })
+
+  it('shows a Copy pill (not Download) for a text-like post with no sendable file', () => {
+    render(<TheaterMobileChrome {...base} current={textItem()} />)
+    expect(screen.getByText('Copy')).toBeInTheDocument()
+    expect(screen.queryByText('Download')).not.toBeInTheDocument()
+  })
+
+  it('copies the post\'s full text and flashes "Copied" on tap', async () => {
+    render(<TheaterMobileChrome {...base} current={textItem({ text: 'the full post body' })} />)
+    fireEvent.click(screen.getByText('Copy'))
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith('the full post body'))
+    expect(await screen.findByText('Copied')).toBeInTheDocument()
+  })
+
+  it('renders no Copy pill for a text-like post with empty text', () => {
+    render(<TheaterMobileChrome {...base} current={textItem({ text: '' })} />)
+    expect(screen.queryByText('Copy')).not.toBeInTheDocument()
+    expect(screen.queryByText('Download')).not.toBeInTheDocument()
+  })
+})
+
+/**
+ * Round 8 (owner request): the author avatar+name row in the bottom scrim
+ * is tappable — jumps to the creator's profile on their own platform, via
+ * `authorProfileUrl()`. Media posts only (text-like posts show the author
+ * on the stage itself, so this row is hidden there).
+ */
+describe('TheaterMobileChrome: tappable author row', () => {
+  it('links the author row to their profile URL for a media post', () => {
+    render(<TheaterMobileChrome {...base} current={videoItem({ author: 'alice' })} />)
+    const link = screen.getByLabelText('View @alice on X')
+    expect(link.tagName).toBe('A')
+    expect(link).toHaveAttribute('href', 'https://x.com/alice')
+    expect(link).toHaveAttribute('target', '_blank')
+  })
+
+  it('resolves the profile URL per-platform (tiktok)', () => {
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={videoItem({ platform: 'tiktok', author: '@bobby' })}
+      />,
+    )
+    expect(screen.getByLabelText('View @bobby on TikTok')).toHaveAttribute(
+      'href',
+      'https://www.tiktok.com/@bobby',
+    )
+  })
+
+  it('renders a plain (non-link) row when there is no author handle', () => {
+    render(
+      <TheaterMobileChrome {...base} current={videoItem({ author: '', authorName: undefined })} />,
+    )
+    expect(screen.queryByLabelText(/^View @/)).not.toBeInTheDocument()
+    expect(screen.getByText('Saved post')).toBeInTheDocument()
+  })
+
+  it('does not render the author row at all for a text-like post (shown on the stage itself)', () => {
+    render(<TheaterMobileChrome {...base} current={textItem({ author: 'carol' })} />)
+    expect(screen.queryByLabelText(/^View @/)).not.toBeInTheDocument()
   })
 })

@@ -104,6 +104,38 @@ describe('tagItemToTheaterItem', () => {
     const item = tagItemToTheaterItem(tagItem({ createdAt: null }))
     expect(item.createdAt).toBe(new Date(0).toISOString())
   })
+
+  /**
+   * Owner report: the collection theater showed "56y" for a saved TikTok
+   * with no stored `createdAt` — the epoch sentinel backfilled above.
+   * `addedAt` is the display-only field the chromes render instead: when
+   * the post was first saved to ADHX (owner decision — deliberately never
+   * the source platform's own publish date, for any platform).
+   */
+  describe('addedAt (display-only "first saved to ADHX" time)', () => {
+    it('passes the TagItem addedAt straight through, regardless of platform', () => {
+      const item = tagItemToTheaterItem(tagItem({ addedAt: '2026-07-01T00:00:00Z' }))
+      expect(item.addedAt).toBe('2026-07-01T00:00:00Z')
+    })
+
+    it('is null when the TagItem carries no addedAt (older fixtures/consumers)', () => {
+      const item = tagItemToTheaterItem(tagItem({ addedAt: undefined }))
+      expect(item.addedAt).toBe(null)
+    })
+
+    it('is null when the TagItem explicitly carries a null addedAt', () => {
+      const item = tagItemToTheaterItem(tagItem({ addedAt: null }))
+      expect(item.addedAt).toBe(null)
+    })
+
+    it('never falls back to createdAt — the two are independent fields', () => {
+      const item = tagItemToTheaterItem(
+        tagItem({ createdAt: '2026-06-06T10:00:00Z', addedAt: '2026-07-01T00:00:00Z' }),
+      )
+      expect(item.createdAt).toBe('2026-06-06T10:00:00Z')
+      expect(item.addedAt).toBe('2026-07-01T00:00:00Z')
+    })
+  })
 })
 
 describe('buildCollectionSeed', () => {

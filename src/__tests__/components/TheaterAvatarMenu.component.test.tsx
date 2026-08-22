@@ -125,6 +125,38 @@ describe('TheaterAvatarMenu', () => {
     expect(screen.getByText('Theater').closest('a')).toHaveAttribute('href', '/')
   })
 
+  // Owner follow-up: the home theater's URL-sync effect rewrites the
+  // address bar to per-post preview paths mid-session (theaterUrlSyncPath),
+  // so `usePathname` alone reads as a shared-preview-page pathname even
+  // while the visitor is still inside the home theater. `theaterActive`
+  // lets the mounting chrome override that.
+  it('theaterActive marks Theater current (close-only button) even when the URL has been rewritten mid-session', async () => {
+    mockPathname = '/naval/status/123'
+    mockAuthMe(AUTHED_ME)
+    render(<TheaterAvatarMenu theaterActive />)
+    fireEvent.click(await screen.findByLabelText('Account menu'))
+
+    const theaterEntry = screen.getByText('Theater').closest('button')
+    expect(theaterEntry).toBeInTheDocument()
+    expect(theaterEntry).toHaveAttribute('aria-current', 'page')
+    expect(theaterEntry!.querySelector('[data-testid="menu-current-dot"]')).toBeInTheDocument()
+
+    fireEvent.click(theaterEntry!)
+    expect(screen.queryByText('Theater')).not.toBeInTheDocument()
+  })
+
+  it('without theaterActive, the same rewritten pathname still renders Theater as an unmarked link', async () => {
+    mockPathname = '/naval/status/123'
+    mockAuthMe(AUTHED_ME)
+    render(<TheaterAvatarMenu />)
+    fireEvent.click(await screen.findByLabelText('Account menu'))
+
+    const theaterLink = screen.getByText('Theater').closest('a')!
+    expect(theaterLink).toHaveAttribute('href', '/')
+    expect(theaterLink).not.toHaveAttribute('aria-current')
+    expect(theaterLink.querySelector('[data-testid="menu-current-dot"]')).not.toBeInTheDocument()
+  })
+
   it('POSTs logout and redirects on Sign out', async () => {
     mockAuthMe(AUTHED_ME)
     const originalLocation = window.location
@@ -151,6 +183,31 @@ describe('TheaterAvatarMenu', () => {
       configurable: true,
       value: originalLocation,
     })
+  })
+
+  it('marks Tags as current (clay dot + aria-current) when on /tags', async () => {
+    mockPathname = '/tags'
+    mockAuthMe(AUTHED_ME)
+    render(<TheaterAvatarMenu />)
+    fireEvent.click(await screen.findByLabelText('Account menu'))
+
+    const tagsLink = screen.getByText('Tags').closest('a')!
+    expect(tagsLink).toHaveAttribute('aria-current', 'page')
+    expect(tagsLink.querySelector('[data-testid="menu-current-dot"]')).toBeInTheDocument()
+
+    // Not the currently-viewed entries.
+    expect(screen.getByText('Settings').closest('a')).not.toHaveAttribute('aria-current')
+  })
+
+  it('marks Settings as current when on /settings', async () => {
+    mockPathname = '/settings'
+    mockAuthMe(AUTHED_ME)
+    render(<TheaterAvatarMenu />)
+    fireEvent.click(await screen.findByLabelText('Account menu'))
+
+    const settingsLink = screen.getByText('Settings').closest('a')!
+    expect(settingsLink).toHaveAttribute('aria-current', 'page')
+    expect(settingsLink.querySelector('[data-testid="menu-current-dot"]')).toBeInTheDocument()
   })
 
   it('closes the menu on Escape', async () => {
@@ -227,6 +284,42 @@ describe('TheaterAvatarMenu — signed-out burger (allowSignedOut)', () => {
     fireEvent.click(await screen.findByLabelText('Menu'))
 
     expect(screen.getByText('Theater').closest('a')).toHaveAttribute('href', '/')
+  })
+
+  it('theaterActive marks Theater current (close-only button) even with a rewritten pathname', async () => {
+    mockPathname = '/naval/status/123'
+    mockAuthMe(SIGNED_OUT_ME)
+    render(<TheaterAvatarMenu allowSignedOut theaterActive />)
+    fireEvent.click(await screen.findByLabelText('Menu'))
+
+    const theaterEntry = screen.getByText('Theater').closest('button')
+    expect(theaterEntry).toBeInTheDocument()
+    expect(theaterEntry).toHaveAttribute('aria-current', 'page')
+    expect(theaterEntry!.querySelector('[data-testid="menu-current-dot"]')).toBeInTheDocument()
+  })
+
+  it('marks Leaderboard as current (clay dot + aria-current) when on /leaderboard, including sub-paths', async () => {
+    mockPathname = '/leaderboard/week'
+    mockAuthMe(SIGNED_OUT_ME)
+    render(<TheaterAvatarMenu allowSignedOut />)
+    fireEvent.click(await screen.findByLabelText('Menu'))
+
+    const leaderboardLink = screen.getByText('Leaderboard').closest('a')!
+    expect(leaderboardLink).toHaveAttribute('aria-current', 'page')
+    expect(leaderboardLink.querySelector('[data-testid="menu-current-dot"]')).toBeInTheDocument()
+  })
+
+  it('does not mark Leaderboard current when elsewhere', async () => {
+    mockPathname = '/naval/status/123'
+    mockAuthMe(SIGNED_OUT_ME)
+    render(<TheaterAvatarMenu allowSignedOut />)
+    fireEvent.click(await screen.findByLabelText('Menu'))
+
+    const leaderboardLink = screen.getByText('Leaderboard').closest('a')!
+    expect(leaderboardLink).not.toHaveAttribute('aria-current')
+    expect(
+      leaderboardLink.querySelector('[data-testid="menu-current-dot"]'),
+    ).not.toBeInTheDocument()
   })
 
   it('the Sign in entry closes the menu and calls onRequestSignIn', async () => {

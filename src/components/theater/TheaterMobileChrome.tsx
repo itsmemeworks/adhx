@@ -20,10 +20,12 @@ import {
   Loader2,
   Share2,
   ExternalLink,
+  Bookmark,
   Check,
-  LogIn,
+  Copy as CopyIcon,
   Flame,
   Repeat,
+  Repeat1,
   Clock,
   Tag as TagIcon,
   Trash2,
@@ -38,11 +40,11 @@ import {
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatCompactRelativeTime } from '@/lib/utils/format'
+import { formatCompactRelativeTime, hasKnownTimestamp } from '@/lib/utils/format'
 import { MatterLogo, PlatformGlyph } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { PasteLinkButton } from '@/components/PasteLinkButton'
-import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
+import { authorProfileUrl, previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { inferType } from '@/lib/trending/filter'
 import { useSendFile } from './useSendFile'
 import { useClampExpand } from './useClampExpand'
@@ -56,10 +58,12 @@ import {
 } from './TheaterProgressLine'
 import { UpNextList } from './UpNextList'
 import { SaveCollectionButton } from './SaveCollectionButton'
+import { SavePostButton } from './TheaterDesktopChrome'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
 import { StageIconButton } from './stage-primitives'
 import { logAV } from './YtDebugOverlay'
 import type {
+  RepeatMode,
   SaveCollectionStatus,
   TheaterCollectionMeta,
   TheaterItem,
@@ -100,6 +104,14 @@ export interface TheaterMobileChromeProps {
   onSaveCollection?: () => void
   /** The signed-in viewer IS this collection's curator — hide the clone CTA, show Manage. */
   isCollectionOwner?: boolean
+  /**
+   * Whether the visiting user is signed in (verification-agent finding: at
+   * mobile width, a signed-in viewer's Save on a shared page opened the
+   * SIGN-IN modal — this chrome never had the authed branch the desktop
+   * chrome's `(mode === 'shared' && authed)` SavePostButton covers). Shared
+   * mode + authed renders the direct-save button instead.
+   */
+  authed?: boolean
   onRequestSignIn?: () => void
   /**
    * Shared mode: the shared post is pinned + repeating (no auto-advance), so
@@ -111,6 +123,14 @@ export interface TheaterMobileChromeProps {
    * the repeat — with the clay treatment.
    */
   repeatCurrent?: boolean
+  /**
+   * The Spotify-style repeat control (round 8): current mode + the cycling
+   * handler. Both absent in collection mode (that queue always loops) and
+   * triage (finite backlog) — the button only renders when the handler is
+   * provided.
+   */
+  repeatMode?: RepeatMode
+  onCycleRepeat?: () => void
   /** Triage mode (unified-theater-triage.md §2): swaps the top scrim's meta for a Collection↔Live tab switcher, and the bottom action row for Later/Tag/Delete/Done. */
   triage?: TheaterTriageChrome
 }
@@ -125,18 +145,29 @@ const PEEK_ICON_BTN_DISABLED =
   'opacity-35 hover:bg-transparent hover:text-ink-3 active:bg-transparent active:text-ink-3 disabled:cursor-default'
 
 /**
- * Bottom-scrim action pills. Save drives account signups, so it's ALWAYS the
- * visually primary action (sign-in prompt, the triage live-tab Save/Saved
- * button) — same PILL_PRIMARY as `SaveCollectionButton`. Download is a
- * power-user affordance, not a headline feature, so it uses PILL_GLASS
- * alongside Share/Open (mirrors GLASS/PRIMARY in TheaterDesktopChrome).
+ * Bottom-scrim action pills. Save (sign-in prompt, the triage live-tab
+ * Save/Saved button) uses PILL_SAVE — glass with a clay border (round 8: the
+ * solid clay fill was "too much"). Download/Copy are power-user affordances
+ * on PILL_GLASS alongside Share/Open (mirrors GLASS/SAVE_OUTLINE in
+ * TheaterDesktopChrome). SaveCollectionButton uses PILL_SAVE too (owner:
+ * same orange outline as the Save button).
  */
 const PILL_GLASS =
   'inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/[0.14] px-3 text-[13px] font-semibold text-white disabled:opacity-70'
-const PILL_PRIMARY =
-  'inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full bg-clay-grad px-3 text-[13px] font-semibold text-white shadow-glow transition-opacity disabled:opacity-70'
+/**
+ * The Save-post pill (round 8, owner): a Bookmark glyph on the same
+ * see-through glass as every other pill, distinguished by a clay border
+ * instead of the old solid clay-grad fill (which was "too much"). Mirrors
+ * `SAVE_OUTLINE` in TheaterDesktopChrome. NOTE: full-strength `border-clay`,
+ * never `border-clay/NN` — the Matter colors are hex CSS vars, so Tailwind
+ * can't compile opacity modifiers on them and silently drops the class
+ * (caught live: the border rendered as the default hairline).
+ */
+const PILL_SAVE =
+  'inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-clay bg-white/[0.14] px-3 text-[13px] font-semibold text-white disabled:opacity-70'
 
 export function TheaterMobileChrome({
+  mode,
   current,
   items,
   currentKey,
@@ -155,13 +186,20 @@ export function TheaterMobileChrome({
   saveStatus = 'idle',
   onSaveCollection,
   isCollectionOwner = false,
+  authed = false,
   onRequestSignIn,
   repeatCurrent = false,
+  repeatMode,
+  onCycleRepeat,
   triage,
 }: TheaterMobileChromeProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // "Copy" for text-like posts (round 8) — separate from the share-link
+  // `copied` above so the two buttons' feedback never cross-flash.
+  const [textCopied, setTextCopied] = useState(false)
+  const textCopyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
   const peekRef = useRef<HTMLDivElement>(null)
   const sheetDrag = useSheetDrag({ open: sheetOpen, onOpenChange: setSheetOpen, sheetRef, peekRef })
@@ -224,6 +262,7 @@ export function TheaterMobileChrome({
   useEffect(
     () => () => {
       if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
+      if (textCopyTimeoutRef.current) clearTimeout(textCopyTimeoutRef.current)
     },
     [],
   )
@@ -303,6 +342,26 @@ export function TheaterMobileChrome({
     }
   }
 
+  // Copy the post's full text (round 8): text-like posts have no file to
+  // download, so the Download slot carries this instead of vanishing.
+  const handleCopyText = async () => {
+    const text = (current?.text || '').trim()
+    if (!text) return
+    try {
+      await navigator.clipboard.writeText(text)
+      setTextCopied(true)
+      if (textCopyTimeoutRef.current) clearTimeout(textCopyTimeoutRef.current)
+      textCopyTimeoutRef.current = setTimeout(() => setTextCopied(false), 1600)
+    } catch {
+      // Clipboard can be denied — nothing actionable to show.
+    }
+  }
+
+  // Queue position for the peek bar's center label (owner: "Up next" wasn't
+  // useful — show where you are in the queue instead). -1 (no current item /
+  // empty list) falls back to the old label.
+  const queueIndex = currentKey ? items.findIndex((it) => theaterItemKey(it) === currentKey) : -1
+
   const trendCount = current ? (current.trendCount ?? current.saveCount ?? 0) : 0
   const tagCount = triage?.tags?.length ?? 0
   const handle = current?.author ? current.author.replace(/^@+/, '') : ''
@@ -334,7 +393,7 @@ export function TheaterMobileChrome({
             <MatterLogo size={16} className="[&>span]:text-white" />
           </a>
           <div className="flex flex-none items-center gap-1.5">
-            <TheaterAvatarMenu />
+            <TheaterAvatarMenu theaterActive />
             <button
               type="button"
               onClick={triage.onClose}
@@ -386,8 +445,10 @@ export function TheaterMobileChrome({
           <div className="flex flex-none items-center gap-1.5">
             {current && (
               <div className="flex flex-none items-center gap-2">
+                {/* Same pill geometry + backdrop as the platform/time chip
+                    beside it (round 8: the two read as mismatched heights). */}
                 {trendCount >= 2 && (
-                  <span className="inline-flex flex-none items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-[11px] font-bold text-orange-300">
+                  <span className="inline-flex min-h-[32px] flex-none items-center gap-1 rounded-full bg-black/40 px-2.5 text-[11px] font-bold text-orange-300 backdrop-blur-sm">
                     <Flame size={11} className="text-orange-400" fill="currentColor" />
                     {trendCount}
                   </span>
@@ -397,9 +458,14 @@ export function TheaterMobileChrome({
                   const inner = (
                     <>
                       <PlatformGlyph platform={current.platform} size={12} />
-                      <span className="font-mono text-[11px]" suppressHydrationWarning>
-                        {formatCompactRelativeTime(current.createdAt)}
-                      </span>
+                      {/* `addedAt` = when the post was first added to ADHX
+                          (owner decision — never the source platform's date,
+                          never the moving event time). Unknown → no time. */}
+                      {hasKnownTimestamp(current.addedAt) && (
+                        <span className="font-mono text-[11px]" suppressHydrationWarning>
+                          {formatCompactRelativeTime(current.addedAt as string)}
+                        </span>
+                      )}
                     </>
                   )
                   const cls =
@@ -428,7 +494,11 @@ export function TheaterMobileChrome({
                 all — its plain home logo plus the bottom scrim's
                 Save-collection CTA cover both navigation and signed-out
                 conversion there. */}
-            <TheaterAvatarMenu onRequestSignIn={onRequestSignIn} allowSignedOut />
+            <TheaterAvatarMenu
+              onRequestSignIn={onRequestSignIn}
+              allowSignedOut
+              theaterActive={mode === 'home'}
+            />
           </div>
         </div>
       )}
@@ -453,18 +523,37 @@ export function TheaterMobileChrome({
                 posts (text/quote/article) show the author on the stage
                 itself, so this row stays hidden for them to avoid doubling
                 up. */}
-            {!textLike && (
-              <div className="flex items-center gap-2">
-                <AuthorAvatar
-                  src={current.authorAvatarUrl ?? current.thumbnailUrl}
-                  author={current.author}
-                  size="sm"
-                />
-                <span className="min-w-0 truncate text-[13px] font-semibold text-white">
-                  {current.authorName || (handle ? `@${handle}` : 'Saved post')}
-                </span>
-              </div>
-            )}
+            {!textLike &&
+              (() => {
+                const profileUrl = authorProfileUrl(current.platform, current.author)
+                const inner = (
+                  <>
+                    <AuthorAvatar
+                      src={current.authorAvatarUrl ?? current.thumbnailUrl}
+                      author={current.author}
+                      size="sm"
+                    />
+                    <span className="min-w-0 truncate text-[13px] font-semibold text-white">
+                      {current.authorName || (handle ? `@${handle}` : 'Saved post')}
+                    </span>
+                  </>
+                )
+                // Tappable author (round 8): jump to the creator's profile on
+                // their own platform. Plain row when there's no handle.
+                return profileUrl ? (
+                  <a
+                    href={profileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex min-h-[32px] items-center gap-2"
+                    aria-label={`View @${handle} on ${PLATFORM_LABEL[current.platform] ?? current.platform}`}
+                  >
+                    {inner}
+                  </a>
+                ) : (
+                  <div className="flex items-center gap-2">{inner}</div>
+                )
+              })()}
             {caption && (
               <div
                 className={cn(
@@ -592,11 +681,11 @@ export function TheaterMobileChrome({
                   count={collection.count}
                   status={saveStatus}
                   onSave={() => onSaveCollection?.()}
-                  className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full bg-clay-grad px-3 text-[13px] font-semibold text-white shadow-glow transition-opacity disabled:opacity-70"
+                  className={PILL_SAVE}
                 />
               ) : (
                 <>
-                  {sendFile.supported && (
+                  {sendFile.supported ? (
                     <button
                       type="button"
                       onClick={() => {
@@ -619,7 +708,22 @@ export function TheaterMobileChrome({
                       )}
                       Download
                     </button>
-                  )}
+                  ) : textLike && (current.text || '').trim() ? (
+                    // Text-like posts have no file — the Download slot copies
+                    // the post's full text instead (round 8, owner request).
+                    <button
+                      type="button"
+                      onClick={() => void handleCopyText()}
+                      className={PILL_GLASS}
+                    >
+                      {textCopied ? (
+                        <Check size={15} className="text-done" />
+                      ) : (
+                        <CopyIcon size={15} />
+                      )}
+                      {textCopied ? 'Copied' : 'Copy'}
+                    </button>
+                  ) : null}
                   {triage?.tab === 'live' ? (
                     <>
                       <StageIconButton
@@ -638,23 +742,24 @@ export function TheaterMobileChrome({
                           if (!triage.savedKeys.has(theaterItemKey(current))) triage.onSave(current)
                         }}
                         disabled={triage.savedKeys.has(theaterItemKey(current))}
-                        className={PILL_PRIMARY}
+                        className={PILL_SAVE}
                       >
                         {triage.savedKeys.has(theaterItemKey(current)) ? (
                           <Check size={15} />
                         ) : (
-                          <LogIn size={15} />
+                          <Bookmark size={15} />
                         )}
                         {triage.savedKeys.has(theaterItemKey(current)) ? 'Saved' : 'Save'}
                       </button>
                     </>
+                  ) : mode === 'shared' && authed ? (
+                    // Signed-in viewers save directly — same branch the
+                    // desktop chrome has always had (see `authed`'s doc
+                    // comment above).
+                    <SavePostButton current={current} className={PILL_SAVE} />
                   ) : (
-                    <button
-                      type="button"
-                      onClick={() => onRequestSignIn?.()}
-                      className={PILL_PRIMARY}
-                    >
-                      <LogIn size={15} />
+                    <button type="button" onClick={() => onRequestSignIn?.()} className={PILL_SAVE}>
+                      <Bookmark size={15} />
                       Save
                     </button>
                   )}
@@ -726,7 +831,13 @@ export function TheaterMobileChrome({
             prev/pause/next on the right. All non-drag-handle buttons stop
             propagation on click AND touchend so pressing them never also
             toggles the sheet open/closed. */}
-        <div ref={peekRef} className="flex-none">
+        {/* Exactly PEEK_H tall (owner: the collapsed bar floated a few px
+            high with list content peeking below it — the natural content
+            height is ~6px shorter than the 4.25rem window the collapse
+            transform reveals, so the top of UpNextList showed through).
+            Pinning the wrapper to the same height the transform uses makes
+            the visible window and the peek content one and the same. */}
+        <div ref={peekRef} className="h-[4.25rem] flex-none overflow-hidden">
           <button
             type="button"
             {...sheetDrag.handlers}
@@ -757,6 +868,47 @@ export function TheaterMobileChrome({
                   inward (Minimize2), restoring the compact chrome. */}
                 {declutter ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
               </button>
+              {/* Spotify-style repeat (round 8): off → all → one. Sits
+                  between the fixed de-clutter button and the (video-only)
+                  audio button so neither ever shifts. Clay = active. */}
+              {onCycleRepeat && repeatMode && (
+                <button
+                  type="button"
+                  // Keyed on the mode so each state change mounts a FRESH DOM
+                  // node born directly in its final color — live-measured, the
+                  // in-place off→one update (SSR/first paint is 'off' until
+                  // currentKey resolves and the shared pin engages) left the
+                  // node painting ink-3 even with the clay class AND an inline
+                  // style present (cause never isolated; a stuck first-paint
+                  // value is the best theory, hence also no transition-colors
+                  // here).
+                  key={repeatMode}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onCycleRepeat()
+                  }}
+                  onTouchEnd={(e) => e.stopPropagation()}
+                  aria-label={
+                    repeatMode === 'off'
+                      ? 'Repeat: off'
+                      : repeatMode === 'all'
+                        ? 'Repeat: whole queue'
+                        : 'Repeat: this post'
+                  }
+                  className={cn(
+                    'inline-flex h-10 w-10 flex-none items-center justify-center rounded-full hover:bg-inset active:bg-inset',
+                    repeatMode !== 'off'
+                      ? 'text-clay hover:text-clay active:text-clay'
+                      : 'text-ink-3 hover:text-ink active:text-ink',
+                  )}
+                  // Belt-and-suspenders (same live finding as `key` above): an
+                  // inline style outranks whatever won the cascade against the
+                  // bare `text-clay` class on the in-place-updated node.
+                  style={repeatMode !== 'off' ? { color: 'var(--m-accent)' } : undefined}
+                >
+                  {repeatMode === 'one' ? <Repeat1 size={16} /> : <Repeat size={16} />}
+                </button>
+              )}
               {mediaKind === 'video' && (
                 <button
                   type="button"
@@ -824,6 +976,10 @@ export function TheaterMobileChrome({
                       <Repeat size={11} className="flex-none" aria-hidden />
                       <span className="truncate">On repeat</span>
                     </>
+                  ) : queueIndex !== -1 ? (
+                    // Queue position ("3 / 17"), with the fresh-arrival count
+                    // folded in when there is one.
+                    `${queueIndex + 1} / ${items.length}${newCount > 0 ? ` · ${newCount} new` : ''}`
                   ) : newCount > 0 ? (
                     `${newCount} new`
                   ) : (

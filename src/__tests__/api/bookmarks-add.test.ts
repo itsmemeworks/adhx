@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server'
 import * as schema from '@/lib/db/schema'
 import { createTestDb, type TestDbInstance } from './setup'
 import { and, eq } from 'drizzle-orm'
+import { tiktokCreatedAtFromId } from '@/lib/media/tiktok-id'
 
 /**
  * API Route Tests: /api/bookmarks/add — YouTube Shorts dispatch.
@@ -142,6 +143,119 @@ describe('POST /api/bookmarks/add — YouTube', () => {
   it('requires auth', async () => {
     mockUserId = null
     const res = await POST(createRequest({ url: 'https://youtube.com/shorts/Y9aytLYBajw' }))
+    expect(res.status).toBe(401)
+  })
+})
+
+/**
+ * API Route Tests: /api/bookmarks/add — TikTok dispatch.
+ *
+ * Owner report: saved TikToks showed "56y" as the post age on the
+ * collection theater — tnktok's metadata carries no date field, so the
+ * inserted bookmark's `createdAt` was left null. Since TikTok ids are
+ * Snowflake-style (the real post time is encoded in the id), the add flow
+ * now derives it via `tiktokCreatedAtFromId` at insert time.
+ *
+ * `resolveTikTokUrl`/`isTikTokShortLink` run for real (a canonical
+ * `@user/video/{id}` URL is parsed locally, no network call) — only
+ * `fetchTikTokMetadata` is mocked.
+ */
+const mockFetchTikTokMetadata = vi.fn()
+vi.mock('@/lib/media/tnktok', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/media/tnktok')>('@/lib/media/tnktok')
+  return {
+    ...actual,
+    fetchTikTokMetadata: (...args: unknown[]) => mockFetchTikTokMetadata(...args),
+  }
+})
+
+describe('POST /api/bookmarks/add — TikTok', () => {
+  const REAL_SNOWFLAKE_ID = '7673414867981831440'
+
+  beforeEach(() => {
+    testInstance = createTestDb()
+    mockUserId = 'user-123'
+    mockFetchTikTokMetadata.mockReset()
+  })
+  afterEach(() => testInstance.close())
+
+  it('derives createdAt from the TikTok Snowflake id (tnktok metadata carries no date)', async () => {
+    mockFetchTikTokMetadata.mockResolvedValue({
+      videoUrl: 'https://cdn.tiktokv.com/video.mp4',
+      description: 'a cool video',
+      authorName: 'Some Creator',
+    })
+
+    const res = await POST(
+      createRequest({
+        url: `https://www.tiktok.com/@someuser/video/${REAL_SNOWFLAKE_ID}`,
+        source: 'url_prefix',
+      }),
+    )
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.success).toBe(true)
+    expect(data.platform).toBe('tiktok')
+
+    const [row] = testInstance.db
+      .select()
+      .from(schema.bookmarks)
+      .where(
+        and(
+          eq(schema.bookmarks.userId, 'user-123'),
+          eq(schema.bookmarks.platform, 'tiktok'),
+          eq(schema.bookmarks.id, REAL_SNOWFLAKE_ID),
+        ),
+      )
+      .all()
+
+    expect(row).toMatchObject({
+      platform: 'tiktok',
+      author: 'someuser',
+      text: 'a cool video',
+      category: 'video',
+    })
+    expect(row.createdAt).toBe(tiktokCreatedAtFromId(REAL_SNOWFLAKE_ID))
+    expect(row.createdAt).toBe('2026-08-13T07:28:42.000Z')
+  })
+
+  it('stores a null createdAt when the id does not parse as a Snowflake id (never a fabricated date)', async () => {
+    mockFetchTikTokMetadata.mockResolvedValue({
+      videoUrl: 'https://cdn.tiktokv.com/video.mp4',
+      description: 'weird id',
+    })
+    // Below the ~2014 sanity floor tiktokCreatedAtFromId enforces.
+    const tinyId = '123456'
+    await POST(createRequest({ url: `https://www.tiktok.com/@someuser/video/${tinyId}` }))
+
+    const [row] = testInstance.db
+      .select()
+      .from(schema.bookmarks)
+      .where(
+        and(
+          eq(schema.bookmarks.userId, 'user-123'),
+          eq(schema.bookmarks.platform, 'tiktok'),
+          eq(schema.bookmarks.id, tinyId),
+        ),
+      )
+      .all()
+    expect(row.createdAt).toBe(null)
+  })
+
+  it('404s when the video cannot be resolved', async () => {
+    mockFetchTikTokMetadata.mockResolvedValue(null)
+    const res = await POST(
+      createRequest({ url: `https://www.tiktok.com/@someuser/video/${REAL_SNOWFLAKE_ID}` }),
+    )
+    expect(res.status).toBe(404)
+  })
+
+  it('requires auth', async () => {
+    mockUserId = null
+    const res = await POST(
+      createRequest({ url: `https://www.tiktok.com/@someuser/video/${REAL_SNOWFLAKE_ID}` }),
+    )
     expect(res.status).toBe(401)
   })
 })

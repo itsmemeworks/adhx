@@ -8,6 +8,8 @@ import {
   findFreshArrival,
   isSharedPostPinned,
   isSharedItemUnavailable,
+  nextRepeatMode,
+  shouldRewaitAfterArrival,
 } from '@/components/theater/TheaterShell'
 import { theaterItemKey } from '@/components/theater/types'
 
@@ -249,5 +251,61 @@ describe('findFreshArrival', () => {
 
   it('returns null against an empty freshKeys set', () => {
     expect(findFreshArrival(new Set(), new Set())).toBe(null)
+  })
+})
+
+/**
+ * Round 8: Spotify-style repeat control. `nextRepeatMode` is the button's
+ * pure cycle order (off -> all -> one -> off); `shouldRewaitAfterArrival`
+ * decides whether a non-user advance off the waiting stage's auto-played
+ * fresh arrival re-enters waiting instead of continuing into the queue.
+ */
+describe('nextRepeatMode', () => {
+  it('cycles off -> all -> one -> off (default, wrapOnly omitted)', () => {
+    expect(nextRepeatMode('off')).toBe('all')
+    expect(nextRepeatMode('all')).toBe('one')
+    expect(nextRepeatMode('one')).toBe('off')
+  })
+
+  it('cycles off -> all -> one -> off when wrapOnly is explicitly false', () => {
+    expect(nextRepeatMode('off', false)).toBe('all')
+    expect(nextRepeatMode('all', false)).toBe('one')
+    expect(nextRepeatMode('one', false)).toBe('off')
+  })
+
+  /**
+   * Collection mode (a curated tag collection): looping is the resting
+   * state, so there's no 'off' to cycle to — the button just toggles
+   * whole-queue <-> this-post.
+   */
+  it('wrapOnly: toggles all <-> one, with no "off" state', () => {
+    expect(nextRepeatMode('all', true)).toBe('one')
+    expect(nextRepeatMode('one', true)).toBe('all')
+  })
+
+  it('wrapOnly: an "off" input (shouldn\'t normally occur in collection mode) resolves to "all", never "off"', () => {
+    expect(nextRepeatMode('off', true)).toBe('all')
+  })
+})
+
+describe('shouldRewaitAfterArrival', () => {
+  it('is true when the current item is the staged fresh arrival and repeat is off', () => {
+    expect(shouldRewaitAfterArrival('twitter:1', 'twitter:1', 'off')).toBe(true)
+  })
+
+  it('is false when nothing is staged (stagedKey null)', () => {
+    expect(shouldRewaitAfterArrival(null, 'twitter:1', 'off')).toBe(false)
+  })
+
+  it('is false once the current item has moved past the staged arrival', () => {
+    expect(shouldRewaitAfterArrival('twitter:1', 'twitter:2', 'off')).toBe(false)
+  })
+
+  it('is false under repeat "all" — the queue loops instead of re-waiting', () => {
+    expect(shouldRewaitAfterArrival('twitter:1', 'twitter:1', 'all')).toBe(false)
+  })
+
+  it('is false under repeat "one" — the staged post repeats instead of re-waiting', () => {
+    expect(shouldRewaitAfterArrival('twitter:1', 'twitter:1', 'one')).toBe(false)
   })
 })

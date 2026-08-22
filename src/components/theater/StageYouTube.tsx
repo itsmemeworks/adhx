@@ -166,6 +166,13 @@ function describeYtPlayerState(state: number): string {
  */
 const STARTUP_RETRY_DELAYS_MS = [1_000, 2_500, 5_000]
 
+/** Round 8 progress-starvation poll (see `lastTimeSignalAtRef`): how often to
+ * check for starvation while playing, and how long without a time-bearing
+ * payload counts as starved. Desktop heartbeats arrive several times a
+ * second, so a healthy stream never trips the 1.5s window. */
+const PROGRESS_POLL_MS = 750
+const PROGRESS_STARVED_MS = 1_500
+
 export interface StageYouTubeProps {
   item: TheaterItem
   /** Muted until the user's first gesture (autoplay policy) — the same
@@ -291,6 +298,24 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
   // `catchupUnmuteBaselineTimeRef` at the moment a catchup unmute is
   // requested.
   const lastKnownCurrentTimeRef = useRef<number | null>(null)
+  // Round 8 (owner on-device report: the clay progress bar never fills on a
+  // plain autoplay — it only appears after tapping the video itself, e.g. a
+  // double-tap seek): on iOS the embed can stream `infoDelivery` heartbeats
+  // that carry `playerState` (playback tracking works, ended auto-advance
+  // works) WITHOUT ever including `currentTime`/`duration` until an
+  // in-iframe gesture wakes YouTube's own progress reporter. The raw
+  // protocol has a pull path though: re-sending the `listening` handshake
+  // makes the player answer with an `initialDelivery` snapshot of its full
+  // state (the same mechanism the official iframe_api script uses at boot,
+  // where it retries `listening` on an interval until it hears back). So:
+  // while state 1 is confirmed AND no time-bearing payload has arrived
+  // recently (this ref, wall-clock of the last one), poll `listening` and
+  // parse `initialDelivery` through the same handler as `infoDelivery`. On
+  // desktop (heartbeats flow normally) the starvation window never opens and
+  // no extra message is ever sent. This is a data poll, not a
+  // state-attribution timer — the round-4 "no timers" rule (about *judging
+  // unmute success* by wall-clock silence) is untouched.
+  const lastTimeSignalAtRef = useRef(0)
   // Round 6: what we last explicitly told the player to be (via `mute`/
   // `unMute`) — the mute-state counterpart of `hasPlayedRef`'s "only trust
   // evidence" discipline. `infoDelivery` streams frequently enough that a
@@ -730,6 +755,12 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
         // integration that only listens for onStateChange never sees state
         // 1 and the stall watchdog skips a video that is playing fine
         // (bitten on staging, 2026-08-21). Handle both shapes.
+        // `initialDelivery` is the player's full-state snapshot answer to a
+        // `listening` handshake — same `info` shape as `infoDelivery`, so it
+        // flows through the same parsing (round 8: it's also the progress
+        // poll's data source when iOS starves the heartbeat stream of
+        // currentTime — see `lastTimeSignalAtRef`).
+        case 'initialDelivery':
         case 'infoDelivery': {
           const info = data.info as
             | {
@@ -832,6 +863,7 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
             // earlier payload, hasn't already reverted.
             if (typeof info.currentTime === 'number') {
               lastKnownCurrentTimeRef.current = info.currentTime
+              lastTimeSignalAtRef.current = Date.now()
               if (
                 unmuteAwaitingConfirmRef.current &&
                 unmuteConfirmSourceRef.current === 'catchup' &&
@@ -876,6 +908,28 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     requestUnmute,
     fallBackToMuted,
   ])
+
+  // Round 8: the progress-starvation poll (mechanism documented on
+  // `lastTimeSignalAtRef`). Armed only while the player is confirmed playing;
+  // each tick re-sends the `listening` handshake ONLY when no
+  // currentTime-bearing payload has arrived within the starvation window, so
+  // a healthy heartbeat stream (desktop) never triggers a single extra
+  // message. The `initialDelivery` answer is parsed by the same handler as
+  // `infoDelivery` above, which dispatches `theater-video-progress`.
+  useEffect(() => {
+    if (!playing) return
+    // A fresh playing state starts the clock now — never inherit a stale
+    // timestamp from a previous item or a pre-pause stretch.
+    lastTimeSignalAtRef.current = Date.now()
+    const timer = setInterval(() => {
+      if (Date.now() - lastTimeSignalAtRef.current <= PROGRESS_STARVED_MS) return
+      const win = iframeRef.current?.contentWindow
+      if (!win) return
+      logStage('progress starved — re-sending listening handshake for initialDelivery')
+      win.postMessage(JSON.stringify({ event: 'listening', id: playerId }), YT_ORIGIN)
+    }, PROGRESS_POLL_MS)
+    return () => clearInterval(timer)
+  }, [playing, playerId])
 
   // Space bar / the stage's play-pause affordance (`theater-toggle-play`,
   // dispatched by TheaterShell) — flips based on the last known state.

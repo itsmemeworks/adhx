@@ -117,7 +117,22 @@ export interface TrendingItem {
   /** The post author's avatar, for tweet-style text/quote cards. */
   authorAvatarUrl?: string | null
   url: string
+  /**
+   * The pulse EVENT time (when this post was last previewed/saved/sent) —
+   * load-bearing for feed ordering, fresh-arrival detection, and "N new".
+   * NOT the post's age: the same post re-surfacing refreshes this. Display
+   * surfaces must show `addedAt` instead (owner report: the time chip "kept
+   * changing").
+   */
   createdAt: string
+  /**
+   * The stable display time: when the post was FIRST added/linked to ADHX —
+   * the earliest of any saver's `bookmarks.processedAt` and the earliest
+   * activity event (owner decision: never the source platform's own publish
+   * date). Stable by construction (MINs never move), unlike `createdAt`
+   * above. Display-only; never used for ordering.
+   */
+  addedAt?: string | null
   /** Distinct ADHX users who've saved this post (anonymous count). */
   saveCount?: number
   /** Trending score = savers + preview events + send events. Drives the flame + Trending sort. */
@@ -303,6 +318,8 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
   const textLinksByPost = new Map<string, TextLinkRef[]>()
   const quoteContexts = new Map<string, string>()
   const avatars = new Map<string, string>()
+  const earliestSaves = new Map<string, string>()
+  const firstSeens = new Map<string, string>()
   const previewCounts = new Map<string, number>()
   const shareCounts = new Map<string, number>()
   if (ids.length > 0) {
@@ -321,6 +338,10 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
         // Legacy quote JSON — same "any row, same content" trick. Only ever
         // populated for twitter quote tweets; public content, fine to select.
         quoteContext: sql<string | null>`max(${bookmarks.quoteContext})`,
+        // Earliest save time across all savers — one half of `addedAt`
+        // (display), never ordering. Public timing metadata, no user
+        // identity.
+        earliestSavedAt: sql<string | null>`min(${bookmarks.processedAt})`,
       })
       .from(bookmarks)
       .where(inArray(bookmarks.id, ids))
@@ -333,6 +354,7 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
       if (r.avatar) avatars.set(k, r.avatar)
       if (r.fullText) fullTexts.set(k, r.fullText)
       if (r.quoteContext) quoteContexts.set(k, r.quoteContext)
+      if (r.earliestSavedAt) earliestSaves.set(k, r.earliestSavedAt)
     }
 
     // Preview interest — how many times each post has been previewed (events,
@@ -364,6 +386,23 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
       .all()
     for (const r of shareRows) {
       shareCounts.set(`${r.platform}:${r.bookmarkId}`, Number(r.n) || 0)
+    }
+
+    // First activity event — the other half of `addedAt` (see its doc
+    // comment). MIN over ALL actions, so it never moves as the post
+    // re-enters the pulse. PUBLIC COLUMNS ONLY — no userId.
+    const firstSeenRows = db
+      .select({
+        platform: activity.platform,
+        bookmarkId: activity.bookmarkId,
+        firstSeen: sql<string | null>`min(${activity.createdAt})`,
+      })
+      .from(activity)
+      .where(inArray(activity.bookmarkId, ids))
+      .groupBy(activity.platform, activity.bookmarkId)
+      .all()
+    for (const r of firstSeenRows) {
+      if (r.firstSeen) firstSeens.set(`${r.platform}:${r.bookmarkId}`, r.firstSeen)
     }
 
     const mediaRows = db
@@ -479,6 +518,13 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
         (counts.get(key) ?? 0) + (previewCounts.get(key) ?? 0) + (shareCounts.get(key) ?? 0),
       contentType,
       thumbnailUrl: thumbOf(i, key, contentType),
+      // Stable display time (see `addedAt`'s doc comment): the earliest
+      // moment this post hit ADHX — first save or first activity event,
+      // whichever came first (ISO strings sort lexically) — never the
+      // moving event time, never the source platform's own date.
+      addedAt:
+        [earliestSaves.get(key), firstSeens.get(key)].filter((t): t is string => !!t).sort()[0] ??
+        null,
       // The post author's avatar for tweet-style cards — the recorded value
       // (preview-only items) else the saved bookmark's avatar (saved items).
       authorAvatarUrl: i.authorAvatarUrl ?? avatars.get(key) ?? null,

@@ -24,7 +24,7 @@ export interface StageProps {
   muted: boolean
   /** User tapped the "Tap for sound" chip / the video. */
   onRequestUnmute: () => void
-  /** Current video finished (show replay + "↓ next" nudge; no auto-advance). */
+  /** Current video finished — the shell auto-advances (or loops, per repeat mode). */
   onEnded?: () => void
   /**
    * Forwarded to StageText's photo variant. Default true (CollectionTheater's

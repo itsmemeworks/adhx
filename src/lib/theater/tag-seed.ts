@@ -28,7 +28,12 @@ export function tagItemToTheaterItem(item: TagItem): TheaterItem {
     // preview path, which `theaterUrlSyncPath`/`sourceUrl()` already rebuild
     // fresh from platform+author+bookmarkId wherever it matters.
     url: item.externalUrl ?? item.url,
+    // Ordering slot only (collection order is curated server-side anyway) —
+    // the epoch sentinel is never DISPLAYED: chips render `addedAt`.
     createdAt: item.createdAt ?? new Date(0).toISOString(),
+    // Stable display time (owner decision): when the post was saved to
+    // ADHX — never the source platform's own publish date.
+    addedAt: item.addedAt ?? null,
     contentType: item.contentType,
     thumbnailUrl: item.thumbnailUrl,
   }

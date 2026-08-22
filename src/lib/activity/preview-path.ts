@@ -30,3 +30,18 @@ export function sourceUrl(platform: string, author: string, id: string): string 
   // X accepts any handle (and `i` when unknown) and redirects to the canonical URL.
   return `https://x.com/${handle || 'i'}/status/${id}`
 }
+
+/**
+ * The author's profile page on their own platform — the theater's tappable
+ * author row links here so a viewer can jump to the rest of that creator's
+ * content. Returns null without a handle (nothing to link to). Same
+ * dependency-free guarantees as previewPath/sourceUrl.
+ */
+export function authorProfileUrl(platform: string, author: string): string | null {
+  const handle = (author || '').replace(/^@+/, '').trim()
+  if (!handle) return null
+  if (platform === 'instagram') return `https://www.instagram.com/${handle}/`
+  if (platform === 'tiktok') return `https://www.tiktok.com/@${handle}`
+  if (platform === 'youtube') return `https://www.youtube.com/@${handle}`
+  return `https://x.com/${handle}`
+}

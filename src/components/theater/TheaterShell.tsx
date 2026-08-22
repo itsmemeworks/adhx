@@ -43,6 +43,7 @@ import { SignInModal, useAuthMe } from '@/components/auth'
 // — imported per the shared contract for the triage "Tag" action.
 import { TagQuickPicker } from '@/components/tags'
 import type {
+  RepeatMode,
   SaveCollectionStatus,
   TheaterCollectionMeta,
   TheaterFeedSeed,
@@ -254,6 +255,45 @@ export function findFreshArrival(
     if (!baseline.has(key)) return key
   }
   return null
+}
+
+// Spotify-style repeat control (mobile round 8, owner request):
+// - 'off'  — the existing behavior: advance to the end, then the waiting
+//   stage ("You're all caught up") until something new arrives.
+// - 'all'  — the whole queue loops, exactly like collection mode's built-in
+//   loop; the waiting stage is never entered.
+// - 'one'  — the current post repeats (the same player-level loop the
+//   shared-post pin uses); timed items simply stay put.
+// One button cycles off → all → one. The type lives in ./types (chromes
+// import it too); re-exported here for tests/callers.
+export type { RepeatMode } from './types'
+
+/**
+ * Pure: the repeat button's cycle order — off → all → one → off. Collection
+ * mode (`wrapOnly`) has no 'off': a curated tag collection is a loop by
+ * definition (there's no live feed to wait on), so the button just toggles
+ * whole-queue ⇄ this-post there.
+ */
+export function nextRepeatMode(mode: RepeatMode, wrapOnly = false): RepeatMode {
+  if (wrapOnly) return mode === 'all' ? 'one' : 'all'
+  return mode === 'off' ? 'all' : mode === 'all' ? 'one' : 'off'
+}
+
+/**
+ * Pure: should a *non-user* advance off `currentKey` re-enter the waiting
+ * stage instead of stepping into the rest of the queue? True exactly when the
+ * item that just finished is the fresh arrival the waiting stage auto-played
+ * (owner report: finishing that one new video dumped them back into the old
+ * playlist — they expected to wait for the next new send) and no repeat mode
+ * overrides it. User-initiated navigation clears `stagedKey` before ever
+ * reaching this, so deliberately browsing onward still works.
+ */
+export function shouldRewaitAfterArrival(
+  stagedKey: string | null,
+  currentKey: string | null,
+  repeatMode: RepeatMode,
+): boolean {
+  return stagedKey !== null && currentKey === stagedKey && repeatMode === 'off'
 }
 
 /**
@@ -752,6 +792,42 @@ export function TheaterShell({
       // Same — never let a storage failure break playback.
     }
   }, [muted])
+
+  // Repeat mode (round 8): session-persisted like the sound preference —
+  // read on mount (not the initializer, for the same SSR-hydration reason),
+  // written on change. Triage never exposes the button (`effectiveRepeatMode`
+  // neutralizes a session-carried value there — a finite backlog with its
+  // own Done/Later semantics; a stale 'one'/'all' leaking in would
+  // repeat/wrap a queue with no visible control to turn it off). Collection
+  // mode DOES expose it (owner: the tag-collection player should show the
+  // repeat icon, selected): it opens on 'all' — looping IS the collection's
+  // resting state — and toggles all ⇄ one (`nextRepeatMode`'s wrapOnly), so
+  // it deliberately skips the sessionStorage read/write below: a collection
+  // page's toggle is per-visit and must never bleed into the home theater's
+  // persisted preference (or vice versa).
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>(loop ? 'all' : 'off')
+  const repeatEnabled = !isTriage
+  const effectiveRepeatMode: RepeatMode = repeatEnabled ? repeatMode : 'off'
+  const repeatModeRef = useRef(effectiveRepeatMode)
+  repeatModeRef.current = effectiveRepeatMode
+  useEffect(() => {
+    if (loop) return
+    try {
+      const stored = sessionStorage.getItem('adhx-theater-repeat')
+      if (stored === 'all' || stored === 'one') setRepeatMode(stored)
+    } catch {
+      // Storage unavailable — keep 'off'.
+    }
+  }, [loop])
+  useEffect(() => {
+    if (loop) return
+    try {
+      sessionStorage.setItem('adhx-theater-repeat', repeatMode)
+    } catch {
+      // Never let a storage failure break playback.
+    }
+  }, [loop, repeatMode])
+
   const isDesktop = useIsDesktopViewport()
   // Desktop de-clutter: collapses the rail column for a full-bleed stage.
   // Desktop-only concept — mobile has its own independent de-clutter state
@@ -849,7 +925,17 @@ export function TheaterShell({
   // Snapshot of `freshKeys` taken the moment waiting begins — anything
   // added to freshKeys AFTER this point is a genuinely new arrival the
   // waiting stage should auto-play into (see the effect near the bottom).
-  const waitingBaselineFreshKeysRef = useRef<ReadonlySet<string>>(new Set())
+  // Staging an arrival ADDS its key here (rather than resnapshotting), so a
+  // second item that arrived while the first played is still "new" when the
+  // first one finishes and waiting resumes.
+  const waitingBaselineFreshKeysRef = useRef<Set<string>>(new Set())
+  // The fresh arrival the waiting stage auto-played into, if that's what's
+  // on stage right now. While set, a NON-user advance off it (video ended /
+  // timed dwell) re-enters the waiting stage instead of continuing into the
+  // already-browsed queue (see `shouldRewaitAfterArrival`). Cleared by every
+  // user-initiated navigation — deliberately browsing onward from the
+  // arrival behaves exactly like browsing from anywhere else.
+  const stagedFromWaitingKeyRef = useRef<string | null>(null)
 
   // Land on the first item immediately (no flash of an empty stage); a
   // moment later, once localStorage seen-state has hydrated, jump to the
@@ -896,10 +982,24 @@ export function TheaterShell({
   // 'timed' auto-advance suppression below — see `isSharedPostPinned`'s doc
   // comment for why the "actually current" half matters.
   const isSharedPinnedOnCurrent = isSharedPostPinned(mode, sharedItemKey, sharedPinned, currentKey)
+  // Round 8: the shared-post pin and the repeat button's 'one' mode are the
+  // same player-level behavior (loop the current post, suppress every
+  // auto-advance path) — this is THE combined signal every consumer uses:
+  // Stage's `repeat` prop, the progress-line pin demotion, the chromes'
+  // `repeatCurrent`, and the 'timed' advance guard below.
+  const repeatCurrentActive = isSharedPinnedOnCurrent || effectiveRepeatMode === 'one'
   // Read fresh inside the `theater-advance` listener (empty-deps-registered
   // below) without re-registering that listener on every render.
-  const isSharedPinnedOnCurrentRef = useRef(isSharedPinnedOnCurrent)
-  isSharedPinnedOnCurrentRef.current = isSharedPinnedOnCurrent
+  const repeatCurrentActiveRef = useRef(repeatCurrentActive)
+  repeatCurrentActiveRef.current = repeatCurrentActive
+  // The repeat BUTTON shows the truth the viewer experiences (browser-agent
+  // finding: the peek bar said "On repeat" while the button said "Repeat:
+  // off"): a pinned shared post IS repeat-one in effect, so the button
+  // displays 'one' while the pin holds, and tapping it then releases the pin
+  // (see `cycleRepeatMode`) — one control, state + action.
+  const displayRepeatMode: RepeatMode = isSharedPinnedOnCurrent ? 'one' : effectiveRepeatMode
+  const sharedPinActiveRef = useRef(isSharedPinnedOnCurrent)
+  sharedPinActiveRef.current = isSharedPinnedOnCurrent
   // TASK 3: the current stage item is the shared lead AND it's an
   // unavailable (deleted/private/suspended) source — swaps in
   // `StageUnavailable` below instead of the normal `<Stage/>` dispatch.
@@ -914,8 +1014,11 @@ export function TheaterShell({
   // (nothing current, e.g. an empty list) always reads as "can't navigate".
   // Collection mode loops, so both chevrons stay enabled the whole time
   // there's a current item — there's no waiting stage and no dead end.
-  const canPrev = loop ? currentIndex !== -1 : computeCanPrev(currentIndex, waiting)
-  const canNext = loop ? currentIndex !== -1 : computeCanNext(currentIndex, waiting)
+  // Repeat 'all' navigates exactly like collection mode's loop: both
+  // chevrons stay enabled whenever anything is current (round 8).
+  const wrapNav = loop || effectiveRepeatMode === 'all'
+  const canPrev = wrapNav ? currentIndex !== -1 : computeCanPrev(currentIndex, waiting)
+  const canNext = wrapNav ? currentIndex !== -1 : computeCanNext(currentIndex, waiting)
 
   // Read fresh inside the `theater-advance` listener below without
   // re-registering that listener on every navigation (mirrors itemsRef).
@@ -924,8 +1027,24 @@ export function TheaterShell({
 
   const goNext = useCallback(() => {
     setCurrentKey((key) => {
+      // Round 8: an auto-advance off the waiting stage's auto-played fresh
+      // arrival goes back to waiting for the NEXT new send, never onward
+      // into the queue the viewer already sat through. The accumulated
+      // baseline already contains this arrival's key (added when it was
+      // staged), so anything that arrived in the meantime is picked up by
+      // the arrival effect immediately. User navigation never lands here —
+      // `goNextUser` clears the staged key first.
+      if (shouldRewaitAfterArrival(stagedFromWaitingKeyRef.current, key, repeatModeRef.current)) {
+        stagedFromWaitingKeyRef.current = null
+        setWaiting(true)
+        return key
+      }
       const idx = itemsRef.current.findIndex((it) => theaterItemKey(it) === key)
-      const next = computeLoopedNext(itemsRef.current.length, idx, loop)
+      const next = computeLoopedNext(
+        itemsRef.current.length,
+        idx,
+        loop || repeatModeRef.current === 'all',
+      )
       if (next === null) return key
       if (next === 'waiting') {
         // Advancing past the last post enters the waiting stage instead of
@@ -956,7 +1075,11 @@ export function TheaterShell({
     }
     setCurrentKey((key) => {
       const idx = itemsRef.current.findIndex((it) => theaterItemKey(it) === key)
-      const prev = computeLoopedPrev(itemsRef.current.length, idx, loop)
+      const prev = computeLoopedPrev(
+        itemsRef.current.length,
+        idx,
+        loop || repeatModeRef.current === 'all',
+      )
       if (prev === null) return key
       hasNavigatedRef.current = true
       return theaterItemKey(itemsRef.current[prev])
@@ -977,21 +1100,66 @@ export function TheaterShell({
   // auto-arrival effect) calls them directly and must NEVER clear the pin.
   const goNextUser = useCallback(() => {
     clearSharedPin()
+    // Deliberate navigation releases the fresh-arrival hold (round 8) — the
+    // viewer choosing to continue past the arrival means "browse the queue",
+    // not "wait again after this one".
+    stagedFromWaitingKeyRef.current = null
     goNext()
   }, [clearSharedPin, goNext])
 
   const goPrevUser = useCallback(() => {
     clearSharedPin()
+    stagedFromWaitingKeyRef.current = null
     goPrev()
   }, [clearSharedPin, goPrev])
 
   const onSelectUser = useCallback(
     (key: string) => {
       clearSharedPin()
+      stagedFromWaitingKeyRef.current = null
       onSelect(key)
     },
     [clearSharedPin, onSelect],
   )
+
+  // The repeat button (round 8): one control cycling off → all → one.
+  // Flipping to 'all' while parked on the waiting stage resumes playback
+  // immediately by wrapping to the top of the queue — that's what "repeat
+  // the playlist" means from the end of it.
+  const cycleRepeatMode = useCallback(() => {
+    // While the shared-post pin holds, the button displays 'one' (see
+    // `displayRepeatMode`) — so a tap means "stop repeating this post":
+    // release the pin and land on 'off', exactly what the displayed
+    // one → off step promises. Only after that does the normal cycle apply.
+    if (sharedPinActiveRef.current) {
+      clearSharedPin()
+      setRepeatMode('off')
+      return
+    }
+    // Computed from the ref (not a state updater) so the waiting-stage exit
+    // below is a plain side effect, never smuggled into an updater that
+    // React may re-invoke (StrictMode double-render safety).
+    const next = nextRepeatMode(repeatModeRef.current, loop)
+    if (next === 'all' && waitingRef.current) {
+      stagedFromWaitingKeyRef.current = null
+      setWaiting(false)
+      const first = itemsRef.current[0]
+      if (first) setCurrentKey(theaterItemKey(first))
+    }
+    setRepeatMode(next)
+  }, [clearSharedPin, loop])
+
+  // "Start from the beginning" on the waiting stage (round 8) — a deliberate
+  // navigation back to the top of the queue.
+  const replayFromStart = useCallback(() => {
+    const first = itemsRef.current[0]
+    if (!first) return
+    hasNavigatedRef.current = true
+    clearSharedPin()
+    stagedFromWaitingKeyRef.current = null
+    setWaiting(false)
+    setCurrentKey(theaterItemKey(first))
+  }, [clearSharedPin])
 
   const onRequestUnmute = useCallback(() => setMuted(false), [])
   // Explicit setter (not a blind toggle) — the chrome's audio button computes
@@ -1026,6 +1194,10 @@ export function TheaterShell({
     }
   }, [])
 
+  // Space must never resume the paused stage hidden behind the waiting
+  // overlay — ref-backed so the keyboard listener never re-registers.
+  const isPlaybackHidden = useCallback(() => waitingRef.current, [])
+
   // Keyboard nav (extracted to useTheaterKeyboard.ts — see its doc comment
   // for the full ↓/→/j vs. triage-collection-tab keymap rationale).
   useTheaterKeyboard({
@@ -1040,6 +1212,7 @@ export function TheaterShell({
     triageStepBack,
     triageDoUndo,
     onClose,
+    isPlaybackHidden,
   })
 
   // Mark seen + fire the preview pulse once the current post has been staged
@@ -1096,12 +1269,13 @@ export function TheaterShell({
       // would otherwise fire this and silently step the (unrelated,
       // unrendered) live-feed cursor underneath it.
       if (isTriageCollection) return
-      // shared-post-repeat: belt-and-suspenders — TheaterProgressLine's
-      // 'timed' kind is already suppressed to 'none' while pinned (so this
-      // event is never actually dispatched for a pinned item), but a
-      // stray/late-arriving dispatch from a since-superseded timer must
-      // still be a no-op rather than advancing past the shared post.
-      if (isSharedPinnedOnCurrentRef.current) return
+      // shared-post-repeat / repeat 'one': belt-and-suspenders —
+      // TheaterProgressLine's 'timed' kind is already suppressed to 'none'
+      // while repeating (so this event is never actually dispatched for a
+      // repeating item), but a stray/late-arriving dispatch from a
+      // since-superseded timer must still be a no-op rather than advancing
+      // past the repeating post.
+      if (repeatCurrentActiveRef.current) return
       if (progressKindFor(currentRef.current) !== 'timed') return
       goNext()
     }
@@ -1121,9 +1295,29 @@ export function TheaterShell({
     if (!waiting) return
     const arrived = findFreshArrival(feed.freshKeys, waitingBaselineFreshKeysRef.current)
     if (!arrived) return
+    // Fold the staged key into the baseline (never resnapshot — an item that
+    // arrived while this one plays must still read as new when waiting
+    // resumes), and remember it so a non-user advance off it re-waits
+    // instead of continuing into the already-browsed queue (round 8).
+    waitingBaselineFreshKeysRef.current.add(arrived)
+    stagedFromWaitingKeyRef.current = arrived
+    // Pin the arrival to the FRONT of the display order (owner: the fresh
+    // video read as "2 / 21" — the session's original lead-pick was still
+    // occupying slot 1). The viewer has been through the whole queue by now,
+    // so newest-first is the honest order.
+    setPinnedKey(arrived)
     setCurrentKey(arrived)
     setWaiting(false)
   }, [waiting, feed.freshKeys])
+
+  // Entering the waiting stage pauses the (still-mounted, now-hidden) stage
+  // — see the render comment above the <Stage/> below. Uses the same
+  // deliberate-pause event the transport buttons use, so StageVideo's
+  // catch-up attribution is disarmed correctly. On the next arrival the
+  // src-change effect calls play() itself; no resume event needed.
+  useEffect(() => {
+    if (waiting) window.dispatchEvent(new CustomEvent('theater-pause'))
+  }, [waiting])
 
   // Items newer than the last visit and not yet seen. Zero on a first-ever
   // visit (no `lastVisitAt` to compare against) — the caught-up state is the
@@ -1393,19 +1587,34 @@ export function TheaterShell({
             ) : null
           ) : isSharedUnavailableOnCurrent && current ? (
             <StageUnavailable item={current} />
-          ) : waiting ? (
-            <StageWaiting savedToday={feed.savedToday} />
           ) : (
-            <Stage
-              item={current}
-              muted={muted}
-              onRequestUnmute={onRequestUnmute}
-              onEnded={() => {
-                if (!showSignInRef.current) goNext()
-              }}
-              photoCaption={false}
-              repeat={isSharedPinnedOnCurrent}
-            />
+            <>
+              {/* The stage stays MOUNTED (paused — see the waiting-pause
+                  effect) underneath the waiting overlay, never swapped out:
+                  StageVideo's persistent <video> element carries the user's
+                  iOS unmuted-playback grant, and unmounting it across the
+                  waiting stage is exactly what made a fresh arrival start
+                  muted for a viewer whose sound was on (owner report). The
+                  overlay's opaque #08070a covers it completely. */}
+              <Stage
+                item={current}
+                muted={muted}
+                onRequestUnmute={onRequestUnmute}
+                onEnded={() => {
+                  if (!showSignInRef.current) goNext()
+                }}
+                photoCaption={false}
+                repeat={repeatCurrentActive}
+              />
+              {waiting && (
+                <div className="absolute inset-0 z-10">
+                  <StageWaiting
+                    savedToday={feed.savedToday}
+                    onReplay={displayItems.length > 0 ? replayFromStart : undefined}
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
         {/* Desktop counterpart to the mobile chrome's top progress line
@@ -1427,7 +1636,7 @@ export function TheaterShell({
             isDesktop
               ? progressKindForPin(
                   collectionTabProgressKind(progressKindFor(chromeCurrent), isTriageCollection),
-                  isSharedPinnedOnCurrent,
+                  repeatCurrentActive,
                 )
               : 'none'
           }
@@ -1462,8 +1671,11 @@ export function TheaterShell({
           isCollectionOwner={isCollectionOwner}
           saveStatus={saveStatus}
           onSaveCollection={handleSaveCollection}
+          authed={authed}
           onRequestSignIn={openSignIn}
-          repeatCurrent={isSharedPinnedOnCurrent}
+          repeatCurrent={repeatCurrentActive}
+          repeatMode={repeatEnabled ? displayRepeatMode : undefined}
+          onCycleRepeat={repeatEnabled ? cycleRepeatMode : undefined}
           triage={triageChrome}
         />
         <DesktopStageChrome
@@ -1533,7 +1745,9 @@ export function TheaterShell({
         declutter={desktopDeclutter}
         collection={collection}
         triage={triageChrome}
-        repeatCurrent={isSharedPinnedOnCurrent}
+        repeatCurrent={repeatCurrentActive}
+        repeatMode={repeatEnabled ? displayRepeatMode : undefined}
+        onCycleRepeat={repeatEnabled ? cycleRepeatMode : undefined}
       />
       {/* `?ytdebug=1`/`?avdebug=1` diagnostics overlay (YtDebugOverlay.tsx) —
           mounted ONCE here so it serves every stage (StageVideo/StageYouTube/

@@ -12,20 +12,37 @@
  * shell auto-exits this stage the moment a genuinely fresh item arrives.
  */
 
+import { RotateCcw } from 'lucide-react'
 import { LiveDot } from '@/components/matter'
 import { StageHeadline } from './stage-primitives'
 
 export interface StageWaitingProps {
   /** Ambient stat shown in quiet mono — omitted entirely when zero/absent. */
   savedToday?: number
+  /**
+   * "Start from the beginning" (round 8, owner request): a deliberate
+   * navigation back to the top of the queue instead of waiting. Omitted when
+   * there's nothing to replay (an empty queue).
+   */
+  onReplay?: () => void
 }
 
-export function StageWaiting({ savedToday }: StageWaitingProps) {
+export function StageWaiting({ savedToday, onReplay }: StageWaitingProps) {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-[#08070a] px-6 text-center">
       <LiveDot />
       <StageHeadline>You&rsquo;re all caught up</StageHeadline>
       <p className="text-sm text-white/50">waiting for new sends&hellip;</p>
+      {onReplay && (
+        <button
+          type="button"
+          onClick={onReplay}
+          className="mt-1 inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/[0.14] px-4 text-[13px] font-semibold text-white transition-colors hover:bg-white/20"
+        >
+          <RotateCcw size={15} />
+          Start from the beginning
+        </button>
+      )}
       {!!savedToday && (
         <p className="font-mono text-[11px] text-white/30">{savedToday} saved today</p>
       )}
