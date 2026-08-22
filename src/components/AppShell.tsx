@@ -33,24 +33,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     /^\/reels?\/[A-Za-z0-9_-]+$/.test(pathname) ||
     /^\/shorts\/[A-Za-z0-9_-]{11}$/.test(pathname) ||
     /^\/@?[A-Za-z0-9._]+\/video\/\d+$/.test(pathname)
+  // TheaterShell is `fixed inset-0 z-[60]` and owns the chrome. Hide the
+  // Header; the install banner still mounts (z-70, under the top-left logo).
+  const isTheaterPage =
+    pathname === '/' || pathname === '/collection' || pathname.startsWith('/t/') || isPreviewPage
   const isFullWidth =
+    isTheaterPage ||
     pathname === '/trending/play' ||
     pathname.startsWith('/share/') ||
     // /welcome is the one-shot username chooser: a full-screen dark card with
     // no app chrome — a mounted (visually hidden) Header would leave its
     // search input focusable underneath the overlay.
-    pathname === '/welcome' ||
-    // Public share surfaces (/t profile + tag theaters) own their chrome — the
-    // app Header stacking above their brand row reads as a double header.
-    pathname.startsWith('/t/') ||
-    isPreviewPage
+    pathname === '/welcome'
+  // One-shot username / starter-playlist screen — the banner covers the card.
+  const hideInstallBanner = pathname === '/welcome'
 
   if (isFullWidth) {
     return (
       <>
         {children}
-        {/* Preview pages already have IosShortcutNudge in the CTA column. */}
-        {!isPreviewPage && <PWAInstallPrompt />}
+        {/* Theater owns the Header slot; the install banner still mounts and
+            hangs under the top-left logo (see PWAInstallPrompt). */}
+        {!hideInstallBanner && <PWAInstallPrompt />}
       </>
     )
   }
@@ -60,8 +64,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Suspense fallback={<HeaderSkeleton />}>
         <Header />
       </Suspense>
-      <main>{children}</main>
+      {/* In-flow under the header so the callout doesn't cover Paste / filters. */}
       <PWAInstallPrompt />
+      <main>{children}</main>
     </div>
   )
 }

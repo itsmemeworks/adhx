@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { ChevronDown, Share, X } from 'lucide-react'
 import { IosShareRecipe } from '@/components/IosShareRecipe'
-import { isIOSDevice } from '@/lib/platform'
+import { getPlatformType, isIOSDevice } from '@/lib/platform'
 import { X_ONLY_SHORTCUT_URL } from '@/lib/share/ios'
 import { cn } from '@/lib/utils'
 
@@ -17,7 +17,7 @@ export function IosShortcutInstallButton({
 }: {
   className?: string
   children?: React.ReactNode
-  variant?: 'primary' | 'ink'
+  variant?: 'primary' | 'ink' | 'outline'
 }) {
   return (
     <a
@@ -25,8 +25,14 @@ export function IosShortcutInstallButton({
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
-        'inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-full font-semibold text-sm transition-transform hover:scale-[1.02]',
-        variant === 'ink' ? 'bg-ink text-surface' : 'bg-clay-grad text-white shadow-glow',
+        'inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold',
+        variant === 'outline'
+          ? // Full-strength `border-clay` — Matter colors are hex CSS vars, so
+            // Tailwind opacity modifiers (`border-clay/NN`) silently drop.
+            'border border-clay bg-transparent text-ink'
+          : variant === 'ink'
+            ? 'bg-ink text-surface transition-transform hover:scale-[1.02]'
+            : 'bg-clay-grad text-white shadow-glow transition-transform hover:scale-[1.02]',
         className,
       )}
     >
@@ -56,6 +62,34 @@ export function IosShortcutHow() {
       </p>
       <IosShareRecipe />
     </details>
+  )
+}
+
+/** Always-available install path in Settings — iOS only. */
+export function IosShortcutSettingsCard() {
+  const [show, setShow] = useState(false)
+  useEffect(() => {
+    setShow(getPlatformType() === 'ios')
+  }, [])
+  if (!show) return null
+  return (
+    <div className="overflow-hidden rounded-card border border-hairline bg-surface shadow-m-sm">
+      <div className="flex items-center gap-3 px-5 pt-[18px]">
+        <div className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-[11px] bg-clay/10">
+          <Share className="h-[19px] w-[19px] text-clay" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="font-serif text-base font-semibold text-ink">iOS shortcut</div>
+          <div className="mt-0.5 text-[13px] text-ink-3">
+            Share posts to ADHX from X, Instagram, TikTok, and YouTube in one tap.
+          </div>
+        </div>
+      </div>
+      <div className="px-5 pb-5 pt-4">
+        <IosShortcutInstallButton className="w-full rounded-xl" />
+        <IosShortcutHow />
+      </div>
+    </div>
   )
 }
 

@@ -31,6 +31,11 @@ authedTest.describe('archive', () => {
       await page.getByRole('button', { name: 'Undo', exact: true }).click()
       await expect(caption(page, POST.alpha.text)).toBeVisible()
 
+      await page.getByRole('button', { name: 'Archive' }).click()
+      await expect(caption(page, POST.bravo.text)).toBeVisible()
+      await page.keyboard.press('u')
+      await expect(caption(page, POST.alpha.text)).toBeVisible()
+
       const feed = await page.request.get(
         `/api/feed?id=${POST.alpha.id}&idPlatform=twitter&hideArchived=true`,
       )

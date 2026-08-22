@@ -17,10 +17,6 @@ function baseArgs(overrides: Partial<Parameters<typeof useTheaterKeyboard>[0]> =
     goNext: vi.fn(),
     goPrev: vi.fn(),
     setMuted: vi.fn(),
-    archiveCurrent: vi.fn(),
-    deferCurrent: vi.fn(),
-    deleteCurrent: vi.fn(),
-    personalStepBack: vi.fn(),
     undoLastAction: vi.fn(),
     ...overrides,
   }
@@ -82,6 +78,26 @@ describe('useTheaterKeyboard: isPlaybackHidden space guard', () => {
     } finally {
       window.removeEventListener('theater-toggle-play', heard)
     }
+  })
+
+  it('collection tab: arrows skip, U undoes Archive, Delete is ignored', () => {
+    const args = baseArgs({
+      isPersonal: true,
+      personalTab: 'collection',
+      goNext: vi.fn(),
+      goPrev: vi.fn(),
+      undoLastAction: vi.fn(),
+      onClose: vi.fn(),
+    })
+    renderHook(() => useTheaterKeyboard(args))
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' })))
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' })))
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete' })))
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'u' })))
+    expect(args.goNext).toHaveBeenCalledTimes(1)
+    expect(args.goPrev).toHaveBeenCalledTimes(1)
+    expect(args.undoLastAction).toHaveBeenCalledTimes(1)
+    expect(args.onClose).not.toHaveBeenCalled()
   })
 
   it('other keys (goNext/goPrev/mute) are unaffected by isPlaybackHidden', () => {

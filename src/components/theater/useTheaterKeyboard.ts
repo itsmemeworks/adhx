@@ -1,15 +1,10 @@
 'use client'
 
 /**
- * Global keydown handling for TheaterShell (extracted verbatim — see
- * TheaterShell.tsx's "Keyboard nav" comment for the full rationale). Two
- * keymaps live here: the standard ↓/↑/j/k/←/→/space/m nav shared by
- * home/shared/collection modes and the collection theater's own Live tab, and the collection theater's
- * Collection tab's action-and-advance map (`personalKeyAction`, ported
- * verbatim from the deleted `CollectionTheater.tsx`'s `collectionKeyAction()`
- * — see docs/specs/unified-theater-collection.md §2). `personalKeyAction` and its
- * helpers are re-exported from `TheaterShell.tsx` so existing imports
- * (tests included) keep working unchanged.
+ * Global keydown handling for TheaterShell. One keymap: ↓/↑/j/k/←/→/space/m
+ * for every theater surface (Live, collection, playlist, shared). Collection
+ * adds U (undo Archive) via `personalKeyAction`. Escape closes the personal
+ * overlay. `personalKeyAction` is re-exported from TheaterShell for tests.
  */
 
 import { useEffect } from 'react'
@@ -31,30 +26,17 @@ function isPersonalTypingTarget(target: EventTarget | null | undefined): boolean
   return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA'
 }
 
-export type PersonalKeyAction = 'done' | 'later' | 'delete' | 'back' | 'undo' | 'close'
+export type PersonalKeyAction = 'undo' | 'close'
 
 /**
- * Pure key → action mapping for collection mode's Collection tab
- * (docs/specs/unified-theater-collection.md §2). Preserves the deleted
- * `CollectionTheater.tsx`'s map VERBATIM — ArrowRight=Done, ArrowLeft=Later,
- * ArrowDown/Backspace/Delete=Delete, U=Undo, Escape=Close — and adds
- * ArrowUp=Back (step to the previous item without touching its read/delete
- * state; distinct from `U`, which reverses the *last* action).
+ * Collection-tab extras on top of the Live keymap (arrows / space / m).
+ * Archive is a button, not a key — same transport as Live. U still undoes
+ * the last Archive; Escape closes the overlay.
  */
 export function personalKeyAction(e: PersonalKeyLike): PersonalKeyAction | null {
   if (e.metaKey || e.ctrlKey || e.altKey) return null
   if (isPersonalTypingTarget(e.target)) return null
   switch (e.key) {
-    case 'ArrowRight':
-      return 'done'
-    case 'ArrowLeft':
-      return 'later'
-    case 'ArrowDown':
-    case 'Backspace':
-    case 'Delete':
-      return 'delete'
-    case 'ArrowUp':
-      return 'back'
     case 'u':
     case 'U':
       return 'undo'
@@ -71,10 +53,6 @@ export interface UseTheaterKeyboardArgs {
   goNext: () => void
   goPrev: () => void
   setMuted: Dispatch<SetStateAction<boolean>>
-  archiveCurrent: () => void
-  deferCurrent: () => void
-  deleteCurrent: () => void
-  personalStepBack: () => void
   undoLastAction: () => void
   onClose?: () => void
   /**
@@ -102,10 +80,6 @@ export function useTheaterKeyboard({
   goNext,
   goPrev,
   setMuted,
-  archiveCurrent,
-  deferCurrent,
-  deleteCurrent,
-  personalStepBack,
   undoLastAction,
   onClose,
   isPlaybackHidden,
@@ -117,36 +91,21 @@ export function useTheaterKeyboard({
       if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return
       if (e.metaKey || e.ctrlKey || e.altKey) return
 
-      // Collection mode's Collection tab uses an entirely different keymap
-      // (action-and-advance, not pure navigation) — see `personalKeyAction()`.
-      // The Live tab keeps the standard ↓/↑/space/m nav below (it's the same
-      // live pulse feed home mode uses), and Escape always closes the
-      // overlay regardless of which collection tab is active.
+      // Collection tab uses the same ↓/↑/←/→/space/m nav as Live. U undoes
+      // Archive; Escape closes the overlay (also handled for the Live tab
+      // just below).
       if (isPersonal && personalTab === 'collection') {
         const action = personalKeyAction(e)
-        if (!action) return
-        e.preventDefault()
-        switch (action) {
-          case 'done':
-            archiveCurrent()
-            break
-          case 'later':
-            deferCurrent()
-            break
-          case 'delete':
-            deleteCurrent()
-            break
-          case 'back':
-            personalStepBack()
-            break
-          case 'undo':
-            undoLastAction()
-            break
-          case 'close':
-            onClose?.()
-            break
+        if (action === 'undo') {
+          e.preventDefault()
+          undoLastAction()
+          return
         }
-        return
+        if (action === 'close') {
+          e.preventDefault()
+          onClose?.()
+          return
+        }
       }
 
       if (isPersonal && e.key === 'Escape') {
@@ -189,17 +148,5 @@ export function useTheaterKeyboard({
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [
-    goNext,
-    goPrev,
-    isPersonal,
-    personalTab,
-    archiveCurrent,
-    deferCurrent,
-    deleteCurrent,
-    personalStepBack,
-    undoLastAction,
-    onClose,
-    isPlaybackHidden,
-  ])
+  }, [goNext, goPrev, isPersonal, personalTab, undoLastAction, onClose, isPlaybackHidden])
 }

@@ -10,6 +10,7 @@
 
 import { Bookmark, Check, Loader2 } from 'lucide-react'
 import type { SavePlaylistStatus } from './types'
+import { StageIconButton } from './stage-primitives'
 
 export interface SavePlaylistButtonProps {
   count: number
@@ -17,13 +18,55 @@ export interface SavePlaylistButtonProps {
   onSave: () => void
   /** Full button class string — callers own the visual style (both chromes pass their Save-outline style: clay border on glass). */
   className: string
+  /** Mobile action row: icon + aria-label only (no room for the pill label). */
+  iconOnly?: boolean
 }
 
-export function SavePlaylistButton({ count, status, onSave, className }: SavePlaylistButtonProps) {
+export function SavePlaylistButton({
+  count,
+  status,
+  onSave,
+  className,
+  iconOnly,
+}: SavePlaylistButtonProps) {
   // Saved state points at the LIBRARY (the grid), not `/` — the cloned posts
   // landed among the viewer's own saves, and `/` is the theater now. This is
   // deliberately not "playlist" wording: what they're being sent to is their
   // own collection of saved posts, not the playlist they just cloned.
+  if (iconOnly) {
+    if (status === 'saved') {
+      return (
+        <StageIconButton
+          href="/library"
+          aria-label="Saved · View in your library"
+          className={className}
+        >
+          <Check size={16} />
+        </StageIconButton>
+      )
+    }
+    return (
+      <StageIconButton
+        onClick={onSave}
+        disabled={status === 'saving'}
+        aria-label={
+          status === 'error'
+            ? 'Try again'
+            : status === 'saving'
+              ? 'Saving playlist'
+              : `Save playlist · ${count}`
+        }
+        className={className}
+      >
+        {status === 'saving' ? (
+          <Loader2 size={16} className="animate-spin" />
+        ) : (
+          <Bookmark size={16} />
+        )}
+      </StageIconButton>
+    )
+  }
+
   if (status === 'saved') {
     return (
       <a href="/library" className={className}>

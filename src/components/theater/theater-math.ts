@@ -42,6 +42,23 @@ export function personalAdvance(index: number): number {
   return index + 1
 }
 
+/**
+ * Pure: the collection queue index after a video ends. Later/Archive still
+ * use `personalAdvance` (a real decision can land on All Clear). Playback
+ * wrapping is only for the repeat control: 'one' stays put, 'all' wraps to
+ * 0 at the end, 'off' walks past the last item so All Clear can render.
+ */
+export function personalAdvanceOnEndedIndex(
+  index: number,
+  length: number,
+  repeatMode: RepeatMode,
+): number {
+  if (repeatMode === 'one' || length <= 0) return index
+  const next = index + 1
+  if (next >= length) return repeatMode === 'all' ? 0 : next
+  return next
+}
+
 /** Pure: the collection queue index after ArrowUp ("Back") — steps to the
  * previous item without going below the start of the queue. */
 export function personalStepBackIndex(index: number): number {

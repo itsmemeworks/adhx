@@ -26,7 +26,7 @@ export function theaterItemKey(item: Pick<TheaterItem, 'platform' | 'bookmarkId'
  * theater), or the authed Collection's collection queue (`unified-theater-
  * collection.md` §2). Collection mode loops (advancing past the last item wraps
  * to the first, and vice versa) and never enters the end-of-feed waiting
- * stage. Collection mode is an overlay over `/` with its own Done/Later/Delete
+ * stage. Collection mode is an overlay over `/` with its own Archive
  * queue (never live, never loops, never rewrites the URL) plus a
  * Collection ↔ Live sub-tab that blends in the same live pulse feed home
  * mode uses.
@@ -114,12 +114,8 @@ export type SavePlaylistStatus = 'idle' | 'saving' | 'saved' | 'error'
 export interface TheaterPersonalChrome {
   tab: PersonalTab
   onTabChange: (tab: PersonalTab) => void
-  /** Done: mark read + advance (Collection tab only). */
+  /** Archive: mark read and drop the post from the collection queue. */
   onDone: () => void
-  /** Later: advance without changing read state (Collection tab only). */
-  onLater: () => void
-  /** Delete: 5s undo window, then DELETE (Collection tab only). */
-  onDelete: () => void
   /** Open the TagQuickPicker for the current item (Collection tab only). */
   onTag: () => void
   /** Current Collection-tab item's tags (unified-theater-collection.md §B) — display-only chip rendering, kept live by TheaterShell's `bookmark-tags-changed` listener. Undefined/empty renders nothing. */

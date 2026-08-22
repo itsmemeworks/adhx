@@ -78,7 +78,7 @@ describe('WelcomeClient', () => {
     expect(screen.getByRole('button', { name: /Claim @popular/ })).toBeDisabled()
   })
 
-  it('claims the typed username, then shows the starter-collections step, and redirects to returnTo on Continue', async () => {
+  it('claims the typed username, then shows the starter-collections step, and Continue goes to /collection', async () => {
     claimResponse = jsonResponse({ ok: true, username: 'freshname' })
     render(<WelcomeClient suggestedUsername="j0hndoe" returnTo="/feed" />)
     const input = screen.getByLabelText('Username') as HTMLInputElement
@@ -99,7 +99,7 @@ describe('WelcomeClient', () => {
     expect(assignSpy).not.toHaveBeenCalled()
 
     fireEvent.click(screen.getByRole('button', { name: 'Continue to your collection' }))
-    await waitFor(() => expect(assignSpy).toHaveBeenCalledWith('/feed'))
+    await waitFor(() => expect(assignSpy).toHaveBeenCalledWith('/collection'))
   })
 
   it('"Keep @suggestion" submits the prefilled suggestion, then Skip redirects to returnTo', async () => {

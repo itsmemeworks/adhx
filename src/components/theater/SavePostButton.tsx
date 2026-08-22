@@ -13,10 +13,13 @@ const ownershipCache = new Map<string, boolean>()
 export function SavePostButton({
   current,
   className,
+  iconOnly,
 }: {
   current: TheaterItem
   /** Full button class string — the caller owns the visual style. */
   className: string
+  /** Mobile action row: icon + aria-label only. */
+  iconOnly?: boolean
 }) {
   const [status, setStatus] = useState<SaveStatus>('idle')
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -89,21 +92,26 @@ export function SavePostButton({
     }
   }
 
+  const visibleLabel = status === 'saved' ? 'Saved' : status === 'error' ? 'Try again' : 'Save'
+  const icon =
+    status === 'saving' ? (
+      <Loader2 size={iconOnly ? 16 : 14} className="animate-spin" />
+    ) : status === 'saved' ? (
+      <Check size={iconOnly ? 16 : 14} />
+    ) : (
+      <Bookmark size={iconOnly ? 16 : 14} />
+    )
+
   return (
     <button
       type="button"
       onClick={() => void handleSave()}
       disabled={status === 'saving' || status === 'saved'}
       className={className}
+      aria-label={iconOnly ? (status === 'saving' ? 'Saving' : visibleLabel) : undefined}
     >
-      {status === 'saving' ? (
-        <Loader2 size={14} className="animate-spin" />
-      ) : status === 'saved' ? (
-        <Check size={14} />
-      ) : (
-        <Bookmark size={14} />
-      )}
-      <span>{status === 'saved' ? 'Saved' : status === 'error' ? 'Try again' : 'Save'}</span>
+      {icon}
+      {!iconOnly && <span>{visibleLabel}</span>}
     </button>
   )
 }
@@ -118,18 +126,25 @@ export function PersonalLiveSaveButton({
   collection,
   className,
   iconSize = 14,
+  iconOnly,
 }: {
   current: TheaterItem
   collection: TheaterPersonalChrome
   className: string
   iconSize?: number
+  iconOnly?: boolean
 }) {
   const saved = collection.savedKeys.has(theaterItemKey(current))
   if (saved) return null
   return (
-    <button type="button" onClick={() => collection.onSave(current)} className={className}>
+    <button
+      type="button"
+      onClick={() => collection.onSave(current)}
+      className={className}
+      aria-label={iconOnly ? 'Save' : undefined}
+    >
       <Bookmark size={iconSize} />
-      <span>Save</span>
+      {!iconOnly && <span>Save</span>}
     </button>
   )
 }

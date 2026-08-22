@@ -7,6 +7,7 @@ import {
   IosShortcutHow,
   IosShortcutInstallButton,
   IosShortcutNudge,
+  IosShortcutSettingsCard,
   SHORTCUT_DISMISS_KEY,
 } from '@/components/IosShortcutInstall'
 import { X_ONLY_SHORTCUT_URL } from '@/lib/share/ios'
@@ -14,6 +15,7 @@ import { X_ONLY_SHORTCUT_URL } from '@/lib/share/ios'
 let mockIos = true
 vi.mock('@/lib/platform', () => ({
   isIOSDevice: () => mockIos,
+  getPlatformType: () => (mockIos ? 'ios' : 'desktop'),
 }))
 
 beforeEach(() => {
@@ -27,6 +29,30 @@ describe('IosShortcutInstallButton', () => {
     const link = screen.getByRole('link', { name: /add to share sheet/i })
     expect(link).toHaveAttribute('href', X_ONLY_SHORTCUT_URL)
     expect(link).toHaveAttribute('target', '_blank')
+  })
+
+  it('outline is a clay border, not a filled clay button', () => {
+    render(<IosShortcutInstallButton variant="outline">Add shortcut</IosShortcutInstallButton>)
+    const link = screen.getByRole('link', { name: /add shortcut/i })
+    expect(link.className).toContain('border-clay')
+    expect(link.className).not.toContain('bg-clay-grad')
+  })
+})
+
+describe('IosShortcutSettingsCard', () => {
+  it('shows the iCloud shortcut on iOS', () => {
+    render(<IosShortcutSettingsCard />)
+    expect(screen.getByText('iOS shortcut')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /add to share sheet/i })).toHaveAttribute(
+      'href',
+      X_ONLY_SHORTCUT_URL,
+    )
+  })
+
+  it('stays hidden on non-iOS', () => {
+    mockIos = false
+    const { container } = render(<IosShortcutSettingsCard />)
+    expect(container).toBeEmptyDOMElement()
   })
 })
 

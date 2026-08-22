@@ -73,7 +73,7 @@ describe('resolveTheaterChrome', () => {
     expect(chrome.chromeCurrent?.bookmarkId).toBe('mine-1')
     expect(chrome.chromeItems[0]?.bookmarkId).toBe('mine-1')
     expect(chrome.chromeNewCount).toBe(0)
-    expect(chrome.queueTotal).toBeUndefined()
+    expect(chrome.queueTotal).toBe(1)
     expect(chrome.chromeCanPrev).toBe(true)
   })
 })

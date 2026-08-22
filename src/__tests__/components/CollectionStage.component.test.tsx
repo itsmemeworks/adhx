@@ -16,8 +16,12 @@ import { CollectionStage } from '@/components/theater/CollectionStage'
 import type { FeedItem } from '@/components/feed/types'
 
 vi.mock('@/components/theater/StageVideo', () => ({
-  StageVideo: (props: { onEnded?: () => void }) => (
-    <div data-testid="stage-video" data-has-onended={String(!!props.onEnded)} />
+  StageVideo: (props: { onEnded?: () => void; repeat?: boolean }) => (
+    <div
+      data-testid="stage-video"
+      data-has-onended={String(!!props.onEnded)}
+      data-repeat={String(!!props.repeat)}
+    />
   ),
 }))
 // The probe + auto-advance guards live in `useInstagramStage` now, so that's
@@ -34,12 +38,22 @@ vi.mock('@/components/theater/StageInstagram', () => ({
   StageInstagram: () => <div data-testid="stage-instagram" />,
 }))
 vi.mock('@/components/theater/StageYouTube', () => ({
-  StageYouTube: (props: { onEnded?: () => void }) => (
-    <div data-testid="stage-youtube" data-has-onended={String(!!props.onEnded)} />
+  StageYouTube: (props: { onEnded?: () => void; repeat?: boolean }) => (
+    <div
+      data-testid="stage-youtube"
+      data-has-onended={String(!!props.onEnded)}
+      data-repeat={String(!!props.repeat)}
+    />
   ),
 }))
 vi.mock('@/components/theater/StageText', () => ({
-  StageText: () => <div data-testid="stage-text" />,
+  StageText: (props: { photo?: boolean; photoCaption?: boolean }) => (
+    <div
+      data-testid="stage-text"
+      data-photo={String(!!props.photo)}
+      data-photo-caption={String(props.photoCaption)}
+    />
+  ),
 }))
 vi.mock('@/components/theater/StageArticle', () => ({
   StageArticle: () => <div data-testid="stage-article" />,
@@ -125,6 +139,35 @@ describe('CollectionStage: onEnded wiring to the video-capable stages', () => {
       />,
     )
     expect(getByTestId('stage-video').dataset.hasOnended).toBe('false')
+  })
+
+  it('forwards repeat to StageVideo so repeat-one can loop the player', () => {
+    const { getByTestId } = render(
+      <CollectionStage
+        feedItem={feedItem({ media: [{ mediaType: 'video' }] as FeedItem['media'] })}
+        muted
+        onRequestUnmute={vi.fn()}
+        onEnded={vi.fn()}
+        repeat
+      />,
+    )
+    expect(getByTestId('stage-video').dataset.repeat).toBe('true')
+  })
+
+  it('a photo item hides the stage caption — the chrome already paints it', () => {
+    const { getByTestId } = render(
+      <CollectionStage
+        feedItem={feedItem({
+          media: [
+            { mediaType: 'photo', thumbnailUrl: 'https://example.com/p.jpg' },
+          ] as FeedItem['media'],
+        })}
+        muted
+        onRequestUnmute={vi.fn()}
+      />,
+    )
+    expect(getByTestId('stage-text').dataset.photo).toBe('true')
+    expect(getByTestId('stage-text').dataset.photoCaption).toBe('false')
   })
 
   it('a text-only item ignores onEnded (StageText has no such affordance) and still renders', () => {

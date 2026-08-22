@@ -116,16 +116,16 @@ function peekCentreText(): string {
   return (labelled[0].textContent ?? '').trim()
 }
 
-// Round 8 (owner: the solid clay-grad Save fill was "too much") — Save now
-// uses PILL_SAVE (a clay border on the same glass background every other
-// pill uses), never the old solid `bg-clay-grad` fill. Download stays on
-// plain PILL_GLASS (`border-white/25`).
+// Mobile action row is icon-only. Save keeps a clay border on the same
+// 44px glass circle as Share/Open; Download stays `border-white/25`.
 describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
   it('sign-in prompt Save is outlined with a clay border, never the old solid fill', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
-    const saveBtn = screen.getByText('Save').closest('button')!
+    const saveBtn = screen.getByRole('button', { name: 'Save' })
     expect(saveBtn.className).toContain('border-clay')
     expect(saveBtn.className).not.toContain('bg-clay-grad')
+    expect(saveBtn).not.toHaveTextContent('Save')
+    expect(saveBtn.parentElement?.className).toContain('justify-end')
   })
 
   it("Download is secondary (glass, border-white/25), distinct from Save's clay border", () => {
@@ -137,11 +137,12 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
       send: vi.fn(),
     })
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
-    const downloadBtn = screen.getByText('Download').closest('button')!
+    const downloadBtn = screen.getByRole('button', { name: 'Download' })
     expect(downloadBtn.className).not.toContain('border-clay')
     expect(downloadBtn.className).toContain('border-white/25')
+    expect(downloadBtn).not.toHaveTextContent('Download')
 
-    const saveBtn = screen.getByText('Save').closest('button')!
+    const saveBtn = screen.getByRole('button', { name: 'Save' })
     expect(saveBtn.className).toContain('border-clay')
   })
 
@@ -157,8 +158,6 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
       tab: 'live',
       onTabChange: vi.fn(),
       onDone: vi.fn(),
-      onLater: vi.fn(),
-      onDelete: vi.fn(),
       onTag: vi.fn(),
       onSave: vi.fn(),
       onLiveTag: vi.fn(),
@@ -168,11 +167,46 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     }
     render(<TheaterMobileChrome {...base} current={videoItem()} collection={collection} />)
 
-    const saveBtn = screen.getByText('Save').closest('button')!
+    const saveBtn = screen.getByRole('button', { name: 'Save' })
     expect(saveBtn.className).toContain('border-clay')
+    expect(saveBtn).not.toHaveTextContent('Save')
 
-    const downloadBtn = screen.getByText('Download').closest('button')!
+    const downloadBtn = screen.getByRole('button', { name: 'Download' })
     expect(downloadBtn.className).not.toContain('border-clay')
+  })
+
+  it('collection tab uses Live actions plus Archive — no Later or Delete', () => {
+    mockUseSendFile.mockReturnValue({
+      supported: true,
+      ready: true,
+      sending: false,
+      mode: 'download' as const,
+      send: vi.fn(),
+    })
+    const collection: TheaterPersonalChrome = {
+      tab: 'collection',
+      onTabChange: vi.fn(),
+      onDone: vi.fn(),
+      onTag: vi.fn(),
+      onSave: vi.fn(),
+      onLiveTag: vi.fn(),
+      savedKeys: new Set<string>(),
+      remaining: 3,
+      onClose: vi.fn(),
+    }
+    render(<TheaterMobileChrome {...base} current={videoItem()} collection={collection} />)
+    expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Share link' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Tag' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open on X' })).toBeInTheDocument()
+    const archive = screen.getByRole('button', { name: 'Archive' })
+    expect(archive).toBeInTheDocument()
+    expect(archive.className).toContain('rounded-full')
+    expect(archive.className).not.toContain('flex-col')
+    expect(archive.className).not.toContain('bg-done')
+    expect(screen.queryByRole('button', { name: 'Later' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
   })
 
   /**
@@ -188,8 +222,6 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
       tab: 'live',
       onTabChange,
       onDone: vi.fn(),
-      onLater: vi.fn(),
-      onDelete: vi.fn(),
       onTag: vi.fn(),
       onSave: vi.fn(),
       onLiveTag: vi.fn(),
@@ -218,8 +250,6 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
       tab: 'collection',
       onTabChange: vi.fn(),
       onDone: vi.fn(),
-      onLater: vi.fn(),
-      onDelete: vi.fn(),
       onTag: vi.fn(),
       onSave: vi.fn(),
       onLiveTag: vi.fn(),
@@ -252,8 +282,6 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
       tab: 'collection',
       onTabChange: vi.fn(),
       onDone: vi.fn(),
-      onLater: vi.fn(),
-      onDelete: vi.fn(),
       onTag: vi.fn(),
       onSave: vi.fn(),
       onLiveTag: vi.fn(),
@@ -439,10 +467,11 @@ describe('TheaterMobileChrome: collection mode brand logo is always home', () =>
         isPlaylistOwner={false}
       />,
     )
-    expect(screen.getByText('Save playlist · 12')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save playlist · 12' })).toBeInTheDocument()
+    expect(screen.queryByText('Save playlist · 12')).not.toBeInTheDocument()
   })
 
-  it('the Save-playlist CTA carries the clay-border outline (PILL_SAVE), not the old solid clay-grad fill', () => {
+  it('the Save-playlist CTA carries the clay-border outline, not the old solid clay-grad fill', () => {
     render(
       <TheaterMobileChrome
         {...base}
@@ -451,9 +480,63 @@ describe('TheaterMobileChrome: collection mode brand logo is always home', () =>
         isPlaylistOwner={false}
       />,
     )
-    const savePlaylistBtn = screen.getByText('Save playlist · 12').closest('button')!
+    const savePlaylistBtn = screen.getByRole('button', { name: 'Save playlist · 12' })
     expect(savePlaylistBtn.className).toContain('border-clay')
     expect(savePlaylistBtn.className).not.toContain('bg-clay-grad')
+  })
+
+  it('keeps Download next to the Save-playlist CTA (same row as desktop)', () => {
+    mockUseSendFile.mockReturnValue({
+      supported: true,
+      ready: true,
+      sending: false,
+      mode: 'download' as const,
+      send: vi.fn(),
+    })
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={videoItem()}
+        playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        isPlaylistOwner={false}
+      />,
+    )
+    expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save playlist · 12' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Share link' })).toBeInTheDocument()
+  })
+
+  it('text posts on a playlist get Copy next to Save playlist', () => {
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={textItem()}
+        playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        isPlaylistOwner={false}
+      />,
+    )
+    expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save playlist · 12' })).toBeInTheDocument()
+  })
+
+  it('owner playlist: Download stays next to Manage playlist', () => {
+    mockUseSendFile.mockReturnValue({
+      supported: true,
+      ready: true,
+      sending: false,
+      mode: 'download' as const,
+      send: vi.fn(),
+    })
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={videoItem()}
+        playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        isPlaylistOwner
+      />,
+    )
+    expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Manage playlist' })).toBeInTheDocument()
   })
 })
 
@@ -502,8 +585,9 @@ describe('TheaterMobileChrome: shared-post-repeat cue', () => {
  * Owner follow-up: the peek bar's center label used to always read "Up
  * next" (or "N new") — now it shows the viewer's actual position in the
  * queue ("3 / 17"), with the fresh-arrival count folded in as a suffix.
- * Collection ("#tag · count") and repeatCurrent ("On repeat") stay
- * unchanged and still take priority. Falls back to the old "N new"/"Up
+ * Playlist tags stay out of this slot (15-char names collide with the
+ * transport buttons); they live in the expanded sheet. repeatCurrent
+ * ("On repeat") still takes priority. Falls back to the old "N new"/"Up
  * next" copy only when the current key doesn't resolve into `items`.
  */
 describe('TheaterMobileChrome: queue position label', () => {
@@ -582,7 +666,7 @@ describe('TheaterMobileChrome: queue position label', () => {
     expect(screen.getByText('Up next')).toBeInTheDocument()
   })
 
-  it('collection mode still shows the tag/count label, not the queue position', () => {
+  it('playlist mode keeps the queue position in the peek bar; the tag lives in the expanded sheet', () => {
     const items = buildItems(5)
     render(
       <TheaterMobileChrome
@@ -593,8 +677,10 @@ describe('TheaterMobileChrome: queue position label', () => {
         playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
       />,
     )
-    expect(screen.getByText('#claude-code · 12')).toBeInTheDocument()
-    expect(screen.queryByText('2 / 5')).not.toBeInTheDocument()
+    expect(peekCentreText()).toBe('2 / 5')
+    expect(screen.queryByText('#claude-code · 12')).not.toBeInTheDocument()
+    expect(screen.getAllByText('#claude-code').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText('12 posts · @weedauwl')).toBeInTheDocument()
   })
 
   it('repeatCurrent still shows "On repeat", not the queue position', () => {
@@ -630,8 +716,6 @@ describe('TheaterMobileChrome: theaterActive prop wiring', () => {
       tab: 'live',
       onTabChange: vi.fn(),
       onDone: vi.fn(),
-      onLater: vi.fn(),
-      onDelete: vi.fn(),
       onTag: vi.fn(),
       onSave: vi.fn(),
       onLiveTag: vi.fn(),
@@ -679,8 +763,6 @@ function collectionCollection(
     tab: 'collection',
     onTabChange: vi.fn(),
     onDone: vi.fn(),
-    onLater: vi.fn(),
-    onDelete: vi.fn(),
     onTag: vi.fn(),
     onSave: vi.fn(),
     onLiveTag: vi.fn(),
@@ -915,17 +997,18 @@ describe('TheaterMobileChrome: Copy button for text-like posts', () => {
     })
   })
 
-  it('shows a Copy pill (not Download) for a text-like post with no sendable file', () => {
+  it('shows a Copy icon (not Download) for a text-like post with no sendable file', () => {
     render(<TheaterMobileChrome {...base} current={textItem()} />)
-    expect(screen.getByText('Copy')).toBeInTheDocument()
-    expect(screen.queryByText('Download')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Download' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Copy')).not.toBeInTheDocument()
   })
 
-  it('copies the post\'s full text and flashes "Copied" on tap', async () => {
+  it("copies the post's full text and flashes Copied on tap", async () => {
     render(<TheaterMobileChrome {...base} current={textItem({ text: 'the full post body' })} />)
-    fireEvent.click(screen.getByText('Copy'))
+    fireEvent.click(screen.getByRole('button', { name: 'Copy' }))
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('the full post body'))
-    expect(await screen.findByText('Copied')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument()
   })
 
   it('renders no Copy pill for a text-like post with empty text', () => {

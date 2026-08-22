@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, fireEvent, act } from '@testing-library/react'
-import { StageYouTube } from '@/components/theater/StageYouTube'
+import { StageYouTube, readYtCurrentTime, readYtDuration } from '@/components/theater/StageYouTube'
 import { resetYtDebugLines, YtDebugOverlay } from '@/components/theater/YtDebugOverlay'
 import type { TheaterItem } from '@/components/theater/types'
 
@@ -101,7 +101,10 @@ describe('StageYouTube', () => {
 
     const [payload, targetOrigin] = postMessage.mock.calls[0]
     expect(targetOrigin).toBe(YT_ORIGIN)
-    expect(JSON.parse(payload)).toMatchObject({ event: 'listening' })
+    expect(JSON.parse(payload)).toMatchObject({
+      event: 'listening',
+      channel: 'widget',
+    })
   })
 
   // Round 2: iOS still never started a Short even with `autoplay=1&mute=1`
@@ -187,15 +190,13 @@ describe('StageYouTube', () => {
     const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
     expect(funcs).not.toContain('mute')
     expect(funcs).not.toContain('playVideo')
-    // Round 8: the progress-starvation poll DOES fire `listening` handshakes
-    // here — this test never sends a currentTime-bearing payload, so every
-    // post-state-1 poll tick (every 750ms, once >1500ms since the last
-    // time signal) re-asks for an `initialDelivery`. That's the intended
-    // behavior this round adds, not a regression of this test's original
-    // intent (which was only ever about the mute/playVideo ladder above).
-    const events = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).event)
-    expect(events.every((e) => e === 'listening')).toBe(true)
-    expect(events.length).toBeGreaterThan(0)
+    // Round 8/9: the progress-starvation poll fires `listening` plus
+    // getCurrentTime/getDuration once starved. That's the intended pull,
+    // not a regression of this test's original mute/playVideo ladder.
+    const parsed = postMessage.mock.calls.map(([payload]) => JSON.parse(payload))
+    expect(parsed.some((p) => p.event === 'listening')).toBe(true)
+    expect(parsed.every((p) => p.event === 'listening' || p.event === 'command')).toBe(true)
+    expect(parsed.length).toBeGreaterThan(0)
   })
 
   it('cleans up the retry ladder on unmount (no post-unmount postMessage calls)', () => {
@@ -1100,6 +1101,24 @@ describe('StageYouTube', () => {
       }
     }
 
+    it('parses apiInfoDelivery the same as infoDelivery', () => {
+      const { progress, stop } = captureProgressEvents()
+      const { container } = render(
+        <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+
+      postFromPlayer(fakeWindow, {
+        event: 'apiInfoDelivery',
+        info: { playerState: 1, currentTime: 4, duration: 16 },
+      })
+
+      expect(progress).toEqual([0.25])
+      stop()
+    })
+
     it('dispatches theater-video-progress with currentTime/duration from infoDelivery', () => {
       const { progress, stop } = captureProgressEvents()
       const { container } = render(
@@ -1292,6 +1311,161 @@ describe('StageYouTube', () => {
       const calls = postMessage.mock.calls.map(([payload]) => JSON.parse(payload))
       expect(calls.some((c) => c.event === 'listening')).toBe(false)
     })
+  })
+
+  // Round 9: YouTube withholds currentTime until an in-iframe gesture.
+  // Clock the clay bar from duration + play-start; snap if a real time
+  // (or mediaReferenceTime) arrives; pull getCurrentTime/getDuration while starved.
+  describe('round 9: interpolate progress while currentTime is starved', () => {
+    function captureProgressEvents() {
+      const progress: number[] = []
+      const handler = (e: Event) =>
+        progress.push((e as CustomEvent<{ progress: number }>).detail.progress)
+      window.addEventListener('theater-video-progress', handler)
+      return {
+        progress,
+        stop: () => window.removeEventListener('theater-video-progress', handler),
+      }
+    }
+
+    it('uses elapsed play time when duration arrives after state 1', () => {
+      const { progress, stop } = captureProgressEvents()
+      const { container } = render(
+        <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+      postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
+      act(() => {
+        vi.advanceTimersByTime(3_000)
+      })
+      postFromPlayer(fakeWindow, {
+        event: 'infoDelivery',
+        info: { playerState: 1, duration: 20 },
+      })
+      expect(progress.some((p) => p > 0.1 && p < 0.25)).toBe(true)
+      stop()
+    })
+
+    it('fills from duration + wall clock when heartbeats have no currentTime', () => {
+      const { progress, stop } = captureProgressEvents()
+      const { container } = render(
+        <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+      postFromPlayer(fakeWindow, {
+        event: 'infoDelivery',
+        info: { playerState: 1, duration: 20 },
+      })
+
+      act(() => {
+        vi.advanceTimersByTime(4_000)
+      })
+      expect(progress.some((p) => p > 0.15 && p < 0.3)).toBe(true)
+      stop()
+    })
+
+    it('treats mediaReferenceTime as currentTime when currentTime is omitted', () => {
+      const { progress, stop } = captureProgressEvents()
+      const { container } = render(
+        <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+      postFromPlayer(fakeWindow, {
+        event: 'infoDelivery',
+        info: { playerState: 1, mediaReferenceTime: 8, duration: 20 },
+      })
+      expect(progress).toEqual([0.4])
+      stop()
+    })
+
+    it('snaps the interpolated clock when a real currentTime later arrives', () => {
+      const { progress, stop } = captureProgressEvents()
+      const { container } = render(
+        <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+      postFromPlayer(fakeWindow, {
+        event: 'infoDelivery',
+        info: { playerState: 1, duration: 20 },
+      })
+      act(() => {
+        vi.advanceTimersByTime(2_000)
+      })
+      postFromPlayer(fakeWindow, {
+        event: 'infoDelivery',
+        info: { playerState: 1, currentTime: 12, duration: 20 },
+      })
+      expect(progress.at(-1)).toBe(0.6)
+      stop()
+    })
+
+    it('freezes the bar on pause', () => {
+      const { progress, stop } = captureProgressEvents()
+      const { container } = render(
+        <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+      postFromPlayer(fakeWindow, {
+        event: 'infoDelivery',
+        info: { playerState: 1, duration: 20 },
+      })
+      act(() => {
+        vi.advanceTimersByTime(2_000)
+      })
+      const beforePause = progress.at(-1) ?? 0
+      postFromPlayer(fakeWindow, { event: 'onStateChange', info: 2 })
+      const atPause = progress.at(-1) ?? 0
+      act(() => {
+        vi.advanceTimersByTime(3_000)
+      })
+      expect(progress.at(-1)).toBe(atPause)
+      expect(beforePause).toBeGreaterThan(0)
+      stop()
+    })
+
+    it('pulls getCurrentTime and getDuration once starved', () => {
+      const { container } = render(
+        <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { postMessage, fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+      postFromPlayer(fakeWindow, { event: 'onReady' })
+      postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
+      postMessage.mockClear()
+
+      act(() => {
+        vi.advanceTimersByTime(2_300)
+      })
+      const calls = postMessage.mock.calls.map(([payload]) => JSON.parse(payload))
+      expect(calls.some((c) => c.event === 'listening' && c.channel === 'widget')).toBe(true)
+      expect(calls.some((c) => c.func === 'getCurrentTime')).toBe(true)
+      expect(calls.some((c) => c.func === 'getDuration')).toBe(true)
+    })
+  })
+})
+
+describe('readYtCurrentTime / readYtDuration', () => {
+  it('prefers currentTime, falls back to mediaReferenceTime', () => {
+    expect(readYtCurrentTime({ currentTime: 3, mediaReferenceTime: 9 })).toBe(3)
+    expect(readYtCurrentTime({ mediaReferenceTime: 9 })).toBe(9)
+    expect(readYtCurrentTime({})).toBe(null)
+  })
+
+  it('rejects missing or zero duration', () => {
+    expect(readYtDuration({ duration: 20 })).toBe(20)
+    expect(readYtDuration({ duration: 0 })).toBe(null)
+    expect(readYtDuration({})).toBe(null)
   })
 })
 
