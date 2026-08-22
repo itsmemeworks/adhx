@@ -323,6 +323,19 @@ export function extractUrlsFromFacets(tweet: FxTwitterResponse['tweet']): Array<
 }
 
 /**
+ * FxTwitter request URL. Override the host with `FXTWITTER_API_BASE` (e2e
+ * mock); production leaves it unset and talks to api.fxtwitter.com.
+ */
+export function buildFxTwitterUrl(author: string, tweetId: string): URL {
+  const raw = process.env.FXTWITTER_API_BASE?.trim()
+  const fxUrl = new URL(raw && raw.length > 0 ? raw : 'https://api.fxtwitter.com')
+  fxUrl.pathname = `/${encodeURIComponent(author)}/status/${encodeURIComponent(tweetId)}`
+  fxUrl.search = ''
+  fxUrl.hash = ''
+  return fxUrl
+}
+
+/**
  * Fetch tweet data from FxTwitter API
  * Returns author profile image and external link preview data
  */
@@ -351,8 +364,7 @@ export async function fetchTweetData(
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), opts.timeoutMs ?? 5000)
 
-    const fxUrl = new URL('https://api.fxtwitter.com')
-    fxUrl.pathname = `/${encodeURIComponent(author)}/status/${encodeURIComponent(tweetId)}`
+    const fxUrl = buildFxTwitterUrl(author, tweetId)
 
     const response = await fetch(fxUrl.toString(), {
       headers: {

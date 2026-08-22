@@ -83,26 +83,33 @@ describe('API: /api/bookmarks/[id]/read', () => {
       expect(response.status).toBe(200)
       const data = await response.json()
       expect(data.success).toBe(true)
-      expect(data.isRead).toBe(true)
-      expect(data.readAt).toBeDefined()
+      expect(data.isArchived).toBe(true)
+      expect(data.archivedAt).toBeDefined()
 
       // Verify in database
       const [status] = await testInstance.db
         .select()
-        .from(schema.readStatus)
+        .from(schema.archivedPosts)
         .where(
-          and(eq(schema.readStatus.userId, USER_A), eq(schema.readStatus.bookmarkId, 'tweet-1')),
+          and(
+            eq(schema.archivedPosts.userId, USER_A),
+            eq(schema.archivedPosts.bookmarkId, 'tweet-1'),
+          ),
         )
 
       expect(status).toBeDefined()
+
+      // Archive is private — a Done in My Collection must not write a public pulse.
+      const pulse = await testInstance.db.select().from(schema.activity)
+      expect(pulse).toHaveLength(0)
     })
 
     it('returns existing read status if already read', async () => {
       const existingReadAt = '2024-01-15T10:00:00Z'
-      await testInstance.db.insert(schema.readStatus).values({
+      await testInstance.db.insert(schema.archivedPosts).values({
         userId: USER_A,
         bookmarkId: 'tweet-1',
-        readAt: existingReadAt,
+        archivedAt: existingReadAt,
       })
 
       const { POST } = await import('@/app/api/bookmarks/[id]/read/route')
@@ -112,7 +119,7 @@ describe('API: /api/bookmarks/[id]/read', () => {
 
       expect(response.status).toBe(200)
       const data = await response.json()
-      expect(data.readAt).toBe(existingReadAt)
+      expect(data.archivedAt).toBe(existingReadAt)
     })
 
     it("does not mark another user's bookmark as read", async () => {
@@ -130,10 +137,10 @@ describe('API: /api/bookmarks/[id]/read', () => {
 
   describe('DELETE /api/bookmarks/[id]/read', () => {
     beforeEach(async () => {
-      await testInstance.db.insert(schema.readStatus).values({
+      await testInstance.db.insert(schema.archivedPosts).values({
         userId: USER_A,
         bookmarkId: 'tweet-1',
-        readAt: new Date().toISOString(),
+        archivedAt: new Date().toISOString(),
       })
     })
 
@@ -157,15 +164,18 @@ describe('API: /api/bookmarks/[id]/read', () => {
       expect(response.status).toBe(200)
       const data = await response.json()
       expect(data.success).toBe(true)
-      expect(data.isRead).toBe(false)
-      expect(data.readAt).toBeNull()
+      expect(data.isArchived).toBe(false)
+      expect(data.archivedAt).toBeNull()
 
       // Verify deleted from database
       const result = await testInstance.db
         .select()
-        .from(schema.readStatus)
+        .from(schema.archivedPosts)
         .where(
-          and(eq(schema.readStatus.userId, USER_A), eq(schema.readStatus.bookmarkId, 'tweet-1')),
+          and(
+            eq(schema.archivedPosts.userId, USER_A),
+            eq(schema.archivedPosts.bookmarkId, 'tweet-1'),
+          ),
         )
 
       expect(result).toHaveLength(0)
@@ -174,10 +184,10 @@ describe('API: /api/bookmarks/[id]/read', () => {
     it("does not affect another user's read status", async () => {
       // Create User B's bookmark and read status
       await testInstance.db.insert(schema.bookmarks).values(createTestBookmark(USER_B, 'tweet-1'))
-      await testInstance.db.insert(schema.readStatus).values({
+      await testInstance.db.insert(schema.archivedPosts).values({
         userId: USER_B,
         bookmarkId: 'tweet-1',
-        readAt: new Date().toISOString(),
+        archivedAt: new Date().toISOString(),
       })
 
       // User A marks their copy as unread
@@ -189,8 +199,8 @@ describe('API: /api/bookmarks/[id]/read', () => {
       // User B's read status should still exist
       const userBStatus = await testInstance.db
         .select()
-        .from(schema.readStatus)
-        .where(eq(schema.readStatus.userId, USER_B))
+        .from(schema.archivedPosts)
+        .where(eq(schema.archivedPosts.userId, USER_B))
 
       expect(userBStatus).toHaveLength(1)
     })

@@ -4,19 +4,19 @@
  * Global keydown handling for TheaterShell (extracted verbatim — see
  * TheaterShell.tsx's "Keyboard nav" comment for the full rationale). Two
  * keymaps live here: the standard ↓/↑/j/k/←/→/space/m nav shared by
- * home/shared/collection modes and triage's own Live tab, and triage's
- * Collection tab's action-and-advance map (`triageKeyAction`, ported
+ * home/shared/collection modes and the collection theater's own Live tab, and the collection theater's
+ * Collection tab's action-and-advance map (`personalKeyAction`, ported
  * verbatim from the deleted `CollectionTheater.tsx`'s `collectionKeyAction()`
- * — see docs/specs/unified-theater-triage.md §2). `triageKeyAction` and its
+ * — see docs/specs/unified-theater-collection.md §2). `personalKeyAction` and its
  * helpers are re-exported from `TheaterShell.tsx` so existing imports
  * (tests included) keep working unchanged.
  */
 
 import { useEffect } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
-import type { TriageTab } from './types'
+import type { PersonalTab } from './types'
 
-export interface TriageKeyLike {
+export interface PersonalKeyLike {
   key: string
   metaKey?: boolean
   ctrlKey?: boolean
@@ -24,26 +24,26 @@ export interface TriageKeyLike {
   target?: EventTarget | null
 }
 
-function isTriageTypingTarget(target: EventTarget | null | undefined): boolean {
+function isPersonalTypingTarget(target: EventTarget | null | undefined): boolean {
   if (!target || typeof HTMLElement === 'undefined') return false
   if (!(target instanceof HTMLElement)) return false
   if (target.isContentEditable) return true
   return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA'
 }
 
-export type TriageKeyAction = 'done' | 'later' | 'delete' | 'back' | 'undo' | 'close'
+export type PersonalKeyAction = 'done' | 'later' | 'delete' | 'back' | 'undo' | 'close'
 
 /**
- * Pure key → action mapping for triage mode's Collection tab
- * (docs/specs/unified-theater-triage.md §2). Preserves the deleted
+ * Pure key → action mapping for collection mode's Collection tab
+ * (docs/specs/unified-theater-collection.md §2). Preserves the deleted
  * `CollectionTheater.tsx`'s map VERBATIM — ArrowRight=Done, ArrowLeft=Later,
  * ArrowDown/Backspace/Delete=Delete, U=Undo, Escape=Close — and adds
  * ArrowUp=Back (step to the previous item without touching its read/delete
  * state; distinct from `U`, which reverses the *last* action).
  */
-export function triageKeyAction(e: TriageKeyLike): TriageKeyAction | null {
+export function personalKeyAction(e: PersonalKeyLike): PersonalKeyAction | null {
   if (e.metaKey || e.ctrlKey || e.altKey) return null
-  if (isTriageTypingTarget(e.target)) return null
+  if (isPersonalTypingTarget(e.target)) return null
   switch (e.key) {
     case 'ArrowRight':
       return 'done'
@@ -66,16 +66,16 @@ export function triageKeyAction(e: TriageKeyLike): TriageKeyAction | null {
 }
 
 export interface UseTheaterKeyboardArgs {
-  isTriage: boolean
-  triageTab: TriageTab
+  isPersonal: boolean
+  personalTab: PersonalTab
   goNext: () => void
   goPrev: () => void
   setMuted: Dispatch<SetStateAction<boolean>>
-  triageDone: () => void
-  triageLater: () => void
-  triageDelete: () => void
-  triageStepBack: () => void
-  triageDoUndo: () => void
+  archiveCurrent: () => void
+  deferCurrent: () => void
+  deleteCurrent: () => void
+  personalStepBack: () => void
+  undoLastAction: () => void
   onClose?: () => void
   /**
    * Space guard for the end-of-feed waiting stage: the stage stays MOUNTED
@@ -97,16 +97,16 @@ export interface UseTheaterKeyboardArgs {
  * element.
  */
 export function useTheaterKeyboard({
-  isTriage,
-  triageTab,
+  isPersonal,
+  personalTab,
   goNext,
   goPrev,
   setMuted,
-  triageDone,
-  triageLater,
-  triageDelete,
-  triageStepBack,
-  triageDoUndo,
+  archiveCurrent,
+  deferCurrent,
+  deleteCurrent,
+  personalStepBack,
+  undoLastAction,
   onClose,
   isPlaybackHidden,
 }: UseTheaterKeyboardArgs): void {
@@ -117,30 +117,30 @@ export function useTheaterKeyboard({
       if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return
       if (e.metaKey || e.ctrlKey || e.altKey) return
 
-      // Triage mode's Collection tab uses an entirely different keymap
-      // (action-and-advance, not pure navigation) — see `triageKeyAction()`.
+      // Collection mode's Collection tab uses an entirely different keymap
+      // (action-and-advance, not pure navigation) — see `personalKeyAction()`.
       // The Live tab keeps the standard ↓/↑/space/m nav below (it's the same
       // live pulse feed home mode uses), and Escape always closes the
-      // overlay regardless of which triage tab is active.
-      if (isTriage && triageTab === 'collection') {
-        const action = triageKeyAction(e)
+      // overlay regardless of which collection tab is active.
+      if (isPersonal && personalTab === 'collection') {
+        const action = personalKeyAction(e)
         if (!action) return
         e.preventDefault()
         switch (action) {
           case 'done':
-            triageDone()
+            archiveCurrent()
             break
           case 'later':
-            triageLater()
+            deferCurrent()
             break
           case 'delete':
-            triageDelete()
+            deleteCurrent()
             break
           case 'back':
-            triageStepBack()
+            personalStepBack()
             break
           case 'undo':
-            triageDoUndo()
+            undoLastAction()
             break
           case 'close':
             onClose?.()
@@ -149,7 +149,7 @@ export function useTheaterKeyboard({
         return
       }
 
-      if (isTriage && e.key === 'Escape') {
+      if (isPersonal && e.key === 'Escape') {
         e.preventDefault()
         onClose?.()
         return
@@ -192,13 +192,13 @@ export function useTheaterKeyboard({
   }, [
     goNext,
     goPrev,
-    isTriage,
-    triageTab,
-    triageDone,
-    triageLater,
-    triageDelete,
-    triageStepBack,
-    triageDoUndo,
+    isPersonal,
+    personalTab,
+    archiveCurrent,
+    deferCurrent,
+    deleteCurrent,
+    personalStepBack,
+    undoLastAction,
     onClose,
     isPlaybackHidden,
   ])

@@ -5,6 +5,7 @@ import {
   buildSnippetDescription,
   contentAfterTitle,
   attributionFact,
+  previewPageMetadata,
 } from '@/lib/utils/content-metadata'
 
 describe('truncateWordBoundary', () => {
@@ -184,5 +185,60 @@ describe('buildSnippetDescription', () => {
     expect(buildSnippetDescription({ title: '', content: 'Some post text here' })).toBe(
       'Some post text here',
     )
+  })
+})
+
+describe('previewPageMetadata', () => {
+  it('advertises an MP4 as video.other and keeps the canonical', () => {
+    const meta = previewPageMetadata({
+      title: 'A Reel',
+      description: 'Watch it.',
+      canonicalUrl: 'https://adhx.com/reels/abc',
+      image: 'https://adhx.com/api/media/instagram/thumbnail?id=abc',
+      videoUrl: 'https://adhx.com/api/media/instagram/video?id=abc',
+    })
+    expect(meta).toMatchObject({
+      title: 'A Reel',
+      description: 'Watch it.',
+      openGraph: {
+        type: 'video.other',
+        url: 'https://adhx.com/reels/abc',
+        videos: [
+          {
+            url: 'https://adhx.com/api/media/instagram/video?id=abc',
+            type: 'video/mp4',
+            width: 1080,
+            height: 1920,
+          },
+        ],
+      },
+      twitter: { card: 'summary_large_image' },
+      alternates: { canonical: 'https://adhx.com/reels/abc' },
+    })
+  })
+
+  it('falls back to article when there is no video, unless ogType is set', () => {
+    const article = previewPageMetadata({
+      title: 'A Reel',
+      description: 'Watch it.',
+      canonicalUrl: 'https://adhx.com/reels/abc',
+      image: 'https://adhx.com/og-logo.png',
+    })
+    expect(article).toMatchObject({ openGraph: { type: 'article' } })
+    expect(
+      article.openGraph && 'videos' in article.openGraph ? article.openGraph.videos : undefined,
+    ).toBeUndefined()
+
+    const short = previewPageMetadata({
+      title: 'A Short',
+      description: 'Watch it.',
+      canonicalUrl: 'https://adhx.com/shorts/dQw4w9wgXcQ',
+      image: 'https://i.ytimg.com/vi/dQw4w9wgXcQ/hqdefault.jpg',
+      ogType: 'video.other',
+    })
+    expect(short).toMatchObject({ openGraph: { type: 'video.other' } })
+    expect(
+      short.openGraph && 'videos' in short.openGraph ? short.openGraph.videos : undefined,
+    ).toBeUndefined()
   })
 })

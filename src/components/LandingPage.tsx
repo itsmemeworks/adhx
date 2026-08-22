@@ -80,7 +80,7 @@ export function LandingPage() {
   // URL detection + the on-ADHX preview path, and the navigation itself, are
   // owned by the shared detectPlatformPost/parseShareUrl/navigateToPastedLink
   // helpers (src/lib/platform/url.ts, src/lib/utils/parse-share-url.ts) —
-  // same source of truth as PreviewAnotherLink, PasteLinkButton, and the PWA
+  // same source of truth as PasteLinkButton and the PWA
   // share target, so X/Instagram/TikTok/YouTube (incl. TikTok short links)
   // all resolve identically here.
   const handleTweetUrlChange = (value: string) => {
@@ -129,9 +129,11 @@ export function LandingPage() {
           <div>
             <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold bg-surface border border-hairline text-ink-2 mb-5">
               <LiveDot />
-              {live.recentActivity > 0
-                ? `${live.recentActivity.toLocaleString()} watched & sent today`
-                : 'Real-time community pulse'}
+              <span>
+                {live.recentActivity > 0
+                  ? `${live.recentActivity.toLocaleString()} watched & sent today`
+                  : 'Real-time community pulse'}
+              </span>
             </span>
 
             <div className="font-indie-flower leading-[.9] text-ink mb-4 text-[60px] min-[860px]:text-[84px]">
@@ -279,8 +281,8 @@ export function LandingPage() {
             />
             <ValueProp
               icon={<Zap className="w-5 h-5" />}
-              title="Triage, don't doomscroll"
-              body="Swipe through your collection one card at a time. Keep, clear, or admit you'll never watch it."
+              title="Watch it, don't doomscroll"
+              body="Go through your collection one post at a time. Keep it, or archive it and admit you'll never watch it."
             />
             <ValueProp
               icon={<Search className="w-5 h-5" />}
@@ -295,6 +297,25 @@ export function LandingPage() {
           <span className="font-indie-flower text-[22px] text-ink-3">
             Save now. Read never. Find always.
           </span>
+          <p className="mt-3 text-xs text-ink-3">
+            <a href="/privacy" className="underline-offset-2 hover:underline">
+              <span>Privacy</span>
+            </a>
+            <span> · </span>
+            <a
+              href="https://github.com/itsmemeworks/adhx/blob/main/SECURITY.md"
+              className="underline-offset-2 hover:underline"
+            >
+              <span>Security</span>
+            </a>
+            <span> · </span>
+            <a
+              href="https://github.com/itsmemeworks/adhx/blob/main/LICENSE"
+              className="underline-offset-2 hover:underline"
+            >
+              <span>MIT</span>
+            </a>
+          </p>
         </footer>
       </div>
     </div>

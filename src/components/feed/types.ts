@@ -109,6 +109,12 @@ export interface ArticleContent {
 
 export type Platform = 'twitter' | 'instagram' | 'tiktok' | 'youtube'
 
+/**
+ * Library-rich saved-post shape (media[], quotes, article body, tags).
+ * Theater / trending use the narrower `TrendingItem` (`TheaterItem`).
+ * Convert at the edges with `feedItemToTheaterItem` — do not add the same
+ * field to both types.
+ */
 export interface FeedItem {
   id: string
   platform?: Platform // 'twitter' (default) | 'instagram' | 'tiktok' | 'youtube'
@@ -120,7 +126,7 @@ export interface FeedItem {
   createdAt?: string | null
   processedAt: string
   category?: string | null
-  isRead: boolean
+  isArchived: boolean
   isQuote?: boolean
   quoteContext?: QuoteContext | null
   quotedTweetId?: string | null
@@ -190,7 +196,7 @@ export interface StreamedBookmark {
   createdAt: string | null
   processedAt: string
   category: string | null
-  isRead: boolean
+  isArchived: boolean
   isQuote: boolean
   isRetweet: boolean
   media: Array<{
@@ -232,7 +238,7 @@ export function streamedBookmarkToFeedItem(bookmark: StreamedBookmark): FeedItem
     createdAt: bookmark.createdAt,
     processedAt: bookmark.processedAt,
     category: bookmark.category,
-    isRead: bookmark.isRead,
+    isArchived: bookmark.isArchived,
     isQuote: bookmark.isQuote,
     isRetweet: bookmark.isRetweet,
     media:

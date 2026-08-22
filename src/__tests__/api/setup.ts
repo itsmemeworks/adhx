@@ -29,9 +29,6 @@ export const FULL_SCHEMA_SQL = `
     quoted_tweet_id TEXT,
     is_retweet INTEGER DEFAULT 0,
     retweet_context TEXT,
-    extracted_content TEXT,
-    filed_path TEXT,
-    needs_transcript INTEGER DEFAULT 0,
     summary TEXT,
     source TEXT DEFAULT 'sync',
     raw_json TEXT,
@@ -65,6 +62,8 @@ export const FULL_SCHEMA_SQL = `
     platform TEXT NOT NULL DEFAULT 'twitter',
     bookmark_id TEXT NOT NULL,
     tag TEXT NOT NULL,
+    -- When the post was added to THIS tag (what a playlist shows/orders by).
+    created_at TEXT,
     PRIMARY KEY (user_id, platform, bookmark_id, tag)
   );
   CREATE INDEX bookmark_tags_user_id_idx ON bookmark_tags(user_id);
@@ -90,24 +89,16 @@ export const FULL_SCHEMA_SQL = `
   );
   CREATE INDEX bookmark_media_user_bookmark_idx ON bookmark_media(user_id, platform, bookmark_id);
 
-  CREATE TABLE read_status (
+  CREATE TABLE archived_posts (
     user_id TEXT NOT NULL,
     platform TEXT NOT NULL DEFAULT 'twitter',
     bookmark_id TEXT NOT NULL,
-    read_at TEXT NOT NULL,
+    archived_at TEXT NOT NULL,
     PRIMARY KEY (user_id, platform, bookmark_id)
   );
-  CREATE INDEX read_status_user_id_idx ON read_status(user_id);
+  CREATE INDEX archived_posts_user_id_idx ON archived_posts(user_id);
 
   CREATE TABLE user_preferences (
-    user_id TEXT NOT NULL,
-    key TEXT NOT NULL,
-    value TEXT,
-    updated_at TEXT,
-    PRIMARY KEY (user_id, key)
-  );
-
-  CREATE TABLE sync_state (
     user_id TEXT NOT NULL,
     key TEXT NOT NULL,
     value TEXT,
@@ -131,30 +122,6 @@ export const FULL_SCHEMA_SQL = `
     state TEXT PRIMARY KEY,
     code_verifier TEXT NOT NULL,
     created_at TEXT
-  );
-
-  CREATE TABLE collections (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    name TEXT NOT NULL,
-    description TEXT,
-    color TEXT,
-    icon TEXT,
-    share_code TEXT UNIQUE,
-    is_public INTEGER DEFAULT 0,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT
-  );
-  CREATE INDEX collections_user_id_idx ON collections(user_id);
-
-  CREATE TABLE collection_tweets (
-    user_id TEXT NOT NULL,
-    collection_id TEXT NOT NULL,
-    platform TEXT NOT NULL DEFAULT 'twitter',
-    bookmark_id TEXT NOT NULL,
-    added_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    notes TEXT,
-    PRIMARY KEY (user_id, collection_id, platform, bookmark_id)
   );
 
   CREATE TABLE sync_logs (

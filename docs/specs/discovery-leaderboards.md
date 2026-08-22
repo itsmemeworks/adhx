@@ -137,8 +137,7 @@ export function getCollectionLeaderboard(opts: {
 
 ## 6. Surfaces (MVP)
 
-**`/leaderboard`** (shipped at `/collections`, renamed post-launch — that path collided with the
-unrelated `/api/collections` custom-collections API; old URLs redirect) **— the leaderboard
+**`/leaderboard`** (shipped at `/collections`, renamed post-launch — old URLs redirect) **— the leaderboard
 page** (public, anonymous, crawlable). Design settled
 2026-08-21 on the "Collection Leaderboard" design canvas: **direction A — Podium**:
 

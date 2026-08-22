@@ -15,7 +15,7 @@ import {
  *
  * Tests the URL parsing utility used by the PWA Share Target /share page,
  * plus `navigateToPastedLink` — the shared navigation sink every "paste a
- * link" surface (LandingPage, PreviewAnotherLink, PasteLinkButton) routes
+ * link" surface (LandingPage, PasteLinkButton) routes
  * through. jsdom is needed here (not the file's original `node` default)
  * because that helper touches `window.location.href` for the TikTok
  * short-link hard-navigation branch.

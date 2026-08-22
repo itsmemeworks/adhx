@@ -128,7 +128,7 @@ export function useTheaterFeed(
       }
     }
 
-    // A feed seeded with zero items (e.g. triage mode's Live sub-tab, which
+    // A feed seeded with zero items (e.g. collection mode's Live sub-tab, which
     // has no server-rendered seed of its own) would otherwise sit blank for
     // a full POLL_MS before its first paint — poll right away in that case.
     // Feeds seeded from the server render (home/shared) already have

@@ -47,7 +47,7 @@ export function DiscoverCard({
     <div className="absolute right-2.5 top-2.5">
       <span className="inline-flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 text-[11.5px] font-bold text-orange-300 backdrop-blur-sm">
         <Flame size={12} className="text-orange-400" fill="currentColor" />
-        {trendCount}
+        <span>{trendCount}</span>
       </span>
     </div>
   ) : null
@@ -198,13 +198,13 @@ export function DiscoverCard({
         >
           {pub ? (
             <>
-              Preview
+              <span>Preview</span>
               <ExternalLink size={13} />
             </>
           ) : (
             <>
               <Plus size={14} />
-              Save
+              <span>Save</span>
             </>
           )}
         </a>

@@ -3,7 +3,7 @@
  *
  * Pure, dependency-free (no DB, no server-only imports) so it's safe to import
  * from client components. `record.ts` re-exports this for server callers; the
- * feed/triage Share buttons import it directly without dragging in
+ * feed/collection Share buttons import it directly without dragging in
  * better-sqlite3.
  */
 export function previewPath(platform: string, author: string, id: string): string {

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { eq } from 'drizzle-orm'
 import { createTestDb, createTestBookmark, type TestDbInstance } from './setup'
 import {
   activity,
@@ -28,6 +29,9 @@ vi.mock('@/lib/db', () => ({
 }))
 
 import { getTheaterFeed } from '@/lib/theater/feed'
+
+/** getTheaterFeed's live pulse now restricts to the last 24h (LIVE_WINDOW_HOURS) — seed relative to now. */
+const minsAgo = (n: number) => new Date(Date.now() - n * 60_000).toISOString()
 
 function seedActivity(overrides: Partial<NewActivity> & { createdAt: string; bookmarkId: string }) {
   const row: NewActivity = {
@@ -84,7 +88,7 @@ describe('getTheaterFeed', () => {
 
   it('returns the live trending items unchanged when there are enough of them', async () => {
     for (let i = 0; i < 15; i++) {
-      seedActivity({ bookmarkId: `t${i}`, createdAt: `2026-06-06T10:0${i % 10}:00Z` })
+      seedActivity({ bookmarkId: `t${i}`, createdAt: minsAgo(i + 1) })
     }
 
     const seed = await getTheaterFeed()
@@ -159,7 +163,7 @@ describe('getTheaterFeed', () => {
   })
 
   it('degrades to the plain trending items when the backfill query fails', async () => {
-    seedActivity({ bookmarkId: 'live1', createdAt: '2026-06-06T10:00:00Z' })
+    seedActivity({ bookmarkId: 'live1', createdAt: minsAgo(5) })
     // Drop a table the backfill query depends on so it throws.
     testInstance.sqlite.exec('DROP TABLE tag_shares')
 
@@ -195,10 +199,46 @@ describe('getTheaterFeed', () => {
     expect(item?.contentType).toBe('photo')
   })
 
+  /**
+   * Owner report: playlist time chips looked like they showed the source
+   * network's post date. Backfilled items carried `bookmarks.createdAt` (the
+   * X publish date) as their event time and no `addedAt` at all — so the chip
+   * (which reads `addedAt`) vanished, and a post's publish date drove the
+   * merge's freshness comparison. Both times are ADHX-side now.
+   */
+  it('times a backfilled item by when it was added to ADHX, not when it was posted', async () => {
+    seedActivity({ bookmarkId: 'live1', createdAt: '2026-06-06T10:00:00Z' })
+    const postedAt = '2019-03-04T09:00:00.000Z'
+    const addedToAdhxAt = '2026-08-20T12:34:56.000Z'
+    testInstance.db
+      .insert(tagShares)
+      .values({ userId: 'curator', tag: 'faves', shareCode: 'curator-faves', isPublic: true })
+      .onConflictDoNothing()
+      .run()
+    seedPublicTagBookmark({
+      userId: 'curator',
+      tag: 'faves',
+      bookmarkId: 'oldpost',
+      processedAt: addedToAdhxAt,
+    })
+    testInstance.db
+      .update(bookmarks)
+      .set({ createdAt: postedAt })
+      .where(eq(bookmarks.id, 'oldpost'))
+      .run()
+
+    const seed = await getTheaterFeed()
+
+    const item = seed.items.find((i) => i.bookmarkId === 'oldpost')
+    expect(item?.addedAt).toBe(addedToAdhxAt)
+    expect(item?.createdAt).toBe(addedToAdhxAt)
+    expect(item?.createdAt).not.toBe(postedAt)
+  })
+
   // spec §6b — link expansions attached via the live getTrendingItems() path
   // (getTheaterFeed passes live items through unchanged).
   it('attaches textLinks from bookmark_links for a saved post', async () => {
-    seedActivity({ bookmarkId: 'linked1', createdAt: '2026-06-06T10:00:00Z' })
+    seedActivity({ bookmarkId: 'linked1', createdAt: minsAgo(5) })
     testInstance.db
       .insert(bookmarks)
       .values(createTestBookmark('owner-1', 'linked1', { platform: 'twitter' }))

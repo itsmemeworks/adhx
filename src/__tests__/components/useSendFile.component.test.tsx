@@ -216,3 +216,187 @@ describe('useSendFile', () => {
     expect(result.current.ready).toBe(false)
   })
 })
+
+/**
+ * Owner report from a production preview page: "we seem to have regressed the
+ * download button for videos and images that's supposed to, on mobile
+ * specifically, share that file so I could put it straight into a WhatsApp
+ * group… It needs to be smart enough that when you tap download, it keeps the
+ * spinner going until it has the file to send."
+ *
+ * The bug: an early tap (before the 2s-delayed prefetch had the blob) fell
+ * straight through to `navigator.share({ url })` — a LINK share. WhatsApp got
+ * a URL instead of the video, silently, and the tap looked like it worked.
+ * A 3MB MP4 on mobile data loses that race easily.
+ *
+ * The mobile share path can't be exercised without a touch platform whose
+ * browser can put a File on the sheet, so these tests mock both.
+ */
+describe('useSendFile — an early tap waits for the file instead of sharing a link', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+    vi.doUnmock('@/lib/platform')
+  })
+
+  /** Load the hook as if we were on iOS Safari with file-sharing available. */
+  async function importOnMobile() {
+    const actual = await vi.importActual<typeof import('@/lib/platform')>('@/lib/platform')
+    vi.doMock('@/lib/platform', () => ({ ...actual, getPlatformType: () => 'ios' }))
+    return (await import('@/components/theater/useSendFile')).useSendFile
+  }
+
+  function stubShare(share: ReturnType<typeof vi.fn>) {
+    vi.stubGlobal('navigator', {
+      ...window.navigator,
+      share,
+      canShare: () => true,
+      clipboard: { writeText: vi.fn() },
+    })
+  }
+
+  /** Share calls that carried an actual file, and ones that were link-only. */
+  const fileShares = (share: ReturnType<typeof vi.fn>) =>
+    share.mock.calls.filter((c) => Array.isArray(c[0]?.files) && c[0].files.length > 0)
+  const linkShares = (share: ReturnType<typeof vi.fn>) =>
+    share.mock.calls.filter((c) => !c[0]?.files && typeof c[0]?.url === 'string')
+
+  it('shares the FILE, never a bare link, when tapped before the prefetch lands', async () => {
+    const fetchMock = mockFetchResolvingVideo()
+    vi.stubGlobal('fetch', fetchMock)
+    const share = vi.fn(async () => undefined)
+    stubShare(share)
+
+    const useSendFile = await importOnMobile()
+    const { result } = renderHook(() => useSendFile(videoItem()))
+
+    // Tap immediately — the 2s prefetch timer has not fired, so there is no
+    // blob yet. This is the exact case that used to link-share.
+    expect(result.current.ready).toBe(false)
+    await act(async () => {
+      await result.current.send()
+    })
+
+    expect(fileShares(share)).toHaveLength(1)
+    expect(linkShares(share)).toHaveLength(0)
+    // And the file it shared is the real MP4, with no `url` key beside it
+    // (the WhatsApp "via URL URL" trap).
+    const payload = fileShares(share)[0][0] as ShareData & { files: File[] }
+    expect(payload.files[0].type).toBe('video/mp4')
+    expect(payload.url).toBeUndefined()
+    expect(payload.text).toMatch(/^via https?:\/\//)
+  })
+
+  it('keeps `sending` up for the whole fetch, so the spinner can stay on', async () => {
+    let releaseFetch: (() => void) | null = null
+    const fetchMock = vi.fn(async (url: string) => {
+      if (String(url).includes('/api/activity/share')) return new Response(null, { status: 204 })
+      await new Promise<void>((resolve) => {
+        releaseFetch = resolve
+      })
+      return new Response(new Blob(['bytes'], { type: 'video/mp4' }), {
+        status: 200,
+        headers: { 'content-type': 'video/mp4' },
+      })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const share = vi.fn(async () => undefined)
+    stubShare(share)
+
+    const useSendFile = await importOnMobile()
+    const { result } = renderHook(() => useSendFile(videoItem()))
+
+    let sendPromise: Promise<void> = Promise.resolve()
+    await act(async () => {
+      sendPromise = result.current.send()
+    })
+
+    // Mid-fetch: the button is still busy and nothing has been shared.
+    expect(result.current.sending).toBe(true)
+    expect(share).not.toHaveBeenCalled()
+
+    await act(async () => {
+      releaseFetch?.()
+      await sendPromise
+    })
+
+    expect(result.current.sending).toBe(false)
+    expect(fileShares(share)).toHaveLength(1)
+  })
+
+  it('asks for a second tap when the sheet refuses the expired gesture', async () => {
+    const fetchMock = mockFetchResolvingVideo()
+    vi.stubGlobal('fetch', fetchMock)
+    // iOS/Chrome both drop user activation across an await, so the share that
+    // follows the fetch can be refused outright.
+    const share = vi.fn(async () => {
+      throw new DOMException('not allowed', 'NotAllowedError')
+    })
+    stubShare(share)
+
+    const useSendFile = await importOnMobile()
+    const { result } = renderHook(() => useSendFile(videoItem()))
+
+    await act(async () => {
+      await result.current.send()
+    })
+
+    // Primed, not silently downgraded: the file is cached and one more tap
+    // sends it. The old code link-shared here.
+    expect(result.current.primed).toBe(true)
+    expect(result.current.ready).toBe(true)
+    expect(linkShares(share)).toHaveLength(0)
+
+    // Second tap: blob is cached, so the sheet opens inside this gesture.
+    const share2 = vi.fn(async () => undefined)
+    stubShare(share2)
+    await act(async () => {
+      await result.current.send()
+    })
+    expect(fileShares(share2)).toHaveLength(1)
+    expect(result.current.primed).toBe(false)
+  })
+
+  it('starts the prefetch immediately when eager (a shared preview page)', async () => {
+    const fetchMock = mockFetchResolvingVideo()
+    vi.stubGlobal('fetch', fetchMock)
+    stubShare(vi.fn(async () => undefined))
+
+    const useSendFile = await importOnMobile()
+    const { result } = renderHook(() => useSendFile(videoItem(), { eager: true }))
+
+    // No 2s wait: the file is ready before the visitor can reach for Send,
+    // which is the only way the sheet opens in the tap's own activation.
+    await advance(0)
+    expect(result.current.ready).toBe(true)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('still falls back to a link share when the file genuinely cannot be fetched', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (String(url).includes('/api/activity/share')) return new Response(null, { status: 204 })
+      return new Response('nope', { status: 500 })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const share = vi.fn(async () => undefined)
+    stubShare(share)
+
+    const useSendFile = await importOnMobile()
+    const { result } = renderHook(() => useSendFile(videoItem()))
+
+    await act(async () => {
+      await result.current.send()
+    })
+
+    // A dead proxy must not leave the tap dead — the link is the honest
+    // fallback when there is no file to be had.
+    expect(fileShares(share)).toHaveLength(0)
+    expect(linkShares(share)).toHaveLength(1)
+    expect(result.current.sending).toBe(false)
+  })
+})

@@ -2,6 +2,14 @@
 
 Thank you for your interest in contributing to ADHX!
 
+**External contributors:** fork the repo, branch from `main`, open a PR. Do not commit `.env`, session secrets, or `CLAUDE.local.md`. The maintainer merges — please do not merge your own PR even if you have write access.
+
+**Security:** never file a public issue for a vulnerability. Use a [private advisory](https://github.com/itsmemeworks/adhx/security/advisories/new) or [security@adhx.com](mailto:security@adhx.com). See [SECURITY.md](SECURITY.md).
+
+**Privacy:** what the hosted app stores (including `activity.userId`, which is never public) is in [PRIVACY.md](PRIVACY.md). Conduct reports: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+
+**Agents:** start at [AGENTS.md](AGENTS.md) / [CLAUDE.md](CLAUDE.md). Put operator-only `gh` accounts and Fly app names in gitignored `CLAUDE.local.md`, not in committed rules.
+
 ## Commit Message Format
 
 We use [Conventional Commits](https://www.conventionalcommits.org/) for commit messages. This enables automatic changelog generation and semantic versioning.
@@ -70,7 +78,10 @@ PR titles should also follow the conventional commit format. When merged via squ
 # Install dependencies
 pnpm install
 
-# Start dev server
+# Create / migrate the local SQLite file (Docker does this on start; local does not)
+pnpm db:migrate
+
+# Start dev server (http://localhost:3001)
 pnpm dev
 
 # Run tests
@@ -78,7 +89,12 @@ pnpm test
 
 # Type check
 pnpm typecheck
+
+# Browser tests (isolated Next on :3002 + data/e2e.db — not your :3001 / adhdone.db)
+pnpm test:e2e
 ```
+
+Do not point Playwright at a personal local database. `pnpm test` does not run e2e.
 
 ## Git Hooks
 

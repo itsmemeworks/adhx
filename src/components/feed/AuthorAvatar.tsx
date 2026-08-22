@@ -1,5 +1,8 @@
 'use client'
 
+import { useState } from 'react'
+import { generateAvatarDataUri, usableAvatarUrl } from '@/lib/avatar/generated-avatar'
+
 interface AuthorAvatarProps {
   src?: string | null
   author: string
@@ -14,23 +17,29 @@ const SIZE_CLASSES = {
 
 export function AuthorAvatar({ src, author, size = 'sm' }: AuthorAvatarProps): React.ReactElement {
   const sizeClass = SIZE_CLASSES[size]
+  // A remote avatar that fails to load (dead URL, blocked hotlink, etc.)
+  // falls through to the same generated icon as having no `src` at all.
+  const [broken, setBroken] = useState(false)
+  // Also treats a platform's own "no photo" placeholder (X's grey silhouette)
+  // as absent — it loads fine, so `onError` never fires for it.
+  const remote = usableAvatarUrl(src)
 
-  if (src) {
+  if (remote && !broken) {
     return (
       <img
-        src={src}
+        src={remote}
         alt={author}
         className={`${sizeClass} rounded-full object-cover flex-shrink-0`}
+        onError={() => setBroken(true)}
       />
     )
   }
 
-  const initial = author[0]?.toUpperCase() || '?'
   return (
-    <div
-      className={`${sizeClass} rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold flex-shrink-0`}
-    >
-      {initial}
-    </div>
+    <img
+      src={generateAvatarDataUri(author)}
+      alt={author}
+      className={`${sizeClass} rounded-full object-cover flex-shrink-0`}
+    />
   )
 }

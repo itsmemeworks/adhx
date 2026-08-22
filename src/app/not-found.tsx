@@ -29,7 +29,7 @@ export default function NotFound() {
             className="inline-flex min-h-[44px] w-full sm:w-auto items-center justify-center gap-1.5 rounded-full border border-hairline bg-surface px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-inset"
           >
             <Flame className="w-4 h-4 text-flame" />
-            See what&rsquo;s trending
+            <span>See what&rsquo;s trending</span>
           </Link>
         </div>
       </div>

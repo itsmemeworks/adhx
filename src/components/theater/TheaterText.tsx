@@ -353,6 +353,19 @@ export interface TheaterLinkedTextProps {
  * Renders text with URLs as real anchors. Clicks on links stop propagation so
  * they never trigger the surrounding stage/rail tap handlers (unmute, play,
  * row select, swipe taps).
+ *
+ * Every text run is wrapped in a `<span>` rather than emitted as a bare text
+ * node — DELIBERATE, don't "simplify" it away. Browser/extension page
+ * translation rewrites text nodes into its own `<font>` wrappers; a bare text
+ * node sitting between an `<a>` and a `<br />` is then gone from under React,
+ * and the next update that removes it throws NotFoundError ("Failed to execute
+ * 'removeChild' on 'Node'"), which killed the whole theater when advancing to
+ * the next post. With each run inside an element, translation only ever mutates
+ * that element's children, and React's removes/text-sets still target a node
+ * that is really there. Browser translation is deliberately left ENABLED
+ * app-wide (reading a Spanish tweet in English is the point), so this is the
+ * only thing standing between a translated caption and a dead theater — see
+ * `docs/specs/translation-safety.md`.
  */
 export function TheaterLinkedText({
   text,
@@ -391,7 +404,7 @@ export function TheaterLinkedText({
         }
         if (segment.type === 'mention') {
           // Unknown platform — no profile URL shape to link to; render plain.
-          return <React.Fragment key={segIndex}>{`@${segment.handle}`}</React.Fragment>
+          return <span key={segIndex}>{`@${segment.handle}`}</span>
         }
         const lines = segment.value.split('\n')
         return (
@@ -399,7 +412,7 @@ export function TheaterLinkedText({
             {lines.map((line, lineIndex) => (
               <React.Fragment key={lineIndex}>
                 {lineIndex > 0 && <br />}
-                {line}
+                <span>{line}</span>
               </React.Fragment>
             ))}
           </React.Fragment>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { notifyCollectionChanged } from '@/lib/client-events'
 import { useAuthMe } from '@/components/auth'
 import { CollectionPosterCard, type PosterTile } from '@/components/tags'
 import { cn } from '@/lib/utils'
@@ -30,14 +31,14 @@ export interface StarterCollectionsProps {
 }
 
 /**
- * Offers the top public collections (by all-time views+clones) as a one-tap
- * "start with a full collection" option, so a brand-new account isn't
+ * Offers the top public playlists (by all-time views+clones) as a one-tap
+ * "start with a full playlist" option, so a brand-new account isn't
  * staring at an empty feed. Reuses the existing Discovery leaderboard
  * (`/api/collections/trending`) and clone endpoint
  * (`/api/share/tag/by-name/[username]/[tag]/clone`) — no new backend.
  *
  * Collapses to `null` (renders nothing) when there's nothing to offer: the
- * leaderboard is empty, the fetch fails, or every top collection turns out
+ * leaderboard is empty, the fetch fails, or every top playlist turns out
  * to be the viewer's own (self-clone is rejected server-side anyway).
  * Callers must tolerate that — this is never the only thing on the page.
  */
@@ -85,7 +86,7 @@ export function StarterCollections({
           compact ? 'mb-2 text-base' : 'mb-3 text-xl',
         )}
       >
-        Start with a full collection
+        Start with a full playlist
       </h3>
       <div className={cn('grid gap-3', gridColsClass)}>
         {starters.map((entry) => (
@@ -119,7 +120,7 @@ function StarterCard({ entry }: { entry: StarterEntry }) {
       // AuthedHome's useSyncListener refetches the feed/tags on this event.
       // Harmless where nothing is listening (e.g. the /welcome flow, which
       // lands on a fresh `/` after this page anyway).
-      window.dispatchEvent(new CustomEvent('tweet-added'))
+      notifyCollectionChanged({ tagsChanged: true })
     } catch {
       setState('error')
     }

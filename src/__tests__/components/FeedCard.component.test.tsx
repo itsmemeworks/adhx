@@ -132,7 +132,7 @@ describe('FeedCard Component Snapshots', () => {
   })
 
   describe('No hover overlay', () => {
-    it('renders no action overlay on the card — copy/share/read live in triage', () => {
+    it('renders no action overlay on the card — copy/share/read live in the collection theater', () => {
       const feedItem = fxTwitterToFeedItem(fixtures['plain-text'])
 
       const { container } = render(
@@ -144,7 +144,7 @@ describe('FeedCard Component Snapshots', () => {
         />,
       )
 
-      // The gallery hover overlay was removed — opening a card in triage is the
+      // The gallery hover overlay was removed — opening a card in the collection theater is the
       // only interaction. No copy/share/mark-read buttons on the card itself.
       expect(container.querySelector('button[title="Copy link to this post"]')).toBeNull()
       expect(container.querySelector('button[title="Mark as read"]')).toBeNull()

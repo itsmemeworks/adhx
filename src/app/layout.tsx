@@ -69,7 +69,7 @@ export const metadata: Metadata = {
     template: '%s | ADHX',
   },
   description:
-    "Sync your X/Twitter bookmarks into one searchable home, discover what's trending, and triage your backlog — every tweet, thread, Reel, TikTok and YouTube Short in one place. The ADHD-friendly bookmark manager.",
+    "Sync your X/Twitter bookmarks into one searchable home, discover what's trending, and work through your backlog — every tweet, thread, Reel, TikTok and YouTube Short in one place. The ADHD-friendly bookmark manager.",
   keywords: [
     'X bookmarks',
     'Twitter bookmarks',
@@ -109,14 +109,14 @@ export const metadata: Metadata = {
     siteName: 'ADHX',
     title: 'ADHX - Save now. Read never. Find always.',
     description:
-      "Sync your X bookmarks, discover what's trending, and triage your backlog — tweets, threads, Reels, TikToks and Shorts in one searchable home.",
+      "Sync your X bookmarks, discover what's trending, and work through your backlog — tweets, threads, Reels, TikToks and Shorts in one searchable home.",
     // Images auto-generated from opengraph-image.tsx
   },
   twitter: {
     card: 'summary_large_image',
     title: 'ADHX - Save now. Read never. Find always.',
     description:
-      "Sync your X bookmarks, discover what's trending, and triage your backlog — tweets, threads, Reels, TikToks and Shorts in one searchable home.",
+      "Sync your X bookmarks, discover what's trending, and work through your backlog — tweets, threads, Reels, TikToks and Shorts in one searchable home.",
     // Images auto-generated from twitter-image.tsx
     creator: '@adhx_app',
   },
@@ -146,7 +146,7 @@ const jsonLd = {
   applicationCategory: 'ProductivityApplication',
   operatingSystem: 'Web',
   description:
-    "Sync your X/Twitter bookmarks into one searchable home, discover what's trending, and triage your backlog — every tweet, thread, Reel, TikTok and YouTube Short in one place. The ADHD-friendly bookmark manager.",
+    "Sync your X/Twitter bookmarks into one searchable home, discover what's trending, and work through your backlog — every tweet, thread, Reel, TikTok and YouTube Short in one place. The ADHD-friendly bookmark manager.",
   url: 'https://adhx.com',
   offers: {
     '@type': 'Offer',
@@ -157,7 +157,7 @@ const jsonLd = {
     'Sync hundreds of X/Twitter bookmarks',
     'Discover what people are watching and sending in real time',
     'Full-text search across everything you save',
-    'One-card-at-a-time triage with streaks',
+    'One post at a time — archive what you are done with',
     'Text-to-speech for any post or article',
     'Save Reels, TikToks and Shorts alongside tweets',
     'Bionic reading and reader-friendly fonts',
@@ -180,6 +180,12 @@ const websiteJsonLd = {
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Browser translation stays ENABLED on purpose (owner decision): reading a
+  // Spanish tweet in English is a feature, not a hazard to be switched off.
+  // What it costs us is that Chrome/Safari replace the text nodes React owns
+  // with their own <font> wrappers, so React must never keep a bare text node
+  // as the SIBLING of an element — see the note in TheaterLinkedText and
+  // `docs/specs/translation-safety.md`.
   return (
     <html lang="en" suppressHydrationWarning>
       <head>

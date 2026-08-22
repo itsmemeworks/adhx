@@ -62,7 +62,7 @@ describe('TheaterAvatarMenu', () => {
     invalidateAuthMe()
   })
 
-  it('renders nothing when signed out and allowSignedOut is not set (triage/collection mounts)', async () => {
+  it('renders nothing when signed out and allowSignedOut is not set (collection/collection mounts)', async () => {
     mockAuthMe(SIGNED_OUT_ME)
     const { container } = render(<TheaterAvatarMenu />)
     await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/auth/me'))
@@ -80,10 +80,10 @@ describe('TheaterAvatarMenu', () => {
     render(<TheaterAvatarMenu />)
     const button = await screen.findByLabelText('Account menu')
 
-    expect(screen.queryByText('Your collection')).not.toBeInTheDocument()
+    expect(screen.queryByText('Library')).not.toBeInTheDocument()
     fireEvent.click(button)
 
-    expect(screen.getByText('Your collection')).toBeInTheDocument()
+    expect(screen.getByText('Library')).toBeInTheDocument()
     expect(screen.getByText('Theater')).toBeInTheDocument()
     expect(screen.getByText('Tags')).toBeInTheDocument()
     expect(screen.getByText('Leaderboard')).toBeInTheDocument()
@@ -92,12 +92,15 @@ describe('TheaterAvatarMenu', () => {
     expect(screen.getByText('@weedauwl')).toBeInTheDocument()
   })
 
-  it('matches the authed Header avatar menu’s nav hrefs — Collection/Tags/Leaderboard/Settings', async () => {
+  it('matches the authed Header avatar menu’s nav hrefs — Library/Tags/Leaderboard/Settings', async () => {
     mockAuthMe(AUTHED_ME)
     render(<TheaterAvatarMenu />)
     fireEvent.click(await screen.findByLabelText('Account menu'))
 
-    expect(screen.getByText('Your collection').closest('a')).toHaveAttribute('href', '/')
+    // `/` is the theater now, so the grid entry points at the library — and
+    // it's LABELLED "Library" since the Theater group gained a "My Collection"
+    // sub-tab, which made "Your collection" read as the same destination.
+    expect(screen.getByText('Library').closest('a')).toHaveAttribute('href', '/library')
     expect(screen.getByText('Tags').closest('a')).toHaveAttribute('href', '/tags')
     expect(screen.getByText('Leaderboard').closest('a')).toHaveAttribute('href', '/leaderboard')
     expect(screen.getByText('Settings').closest('a')).toHaveAttribute('href', '/settings')
@@ -214,20 +217,20 @@ describe('TheaterAvatarMenu', () => {
     mockAuthMe(AUTHED_ME)
     render(<TheaterAvatarMenu />)
     fireEvent.click(await screen.findByLabelText('Account menu'))
-    expect(screen.getByText('Your collection')).toBeInTheDocument()
+    expect(screen.getByText('Library')).toBeInTheDocument()
 
     fireEvent.keyDown(window, { key: 'Escape' })
-    expect(screen.queryByText('Your collection')).not.toBeInTheDocument()
+    expect(screen.queryByText('Library')).not.toBeInTheDocument()
   })
 
   it('closes the menu on outside click', async () => {
     mockAuthMe(AUTHED_ME)
     render(<TheaterAvatarMenu />)
     fireEvent.click(await screen.findByLabelText('Account menu'))
-    expect(screen.getByText('Your collection')).toBeInTheDocument()
+    expect(screen.getByText('Library')).toBeInTheDocument()
 
     fireEvent.mouseDown(document.body)
-    expect(screen.queryByText('Your collection')).not.toBeInTheDocument()
+    expect(screen.queryByText('Library')).not.toBeInTheDocument()
   })
 })
 
@@ -243,7 +246,7 @@ describe('TheaterAvatarMenu — signed-out burger (allowSignedOut)', () => {
     invalidateAuthMe()
   })
 
-  it('renders a burger (not the avatar) with Theater/Leaderboard/Sign in', async () => {
+  it('renders a burger (not the avatar) with Theater/Leaderboard/Privacy/Sign in', async () => {
     mockAuthMe(SIGNED_OUT_ME)
     render(<TheaterAvatarMenu allowSignedOut />)
 
@@ -253,7 +256,16 @@ describe('TheaterAvatarMenu — signed-out burger (allowSignedOut)', () => {
     fireEvent.click(button)
     expect(screen.getByText('Theater')).toBeInTheDocument()
     expect(screen.getByText('Leaderboard')).toBeInTheDocument()
+    expect(screen.getByText('Privacy')).toBeInTheDocument()
     expect(screen.getByText('Sign in')).toBeInTheDocument()
+  })
+
+  it('the Privacy entry links to /privacy', async () => {
+    mockAuthMe(SIGNED_OUT_ME)
+    render(<TheaterAvatarMenu allowSignedOut />)
+    fireEvent.click(await screen.findByLabelText('Menu'))
+
+    expect(screen.getByText('Privacy').closest('a')).toHaveAttribute('href', '/privacy')
   })
 
   it('the Leaderboard entry links to /leaderboard', async () => {
@@ -339,5 +351,95 @@ describe('TheaterAvatarMenu — signed-out burger (allowSignedOut)', () => {
 
     expect(await screen.findByLabelText('Account menu')).toBeInTheDocument()
     expect(screen.queryByLabelText('Menu')).not.toBeInTheDocument()
+  })
+})
+
+/**
+ * Mobile's home for the Live ⇄ My Collection switch (owner: a tab pill in the
+ * top scrim "is going to definitely cause overlap with the logo, the play
+ * stats, and the paste and burger menu… why not just put it in the burger menu
+ * for mobile? Theater just has two sub options: live and collection and we can
+ * just highlight which one is selected"). Desktop passes no `theaterTabs` and
+ * keeps its top-bar pill, so the control never renders twice.
+ */
+describe('TheaterAvatarMenu — Theater sub-options (theaterTabs)', () => {
+  beforeEach(() => {
+    mockPathname = '/'
+    invalidateAuthMe()
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  async function openWith(tab: 'live' | 'collection', onTabChange = vi.fn()) {
+    mockAuthMe(AUTHED_ME)
+    render(<TheaterAvatarMenu theaterActive theaterTabs={{ tab, onTabChange }} />)
+    fireEvent.click(await screen.findByLabelText('Account menu'))
+    return onTabChange
+  }
+
+  it('lists Live then My Collection under a Theater heading', async () => {
+    await openWith('live')
+
+    expect(screen.getByText('Theater')).toBeInTheDocument()
+    const live = screen.getByText('Live')
+    const collection = screen.getByText('My Collection')
+    // Live is the default, so it reads first.
+    expect(live.compareDocumentPosition(collection) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('highlights the selected tab and only that one', async () => {
+    await openWith('live')
+
+    const live = screen.getByText('Live').closest('button')!
+    const collection = screen.getByText('My Collection').closest('button')!
+    expect(live).toHaveAttribute('aria-current', 'page')
+    expect(live.querySelector('[data-testid="menu-current-dot"]')).toBeInTheDocument()
+    expect(collection).not.toHaveAttribute('aria-current')
+    expect(collection.querySelector('[data-testid="menu-current-dot"]')).not.toBeInTheDocument()
+  })
+
+  it('moves the highlight with the selection', async () => {
+    await openWith('collection')
+
+    expect(screen.getByText('My Collection').closest('button')).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    expect(screen.getByText('Live').closest('button')).not.toHaveAttribute('aria-current')
+  })
+
+  it('switches tabs through onTabChange, not a link, and closes the menu', async () => {
+    const onTabChange = await openWith('live')
+
+    // A real <a href> would reload the stage the viewer is watching; the
+    // chrome flips the tab locally first, then navigates.
+    const collection = screen.getByText('My Collection').closest('button')!
+    expect(collection.tagName).toBe('BUTTON')
+
+    fireEvent.click(collection)
+    expect(onTabChange).toHaveBeenCalledWith('collection')
+    await waitFor(() => expect(screen.queryByText('My Collection')).not.toBeInTheDocument())
+  })
+
+  it('replaces the single Theater entry rather than adding to it', async () => {
+    await openWith('live')
+
+    // One "Theater" (the group heading), and it is NOT itself a menu item —
+    // its two children are. Otherwise the menu offers three ways to say the
+    // same thing.
+    expect(screen.getAllByText('Theater')).toHaveLength(1)
+    expect(screen.getByText('Theater').closest('[role="menuitem"]')).toBeNull()
+  })
+
+  it('falls back to the plain Theater entry when no tabs are passed (desktop)', async () => {
+    mockAuthMe(AUTHED_ME)
+    render(<TheaterAvatarMenu theaterActive />)
+    fireEvent.click(await screen.findByLabelText('Account menu'))
+
+    expect(screen.getByText('Theater')).toBeInTheDocument()
+    expect(screen.queryByText('My Collection')).not.toBeInTheDocument()
+    expect(screen.queryByText('Live')).not.toBeInTheDocument()
   })
 })

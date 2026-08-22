@@ -66,10 +66,16 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy migration files for npm run db:migrate
-COPY --from=builder --chown=nextjs:nodejs /app/src/lib/db/migrate.ts ./src/lib/db/migrate.ts
+# Copy the whole lib tree for migrations + one-off scripts. Individual file
+# COPYs missed new migrate.ts imports and took staging down (module-not-found
+# before listen — Fly reports "never became reachable on 0.0.0.0:3000").
+COPY --from=builder --chown=nextjs:nodejs /app/src/lib ./src/lib
 COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
+
+# One-off maintenance scripts, run by hand against a deployed volume:
+#   fly ssh console --app adhx -C "tsx /app/scripts/<name>.ts"
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 
 # Create data directory for SQLite (will be mounted as volume)
 RUN mkdir -p /data && chown nextjs:nodejs /data

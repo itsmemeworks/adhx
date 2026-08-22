@@ -6,10 +6,15 @@
  * vxinstagram's cold cache can 404-retry for ~10–20s and a media element
  * aborts sooner than that, which used to surface as a false "failed to load"
  * (see `instagram-playback.ts`). While probing: poster + a small spinner for
- * ≤3s, then poster + a quiet "starting…" line — never a black void. Once the
- * probe confirms the mirror, this renders `StageVideo` itself (same chrome:
- * tap-for-sound, progress bar, replay + "↓ next") rather than duplicating it.
- * A persistent miss falls back to Instagram's official embed.
+ * ≤3s, then poster + a quiet "starting…" line — never a black void.
+ *
+ * The probe lives in `useInstagramStage` and the confirmed reel is played by
+ * `Stage` through its shared <video> slot — NOT here. That's deliberate: React
+ * reconciles by position, so a player rendered from inside this file would be a
+ * different element than the one Stage renders for X/TikTok, and iOS grants
+ * unmuted playback per element. Sharing the slot is what lets sound survive
+ * X video → text post → Instagram reel. A persistent mirror miss falls back to
+ * Instagram's official embed, which this file does still render.
  */
 
 import { useEffect, useRef, useState } from 'react'
@@ -20,7 +25,6 @@ import {
   probeInstagramVideo,
 } from '@/lib/media/instagram-playback'
 import { previewPath } from '@/lib/activity/preview-path'
-import { StageVideo } from './StageVideo'
 import { StageFrame } from './stage-primitives'
 import type { TheaterItem } from './types'
 
@@ -82,20 +86,53 @@ export function instagramStagePhase(
   return slow ? 'status' : 'spinner'
 }
 
-export function StageInstagram({
+/** What the Instagram probe currently knows — see `useInstagramStage`. */
+export interface InstagramStageState {
+  status: ProbeStatus
+  slow: boolean
+  /** The mirror MP4, only once the probe confirmed it. */
+  src: string | null
+  poster: string | null
+}
+
+/**
+ * The probe + auto-advance guards, as a hook so `Stage` can own them.
+ *
+ * Why a hook rather than keeping it all inside `StageInstagram`: React
+ * reconciles by POSITION, so a `<StageVideo>` rendered from inside
+ * StageInstagram sits at a different tree path than one rendered directly by
+ * Stage — which meant a brand-new `<video>` element, and iOS grants unmuted
+ * playback to the ELEMENT the viewer gestured on. Going X video → text →
+ * Instagram reel therefore lost sound (owner report). With the probe hoisted,
+ * Stage can render the confirmed reel through its own shared video slot, so
+ * every MP4 platform reuses one element and one grant.
+ *
+ * `active` is false for non-Instagram items (Stage calls this unconditionally,
+ * hooks-rules oblige) and skips all the work.
+ */
+export function useInstagramStage({
   item,
-  muted,
-  onRequestUnmute,
+  active,
   onEnded,
   repeat,
-}: StageInstagramProps) {
-  const id = item.bookmarkId || ''
+}: {
+  item: TheaterItem | null
+  active: boolean
+  onEnded?: () => void
+  repeat?: boolean
+}): InstagramStageState {
+  const id = (active && item?.bookmarkId) || ''
   const [status, setStatus] = useState<ProbeStatus>(() =>
     probedReady.has(id) ? 'ready' : 'probing',
   )
   const [slow, setSlow] = useState(false)
 
   useEffect(() => {
+    // Inert for every non-Instagram item. This MUST come first: falling
+    // through to the `!id` branch below set status to 'failed', which armed the
+    // embed-fallback guard and auto-advanced any item that merely happened to
+    // be on stage — the YouTube stall-watchdog test caught exactly that.
+    if (!active) return
     setSlow(false)
 
     if (probedReady.has(id)) {
@@ -121,7 +158,7 @@ export function StageInstagram({
       controller.abort()
       clearTimeout(slowTimer)
     }
-  }, [id])
+  }, [id, active])
 
   // `status` at the moment either guard's timer actually fires — read via a
   // ref so a stale value captured at schedule time can't suppress a real
@@ -137,13 +174,13 @@ export function StageInstagram({
   // item that lands in 'ready' or a fresh 'probing' never inherits a stale
   // timer (the effect's own cleanup clears it on every status change).
   useEffect(() => {
-    if (!onEnded || repeat) return
+    if (!active || !onEnded || repeat) return
     if (status !== 'failed') return
     const timer = setTimeout(() => {
       onEnded()
     }, ADVANCE_AFTER_EMBED_FALLBACK_MS)
     return () => clearTimeout(timer)
-  }, [status, onEnded, repeat])
+  }, [status, onEnded, repeat, active])
 
   // Guard 3: an overall "nothing started" ceiling from mount, independent of
   // the probe's own (up to ~70s) retry budget — if the probe is still
@@ -153,28 +190,35 @@ export function StageInstagram({
   // 2 already advanced first, the parent swaps the item and this effect's
   // `id`-change cleanup cancels the now-irrelevant timer before it fires.
   useEffect(() => {
-    if (!onEnded || repeat || !id) return
+    if (!active || !onEnded || repeat || !id) return
     const timer = setTimeout(() => {
       if (shouldAdvanceInstagramStage(statusRef.current)) onEnded()
     }, NEVER_STARTED_GUARD_MS)
     return () => clearTimeout(timer)
-  }, [id, onEnded, repeat])
+  }, [id, onEnded, repeat, active])
 
+  const poster = (active && item?.thumbnailUrl) || null
+
+  return { status, slow, src: status === 'ready' && id ? instagramVideoSrc(id) : null, poster }
+}
+
+/**
+ * The NON-video half of the Instagram stage: the official-embed fallback for a
+ * persistent mirror miss, and the poster + spinner/status while probing. The
+ * confirmed reel itself is rendered by `Stage` through its shared video slot
+ * (see `useInstagramStage`), so this component never mounts a player.
+ */
+export function StageInstagram({
+  item,
+  status,
+  slow,
+}: {
+  item: TheaterItem
+  status: ProbeStatus
+  slow: boolean
+}) {
+  const id = item.bookmarkId || ''
   const poster = item.thumbnailUrl ?? null
-
-  if (status === 'ready') {
-    return (
-      <StageVideo
-        item={item}
-        src={instagramVideoSrc(id)}
-        poster={poster}
-        muted={muted}
-        onRequestUnmute={onRequestUnmute}
-        onEnded={onEnded}
-        repeat={repeat}
-      />
-    )
-  }
 
   if (status === 'failed') {
     const href = previewPath('instagram', item.author, id)

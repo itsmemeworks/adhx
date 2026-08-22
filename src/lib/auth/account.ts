@@ -218,98 +218,167 @@ export interface FindOrCreateXResult {
 }
 
 /**
+ * True for a SQLite primary-key/unique violation from better-sqlite3 (same
+ * check as `src/app/api/bookmarks/[id]/tags/route.ts`) — used below to
+ * detect a lost race instead of crashing on it.
+ */
+function isDuplicateRowError(error: unknown): boolean {
+  const code = (error as { code?: string } | null)?.code
+  return code === 'SQLITE_CONSTRAINT_PRIMARYKEY' || code === 'SQLITE_CONSTRAINT_UNIQUE'
+}
+
+const MAX_RESOLVE_ATTEMPTS = 3
+
+/**
  * Resolve (or create) the app account for an X login.
  *
  * - Existing 'x' identity → return its owner (refreshing display name/avatar).
  *   If a different session is currently signed in and tries to link an X
  *   account already tied to someone else, that's a conflict — the caller
  *   should NOT change the session.
+ * - No existing identity, but a `users` row already has `id === xUserId` →
+ *   that id was previously claimed by an X-first signup (the historical
+ *   `userId == X id` convention) whose identity row was later detached, e.g.
+ *   by `unlinkX` (which drops the `user_identities` row but keeps the
+ *   `users` row so the account — now identified by email — survives). This
+ *   is the SAME conflict as above, just discovered via `users.id` instead of
+ *   `user_identities`: if a different session is signed in, report it
+ *   without touching the session; otherwise relink X to that account. Was
+ *   previously unhandled — a blind insert crashed with `SqliteError: UNIQUE
+ *   constraint failed: users.id` (Sentry WHITE-SUN-6317-17).
  * - No existing identity + an active session (`sessionUserId`) → link this X
  *   account to that session's user (e.g. an email user connecting X).
  * - No existing identity + no session → brand new user, id = the X user id
  *   (matches the historical `userId == X id` convention).
+ *
+ * Every insert is wrapped so a lost race (two callbacks resolving the same X
+ * id at once) re-checks from the top instead of crashing on the resulting
+ * constraint violation — the loser's retry sees what the winner committed.
  */
 export async function findOrCreateUserForX(
   x: { xUserId: string; username: string; name?: string | null; profileImageUrl: string | null },
   sessionUserId?: string,
 ): Promise<FindOrCreateXResult> {
-  const [existingIdentity] = await db
-    .select()
-    .from(userIdentities)
-    .where(and(eq(userIdentities.provider, 'x'), eq(userIdentities.providerId, x.xUserId)))
-    .limit(1)
+  for (let attempt = 0; attempt < MAX_RESOLVE_ATTEMPTS; attempt++) {
+    const [existingIdentity] = await db
+      .select()
+      .from(userIdentities)
+      .where(and(eq(userIdentities.provider, 'x'), eq(userIdentities.providerId, x.xUserId)))
+      .limit(1)
 
-  if (existingIdentity) {
-    if (sessionUserId && existingIdentity.userId !== sessionUserId) {
+    if (existingIdentity) {
+      if (sessionUserId && existingIdentity.userId !== sessionUserId) {
+        return {
+          userId: existingIdentity.userId,
+          username: '',
+          created: false,
+          conflict: 'linked_elsewhere',
+        }
+      }
+
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, existingIdentity.userId))
+        .limit(1)
+      const updates: Partial<typeof users.$inferInsert> = {}
+      if (x.name && x.name !== user?.displayName) updates.displayName = x.name
+      if (x.profileImageUrl && x.profileImageUrl !== user?.avatarUrl)
+        updates.avatarUrl = x.profileImageUrl
+      if (Object.keys(updates).length > 0) {
+        await db.update(users).set(updates).where(eq(users.id, existingIdentity.userId))
+      }
+
       return {
         userId: existingIdentity.userId,
-        username: '',
+        username: user?.username ?? x.username,
         created: false,
-        conflict: 'linked_elsewhere',
       }
     }
 
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, existingIdentity.userId))
-      .limit(1)
-    const updates: Partial<typeof users.$inferInsert> = {}
-    if (x.name && x.name !== user?.displayName) updates.displayName = x.name
-    if (x.profileImageUrl && x.profileImageUrl !== user?.avatarUrl)
-      updates.avatarUrl = x.profileImageUrl
-    if (Object.keys(updates).length > 0) {
-      await db.update(users).set(updates).where(eq(users.id, existingIdentity.userId))
+    const [ownerOfXId] = await db.select().from(users).where(eq(users.id, x.xUserId)).limit(1)
+
+    if (ownerOfXId) {
+      if (sessionUserId && ownerOfXId.id !== sessionUserId) {
+        return { userId: ownerOfXId.id, username: '', created: false, conflict: 'linked_elsewhere' }
+      }
+
+      try {
+        runInTransaction(() => {
+          db.insert(userIdentities)
+            .values({ provider: 'x', providerId: x.xUserId, userId: ownerOfXId.id })
+            .run()
+        })
+      } catch (err) {
+        if (!isDuplicateRowError(err)) throw err
+        continue // lost the race — retry sees the winner's committed identity
+      }
+
+      const updates: Partial<typeof users.$inferInsert> = {}
+      if (x.name && x.name !== ownerOfXId.displayName) updates.displayName = x.name
+      if (x.profileImageUrl && x.profileImageUrl !== ownerOfXId.avatarUrl)
+        updates.avatarUrl = x.profileImageUrl
+      if (Object.keys(updates).length > 0) {
+        await db.update(users).set(updates).where(eq(users.id, ownerOfXId.id))
+      }
+
+      return { userId: ownerOfXId.id, username: ownerOfXId.username, created: false }
     }
 
-    return {
-      userId: existingIdentity.userId,
-      username: user?.username ?? x.username,
-      created: false,
+    if (sessionUserId) {
+      // Linking a fresh X account to the currently signed-in (e.g. email) user.
+      try {
+        runInTransaction(() => {
+          db.insert(userIdentities)
+            .values({ provider: 'x', providerId: x.xUserId, userId: sessionUserId })
+            .run()
+        })
+      } catch (err) {
+        if (!isDuplicateRowError(err)) throw err
+        continue
+      }
+
+      const [user] = await db.select().from(users).where(eq(users.id, sessionUserId)).limit(1)
+      const updates: Partial<typeof users.$inferInsert> = {}
+      if (x.name && !user?.displayName) updates.displayName = x.name
+      if (x.profileImageUrl && !user?.avatarUrl) updates.avatarUrl = x.profileImageUrl
+      if (Object.keys(updates).length > 0) {
+        await db.update(users).set(updates).where(eq(users.id, sessionUserId))
+      }
+
+      return { userId: sessionUserId, username: user?.username ?? x.username, created: false }
     }
-  }
 
-  if (sessionUserId) {
-    // Linking a fresh X account to the currently signed-in (e.g. email) user.
-    runInTransaction(() => {
-      db.insert(userIdentities)
-        .values({ provider: 'x', providerId: x.xUserId, userId: sessionUserId })
-        .run()
-    })
-
-    const [user] = await db.select().from(users).where(eq(users.id, sessionUserId)).limit(1)
-    const updates: Partial<typeof users.$inferInsert> = {}
-    if (x.name && !user?.displayName) updates.displayName = x.name
-    if (x.profileImageUrl && !user?.avatarUrl) updates.avatarUrl = x.profileImageUrl
-    if (Object.keys(updates).length > 0) {
-      await db.update(users).set(updates).where(eq(users.id, sessionUserId))
+    // Brand new user, keyed by the X id.
+    let username = x.username
+    if (await isUsernameTaken(username)) {
+      username = `${x.username}-x${randomHex(2)}`
     }
 
-    return { userId: sessionUserId, username: user?.username ?? x.username, created: false }
-  }
-
-  // Brand new user, keyed by the X id.
-  let username = x.username
-  if (await isUsernameTaken(username)) {
-    username = `${x.username}-x${randomHex(2)}`
-  }
-
-  runInTransaction(() => {
-    db.insert(users)
-      .values({
-        id: x.xUserId,
-        username,
-        displayName: x.name ?? null,
-        avatarUrl: x.profileImageUrl,
-        usernameChosen: true, // picked their handle on X — no /welcome prompt
+    try {
+      runInTransaction(() => {
+        db.insert(users)
+          .values({
+            id: x.xUserId,
+            username,
+            displayName: x.name ?? null,
+            avatarUrl: x.profileImageUrl,
+            usernameChosen: true, // picked their handle on X — no /welcome prompt
+          })
+          .run()
+        db.insert(userIdentities)
+          .values({ provider: 'x', providerId: x.xUserId, userId: x.xUserId })
+          .run()
       })
-      .run()
-    db.insert(userIdentities)
-      .values({ provider: 'x', providerId: x.xUserId, userId: x.xUserId })
-      .run()
-  })
+    } catch (err) {
+      if (!isDuplicateRowError(err)) throw err
+      continue
+    }
 
-  return { userId: x.xUserId, username, created: true }
+    return { userId: x.xUserId, username, created: true }
+  }
+
+  throw new Error('findOrCreateUserForX: could not resolve X identity after repeated races')
 }
 
 // ===========================================

@@ -58,15 +58,6 @@ function mockFetch(me: object, overrides: Partial<Record<string, FetchImpl>> = {
     if (url.startsWith('/api/sync/cooldown')) {
       return jsonResponse({ canSync: true, cooldownRemaining: 0, lastSyncAt: null })
     }
-    if (url.startsWith('/api/triage/streak')) {
-      return jsonResponse({
-        current: 0,
-        longest: 0,
-        lastActiveDate: null,
-        triagedTotal: 0,
-        triagedThisWeek: 0,
-      })
-    }
     return jsonResponse({})
   }) as unknown as typeof fetch
 

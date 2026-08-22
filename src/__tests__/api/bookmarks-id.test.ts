@@ -73,9 +73,6 @@ function createTestDatabase() {
       quoted_tweet_id TEXT,
       is_retweet INTEGER DEFAULT 0,
       retweet_context TEXT,
-      extracted_content TEXT,
-      filed_path TEXT,
-      needs_transcript INTEGER DEFAULT 0,
       summary TEXT,
       source TEXT DEFAULT 'sync',
       raw_json TEXT,
@@ -102,6 +99,8 @@ function createTestDatabase() {
       platform TEXT NOT NULL DEFAULT 'twitter',
       bookmark_id TEXT NOT NULL,
       tag TEXT NOT NULL,
+      -- When the post was added to THIS tag (what a playlist shows/orders by).
+      created_at TEXT,
       PRIMARY KEY (user_id, platform, bookmark_id, tag)
     );
 
@@ -125,11 +124,11 @@ function createTestDatabase() {
       PRIMARY KEY (user_id, platform, id)
     );
 
-    CREATE TABLE read_status (
+    CREATE TABLE archived_posts (
       user_id TEXT NOT NULL,
       platform TEXT NOT NULL DEFAULT 'twitter',
       bookmark_id TEXT NOT NULL,
-      read_at TEXT NOT NULL,
+      archived_at TEXT NOT NULL,
       PRIMARY KEY (user_id, platform, bookmark_id)
     );
   `)
@@ -216,10 +215,10 @@ describe('API: /api/bookmarks/[id]', () => {
         mediaType: 'photo',
         originalUrl: 'https://pbs.twimg.com/media/test.jpg',
       })
-      await testDb.insert(schema.readStatus).values({
+      await testDb.insert(schema.archivedPosts).values({
         userId: USER_A,
         bookmarkId: 'tweet-1',
-        readAt: '2024-01-15T10:00:00Z',
+        archivedAt: '2024-01-15T10:00:00Z',
       })
 
       const { GET } = await import('@/app/api/bookmarks/[id]/route')
@@ -232,8 +231,8 @@ describe('API: /api/bookmarks/[id]', () => {
       expect(data.id).toBe('tweet-1')
       expect(data.tags).toEqual(['important', 'work'])
       expect(data.media).toHaveLength(1)
-      expect(data.isRead).toBe(true)
-      expect(data.readAt).toBe('2024-01-15T10:00:00Z')
+      expect(data.isArchived).toBe(true)
+      expect(data.archivedAt).toBe('2024-01-15T10:00:00Z')
     })
 
     it("does not return another user's bookmark", async () => {
@@ -406,10 +405,10 @@ describe('API: /api/bookmarks/[id]', () => {
         bookmarkId: 'tweet-1',
         expandedUrl: 'https://example.com',
       })
-      await testDb.insert(schema.readStatus).values({
+      await testDb.insert(schema.archivedPosts).values({
         userId: USER_A,
         bookmarkId: 'tweet-1',
-        readAt: new Date().toISOString(),
+        archivedAt: new Date().toISOString(),
       })
     })
 
@@ -464,9 +463,12 @@ describe('API: /api/bookmarks/[id]', () => {
         )
       const readResult = await testDb
         .select()
-        .from(schema.readStatus)
+        .from(schema.archivedPosts)
         .where(
-          and(eq(schema.readStatus.userId, USER_A), eq(schema.readStatus.bookmarkId, 'tweet-1')),
+          and(
+            eq(schema.archivedPosts.userId, USER_A),
+            eq(schema.archivedPosts.bookmarkId, 'tweet-1'),
+          ),
         )
 
       expect(bookmarkResult).toHaveLength(0)

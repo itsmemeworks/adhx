@@ -8,9 +8,11 @@ import {
   type ReactNode,
 } from 'react'
 import { usePathname } from 'next/navigation'
-import { Bookmark, LogIn, LogOut, Menu, Radio, Settings, Tag, Trophy } from 'lucide-react'
+import { Bookmark, LogIn, LogOut, Menu, Radio, Settings, Shield, Tag, Trophy } from 'lucide-react'
 import { useAuthMe } from '@/components/auth'
 import { cn } from '@/lib/utils'
+import { PERSONAL_TAB_ORDER, PERSONAL_TAB_LABEL, type PersonalTab } from './types'
+import { generateAvatarDataUri, usableAvatarUrl } from '@/lib/avatar/generated-avatar'
 
 // The theater is ALWAYS dark regardless of the site's light/dark theme, so
 // the dropdown panel uses a hardcoded palette rather than the Matter theme
@@ -107,7 +109,7 @@ function TheaterMenuEntry({ isHome, onClose }: { isHome: boolean; onClose: () =>
         style={{ color: INK }}
       >
         <Radio size={15} />
-        Theater
+        <span>Theater</span>
         <CurrentDot />
       </button>
     )
@@ -115,8 +117,61 @@ function TheaterMenuEntry({ isHome, onClose }: { isHome: boolean; onClose: () =>
   return (
     <MenuLink href="/" onClick={onClose}>
       <Radio size={15} />
-      Theater
+      <span>Theater</span>
     </MenuLink>
+  )
+}
+
+/**
+ * The Theater entry expanded into its two playlists (owner: "Theater just has
+ * two sub options: live and collection and we can just highlight which one is
+ * selected"). This is the MOBILE home for the tab switcher — the top scrim has
+ * the logo, trend/time chips, paste and this burger competing for ~360px, so a
+ * tab pill up there overlaps; desktop has room in its top bar and keeps the
+ * pill instead. Only one of the two ever renders, so the control is never
+ * duplicated.
+ *
+ * Selecting a tab goes through `onTabChange` rather than an `<a href>`: the
+ * pair is routes (`/` and `/collection`) but the chrome flips the tab locally
+ * first so the switch is instant, then navigates — a plain link would reload
+ * the stage the viewer is watching.
+ */
+function TheaterTabsGroup({
+  tab,
+  onTabChange,
+  onClose,
+}: {
+  tab: PersonalTab
+  onTabChange: (tab: PersonalTab) => void
+  onClose: () => void
+}) {
+  return (
+    <>
+      <p
+        className="flex items-center gap-2.5 px-4 pt-2.5 pb-1 text-[11px] font-semibold tracking-wide uppercase"
+        style={{ color: MUTED }}
+      >
+        <Radio size={13} />
+        <span>Theater</span>
+      </p>
+      {PERSONAL_TAB_ORDER.map((t) => (
+        <button
+          key={t}
+          type="button"
+          role="menuitem"
+          aria-current={tab === t ? 'page' : undefined}
+          onClick={() => {
+            onTabChange(t)
+            onClose()
+          }}
+          className="flex w-full items-center gap-2.5 py-2.5 pr-4 pl-[2.4rem] text-left text-[13px] transition-colors hover:bg-white/[.06]"
+          style={{ color: tab === t ? INK : SUBTLE }}
+        >
+          <span>{PERSONAL_TAB_LABEL[t]}</span>
+          {tab === t && <CurrentDot />}
+        </button>
+      ))}
+    </>
   )
 }
 
@@ -130,18 +185,18 @@ export interface TheaterAvatarMenuProps {
    */
   onRequestSignIn?: () => void
   /**
-   * Renders a burger-menu fallback (Theater / Leaderboard / Sign in) for
+   * Renders a burger-menu fallback (Theater / Leaderboard / Privacy / Sign in) for
    * signed-out visitors in this exact slot, instead of this component's
    * default "render nothing" behavior — one menu implementation covering
    * both auth states rather than a second component. Callers opt in per
    * mode: the home theater and shared preview pages pass this (signed-out
-   * visitors there had no navigation at all); triage is always reached
-   * authed, and collection mode already has its own "Make your own"
+   * visitors there had no navigation at all); the collection theater is always reached
+   * authed, and playlist mode already has its own "Make your own"
    * signed-out conversion CTA, so neither passes it.
    */
   allowSignedOut?: boolean
   /**
-   * The mount site IS the home theater screen (home mode, or triage — the
+   * The mount site IS the home theater screen (home mode, or collection — the
    * theater overlaying `/`), regardless of what the address bar says (the
    * URL-sync effect rewrites it to per-post preview paths mid-session, and
    * usePathname follows). Marks the Theater entry as current and makes it
@@ -149,6 +204,13 @@ export interface TheaterAvatarMenuProps {
    * Theater is a real link home and never marked.
    */
   theaterActive?: boolean
+  /**
+   * Mobile collection only: expands the Theater entry into its Live / My
+   * Collection sub-options with the selected one marked. Desktop omits it —
+   * its top bar carries the tab pill, and rendering both would be two
+   * controls for one piece of state.
+   */
+  theaterTabs?: { tab: PersonalTab; onTabChange: (tab: PersonalTab) => void }
 }
 
 /**
@@ -156,7 +218,7 @@ export interface TheaterAvatarMenuProps {
  * menu — Your collection / Theater / Tags / Leaderboard / Settings (the same
  * nav set as the authed Header's own avatar menu, so signed-in visitors
  * aren't stranded on a preview page) plus Sign out. Signed out with
- * `allowSignedOut`: a burger menu (Theater/Leaderboard/Sign in) in the same
+ * `allowSignedOut`: a burger menu (Theater/Leaderboard/Privacy/Sign in) in the same
  * slot, so new mobile visitors have SOME way to reach the public surfaces.
  * Signed out without `allowSignedOut` (or while auth is still loading):
  * renders nothing.
@@ -166,9 +228,13 @@ export function TheaterAvatarMenu({
   onRequestSignIn,
   allowSignedOut = false,
   theaterActive = false,
+  theaterTabs,
 }: TheaterAvatarMenuProps) {
   const { me, loading } = useAuthMe()
   const [open, setOpen] = useState(false)
+  // A remote avatar that fails to load falls through to the generated icon,
+  // same as having no avatarUrl at all.
+  const [avatarBroken, setAvatarBroken] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
 
@@ -220,6 +286,7 @@ export function TheaterAvatarMenu({
   const isLeaderboard = pathname === '/leaderboard' || pathname?.startsWith('/leaderboard/')
   const isTags = pathname === '/tags' || pathname?.startsWith('/tags/')
   const isSettings = pathname === '/settings' || pathname?.startsWith('/settings/')
+  const isPrivacy = pathname === '/privacy'
   const close = () => setOpen(false)
 
   if (!me?.authenticated || !me.user) {
@@ -251,7 +318,11 @@ export function TheaterAvatarMenu({
             <TheaterMenuEntry isHome={isHome} onClose={close} />
             <MenuLink href="/leaderboard" onClick={close} current={isLeaderboard}>
               <Trophy size={15} />
-              Leaderboard
+              <span>Leaderboard</span>
+            </MenuLink>
+            <MenuLink href="/privacy" onClick={close} current={isPrivacy}>
+              <Shield size={15} />
+              <span>Privacy</span>
             </MenuLink>
             <div className="my-1 h-px" style={{ backgroundColor: BORDER }} />
             <button
@@ -265,7 +336,7 @@ export function TheaterAvatarMenu({
               style={{ color: SUBTLE }}
             >
               <LogIn size={15} />
-              Sign in
+              <span>Sign in</span>
             </button>
           </div>
         )}
@@ -274,7 +345,11 @@ export function TheaterAvatarMenu({
   }
 
   const { user, identities } = me
-  const initial = (user.displayName || user.username || '?').trim().charAt(0).toUpperCase() || '?'
+  // `usableAvatarUrl` also rejects a platform's own "no photo" placeholder
+  // (X's grey silhouette) — it loads fine, so `onError` never fires for it.
+  const remoteAvatar = usableAvatarUrl(user.avatarUrl)
+  const showAvatarImage = Boolean(remoteAvatar) && !avatarBroken
+  const generatedAvatarUri = generateAvatarDataUri(user.username || user.displayName)
   const identityLabel = identities?.x
     ? `@${identities.x.username}`
     : identities?.email?.email || `@${user.username}`
@@ -308,16 +383,13 @@ export function TheaterAvatarMenu({
         onClick={() => setOpen((v) => !v)}
         className="flex h-10 w-10 flex-none items-center justify-center overflow-hidden rounded-full border border-white/25 bg-white/10 text-[13px] font-semibold text-white backdrop-blur-md transition-colors hover:bg-white/20"
       >
-        {user.avatarUrl ? (
-          <img
-            src={user.avatarUrl}
-            alt=""
-            referrerPolicy="no-referrer"
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          initial
-        )}
+        <img
+          src={showAvatarImage ? remoteAvatar! : generatedAvatarUri}
+          alt=""
+          referrerPolicy="no-referrer"
+          className="h-full w-full object-cover"
+          onError={() => setAvatarBroken(true)}
+        />
       </button>
 
       {open && (
@@ -334,16 +406,13 @@ export function TheaterAvatarMenu({
               className="flex h-9 w-9 flex-none items-center justify-center overflow-hidden rounded-full text-[13px] font-semibold text-white"
               style={{ backgroundColor: BORDER }}
             >
-              {user.avatarUrl ? (
-                <img
-                  src={user.avatarUrl}
-                  alt=""
-                  referrerPolicy="no-referrer"
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                initial
-              )}
+              <img
+                src={showAvatarImage ? remoteAvatar! : generatedAvatarUri}
+                alt=""
+                referrerPolicy="no-referrer"
+                className="h-full w-full object-cover"
+                onError={() => setAvatarBroken(true)}
+              />
             </div>
             <div className="min-w-0">
               <p className="truncate text-[13.5px] font-semibold" style={{ color: INK }}>
@@ -363,22 +432,34 @@ export function TheaterAvatarMenu({
               reach the rest of the app. "Your collection" keeps this
               menu's own naming convention rather than Header's plain
               "Collection". */}
-          <MenuLink href="/" onClick={close}>
+          <MenuLink href="/library" onClick={close}>
             <Bookmark size={15} />
-            Your collection
+            {/* "Library" (the grid over your saves — repo terminology) rather
+                than "Your collection", which became ambiguous the moment the
+                Theater group below gained a "My Collection" tab: two rows
+                reading as the same destination, going to different screens. */}
+            <span>Library</span>
           </MenuLink>
-          <TheaterMenuEntry isHome={isHome} onClose={close} />
+          {theaterTabs ? (
+            <TheaterTabsGroup
+              tab={theaterTabs.tab}
+              onTabChange={theaterTabs.onTabChange}
+              onClose={close}
+            />
+          ) : (
+            <TheaterMenuEntry isHome={isHome} onClose={close} />
+          )}
           <MenuLink href="/tags" onClick={close} current={isTags}>
             <Tag size={15} />
-            Tags
+            <span>Tags</span>
           </MenuLink>
           <MenuLink href="/leaderboard" onClick={close} current={isLeaderboard}>
             <Trophy size={15} />
-            Leaderboard
+            <span>Leaderboard</span>
           </MenuLink>
           <MenuLink href="/settings" onClick={close} current={isSettings}>
             <Settings size={15} />
-            Settings
+            <span>Settings</span>
           </MenuLink>
           <div className="my-1 h-px" style={{ backgroundColor: BORDER }} />
           <button
@@ -389,7 +470,7 @@ export function TheaterAvatarMenu({
             style={{ color: SUBTLE }}
           >
             <LogOut size={15} />
-            Sign out
+            <span>Sign out</span>
           </button>
         </div>
       )}

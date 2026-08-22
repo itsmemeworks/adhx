@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from 'next/server'
  * Algorithm: fixed window per key. A key's counter resets once `windowMs` has
  * elapsed since the window started, rather than sliding continuously — simpler
  * than a token bucket and generous enough that a legitimate browsing session
- * (gallery hover previews, a handful of triage swipes) never trips it.
+ * (gallery hover previews, a handful of collection swipes) never trips it.
  */
 
 export interface RateLimitOptions {
@@ -108,6 +108,28 @@ export function getClientIp(request: NextRequest | Request): string {
 export function mediaRateLimit(request: NextRequest, opts?: RateLimitOptions): NextResponse | null {
   const ip = getClientIp(request)
   const result = checkRateLimit(`media:${ip}`, opts)
+
+  if (result.limited) {
+    return NextResponse.json(
+      { error: 'Too many requests' },
+      {
+        status: 429,
+        headers: { 'Retry-After': Math.ceil(result.resetMs / 1000).toString() },
+      },
+    )
+  }
+
+  return null
+}
+
+/**
+ * Dedicated limiter for unauthenticated pulse writes. Separate from the
+ * media bucket so a gallery hover session cannot starve share/preview,
+ * and so we can keep the write cap tighter (15 / minute / IP).
+ */
+export function activityWriteLimit(request: NextRequest): NextResponse | null {
+  const ip = getClientIp(request)
+  const result = checkRateLimit(`activity:${ip}`, { windowMs: 60_000, max: 15 })
 
   if (result.limited) {
     return NextResponse.json(

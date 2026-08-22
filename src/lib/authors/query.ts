@@ -3,6 +3,8 @@ import { activity, bookmarks, bookmarkMedia, bookmarkLinks } from '@/lib/db/sche
 import { and, desc, eq, inArray, sql } from 'drizzle-orm'
 import { previewPath } from '@/lib/activity/preview-path'
 import { isReservedTopLevelSegment } from '@/lib/routes/reserved'
+import { asContentType, inferContentType } from '@/lib/content-type'
+import type { ContentType } from '@/components/matter'
 
 /**
  * Author hub query — the anonymity-safe data layer for the public `/{username}`
@@ -22,11 +24,7 @@ import { isReservedTopLevelSegment } from '@/lib/routes/reserved'
  * catching X handle-name search queries.
  */
 
-export type ContentType = 'video' | 'photo' | 'text' | 'quote' | 'article'
-const CONTENT_TYPES = new Set<string>(['video', 'photo', 'text', 'quote', 'article'])
-function asContentType(v: string | null | undefined): ContentType | undefined {
-  return v && CONTENT_TYPES.has(v) ? (v as ContentType) : undefined
-}
+export type { ContentType }
 
 /** X handle validation: 1-15 alphanumeric/underscore chars, same rule the status route uses. */
 const HANDLE_RE = /^\w{1,15}$/
@@ -258,11 +256,12 @@ async function fetchAuthorProfile(handle: string): Promise<AuthorProfile | null>
   const typeOf = (item: MergedItem): ContentType => {
     if (!item.isSaved) return item.previewContentType ?? 'text'
     const m = mediaKinds.get(item.bookmarkId)
-    if (m?.video) return 'video'
-    if (item.category === 'article') return 'article'
-    if (m?.photo) return 'photo'
-    if (item.isQuote) return 'quote'
-    return 'text'
+    return inferContentType({
+      category: item.category,
+      isQuote: item.isQuote,
+      hasVideo: m?.video,
+      hasPhoto: m?.photo,
+    })
   }
 
   const items: AuthorItem[] = top.map((item) => {

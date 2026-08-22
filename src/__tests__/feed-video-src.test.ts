@@ -3,7 +3,7 @@ import { feedVideoSrc, feedHoverSrc } from '@/components/feed/video-src'
 import type { FeedItem } from '@/components/feed/types'
 
 /**
- * Per-platform video source resolution for the in-app feed/triage cards.
+ * Per-platform video source resolution for the in-app feed/collection cards.
  *
  * This is the regression we hit twice: each surface special-cased TikTok and let
  * Instagram fall through to the Twitter proxy, so IG video played on the preview
@@ -24,7 +24,7 @@ const item = (over: Partial<FeedItem>): FeedItem =>
 const withVideo = (platform: FeedItem['platform'], url: string): FeedItem =>
   item({ platform, media: [{ mediaType: 'video', url }] as unknown as FeedItem['media'] })
 
-describe('feedVideoSrc — inline playback (focus/triage)', () => {
+describe('feedVideoSrc — inline playback (focus/collection)', () => {
   it('Twitter → the FxTwitter proxy at hd quality (built from author + id)', () => {
     expect(feedVideoSrc(item({ platform: 'twitter', author: 'jack', id: '99' }))).toBe(
       '/api/media/video?author=jack&tweetId=99&quality=hd',

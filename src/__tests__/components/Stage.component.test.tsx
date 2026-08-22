@@ -124,3 +124,64 @@ describe('Stage: manual advance off a stalled YouTube item must not double-advan
     expect(onEnded).not.toHaveBeenCalled()
   })
 })
+
+/**
+ * Owner report: "sometimes I'm watching with volume and it goes from a video
+ * to an image or a text post, and then back to a video. It's actually muted
+ * for me again."
+ *
+ * iOS grants unmuted playback to the ELEMENT the viewer gestured on, and
+ * StageVideo's whole design is to never remount its <video> so that grant
+ * survives item changes. But a text/photo/article item used to unmount
+ * StageVideo entirely (a gap its own doc comment called out), so the next
+ * video got a brand-new element and lost the grant. Stage now keeps the last
+ * video mounted, paused and covered, underneath a non-video item.
+ */
+describe('Stage: the granted <video> element survives a non-video item', () => {
+  // jsdom implements neither play() nor load(); StageVideo calls both on mount.
+  beforeEach(() => {
+    HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue(undefined)
+    HTMLMediaElement.prototype.load = vi.fn()
+    HTMLMediaElement.prototype.pause = vi.fn()
+  })
+
+  /** A twitter item with media, so `usePlaybackSource` resolves a video src. */
+  function videoItem(id: string): TheaterItem {
+    return {
+      action: 'save',
+      platform: 'twitter',
+      bookmarkId: id,
+      author: 'someone',
+      url: `/someone/status/${id}`,
+      text: 'a video tweet',
+      contentType: 'video',
+      thumbnailUrl: 'https://example.com/poster.jpg',
+      createdAt: '2026-08-20T00:00:00Z',
+    } as TheaterItem
+  }
+
+  it('keeps the same element across video → text → video', () => {
+    const props = { muted: true, onRequestUnmute: vi.fn() }
+    const { container, rerender } = render(<Stage item={videoItem('1')} {...props} />)
+
+    const first = container.querySelector('video')
+    expect(first).not.toBeNull()
+
+    // A text item in between: the element must still be there (covered), not
+    // unmounted — that's what preserves the grant.
+    rerender(<Stage item={textItem()} {...props} />)
+    const whileCovered = container.querySelector('video')
+    expect(whileCovered).toBe(first)
+    expect(container.querySelector('[aria-hidden="true"] video')).toBe(first)
+
+    // Back to a video: same element again, so the grant (and any unmute the
+    // viewer had granted it) carries through.
+    rerender(<Stage item={videoItem('2')} {...props} />)
+    expect(container.querySelector('video')).toBe(first)
+  })
+
+  it('renders no retained video before any video has played', () => {
+    const { container } = render(<Stage item={textItem()} muted onRequestUnmute={vi.fn()} />)
+    expect(container.querySelector('video')).toBeNull()
+  })
+})

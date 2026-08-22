@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { bookmarks, bookmarkMedia, readStatus } from '@/lib/db/schema'
+import { bookmarks, bookmarkMedia, archivedPosts } from '@/lib/db/schema'
 import { count, sql, eq, and, or } from 'drizzle-orm'
 import { withAuth } from '@/lib/api/with-auth'
 
@@ -14,15 +14,15 @@ export const GET = withAuth(async (_req, userId) => {
       .where(eq(bookmarks.userId, userId))
     const total = totalResult?.count || 0
 
-    // Read count for user's bookmarks (use userId from readStatus directly)
+    // Read count for user's bookmarks (use userId from archivedPosts directly)
     const [readResult] = await db
       .select({ count: count() })
-      .from(readStatus)
-      .where(eq(readStatus.userId, userId))
-    const readCount = readResult?.count || 0
+      .from(archivedPosts)
+      .where(eq(archivedPosts.userId, userId))
+    const archivedCount = readResult?.count || 0
 
-    // Calculate unread
-    const unread = Math.max(0, total - readCount)
+    // Posts still in the active collection — everything not archived.
+    const active = Math.max(0, total - archivedCount)
 
     // By category for this user (strict userId check)
     const categoryCounts = await db
@@ -45,12 +45,6 @@ export const GET = withAuth(async (_req, userId) => {
       .from(bookmarkMedia)
       .where(eq(bookmarkMedia.userId, userId))
 
-    // Needs transcript for this user (strict userId check)
-    const [needsTranscriptResult] = await db
-      .select({ count: count() })
-      .from(bookmarks)
-      .where(and(eq(bookmarks.userId, userId), sql`${bookmarks.needsTranscript} = 1`))
-
     // Manually added bookmarks (not via sync)
     const [manualResult] = await db
       .select({ count: count() })
@@ -65,11 +59,10 @@ export const GET = withAuth(async (_req, userId) => {
 
     return NextResponse.json({
       total,
-      unread,
-      read: readCount,
+      active,
+      archived: archivedCount,
       categories,
       withMedia: withMediaResult?.count || 0,
-      needsTranscript: needsTranscriptResult?.count || 0,
       manual: manualCount,
     })
   } catch (error) {

@@ -5,7 +5,7 @@ import { and, eq, gt } from 'drizzle-orm'
 /**
  * The Discovery leaderboard event log (docs/specs/discovery-leaderboards.md §3–§4).
  *
- * Records `view`/`clone` events against a public collection — keyed by
+ * Records `view`/`clone` events against a public playlist (one shared tag) — keyed by
  * `(ownerUserId, tag)`, not `(platform, bookmarkId)`, so this is its own log
  * rather than nullable columns bolted onto `activity` (see the comment on
  * `collectionEvents` in `src/lib/db/schema.ts`). Same two hard rules as
@@ -21,7 +21,7 @@ export type CollectionEventAction = 'view' | 'clone'
 const SIGNED_IN_DEDUPE_WINDOW_MS = 30 * 60 * 1000 // 30 minutes
 const ANON_DEDUPE_WINDOW_MS = 60_000 // 60 seconds
 
-/** Whether `(ownerUserId, tag)` is currently a publicly shared collection. */
+/** Whether `(ownerUserId, tag)` is currently a publicly shared playlist. */
 function isPublicCollection(ownerUserId: string, tag: string): boolean {
   const share = db
     .select({ isPublic: tagShares.isPublic })
@@ -39,7 +39,7 @@ function isPublicCollection(ownerUserId: string, tag: string): boolean {
  *
  * Rules enforced here so call sites stay dumb — see spec §4:
  *  - Self-events never count (`viewerId === ownerUserId`).
- *  - Only public collections accrue events; private ones are a no-op (their
+ *  - Only public playlists accrue events; private ones are a no-op (their
  *    historical events are also excluded at read time by the public-only
  *    join in `rank.ts`).
  *  - Write-side dedupe: signed-in viewers per `(viewerId, owner, tag, action)`
@@ -58,7 +58,7 @@ export function recordCollectionEvent(opts: {
     if (!ownerUserId || !tag) return
 
     // Self-events never count — otherwise every curator refresh/clone-check
-    // of their own collection inflates their own rank.
+    // of their own playlist inflates their own rank.
     if (viewerId && viewerId === ownerUserId) return
 
     if (!isPublicCollection(ownerUserId, tag)) return

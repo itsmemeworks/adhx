@@ -76,15 +76,6 @@ function mockFetch(
     if (url.startsWith('/api/sync/cooldown')) {
       return jsonResponse({ canSync: true, cooldownRemaining: 0, lastSyncAt: null })
     }
-    if (url.startsWith('/api/triage/streak')) {
-      return jsonResponse({
-        current: 0,
-        longest: 0,
-        lastActiveDate: null,
-        triagedTotal: 0,
-        triagedThisWeek: 0,
-      })
-    }
     return jsonResponse({})
   }) as unknown as typeof fetch
 }
@@ -123,7 +114,7 @@ describe('SettingsClient — Username row', () => {
     render(<SettingsClient />)
 
     await waitFor(() => expect(screen.getByText('@auto123')).toBeInTheDocument())
-    expect(screen.getByText('Your public handle on shared collections')).toBeInTheDocument()
+    expect(screen.getByText('Your public handle on shared playlists')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Choose' })).toBeInTheDocument()
   })
 

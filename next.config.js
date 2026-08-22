@@ -1,6 +1,15 @@
-import { readFileSync } from 'fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'fs'
+import { join } from 'path'
 
 const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'))
+
+// Playwright e2e: persist DATABASE_PATH where Next workers can find it even
+// when Turbopack drops the env. Owner `pnpm dev` uses `.next` and never
+// writes this file.
+if (process.env.NEXT_DIST_DIR === '.next-e2e' && process.env.DATABASE_PATH) {
+  mkdirSync('.next-e2e', { recursive: true })
+  writeFileSync(join('.next-e2e', 'database-path'), process.env.DATABASE_PATH, 'utf8')
+}
 
 // In dev, Next/React use eval() for HMR + debugging (callstack reconstruction),
 // which a strict CSP blocks — noisy console errors on every page. Allow it for
@@ -13,10 +22,21 @@ const nextConfig = {
   // Expose app version to client
   env: {
     NEXT_PUBLIC_APP_VERSION: packageJson.version,
+    // Inlined into the server bundle as `process.env.ADHX_DATABASE_PATH`
+    // (dot access only — brackets are not replaced). Playwright-only.
+    ...(process.env.NEXT_DIST_DIR === '.next-e2e' && process.env.DATABASE_PATH
+      ? { ADHX_DATABASE_PATH: process.env.DATABASE_PATH }
+      : {}),
   },
 
   // Enable standalone output for Docker deployment
   output: 'standalone',
+
+  // Playwright e2e runs `next dev` alongside the owner's :3001 server. Next
+  // locks on distDir, so the e2e process uses `.next-e2e` (see e2e/env.ts).
+  distDir: process.env.NEXT_DIST_DIR || '.next',
+  // Dev-only: Playwright hits localhost / 127.0.0.1. Production ignores this.
+  allowedDevOrigins: ['localhost', '127.0.0.1'],
 
   // Enable server-side external packages for better-sqlite3.
   // @sentry/node is also external: without this, Turbopack bundles a full

@@ -5,7 +5,7 @@
  * `!authStatus.authenticated`, placed after an earlier `if (authStatus !==
  * null && !authStatus.authenticated) return null` — so the component always
  * bailed out before that block could render. The link was removed rather than
- * fixed (GitHub discoverability now lives in PublicNav/PreviewShell, the
+ * fixed (GitHub discoverability now lives in PublicNav, the
  * actual signed-out surfaces). This test guards against it reappearing here.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -62,8 +62,7 @@ function mockFetch(authenticated: boolean, xConnected = true) {
             },
       )
     }
-    if (url.startsWith('/api/stats')) return jsonResponse({ total: 0, unread: 0 })
-    if (url.startsWith('/api/triage/streak')) return jsonResponse({ current: 0 })
+    if (url.startsWith('/api/stats')) return jsonResponse({ total: 0, active: 0 })
     if (url.startsWith('/api/sync/cooldown')) {
       return jsonResponse({ canSync: true, cooldownRemaining: 0, lastSyncAt: null })
     }
@@ -140,15 +139,17 @@ describe('Header', () => {
     })
   })
 
-  it('shows Collection · Theater · Tags · Leaderboard nav, with no Add button', async () => {
+  it('shows Library · Theater · Tags · Leaderboard nav as links, with no Add button', async () => {
     mockFetch(true)
     render(<Header />)
 
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
-    // Desktop primary nav
-    expect(screen.getByRole('link', { name: 'Collection' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Theater' })).toBeInTheDocument()
+    // Desktop primary nav — every entry is a real route now that the theater
+    // has its own (`/` = Live, `/collection` = My Collection, `/library` = the
+    // grid). Theater used to be a button dispatching `open-theater`.
+    expect(screen.getByRole('link', { name: 'Library' })).toHaveAttribute('href', '/library')
+    expect(screen.getByRole('link', { name: 'Theater' })).toHaveAttribute('href', '/')
     expect(screen.getByRole('link', { name: 'Tags' })).toHaveAttribute('href', '/tags')
     expect(screen.getByRole('link', { name: 'Leaderboard' })).toHaveAttribute(
       'href',
@@ -156,48 +157,45 @@ describe('Header', () => {
     )
 
     // "Live" is gone — renamed to "Theater" (the mode contains both the live
-    // pulse and the collection-as-theater tabs, so it's not just "Live").
+    // pulse and the collection-as-theater tabs, so it's not just "Live"), and
+    // "Collection" is gone — the grid is "Library" now.
     expect(screen.queryByRole('button', { name: 'Live' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Collection' })).not.toBeInTheDocument()
 
     // The `+` Add button and its modal trigger are removed
     expect(screen.queryByRole('button', { name: /add link/i })).not.toBeInTheDocument()
   })
 
-  it('dispatches open-theater with tab "live" when Theater is clicked', async () => {
+  it('points Theater at `/` — the live theater is a route, not an overlay event', async () => {
     mockFetch(true)
     render(<Header />)
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
-    screen.getByRole('button', { name: 'Theater' }).click()
+    const theaterLink = screen.getByRole('link', { name: 'Theater' })
+    expect(theaterLink).toHaveAttribute('href', '/')
+    theaterLink.click()
 
     const liveEvent = dispatchSpy.mock.calls
       .map((call) => call[0] as CustomEvent)
       .find((e) => e.type === 'open-theater')
-    expect(liveEvent).toBeDefined()
-    expect(liveEvent?.detail).toEqual({ tab: 'live' })
+    expect(liveEvent).toBeUndefined()
   })
 
-  it('dispatches open-theater with tab "live" from the avatar menu entry too', async () => {
+  it('carries Library + Theater as links in the avatar menu too', async () => {
     mockFetch(true)
     render(<Header />)
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
-    // Open the avatar menu (the small round button with no accessible name
-    // other than its image/initial — grab it by its position among buttons).
     const avatarButtons = screen.getAllByRole('button')
-    const avatarButton = avatarButtons.find((btn) => btn.className.includes('rounded-full'))
+    const avatarButton = avatarButtons.find((btn) => btn.className.includes('w-[33px]'))
     expect(avatarButton).toBeDefined()
-    avatarButton!.click()
+    fireEvent.click(avatarButton!)
 
-    const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
-    const menuLiveButton = screen.getAllByRole('button', { name: 'Theater' })[0]
-    menuLiveButton.click()
-
-    const liveEvent = dispatchSpy.mock.calls
-      .map((call) => call[0] as CustomEvent)
-      .find((e) => e.type === 'open-theater')
-    expect(liveEvent?.detail).toEqual({ tab: 'live' })
+    const theaterLinks = screen.getAllByRole('link', { name: 'Theater' })
+    expect(theaterLinks.some((l) => l.getAttribute('href') === '/')).toBe(true)
+    const libraryLinks = screen.getAllByRole('link', { name: 'Library' })
+    expect(libraryLinks.some((l) => l.getAttribute('href') === '/library')).toBe(true)
   })
 
   it('shows a Leaderboard link in the avatar menu too, pointing at /leaderboard', async () => {
@@ -223,7 +221,7 @@ describe('Header', () => {
     expect(navTagsLink).toHaveAttribute('href', '/tags')
 
     // Avatar menu also carries a Tags entry
-    // Distinguish from the Triage pill and mobile search icon, which also
+    // Distinguish from the Collection entry and mobile search icon, which also
     // carry `rounded-full` — the avatar toggle is the only 33px round button.
     // Use fireEvent (not a raw `.click()`) so the resulting setState is
     // flushed before we assert on the menu contents.
@@ -235,57 +233,42 @@ describe('Header', () => {
     expect(menuTagsLinks.some((l) => l.getAttribute('href') === '/tags')).toBe(true)
   })
 
-  it('dispatches open-theater {tab: "triage"} plus the legacy open-triage event from the Triage pill', async () => {
+  // The Collection entry is gone with the concept it was named for (owner: "remove
+  // the concept of collection… it's essentially 'show me everything that's not
+  // archived'"). Its job — reach your collection — is the nav's own entries,
+  // and it carried both the gamified streak and an accent CTA.
+  it('no longer renders a Collection entry', async () => {
     mockFetch(true)
     render(<Header />)
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
-    const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
-    screen.getByTitle('Triage your unread').click()
-
-    const dispatchedTypes = dispatchSpy.mock.calls.map((call) => (call[0] as CustomEvent).type)
-    expect(dispatchedTypes).toContain('open-triage')
-
-    const theaterEvent = dispatchSpy.mock.calls
-      .map((call) => call[0] as CustomEvent)
-      .find((e) => e.type === 'open-theater')
-    expect(theaterEvent?.detail).toEqual({ tab: 'triage' })
+    expect(screen.queryByTitle('Collection your unread')).not.toBeInTheDocument()
+    expect(screen.queryByText('Collection')).not.toBeInTheDocument()
   })
 
-  it('navigates to /?live=1 instead of dispatching when Theater is clicked off the feed page', async () => {
+  it('keeps Theater pointing at `/` from any route (no ?live=1 hand-off)', async () => {
+    // The theater used to be an overlay the feed page owned, so reaching it
+    // from elsewhere meant `router.push('/?live=1')`. It's a route now, so the
+    // same plain link works from anywhere.
     mockPathname = '/tags'
     mockFetch(true)
     render(<Header />)
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
-    const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
-    screen.getByRole('button', { name: 'Theater' }).click()
-
-    expect(pushSpy).toHaveBeenCalledWith('/?live=1')
-    const liveEvent = dispatchSpy.mock.calls
-      .map((call) => call[0] as CustomEvent)
-      .find((e) => e.type === 'open-theater')
-    expect(liveEvent).toBeUndefined()
+    expect(screen.getByRole('link', { name: 'Theater' })).toHaveAttribute('href', '/')
+    expect(screen.getByRole('link', { name: 'Library' })).toHaveAttribute('href', '/library')
   })
 
-  it('navigates to /?live=1 from the avatar menu entry too when off the feed page', async () => {
-    mockPathname = '/tags'
+  it('marks Theater as current on both of its routes', async () => {
+    mockPathname = '/collection'
     mockFetch(true)
     render(<Header />)
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
-    // Distinguish from the Triage pill and mobile search icon, which also
-    // carry `rounded-full` — the avatar toggle is the only 33px round button.
-    // Use fireEvent (not a raw `.click()`) so the resulting setState is
-    // flushed before we assert on the menu contents.
-    const avatarButtons = screen.getAllByRole('button')
-    const avatarButton = avatarButtons.find((btn) => btn.className.includes('w-[33px]'))
-    fireEvent.click(avatarButton!)
-
-    const menuLiveButton = screen.getAllByRole('button', { name: 'Theater' })[0]
-    menuLiveButton.click()
-
-    expect(pushSpy).toHaveBeenCalledWith('/?live=1')
+    // `/collection` is the theater's My Collection tab, so the Theater entry —
+    // not Library — is the active one there.
+    expect(screen.getByRole('link', { name: 'Theater' }).className).toContain('text-clay')
+    expect(screen.getByRole('link', { name: 'Library' }).className).not.toContain('bg-clay')
   })
 
   it('on /tags: search placeholder changes and typing dispatches "tags-search" instead of navigating', async () => {
@@ -323,7 +306,7 @@ describe('Header', () => {
     render(<Header />)
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
-    // Distinguish from the Triage pill and mobile search icon, which also
+    // Distinguish from the Collection entry and mobile search icon, which also
     // carry `rounded-full` — the avatar toggle is the only 33px round button.
     // Use fireEvent (not a raw `.click()`) so the resulting setState is
     // flushed before we assert on the menu contents.
@@ -340,7 +323,7 @@ describe('Header', () => {
     render(<Header />)
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
-    // Distinguish from the Triage pill and mobile search icon, which also
+    // Distinguish from the Collection entry and mobile search icon, which also
     // carry `rounded-full` — the avatar toggle is the only 33px round button.
     // Use fireEvent (not a raw `.click()`) so the resulting setState is
     // flushed before we assert on the menu contents.

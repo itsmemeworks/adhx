@@ -7,6 +7,7 @@ import { FeedListRow } from './FeedListRow'
 import { FeedBentoTile, BENTO_SPANS } from './FeedBentoTile'
 import { EmptyAccountOnboarding } from './EmptyAccountOnboarding'
 import type { FeedItem } from './types'
+import { notifyTagsChanged } from '@/lib/client-events'
 
 export type FeedView = 'grid' | 'list' | 'bento'
 
@@ -16,22 +17,37 @@ interface FeedGridProps {
   hasMore: boolean
   lastSyncAt: string | null
   sortField: 'processedAt' | 'createdAt'
-  unreadOnly: boolean
-  stats: { total: number; unread: number }
+  hideArchived: boolean
+  stats: { total: number; active: number }
   view?: FeedView
   onExpand: (index: number) => void
   onLoadMore: () => void
   onShowAll: () => void
-  // Tags: "Add posts" selection mode (unified-theater-triage §4). Non-null
+  // Tags: "Add posts" selection mode (unified-theater-collection §4). Non-null
   // puts the grid view into selection mode for that tag; FilterBar owns the
   // toggle/exit (Escape + the toolbar's "Done adding" button) — this prop is
   // display + membership-toggling only.
   tagSelectTag?: string | null
+  /**
+   * `platform:id` of a post to highlight briefly — what the library shows
+   * after a paste instead of a transient banner, which pushed the whole grid
+   * down (owner: "just something subtle").
+   */
+  justAddedKey?: string | null
 }
 
 /** `platform:id` key for the optimistic tag-membership overlay below. */
 function tagOverlayKey(item: FeedItem): string {
   return `${item.platform || 'twitter'}:${item.id}`
+}
+
+/**
+ * React key AND highlight key. Deliberately not the bare `item.id`: ids are
+ * only unique per platform (a TikTok video id and a tweet id can both be 19
+ * digits), so two platforms sharing one id rendered duplicate React keys.
+ */
+function cardKey(item: FeedItem): string {
+  return tagOverlayKey(item)
 }
 
 // Calm Matter grid: mobile 1 col → tablet 2 col (≥640) → 3 col (≥820) →
@@ -46,13 +62,14 @@ export function FeedGrid({
   hasMore,
   lastSyncAt,
   sortField,
-  unreadOnly,
+  hideArchived,
   stats,
   view = 'grid',
   onExpand,
   onLoadMore,
   onShowAll,
   tagSelectTag = null,
+  justAddedKey = null,
 }: FeedGridProps): React.ReactElement {
   // Optimistic overlay for tag-membership toggles, keyed by `platform:id` —
   // items arrive via props, so membership changes are tracked here rather
@@ -86,11 +103,7 @@ export function FeedGrid({
           const tags = next
             ? [...item.tags.filter((t) => t !== tagSelectTag), tagSelectTag]
             : item.tags.filter((t) => t !== tagSelectTag)
-          window.dispatchEvent(
-            new CustomEvent('bookmark-tags-changed', {
-              detail: { platform, bookmarkId: item.id, tags },
-            }),
-          )
+          notifyTagsChanged({ platform, bookmarkId: item.id, tags })
         })
         .catch(() => {
           // Revert on failure — best-effort, no toast (mirrors the
@@ -152,7 +165,7 @@ export function FeedGrid({
     if (stats.total === 0) {
       return <EmptyAccountOnboarding />
     }
-    return <EmptyState unreadOnly={unreadOnly} stats={stats} onShowAll={onShowAll} />
+    return <EmptyState hideArchived={hideArchived} stats={stats} onShowAll={onShowAll} />
   }
 
   return (
@@ -165,7 +178,7 @@ export function FeedGrid({
               : false
             return (
               <FeedCard
-                key={item.id}
+                key={cardKey(item)}
                 item={item}
                 lastSyncAt={lastSyncAt}
                 sortField={sortField}
@@ -173,6 +186,7 @@ export function FeedGrid({
                 selectionMode={!!tagSelectTag}
                 selected={selected}
                 onToggleSelect={() => toggleTagMembership(item)}
+                justAdded={cardKey(item) === justAddedKey}
               />
             )
           })}
@@ -188,12 +202,13 @@ export function FeedGrid({
               : false
             return (
               <FeedListRow
-                key={item.id}
+                key={cardKey(item)}
                 item={item}
                 onClick={() => onExpand(index)}
                 selectionMode={!!tagSelectTag}
                 selected={selected}
                 onToggleSelect={() => toggleTagMembership(item)}
+                justAdded={cardKey(item) === justAddedKey}
               />
             )
           })}
@@ -210,7 +225,7 @@ export function FeedGrid({
               : false
             return (
               <FeedBentoTile
-                key={item.id}
+                key={cardKey(item)}
                 item={item}
                 cs={cs}
                 rs={rs}
@@ -218,6 +233,7 @@ export function FeedGrid({
                 selectionMode={!!tagSelectTag}
                 selected={selected}
                 onToggleSelect={() => toggleTagMembership(item)}
+                justAdded={cardKey(item) === justAddedKey}
               />
             )
           })}
@@ -281,24 +297,24 @@ function LoadingSkeleton(): React.ReactElement {
 }
 
 interface EmptyStateProps {
-  unreadOnly: boolean
-  stats: { total: number; unread: number }
+  hideArchived: boolean
+  stats: { total: number; active: number }
   onShowAll: () => void
 }
 
-function EmptyState({ unreadOnly, stats, onShowAll }: EmptyStateProps): React.ReactElement {
+function EmptyState({ hideArchived, stats, onShowAll }: EmptyStateProps): React.ReactElement {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <div className="w-20 h-20 mb-4 rounded-full bg-inset flex items-center justify-center">
         <Image className="w-10 h-10 text-ink-3" />
       </div>
       <h3 className="font-serif text-xl font-semibold text-ink mb-2">
-        {unreadOnly ? 'All caught up!' : 'No items found'}
+        {hideArchived ? 'All caught up!' : 'No items found'}
       </h3>
       <p className="text-ink-2">
-        {unreadOnly ? 'You have no unread bookmarks' : 'Try adjusting your filters'}
+        {hideArchived ? 'You have no unread bookmarks' : 'Try adjusting your filters'}
       </p>
-      {unreadOnly && stats.total > 0 && (
+      {hideArchived && stats.total > 0 && (
         <button
           onClick={onShowAll}
           className="mt-4 px-6 py-2 rounded-full font-medium bg-clay-grad text-white shadow-glow transition-opacity hover:opacity-90"

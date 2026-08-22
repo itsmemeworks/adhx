@@ -23,11 +23,17 @@ import { recordActivity } from '@/lib/activity/record'
 function post(
   body: unknown,
   userAgent = 'Mozilla/5.0 (compatible test browser)',
+  origin?: string,
 ): Promise<Response> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'User-Agent': userAgent,
+  }
+  if (origin) headers.Origin = origin
   return POST(
     new NextRequest('http://localhost:3000/api/activity/preview', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'User-Agent': userAgent },
+      headers,
       body: JSON.stringify(body),
     }),
   )
@@ -147,6 +153,11 @@ describe('POST /api/activity/preview', () => {
       .all()
       .filter((r) => r.action === 'preview')
     expect(previews).toHaveLength(0)
+  })
+
+  it('rejects a cross-site Origin', async () => {
+    const res = await post({ platform: 'twitter', id: '1' }, undefined, 'https://evil.example')
+    expect(res.status).toBe(403)
   })
 
   it('never returns userId', async () => {

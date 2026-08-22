@@ -7,6 +7,7 @@
 import Database from 'better-sqlite3'
 import path from 'path'
 import fs from 'fs'
+import { renameReadStatusToArchivedPosts } from './rename-read-status'
 
 const DB_PATH = process.env.DATABASE_PATH || './data/adhdone.db'
 const MIGRATIONS_PATH = process.env.MIGRATIONS_PATH || './drizzle'
@@ -97,6 +98,20 @@ db.exec(`
 
 console.log('[migrate] Dropped unused bookmarks_fts table and sync triggers')
 
+// read_status → archived_posts (see rename-read-status.ts for the why and the
+// idempotency guard). MUST run BEFORE the index block below, which references
+// the new names: on a fresh database the Drizzle SQL still creates
+// `read_status`, so this converts it in the same boot.
+try {
+  if (renameReadStatusToArchivedPosts(db)) {
+    console.log('[migrate] Renamed read_status → archived_posts (read_at → archived_at)')
+  }
+} catch (error) {
+  console.log('[migrate] FAILED renaming read_status → archived_posts', error)
+  db.close()
+  process.exit(1)
+}
+
 // Create indexes
 db.exec(`
   CREATE INDEX IF NOT EXISTS idx_bookmarks_user_id ON bookmarks(user_id);
@@ -113,11 +128,10 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_media_bookmark ON bookmark_media(bookmark_id);
   CREATE INDEX IF NOT EXISTS idx_media_status ON bookmark_media(download_status);
 
-  CREATE INDEX IF NOT EXISTS idx_read_status_read_at ON read_status(read_at DESC);
-  CREATE INDEX IF NOT EXISTS idx_collection_tweets_bookmark ON collection_tweets(bookmark_id);
+  CREATE INDEX IF NOT EXISTS idx_archived_posts_archived_at ON archived_posts(archived_at DESC);
+  CREATE INDEX IF NOT EXISTS archived_posts_user_id_idx ON archived_posts(user_id);
 
   CREATE INDEX IF NOT EXISTS idx_sync_logs_user_id ON sync_logs(user_id);
-  CREATE INDEX IF NOT EXISTS idx_sync_state_user_id ON sync_state(user_id);
   CREATE INDEX IF NOT EXISTS idx_user_preferences_user_id ON user_preferences(user_id);
 `)
 
@@ -154,6 +168,30 @@ try {
 } catch {
   // Column already exists — nothing to do.
 }
+// bookmark_tags.created_at — when a post was added to a TAG, which is what a
+// playlist displays and orders by. Distinct from bookmarks.processed_at (when
+// the curator first saved the post, possibly long before curating it), so it
+// needed its own column. Guarded for re-runs (no IF NOT EXISTS), then existing
+// rows are backfilled from the bookmark's own save time — the closest thing
+// history has — so old playlists don't all read "just now".
+try {
+  db.exec('ALTER TABLE bookmark_tags ADD COLUMN created_at text')
+  console.log('[migrate] Added bookmark_tags.created_at')
+  const backfilled = db
+    .prepare(
+      `UPDATE bookmark_tags SET created_at = (
+       SELECT b.processed_at FROM bookmarks b
+        WHERE b.user_id = bookmark_tags.user_id
+          AND b.platform = bookmark_tags.platform
+          AND b.id = bookmark_tags.bookmark_id
+     ) WHERE created_at IS NULL`,
+    )
+    .run()
+  console.log(`[migrate] Backfilled ${backfilled.changes} bookmark_tags.created_at`)
+} catch {
+  // Column already exists — nothing to do.
+}
+
 try {
   db.exec('ALTER TABLE activity ADD COLUMN quote_json text')
   console.log('[migrate] Added activity.quote_json')
@@ -412,6 +450,25 @@ try {
   console.log('[migrate] Ensured collection_events table')
 } catch (error) {
   console.log('[migrate] Warning: failed to create collection_events table', error)
+}
+
+// Dead custom-collections product + unused archiver columns. Tables and
+// columns stay in historical drizzle SQL so already-applied journals are
+// untouched; this drops them on every boot (IF EXISTS / try-catch).
+db.exec(`
+  DROP TABLE IF EXISTS collection_tweets;
+  DROP TABLE IF EXISTS collections;
+  DROP TABLE IF EXISTS sync_state;
+`)
+console.log('[migrate] Dropped unused collections / collection_tweets / sync_state')
+
+for (const column of ['extracted_content', 'filed_path', 'needs_transcript'] as const) {
+  try {
+    db.exec(`ALTER TABLE bookmarks DROP COLUMN ${column}`)
+    console.log(`[migrate] Dropped bookmarks.${column}`)
+  } catch {
+    // Column already gone (fresh DB after this drop, or a re-run).
+  }
 }
 
 console.log(`[migrate] Database ready at: ${path.resolve(DB_PATH)}`)

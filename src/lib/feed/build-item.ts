@@ -22,7 +22,7 @@ export type FeedItemResponse = {
   createdAt: string | null
   processedAt: string
   category: string | null
-  isRead: boolean
+  isArchived: boolean
   isQuote: boolean | null
   quoteContext: unknown
   quotedTweetId: string | null
@@ -63,7 +63,7 @@ export function buildFeedItem(
   bookmarkLinksList: BookmarkLink[],
   bookmarkMediaList: BookmarkMedia[],
   bookmarkTags: string[],
-  isRead: boolean,
+  isArchived: boolean,
   isArticle: boolean,
 ): FeedItemResponse {
   // Build media URLs — platform-aware. Twitter uses FxEmbed; Instagram and
@@ -114,7 +114,7 @@ export function buildFeedItem(
     }
 
     if (bookmark.platform === 'youtube') {
-      // Playback is the official iframe embed (handled in MediaCard by
+      // Playback is the official iframe embed (handled in StageYouTube by
       // platform+id); the gallery just needs the poster + a 'video' type.
       return {
         id: m.id,
@@ -208,7 +208,7 @@ export function buildFeedItem(
     createdAt: bookmark.createdAt,
     processedAt: bookmark.processedAt,
     category: effectiveCategory,
-    isRead,
+    isArchived,
     isQuote: bookmark.isQuote,
     quoteContext,
     quotedTweetId: bookmark.quotedTweetId,

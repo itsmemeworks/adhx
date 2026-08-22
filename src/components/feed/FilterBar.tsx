@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
+  Eye,
   EyeOff,
   ChevronDown,
   SlidersHorizontal,
@@ -41,8 +42,8 @@ interface FilterBarProps {
   onSortChange: (sort: SortType) => void
   sortDirection: SortDirection
   onSortDirectionChange: (dir: SortDirection) => void
-  unreadOnly: boolean
-  onUnreadOnlyChange: (unreadOnly: boolean) => void
+  hideArchived: boolean
+  onHideArchivedChange: (hideArchived: boolean) => void
   view?: FeedView
   onViewChange?: (view: FeedView) => void
   // Tagging is removed in the Matter redesign. These props are retained so
@@ -50,9 +51,9 @@ interface FilterBarProps {
   selectedTags?: string[]
   onSelectedTagsChange?: (tags: string[]) => void
   availableTags?: TagItem[]
-  stats: { total: number; unread: number }
+  stats: { total: number; active: number }
   onTagUpdated?: (tag: string, isPublic: boolean, shareUrl: string) => void
-  // Tags: create + fill (unified-theater-triage §4). `tagSelect` is the tag
+  // Tags: create + fill (unified-theater-collection §4). `tagSelect` is the tag
   // currently in grid "Add posts" selection mode (null when inactive).
   tagSelect?: string | null
   onTagSelectChange?: (tag: string | null) => void
@@ -134,8 +135,8 @@ export function FilterBar({
   onSortChange,
   sortDirection,
   onSortDirectionChange,
-  unreadOnly,
-  onUnreadOnlyChange,
+  hideArchived,
+  onHideArchivedChange,
   view = 'grid',
   onViewChange,
   selectedTags = [],
@@ -270,7 +271,7 @@ export function FilterBar({
             {copiedLabel && (
               <span className="flex flex-none items-center gap-1.5 whitespace-nowrap rounded-full bg-inset px-2.5 py-1 font-mono text-[11px] text-ink-2">
                 <Check size={12} className="text-done" />
-                {copiedLabel} copied
+                <span>{copiedLabel} copied</span>
               </span>
             )}
             {onTagSelectChange && (
@@ -285,7 +286,7 @@ export function FilterBar({
                 )}
               >
                 <ListChecks size={13} />
-                {tagSelect === selectedTag ? 'Done adding' : 'Add posts'}
+                <span>{tagSelect === selectedTag ? 'Done adding' : 'Add posts'}</span>
               </button>
             )}
             {/* ONE visibility control — the state IS the action, styled like
@@ -307,12 +308,12 @@ export function FilterBar({
                 <>
                   <span className="h-1.5 w-1.5 flex-none rounded-full bg-live" aria-hidden />
                   <Globe size={13} />
-                  Public
+                  <span>Public</span>
                 </>
               ) : (
                 <>
                   <Lock size={13} />
-                  Private
+                  <span>Private</span>
                 </>
               )}
             </button>
@@ -535,7 +536,7 @@ export function FilterBar({
                   className="w-full px-3 py-2 text-left text-sm flex items-center gap-2 text-clay font-medium hover:bg-inset transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  New tag
+                  <span>New tag</span>
                 </button>
               )}
             </AnchoredMenu>
@@ -593,28 +594,35 @@ export function FilterBar({
           </AnchoredMenu>
         </div>
 
-        {/* Unread only toggle — hidden while a tag is selected: a tag is a
-            deliberately curated set, so read state doesn't apply there (the
-            feed fetch ignores unreadOnly for tag views too). */}
+        {/* The archive view switch — hidden while a tag is selected: a tag is
+            a deliberately curated set, so this doesn't apply there (the feed
+            fetch ignores `hideArchived` for tag views too).
+
+            Two things the owner asked for here. The LABEL names what you will
+            see after pressing it, because there are only two views and neither
+            is a "mode" you enable: "you're either viewing your collection with
+            archive or without". And it is NOT an orange CTA — a view switch is
+            not a call to action, so both states use the same quiet surface and
+            only the label and count change.
+
+            Vocabulary note: the flag is still `hideArchived` and the column is
+            still archived_posts. Renaming a shipped API and a DB column is a
+            separate job from fixing the words people read. */}
         {selectedTags.length === 0 && (
           <button
-            onClick={() => onUnreadOnlyChange(!unreadOnly)}
-            className={cn(
-              'flex items-center gap-2 px-3.5 py-[7px] rounded-full text-[13.5px] font-semibold whitespace-nowrap flex-shrink-0 transition-all duration-150',
-              unreadOnly
-                ? 'bg-clay-grad text-white shadow-glow'
-                : 'bg-surface border border-hairline text-ink-2 hover:text-ink',
-            )}
+            onClick={() => onHideArchivedChange(!hideArchived)}
+            aria-pressed={!hideArchived}
+            title={
+              hideArchived
+                ? 'Show archived posts as well'
+                : 'Hide archived posts — show only your active collection'
+            }
+            className="flex flex-shrink-0 items-center gap-2 rounded-full border border-hairline bg-surface px-3.5 py-[7px] text-[13.5px] font-semibold whitespace-nowrap text-ink-2 transition-colors duration-150 hover:text-ink"
           >
-            <EyeOff className="w-3.5 h-3.5" />
-            <span>Unread only</span>
-            <span
-              className={cn(
-                'text-[11.5px] rounded-full px-[7px] py-px',
-                unreadOnly ? 'bg-white/28 text-white' : 'bg-inset text-ink-2',
-              )}
-            >
-              {unreadOnly ? stats.unread : stats.total}
+            {hideArchived ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+            <span>{hideArchived ? 'Show archived' : 'Hide archived'}</span>
+            <span className="rounded-full bg-inset px-[7px] py-px text-[11.5px] text-ink-2">
+              {hideArchived ? stats.active : stats.total}
             </span>
           </button>
         )}

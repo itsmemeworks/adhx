@@ -43,7 +43,10 @@ We'd rather not do any of that, so let's all just be decent humans.
 
 ## Reporting Issues
 
-See something? Say something. Reach out to the maintainers privately.
+See something? Say something.
+
+- **Conduct / harassment:** email [security@adhx.com](mailto:security@adhx.com) with the subject “Code of Conduct”, or contact a maintainer privately on GitHub.
+- **Security vulnerability:** do **not** file a public issue — see [SECURITY.md](SECURITY.md).
 
 We take reports seriously and will handle them with discretion.
 

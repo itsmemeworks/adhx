@@ -43,6 +43,7 @@ export function FeedListRow({
   selectionMode = false,
   selected = false,
   onToggleSelect,
+  justAdded = false,
 }: {
   item: FeedItem
   onClick?: () => void
@@ -52,10 +53,12 @@ export function FeedListRow({
   selectionMode?: boolean
   selected?: boolean
   onToggleSelect?: () => void
+  /** Briefly tinted: this is the post the viewer just pasted in. */
+  justAdded?: boolean
 }) {
   const type = feedItemType(item)
   const thumb = feedItemThumb(item)
-  const unread = !item.isRead
+  const unread = !item.isArchived
   const time = formatCompactRelativeTime(item.processedAt)
   const duration = formatDurationMs(item.media?.[0]?.durationMs)
   const TypeIcon = TYPE_ICON[type]
@@ -96,6 +99,15 @@ export function FeedListRow({
         compact ? 'gap-3 px-4 py-[13px]' : 'gap-4 px-4 sm:px-[26px] py-[14px]',
         unread ? 'bg-surface' : 'bg-transparent',
         selectionMode && selected && 'bg-clay/10 hover:bg-clay/15',
+        // The list sits inside an `overflow-hidden` surface, which clips a
+        // glow, so the just-pasted row gets a left accent bar instead — same
+        // accent, appropriate to the shape.
+        //
+        // NOT `bg-clay/10`: `clay` is a hex CSS var, and Tailwind's opacity
+        // modifier compiles to NOTHING on those (known repo gotcha), so the
+        // tint this started as was invisible — the list view had no
+        // confirmation at all while grid and bento glowed.
+        justAdded && 'border-l-2 border-clay',
       )}
     >
       {selectionMode && (

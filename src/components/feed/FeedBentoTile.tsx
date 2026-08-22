@@ -6,6 +6,7 @@ import { TypeBadge } from '@/components/matter'
 import { formatCompactRelativeTime, formatDurationMs } from '@/lib/utils/format'
 import { feedItemType, feedItemTitle, feedItemThumb } from './feedItemMeta'
 import { cn } from '@/lib/utils'
+import { RECENT_GLOW } from './utils'
 
 /**
  * Bento mosaic tile — lifted from the Matter `concepts.jsx` BentoTile.
@@ -19,6 +20,7 @@ export function FeedBentoTile({
   selectionMode = false,
   selected = false,
   onToggleSelect,
+  justAdded = false,
 }: {
   item: FeedItem
   cs: number
@@ -29,6 +31,8 @@ export function FeedBentoTile({
   selectionMode?: boolean
   selected?: boolean
   onToggleSelect?: () => void
+  /** Briefly glow: this is the post the viewer just pasted in. */
+  justAdded?: boolean
 }) {
   const type = feedItemType(item)
   const thumb = feedItemThumb(item)
@@ -47,6 +51,7 @@ export function FeedBentoTile({
         className={cn(
           'relative block overflow-hidden rounded-card border bg-surface shadow-m-sm text-left group',
           selectionMode && selected ? 'border-clay ring-2 ring-clay' : 'border-hairline',
+          justAdded && RECENT_GLOW,
         )}
       >
         {selectionMode && (

@@ -152,3 +152,30 @@ jobs:
 
       - name: Run tests
         run: pnpm test
+
+  e2e:
+    if: |
+      github.event_name != 'workflow_run' &&
+      (github.event_name == 'push' || !startsWith(github.head_ref || '', 'release-please--'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run browser tests
+        env:
+          # Same file Next falls back to when workers drop DATABASE_PATH.
+          DATABASE_PATH: ${{ github.workspace }}/data/adhdone.db
+        run: pnpm test:e2e

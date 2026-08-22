@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { eq } from 'drizzle-orm'
 import { createTestDb, type TestDbInstance, createTestBookmark } from './api/setup'
 import {
   oauthTokens,
@@ -26,7 +27,7 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 
-import { getPublicTagCollection } from '@/lib/tags/query'
+import { getPublicTagCollection, invalidateTagCollectionCache } from '@/lib/tags/query'
 
 const OWNER_ID = 'owner-user-1'
 const OWNER_USERNAME = 'curator'
@@ -81,6 +82,38 @@ describe('getPublicTagCollection', () => {
     // to the private branch — the whole point is nothing renders.
     expect((result as Record<string, unknown>).data).toBeUndefined()
     expect(JSON.stringify(result)).not.toContain('top secret content')
+  })
+
+  it('a visibility flip is visible after invalidateTagCollectionCache', async () => {
+    await seedOwner()
+    await testInstance.db.insert(tagShares).values({
+      userId: OWNER_ID,
+      tag: 'secret-tag',
+      shareCode: 'code-1',
+      isPublic: false,
+    })
+    await testInstance.db
+      .insert(bookmarks)
+      .values(createTestBookmark(OWNER_ID, 'secret-1', { text: 'top secret content' }))
+    await testInstance.db.insert(bookmarkTags).values({
+      userId: OWNER_ID,
+      bookmarkId: 'secret-1',
+      tag: 'secret-tag',
+    })
+
+    expect((await getPublicTagCollection(OWNER_USERNAME, 'secret-tag')).status).toBe('private')
+
+    await testInstance.db
+      .update(tagShares)
+      .set({ isPublic: true })
+      .where(eq(tagShares.tag, 'secret-tag'))
+
+    // Negative results are not cached, so a visibility flip is visible
+    // without an explicit invalidate. invalidate still exists for the
+    // public → private direction (ok results are cached).
+    expect((await getPublicTagCollection(OWNER_USERNAME, 'secret-tag')).status).toBe('ok')
+    invalidateTagCollectionCache(OWNER_USERNAME, 'secret-tag')
+    expect((await getPublicTagCollection(OWNER_USERNAME, 'secret-tag')).status).toBe('ok')
   })
 
   it('returns items for a public tag, ordered newest-first, with on-ADHX preview links', async () => {
@@ -243,5 +276,98 @@ describe('getPublicTagCollection', () => {
     expect(item.contentType).toBe('article')
     expect(item.text).toBe('The Real Headline')
     expect(item.thumbnailUrl).toBe('https://example.com/cover.jpg')
+  })
+})
+
+/**
+ * Owner decision: "when a user creates a tag and then adds a post into the
+ * tag, we should use the time at which they added that post to the tag…
+ * users get control over when they are creating things that are related to
+ * them." So a playlist is timed and ordered by `bookmark_tags.created_at`,
+ * NOT by `bookmarks.processed_at` (when the curator first saved the post,
+ * possibly months before they curated it into anything).
+ */
+describe('getPublicTagCollection — playlist times come from the tag, not the save', () => {
+  beforeEach(() => {
+    testInstance = createTestDb()
+  })
+  afterEach(() => testInstance.close())
+
+  async function seedTaggedPost(opts: {
+    id: string
+    savedAt: string
+    taggedAt: string | null
+    tag: string
+  }) {
+    await testInstance.db
+      .insert(bookmarks)
+      .values(createTestBookmark(OWNER_ID, opts.id, { processedAt: opts.savedAt }))
+    await testInstance.db.insert(bookmarkTags).values({
+      userId: OWNER_ID,
+      platform: 'twitter',
+      bookmarkId: opts.id,
+      tag: opts.tag,
+      createdAt: opts.taggedAt,
+    })
+  }
+
+  async function sharePublicTag(tag: string) {
+    await testInstance.db
+      .insert(tagShares)
+      .values({ userId: OWNER_ID, tag, shareCode: `code-${tag}`, isPublic: true })
+  }
+
+  it('shows when the post joined the tag, not when it was saved', async () => {
+    await seedOwner()
+    await sharePublicTag('faves')
+    await seedTaggedPost({
+      id: 'old-save',
+      savedAt: '2026-01-01T00:00:00.000Z', // saved in January…
+      taggedAt: '2026-08-20T00:00:00.000Z', // …curated in August
+      tag: 'faves',
+    })
+
+    const result = await getPublicTagCollection(OWNER_USERNAME, 'faves')
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.items[0].addedAt).toBe('2026-08-20T00:00:00.000Z')
+  })
+
+  it('orders by when each post joined the tag', async () => {
+    await seedOwner()
+    await sharePublicTag('faves')
+    // Deliberately inverted: the post saved FIRST was curated LAST.
+    await seedTaggedPost({
+      id: 'saved-first',
+      savedAt: '2026-01-01T00:00:00.000Z',
+      taggedAt: '2026-08-22T00:00:00.000Z',
+      tag: 'faves',
+    })
+    await seedTaggedPost({
+      id: 'saved-second',
+      savedAt: '2026-06-01T00:00:00.000Z',
+      taggedAt: '2026-08-01T00:00:00.000Z',
+      tag: 'faves',
+    })
+
+    const result = await getPublicTagCollection(OWNER_USERNAME, 'faves')
+    if (result.status !== 'ok') throw new Error('expected ok')
+    // Ordering by save time would put 'saved-second' first.
+    expect(result.data.items.map((i) => i.bookmarkId)).toEqual(['saved-first', 'saved-second'])
+  })
+
+  it('falls back to the save time for rows predating the column', async () => {
+    await seedOwner()
+    await sharePublicTag('legacy')
+    await seedTaggedPost({
+      id: 'no-tag-time',
+      savedAt: '2026-03-03T00:00:00.000Z',
+      taggedAt: null,
+      tag: 'legacy',
+    })
+
+    const result = await getPublicTagCollection(OWNER_USERNAME, 'legacy')
+    if (result.status !== 'ok') throw new Error('expected ok')
+    expect(result.data.items[0].addedAt).toBe('2026-03-03T00:00:00.000Z')
   })
 })

@@ -17,7 +17,7 @@ import type { TrendingItem } from '@/lib/trending/query'
 const twitterProxy = (item: FeedItem, quality: 'hd' | 'preview') =>
   `/api/media/video?author=${encodeURIComponent(item.author)}&tweetId=${encodeURIComponent(item.id)}&quality=${quality}`
 
-/** Full-quality inline playback src (focus/triage). */
+/** Full-quality inline playback src (focus/collection). */
 export function feedVideoSrc(item: FeedItem): string {
   const primary = item.media?.[0]
   if ((item.platform === 'tiktok' || item.platform === 'instagram') && primary?.url) {

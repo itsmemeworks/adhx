@@ -2,6 +2,7 @@ import { db } from '@/lib/db'
 import { activity, bookmarks, bookmarkMedia, bookmarkLinks } from '@/lib/db/schema'
 import { and, desc, eq, gte, inArray, lt, sql } from 'drizzle-orm'
 import type { ContentType } from '@/components/matter'
+import { asContentType, inferContentType } from '@/lib/content-type'
 import type { TrendingItem } from './query'
 
 /**
@@ -263,11 +264,6 @@ export interface ArchiveWeekResult {
   totalCount: number
 }
 
-const CONTENT_TYPES = new Set<string>(['video', 'photo', 'text', 'quote', 'article'])
-function asContentType(v: string | null | undefined): ContentType | undefined {
-  return v && CONTENT_TYPES.has(v) ? (v as ContentType) : undefined
-}
-
 /**
  * Fetch + enrich the deduped, ranked posts for one ISO week. Returns null for
  * an unparseable slug, the current in-progress week (not archived yet), or a
@@ -392,15 +388,20 @@ export async function getArchiveItems(slug: string): Promise<ArchiveWeekResult |
     }
   }
 
-  const typeOf = (platform: string, key: string): ContentType | undefined => {
-    if (platform === 'tiktok' || platform === 'youtube' || platform === 'instagram') return 'video'
-    if (!flags.has(key)) return undefined
+  const typeOf = (
+    platform: string,
+    key: string,
+    recorded?: string | null,
+  ): ContentType | undefined => {
+    if (!flags.has(key)) return asContentType(recorded)
     const m = mediaKinds.get(key)
-    if (m?.video) return 'video'
-    if (flags.get(key)?.category === 'article') return 'article'
-    if (m?.photo) return 'photo'
-    if (flags.get(key)?.isQuote) return 'quote'
-    return 'text'
+    return inferContentType({
+      platform,
+      category: flags.get(key)?.category,
+      isQuote: flags.get(key)?.isQuote,
+      hasVideo: m?.video,
+      hasPhoto: m?.photo,
+    })
   }
 
   const thumbOf = (
@@ -417,7 +418,7 @@ export async function getArchiveItems(slug: string): Promise<ArchiveWeekResult |
 
   const enriched: TrendingItem[] = deduped.map((i) => {
     const key = `${i.platform}:${i.bookmarkId}`
-    const contentType = typeOf(i.platform, key) ?? asContentType(i.contentType)
+    const contentType = typeOf(i.platform, key, i.contentType) ?? asContentType(i.contentType)
     return {
       ...i,
       text: contentType === 'article' ? (articleTitles.get(key) ?? i.text) : i.text,

@@ -1,5 +1,5 @@
 import { ok } from '@/lib/api/response'
-import { getTrendingItems } from '@/lib/trending/query'
+import { getTrendingItems, LIVE_WINDOW_HOURS } from '@/lib/trending/query'
 
 /**
  * GET /api/activity — the public, anonymous pulse for the landing + Discover.
@@ -26,8 +26,15 @@ export async function GET(request?: Request) {
     const parsedOffset = offsetParam ? parseInt(offsetParam, 10) : 0
     const offset = Number.isFinite(parsedOffset) && parsedOffset > 0 ? parsedOffset : 0
 
-    // Same defaults as before: FETCH 80 → dedup → LIMIT 30, no platform filter.
-    const { items, savedToday, recentActivity, hasMore } = await getTrendingItems({ offset })
+    // FETCH 80 → dedup → LIMIT 30, no platform filter, and only the last
+    // LIVE_WINDOW_HOURS: this endpoint IS the theater's live feed, which is
+    // defined as the last 24 hours of community activity. The window must
+    // match the server seed (`getTheaterFeed`) or the first poll would append
+    // out-of-window posts the seed deliberately left out.
+    const { items, savedToday, recentActivity, hasMore } = await getTrendingItems({
+      offset,
+      withinHours: LIVE_WINDOW_HOURS,
+    })
     return ok(
       { items, savedToday, recentActivity, hasMore },
       { headers: { 'Cache-Control': 'public, max-age=5, stale-while-revalidate=15' } },

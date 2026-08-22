@@ -50,10 +50,9 @@ describe('API: /api/stats', () => {
     const data = await response.json()
 
     expect(data.total).toBe(0)
-    expect(data.read).toBe(0)
-    expect(data.unread).toBe(0)
+    expect(data.archived).toBe(0)
+    expect(data.active).toBe(0)
     expect(data.withMedia).toBe(0)
-    expect(data.needsTranscript).toBe(0)
     expect(data.manual).toBe(0)
     expect(data.categories).toEqual({})
   })
@@ -84,7 +83,7 @@ describe('API: /api/stats', () => {
     })
   })
 
-  it('calculates read/unread correctly', async () => {
+  it('calculates archived/active correctly', async () => {
     // Add 5 bookmarks
     await testInstance.db
       .insert(schema.bookmarks)
@@ -97,9 +96,9 @@ describe('API: /api/stats', () => {
       ])
 
     // Mark 2 as read
-    await testInstance.db.insert(schema.readStatus).values([
-      { userId: USER_A, bookmarkId: 't1', readAt: '2024-01-01T10:00:00Z' },
-      { userId: USER_A, bookmarkId: 't2', readAt: '2024-01-01T10:00:00Z' },
+    await testInstance.db.insert(schema.archivedPosts).values([
+      { userId: USER_A, bookmarkId: 't1', archivedAt: '2024-01-01T10:00:00Z' },
+      { userId: USER_A, bookmarkId: 't2', archivedAt: '2024-01-01T10:00:00Z' },
     ])
 
     const { GET } = await import('@/app/api/stats/route')
@@ -107,8 +106,8 @@ describe('API: /api/stats', () => {
     const data = await response.json()
 
     expect(data.total).toBe(5)
-    expect(data.read).toBe(2)
-    expect(data.unread).toBe(3)
+    expect(data.archived).toBe(2)
+    expect(data.active).toBe(3)
   })
 
   it('counts bookmarks with media', async () => {
@@ -134,22 +133,6 @@ describe('API: /api/stats', () => {
     expect(data.withMedia).toBe(2) // Distinct bookmarks with media
   })
 
-  it('counts bookmarks needing transcript', async () => {
-    await testInstance.db
-      .insert(schema.bookmarks)
-      .values([
-        createTestBookmark(USER_A, 't1', { needsTranscript: true }),
-        createTestBookmark(USER_A, 't2', { needsTranscript: true }),
-        createTestBookmark(USER_A, 't3', { needsTranscript: false }),
-      ])
-
-    const { GET } = await import('@/app/api/stats/route')
-    const response = await GET()
-    const data = await response.json()
-
-    expect(data.needsTranscript).toBe(2)
-  })
-
   it('isolates stats between users', async () => {
     // User A: 3 bookmarks, 1 read
     await testInstance.db
@@ -160,8 +143,8 @@ describe('API: /api/stats', () => {
         createTestBookmark(USER_A, 't3'),
       ])
     await testInstance.db
-      .insert(schema.readStatus)
-      .values([{ userId: USER_A, bookmarkId: 't1', readAt: '2024-01-01T10:00:00Z' }])
+      .insert(schema.archivedPosts)
+      .values([{ userId: USER_A, bookmarkId: 't1', archivedAt: '2024-01-01T10:00:00Z' }])
 
     // User B: 5 bookmarks, 3 read
     await testInstance.db
@@ -173,10 +156,10 @@ describe('API: /api/stats', () => {
         createTestBookmark(USER_B, 't4'),
         createTestBookmark(USER_B, 't5'),
       ])
-    await testInstance.db.insert(schema.readStatus).values([
-      { userId: USER_B, bookmarkId: 't1', readAt: '2024-01-01T10:00:00Z' },
-      { userId: USER_B, bookmarkId: 't2', readAt: '2024-01-01T10:00:00Z' },
-      { userId: USER_B, bookmarkId: 't3', readAt: '2024-01-01T10:00:00Z' },
+    await testInstance.db.insert(schema.archivedPosts).values([
+      { userId: USER_B, bookmarkId: 't1', archivedAt: '2024-01-01T10:00:00Z' },
+      { userId: USER_B, bookmarkId: 't2', archivedAt: '2024-01-01T10:00:00Z' },
+      { userId: USER_B, bookmarkId: 't3', archivedAt: '2024-01-01T10:00:00Z' },
     ])
 
     // User A stats
@@ -186,8 +169,8 @@ describe('API: /api/stats', () => {
     const dataA = await responseA.json()
 
     expect(dataA.total).toBe(3)
-    expect(dataA.read).toBe(1)
-    expect(dataA.unread).toBe(2)
+    expect(dataA.archived).toBe(1)
+    expect(dataA.active).toBe(2)
 
     // User B stats
     mockUserId = USER_B
@@ -195,8 +178,8 @@ describe('API: /api/stats', () => {
     const dataB = await responseB.json()
 
     expect(dataB.total).toBe(5)
-    expect(dataB.read).toBe(3)
-    expect(dataB.unread).toBe(2)
+    expect(dataB.archived).toBe(3)
+    expect(dataB.active).toBe(2)
   })
 
   // =========================================

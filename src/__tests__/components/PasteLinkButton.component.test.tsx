@@ -1,8 +1,8 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { PasteLinkButton } from '@/components/PasteLinkButton'
 
 const pushSpy = vi.fn()
@@ -180,7 +180,13 @@ describe('PasteLinkButton — non-iOS (readText flow, unchanged)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Paste link' }))
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
 
-    fireEvent.keyDown(window, { key: 'Escape' })
+    // The dialog is portalled to <body>, so its unmount lands in a later
+    // commit than the keydown. `act` flushes that deterministically — polling
+    // with waitFor passed in isolation but timed out under a loaded parallel
+    // suite, which is a flaky test rather than a real signal.
+    await act(async () => {
+      fireEvent.keyDown(window, { key: 'Escape' })
+    })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
@@ -191,7 +197,9 @@ describe('PasteLinkButton — non-iOS (readText flow, unchanged)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Paste link' }))
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
 
-    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+    })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
@@ -289,7 +297,9 @@ describe('PasteLinkButton — iOS (input-paste flow)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Paste link' }))
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
 
-    fireEvent.keyDown(window, { key: 'Escape' })
+    await act(async () => {
+      fireEvent.keyDown(window, { key: 'Escape' })
+    })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
@@ -300,5 +310,103 @@ describe('PasteLinkButton — iOS (input-paste flow)', () => {
     const input = await screen.findByPlaceholderText('Paste a link…')
     await waitFor(() => expect(input).toHaveFocus())
     expect(screen.queryByRole('button', { name: 'Paste' })).not.toBeInTheDocument()
+  })
+})
+
+/**
+ * Owner report with a screenshot: tapping the icon-only Paste button in the
+ * theater's mobile top bar opened the helper anchored under the button, then
+ * iOS's keyboard appeared and Safari's focus-scroll dragged the panel off the
+ * top of the screen — "not intuitive at all. Maybe we just need to use a
+ * better model for capturing the paste that will automatically center?"
+ *
+ * The panel is now a portalled dialog centred in the VISIBLE viewport, so the
+ * keyboard shrinks the box it centres in instead of pushing it away.
+ */
+describe('PasteLinkButton — the helper is a centred dialog, not an anchored popover', () => {
+  beforeEach(() => {
+    mockIos = true
+    pushSpy.mockClear()
+    Object.assign(navigator, { clipboard: undefined })
+  })
+
+  // These tests replace `navigator` and define `window.visualViewport`; both
+  // must be put back or they leak into every test that runs after them.
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    Reflect.deleteProperty(window, 'visualViewport')
+  })
+
+  /** Pretend a keyboard is open: a short visual viewport, offset down the page. */
+  function stubVisualViewport(height: number, offsetTop = 0) {
+    const listeners: Record<string, (() => void)[]> = {}
+    Object.defineProperty(window, 'visualViewport', {
+      configurable: true,
+      value: {
+        height,
+        offsetTop,
+        addEventListener: (t: string, fn: () => void) => {
+          ;(listeners[t] ??= []).push(fn)
+        },
+        removeEventListener: () => {},
+      },
+    })
+  }
+
+  it('renders outside the button subtree, so no transformed ancestor can trap it', async () => {
+    stubVisualViewport(844)
+    const { container } = render(<PasteLinkButton iconOnly />)
+    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog).toBeInTheDocument()
+    // Portalled to <body>: `position: fixed` resolves against the viewport
+    // rather than the theater's transformed scrims.
+    expect(container.contains(dialog)).toBe(false)
+  })
+
+  it('centres itself in the space the keyboard leaves', async () => {
+    // 844-tall screen with a ~420px keyboard open.
+    stubVisualViewport(424, 0)
+    render(<PasteLinkButton iconOnly />)
+    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+
+    const dialog = await screen.findByRole('dialog')
+    const box = dialog.parentElement!
+    expect(box).toHaveStyle({ height: '424px' })
+    // Flex-centred inside that box, so the panel sits above the keyboard.
+    expect(box.className).toContain('items-center')
+    expect(box.className).toContain('fixed')
+  })
+
+  it('follows the viewport when Safari scrolls the page under the keyboard', async () => {
+    stubVisualViewport(424, 130)
+    render(<PasteLinkButton iconOnly />)
+    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+
+    const box = (await screen.findByRole('dialog')).parentElement!
+    // Offset, not pinned to 0 — this is what kept the panel on screen.
+    expect(box).toHaveStyle({ top: '130px' })
+  })
+
+  it('falls back to the full screen where visualViewport is unavailable', async () => {
+    Object.defineProperty(window, 'visualViewport', { configurable: true, value: undefined })
+    render(<PasteLinkButton iconOnly />)
+    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+
+    const box = (await screen.findByRole('dialog')).parentElement!
+    expect(box).toHaveStyle({ top: '0px' })
+  })
+
+  it('keeps a tap inside the dialog from dismissing it', async () => {
+    stubVisualViewport(424)
+    render(<PasteLinkButton iconOnly />)
+    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+
+    const dialog = await screen.findByRole('dialog')
+    // The panel lives outside containerRef now, so the outside-click handler
+    // has to know about it explicitly or every tap in the field closes it.
+    fireEvent.mouseDown(screen.getByPlaceholderText(/paste a link/i))
+    expect(screen.queryByRole('dialog')).toBe(dialog)
   })
 })

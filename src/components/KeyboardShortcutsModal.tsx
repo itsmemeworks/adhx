@@ -116,9 +116,10 @@ export function KeyboardShortcutsModal({
               {/* Actions */}
               <div>
                 <SectionHeader>Actions</SectionHeader>
-                <Row keys={['a']} label="Add tweet" />
+                {/* No 'a' row: the Add modal is gone — adding is paste-first
+                    (paste a link anywhere on the library). */}
                 <Row keys={['b']} label="Sync bookmarks" />
-                <Row keys={['u']} label="Toggle unread only" />
+                <Row keys={['u']} label="Toggle hide archived" />
                 <Row keys={['t']} label="Open tags filter" />
                 <Row keys={['o']} label="Toggle sort order" />
                 <Row keys={['d']} label="Toggle dark mode" />
@@ -141,29 +142,23 @@ export function KeyboardShortcutsModal({
             </>
           ) : (
             <>
-              {/* Navigation */}
+              {/* The real theater keymap (`personalKeyAction` in
+                  useTheaterKeyboard.ts). Everything previously listed here —
+                  r/u for read state, s, x, and q/p for quoted/parent — belonged
+                  to the Lightbox that was replaced by the theater and had been
+                  documenting keys that do nothing for some time. */}
               <div>
                 <SectionHeader>Navigation</SectionHeader>
-                <Row keys={['←', '→']} label="Previous / next" />
-                <Row keys={['g']} label="Back to gallery" />
-                <Row keys={['Esc']} label="Exit focus mode" />
+                <Row keys={['↑']} label="Back to the previous post" />
+                <Row keys={['Esc']} label="Close the theater" />
               </div>
 
-              {/* Actions */}
               <div>
                 <SectionHeader>Actions</SectionHeader>
-                <Row keys={['r']} label="Mark as read" />
-                <Row keys={['u']} label="Mark as unread" />
-                <Row keys={['t']} label="Add tag" />
-                <Row keys={['s']} label="Copy share link" />
-                <Row keys={['x']} label="Open on X" />
-              </div>
-
-              {/* Tweet Navigation */}
-              <div>
-                <SectionHeader>Tweet Navigation</SectionHeader>
-                <Row keys={['q']} label="Go to quoted tweet" />
-                <Row keys={['p']} label="Go to parent tweet" />
+                <Row keys={['→']} label="Archive (out of your collection)" />
+                <Row keys={['←']} label="Later (keep it, move on)" />
+                <Row keys={['↓']} label="Delete" />
+                <Row keys={['u']} label="Undo the last action" />
               </div>
             </>
           )}

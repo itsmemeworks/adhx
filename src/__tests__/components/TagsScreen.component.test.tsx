@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * TagsScreen (`/tags`) component tests (unified-theater-triage.md §4) —
+ * TagsScreen (`/tags`) component tests (unified-theater-collection.md §4) —
  * covers the poster-card grid render (counts + the Public/Private visibility
  * toggle), toggling to public (PATCH make-public + copy the friendly URL),
  * toggling to private, the empty state, and the card's `?tag=` link target.
@@ -75,7 +75,7 @@ describe('TagsClient', () => {
     expect(screen.getByRole('link', { name: /open/i })).toHaveAttribute('href', '/t/tester/work')
   })
 
-  it('the poster card links to /?tag={tag}', async () => {
+  it('the poster card links to /library?tag={tag} — the grid moved off `/`', async () => {
     global.fetch = vi.fn().mockImplementation((url: string) => {
       if (url === '/api/tags') {
         return jsonResponse({ tags: [{ tag: 'work', count: 2, isPublic: false, shareUrl: null }] })
@@ -86,7 +86,10 @@ describe('TagsClient', () => {
     render(<TagsClient />)
 
     await waitFor(() => expect(screen.getByText('#work')).toBeInTheDocument())
-    expect(screen.getByRole('link', { name: 'View #work' })).toHaveAttribute('href', '/?tag=work')
+    expect(screen.getByRole('link', { name: 'View #work' })).toHaveAttribute(
+      'href',
+      '/library?tag=work',
+    )
   })
 
   it('clicking the "Private" toggle PATCHes make-public and copies the friendly URL', async () => {
@@ -197,7 +200,7 @@ describe('TagsClient', () => {
               text: 'hello world',
               tweetUrl: 'https://x.com/alice/status/1',
               processedAt: '2026-01-01T00:00:00.000Z',
-              isRead: false,
+              isArchived: false,
               media: [
                 {
                   id: 'm1',
@@ -217,7 +220,7 @@ describe('TagsClient', () => {
               text: 'a text-only post with no media at all here',
               tweetUrl: 'https://x.com/bob/status/2',
               processedAt: '2026-01-01T00:00:00.000Z',
-              isRead: false,
+              isArchived: false,
               media: null,
               links: null,
               tags: ['work'],
@@ -229,7 +232,7 @@ describe('TagsClient', () => {
               text: 'third post',
               tweetUrl: 'https://x.com/carol/status/3',
               processedAt: '2026-01-01T00:00:00.000Z',
-              isRead: false,
+              isArchived: false,
               media: null,
               links: null,
               tags: ['work'],
@@ -241,7 +244,7 @@ describe('TagsClient', () => {
               text: 'fourth post',
               tweetUrl: 'https://x.com/dave/status/4',
               processedAt: '2026-01-01T00:00:00.000Z',
-              isRead: false,
+              isArchived: false,
               media: null,
               links: null,
               tags: ['work'],

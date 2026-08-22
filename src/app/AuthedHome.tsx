@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, Suspense, useRef } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { LandingPage } from '@/components/LandingPage'
 import {
   FeedGrid,
@@ -18,26 +18,14 @@ import {
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Loader2, CheckCircle2, MessageSquare } from 'lucide-react'
-import { TheaterShell } from '@/components/theater/TheaterShell'
-import type { TriageTab } from '@/components/theater/types'
 import { PasteToPreview } from '@/components/PasteToPreview'
 import { PasteLinkButton } from '@/components/PasteLinkButton'
 import { useTheme } from '@/lib/theme/context'
+import { cn } from '@/lib/utils'
 import { ConnectWithX } from '@/components/matter'
 import { parseSyncErrorEvent, type SyncErrorCode } from '@/lib/sync/messages'
 import { useSyncListener } from './useSyncListener'
-import { useTriageQueue } from './useTriageQueue'
-
-/**
- * Seed for triage's Live sub-tab (unified-theater-triage.md §2) — the same
- * live community pulse home mode uses, but AuthedHome has no server-rendered
- * trending items of its own to seed it with. `useTheaterFeed` polls
- * `/api/activity` immediately when seeded empty (see its 2026-08-20 change),
- * so this only costs a brief "Loading…" the first time a triage session's
- * Live tab is opened — module-level so it's a stable reference across
- * re-renders/re-opens.
- */
-const TRIAGE_LIVE_SEED = { items: [], savedToday: 0, recentActivity: 0 }
+import { collectionPath } from '@/lib/theater/collection-href'
 
 export default function AuthedHome(): React.ReactElement {
   return (
@@ -56,10 +44,30 @@ export default function AuthedHome(): React.ReactElement {
 function FeedPageContent(): React.ReactElement {
   const router = useRouter()
   const searchParams = useSearchParams()
+  // The grid lives at `/library` (the theater took `/`), and every URL sync
+  // below is a query-string update on WHATEVER route it's mounted at — so the
+  // "no query string left" case has to fall back to this pathname, not to a
+  // hardcoded '/'. It used to be '/' and that silently navigated the grid home.
+  const pathname = usePathname()
   const { resolvedTheme, setTheme } = useTheme()
 
   const [items, setItems] = useState<FeedItem[]>([])
+  /** Monotonic id of the newest feed request — older responses are dropped. */
+  const feedRequestRef = useRef(0)
   const [loading, setLoading] = useState(true)
+  /**
+   * Paste-to-add status. Success is NOT announced in words — the post appears
+   * at the top with a brief glow (`justAddedKey` below), because a banner
+   * saying "Added" pushed the entire grid down to state what the new card
+   * already shows (owner: "just something subtle"). Only the WAIT and a
+   * FAILURE get text, and it's positioned so it can't move the grid either.
+   */
+  const [pasteAdd, setPasteAdd] = useState<{
+    status: 'adding' | 'error'
+    message?: string
+  } | null>(null)
+  /** `platform:id` of the just-pasted post, held long enough to be noticed. */
+  const [justAddedKey, setJustAddedKey] = useState<string | null>(null)
   const [filter, setFilter] = useState<FilterType>(
     (searchParams.get('filter') as FilterType) || 'all',
   )
@@ -70,20 +78,16 @@ function FeedPageContent(): React.ReactElement {
   const [sortDirection, setSortDirection] = useState<SortDirection>(
     (searchParams.get('sortDir') as SortDirection) || 'desc',
   )
-  const [unreadOnly, setUnreadOnly] = useState(searchParams.get('unreadOnly') !== 'false')
+  const [hideArchived, setHideArchived] = useState(searchParams.get('hideArchived') !== 'false')
   const [view, setView] = useState<'grid' | 'list' | 'bento'>('grid')
   const [search, setSearch] = useState(searchParams.get('search') || '')
-  const [triageQueue, setTriageQueue] = useState<FeedItem[]>([])
-  const [triageStart, setTriageStart] = useState(0)
-  const [triageInitialTab, setTriageInitialTab] = useState<TriageTab>('collection')
-  // Tag-select plumbing (unified-theater-triage.md §4, built by a parallel
+  // Tag-select plumbing (unified-theater-collection.md §4, built by a parallel
   // agent) — FilterBar owns entering/exiting select mode; FeedGrid reads it
   // to render the tap-to-toggle-membership grid.
   const [tagSelectTag, setTagSelectTag] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
-  const [stats, setStats] = useState({ total: 0, unread: 0 })
-  const [triageOpen, setTriageOpen] = useState(false)
+  const [stats, setStats] = useState({ total: 0, active: 0 })
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)
@@ -107,18 +111,6 @@ function FeedPageContent(): React.ReactElement {
   const [streamedItems, setStreamedItems] = useState<FeedItem[]>([])
   const syncTriggeredRef = useRef(false)
   const syncTerminalRef = useRef(false)
-  const [pendingNavigation, setPendingNavigation] = useState<{
-    id: string
-    fallbackUrl?: string
-  } | null>(null)
-  // Set when arriving via `?triage=1` (e.g. the Triage pill pressed on /discover);
-  // opens the focus queue once the feed has loaded.
-  const [pendingTriage, setPendingTriage] = useState(false)
-  // Set when arriving via `?live=1` (e.g. the Header's Live nav pressed from
-  // a page other than `/`, which has no `open-theater` listener of its own);
-  // opens the theater on the Live tab once authenticated.
-  const [pendingLive, setPendingLive] = useState(false)
-  const prevLoadingRef = useRef(false)
   // Track seen item IDs for O(1) duplicate detection during sync streaming
   const seenItemIdsRef = useRef<Set<string>>(new Set())
   // Track EventSource for cleanup on unmount to prevent memory leaks
@@ -146,78 +138,87 @@ function FeedPageContent(): React.ReactElement {
     }
   }, [])
 
-  // Open the unified triage viewer on a snapshot of the queue at a given index.
-  const openTriage = useCallback(
-    (queue: FeedItem[], start: number, tab: TriageTab = 'collection') => {
-      setTriageQueue(queue)
-      setTriageStart(Math.max(0, start))
-      setTriageInitialTab(tab)
-      setTriageOpen(true)
-    },
-    [],
-  )
+  /**
+   * Place a just-added post at the top of the grid. Shared by paste-to-add and
+   * the theater's Live-tab Save, and deduped so re-adding something already
+   * listed moves that card up instead of rendering it twice.
+   */
+  const placeAddedItem = useCallback((added: FeedItem) => {
+    const platform = added.platform ?? 'twitter'
+    setItems((prev) => [
+      added,
+      ...prev.filter((f) => !((f.platform ?? 'twitter') === platform && f.id === added.id)),
+    ])
+    setJustAddedKey(`${platform}:${added.id}`)
+  }, [])
 
-  // PRODUCT DECISION REVERSAL — do not "fix" this back to reading current
-  // view state. A previous iteration (#342) seeded the triage queue from the
-  // CURRENT filter/platform/tag/search state, so the theater's Collection tab
-  // always matched whatever the grid happened to be showing. The owner
-  // reversed that: "Triage is just about marking a post as read or not read."
-  // Triage is now strictly the full unread backlog, every time, regardless of
-  // what's active in the grid behind it — a consistent queue instead of a
-  // filtered snapshot. So the query below is fixed (unreadOnly=true, no
-  // filter/platform/tag/search) rather than derived from component state.
-  // The feed API caps at 100/request, which covers a typical backlog.
-  const buildUnreadTriageQuery = useCallback(
-    () => new URLSearchParams({ filter: 'all', unreadOnly: 'true', limit: '100' }),
-    [],
-  )
+  /**
+   * Paste a post link while on the library → add it and put it at the top,
+   * without leaving the page (owner). The card is pulled from `/api/feed?id=`
+   * rather than built from the add endpoint's raw DB row, so it renders
+   * identically to every other card (media, links, tags, read state) — the
+   * same trick `handlePersonalLiveSave` uses to pull a save into an open queue.
+   */
+  const addPastedPost = useCallback(
+    async (url: string) => {
+      setPasteAdd({ status: 'adding' })
+      try {
+        const res = await fetch('/api/bookmarks/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, source: 'manual' }),
+        })
+        const data = await res.json().catch(() => null)
+        if (!res.ok) {
+          setPasteAdd({
+            status: 'error',
+            message: typeof data?.error === 'string' ? data.error : "Couldn't add that link",
+          })
+          return
+        }
 
-  const fetchUnreadQueue = useCallback(async (): Promise<FeedItem[]> => {
-    let queue: FeedItem[] = items.filter((i) => !i.isRead)
-    try {
-      const res = await fetch(`/api/feed?${buildUnreadTriageQuery()}`)
-      if (res.ok) {
-        const data = await res.json()
-        const fetched: FeedItem[] = (data.items || []).filter((i: FeedItem) => !i.isRead)
-        if (fetched.length) queue = fetched
+        const platform: string = data?.platform ?? 'twitter'
+        const id: string | undefined = data?.bookmark?.id
+
+        if (id) {
+          const q = new URLSearchParams({ hideArchived: 'false', filter: 'all', limit: '5' })
+          q.append('id', id)
+          q.append('idPlatform', platform)
+          const fres = await fetch(`/api/feed?${q}`)
+          if (fres.ok) {
+            const feed = await fres.json()
+            const added: FeedItem | undefined = (feed.items ?? []).find(
+              (f: FeedItem) => (f.platform ?? 'twitter') === platform && f.id === id,
+            )
+            if (added) placeAddedItem(added)
+          }
+        }
+
+        // No success text: the glowing card at the top IS the confirmation —
+        // for a fresh add, and for a re-paste that moved an existing card up.
+        setPasteAdd(null)
+        // Refresh the header's counts only. Deliberately NOT `tweet-added`,
+        // which `useSyncListener` turns into a full `fetchFeed(true)` — that
+        // would throw away the prepend above and, with a filter or search
+        // active, drop the just-added post out of view entirely.
+        window.dispatchEvent(new CustomEvent('stats-updated'))
+      } catch {
+        setPasteAdd({ status: 'error', message: "Couldn't add that link" })
       }
-    } catch {
-      /* fall back to the loaded items, filtered to unread */
-    }
-    return queue
-  }, [items, buildUnreadTriageQuery])
-
-  const startTriageAll = useCallback(
-    async (tab: TriageTab = 'collection') => {
-      const queue = await fetchUnreadQueue()
-      openTriage(queue, 0, tab)
     },
-    [fetchUnreadQueue, openTriage],
+    [placeAddedItem],
   )
 
-  // Open triage from a tapped gallery item: always the full unread backlog
-  // (see the decision-reversal note above), starting on the item the user
-  // tapped — which may live outside that backlog (e.g. it's already read, or
-  // the grid is showing a tag/category view that mixes read + unread). Of the
-  // two reasonable fallbacks (prepend it, or just open at the front of the
-  // unread queue and ignore the tap), prepending is the least surprising:
-  // tapping a specific card should always open ON that card, with the rest of
-  // the unread backlog queued up right behind it.
-  const openTriageFromItem = useCallback(
-    async (idx: number) => {
-      const clicked = items[idx]
-      let queue = await fetchUnreadQueue()
-      const plat = (i: FeedItem) => i.platform ?? 'twitter'
-      let start = clicked
-        ? queue.findIndex((i) => i.id === clicked.id && plat(i) === plat(clicked))
-        : 0
-      if (start === -1 && clicked) {
-        queue = [clicked, ...queue]
-        start = 0
-      }
-      openTriage(queue, Math.max(0, start))
+  // One personal theater: a card tap / `F` leaves the grid for `/collection`.
+  // AuthedTheater fetches the full active queue (API cap 100) and starts on
+  // this post — prepends it when it's archived or outside the first page.
+  const goToCollectionFromItem = useCallback(
+    (idx: number) => {
+      const item = items[idx]
+      if (!item) return
+      router.push(collectionPath({ open: item.id, platform: item.platform }))
     },
-    [items, fetchUnreadQueue, openTriage],
+    [items, router],
   )
 
   const startSync = useCallback(
@@ -298,7 +299,7 @@ function FeedPageContent(): React.ReactElement {
           eventSource.close()
           eventSourceRef.current = null
           setIsSyncing(false)
-          router.replace('/', { scroll: false })
+          router.replace(pathname, { scroll: false })
           window.dispatchEvent(new CustomEvent('sync-complete'))
 
           // Keep modal open for 2s after completion so user can see final state
@@ -323,7 +324,7 @@ function FeedPageContent(): React.ReactElement {
           if (firstLogin) {
             setShowSyncModal(true)
             // Drop ?firstLogin= so a refresh doesn't re-fire sync into a loop.
-            router.replace('/', { scroll: false })
+            router.replace(pathname, { scroll: false })
           } else {
             setTimeout(() => {
               setSyncProgress(null)
@@ -406,16 +407,21 @@ function FeedPageContent(): React.ReactElement {
     async (resetPage = false) => {
       const currentPage = resetPage ? 1 : page
       if (resetPage) setPage(1)
+      // Request token: a filter change and an in-flight `loadMore` used to be
+      // able to interleave, appending the OLD filter's page 2 onto the new
+      // filter's freshly reset list (state review). Only the newest request
+      // may write to `items`.
+      const requestId = ++feedRequestRef.current
 
       try {
         setLoading(true)
         // Add-posts mode browses the WHOLE collection: drop the tag filter
         // (else the grid only shows posts already carrying the tag — nothing
-        // left to add) and the unread-only gate (already-read posts are prime
+        // left to add) and the hide-archived gate (archived posts are prime
         // tagging candidates). The FilterBar's selected-tag UI state is
-        // untouched. VIEWING a tag also ignores unread: a tag is a deliberate
+        // untouched. VIEWING a tag also ignores archive state: a tag is a deliberate
         // collection the user curated — read state is irrelevant there, and
-        // the default unread-only filter otherwise greets a fully-read tag
+        // the default hide-archived filter otherwise greets a fully-archived tag
         // with a misleading "All caught up" empty state.
         const addingToTag = tagSelectTag !== null
         const tagActive = addingToTag || selectedTags.length > 0
@@ -423,7 +429,7 @@ function FeedPageContent(): React.ReactElement {
           page: currentPage.toString(),
           limit: '50',
           filter,
-          unreadOnly: (tagActive ? false : unreadOnly).toString(),
+          hideArchived: (tagActive ? false : hideArchived).toString(),
         })
         if (platformFilter !== 'all') params.set('platform', platformFilter)
         if (sort !== 'added') params.set('sort', sort)
@@ -433,20 +439,34 @@ function FeedPageContent(): React.ReactElement {
 
         const response = await fetch(`/api/feed?${params}`)
         const data = await response.json()
+        // A superseded response must touch NOTHING — including `loading`.
+        if (requestId !== feedRequestRef.current) return
 
         if (resetPage) {
           setItems(data.items || [])
         } else {
-          setItems((prev) => [...prev, ...(data.items || [])])
+          // Dedupe on append. The server pages by OFFSET, so every item this
+          // session removed locally (an archive while hiding archived, a delete)
+          // shifts the boundary and page N+1 re-sends a row already on
+          // screen — React then renders two cards with the same key (state
+          // review). Filtering by (platform, id) is the cheap correct fix.
+          setItems((prev) => {
+            const seen = new Set(prev.map((f) => `${f.platform ?? 'twitter'}:${f.id}`))
+            const fresh = ((data.items || []) as FeedItem[]).filter(
+              (f) => !seen.has(`${f.platform ?? 'twitter'}:${f.id}`),
+            )
+            return fresh.length ? [...prev, ...fresh] : prev
+          })
         }
 
         setHasMore(data.pagination?.page < data.pagination?.totalPages)
-        setStats({ total: data.stats?.total || 0, unread: data.stats?.unread || 0 })
+        setStats({ total: data.stats?.total || 0, active: data.stats?.active || 0 })
         if (data.lastSyncAt) setLastSyncAt(data.lastSyncAt)
       } catch (error) {
         console.error('Failed to fetch feed:', error)
       } finally {
-        setLoading(false)
+        // Only the newest request owns the spinner.
+        if (requestId === feedRequestRef.current) setLoading(false)
       }
     },
     [
@@ -454,7 +474,7 @@ function FeedPageContent(): React.ReactElement {
       platformFilter,
       sort,
       sortDirection,
-      unreadOnly,
+      hideArchived,
       search,
       page,
       selectedTags,
@@ -466,13 +486,13 @@ function FeedPageContent(): React.ReactElement {
     const urlFilter = (searchParams.get('filter') as FilterType) || 'all'
     const urlSort = (searchParams.get('sort') as SortType) || 'added'
     const urlSortDir = (searchParams.get('sortDir') as SortDirection) || 'desc'
-    const urlUnreadOnly = searchParams.get('unreadOnly') !== 'false'
+    const urlHideArchived = searchParams.get('hideArchived') !== 'false'
     const urlSearch = searchParams.get('search') || ''
 
     if (urlFilter !== filter) setFilter(urlFilter)
     if (urlSort !== sort) setSort(urlSort)
     if (urlSortDir !== sortDirection) setSortDirection(urlSortDir)
-    if (urlUnreadOnly !== unreadOnly) setUnreadOnly(urlUnreadOnly)
+    if (urlHideArchived !== hideArchived) setHideArchived(urlHideArchived)
     if (urlSearch !== search) setSearch(urlSearch)
   }, [searchParams])
 
@@ -488,7 +508,7 @@ function FeedPageContent(): React.ReactElement {
     platformFilter,
     sort,
     sortDirection,
-    unreadOnly,
+    hideArchived,
     search,
     selectedTags,
     tagSelectTag,
@@ -497,14 +517,41 @@ function FeedPageContent(): React.ReactElement {
   ])
 
   // Any surface that changes a post's tags (grid Add-posts toggles, the
-  // triage TagQuickPicker) announces it — refetch tag counts so the toolbar
-  // "{n} posts" and the Tags dropdown never go stale.
+  // collection TagQuickPicker) announces it — refetch tag counts so the toolbar
+  // "{n} posts" and the Tags dropdown never go stale, AND patch the affected
+  // card's own tags.
+  //
+  // The patch is the fix for a real staleness bug (state review, 2026-08-22):
+  // the event has always carried the post's complete new tag list in `detail`,
+  // and this listener ignored it, refetching only the tag COUNTS. So a tag
+  // added in the theater showed there (the theater patches its own snapshot)
+  // and then vanished the moment the overlay closed and the grid's untouched
+  // `items` re-rendered — the tag was saved, but the UI said otherwise until a
+  // filter change or reload.
   useEffect(() => {
     if (!isAuthenticated) return
-    const handler = () => fetchTags()
+    const handler = (e: Event) => {
+      void fetchTags()
+      const detail = (e as CustomEvent).detail as
+        { platform?: string; bookmarkId?: string; tags?: string[] } | undefined
+      if (!detail?.bookmarkId || !Array.isArray(detail.tags)) return
+      const platform = detail.platform ?? 'twitter'
+      const tags = detail.tags
+      setItems((prev) => {
+        let changed = false
+        const next = prev.map((item) => {
+          if (item.id !== detail.bookmarkId || (item.platform ?? 'twitter') !== platform) {
+            return item
+          }
+          changed = true
+          return { ...item, tags }
+        })
+        return changed ? next : prev
+      })
+    }
     window.addEventListener('bookmark-tags-changed', handler)
     return () => window.removeEventListener('bookmark-tags-changed', handler)
-  }, [isAuthenticated])
+  }, [isAuthenticated, fetchTags])
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -516,29 +563,28 @@ function FeedPageContent(): React.ReactElement {
     if (page > 1) fetchFeed(false)
   }, [page])
 
+  // The paste pill is an acknowledgement, not a permanent state — clear it.
+  // Errors linger longer than successes: the card appearing at the top of the
+  // grid is its own confirmation, but a failure is the only signal there is.
+  useEffect(() => {
+    if (!pasteAdd) return
+    // 'adding' is cleared by the request finishing; the long timeout is only a
+    // backstop so a hung request can't leave a spinner up forever.
+    const ms = pasteAdd.status === 'error' ? 6_000 : 30_000
+    const timer = setTimeout(() => setPasteAdd(null), ms)
+    return () => clearTimeout(timer)
+  }, [pasteAdd])
+
+  // Hold the glow long enough to catch the eye, then let the card settle in.
+  useEffect(() => {
+    if (!justAddedKey) return
+    const timer = setTimeout(() => setJustAddedKey(null), 2_600)
+    return () => clearTimeout(timer)
+  }, [justAddedKey])
+
   // Listen for sync-complete (Header's SyncProgress component) and
   // tweet-added (URL-prefix add flow) events and refresh the feed/tags.
   useSyncListener({ isSyncing, fetchFeed, fetchTags })
-
-  // Handle pending navigation after filter change and items reload
-  // Only navigate when loading transitions from true to false (fetch completed)
-  useEffect(() => {
-    const wasLoading = prevLoadingRef.current
-    prevLoadingRef.current = loading
-
-    // Only proceed if we have a pending navigation AND loading just finished
-    if (pendingNavigation && wasLoading && !loading && items.length > 0) {
-      const targetIndex = items.findIndex((i) => i.id === pendingNavigation.id)
-      if (targetIndex !== -1) {
-        openTriage(items, targetIndex)
-      } else if (pendingNavigation.fallbackUrl) {
-        // Parent tweet not in user's collection - open externally as fallback
-        window.open(pendingNavigation.fallbackUrl, '_blank')
-      }
-      // Clear pending navigation regardless of outcome
-      setPendingNavigation(null)
-    }
-  }, [pendingNavigation, items, loading])
 
   // Rebuild the URL from the CURRENT URL (searchParams), not from scratch. `search`
   // is written to the URL by Header's own debounced push (Header.tsx), and this
@@ -558,77 +604,44 @@ function FeedPageContent(): React.ReactElement {
     else params.delete('sort')
     if (sortDirection !== 'desc') params.set('sortDir', sortDirection)
     else params.delete('sortDir')
-    if (!unreadOnly) params.set('unreadOnly', 'false')
-    else params.delete('unreadOnly')
+    if (!hideArchived) params.set('hideArchived', 'false')
+    else params.delete('hideArchived')
+    // One-way cleanup of the superseded query name.
+    params.delete('unreadOnly')
     const queryString = params.toString()
-    router.replace(queryString ? `?${queryString}` : '/', { scroll: false })
-  }, [filter, platformFilter, sort, sortDirection, unreadOnly, router, searchParams])
+    router.replace(queryString ? `?${queryString}` : pathname, { scroll: false })
+  }, [filter, platformFilter, sort, sortDirection, hideArchived, router, searchParams, pathname])
 
-  // Handle ?open=tweetId URL parameter to open a specific tweet in lightbox
+  // Leftover overlay deep links — there is one personal theater, at `/collection`.
   useEffect(() => {
     const openId = searchParams.get('open')
-    if (!openId) return
-
-    // Clear the open param from URL immediately
-    const params = new URLSearchParams(searchParams.toString())
-    params.delete('open')
-    const queryString = params.toString()
-    router.replace(queryString ? `?${queryString}` : '/', { scroll: false })
-
-    // Try to find it in current items first
-    const currentIndex = items.findIndex((i) => i.id === openId)
-    if (currentIndex !== -1) {
-      openTriage(items, currentIndex)
+    if (openId) {
+      const fromGrid = items.find((i) => i.id === openId)
+      router.replace(
+        collectionPath({
+          open: openId,
+          platform: fromGrid?.platform ?? searchParams.get('platform'),
+        }),
+      )
       return
     }
-
-    // Not in the loaded feed — e.g. an already-saved tweet that's already read,
-    // or one on a later page. Fetch that specific bookmark by id (read state and
-    // pagination ignored) and open it directly in triage.
-    let alive = true
-    fetch(`/api/feed?id=${encodeURIComponent(openId)}&unreadOnly=false&limit=1`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (!alive) return
-        const item = data?.items?.[0]
-        if (item) openTriage([item], 0)
-      })
-      .catch(() => {})
-    return () => {
-      alive = false
-    }
-  }, [searchParams]) // Only run when searchParams changes
-
-  // Handle ?added=success URL parameter after adding tweet via URL prefix
-  useEffect(() => {
     const added = searchParams.get('added')
-    const tweetId = searchParams.get('tweetId')
-
-    if (!added || !tweetId) return
-
-    // Clear the added params from URL immediately
-    const params = new URLSearchParams(searchParams.toString())
-    params.delete('added')
-    params.delete('tweetId')
-    params.delete('author')
-    params.delete('text')
-    params.delete('error')
-    const queryString = params.toString()
-    router.replace(queryString ? `?${queryString}` : '/', { scroll: false })
-
-    // Refresh the feed to include the newly added tweet. Rather than reading
-    // `items` from this closure after the refresh resolves (which is always a
-    // stale pre-fetch snapshot — this effect only depends on [searchParams],
-    // so `items` here never reflects the fetchFeed below), set the pending
-    // navigation up front and let the dedicated reconciliation effect (which
-    // depends on [pendingNavigation, items, loading]) open it deterministically
-    // once loading actually transitions back to false with the refreshed items.
-    setPendingNavigation({ id: tweetId })
-    fetchFeed(true)
-  }, [searchParams]) // Only run when searchParams changes
+    const addedId = searchParams.get('id') ?? searchParams.get('tweetId')
+    if ((added === 'success' || added === 'duplicate') && addedId) {
+      router.replace(collectionPath({ open: addedId, platform: searchParams.get('platform') }))
+      return
+    }
+    if (searchParams.get('collection') === '1') {
+      router.replace('/collection')
+      return
+    }
+    if (searchParams.get('live') === '1') {
+      router.replace('/')
+    }
+  }, [searchParams, router, items])
 
   // Preselect a tag from `?tag=` — the `/tags` screen's "View" action
-  // (unified-theater-triage.md §4). Applied once on arrival via a ref guard:
+  // (unified-theater-collection.md §4). Applied once on arrival via a ref guard:
   // unlike filter/sort/etc above, `selectedTags` has no URL round-trip (the
   // writer effect below never sets/clears `tag`), so continuously re-reading
   // it on every searchParams change would silently undo an explicit "clear
@@ -642,69 +655,19 @@ function FeedPageContent(): React.ReactElement {
     setSelectedTags([urlTag])
   }, [searchParams])
 
-  // Header's Collection/Live nav (unified-theater-triage.md §1) dispatches
-  // `open-theater` with `{ tab: 'triage' | 'live' }` for both the Triage
-  // pill and the Live nav item — open the triage overlay on the matching
-  // sub-tab, seeded from the current unread queue either way (so switching
-  // tabs mid-session always has a Collection queue to fall back to).
+  // Leftover `open-theater` from older chrome — navigate, don't overlay.
   useEffect(() => {
     function handler(e: Event) {
-      const detail = (e as CustomEvent<{ tab?: 'triage' | 'live' }>).detail
-      void startTriageAll(detail?.tab === 'live' ? 'live' : 'collection')
+      const tab = (e as CustomEvent<{ tab?: string }>).detail?.tab
+      router.push(tab === 'live' ? '/' : '/collection')
     }
     window.addEventListener('open-theater', handler)
     return () => window.removeEventListener('open-theater', handler)
-  }, [startTriageAll])
+  }, [router])
 
-  // `?triage=1` — the Triage pill was pressed from another route (e.g. Discover),
-  // so we navigated here to open triage. Flag it, then clear the param.
+  // Global keyboard shortcuts
   useEffect(() => {
-    if (searchParams.get('triage') !== '1') return
-    setPendingTriage(true)
-    const params = new URLSearchParams(searchParams.toString())
-    params.delete('triage')
-    const qs = params.toString()
-    router.replace(qs ? `?${qs}` : '/', { scroll: false })
-  }, [searchParams, router])
-
-  // Arrived via ?triage=1 — open the full unread queue once authenticated.
-  useEffect(() => {
-    if (!pendingTriage || isAuthenticated !== true) return
-    setPendingTriage(false)
-    startTriageAll()
-  }, [pendingTriage, isAuthenticated, startTriageAll])
-
-  // `?live=1` — the Live nav item was pressed from a route other than `/`
-  // (Header's `open-theater` event has no listener outside the feed page),
-  // so we navigated here to open the theater's Live tab. Flag it, then clear
-  // the param — mirrors the ?triage=1 handling above.
-  useEffect(() => {
-    if (searchParams.get('live') !== '1') return
-    setPendingLive(true)
-    const params = new URLSearchParams(searchParams.toString())
-    params.delete('live')
-    const qs = params.toString()
-    router.replace(qs ? `?${qs}` : '/', { scroll: false })
-  }, [searchParams, router])
-
-  // Arrived via ?live=1 — open the theater on the Live tab once authenticated.
-  useEffect(() => {
-    if (!pendingLive || isAuthenticated !== true) return
-    setPendingLive(false)
-    startTriageAll('live')
-  }, [pendingLive, isAuthenticated, startTriageAll])
-
-  // Reconcile the feed's items/stats with actions taken inside the triage theater.
-  const { handleTriageResolved, handleTriageRestored } = useTriageQueue({
-    unreadOnly,
-    setItems,
-    setStats,
-  })
-
-  // Global keyboard shortcuts (when lightbox is NOT open)
-  useEffect(() => {
-    // Skip if lightbox is open (those shortcuts are handled above) or shortcuts modal is open
-    if (triageOpen || showShortcutsModal) return
+    if (showShortcutsModal) return
     // Skip if not authenticated
     if (!isAuthenticated) return
 
@@ -762,15 +725,12 @@ function FeedPageContent(): React.ReactElement {
         case 'u':
         case 'U':
           e.preventDefault()
-          setUnreadOnly((prev) => !prev)
+          setHideArchived((prev) => !prev)
           break
         case 'f':
         case 'F':
-          // Focus mode - open first item (full unread backlog)
           e.preventDefault()
-          if (items.length > 0) {
-            openTriageFromItem(0)
-          }
+          if (items.length > 0) goToCollectionFromItem(0)
           break
         case 't':
         case 'T':
@@ -800,11 +760,11 @@ function FeedPageContent(): React.ReactElement {
     window.addEventListener('keydown', handleGlobalKeyDown)
     return () => window.removeEventListener('keydown', handleGlobalKeyDown)
   }, [
-    triageOpen,
     isAuthenticated,
     router,
     showShortcutsModal,
     items.length,
+    goToCollectionFromItem,
     resolvedTheme,
     setTheme,
   ])
@@ -1007,11 +967,42 @@ function FeedPageContent(): React.ReactElement {
         </div>
       )}
 
-      {/* Paste-first add (unified-theater-triage.md §1): no more `+` Add
-          button/modal — pasting a platform URL anywhere outside an
-          input/textarea routes straight to its preview page. No UI of its
-          own. */}
-      <PasteToPreview />
+      {/* Paste-first add (unified-theater-collection.md §1): no more `+` Add
+          button/modal. On the LIBRARY a paste adds the post in place and puts
+          it at the top (owner) rather than navigating to its preview page —
+          you're already looking at the collection you're adding to. Everywhere
+          else PasteToPreview still routes to the preview page. */}
+      <PasteToPreview onPastePost={addPastedPost} />
+
+      {/* Fixed, not in flow: this used to sit above the grid and shove every
+          card down the moment you pasted (owner). Only the wait and a failure
+          are worth words at all — a successful add is announced by the new
+          card's glow, not by text. */}
+      {pasteAdd && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center px-4"
+        >
+          <span
+            className={cn(
+              // Opacity modifiers are deliberately absent: `clay` and
+              // `surface` are hex CSS vars, and `/NN` on those compiles to
+              // nothing in this setup — the pill was rendering with no
+              // background or border at all.
+              'inline-flex items-center gap-1.5 rounded-full border bg-surface px-3 py-1.5 text-[12.5px] shadow-m-sm',
+              pasteAdd.status === 'error' ? 'border-clay text-ink-2' : 'border-hairline text-ink-3',
+            )}
+          >
+            {pasteAdd.status === 'adding' && <Loader2 size={13} className="animate-spin" />}
+            <span>
+              {pasteAdd.status === 'adding'
+                ? 'Adding\u2026'
+                : (pasteAdd.message ?? "Couldn't add that link")}
+            </span>
+          </span>
+        </div>
+      )}
 
       <ErrorBoundary componentName="FilterBar">
         <FilterBar
@@ -1023,8 +1014,8 @@ function FeedPageContent(): React.ReactElement {
           onSortChange={setSort}
           sortDirection={sortDirection}
           onSortDirectionChange={setSortDirection}
-          unreadOnly={unreadOnly}
-          onUnreadOnlyChange={setUnreadOnly}
+          hideArchived={hideArchived}
+          onHideArchivedChange={setHideArchived}
           view={view}
           onViewChange={changeView}
           selectedTags={selectedTags}
@@ -1052,8 +1043,6 @@ function FeedPageContent(): React.ReactElement {
         <PasteLinkButton className="w-full justify-center" />
       </div>
 
-      {/* Collection/Live now live in the top bar (Matter); Live opens the
-          theater via `open-theater`, which we listen for below. */}
       <div className="px-4 sm:px-[26px] py-4">
         <ErrorBoundary componentName="FeedGrid">
           <FeedGrid
@@ -1062,41 +1051,22 @@ function FeedPageContent(): React.ReactElement {
             hasMore={hasMore}
             lastSyncAt={lastSyncAt}
             sortField={sort === 'posted' ? 'createdAt' : 'processedAt'}
-            unreadOnly={unreadOnly}
+            hideArchived={hideArchived}
             stats={stats}
             view={view}
-            onExpand={openTriageFromItem}
+            onExpand={goToCollectionFromItem}
             onLoadMore={loadMore}
-            onShowAll={() => setUnreadOnly(false)}
+            onShowAll={() => setHideArchived(false)}
             tagSelectTag={tagSelectTag}
+            justAddedKey={justAddedKey}
           />
         </ErrorBoundary>
       </div>
 
-      {triageOpen && (
-        <ErrorBoundary componentName="TheaterShell">
-          <TheaterShell
-            mode="triage"
-            seed={TRIAGE_LIVE_SEED}
-            triageItems={triageQueue}
-            initialTriageIndex={triageStart}
-            initialTriageTab={triageInitialTab}
-            onTriageResolved={handleTriageResolved}
-            onTriageRestored={handleTriageRestored}
-            onClose={() => {
-              setTriageOpen(false)
-              // Refresh the top-bar streak + counts after a triage session.
-              window.dispatchEvent(new CustomEvent('stats-updated'))
-            }}
-          />
-        </ErrorBoundary>
-      )}
-
-      {/* Keyboard Shortcuts Modal */}
       <KeyboardShortcutsModal
         isOpen={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        inFocusMode={triageOpen}
+        inFocusMode={false}
       />
     </div>
   )

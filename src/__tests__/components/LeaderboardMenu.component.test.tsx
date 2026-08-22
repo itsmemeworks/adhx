@@ -60,7 +60,7 @@ describe('LeaderboardMenu', () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText('Save posts into collections and get them on this leaderboard.'),
+        screen.getByText('Save posts into playlists and get them on this leaderboard.'),
       ).toBeInTheDocument(),
     )
   })

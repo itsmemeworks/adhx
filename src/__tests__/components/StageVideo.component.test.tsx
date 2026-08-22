@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, act } from '@testing-library/react'
+import { render, act, fireEvent } from '@testing-library/react'
 import { StageVideo } from '@/components/theater/StageVideo'
 import type { TheaterItem } from '@/components/theater/types'
 
@@ -442,5 +442,81 @@ describe('StageVideo theater-set-muted (gesture-context fast path)', () => {
       )
     })
     expect(video.muted).toBe(false)
+  })
+})
+
+/**
+ * Owner report: a video whose proxy/mirror fails shows "This video couldn't
+ * load" and the playlist STOPS there. A dead post should cost the same ~10s a
+ * text post does and then move on.
+ */
+describe('StageVideo: a failed video does not stall the playlist', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+    HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue(undefined)
+  })
+
+  /**
+   * `errored` comes from the element's own `error` event (the src failing to
+   * load), not from a rejected play() — that path shows the tap-to-play
+   * overlay instead. The handler also range-fetches the src to tell a deleted
+   * post from a transient failure, so `fetch` is stubbed.
+   *
+   * Fake timers are installed BEFORE render but the render is NOT wrapped in
+   * `act` — nesting act around it while the scheduler is faked leaves React
+   * uncommitted and the container empty.
+   */
+  function renderErrored(props: { onEnded?: () => void; repeat?: boolean }) {
+    global.fetch = vi.fn().mockResolvedValue({ status: 500, json: async () => null }) as never
+    vi.useFakeTimers()
+    const rendered = render(
+      <StageVideo
+        item={makeItem()}
+        src="/api/media/video?a=1"
+        poster={null}
+        muted
+        onRequestUnmute={vi.fn()}
+        {...props}
+      />,
+    )
+    const video = rendered.container.querySelector('video')
+    if (!video) throw new Error('no <video> rendered')
+    act(() => {
+      fireEvent.error(video)
+    })
+    return rendered
+  }
+
+  it('advances after ~10s instead of sitting on the error forever', () => {
+    const onEnded = vi.fn()
+    renderErrored({ onEnded })
+    expect(onEnded).not.toHaveBeenCalled()
+
+    act(() => {
+      vi.advanceTimersByTime(9_000)
+    })
+    expect(onEnded).not.toHaveBeenCalled()
+
+    act(() => {
+      vi.advanceTimersByTime(1_500)
+    })
+    expect(onEnded).toHaveBeenCalledTimes(1)
+  })
+
+  it('stays put when the post is deliberately repeating', () => {
+    const onEnded = vi.fn()
+    renderErrored({ onEnded, repeat: true })
+    act(() => {
+      vi.advanceTimersByTime(30_000)
+    })
+    expect(onEnded).not.toHaveBeenCalled()
+  })
+
+  it('does nothing when there is nowhere to advance to (collection)', () => {
+    renderErrored({})
+    // No onEnded: nothing is scheduled and nothing throws.
+    act(() => {
+      vi.advanceTimersByTime(30_000)
+    })
   })
 })

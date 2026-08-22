@@ -94,11 +94,11 @@ describe('progressKindForPin', () => {
 
 /**
  * "My Collection is just a different playlist in that same theater" (owner
- * directive, 2026-08-21): triage's Collection tab used to force every kind
+ * directive, 2026-08-21): the personal theater's Collection tab used to force every kind
  * to 'none'. Now only 'timed' items (photo/text/quote/article) — which still
  * wait on a deliberate Done/Later/Delete, never a 10s dwell auto-advance —
  * get demoted there. 'video' keeps its real kind: those items auto-advance
- * on end through the player's own `onEnded` (see TriageStage/StageVideo),
+ * on end through the player's own `onEnded` (see CollectionStage/StageVideo),
  * exactly like every other playlist.
  */
 describe('collectionTabProgressKind', () => {

@@ -118,7 +118,7 @@ function RankedRow({ item, rank, fresh }: { item: TheaterItem; rank: number; fre
         <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[12px] text-white/45">
           <span className="inline-flex items-center gap-1">
             <PlatformGlyph platform={item.platform} size={12} className="text-white/50" />
-            {PLATFORM_LABEL[item.platform] ?? item.platform}
+            <span>{PLATFORM_LABEL[item.platform] ?? item.platform}</span>
           </span>
           <span aria-hidden>·</span>
           <span suppressHydrationWarning>{formatCompactRelativeTime(item.createdAt)}</span>
@@ -133,7 +133,7 @@ function RankedRow({ item, rank, fresh }: { item: TheaterItem; rank: number; fre
               <span aria-hidden>·</span>
               <span className="inline-flex items-center gap-1 text-flame">
                 <Flame size={12} fill="currentColor" />
-                {trend}
+                <span>{trend}</span>
               </span>
             </>
           ) : null}

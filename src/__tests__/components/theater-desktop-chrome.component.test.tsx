@@ -223,7 +223,7 @@ describe('DesktopDock: end cap restructure', () => {
         current={items[0]}
         currentKey={null}
         newCount={5}
-        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
       />,
     )
     expect(screen.queryByText(/new/)).not.toBeInTheDocument()
@@ -259,7 +259,7 @@ describe('DesktopDock: collection Loops divider hidden under repeat "one"', () =
         items={items}
         current={items[0]}
         currentKey={theaterItemKey(items[0])}
-        collection={collection}
+        playlist={collection}
       />,
     )
     expect(screen.getByText('Loops')).toBeInTheDocument()
@@ -274,7 +274,7 @@ describe('DesktopDock: collection Loops divider hidden under repeat "one"', () =
         items={items}
         current={items[0]}
         currentKey={theaterItemKey(items[0])}
-        collection={collection}
+        playlist={collection}
         repeatMode="one"
       />,
     )
@@ -290,7 +290,7 @@ describe('DesktopDock: collection Loops divider hidden under repeat "one"', () =
         items={items}
         current={items[0]}
         currentKey={theaterItemKey(items[0])}
-        collection={collection}
+        playlist={collection}
         repeatMode="all"
       />,
     )
@@ -513,9 +513,9 @@ describe('DesktopStageChrome', () => {
     render(
       <DesktopStageChrome
         {...stageBase}
-        mode="collection"
+        mode="playlist"
         current={videoItem()}
-        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
       />,
     )
     const curatorLink = screen.getByText('@weedauwl').closest('a')!
@@ -560,8 +560,8 @@ describe('DesktopStageChrome', () => {
     expect(toggle.querySelector('.lucide-minimize-2')).not.toBeInTheDocument()
   })
 
-  it('triage mode: the close button sits inside the tab-selector pill, not in the far-right cluster', () => {
-    const triage = {
+  it('collection mode: the close button sits inside the tab-selector pill, not in the far-right cluster', () => {
+    const collection = {
       tab: 'live' as const,
       onTabChange: vi.fn(),
       onDone: vi.fn(),
@@ -572,23 +572,22 @@ describe('DesktopStageChrome', () => {
       onLiveTag: vi.fn(),
       savedKeys: new Set<string>(),
       remaining: 0,
-      streak: { current: 0, longest: 0 },
       onClose: vi.fn(),
     }
-    render(<DesktopStageChrome {...stageBase} current={videoItem()} triage={triage} />)
+    render(<DesktopStageChrome {...stageBase} current={videoItem()} collection={collection} />)
 
-    const closeBtn = screen.getByLabelText('Close triage')
+    const closeBtn = screen.getByLabelText('Close')
     const liveTab = screen.getByText('Live', { selector: 'button' })
     // Same immediate pill container as the tab buttons (contained cluster).
     expect(closeBtn.parentElement).toBe(liveTab.parentElement)
     fireEvent.click(closeBtn)
-    expect(triage.onClose).toHaveBeenCalled()
+    expect(collection.onClose).toHaveBeenCalled()
 
     // The far-right cluster (outside the tab pill) holds only the avatar
     // menu and the de-clutter toggle — no stray close button there.
     const declutterBtn = screen.getByLabelText('Hide controls')
     const rightCluster = declutterBtn.parentElement!
-    expect(rightCluster.querySelector('[aria-label="Close triage"]')).toBeNull()
+    expect(rightCluster.querySelector('[aria-label="Close"]')).toBeNull()
   })
 
   it('collection mode: "Make your own" opens the sign-in modal in place instead of navigating', () => {
@@ -596,10 +595,10 @@ describe('DesktopStageChrome', () => {
     render(
       <DesktopStageChrome
         {...stageBase}
-        mode="collection"
+        mode="playlist"
         current={videoItem()}
-        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
-        isCollectionOwner={false}
+        playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        isPlaylistOwner={false}
         onRequestMakeYourOwn={onRequestMakeYourOwn}
       />,
     )
@@ -614,10 +613,10 @@ describe('DesktopStageChrome', () => {
     render(
       <DesktopStageChrome
         {...stageBase}
-        mode="collection"
+        mode="playlist"
         current={videoItem()}
-        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
-        isCollectionOwner
+        playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        isPlaylistOwner
       />,
     )
     expect(screen.queryByText('Make your own')).not.toBeInTheDocument()
@@ -674,7 +673,7 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
     expect(saveBtn.closest('button')!.className).toContain('border-clay')
   })
 
-  it('triage live-tab Save carries the clay-border outline, Download (when present) stays plain glass', () => {
+  it('collection live-tab Save carries the clay-border outline, Download (when present) stays plain glass', () => {
     mockUseSendFile.mockReturnValue({
       supported: true,
       ready: true,
@@ -682,7 +681,7 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
       mode: 'download' as const,
       send: vi.fn(),
     })
-    const triage = {
+    const collection = {
       tab: 'live' as const,
       onTabChange: vi.fn(),
       onDone: vi.fn(),
@@ -693,10 +692,9 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
       onLiveTag: vi.fn(),
       savedKeys: new Set<string>(),
       remaining: 0,
-      streak: { current: 0, longest: 0 },
       onClose: vi.fn(),
     }
-    render(<DesktopStageChrome {...stageBase} current={videoItem()} triage={triage} />)
+    render(<DesktopStageChrome {...stageBase} current={videoItem()} collection={collection} />)
 
     const saveBtn = screen.getByText('Save').closest('button')!
     expect(saveBtn.className).toContain('border-clay')
@@ -705,19 +703,19 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
     expect(downloadBtn.className).not.toContain('border-clay')
   })
 
-  it('collection mode: the Save-collection CTA also carries the clay-border outline, not the old solid clay-grad fill', () => {
+  it('playlist mode: the Save-playlist CTA also carries the clay-border outline, not the old solid clay-grad fill', () => {
     render(
       <DesktopStageChrome
         {...stageBase}
-        mode="collection"
+        mode="playlist"
         current={videoItem()}
-        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
-        isCollectionOwner={false}
+        playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        isPlaylistOwner={false}
       />,
     )
-    const saveCollectionBtn = screen.getByText(/Save collection/).closest('button')!
-    expect(saveCollectionBtn.className).toContain('border-clay')
-    expect(saveCollectionBtn.className).not.toContain('bg-clay-grad')
+    const savePlaylistBtn = screen.getByText(/Save playlist/).closest('button')!
+    expect(savePlaylistBtn.className).toContain('border-clay')
+    expect(savePlaylistBtn.className).not.toContain('bg-clay-grad')
   })
 
   it('text posts never show Download (nothing sendable)', () => {
@@ -733,7 +731,7 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
   })
 
   it('renders Live before My Collection, not the bare "Collection" label', () => {
-    const triage = {
+    const collection = {
       tab: 'live' as const,
       onTabChange: vi.fn(),
       onDone: vi.fn(),
@@ -744,10 +742,9 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
       onLiveTag: vi.fn(),
       savedKeys: new Set<string>(),
       remaining: 0,
-      streak: { current: 0, longest: 0 },
       onClose: vi.fn(),
     }
-    render(<DesktopStageChrome {...stageBase} current={videoItem()} triage={triage} />)
+    render(<DesktopStageChrome {...stageBase} current={videoItem()} collection={collection} />)
 
     expect(screen.queryByText('Collection')).not.toBeInTheDocument()
     const liveTab = screen.getByText('Live', { selector: 'button' })
@@ -762,7 +759,7 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
  * Round 8: the Spotify-style repeat control in the transport cluster, after
  * the audio button and before the divider. Only renders when BOTH
  * `repeatMode` and `onCycleRepeat` are provided (home/shared mode) —
- * collection mode always loops on its own and triage is a finite backlog,
+ * collection mode always loops on its own and the collection theater is a finite backlog,
  * so neither passes these props.
  */
 describe('DesktopDock: repeat control', () => {
@@ -785,7 +782,7 @@ describe('DesktopDock: repeat control', () => {
         onCycleRepeat={vi.fn()}
       />,
     )
-    const btn = screen.getByLabelText('Repeat: off')
+    const btn = screen.getByLabelText('Stop when caught up')
     expect(btn.querySelector('.lucide-repeat')).toBeInTheDocument()
     expect(btn.querySelector('.lucide-repeat-1')).not.toBeInTheDocument()
     expect(btn.className).not.toContain('text-clay')
@@ -802,7 +799,7 @@ describe('DesktopDock: repeat control', () => {
         onCycleRepeat={vi.fn()}
       />,
     )
-    const btn = screen.getByLabelText('Repeat: whole queue')
+    const btn = screen.getByLabelText('Keep playing')
     expect(btn.className).toContain('text-clay')
   })
 
@@ -817,7 +814,7 @@ describe('DesktopDock: repeat control', () => {
         onCycleRepeat={vi.fn()}
       />,
     )
-    const btn = screen.getByLabelText('Repeat: this post')
+    const btn = screen.getByLabelText('Repeat this post')
     expect(btn.querySelector('.lucide-repeat-1')).toBeInTheDocument()
     expect(btn.className).toContain('text-clay')
   })
@@ -834,7 +831,7 @@ describe('DesktopDock: repeat control', () => {
         onCycleRepeat={onCycleRepeat}
       />,
     )
-    fireEvent.click(screen.getByLabelText('Repeat: off'))
+    fireEvent.click(screen.getByLabelText('Stop when caught up'))
     expect(onCycleRepeat).toHaveBeenCalledTimes(1)
   })
 
@@ -850,12 +847,12 @@ describe('DesktopDock: repeat control', () => {
         items={items}
         current={items[0]}
         currentKey={currentKey}
-        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
         repeatMode="all"
         onCycleRepeat={vi.fn()}
       />,
     )
-    const btn = screen.getByLabelText('Repeat: whole queue')
+    const btn = screen.getByLabelText('Keep playing')
     expect(btn.className).toContain('text-clay')
   })
 })
@@ -951,7 +948,7 @@ describe('DesktopDock: hides the time text for an unknown addedAt (filmstrip car
         items={items}
         current={items[0]}
         currentKey={theaterItemKey(items[0])}
-        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 2 }}
+        playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 2 }}
       />,
     )
     const ghost = screen.getByLabelText('Back to the first post')
@@ -1057,7 +1054,7 @@ describe('DesktopStageChrome: tappable author row', () => {
  * Owner follow-up: the theater's URL-sync effect rewrites the address bar to
  * per-post preview paths mid-session, so `usePathname` alone can't tell the
  * chrome it's still inside the home theater — `theaterActive` is passed to
- * `TheaterAvatarMenu` explicitly as `mode === 'home' || !!triage`. Asserted
+ * `TheaterAvatarMenu` explicitly as `mode === 'home' || !!collection`. Asserted
  * directly on the mocked `TheaterAvatarMenu`'s captured props (see the
  * module mock above).
  */
@@ -1068,7 +1065,7 @@ describe('DesktopStageChrome: theaterActive prop wiring', () => {
     onToggleDeclutter: vi.fn(),
   }
 
-  const triage = {
+  const collection = {
     tab: 'live' as const,
     onTabChange: vi.fn(),
     onDone: vi.fn(),
@@ -1079,33 +1076,37 @@ describe('DesktopStageChrome: theaterActive prop wiring', () => {
     onLiveTag: vi.fn(),
     savedKeys: new Set<string>(),
     remaining: 0,
-    streak: { current: 0, longest: 0 },
     onClose: vi.fn(),
   }
 
-  it('passes theaterActive: true in home mode (no triage)', () => {
+  it('passes theaterActive: true in home mode (no collection)', () => {
     render(<DesktopStageChrome {...stageBase} mode="home" current={videoItem()} />)
     expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
       expect.objectContaining({ theaterActive: true }),
     )
   })
 
-  it('passes theaterActive: true whenever triage is present, regardless of mode', () => {
+  it('passes theaterActive: true whenever the collection theater is present, regardless of mode', () => {
     render(
-      <DesktopStageChrome {...stageBase} mode="triage" current={videoItem()} triage={triage} />,
+      <DesktopStageChrome
+        {...stageBase}
+        mode="personal"
+        current={videoItem()}
+        collection={collection}
+      />,
     )
     expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
       expect.objectContaining({ theaterActive: true }),
     )
   })
 
-  it('passes theaterActive: false in collection mode (no triage)', () => {
+  it('passes theaterActive: false in collection mode (no collection)', () => {
     render(
       <DesktopStageChrome
         {...stageBase}
-        mode="collection"
+        mode="playlist"
         current={videoItem()}
-        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
       />,
     )
     expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
@@ -1113,7 +1114,7 @@ describe('DesktopStageChrome: theaterActive prop wiring', () => {
     )
   })
 
-  it('passes theaterActive: false in shared mode (no triage)', () => {
+  it('passes theaterActive: false in shared mode (no collection)', () => {
     render(<DesktopStageChrome {...stageBase} mode="shared" current={videoItem()} />)
     expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
       expect.objectContaining({ theaterActive: false }),

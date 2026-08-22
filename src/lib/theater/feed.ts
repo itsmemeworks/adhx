@@ -1,9 +1,10 @@
 import { db } from '@/lib/db'
 import { tagShares, bookmarkTags, bookmarks, bookmarkMedia } from '@/lib/db/schema'
 import { and, desc, eq, inArray } from 'drizzle-orm'
-import { getTrendingItems } from '@/lib/trending/query'
+import { getTrendingItems, LIVE_WINDOW_HOURS } from '@/lib/trending/query'
 import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
+import { inferContentType } from '@/lib/content-type'
 
 /**
  * Server-side feed assembly for the theater (docs/specs/theater-first.md §4).
@@ -24,7 +25,14 @@ const THEATER_MIN_ITEMS = 12
 const THEATER_MAX_ITEMS = 30
 
 export async function getTheaterFeed(): Promise<TheaterFeedSeed> {
-  const { items, savedToday, recentActivity } = await getTrendingItems({ limit: THEATER_MAX_ITEMS })
+  // Live mode is "the last 24 hours of community activity" (owner) — the same
+  // window `/api/activity` polls with, so the poll never surfaces a post the
+  // seed excluded. When that window is thin the public-tag backfill below
+  // still keeps the stage from opening empty.
+  const { items, savedToday, recentActivity } = await getTrendingItems({
+    limit: THEATER_MAX_ITEMS,
+    withinHours: LIVE_WINDOW_HOURS,
+  })
 
   let combined: TheaterItem[] = items
 
@@ -128,15 +136,13 @@ function fetchPublicTagBackfill(existing: TheaterItem[], needed: number): Theate
     seen.add(key)
 
     const media = mediaByBookmark.get(key)
-    const contentType = media
-      ? media.isVideo
-        ? 'video'
-        : 'photo'
-      : row.category === 'article'
-        ? 'article'
-        : row.isQuote
-          ? 'quote'
-          : 'text'
+    const contentType = inferContentType({
+      platform: row.platform,
+      category: row.category,
+      isQuote: row.isQuote,
+      hasVideo: media?.isVideo,
+      hasPhoto: !!media && !media.isVideo,
+    })
 
     out.push({
       action: 'save',
@@ -148,7 +154,16 @@ function fetchPublicTagBackfill(existing: TheaterItem[], needed: number): Theate
       text: row.text,
       thumbnailUrl: media?.url ?? null,
       url: row.url,
-      createdAt: row.createdAt || row.processedAt,
+      // BOTH times are ADHX-side, never the source platform's publish date
+      // (owner decision, see TrendingItem.addedAt): `processedAt` is when the
+      // curator saved it, which is both this item's "added to ADHX" chip and
+      // the event time the pulse orders/merges on. Using `row.createdAt` here
+      // leaked the post's own publish date into the queue — it dropped the
+      // time chip entirely (hasKnownTimestamp reads `addedAt`, which was
+      // absent) and made a months-old post look "fresh"/"stale" to
+      // mergeFeedItems depending on when it was posted rather than added.
+      createdAt: row.processedAt,
+      addedAt: row.processedAt,
       contentType,
     })
   }

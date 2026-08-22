@@ -44,8 +44,8 @@ const defaultProps = {
   onSortChange: vi.fn(),
   sortDirection: 'desc' as const,
   onSortDirectionChange: vi.fn(),
-  unreadOnly: false,
-  onUnreadOnlyChange: vi.fn(),
+  hideArchived: false,
+  onHideArchivedChange: vi.fn(),
   selectedTags: [] as string[],
   onSelectedTagsChange: vi.fn(),
   availableTags: [
@@ -53,7 +53,7 @@ const defaultProps = {
     { tag: 'personal', count: 3 },
     { tag: 'important', count: 2 },
   ] as TagItem[],
-  stats: { total: 100, unread: 50 },
+  stats: { total: 100, active: 50 },
 }
 
 describe('FilterBar Component', () => {
@@ -209,45 +209,67 @@ describe('FilterBar Component', () => {
   })
 
   describe('Unread Toggle', () => {
-    it('renders an "Unread only" toggle', () => {
-      render(<FilterBar {...defaultProps} unreadOnly={false} />)
+    // The user-facing idea is archiving, not read state (owner) — the
+    // underlying `hideArchived` flag keeps its name.
+    it('renders the "Hide archived" toggle', () => {
+      render(<FilterBar {...defaultProps} hideArchived={false} />)
 
-      expect(screen.getByText(/unread only/i)).toBeTruthy()
+      expect(screen.getByText(/hide archived/i)).toBeTruthy()
     })
 
-    it('shows the unread count when unreadOnly is true', () => {
-      render(<FilterBar {...defaultProps} unreadOnly={true} />)
+    it('shows the active count, and offers to show archived, when archived are hidden', () => {
+      render(<FilterBar {...defaultProps} hideArchived={true} />)
 
       const buttons = screen.getAllByRole('button')
-      const toggleButton = buttons.find((b) => b.textContent?.includes('Unread only'))
+      // The label names the view the press will TAKE you to, since there are
+      // only two views and neither is a mode you switch on.
+      const toggleButton = buttons.find((b) => b.textContent?.includes('Show archived'))
       expect(toggleButton?.textContent).toContain('50')
     })
 
-    it('shows the total count when unreadOnly is false', () => {
-      render(<FilterBar {...defaultProps} unreadOnly={false} />)
+    it('shows the total count when hideArchived is false', () => {
+      render(<FilterBar {...defaultProps} hideArchived={false} />)
 
       const buttons = screen.getAllByRole('button')
-      const toggleButton = buttons.find((b) => b.textContent?.includes('Unread only'))
+      const toggleButton = buttons.find((b) => b.textContent?.includes('Hide archived'))
       expect(toggleButton?.textContent).toContain('100')
     })
 
-    it('applies active gradient styling when unreadOnly is true', () => {
-      render(<FilterBar {...defaultProps} unreadOnly={true} />)
+    // Owner: "there's no need for it to have an orange CTA. You're either
+    // viewing your collection with archive or without." A view switch is not a
+    // call to action, so neither state gets the accent treatment.
+    it('never uses the accent CTA styling in either state', () => {
+      const { rerender } = render(<FilterBar {...defaultProps} hideArchived={true} />)
+      const find = (label: string) =>
+        screen.getAllByRole('button').find((b) => b.textContent?.includes(label))
 
-      const buttons = screen.getAllByRole('button')
-      const toggleButton = buttons.find((b) => b.textContent?.includes('Unread only'))
-      expect(toggleButton?.className).toContain('bg-clay-grad')
+      expect(find('Show archived')?.className).not.toContain('bg-clay-grad')
+      expect(find('Show archived')?.className).not.toContain('shadow-glow')
+
+      rerender(<FilterBar {...defaultProps} hideArchived={false} />)
+      expect(find('Hide archived')?.className).not.toContain('bg-clay-grad')
+      expect(find('Hide archived')?.className).not.toContain('shadow-glow')
     })
 
-    it('calls onUnreadOnlyChange on toggle', () => {
-      const onUnreadOnlyChange = vi.fn()
-      render(<FilterBar {...defaultProps} onUnreadOnlyChange={onUnreadOnlyChange} />)
+    it('reflects which view is active for assistive tech', () => {
+      const { rerender } = render(<FilterBar {...defaultProps} hideArchived={true} />)
+      const btn = () =>
+        screen.getAllByRole('button').find((b) => /archived/.test(b.textContent ?? ''))
+      // Pressed = showing everything, including archived.
+      expect(btn()?.getAttribute('aria-pressed')).toBe('false')
+      rerender(<FilterBar {...defaultProps} hideArchived={false} />)
+      expect(btn()?.getAttribute('aria-pressed')).toBe('true')
+    })
+
+    it('calls onHideArchivedChange on toggle', () => {
+      const onHideArchivedChange = vi.fn()
+      render(<FilterBar {...defaultProps} onHideArchivedChange={onHideArchivedChange} />)
 
       const buttons = screen.getAllByRole('button')
-      const toggleButton = buttons.find((b) => b.textContent?.includes('Unread only'))
+      const toggleButton = buttons.find((b) => b.textContent?.includes('Hide archived'))
       fireEvent.click(toggleButton!)
 
-      expect(onUnreadOnlyChange).toHaveBeenCalledWith(true)
+      expect(onHideArchivedChange).toHaveBeenCalledWith(true)
     })
   })
 

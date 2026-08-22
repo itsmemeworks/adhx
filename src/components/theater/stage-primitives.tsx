@@ -12,8 +12,8 @@ import { ArrowRight } from 'lucide-react'
 
 /**
  * 44px icon-button chrome (dark scrim actions) — was repeated identically 4×
- * in TheaterMobileChrome.tsx (the triage "Open on {platform}" link, the Tag
- * button, the Share button, and the non-triage "Open on {platform}" link).
+ * in TheaterMobileChrome.tsx (the collection "Open on {platform}" link, the Tag
+ * button, the Share button, and the non-collection "Open on {platform}" link).
  * Renders an `<a>` when `href` is given, otherwise a `<button type="button">`
  * — the two link occurrences and two button occurrences differ only in that.
  * Named props (rather than extending the full HTML attribute types) since
@@ -71,7 +71,7 @@ export function StageIconButton({
 /**
  * Stage headline — was repeated identically in Stage.tsx (StagePoster's
  * title), StageWaiting.tsx ("You're all caught up"), StageYouTube.tsx (the
- * no-videoId fallback's title), and TriageAllClear.tsx (the done-state
+ * no-videoId fallback's title), and CollectionAllClear.tsx (the done-state
  * title). Always an `<h2>` with this exact class string.
  */
 export function StageHeadline({ children }: { children: ReactNode }) {

@@ -2,6 +2,8 @@ import { db } from '@/lib/db'
 import { activity, bookmarks, bookmarkMedia, bookmarkLinks } from '@/lib/db/schema'
 import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm'
 import type { PlatformId } from '@/lib/platform/url'
+import { asContentType, inferContentType } from '@/lib/content-type'
+import type { ContentType } from '@/components/matter'
 
 /**
  * Anonymity-safe trending query — the SINGLE audited choke point for the
@@ -27,8 +29,6 @@ import type { PlatformId } from '@/lib/platform/url'
  *     (the CDN needs signing the proxy adds), and article covers are pulled
  *     from the saved bookmark's enriched link.
  */
-
-type ContentType = 'video' | 'photo' | 'text' | 'quote' | 'article'
 
 /**
  * A short-link expansion carried alongside a post's text (spec §6b) so the
@@ -56,12 +56,6 @@ export interface TheaterQuoteRef {
   authorName?: string | null
   text?: string | null
   authorAvatarUrl?: string | null
-}
-
-const CONTENT_TYPES = new Set<string>(['video', 'photo', 'text', 'quote', 'article'])
-/** Coerce a recorded `activity.content_type` string to a known ContentType. */
-function asContentType(v: string | null | undefined): ContentType | undefined {
-  return v && CONTENT_TYPES.has(v) ? (v as ContentType) : undefined
 }
 
 /** Parse a stored JSON column back into a value, defensively — malformed JSON serves absent, never throws. */
@@ -105,6 +99,10 @@ function quoteFromBookmarkContext(json: string | null | undefined): TheaterQuote
  * Canonical public item shape returned to clients. Matches the enriched
  * `/api/activity` items + the fields `DiscoverFeed`'s `ActivityItem` needs.
  * Deliberately carries NO `userId` — see the anonymity invariant above.
+ */
+/**
+ * Theater / pulse item. Narrower than library `FeedItem` (no media[], no
+ * article body). Convert a saved post with `feedItemToTheaterItem`.
  */
 export interface TrendingItem {
   action: 'preview' | 'save' | 'read' | string
@@ -171,7 +169,19 @@ export interface GetTrendingOptions {
    * to 0. Used by `/api/activity` to fetch older pages for infinite scroll.
    */
   offset?: number
+  /**
+   * Only consider activity from the last N hours. Opt-in, and deliberately
+   * NOT applied to `/trending`: the theater's live mode is defined as "what
+   * the community previewed, saved and sent in the last 24 hours" (owner), so
+   * a quiet night must leave the queue short rather than backfilling it with
+   * last week's posts. The `/trending` hubs are a ranked all-time-ish board
+   * and keep their unbounded window so a quiet day can't empty an SEO page.
+   */
+  withinHours?: number
 }
+
+/** The live window for the theater + `/api/activity` (see `withinHours`). */
+export const LIVE_WINDOW_HOURS = 24
 
 export interface TrendingResult {
   items: TrendingItem[]
@@ -223,7 +233,17 @@ function getCache(): TrendingCache {
 }
 
 function cacheKey(opts: GetTrendingOptions): string {
-  return `${opts.platform ?? '*'}:${opts.limit ?? LIMIT}:${opts.minTrend ?? '*'}:${opts.offset ?? 0}`
+  // `withinHours` MUST be part of the key — the windowed live feed and the
+  // unbounded /trending board otherwise share a cache entry and one serves
+  // the other's rows. The key carries the hours, not the derived cutoff
+  // timestamp, so the entry stays hittable for its whole TTL.
+  return [
+    opts.platform ?? '*',
+    opts.limit ?? LIMIT,
+    opts.minTrend ?? '*',
+    opts.offset ?? 0,
+    opts.withinHours ?? '*',
+  ].join(':')
 }
 
 /**
@@ -258,6 +278,13 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
   // what happens if a very deep offset outruns this window.
   const rawFetchSize = Math.min(600, Math.max(FETCH, (offset + limit) * 3))
 
+  // Live window (opt-in, see `withinHours`). ISO strings compare lexically,
+  // which is what every other date filter in this file relies on.
+  const since =
+    opts.withinHours && opts.withinHours > 0
+      ? new Date(Date.now() - opts.withinHours * 60 * 60 * 1000).toISOString()
+      : null
+
   // ANONYMITY CHOKE POINT: this select lists ONLY public columns. `userId` is
   // intentionally absent and must stay that way.
   const rows = db
@@ -278,9 +305,11 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
     })
     .from(activity)
     .where(
-      platformFilter
-        ? and(eq(activity.hidden, 0), eq(activity.platform, platformFilter))
-        : eq(activity.hidden, 0),
+      and(
+        eq(activity.hidden, 0),
+        ...(platformFilter ? [eq(activity.platform, platformFilter)] : []),
+        ...(since ? [gte(activity.createdAt, since)] : []),
+      ),
     )
     .orderBy(desc(activity.createdAt))
     .limit(rawFetchSize)
@@ -461,16 +490,20 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
   }
 
   /** Real type from the saved bookmark; undefined if the post was never saved. */
-  const typeOf = (platform: string, key: string): ContentType | undefined => {
-    // Single-format platforms: always video, even without a stored poster.
-    if (platform === 'tiktok' || platform === 'youtube' || platform === 'instagram') return 'video'
-    if (!flags.has(key)) return undefined // preview-only — let the client guess
+  const typeOf = (
+    platform: string,
+    key: string,
+    recorded?: string | null,
+  ): ContentType | undefined => {
+    if (!flags.has(key)) return asContentType(recorded)
     const m = mediaKinds.get(key)
-    if (m?.video) return 'video'
-    if (flags.get(key)?.category === 'article') return 'article'
-    if (m?.photo) return 'photo'
-    if (flags.get(key)?.isQuote) return 'quote'
-    return 'text'
+    return inferContentType({
+      platform,
+      category: flags.get(key)?.category,
+      isQuote: flags.get(key)?.isQuote,
+      hasVideo: m?.video,
+      hasPhoto: m?.photo,
+    })
   }
 
   /**
@@ -496,7 +529,7 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
     // Bookmark-derived type is authoritative (saved items); otherwise fall back
     // to the type recorded at preview time so preview-only items (esp. articles)
     // still render the right card instead of a bare text "Saved post".
-    const contentType = typeOf(i.platform, key) ?? asContentType(i.contentType)
+    const contentType = typeOf(i.platform, key, i.contentType) ?? asContentType(i.contentType)
     // Text precedence: article title (unchanged) beats the full saved bookmark
     // text (uncapped at write time, unlike the recorded `activity.text`) beats
     // the recorded text (the only option for preview-only posts). Capped here

@@ -24,6 +24,10 @@ vi.mock('@/lib/auth/session', () => ({
   getCurrentUserId: vi.fn(() => Promise.resolve(mockUserId)),
 }))
 
+vi.mock('next/cache', () => ({
+  revalidatePath: vi.fn(),
+}))
+
 function createRequest(method: string, body?: object): NextRequest {
   return new NextRequest('http://localhost:3000/api/tags', {
     method,

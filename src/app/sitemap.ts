@@ -99,6 +99,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     changeFrequency: 'weekly',
     priority: 0.6,
   })
+  entries.push({
+    url: `${baseUrl}/privacy`,
+    lastModified: now,
+    changeFrequency: 'yearly',
+    priority: 0.3,
+  })
   for (const w of RANK_WINDOWS) {
     if (w.id === 'week') continue // already the bare /leaderboard above
     entries.push({

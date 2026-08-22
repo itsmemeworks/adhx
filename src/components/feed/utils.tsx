@@ -47,6 +47,25 @@ interface VideoDownloadBlockedProps {
   aspectRatio?: string
 }
 
+/**
+ * The warm "this one is new" glow. Already the language for posts newer than
+ * the last sync (FeedCard) and for the leaderboard's number one, so a
+ * just-pasted post reuses it rather than introducing a third idiom — and it
+ * replaces the transient "Added" pill, which announced the same thing by
+ * pushing the whole grid down (owner: "the added notification pushes all the
+ * content down… just something subtle").
+ *
+ * It is the `shadow-glow` TOKEN, not an arbitrary value. The arbitrary version
+ * this replaced was inlined in FeedCard, and moving it into this constant
+ * silently broke it: Tailwind generates utilities it finds as class literals,
+ * so a class assembled from a JS constant got applied to the element with no
+ * rule behind it — the class was in the DOM and the computed shadow was empty.
+ * `shadow-glow` is already generated, theme-aware (see `--m-glow`), and is the
+ * same accent the leaderboard's number one uses, which is the treatment the
+ * owner asked for by name.
+ */
+export const RECENT_GLOW = 'shadow-glow'
+
 export function VideoDownloadBlocked({
   estimatedSize,
   onDismiss,

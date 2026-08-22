@@ -9,7 +9,7 @@ import { relations, sql } from 'drizzle-orm'
 // `platform` is one of 'twitter' | 'instagram' | 'tiktok' | 'youtube' — added so
 // a TikTok video id (numeric, 19 digits) can't collide with a tweet id (also
 // numeric, 18-19 digits), and YouTube's 11-char id stays in its own namespace.
-// All bookmark-derived tables (tags/media/links/read_status/collection_tweets)
+// All bookmark-derived tables (tags/media/links/archived_posts)
 // carry platform too so the foreign-key tuple matches. It's a free-text column
 // (no enum/migration needed to add a platform).
 export const bookmarks = sqliteTable(
@@ -35,13 +35,6 @@ export const bookmarks = sqliteTable(
     quotedTweetId: text('quoted_tweet_id'),
     isRetweet: integer('is_retweet', { mode: 'boolean' }).default(false),
     retweetContext: text('retweet_context'),
-
-    // Content extraction
-    extractedContent: text('extracted_content'),
-
-    // Filing status
-    filedPath: text('filed_path'),
-    needsTranscript: integer('needs_transcript', { mode: 'boolean' }).default(false),
 
     // AI-generated summary
     summary: text('summary'),
@@ -105,6 +98,19 @@ export const bookmarkTags = sqliteTable(
     platform: text('platform').notNull().default('twitter'),
     bookmarkId: text('bookmark_id').notNull(),
     tag: text('tag').notNull(),
+    /**
+     * When this post was added to THIS tag — which is what a playlist shows and
+     * orders by, and is NOT `bookmarks.processedAt` (when the curator first
+     * saved the post, possibly long before they curated it into anything).
+     * Owner: "when a user creates a tag and then adds a post into the tag, we
+     * should use the time at which they added that post to the tag… users get
+     * control over when they are creating things that are related to them."
+     *
+     * Nullable because the column was added to an existing table; `migrate.ts`
+     * backfills old rows from the bookmark's own save time, the closest thing
+     * that history has. Readers fall back the same way.
+     */
+    createdAt: text('created_at'),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.userId, table.platform, table.bookmarkId, table.tag] }),
@@ -163,70 +169,20 @@ export const oauthState = sqliteTable('oauth_state', {
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 })
 
-// Sync state tracking - PK: (userId, key)
-export const syncState = sqliteTable(
-  'sync_state',
-  {
-    userId: text('user_id').notNull(),
-    key: text('key').notNull(),
-    value: text('value'),
-    updatedAt: text('updated_at'),
-  },
-  (table) => ({
-    pk: primaryKey({ columns: [table.userId, table.key] }),
-  }),
-)
-
-// Read status - PK: (userId, platform, bookmarkId)
-export const readStatus = sqliteTable(
-  'read_status',
+// Archived posts — taken out of the active collection. PK: (userId, platform,
+// bookmarkId). Was `read_status`/`read_at`, renamed when "read" became
+// "archived" in the product; see the guarded rename in migrate.ts.
+export const archivedPosts = sqliteTable(
+  'archived_posts',
   {
     userId: text('user_id').notNull(),
     platform: text('platform').notNull().default('twitter'),
     bookmarkId: text('bookmark_id').notNull(),
-    readAt: text('read_at').notNull(),
+    archivedAt: text('archived_at').notNull(),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.userId, table.platform, table.bookmarkId] }),
-    userIdIdx: index('read_status_user_id_idx').on(table.userId),
-  }),
-)
-
-// Collections - PK: id (collections are user-owned)
-export const collections = sqliteTable(
-  'collections',
-  {
-    id: text('id').primaryKey(),
-    userId: text('user_id').notNull(),
-    name: text('name').notNull(),
-    description: text('description'),
-    color: text('color'),
-    icon: text('icon'),
-    shareCode: text('share_code').unique(),
-    isPublic: integer('is_public', { mode: 'boolean' }).default(false),
-    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: text('updated_at'),
-  },
-  (table) => ({
-    userIdIdx: index('collections_user_id_idx').on(table.userId),
-  }),
-)
-
-// Tweets in collections - PK: (userId, collectionId, platform, bookmarkId)
-export const collectionTweets = sqliteTable(
-  'collection_tweets',
-  {
-    userId: text('user_id').notNull(),
-    collectionId: text('collection_id').notNull(),
-    platform: text('platform').notNull().default('twitter'),
-    bookmarkId: text('bookmark_id').notNull(),
-    addedAt: text('added_at').default(sql`CURRENT_TIMESTAMP`),
-    notes: text('notes'),
-  },
-  (table) => ({
-    pk: primaryKey({
-      columns: [table.userId, table.collectionId, table.platform, table.bookmarkId],
-    }),
+    userIdIdx: index('archived_posts_user_id_idx').on(table.userId),
   }),
 )
 
@@ -443,8 +399,7 @@ export const bookmarksRelations = relations(bookmarks, ({ many, one }) => ({
   links: many(bookmarkLinks),
   tags: many(bookmarkTags),
   media: many(bookmarkMedia),
-  readStatus: one(readStatus),
-  collectionTweets: many(collectionTweets),
+  archivedPost: one(archivedPosts),
 }))
 
 export const bookmarkLinksRelations = relations(bookmarkLinks, ({ one }) => ({
@@ -468,24 +423,9 @@ export const bookmarkMediaRelations = relations(bookmarkMedia, ({ one }) => ({
   }),
 }))
 
-export const readStatusRelations = relations(readStatus, ({ one }) => ({
+export const archivedPostsRelations = relations(archivedPosts, ({ one }) => ({
   bookmark: one(bookmarks, {
-    fields: [readStatus.userId, readStatus.platform, readStatus.bookmarkId],
-    references: [bookmarks.userId, bookmarks.platform, bookmarks.id],
-  }),
-}))
-
-export const collectionsRelations = relations(collections, ({ many }) => ({
-  tweets: many(collectionTweets),
-}))
-
-export const collectionTweetsRelations = relations(collectionTweets, ({ one }) => ({
-  collection: one(collections, {
-    fields: [collectionTweets.collectionId],
-    references: [collections.id],
-  }),
-  bookmark: one(bookmarks, {
-    fields: [collectionTweets.userId, collectionTweets.platform, collectionTweets.bookmarkId],
+    fields: [archivedPosts.userId, archivedPosts.platform, archivedPosts.bookmarkId],
     references: [bookmarks.userId, bookmarks.platform, bookmarks.id],
   }),
 }))
@@ -503,16 +443,12 @@ export type NewBookmarkTag = typeof bookmarkTags.$inferInsert
 export type BookmarkMedia = typeof bookmarkMedia.$inferSelect
 export type NewBookmarkMedia = typeof bookmarkMedia.$inferInsert
 export type OAuthToken = typeof oauthTokens.$inferSelect
-export type ReadStatus = typeof readStatus.$inferSelect
-export type NewReadStatus = typeof readStatus.$inferInsert
-export type Collection = typeof collections.$inferSelect
-export type NewCollection = typeof collections.$inferInsert
-export type CollectionTweet = typeof collectionTweets.$inferSelect
+export type ArchivedPost = typeof archivedPosts.$inferSelect
+export type NewArchivedPost = typeof archivedPosts.$inferInsert
 export type UserPreference = typeof userPreferences.$inferSelect
 export type NewUserPreference = typeof userPreferences.$inferInsert
 export type SyncLog = typeof syncLogs.$inferSelect
 export type NewSyncLog = typeof syncLogs.$inferInsert
-export type SyncState = typeof syncState.$inferSelect
 export type TagShare = typeof tagShares.$inferSelect
 export type NewTagShare = typeof tagShares.$inferInsert
 export type Activity = typeof activity.$inferSelect

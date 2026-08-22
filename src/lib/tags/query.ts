@@ -4,6 +4,7 @@ import { eq, and, inArray, desc } from 'drizzle-orm'
 import { getUserIdForUsername } from '@/lib/users/lookup'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { getThumbnailUrl } from '@/lib/media/fxembed'
+import { inferContentType } from '@/lib/content-type'
 
 /**
  * Public tag-collection query — the data layer for `/t/{username}/{tag}`.
@@ -65,6 +66,16 @@ function getCache(): TagCache {
   return c
 }
 
+/** Drop a cached playlist read so a visibility PATCH is visible immediately. */
+export function invalidateTagCollectionCache(username?: string, tag?: string): void {
+  const cache = getCache()
+  if (!username || !tag) {
+    cache.clear()
+    return
+  }
+  cache.delete(`${username.toLowerCase()}:${tag}`)
+}
+
 /**
  * Fetch a public tag collection by username + tag name. Returns `not_found`
  * when the user or tag doesn't exist, `private` when the tag exists but isn't
@@ -81,7 +92,11 @@ export async function getPublicTagCollection(
   if (hit && hit.expiresAt > now) return hit.value
 
   const value = await fetchTagCollection(username, tagName)
-  cache.set(key, { value, expiresAt: now + CACHE_TTL_MS })
+  // Never cache private/not_found — a visibility PATCH must be visible on the
+  // next request, and those misses are a cheap local read.
+  if (value.status === 'ok') {
+    cache.set(key, { value, expiresAt: now + CACHE_TTL_MS })
+  }
   return value
 }
 
@@ -130,7 +145,14 @@ async function fetchTagCollection(username: string, tagName: string): Promise<Ta
   if (!share.isPublic) return { status: 'private' }
 
   const taggedRows = db
-    .select({ bookmarkId: bookmarkTags.bookmarkId, platform: bookmarkTags.platform })
+    .select({
+      bookmarkId: bookmarkTags.bookmarkId,
+      platform: bookmarkTags.platform,
+      // When the curator added this post to THIS tag — what the playlist shows
+      // and orders by. Null for rows predating the column; the fallback below
+      // is the bookmark's own save time, which is what migrate.ts backfills.
+      taggedAt: bookmarkTags.createdAt,
+    })
     .from(bookmarkTags)
     .where(and(eq(bookmarkTags.userId, user.userId), eq(bookmarkTags.tag, tagName)))
     .all()
@@ -143,6 +165,9 @@ async function fetchTagCollection(username: string, tagName: string): Promise<Ta
   // collide across platforms (e.g. a numeric TikTok id equal to a tweet id)
   // can never be mismatched to the wrong platform's content.
   const taggedKeySet = new Set(taggedRows.map((r) => `${r.platform}:${r.bookmarkId}`))
+  const taggedAtByKey = new Map(
+    taggedRows.map((r) => [`${r.platform}:${r.bookmarkId}`, r.taggedAt ?? null]),
+  )
   const allIds = [...new Set(taggedRows.map((r) => r.bookmarkId))]
 
   const bookmarkResults = db
@@ -152,7 +177,18 @@ async function fetchTagCollection(username: string, tagName: string): Promise<Ta
     .orderBy(desc(bookmarks.processedAt))
     .all()
 
-  const matched = bookmarkResults.filter((b) => taggedKeySet.has(`${b.platform}:${b.id}`))
+  const matched = bookmarkResults
+    .filter((b) => taggedKeySet.has(`${b.platform}:${b.id}`))
+    // Newest-added-to-the-tag first. A playlist is ordered by when its curator
+    // put each post IN it (owner) — not by when they first saved the post,
+    // which is what `bookmarks.processedAt` above says. Rows with no
+    // membership time fall back to that save time so pre-column playlists keep
+    // a sensible order.
+    .sort((a, b) => {
+      const at = taggedAtByKey.get(`${a.platform}:${a.id}`) ?? a.processedAt ?? ''
+      const bt = taggedAtByKey.get(`${b.platform}:${b.id}`) ?? b.processedAt ?? ''
+      return bt.localeCompare(at)
+    })
   const ids = matched.map((b) => b.id)
 
   const mediaResults =
@@ -203,20 +239,13 @@ async function fetchTagCollection(username: string, tagName: string): Promise<Ta
     const hasVideo = media.some((m) => m.mediaType === 'video' || m.mediaType === 'animated_gif')
     const hasPhoto = media.some((m) => m.mediaType === 'photo')
 
-    let contentType: ContentType
-    if (b.platform === 'tiktok' || b.platform === 'youtube' || b.platform === 'instagram') {
-      contentType = 'video'
-    } else if (hasVideo) {
-      contentType = 'video'
-    } else if (b.category === 'article') {
-      contentType = 'article'
-    } else if (hasPhoto) {
-      contentType = 'photo'
-    } else if (b.isQuote) {
-      contentType = 'quote'
-    } else {
-      contentType = 'text'
-    }
+    const contentType = inferContentType({
+      platform: b.platform,
+      category: b.category,
+      isQuote: b.isQuote,
+      hasVideo,
+      hasPhoto,
+    })
 
     const isArticle = contentType === 'article'
     const thumbnailUrl = isArticle
@@ -241,7 +270,8 @@ async function fetchTagCollection(username: string, tagName: string): Promise<Ta
       extraMediaCount: Math.max(0, media.length - 1),
       contentType,
       createdAt: b.createdAt,
-      addedAt: b.processedAt ?? null,
+      // The playlist's own time: when this post was added to the tag.
+      addedAt: taggedAtByKey.get(key) ?? b.processedAt ?? null,
       url: previewPath(b.platform, b.author, b.id),
       externalUrl: sourceUrl(b.platform, b.author, b.id),
     }

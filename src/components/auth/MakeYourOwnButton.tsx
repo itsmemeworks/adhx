@@ -15,7 +15,7 @@ export interface MakeYourOwnButtonProps {
 
 /**
  * Sign-in trigger for the public curator profile's "Make your own
- * collection" CTAs (`/t/{username}`'s top-right pill and footer CTA block).
+ * playlist" CTAs (`/t/{username}`'s top-right pill and footer CTA block).
  * Opens `SignInModal` IN PLACE instead of navigating to `/?start=1` — per
  * owner review, a signed-out visitor shouldn't be bounced off the profile
  * just to see the sign-in options.
@@ -31,8 +31,8 @@ export function MakeYourOwnButton({ className, children, returnTo = '/' }: MakeY
       <SignInModal
         open={open}
         onClose={() => setOpen(false)}
-        title="Make your own collection"
-        subtitle="Sign up and start saving — anything you save can be tagged into collections like this one."
+        title="Make your own playlist"
+        subtitle="Sign up and start saving — anything you save can be tagged into playlists like this one."
         returnTo={returnTo}
       />
     </>

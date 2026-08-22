@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
   AlertCircle,
@@ -15,6 +15,7 @@ import {
   Tag as TagIcon,
 } from 'lucide-react'
 import type { FeedItem, TagItem } from '@/components/feed/types'
+import { CLIENT_EVENTS } from '@/lib/client-events'
 import { CollectionPosterCard, type PosterTile } from '@/components/tags'
 
 /** Owner-level Discovery totals for the "This week" summary card (docs/specs/discovery-leaderboards.md §6). */
@@ -27,7 +28,7 @@ interface OwnerStats {
 const PREVIEW_LIMIT = 4
 
 /**
- * `/tags` — a home for every tag collection (unified-theater-triage.md §4):
+ * `/tags` — a home for every tag playlist (unified-theater-collection.md §4):
  * count, public status, a content-mosaic "poster" card (Option C), and the
  * same make-public flow FilterBar's selected-tag toolbar uses (`FilterBar.tsx`
  * — PATCH `/api/tags` idempotent make-public, then copy the friendly
@@ -50,20 +51,37 @@ export function TagsClient() {
   const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const copyHintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    fetch('/api/tags')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (cancelled) return
-        setTags(d?.tags ?? [])
-        setOwnerStats(d?.stats ?? null)
-      })
-      .catch(() => !cancelled && setTags([]))
-    return () => {
-      cancelled = true
+  const loadTags = useCallback(async () => {
+    try {
+      const r = await fetch('/api/tags')
+      const d = r.ok ? await r.json() : null
+      setTags(d?.tags ?? [])
+      setOwnerStats(d?.stats ?? null)
+    } catch {
+      setTags((prev) => prev ?? [])
     }
   }, [])
+
+  useEffect(() => {
+    void loadTags()
+  }, [loadTags])
+
+  /**
+   * Stay live while mounted. This page used to fetch once and subscribe to
+   * nothing (state review, 2026-08-22), so tagging a post in the theater — or
+   * cloning a playlist, which adds a whole tag — left these counts, and even
+   * the presence of a brand-new tag, wrong until a reload. Every tag/collection
+   * mutation in the app announces itself; listen for it.
+   */
+  useEffect(() => {
+    const refresh = () => void loadTags()
+    window.addEventListener(CLIENT_EVENTS.tagsChanged, refresh)
+    window.addEventListener(CLIENT_EVENTS.feedChanged, refresh)
+    return () => {
+      window.removeEventListener(CLIENT_EVENTS.tagsChanged, refresh)
+      window.removeEventListener(CLIENT_EVENTS.feedChanged, refresh)
+    }
+  }, [loadTags])
 
   // Fetch a small content preview per tag once the tag list is known. Keyed
   // off the set of tag names (not the `tags` array itself) so re-fetching
@@ -76,7 +94,7 @@ export function TagsClient() {
     setPreviewsLoading(Object.fromEntries(tagNames.map((t) => [t, true])))
     tagNames.forEach((tag) => {
       fetch(
-        `/api/feed?tag=${encodeURIComponent(tag)}&unreadOnly=false&limit=${PREVIEW_LIMIT}&filter=all`,
+        `/api/feed?tag=${encodeURIComponent(tag)}&hideArchived=false&limit=${PREVIEW_LIMIT}&filter=all`,
       )
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
@@ -233,7 +251,7 @@ export function TagsClient() {
               Tags
             </h1>
             <p className="text-[15px] text-ink-2">
-              Your collections — share any of them as a looping theater
+              Your playlists — share any of them as a looping theater
             </p>
           </div>
 
@@ -245,14 +263,14 @@ export function TagsClient() {
               <div className="mt-1 flex items-center gap-2 font-mono text-[12.5px] text-ink">
                 <span className="flex items-center gap-1">
                   <Eye size={12} />
-                  {ownerStats.viewCount} views
+                  <span>{ownerStats.viewCount} views</span>
                 </span>
                 <span aria-hidden className="text-ink-3">
                   ·
                 </span>
                 <span className="flex items-center gap-1">
                   <Bookmark size={12} />
-                  {ownerStats.cloneCount} saves
+                  <span>{ownerStats.cloneCount} saves</span>
                 </span>
                 {ownerStats.bestRank != null && (
                   <>
@@ -261,7 +279,7 @@ export function TagsClient() {
                     </span>
                     <span className="flex items-center gap-1 text-[#e88a5e]">
                       <Flame size={12} fill="currentColor" />
-                      best rank #{ownerStats.bestRank}
+                      <span>best rank #{ownerStats.bestRank}</span>
                     </span>
                   </>
                 )}
@@ -401,7 +419,7 @@ function VisibilityToggle({
     >
       {isPublic && <span className="h-1.5 w-1.5 flex-none rounded-full bg-live" aria-hidden />}
       <toggle.Icon size={11} />
-      {toggle.label}
+      <span>{toggle.label}</span>
     </button>
   )
 }
@@ -439,7 +457,7 @@ function TagPosterCard({
         count={tag.count}
         tiles={tiles}
         tilesLoading={tilesLoading}
-        href={`/?tag=${encodeURIComponent(tag.tag)}`}
+        href={`/library?tag=${encodeURIComponent(tag.tag)}`}
         badge={
           <VisibilityToggle
             isPublic={!!tag.isPublic}
@@ -491,7 +509,7 @@ function TagPosterCard({
       {error && (
         <p className="flex items-center gap-1.5 text-[12px] text-red-600 dark:text-red-400">
           <AlertCircle size={12} className="flex-none" />
-          {error}
+          <span>{error}</span>
         </p>
       )}
     </div>

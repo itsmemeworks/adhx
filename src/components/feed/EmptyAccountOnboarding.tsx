@@ -75,7 +75,7 @@ export function EmptyAccountOnboarding(): React.ReactElement {
         />
       </div>
 
-      {/* Collapses to nothing when there are no public collections to offer —
+      {/* Collapses to nothing when there are no public playlists to offer —
           the save-methods cards above are already a complete onboarding
           path on their own. See StarterCollections' own doc. */}
       <div className="mt-10 w-full max-w-2xl">

@@ -299,7 +299,7 @@ export default function DevFixturesPage() {
                     }`}
                   >
                     <Eye className="w-3.5 h-3.5" />
-                    Devices
+                    <span>Devices</span>
                   </button>
                   <button
                     onClick={() => setViewMode('og')}
@@ -310,7 +310,7 @@ export default function DevFixturesPage() {
                     }`}
                   >
                     <Share2 className="w-3.5 h-3.5" />
-                    OG Tags
+                    <span>OG Tags</span>
                   </button>
                 </div>
                 <div className="flex items-center gap-2">
@@ -320,7 +320,7 @@ export default function DevFixturesPage() {
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 px-2 py-1 text-xs text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400"
                   >
-                    Open full page <ExternalLink className="w-3 h-3" />
+                    <span>Open full page</span> <ExternalLink className="w-3 h-3" />
                   </a>
                   <a
                     href={`https://x.com/${selectedFixture.author}/status/${selectedFixture.tweetId}`}
@@ -328,7 +328,7 @@ export default function DevFixturesPage() {
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
                   >
-                    View on X <ExternalLink className="w-3 h-3" />
+                    <span>View on X</span> <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
               </div>

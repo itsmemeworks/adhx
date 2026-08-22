@@ -18,7 +18,6 @@ import {
   Moon,
   Sun,
   Check,
-  Flame,
   Mail,
   Lock,
   AtSign,
@@ -168,7 +167,7 @@ function SettingsLoadingSkeleton() {
  * Every account gets a first free username claim, plus `MAX_USERNAME_CHANGES`
  * (2) further changes — after that the row goes read-only. Every change past
  * the first records the old name as a redirect alias (see
- * `chooseUsername()` in `src/lib/auth/account.ts`), so public collection
+ * `chooseUsername()` in `src/lib/auth/account.ts`), so public playlist
  * links (`/t/{username}/...`) never dead-end after a rename.
  */
 function UsernameRow({ me, refresh }: { me: AuthMe; refresh: () => void }) {
@@ -205,7 +204,7 @@ function UsernameRow({ me, refresh }: { me: AuthMe; refresh: () => void }) {
               ? changesRemaining > 0
                 ? `${changesRemaining} change${changesRemaining === 1 ? '' : 's'} left`
                 : 'Usernames are permanent once changes run out'
-              : 'Your public handle on shared collections'}
+              : 'Your public handle on shared playlists'}
           </p>
         </div>
         {canChange && !editing && (
@@ -362,7 +361,7 @@ function SignInConnectionCard({ me, refresh }: { me: AuthMe; refresh: () => void
                 ) : (
                   <LogOut className="h-3.5 w-3.5" />
                 )}
-                Disconnect
+                <span>Disconnect</span>
               </button>
             ) : (
               <a
@@ -530,7 +529,9 @@ function SyncBookmarksCard({
         )}
       >
         <RefreshCw className="h-[18px] w-[18px]" />
-        {cooldown.canSync ? 'Sync now' : `Available in ${formatCooldown(displayedCooldown)}`}
+        <span>
+          {cooldown.canSync ? 'Sync now' : `Available in ${formatCooldown(displayedCooldown)}`}
+        </span>
       </button>
       <p className="text-[13px] text-ink-3 text-center mt-3">
         {lastSyncAt ? `Last sync ${getTimeSince(lastSyncAt)}` : 'No syncs yet'}
@@ -593,120 +594,6 @@ function SyncHistoryCard({ syncs, loading }: { syncs: SyncHistoryEntry[]; loadin
         </div>
       )}
     </SCard>
-  )
-}
-
-/** Local calendar day as YYYY-MM-DD. */
-function localDay(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-interface StreakData {
-  current: number
-  longest: number
-  lastActiveDate: string | null
-  triagedTotal: number
-  triagedThisWeek: number
-}
-
-/**
- * Gamification streak card: current streak, a Mon–Sun dot row
- * (done / today / upcoming), and stats — longest streak, posts triaged, this week.
- */
-function StreakCard() {
-  const [s, setS] = useState<StreakData | null>(null)
-
-  useEffect(() => {
-    let alive = true
-    fetch(`/api/triage/streak?today=${localDay(new Date())}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => alive && d && setS(d))
-      .catch(() => {})
-    return () => {
-      alive = false
-    }
-  }, [])
-
-  const current = s?.current ?? 0
-  const today = localDay(new Date())
-
-  // Active days = the `current` consecutive days ending at lastActiveDate.
-  const activeDays = new Set<string>()
-  if (s?.lastActiveDate && current > 0) {
-    const [y, m, d] = s.lastActiveDate.split('-').map(Number)
-    for (let k = 0; k < current; k++) {
-      const dt = new Date(y, m - 1, d)
-      dt.setDate(dt.getDate() - k)
-      activeDays.add(localDay(dt))
-    }
-  }
-
-  // Build the current calendar week, Monday → Sunday.
-  const now = new Date()
-  const monday = new Date(now)
-  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7))
-  const labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
-  const week = labels.map((label, i) => {
-    const dt = new Date(monday)
-    dt.setDate(monday.getDate() + i)
-    const iso = localDay(dt)
-    return { label, iso, done: activeDays.has(iso), isToday: iso === today, isFuture: iso > today }
-  })
-
-  const activeToday = activeDays.has(today)
-  const subtitle = activeToday
-    ? 'Nice — come back tomorrow to keep it going.'
-    : current > 0
-      ? `Triage at least one post today to reach ${current + 1} days.`
-      : 'Triage a post today to start your streak.'
-
-  const stats: [string, string][] = [
-    [String(s?.longest ?? 0), 'Longest streak'],
-    [String(s?.triagedTotal ?? 0), 'Posts triaged'],
-    [String(s?.triagedThisWeek ?? 0), 'This week'],
-  ]
-
-  return (
-    <div className="rounded-card border border-clay/25 bg-clay/[0.06] p-5 sm:px-6">
-      <div className="flex flex-wrap items-center gap-3.5">
-        <div className="w-[52px] h-[52px] flex-none rounded-[14px] bg-flame/[0.18] flex items-center justify-center">
-          <Flame className="w-[26px] h-[26px] text-flame" fill="currentColor" />
-        </div>
-        <div className="flex-1 min-w-[140px]">
-          <div className="font-serif font-bold text-[23px] leading-tight text-ink">
-            {current > 0 ? `${current}-day streak` : 'Start a streak'}
-          </div>
-          <div className="text-[13.5px] text-ink-2 mt-0.5">{subtitle}</div>
-        </div>
-        <div className="flex gap-[7px]">
-          {week.map((d, i) => (
-            <div key={i} className="flex flex-col items-center gap-1.5">
-              <div
-                className={cn(
-                  'w-[26px] h-[26px] rounded-full flex items-center justify-center',
-                  d.done
-                    ? 'bg-clay-grad text-white'
-                    : d.isToday
-                      ? 'border-2 border-dashed border-clay bg-inset'
-                      : 'bg-inset',
-                )}
-              >
-                {d.done && <Check className="w-3 h-3" strokeWidth={3} />}
-              </div>
-              <span className="text-[10.5px] font-semibold text-ink-3">{d.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="flex gap-7 mt-4 pt-4 border-t border-clay/20 font-mono">
-        {stats.map(([n, l]) => (
-          <div key={l}>
-            <div className="font-extrabold text-[18px] text-ink">{n}</div>
-            <div className="text-[12px] text-ink-3">{l}</div>
-          </div>
-        ))}
-      </div>
-    </div>
   )
 }
 
@@ -1048,9 +935,6 @@ function SettingsPage() {
         {/* Sync history */}
         <SyncHistoryCard syncs={syncHistory.syncs} loading={syncHistoryLoading} />
 
-        {/* Streak / gamification */}
-        <StreakCard />
-
         {/* Appearance Card */}
         <SCard
           icon={theme === 'dark' ? Moon : Sun}
@@ -1092,13 +976,20 @@ function SettingsPage() {
                 </span>
               </div>
               <p className="text-[12.5px] text-ink-3">
-                <strong className="font-bold text-ink-2">Bo</strong>lds the{' '}
-                <strong className="font-bold text-ink-2">fi</strong>rst{' '}
-                <strong className="font-bold text-ink-2">pa</strong>rt of{' '}
-                <strong className="font-bold text-ink-2">ea</strong>ch{' '}
-                <strong className="font-bold text-ink-2">wo</strong>rd to{' '}
-                <strong className="font-bold text-ink-2">gui</strong>de your{' '}
-                <strong className="font-bold text-ink-2">ey</strong>es.
+                <strong className="font-bold text-ink-2">Bo</strong>
+                <span>lds the </span>
+                <strong className="font-bold text-ink-2">fi</strong>
+                <span>rst </span>
+                <strong className="font-bold text-ink-2">pa</strong>
+                <span>rt of </span>
+                <strong className="font-bold text-ink-2">ea</strong>
+                <span>ch </span>
+                <strong className="font-bold text-ink-2">wo</strong>
+                <span>rd to </span>
+                <strong className="font-bold text-ink-2">gui</strong>
+                <span>de your </span>
+                <strong className="font-bold text-ink-2">ey</strong>
+                <span>es.</span>
               </p>
             </div>
             <button
@@ -1119,7 +1010,7 @@ function SettingsPage() {
           {/* Font Selection */}
           <div className="flex items-center gap-1.5 text-[12.5px] font-bold tracking-[0.04em] uppercase text-ink-3 mb-2.5">
             <Type className="w-3.5 h-3.5" />
-            Body Font
+            <span>Body Font</span>
           </div>
           <div className="flex flex-col gap-2">
             {(
@@ -1169,7 +1060,7 @@ function SettingsPage() {
             <div className="flex-1 min-w-0">
               <div className="font-bold text-[14.5px] text-ink flex items-center gap-2">
                 <Eraser className="h-[15px] w-[15px] text-ink-3 flex-shrink-0" />
-                Clear all data
+                <span>Clear all data</span>
               </div>
               <div className="text-[12.5px] text-ink-3 mt-0.5">
                 Delete all bookmarks and sync history. Keeps your sign-in connections.
@@ -1188,7 +1079,7 @@ function SettingsPage() {
             <div className="flex-1 min-w-0">
               <div className="font-bold text-[14.5px] text-ink flex items-center gap-2">
                 <UserX className="h-[15px] w-[15px] text-ink-3 flex-shrink-0" />
-                Delete account
+                <span>Delete account</span>
               </div>
               <div className="text-[12.5px] text-ink-3 mt-0.5">
                 Permanently delete everything, including your sign-in connections.
@@ -1207,6 +1098,18 @@ function SettingsPage() {
         <div className="text-center pt-4">
           <p className="text-xs text-ink-3 font-mono">
             ADHX v{process.env.NEXT_PUBLIC_APP_VERSION || '0.0.0'}
+          </p>
+          <p className="mt-2 text-xs text-ink-3">
+            <a href="/privacy" className="underline-offset-2 hover:underline">
+              <span>Privacy</span>
+            </a>
+            <span> · </span>
+            <a
+              href="https://github.com/itsmemeworks/adhx/blob/main/SECURITY.md"
+              className="underline-offset-2 hover:underline"
+            >
+              <span>Security</span>
+            </a>
           </p>
         </div>
       </div>
@@ -1239,13 +1142,13 @@ function SettingsPage() {
               <p className="text-ink-2">This will permanently delete:</p>
               <ul className="list-disc list-inside text-sm text-ink-2 space-y-1 ml-2">
                 <li>All synced bookmarks</li>
-                <li>Read/unread status</li>
+                <li>Archive status</li>
                 <li>Sync history</li>
                 <li>Collections and preferences</li>
               </ul>
               <p className="text-sm text-green-700 flex items-center gap-1.5">
                 <Check className="h-4 w-4 flex-shrink-0" />
-                Your sign-in connections will be preserved
+                <span>Your sign-in connections will be preserved</span>
               </p>
               <div>
                 <label className="block text-sm font-medium text-ink-2 mb-2">
@@ -1311,7 +1214,7 @@ function SettingsPage() {
               <div className="p-3 bg-red-500/10 rounded-[11px] border border-red-500/30">
                 <p className="text-sm text-red-700 font-medium flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4" />
-                  This action is permanent and cannot be undone!
+                  <span>This action is permanent and cannot be undone!</span>
                 </p>
               </div>
               <p className="text-ink-2">This will permanently delete:</p>

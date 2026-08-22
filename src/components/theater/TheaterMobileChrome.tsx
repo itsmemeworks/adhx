@@ -23,12 +23,9 @@ import {
   Bookmark,
   Check,
   Copy as CopyIcon,
-  Flame,
   Repeat,
   Repeat1,
-  Clock,
   Tag as TagIcon,
-  Trash2,
   ChevronUp,
   ChevronDown,
   Pause,
@@ -40,15 +37,16 @@ import {
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatCompactRelativeTime, hasKnownTimestamp } from '@/lib/utils/format'
-import { MatterLogo, PlatformGlyph } from '@/components/matter'
+import { MatterLogo } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { PasteLinkButton } from '@/components/PasteLinkButton'
 import { authorProfileUrl, previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { inferType } from '@/lib/trending/filter'
 import { useSendFile } from './useSendFile'
+import { useTheaterCopy } from './useTheaterCopy'
+import { useTheaterStageEvents } from './useTheaterStageEvents'
 import { useClampExpand } from './useClampExpand'
-import { theaterItemKey, PLATFORM_LABEL, TRIAGE_TAB_ORDER, TRIAGE_TAB_LABEL } from './types'
+import { theaterItemKey, PLATFORM_LABEL, REPEAT_MODE_LABEL } from './types'
 import { TheaterLinkedText } from './TheaterText'
 import {
   TheaterProgressLine,
@@ -57,18 +55,21 @@ import {
   collectionTabProgressKind,
 } from './TheaterProgressLine'
 import { UpNextList } from './UpNextList'
-import { SaveCollectionButton } from './SaveCollectionButton'
-import { SavePostButton } from './TheaterDesktopChrome'
+import { SavePlaylistButton } from './SavePlaylistButton'
+import { SavePostButton, PersonalLiveSaveButton } from './SavePostButton'
+import { FlameChip, PlatformTimeChip } from './TheaterMetaChips'
+import { TheaterTagChips } from './TheaterTagChips'
+import { TheaterCollectionActions } from './TheaterCollectionActions'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
 import { StageIconButton } from './stage-primitives'
 import { logAV } from './YtDebugOverlay'
 import type {
   RepeatMode,
-  SaveCollectionStatus,
-  TheaterCollectionMeta,
+  SavePlaylistStatus,
+  TheaterPlaylistMeta,
   TheaterItem,
   TheaterMode,
-  TheaterTriageChrome,
+  TheaterPersonalChrome,
 } from './types'
 
 export interface TheaterMobileChromeProps {
@@ -80,6 +81,12 @@ export interface TheaterMobileChromeProps {
   seenReady: boolean
   freshKeys: ReadonlySet<string>
   newCount: number
+  /** Passed straight through to `UpNextList` for its section headings — the arrival snapshot the queue was grouped by. Absent only in playlist mode (one authored order, no groups); shared mode passes it and pins its lead post out of the grouping instead. */
+  wasSeenOnEntry?: (key: string) => boolean
+  /** The shared post on a preview page — pinned as the lead row and excluded from the section grouping (it isn't "what's new", it's the link the visitor followed). Passed straight to `UpNextList`. */
+  pinnedKey?: string | null
+  /** How many posts the position counter is out of — what will actually play from here (see `computeQueueTotal`). Falls back to `items.length`. */
+  queueTotal?: number
   onSelect: (key: string) => void
   /** Prev/next navigation for the peek bar's chevrons — the only mobile nav besides keyboard and video-ended auto-advance. */
   onPrev: () => void
@@ -98,12 +105,12 @@ export interface TheaterMobileChromeProps {
    * event `handleAudioTap` dispatches alongside this call.
    */
   onSetMuted: (muted: boolean) => void
-  /** Collection mode (`/t/{username}/{tag}`): identity chrome + swaps the bottom action row's Download/Save-login for the Save-collection CTA. */
-  collection?: TheaterCollectionMeta
-  saveStatus?: SaveCollectionStatus
-  onSaveCollection?: () => void
-  /** The signed-in viewer IS this collection's curator — hide the clone CTA, show Manage. */
-  isCollectionOwner?: boolean
+  /** Playlist mode (`/t/{username}/{tag}`): identity chrome + swaps the bottom action row's Download/Save-login for the Save-playlist CTA. */
+  playlist?: TheaterPlaylistMeta
+  saveStatus?: SavePlaylistStatus
+  onSavePlaylist?: () => void
+  /** The signed-in viewer IS this playlist's curator — hide the clone CTA, show Manage. */
+  isPlaylistOwner?: boolean
   /**
    * Whether the visiting user is signed in (verification-agent finding: at
    * mobile width, a signed-in viewer's Save on a shared page opened the
@@ -125,14 +132,14 @@ export interface TheaterMobileChromeProps {
   repeatCurrent?: boolean
   /**
    * The Spotify-style repeat control (round 8): current mode + the cycling
-   * handler. Both absent in collection mode (that queue always loops) and
-   * triage (finite backlog) — the button only renders when the handler is
+   * handler. Both absent in playlist mode (that queue always loops) and
+   * collection (finite backlog) — the button only renders when the handler is
    * provided.
    */
   repeatMode?: RepeatMode
   onCycleRepeat?: () => void
-  /** Triage mode (unified-theater-triage.md §2): swaps the top scrim's meta for a Collection↔Live tab switcher, and the bottom action row for Later/Tag/Delete/Done. */
-  triage?: TheaterTriageChrome
+  /** Collection mode (unified-theater-collection.md §2): swaps the top scrim's post meta for a close button + the burger (which carries the Live↔Collection switch as Theater sub-options — the top scrim is too tight for a tab pill at phone widths, unlike desktop's top bar), and the bottom action row for Later/Tag/Delete/Done. */
+  collection?: TheaterPersonalChrome
 }
 
 /** Height of the collapsed sheet's peek bar — kept in sync with the transform below. Two rows now (drag handle + the nav/pause/audio/de-clutter controls), taller than the old label-only bar. */
@@ -145,11 +152,11 @@ const PEEK_ICON_BTN_DISABLED =
   'opacity-35 hover:bg-transparent hover:text-ink-3 active:bg-transparent active:text-ink-3 disabled:cursor-default'
 
 /**
- * Bottom-scrim action pills. Save (sign-in prompt, the triage live-tab
+ * Bottom-scrim action pills. Save (sign-in prompt, the collection live-tab
  * Save/Saved button) uses PILL_SAVE — glass with a clay border (round 8: the
  * solid clay fill was "too much"). Download/Copy are power-user affordances
  * on PILL_GLASS alongside Share/Open (mirrors GLASS/SAVE_OUTLINE in
- * TheaterDesktopChrome). SaveCollectionButton uses PILL_SAVE too (owner:
+ * TheaterDesktopChrome). SavePlaylistButton uses PILL_SAVE too (owner:
  * same orange outline as the Save button).
  */
 const PILL_GLASS =
@@ -175,6 +182,9 @@ export function TheaterMobileChrome({
   seenReady,
   freshKeys,
   newCount,
+  wasSeenOnEntry,
+  pinnedKey,
+  queueTotal,
   onSelect,
   onPrev,
   onNext,
@@ -182,33 +192,34 @@ export function TheaterMobileChrome({
   canNext,
   muted,
   onSetMuted,
-  collection,
+  playlist,
   saveStatus = 'idle',
-  onSaveCollection,
-  isCollectionOwner = false,
+  onSavePlaylist,
+  isPlaylistOwner = false,
   authed = false,
   onRequestSignIn,
   repeatCurrent = false,
   repeatMode,
   onCycleRepeat,
-  triage,
+  collection,
 }: TheaterMobileChromeProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // "Copy" for text-like posts (round 8) — separate from the share-link
-  // `copied` above so the two buttons' feedback never cross-flash.
-  const [textCopied, setTextCopied] = useState(false)
-  const textCopyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
   const peekRef = useRef<HTMLDivElement>(null)
   const sheetDrag = useSheetDrag({ open: sheetOpen, onOpenChange: setSheetOpen, sheetRef, peekRef })
-  const sendFile = useSendFile(current)
+  // Eager on a shared preview page: there's one post the visitor followed a
+  // link FOR (pinned + repeating, not skimmed past), so the file should be
+  // ready before they reach for Send — the only way the share sheet opens
+  // inside the tap's own user activation. Elsewhere the 2s skim guard stands.
+  const sendFile = useSendFile(current, { eager: mode === 'shared' })
+  const { textCopied, copyText } = useTheaterCopy(current, (current?.text || '').trim())
   const { ref: captionRef, expanded, setExpanded, overflowing } = useClampExpand(currentKey)
 
   // `mediaKind` is the REAL content kind — drives the audio/pause buttons,
   // `paused`/`soundPulse` state, and the pause/resume handler in every tab.
-  // `progressKind` additionally demotes 'timed' to 'none' in triage's
+  // `progressKind` additionally demotes 'timed' to 'none' in the collection theater's
   // Collection tab (photo/text/quote/article still wait on a deliberate
   // Done/Later/Delete there — no 10s dwell auto-advance) and feeds ONLY
   // <TheaterProgressLine/> — the two must not be conflated, or forcing off
@@ -218,7 +229,7 @@ export function TheaterMobileChrome({
   // "My Collection is just a different playlist in that same theater").
   const mediaKind = progressKindFor(current)
   const progressKind = progressKindForPin(
-    collectionTabProgressKind(mediaKind, triage?.tab === 'collection'),
+    collectionTabProgressKind(mediaKind, collection?.tab === 'collection'),
     repeatCurrent,
   )
 
@@ -227,13 +238,8 @@ export function TheaterMobileChrome({
   // the button honest); `'timed'`-kind items have no underlying element to
   // ask, so the button owns that state itself, reset to playing whenever the
   // current post changes (a paused state must never leak to the next post).
-  const [videoPlaying, setVideoPlaying] = useState(true)
-  const [timedPaused, setTimedPaused] = useState(false)
-  // Live mute signal from StageVideo (`effectiveMuted`, which can diverge
-  // from the shell's `muted` prop when an unmuted-autoplay retry fails and
-  // the element falls back to muted on its own). Starts null — until the
-  // first event arrives, the button trusts the `muted` prop.
-  const [liveMuted, setLiveMuted] = useState<boolean | null>(null)
+  const { videoPlaying, timedPaused, setTimedPaused, liveMuted, setLiveMuted } =
+    useTheaterStageEvents()
   // De-clutter: hides the top and bottom scrims (brand + caption/actions) for
   // an unobstructed view of the stage. The peek bar (nav/pause/audio + the
   // up-next sheet) deliberately stays visible and functional — the point is
@@ -242,27 +248,9 @@ export function TheaterMobileChrome({
   // that way while browsing, not fight it back open on every navigation.
   const [declutter, setDeclutter] = useState(false)
 
-  useEffect(() => {
-    const handlePlaying = (e: Event) => {
-      const detail = (e as CustomEvent<{ playing: boolean }>).detail
-      if (detail) setVideoPlaying(detail.playing)
-    }
-    const handleMuted = (e: Event) => {
-      const detail = (e as CustomEvent<{ muted: boolean }>).detail
-      if (detail) setLiveMuted(detail.muted)
-    }
-    window.addEventListener('theater-playing-state', handlePlaying)
-    window.addEventListener('theater-muted-state', handleMuted)
-    return () => {
-      window.removeEventListener('theater-playing-state', handlePlaying)
-      window.removeEventListener('theater-muted-state', handleMuted)
-    }
-  }, [])
-
   useEffect(
     () => () => {
       if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
-      if (textCopyTimeoutRef.current) clearTimeout(textCopyTimeoutRef.current)
     },
     [],
   )
@@ -273,6 +261,14 @@ export function TheaterMobileChrome({
   useEffect(() => {
     setSheetOpen(false)
     setTimedPaused(false)
+    // `liveMuted` describes the ELEMENT that was on stage, so it must not
+    // outlive the item — the sibling `timedPaused` was reset here and this
+    // wasn't (state review, 2026-08-22). Carried over, the audio icon showed
+    // the previous post's real mute state until the new stage happened to
+    // re-broadcast, which is the intermittent "mute flicks on and off while
+    // watching" the owner reported. Null falls back to the shell's `muted`,
+    // the intended state for a post that hasn't reported yet.
+    setLiveMuted(null)
   }, [currentKey])
 
   const paused = mediaKind === 'video' ? !videoPlaying : timedPaused
@@ -342,28 +338,13 @@ export function TheaterMobileChrome({
     }
   }
 
-  // Copy the post's full text (round 8): text-like posts have no file to
-  // download, so the Download slot carries this instead of vanishing.
-  const handleCopyText = async () => {
-    const text = (current?.text || '').trim()
-    if (!text) return
-    try {
-      await navigator.clipboard.writeText(text)
-      setTextCopied(true)
-      if (textCopyTimeoutRef.current) clearTimeout(textCopyTimeoutRef.current)
-      textCopyTimeoutRef.current = setTimeout(() => setTextCopied(false), 1600)
-    } catch {
-      // Clipboard can be denied — nothing actionable to show.
-    }
-  }
-
   // Queue position for the peek bar's center label (owner: "Up next" wasn't
   // useful — show where you are in the queue instead). -1 (no current item /
   // empty list) falls back to the old label.
   const queueIndex = currentKey ? items.findIndex((it) => theaterItemKey(it) === currentKey) : -1
 
   const trendCount = current ? (current.trendCount ?? current.saveCount ?? 0) : 0
-  const tagCount = triage?.tags?.length ?? 0
+  const tagCount = collection?.tags?.length ?? 0
   const handle = current?.author ? current.author.replace(/^@+/, '') : ''
   // The stage IS the text for text/quote/article posts — repeating the body
   // (and the author header) in the bottom scrim doubles it up and buries the
@@ -381,7 +362,7 @@ export function TheaterMobileChrome({
           bottom scrim. De-clutter hides this whole scrim (meta included) —
           expected: immersion hides meta too. Collection mode replaces post
           meta with the tag/curator identity chrome (two rows). */}
-      {triage ? (
+      {collection ? (
         <div
           className={cn(
             'pointer-events-auto absolute inset-x-0 top-0 flex items-center justify-between gap-3 px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
@@ -393,18 +374,29 @@ export function TheaterMobileChrome({
             <MatterLogo size={16} className="[&>span]:text-white" />
           </a>
           <div className="flex flex-none items-center gap-1.5">
-            <TheaterAvatarMenu theaterActive />
+            {/* Live ⇄ My Collection lives in this menu on mobile, as two
+                sub-options under Theater (owner: a tab pill up here "is
+                going to definitely cause overlap with the logo, the play
+                stats, and the paste and burger menu… why not just put it in
+                the burger menu for mobile?"). Desktop keeps its top-bar pill
+                and does NOT pass this — one control per surface, never both.
+                It's what freed the peek bar's centre slot for the queue
+                position. */}
+            <TheaterAvatarMenu
+              theaterActive
+              theaterTabs={{ tab: collection.tab, onTabChange: collection.onTabChange }}
+            />
             <button
               type="button"
-              onClick={triage.onClose}
-              aria-label="Close triage"
+              onClick={collection.onClose}
+              aria-label="Close"
               className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full border border-white/25 bg-white/[0.14] text-white"
             >
               <X size={16} />
             </button>
           </div>
         </div>
-      ) : collection ? (
+      ) : playlist ? (
         <div
           className={cn(
             'pointer-events-auto absolute inset-x-0 top-0 flex flex-col gap-1.5 px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
@@ -419,7 +411,7 @@ export function TheaterMobileChrome({
               shared tag must always be able to get back to the main theater
               (owner override: wiring it to open the "Make your own" modal
               instead left non-owners with no way home). Conversion is
-              carried entirely by the Save-collection CTA below, which
+              carried entirely by the Save-playlist CTA below, which
               already opens the sign-in modal in place for a signed-out
               visitor (`handleSaveCollection` in TheaterShell). */}
           <div className="flex items-center justify-between gap-3">
@@ -427,7 +419,7 @@ export function TheaterMobileChrome({
               <MatterLogo size={16} className="[&>span]:text-white" />
             </a>
             <span className="min-w-0 truncate text-[15px] font-bold text-white">
-              #{collection.tag}
+              #{playlist.tag}
             </span>
           </div>
         </div>
@@ -445,54 +437,23 @@ export function TheaterMobileChrome({
           <div className="flex flex-none items-center gap-1.5">
             {current && (
               <div className="flex flex-none items-center gap-2">
-                {/* Same pill geometry + backdrop as the platform/time chip
-                    beside it (round 8: the two read as mismatched heights). */}
-                {trendCount >= 2 && (
-                  <span className="inline-flex min-h-[32px] flex-none items-center gap-1 rounded-full bg-black/40 px-2.5 text-[11px] font-bold text-orange-300 backdrop-blur-sm">
-                    <Flame size={11} className="text-orange-400" fill="currentColor" />
-                    {trendCount}
-                  </span>
-                )}
-                {(() => {
-                  const src = sourceUrl(current.platform, current.author, current.bookmarkId ?? '')
-                  const inner = (
-                    <>
-                      <PlatformGlyph platform={current.platform} size={12} />
-                      {/* `addedAt` = when the post was first added to ADHX
-                          (owner decision — never the source platform's date,
-                          never the moving event time). Unknown → no time. */}
-                      {hasKnownTimestamp(current.addedAt) && (
-                        <span className="font-mono text-[11px]" suppressHydrationWarning>
-                          {formatCompactRelativeTime(current.addedAt as string)}
-                        </span>
-                      )}
-                    </>
-                  )
-                  const cls =
-                    'inline-flex min-h-[32px] flex-none items-center gap-1.5 rounded-full bg-black/40 px-2.5 text-white/80 backdrop-blur-sm'
-                  return src ? (
-                    <a href={src} target="_blank" rel="noopener noreferrer" className={cls}>
-                      {inner}
-                    </a>
-                  ) : (
-                    <span className={cls}>{inner}</span>
-                  )
-                })()}
+                <FlameChip trendCount={trendCount} />
+                <PlatformTimeChip item={current} />
               </div>
             )}
             {/* Mobile equivalent of the desktop top bar's ⌘V paste-to-preview
                 input (spec §8/DesktopStageChrome) — touch Safari has no
                 paste gesture, so this covers the signed-out home theater and
-                shared preview pages (triage/collection top scrims above
+                shared preview pages (collection/collection top scrims above
                 have their own chrome and skip this). */}
             <PasteLinkButton iconOnly />
             {/* Signed-out visitors here (the home theater + shared preview
                 pages) get a burger fallback in this same slot — Theater /
-                Leaderboard / Sign in — instead of no navigation at all.
-                Triage above never passes this (always reached authed);
-                collection mode's top scrim doesn't mount this component at
+                Leaderboard / Privacy / Sign in — instead of no navigation at all.
+                Collection above never passes this (always reached authed);
+                playlist mode's top scrim doesn't mount this component at
                 all — its plain home logo plus the bottom scrim's
-                Save-collection CTA cover both navigation and signed-out
+                Save-playlist CTA cover both navigation and signed-out
                 conversion there. */}
             <TheaterAvatarMenu
               onRequestSignIn={onRequestSignIn}
@@ -592,95 +553,38 @@ export function TheaterMobileChrome({
               </div>
             )}
 
-            {/* Tag chips (unified-theater-triage.md §B) — the Collection
+            {/* Tag chips (unified-theater-collection.md §B) — the Collection
                 tab's current item only; display-only, nothing renders
                 without tags. */}
-            {triage?.tab === 'collection' && triage.tags && triage.tags.length > 0 && (
-              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                {triage.tags.map((t) => (
-                  <span
-                    key={t}
-                    className="flex-none rounded-full border border-white/12 bg-white/[.06] px-2 py-0.5 text-[10.5px] text-white/55"
-                  >
-                    #{t}
-                  </span>
-                ))}
-              </div>
-            )}
+            <TheaterTagChips
+              tags={collection?.tags}
+              className="mt-1.5 flex flex-wrap items-center gap-1.5"
+            />
           </div>
 
-          {triage && triage.tab === 'collection' ? (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={triage.onLater}
-                className="inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/25 bg-white/[0.14] text-[11px] font-semibold text-white"
-              >
-                <Clock size={16} />
-                Later
-              </button>
-              <button
-                type="button"
-                onClick={triage.onTag}
-                className={cn(
-                  'inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border bg-white/10 text-[11px] font-semibold backdrop-blur-md',
-                  tagCount > 0 ? 'border-clay/50 text-clay' : 'border-white/25 text-white',
-                )}
-              >
-                <TagIcon size={16} fill={tagCount > 0 ? 'currentColor' : 'none'} />
-                {tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}
-              </button>
-              <button
-                type="button"
-                onClick={triage.onDelete}
-                className="inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/25 bg-white/[0.14] text-[11px] font-semibold text-white"
-              >
-                <Trash2 size={16} />
-                Delete
-              </button>
-              <button
-                type="button"
-                onClick={triage.onDone}
-                className="inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl bg-done/25 text-[11px] font-semibold text-done"
-              >
-                <Check size={16} />
-                Done
-              </button>
-              {(() => {
-                const openUrl = sourceUrl(
-                  current.platform,
-                  current.author,
-                  current.bookmarkId ?? '',
-                )
-                if (!openUrl) return null
-                const platformLabel = PLATFORM_LABEL[current.platform] ?? current.platform
-                return (
-                  <StageIconButton
-                    href={openUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`Open on ${platformLabel}`}
-                  >
-                    <ExternalLink size={16} />
-                  </StageIconButton>
-                )
-              })()}
-            </div>
+          {collection && collection.tab === 'collection' ? (
+            <TheaterCollectionActions
+              collection={collection}
+              tagCount={tagCount}
+              openUrl={sourceUrl(current.platform, current.author, current.bookmarkId ?? '')}
+              platformLabel={PLATFORM_LABEL[current.platform] ?? current.platform}
+              variant="mobile"
+            />
           ) : (
             <div className="flex items-center gap-2">
-              {collection && isCollectionOwner ? (
+              {playlist && isPlaylistOwner ? (
                 <a
-                  href={`/?tag=${encodeURIComponent(collection.tag)}`}
+                  href={`/library?tag=${encodeURIComponent(playlist.tag)}`}
                   className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/[0.14] px-3 text-[13px] font-semibold text-white"
                 >
                   <TagIcon size={15} />
-                  Manage collection
+                  <span>Manage playlist</span>
                 </a>
-              ) : collection ? (
-                <SaveCollectionButton
-                  count={collection.count}
+              ) : playlist ? (
+                <SavePlaylistButton
+                  count={playlist.count}
                   status={saveStatus}
-                  onSave={() => onSaveCollection?.()}
+                  onSave={() => onSavePlaylist?.()}
                   className={PILL_SAVE}
                 />
               ) : (
@@ -699,58 +603,62 @@ export function TheaterMobileChrome({
                           ? 'Opens your share sheet with the file'
                           : 'Download the file'
                       }
-                      className={PILL_GLASS}
+                      className={cn(PILL_GLASS, sendFile.primed && 'border-clay')}
                     >
+                      {/* Spinner covers the whole wait, including the file
+                          fetch a tap kicks off when the prefetch hasn't
+                          landed (owner: "keeps the spinner going until it has
+                          the file to send"). `primed` = the file is cached but
+                          the sheet needs a fresh gesture, so ASK for the tap
+                          rather than silently sharing a link. */}
                       {sendFile.sending ? (
                         <Loader2 size={15} className="animate-spin" />
                       ) : (
                         <DownloadIcon size={15} />
                       )}
-                      Download
+                      <span>
+                        {sendFile.sending
+                          ? 'Getting file'
+                          : sendFile.primed
+                            ? 'Tap again'
+                            : 'Download'}
+                      </span>
                     </button>
                   ) : textLike && (current.text || '').trim() ? (
                     // Text-like posts have no file — the Download slot copies
                     // the post's full text instead (round 8, owner request).
-                    <button
-                      type="button"
-                      onClick={() => void handleCopyText()}
-                      className={PILL_GLASS}
-                    >
+                    <button type="button" onClick={() => void copyText()} className={PILL_GLASS}>
                       {textCopied ? (
                         <Check size={15} className="text-done" />
                       ) : (
                         <CopyIcon size={15} />
                       )}
-                      {textCopied ? 'Copied' : 'Copy'}
+                      <span>{textCopied ? 'Copied' : 'Copy'}</span>
                     </button>
                   ) : null}
-                  {triage?.tab === 'live' ? (
+                  {collection?.tab === 'live' ? (
                     <>
                       <StageIconButton
                         onClick={(e) => {
                           e.stopPropagation()
-                          triage.onLiveTag?.(current)
+                          collection.onLiveTag?.(current)
                         }}
                         onTouchEnd={(e) => e.stopPropagation()}
                         aria-label="Tag this post"
                       >
                         <TagIcon size={16} />
                       </StageIconButton>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!triage.savedKeys.has(theaterItemKey(current))) triage.onSave(current)
-                        }}
-                        disabled={triage.savedKeys.has(theaterItemKey(current))}
+                      {/* Once it's saved the button goes away entirely (owner:
+                          "there's no point in showing 'Saved' for a post —
+                          simply show the tag icon because that denotes that
+                          it's already saved"). The tag icon beside it is both
+                          the affordance and the state. */}
+                      <PersonalLiveSaveButton
+                        current={current}
+                        collection={collection}
                         className={PILL_SAVE}
-                      >
-                        {triage.savedKeys.has(theaterItemKey(current)) ? (
-                          <Check size={15} />
-                        ) : (
-                          <Bookmark size={15} />
-                        )}
-                        {triage.savedKeys.has(theaterItemKey(current)) ? 'Saved' : 'Save'}
-                      </button>
+                        iconSize={15}
+                      />
                     </>
                   ) : mode === 'shared' && authed ? (
                     // Signed-in viewers save directly — same branch the
@@ -760,7 +668,7 @@ export function TheaterMobileChrome({
                   ) : (
                     <button type="button" onClick={() => onRequestSignIn?.()} className={PILL_SAVE}>
                       <Bookmark size={15} />
-                      Save
+                      <span>Save</span>
                     </button>
                   )}
                 </>
@@ -888,13 +796,7 @@ export function TheaterMobileChrome({
                     onCycleRepeat()
                   }}
                   onTouchEnd={(e) => e.stopPropagation()}
-                  aria-label={
-                    repeatMode === 'off'
-                      ? 'Repeat: off'
-                      : repeatMode === 'all'
-                        ? 'Repeat: whole queue'
-                        : 'Repeat: this post'
-                  }
+                  aria-label={REPEAT_MODE_LABEL[repeatMode].action}
                   className={cn(
                     'inline-flex h-10 w-10 flex-none items-center justify-center rounded-full hover:bg-inset active:bg-inset',
                     repeatMode !== 'off'
@@ -928,65 +830,49 @@ export function TheaterMobileChrome({
               )}
             </div>
 
+            {/* Centre slot: where you are in the queue. Collection used to spend
+                this on the Live/Collection tabs — they're in the top scrim
+                now (see above), so every mode gets the position, which is
+                what the owner asked the count to be aware of. */}
             <div className="pointer-events-none absolute inset-x-0 flex justify-center">
-              {triage ? (
-                <div
-                  className="pointer-events-auto inline-flex rounded-full bg-inset p-0.5 text-[11.5px] font-semibold"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {TRIAGE_TAB_ORDER.map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        triage.onTabChange(t)
-                      }}
-                      onTouchEnd={(e) => e.stopPropagation()}
-                      aria-current={triage.tab === t ? 'true' : undefined}
-                      className={cn(
-                        'rounded-full px-3 py-1 whitespace-nowrap transition-colors',
-                        triage.tab === t ? 'bg-surface text-ink shadow-sm' : 'text-ink-3',
-                      )}
-                    >
-                      {TRIAGE_TAB_LABEL[t]}
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setSheetOpen((v) => !v)}
-                  aria-expanded={sheetOpen}
-                  aria-label={sheetOpen ? 'Collapse up next' : 'Expand up next'}
-                  className={cn(
-                    'pointer-events-auto flex max-w-[45%] items-center justify-center gap-1 truncate px-1 text-center text-[12px] font-semibold',
-                    repeatCurrent ? 'text-clay' : 'text-ink-2',
-                  )}
-                >
-                  {collection ? (
-                    <>
-                      <Repeat size={11} className="flex-none" aria-hidden />
-                      <span className="truncate">
-                        #{collection.tag} · {collection.count}
-                      </span>
-                    </>
-                  ) : repeatCurrent ? (
-                    <>
-                      <Repeat size={11} className="flex-none" aria-hidden />
-                      <span className="truncate">On repeat</span>
-                    </>
-                  ) : queueIndex !== -1 ? (
-                    // Queue position ("3 / 17"), with the fresh-arrival count
-                    // folded in when there is one.
-                    `${queueIndex + 1} / ${items.length}${newCount > 0 ? ` · ${newCount} new` : ''}`
-                  ) : newCount > 0 ? (
-                    `${newCount} new`
-                  ) : (
-                    'Up next'
-                  )}
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => setSheetOpen((v) => !v)}
+                aria-expanded={sheetOpen}
+                aria-label={sheetOpen ? 'Collapse up next' : 'Expand up next'}
+                className={cn(
+                  'pointer-events-auto flex max-w-[45%] items-center justify-center gap-1 truncate px-1 text-center text-[12px] font-semibold',
+                  repeatCurrent ? 'text-clay' : 'text-ink-2',
+                )}
+              >
+                {playlist ? (
+                  <>
+                    <Repeat size={11} className="flex-none" aria-hidden />
+                    <span className="truncate">
+                      #{playlist.tag} · {playlist.count}
+                    </span>
+                  </>
+                ) : repeatCurrent ? (
+                  <>
+                    <Repeat size={11} className="flex-none" aria-hidden />
+                    <span className="truncate">On repeat</span>
+                  </>
+                ) : queueIndex !== -1 ? (
+                  // Queue position ("3 / 7"), out of what will actually PLAY
+                  // from here — the unwatched run while repeat is off, the
+                  // whole queue once it isn't (see `computeQueueTotal`). The
+                  // fresh-arrival count folds in when there is one, but only
+                  // where "new" means anything: the Collection tab is a finite
+                  // backlog, not the live pulse.
+                  `${queueIndex + 1} / ${queueTotal ?? items.length}${
+                    newCount > 0 && collection?.tab !== 'collection' ? ` · ${newCount} new` : ''
+                  }`
+                ) : newCount > 0 && collection?.tab !== 'collection' ? (
+                  `${newCount} new`
+                ) : (
+                  'Up next'
+                )}
+              </button>
             </div>
 
             <div className="ml-auto flex items-center gap-0.5">
@@ -1061,7 +947,8 @@ export function TheaterMobileChrome({
           isSeen={isSeen}
           seenReady={seenReady}
           freshKeys={freshKeys}
-          newCount={newCount}
+          wasSeenOnEntry={wasSeenOnEntry}
+          pinnedKey={pinnedKey}
           onSelect={handleSelect}
           repeatCurrent={repeatCurrent}
           className="min-h-0 flex-1 pb-[max(1rem,env(safe-area-inset-bottom))]"

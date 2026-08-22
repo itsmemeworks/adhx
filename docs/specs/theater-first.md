@@ -66,7 +66,7 @@ Route wiring:
 - Preview pages keep their server components (metadata, JSON-LD, `recordActivity('preview')`, bot filtering) and swap the `*PreviewLanding` visual layer for `TheaterShell` seeded at the post with `mode="shared"`. The crawlable tweet `<article>` stays in the DOM (sr-only).
 - `AppShell` suppresses the global Header for `/` signed-out and preview paths (extend the existing `isFullWidth` regex).
 - Browse list: `/trending` remains the dark ranked-list view (round-2 design restyled). Hubs `/trending/[filter]` unchanged.
-- Signed-in: `/` keeps the Collection as home. The theater becomes the Collection's focus mode (replacing the current Lightbox/triage surface, keeping its keyboard map: ←→, R/U, Q/P, Keep/Delete/Done) and the **Live** tab in the rail opens the community theater. This is Phase 3; Phases 1–2 must not regress the existing authed feed.
+- Signed-in: `/` keeps the Collection as home. The theater becomes the Collection's focus mode (replacing the old Lightbox surface) and the **Live** tab in the rail opens the community theater. This is Phase 3; Phases 1–2 must not regress the existing authed feed.
 
 ## 4. Data
 
@@ -147,7 +147,7 @@ _Acceptance_: each platform plays (IG within its warm window, YT via iframe), ar
 
 **PR 3 — Preview pages + Browse + signed-in**
 Preview pages swap to `TheaterShell mode="shared"` (SEO markup verified byte-comparable for bots), `/trending` restyled to the dark ranked list, Collection focus mode replaced by the theater (Keep/Done/Delete + `read_status` merge), Live tab.
-_Acceptance_: preview URLs keep JSON-LD/OG (diff against production snapshots), GSC-critical routes still 200 + crawlable, authed triage keyboard map preserved, no regression in `/api/feed` tests.
+_Acceptance_: preview URLs keep JSON-LD/OG (diff against production snapshots), GSC-critical routes still 200 + crawlable, the authed collection keyboard map preserved, no regression in `/api/feed` tests.
 
 ## 11. Risks & mitigations
 

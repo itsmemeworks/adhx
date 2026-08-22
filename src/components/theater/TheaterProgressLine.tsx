@@ -17,11 +17,11 @@
  *   explicit pause/play button (TheaterMobileChrome). There is no longer a
  *   hold-to-pause gesture — it interfered with text selection on long posts.
  * - kind 'none': no item, or a 'timed' item (photo/text/quote/article) in
- *   triage's Collection tab — those still wait on a deliberate Done/Later/
+ *   the personal theater's Collection tab — those still wait on a deliberate Done/Later/
  *   Delete, never a 10s dwell auto-advance (see `collectionTabProgressKind`
  *   and TheaterShell's `handleAdvance`). Videos in the Collection tab keep
  *   their real 'video' kind and auto-advance on end like every other
- *   playlist — see `TriageStage`'s `onEnded` wiring.
+ *   playlist — see `CollectionStage`'s `onEnded` wiring.
  *
  * Progress state lives entirely inside this component (rAF/event driven) so
  * ticks never re-render the shell/stage tree — the fill's width is mutated
@@ -67,8 +67,8 @@ export function progressKindForPin(kind: ProgressKind, pinned: boolean): Progres
 }
 
 /**
- * Pure: the progress-line kind for triage's Collection tab (unified-theater-
- * triage.md §2 — "My Collection is just a different playlist in that same
+ * Pure: the progress-line kind for the personal theater's Collection tab (unified-theater-
+ * collection.md §2 — "My Collection is just a different playlist in that same
  * theater," the owner's standing directive). Videos now flow through the
  * Collection tab exactly like every other playlist — auto-advance on end —
  * so they keep whatever `progressKindFor` already gave them (typically

@@ -3,24 +3,32 @@
 import { useState, useEffect } from 'react'
 import { Image, Play, FileText, Check } from 'lucide-react'
 import { AuthorAvatar } from './AuthorAvatar'
-import { renderTextWithLinks, renderBionicTextWithLinks, stripMediaUrls } from './utils'
+import {
+  renderTextWithLinks,
+  renderBionicTextWithLinks,
+  stripMediaUrls,
+  RECENT_GLOW,
+} from './utils'
 import { usePreferences } from '@/lib/preferences-context'
 import { formatDurationMs, formatCompactRelativeTime } from '@/lib/utils/format'
 import { TypeBadge, PlatformChip, type ContentType, type PlatformId } from '@/components/matter'
 import { cn } from '@/lib/utils'
 import type { FeedItem } from './types'
 import { feedHoverSrc } from './video-src'
+import { feedItemType } from './feedItemMeta'
 
 interface FeedCardProps {
   item: FeedItem
   lastSyncAt: string | null
   sortField: 'processedAt' | 'createdAt'
   onExpand: () => void
-  // Tag "Add posts" selection mode (unified-theater-triage §4): when active,
+  // Tag "Add posts" selection mode (unified-theater-collection §4): when active,
   // clicking the card toggles tag membership instead of opening it.
   selectionMode?: boolean
   selected?: boolean
   onToggleSelect?: () => void
+  /** Briefly glow: this is the post the viewer just pasted in. */
+  justAdded?: boolean
 }
 
 /** Time pill — mono white on translucent black, for media/article overlays. */
@@ -45,13 +53,14 @@ export function FeedCard({
   selectionMode = false,
   selected = false,
   onToggleSelect,
+  justAdded = false,
 }: FeedCardProps): React.ReactElement {
   const [error, setError] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
   // Video hover-autoplay is desktop-only. On touch the browser emulates :hover
   // on the FIRST tap, which would start playback and swallow that tap; gate it to
-  // hover-capable devices so a tap just opens the item in triage.
+  // hover-capable devices so a tap just opens the item in the collection theater.
   const [canHover, setCanHover] = useState(false)
   useEffect(() => {
     setCanHover(window.matchMedia('(hover: hover)').matches)
@@ -61,9 +70,10 @@ export function FeedCard({
 
   const hasMedia = item.media && item.media.length > 0
   const primaryMedia = hasMedia ? item.media![0] : null
-  const isVideo = primaryMedia?.mediaType === 'video' || primaryMedia?.mediaType === 'animated_gif'
-  const isArticle = item.category === 'article'
-  const isQuote = item.isQuote && item.quoteContext
+  const type = feedItemType(item)
+  const isVideo = type === 'video'
+  const isArticle = type === 'article'
+  const isQuote = type === 'quote'
   const isNew = lastSyncAt && item.processedAt >= lastSyncAt
 
   const articleLink = isArticle ? item.links?.[0] : null
@@ -74,23 +84,14 @@ export function FeedCard({
   const aspectRatio =
     primaryMedia?.width && primaryMedia?.height ? primaryMedia.width / primaryMedia.height : 1
 
-  const newGlowClass = isNew
-    ? 'shadow-[0_0_8px_2px_rgba(194,96,63,0.4),0_0_20px_4px_rgba(194,96,63,0.22),0_0_35px_8px_rgba(194,96,63,0.1)]'
-    : ''
+  // `justAdded` is the same glow held briefly on a post the viewer just
+  // pasted in — the confirmation that replaced the layout-shifting pill.
+  const newGlowClass = isNew || justAdded ? RECENT_GLOW : ''
 
   const timeDate = sortField === 'createdAt' && item.createdAt ? item.createdAt : item.processedAt
   const timeBadge = formatCompactRelativeTime(timeDate)
 
-  // Map content to a Matter TypeBadge type.
-  const badgeType: ContentType = isArticle
-    ? 'article'
-    : isVideo
-      ? 'video'
-      : hasMedia
-        ? 'photo'
-        : isQuote
-          ? 'quote'
-          : 'text'
+  const badgeType: ContentType = type
 
   // Platform glyph: twitter renders X; others render their own glyph.
   const platform = (item.platform || 'twitter') as PlatformId

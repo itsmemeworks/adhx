@@ -13,8 +13,7 @@ import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
  * `/leaderboard` is the `week` window (the default); the other three windows
  * live at `/leaderboard/[window]`.
  *
- * This used to live at `/collections`, which collided with the unrelated
- * `/api/collections` custom-collections API — the owner asked for it to move
+ * This used to live at `/collections` — the owner asked for it to move
  * here. The old `/collections` + `/collections/[window]` paths still work:
  * they're now thin redirect stubs (`src/app/collections/page.tsx` and
  * `src/app/collections/[window]/page.tsx`) since they're on staging and

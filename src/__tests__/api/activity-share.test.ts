@@ -20,11 +20,13 @@ vi.mock('@/lib/auth/session', () => ({
 import { POST } from '@/app/api/activity/share/route'
 import { recordActivity } from '@/lib/activity/record'
 
-function post(body: unknown): Promise<Response> {
+function post(body: unknown, origin?: string): Promise<Response> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (origin) headers.Origin = origin
   return POST(
     new NextRequest('http://localhost:3000/api/activity/share', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(body),
     }),
   )
@@ -111,6 +113,11 @@ describe('POST /api/activity/share', () => {
   it('rejects an invalid platform', async () => {
     const res = await post({ platform: 'myspace', id: '1' })
     expect(res.status).toBe(400)
+  })
+
+  it('rejects a cross-site Origin', async () => {
+    const res = await post({ platform: 'twitter', id: '1' }, 'https://evil.example')
+    expect(res.status).toBe(403)
   })
 
   it('never returns userId', async () => {

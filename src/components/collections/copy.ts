@@ -6,24 +6,26 @@ import type { RankWindow } from '@/lib/discovery/rank'
  * `src/app/leaderboard/[window]/page.tsx` (the other three windows) so
  * metadata, JSON-LD `name`/`description`, and the sr-only heading never
  * drift apart.
+ *
+ * Titles carry NO "— ADHX" suffix: the root layout's metadata template already
+ * appends "| ADHX", so including it here rendered "Top playlists this week —
+ * ADHX | ADHX" (spotted while checking the leaderboard's robots tag).
  */
 export const WINDOW_COPY: Record<RankWindow, { title: string; description: string }> = {
   day: {
-    title: 'Top collections today — ADHX',
-    description: 'The most-watched public collections on ADHX today, ranked by views and saves.',
+    title: 'Top playlists today',
+    description: 'The most-watched public playlists on ADHX today, ranked by views and saves.',
   },
   week: {
-    title: 'Top collections this week — ADHX',
-    description:
-      'The most-watched public collections on ADHX this week, ranked by views and saves.',
+    title: 'Top playlists this week',
+    description: 'The most-watched public playlists on ADHX this week, ranked by views and saves.',
   },
   month: {
-    title: 'Top collections this month — ADHX',
-    description:
-      'The most-watched public collections on ADHX this month, ranked by views and saves.',
+    title: 'Top playlists this month',
+    description: 'The most-watched public playlists on ADHX this month, ranked by views and saves.',
   },
   all: {
-    title: 'Top collections, all-time — ADHX',
-    description: 'The all-time most-watched public collections on ADHX, ranked by views and saves.',
+    title: 'Top playlists, all-time',
+    description: 'The all-time most-watched public playlists on ADHX, ranked by views and saves.',
   },
 }

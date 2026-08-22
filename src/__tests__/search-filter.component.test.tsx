@@ -104,10 +104,8 @@ vi.mock('@/components/feed', async (importOriginal) => {
     FilterBar: () => null,
   }
 })
-vi.mock('@/components/feed/TriageMode', () => ({ TriageMode: () => null }))
 vi.mock('@/components/KeyboardShortcutsModal', () => ({ KeyboardShortcutsModal: () => null }))
 vi.mock('@/components/LandingPage', () => ({ LandingPage: () => null }))
-vi.mock('@/components/AddTweetModal', () => ({ AddTweetModal: () => null }))
 vi.mock('@/components/sync/SyncProgress', () => ({ SyncProgress: () => null }))
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -138,7 +136,7 @@ beforeEach(() => {
       feedRequests.push(url)
       return jsonResponse({
         items: [],
-        stats: { total: 0, unread: 0 },
+        stats: { total: 0, active: 0 },
         pagination: { page: 1, totalPages: 1 },
       })
     }
@@ -154,8 +152,7 @@ beforeEach(() => {
       })
     }
     if (url.startsWith('/api/tags')) return jsonResponse({ tags: [] })
-    if (url.startsWith('/api/stats')) return jsonResponse({ total: 0, unread: 0 })
-    if (url.startsWith('/api/triage/streak')) return jsonResponse({ currentStreak: 0 })
+    if (url.startsWith('/api/stats')) return jsonResponse({ total: 0, active: 0 })
     if (url.startsWith('/api/sync/cooldown')) {
       return jsonResponse({ canSync: true, cooldownRemaining: 0, lastSyncAt: null })
     }
@@ -210,7 +207,7 @@ describe('Header search -> feed filtering (regression)', () => {
 
     replaceSpy.mockClear()
 
-    // 'u' toggles unreadOnly — a state this component owns and writes to the
+    // 'u' toggles hideArchived — a state this component owns and writes to the
     // URL via the same effect that used to also (incorrectly) rebuild `search`
     // from local state.
     fireEvent.keyDown(window, { key: 'u' })

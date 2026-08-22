@@ -10,6 +10,7 @@ import {
   getThumbnailUrl,
   extractUrlsFromFacets,
   fetchTweetData,
+  buildFxTwitterUrl,
   type FxTwitterResponse,
 } from '@/lib/media/fxembed'
 
@@ -62,6 +63,28 @@ describe('fetchTweetData', () => {
     expect(mockFetch).toHaveBeenCalledTimes(1)
     const [calledUrl] = mockFetch.mock.calls[0]
     expect(calledUrl).toBe('https://api.fxtwitter.com/i/status/999')
+  })
+
+  it('sends the request to FXTWITTER_API_BASE when set', async () => {
+    const prev = process.env.FXTWITTER_API_BASE
+    process.env.FXTWITTER_API_BASE = 'http://127.0.0.1:3998'
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ tweet: null }) })
+    await fetchTweetData('testuser', '1234567890')
+    const [calledUrl] = mockFetch.mock.calls[0]
+    expect(calledUrl).toBe('http://127.0.0.1:3998/testuser/status/1234567890')
+    if (prev === undefined) delete process.env.FXTWITTER_API_BASE
+    else process.env.FXTWITTER_API_BASE = prev
+  })
+})
+
+describe('buildFxTwitterUrl', () => {
+  it('defaults to api.fxtwitter.com', () => {
+    const prev = process.env.FXTWITTER_API_BASE
+    delete process.env.FXTWITTER_API_BASE
+    expect(buildFxTwitterUrl('alice', '1').toString()).toBe(
+      'https://api.fxtwitter.com/alice/status/1',
+    )
+    if (prev !== undefined) process.env.FXTWITTER_API_BASE = prev
   })
 })
 

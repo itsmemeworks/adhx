@@ -16,7 +16,9 @@ import { makeHostAllowlist, buildAllowlistedUrl } from '@/lib/media/proxy'
 import { decodeHtmlEntities } from '@/lib/utils/html-entities'
 import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
-const MIRRORS = ['https://tnktok.com'] as const
+const MIRRORS = [
+  (process.env.TNKTOK_API_BASE?.trim() || 'https://tnktok.com').replace(/\/$/, ''),
+] as const
 
 const ALLOWED_VIDEO_HOSTS = [
   // Mirror video endpoint (redirects to TikTok CDN)
