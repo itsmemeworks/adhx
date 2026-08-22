@@ -946,6 +946,11 @@ export function TheaterShell({
       })
       if (res.ok) {
         setTriageSavedKeys((prev) => new Set(prev).add(key))
+        // Did we manage to hand the grid a ready-made row? If not (no
+        // bookmarkId, a failed lookup, a row the feed didn't return) the grid
+        // still has to learn about the post somehow, so fall back to the
+        // refetch below rather than leaving it invisible until a reload.
+        let placedInGrid = false
         // Pull the freshly saved bookmark into the OPEN triage queue too, so
         // switching to the Collection tab shows it without a page reload
         // (the queue is a snapshot taken when the overlay opened).
@@ -974,7 +979,10 @@ export function TheaterShell({
                 // fire `tweet-added`, whose only listener refetches the WHOLE
                 // feed — resetting the grid to page 1 and losing however far
                 // the viewer had scrolled, for one added post (state review).
-                onCollectionAddedRef.current?.(saved)
+                if (onCollectionAddedRef.current) {
+                  onCollectionAddedRef.current(saved)
+                  placedInGrid = true
+                }
               }
             }
           } catch {
@@ -983,7 +991,7 @@ export function TheaterShell({
         }
         // Either way the Header's counts must move — this path only ever told
         // the local Save button.
-        notifyCollectionChanged({ refetchFeed: !onCollectionAddedRef.current })
+        notifyCollectionChanged({ refetchFeed: !placedInGrid })
       }
       return res.ok
     } catch {
