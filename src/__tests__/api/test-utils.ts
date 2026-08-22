@@ -75,6 +75,8 @@ export function createTestDatabase(): BetterSQLite3Database<typeof schema> & { c
       platform TEXT NOT NULL DEFAULT 'twitter',
       bookmark_id TEXT NOT NULL,
       tag TEXT NOT NULL,
+      -- When the post was added to THIS tag (what a playlist shows/orders by).
+      created_at TEXT,
       PRIMARY KEY (user_id, platform, bookmark_id, tag)
     );
     CREATE INDEX bookmark_tags_user_id_idx ON bookmark_tags(user_id);

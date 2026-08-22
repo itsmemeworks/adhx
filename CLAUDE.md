@@ -665,6 +665,16 @@ This avoids prop drilling and keeps keyboard logic centralized while allowing di
 
 **Terminology (owner decision):** a **playlist** is a single shared tag — the thing at `/t/{username}/{tag}`, the thing `/leaderboard` ranks, the thing you clone with **Save playlist**. It used to be called a "tagged collection", which meant nothing to users. A user's own pile of saved posts is still their **collection** (the theater's **My Collection** tab), and the grid that browses it is the **Library**. Keep those three words straight in UI copy: playlist = one shared tag, collection = your saves, library = the grid over them. URLs, API paths, DB columns (`collection_events`, `tag_shares`) and the `/api/collections/*` endpoints deliberately still say "collection" — they're indexed, in sitemaps, and public contracts.
 
+**Which timestamp a surface shows.** Three different questions, three different answers — do not unify them:
+
+| Surface                     | Time shown                                      | Source                                                                                    |
+| --------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Live / trending (community) | when the post first entered ADHX, by anyone     | `getTrendingItems`' `addedAt` = MIN(earliest saver's `processedAt`, first activity event) |
+| My Collection, `/library`   | when **this** user saved it                     | their own `bookmarks.processed_at`                                                        |
+| A playlist (`/t/{u}/{tag}`) | when the curator added the post **to that tag** | `bookmark_tags.created_at`                                                                |
+
+Owner rule: on a user-owned surface the user's own timestamp always wins, even when the post entered ADHX earlier via somebody else — "users get control over when they are creating things that are related to them". `bookmark_tags.created_at` exists precisely because "saved it" and "curated it into this playlist" are different events, often months apart; it's nullable (added to an existing table) and `migrate.ts` backfills old rows from the bookmark's save time, which is what readers also fall back to. Never the source platform's publish date, anywhere.
+
 **Routes:**
 
 | Route         | What renders                                                                                                                                                            |

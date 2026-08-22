@@ -102,6 +102,8 @@ function createTestDatabase() {
       platform TEXT NOT NULL DEFAULT 'twitter',
       bookmark_id TEXT NOT NULL,
       tag TEXT NOT NULL,
+      -- When the post was added to THIS tag (what a playlist shows/orders by).
+      created_at TEXT,
       PRIMARY KEY (user_id, platform, bookmark_id, tag)
     );
 

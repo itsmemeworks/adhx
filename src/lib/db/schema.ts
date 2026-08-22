@@ -105,6 +105,19 @@ export const bookmarkTags = sqliteTable(
     platform: text('platform').notNull().default('twitter'),
     bookmarkId: text('bookmark_id').notNull(),
     tag: text('tag').notNull(),
+    /**
+     * When this post was added to THIS tag — which is what a playlist shows and
+     * orders by, and is NOT `bookmarks.processedAt` (when the curator first
+     * saved the post, possibly long before they curated it into anything).
+     * Owner: "when a user creates a tag and then adds a post into the tag, we
+     * should use the time at which they added that post to the tag… users get
+     * control over when they are creating things that are related to them."
+     *
+     * Nullable because the column was added to an existing table; `migrate.ts`
+     * backfills old rows from the bookmark's own save time, the closest thing
+     * that history has. Readers fall back the same way.
+     */
+    createdAt: text('created_at'),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.userId, table.platform, table.bookmarkId, table.tag] }),

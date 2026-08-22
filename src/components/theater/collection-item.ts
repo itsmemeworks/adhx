@@ -98,9 +98,17 @@ export function feedItemToTheaterItem(item: FeedItem): TheaterItem {
     thumbnailUrl: heroThumbnail(item),
     url: item.tweetUrl,
     createdAt: item.createdAt || item.processedAt,
-    // Stable display time (owner decision — chips render addedAt, never
-    // createdAt): when the post was saved to ADHX, never the source
-    // platform's own publish date.
+    // THIS user's own save time — `bookmarks.processedAt` for their row, not
+    // the community-wide "first added to ADHX" MIN the live pulse shows.
+    //
+    // Owner rule: "if somebody adds something to their own collection, we
+    // should override the time if it was added to ADHX before this user saved
+    // it. The time we want to store for that user for their collection is the
+    // time that they saved that to their collection." So on a user-owned
+    // surface the user's own timestamp always wins; the global MIN is for the
+    // community feed only. Don't "unify" these — they answer different
+    // questions. (And never the source platform's publish date, for any
+    // platform.)
     addedAt: item.processedAt || null,
     contentType,
     textLinks: toTextLinks(item.links),

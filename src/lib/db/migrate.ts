@@ -154,6 +154,30 @@ try {
 } catch {
   // Column already exists — nothing to do.
 }
+// bookmark_tags.created_at — when a post was added to a TAG, which is what a
+// playlist displays and orders by. Distinct from bookmarks.processed_at (when
+// the curator first saved the post, possibly long before curating it), so it
+// needed its own column. Guarded for re-runs (no IF NOT EXISTS), then existing
+// rows are backfilled from the bookmark's own save time — the closest thing
+// history has — so old playlists don't all read "just now".
+try {
+  db.exec('ALTER TABLE bookmark_tags ADD COLUMN created_at text')
+  console.log('[migrate] Added bookmark_tags.created_at')
+  const backfilled = db
+    .prepare(
+      `UPDATE bookmark_tags SET created_at = (
+       SELECT b.processed_at FROM bookmarks b
+        WHERE b.user_id = bookmark_tags.user_id
+          AND b.platform = bookmark_tags.platform
+          AND b.id = bookmark_tags.bookmark_id
+     ) WHERE created_at IS NULL`,
+    )
+    .run()
+  console.log(`[migrate] Backfilled ${backfilled.changes} bookmark_tags.created_at`)
+} catch {
+  // Column already exists — nothing to do.
+}
+
 try {
   db.exec('ALTER TABLE activity ADD COLUMN quote_json text')
   console.log('[migrate] Added activity.quote_json')

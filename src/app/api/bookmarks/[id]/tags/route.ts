@@ -77,6 +77,9 @@ export const POST = withAuth(
         platform,
         bookmarkId: id,
         tag: cleanTag,
+        // A playlist shows when a post joined THAT tag, not when the post was
+        // first saved — see bookmarkTags.createdAt.
+        createdAt: new Date().toISOString(),
       })
 
       const allTags = await db

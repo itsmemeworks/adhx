@@ -67,7 +67,13 @@ export const POST = withAuth(
       // isn't unique across platforms (composite key is userId+platform+bookmarkId+tag), so
       // every lookup below must match on the pair, not just the id.
       const sourceTaggedBookmarks = await db
-        .select({ bookmarkId: bookmarkTags.bookmarkId, platform: bookmarkTags.platform })
+        .select({
+          bookmarkId: bookmarkTags.bookmarkId,
+          platform: bookmarkTags.platform,
+          // The curator's own "added to this tag" time — used only to preserve
+          // their curation ORDER in the clone (see the stamping below).
+          taggedAt: bookmarkTags.createdAt,
+        })
         .from(bookmarkTags)
         .where(and(eq(bookmarkTags.userId, sourceUserId), eq(bookmarkTags.tag, tagName)))
 
@@ -90,11 +96,15 @@ export const POST = withAuth(
         sourceTaggedBookmarks.map((t) => pairKey(t.platform, t.bookmarkId)),
       )
       // Dedup (platform, bookmarkId) pairs for the tag-insert step below.
-      const pairsToTagMap = new Map<string, { platform: string; bookmarkId: string }>()
+      const pairsToTagMap = new Map<
+        string,
+        { platform: string; bookmarkId: string; taggedAt: string | null }
+      >()
       for (const t of sourceTaggedBookmarks) {
         pairsToTagMap.set(pairKey(t.platform, t.bookmarkId), {
           platform: t.platform,
           bookmarkId: t.bookmarkId,
+          taggedAt: t.taggedAt ?? null,
         })
       }
       const pairsToTag = [...pairsToTagMap.values()]
@@ -166,6 +176,11 @@ export const POST = withAuth(
       // preserved by stamping in that order and counting backwards from the
       // clone (see addedAtForIndex).
       const clonedAtMs = Date.now()
+      // Newest-added-to-the-source-tag first; rows predating the created_at
+      // column sort last, which is the best history can say about them.
+      const orderedPairsToTag = [...pairsToTag].sort((a, b) =>
+        (b.taggedAt ?? '').localeCompare(a.taggedAt ?? ''),
+      )
       const orderedNewBookmarks = [...newBookmarks].sort((a, b) =>
         (b.processedAt ?? '').localeCompare(a.processedAt ?? ''),
       )
@@ -216,14 +231,19 @@ export const POST = withAuth(
             .run()
         }
 
-        // Add tag to all cloned bookmarks (both new and already-owned)
+        // Add tag to all cloned bookmarks (both new and already-owned). The
+        // cloner added every one of them to their tag right now, so the times
+        // count backwards from this moment in the curator's own order — same
+        // trick as the bookmark stamps above, so the cloned playlist reads the
+        // same way round as the one it came from.
         db.insert(bookmarkTags)
           .values(
-            pairsToTag.map((pair) => ({
+            orderedPairsToTag.map((pair, i) => ({
               userId: currentUserId,
               platform: pair.platform,
               bookmarkId: pair.bookmarkId,
               tag: tagName,
+              createdAt: addedAtForIndex(clonedAtMs, i),
             })),
           )
           .onConflictDoNothing()

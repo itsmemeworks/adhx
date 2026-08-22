@@ -142,11 +142,14 @@ export const POST = withAuth(
           })
         }
 
-        // Add tag
+        // Add tag. Membership is timestamped at clone time, counting backwards
+        // in the same order as the bookmark stamps above so the cloned playlist
+        // reads the same way round as the source.
         tagsToInsert.push({
           userId,
           bookmarkId: bookmark.id,
           tag: tagName,
+          createdAt: now,
         })
       }
 

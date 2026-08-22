@@ -153,6 +153,9 @@ export const PATCH = withAuth(
             .run()
 
           if (newTags.length > 0) {
+            // Tag membership is timestamped when it's created — a playlist
+            // orders by when a post joined the tag, not when it was saved.
+            const taggedAt = new Date().toISOString()
             db.insert(bookmarkTags)
               .values(
                 newTags.map((tag: string) => ({
@@ -160,6 +163,7 @@ export const PATCH = withAuth(
                   platform,
                   bookmarkId: id,
                   tag,
+                  createdAt: taggedAt,
                 })),
               )
               .run()

@@ -4,6 +4,16 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-22 — User-specific timings: a playlist is timed by when you tagged the post
+
+- **Owner**: "If somebody adds something to their own collection, we should override the time if it was added to ADHX before this user saved it… When a user creates a tag and then adds a post into the tag, we should use the time at which they added that post to the tag. Therefore the users get control over when they are creating things that are related to them."
+- **Collection half was already right**: `feedItemToTheaterItem` maps `addedAt` from THIS user's `bookmarks.processedAt`, so a post someone else linked months earlier still shows the viewer's own save time in their collection and library. Three existing tests already lock it; the rule is now spelled out in the code comment so nobody "unifies" it with the community MIN later.
+- **Playlist half needed a new column**: `bookmark_tags` had NO timestamp at all, so a playlist was timed by `bookmarks.processed_at` — when the curator first saved the post, which can be months before they curated it into anything. Added **`bookmark_tags.created_at`** (nullable; guarded `ALTER TABLE` + a backfill from the bookmark's own save time in `migrate.ts`, since that's the closest thing history has). All four write sites stamp it: the tag POST, the bulk tag replace, and both clone endpoints — clones stamp backwards from the clone moment in the SOURCE's tag order (`addedAtForIndex`, same trick as the bookmark stamps) so a cloned playlist reads the same way round as the one it came from.
+- **Read side** (`getPublicTagCollection`): `addedAt` and the ORDER both come from `bookmark_tags.created_at`, falling back to the bookmark's save time for pre-column rows. The sort happens after matching rather than in SQL because the key lives in the other table.
+- **Three surfaces, three timestamps, deliberately not unified** — documented as a table in CLAUDE.md: community feed = global first-added MIN; My Collection / `/library` = this user's save; playlist = when the curator tagged it.
+- **Gotcha, four times over**: `bookmark_tags` DDL is duplicated across FOUR in-memory test harnesses (`api/setup.ts`, `api/test-utils.ts`, `db/test-db.ts`, and inline in `api/bookmarks-id.test.ts`). Missing any one produces `SqliteError: table bookmark_tags has no column named created_at` in unrelated suites. CLAUDE.md's warning about the activity-table DDL applies here too.
+- **State**: 2325 tests / 185 files green, typecheck + prettier clean. New tests in `tags-query.test.ts` cover tag-time display, tag-time ordering (seeded inverted against save order so ordering by the old field would fail), and the pre-column fallback.
+
 ## 2026-08-22 — Up-next: sort by the timestamp we DISPLAY, and label the three groups
 
 - **Owner report** (staging, screenshot): "look at these time stamps in the playlist. They're not right. They're out of order. I'm saying two hours that are after one that says one week." Plus: the panel said "You're all caught up — Top today" with unwatched rows still listed. Plus a design ask: "do we need to be clear about what's been seen, what hasn't been seen yet, and then new things that have come in as we've been watching?"
