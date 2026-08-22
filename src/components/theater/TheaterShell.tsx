@@ -776,6 +776,22 @@ export function TheaterShell({
   }, [clearTriageUndoTimer, onTriageResolved])
 
   // Done: mark read and advance.
+  /**
+   * Take a post OUT of the collection queue (owner: "when I click Archive on a
+   * post from my collection view it should just remove it from the list… it's
+   * moving to the next item but it should completely remove it and update the
+   * playlist"). Archive and Delete both resolve a post's fate, so both drop it
+   * from the list rather than leaving it sitting there behind the cursor —
+   * which also keeps the queue count honest.
+   *
+   * The index deliberately does NOT advance afterwards: removing element `idx`
+   * shifts the next post INTO `idx`, so staying put IS advancing. Later is
+   * different and still just advances — "show me this again" means keep it.
+   */
+  const removeFromTriageQueue = useCallback((idx: number) => {
+    setTriageQueue((prev) => (idx < 0 || idx >= prev.length ? prev : prev.toSpliced(idx, 1)))
+  }, [])
+
   const triageDone = useCallback(() => {
     if (!triageCurrentFeedItem) return
     recordTriageStreak()
@@ -789,7 +805,7 @@ export function TheaterShell({
     const action: TriageUndoAction = { type: 'archive', item, index: idx }
     setTriageUndo(action)
     armUndoDismiss(action)
-    setTriageIndex(triageAdvance)
+    removeFromTriageQueue(idx)
   }, [
     triageCurrentFeedItem,
     triageIndex,
@@ -797,6 +813,7 @@ export function TheaterShell({
     onTriageResolved,
     commitPendingTriageDelete,
     armUndoDismiss,
+    removeFromTriageQueue,
   ])
 
   // Later: defer — advance without changing read state.
@@ -838,7 +855,7 @@ export function TheaterShell({
     }, 5000)
     triageUndoTimerRef.current = timer
     setTriageUndo({ type: 'delete', item, index: triageIndex })
-    setTriageIndex(triageAdvance)
+    removeFromTriageQueue(triageIndex)
   }, [
     triageCurrentFeedItem,
     triageIndex,
@@ -861,6 +878,19 @@ export function TheaterShell({
       onTriageRestored?.(triageUndo.item)
     } else if (triageUndo.type === 'delete') {
       clearTriageUndoTimer()
+    }
+    // Both actions REMOVED the post from the queue, so undo re-inserts it at
+    // the position it held — otherwise "undo" would restore its read state
+    // server-side while leaving it missing from the list.
+    if (triageUndo.type === 'archive' || triageUndo.type === 'delete') {
+      const { item, index } = triageUndo
+      setTriageQueue((prev) =>
+        prev.some(
+          (f) => f.id === item.id && (f.platform ?? 'twitter') === (item.platform ?? 'twitter'),
+        )
+          ? prev
+          : prev.toSpliced(Math.min(Math.max(index, 0), prev.length), 0, item),
+      )
     }
     setTriageIndex(triageUndo.index)
     setTriageUndo(null)
