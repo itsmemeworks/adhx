@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { PREVIEW_YT } from './constants'
 import { caption, expectTheaterReady } from './helpers'
-import { progressFillPercent, stubYouTubeEmbed } from './yt-embed-stub'
+import { isYoutubeNocookieFrameUrl, progressFillPercent, stubYouTubeEmbed } from './yt-embed-stub'
 
 test.describe('YouTube clay progress bar', () => {
   test('fills on autoplay without a click inside the iframe', async ({ page }) => {
@@ -29,7 +29,7 @@ test.describe('YouTube clay progress bar', () => {
     await page.waitForTimeout(1_500)
     expect(Math.abs((await progressFillPercent(page)) - pausedAt)).toBeLessThan(2)
 
-    const ytFrame = page.frames().find((f) => f.url().includes('youtube-nocookie.com'))
+    const ytFrame = page.frames().find((f) => isYoutubeNocookieFrameUrl(f.url()))
     if (!ytFrame) throw new Error('youtube-nocookie iframe never loaded')
     await ytFrame.evaluate(() => {
       document.dispatchEvent(new MouseEvent('click', { bubbles: true }))

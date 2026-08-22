@@ -60,6 +60,16 @@ export function fakeYtPlayerHtml(durationSec: number): string {
 </body></html>`
 }
 
+/** Exact host match — never `.includes()`. CodeQL js/incomplete-url-substring-sanitization. */
+export function isYoutubeNocookieFrameUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname
+    return host === 'www.youtube-nocookie.com' || host === 'youtube-nocookie.com'
+  } catch {
+    return false
+  }
+}
+
 export async function stubYouTubeEmbed(page: Page, durationSec = 20): Promise<void> {
   await page.route('https://www.youtube-nocookie.com/embed/**', async (route) => {
     await route.fulfill({
