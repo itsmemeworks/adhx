@@ -46,7 +46,8 @@ interface Identities {
 
 interface Stats {
   total: number
-  unread: number
+  /** Posts NOT archived — what the collection actively holds. */
+  active: number
 }
 
 interface CooldownStatus {
@@ -80,7 +81,7 @@ export function Header() {
   // Whether this account has a live X connection — email-only accounts have
   // no bookmarks to sync, so sync affordances are hidden entirely for them.
   const [xConnected, setXConnected] = useState(false)
-  const [stats, setStats] = useState<Stats>({ total: 0, unread: 0 })
+  const [stats, setStats] = useState<Stats>({ total: 0, active: 0 })
   const [cooldown, setCooldown] = useState<CooldownStatus>({
     canSync: true,
     cooldownRemaining: 0,
@@ -280,7 +281,7 @@ export function Header() {
     try {
       const response = await fetch('/api/stats')
       const data = await response.json()
-      setStats({ total: data.total || 0, unread: data.unread || 0 })
+      setStats({ total: data.total || 0, active: data.active || 0 })
     } catch (error) {
       console.error('Failed to fetch stats:', error)
     }
@@ -555,7 +556,7 @@ export function Header() {
                             <b className="font-bold text-ink">{stats.total}</b> saved
                           </span>
                           <span>
-                            <b className="font-bold text-clay">{stats.unread}</b> unread
+                            <b className="font-bold text-clay">{stats.active}</b> unread
                           </span>
                         </div>
                       </div>

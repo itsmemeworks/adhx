@@ -208,10 +208,10 @@ describe('API: /api/feed', () => {
         .values([createTestBookmark(USER_A, 'tweet-1'), createTestBookmark(USER_B, 'tweet-1')])
 
       // Mark as read for User B only
-      await testInstance.db.insert(schema.readStatus).values({
+      await testInstance.db.insert(schema.archivedPosts).values({
         userId: USER_B,
         bookmarkId: 'tweet-1',
-        readAt: new Date().toISOString(),
+        archivedAt: new Date().toISOString(),
       })
 
       const { GET } = await import('@/app/api/feed/route')
@@ -221,7 +221,7 @@ describe('API: /api/feed', () => {
       const data = await response.json()
 
       // User A's bookmark should show as unread
-      expect(data.items[0].isRead).toBe(false)
+      expect(data.items[0].isArchived).toBe(false)
     })
   })
 
@@ -231,10 +231,10 @@ describe('API: /api/feed', () => {
         .insert(schema.bookmarks)
         .values([createTestBookmark(USER_A, 'tweet-1'), createTestBookmark(USER_A, 'tweet-2')])
       // Mark tweet-1 as read — the default feed (hideArchived) would hide it.
-      await testInstance.db.insert(schema.readStatus).values({
+      await testInstance.db.insert(schema.archivedPosts).values({
         userId: USER_A,
         bookmarkId: 'tweet-1',
-        readAt: new Date().toISOString(),
+        archivedAt: new Date().toISOString(),
       })
 
       const { GET } = await import('@/app/api/feed/route')
@@ -245,7 +245,7 @@ describe('API: /api/feed', () => {
       const data = await response.json()
       expect(data.items).toHaveLength(1)
       expect(data.items[0].id).toBe('tweet-1')
-      expect(data.items[0].isRead).toBe(true)
+      expect(data.items[0].isArchived).toBe(true)
     })
 
     it('never returns another user’s bookmark by id', async () => {
@@ -480,10 +480,10 @@ describe('API: /api/feed', () => {
         ])
 
       // Mark tweet-1 as read
-      await testInstance.db.insert(schema.readStatus).values({
+      await testInstance.db.insert(schema.archivedPosts).values({
         userId: USER_A,
         bookmarkId: 'tweet-1',
-        readAt: new Date().toISOString(),
+        archivedAt: new Date().toISOString(),
       })
     })
 
@@ -495,7 +495,7 @@ describe('API: /api/feed', () => {
       const data = await response.json()
 
       expect(data.items).toHaveLength(2)
-      expect(data.items.every((i: { isRead: boolean }) => !i.isRead)).toBe(true)
+      expect(data.items.every((i: { isArchived: boolean }) => !i.isArchived)).toBe(true)
     })
 
     it('returns all items when hideArchived is false', async () => {
@@ -519,10 +519,10 @@ describe('API: /api/feed', () => {
           createTestBookmark(USER_A, 'tweet-3'),
         ])
 
-      await testInstance.db.insert(schema.readStatus).values({
+      await testInstance.db.insert(schema.archivedPosts).values({
         userId: USER_A,
         bookmarkId: 'tweet-1',
-        readAt: new Date().toISOString(),
+        archivedAt: new Date().toISOString(),
       })
     })
 
@@ -534,7 +534,7 @@ describe('API: /api/feed', () => {
       const data = await response.json()
 
       expect(data.stats.total).toBe(3)
-      expect(data.stats.unread).toBe(2)
+      expect(data.stats.active).toBe(2)
     })
   })
 

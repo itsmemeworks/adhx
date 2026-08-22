@@ -39,7 +39,7 @@ describe('Feed Types', () => {
       createdAt: '2024-01-15T12:00:00Z',
       processedAt: '2024-01-15T12:01:00Z',
       category: 'tech',
-      isRead: false,
+      isArchived: false,
       isQuote: false,
       isRetweet: false,
       media: null,
@@ -54,7 +54,7 @@ describe('Feed Types', () => {
       expect(feedItem.author).toBe('testuser')
       expect(feedItem.authorName).toBe('Test User')
       expect(feedItem.text).toBe('This is a test tweet')
-      expect(feedItem.isRead).toBe(false)
+      expect(feedItem.isArchived).toBe(false)
       expect(feedItem.tags).toEqual(['test', 'vitest'])
     })
 

@@ -55,7 +55,7 @@ const baseProps = {
   lastSyncAt: null as string | null,
   sortField: 'processedAt' as const,
   hideArchived: false,
-  stats: { total: 1, unread: 1 },
+  stats: { total: 1, active: 1 },
   onExpand: vi.fn(),
   onShowAll: vi.fn(),
 }

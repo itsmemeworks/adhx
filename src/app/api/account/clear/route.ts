@@ -5,7 +5,7 @@ import {
   bookmarkLinks,
   bookmarkTags,
   bookmarkMedia,
-  readStatus,
+  archivedPosts,
   collections,
   collectionTweets,
   syncLogs,
@@ -36,7 +36,7 @@ export const POST = withAuth(async (_req, userId) => {
     runInTransaction(() => {
       db.delete(collectionTweets).where(eq(collectionTweets.userId, userId)).run()
       db.delete(collections).where(eq(collections.userId, userId)).run()
-      db.delete(readStatus).where(eq(readStatus.userId, userId)).run()
+      db.delete(archivedPosts).where(eq(archivedPosts.userId, userId)).run()
       db.delete(bookmarkMedia).where(eq(bookmarkMedia.userId, userId)).run()
       db.delete(bookmarkTags).where(eq(bookmarkTags.userId, userId)).run()
       db.delete(bookmarkLinks).where(eq(bookmarkLinks.userId, userId)).run()

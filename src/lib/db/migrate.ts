@@ -7,6 +7,7 @@
 import Database from 'better-sqlite3'
 import path from 'path'
 import fs from 'fs'
+import { renameReadStatusToArchivedPosts } from './rename-read-status'
 
 const DB_PATH = process.env.DATABASE_PATH || './data/adhdone.db'
 const MIGRATIONS_PATH = process.env.MIGRATIONS_PATH || './drizzle'
@@ -97,6 +98,20 @@ db.exec(`
 
 console.log('[migrate] Dropped unused bookmarks_fts table and sync triggers')
 
+// read_status → archived_posts (see rename-read-status.ts for the why and the
+// idempotency guard). MUST run BEFORE the index block below, which references
+// the new names: on a fresh database the Drizzle SQL still creates
+// `read_status`, so this converts it in the same boot.
+try {
+  if (renameReadStatusToArchivedPosts(db)) {
+    console.log('[migrate] Renamed read_status → archived_posts (read_at → archived_at)')
+  }
+} catch (error) {
+  console.log('[migrate] FAILED renaming read_status → archived_posts', error)
+  db.close()
+  process.exit(1)
+}
+
 // Create indexes
 db.exec(`
   CREATE INDEX IF NOT EXISTS idx_bookmarks_user_id ON bookmarks(user_id);
@@ -113,7 +128,8 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_media_bookmark ON bookmark_media(bookmark_id);
   CREATE INDEX IF NOT EXISTS idx_media_status ON bookmark_media(download_status);
 
-  CREATE INDEX IF NOT EXISTS idx_read_status_read_at ON read_status(read_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_archived_posts_archived_at ON archived_posts(archived_at DESC);
+  CREATE INDEX IF NOT EXISTS archived_posts_user_id_idx ON archived_posts(user_id);
   CREATE INDEX IF NOT EXISTS idx_collection_tweets_bookmark ON collection_tweets(bookmark_id);
 
   CREATE INDEX IF NOT EXISTS idx_sync_logs_user_id ON sync_logs(user_id);

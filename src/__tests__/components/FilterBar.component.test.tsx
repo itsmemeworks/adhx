@@ -53,7 +53,7 @@ const defaultProps = {
     { tag: 'personal', count: 3 },
     { tag: 'important', count: 2 },
   ] as TagItem[],
-  stats: { total: 100, unread: 50 },
+  stats: { total: 100, active: 50 },
 }
 
 describe('FilterBar Component', () => {

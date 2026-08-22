@@ -147,8 +147,8 @@ export const metrics = {
 
   // Bookmark interactions
   bookmarkViewed: () => metricCount('bookmark.viewed'),
-  bookmarkReadToggled: (isRead: boolean) =>
-    metricCount('bookmark.read_toggled', 1, { new_state: isRead ? 'read' : 'unread' }),
+  bookmarkReadToggled: (isArchived: boolean) =>
+    metricCount('bookmark.read_toggled', 1, { new_state: isArchived ? 'read' : 'unread' }),
   bookmarkTagged: (tagCount: number) => metricCount('bookmark.tagged', 1, { tag_count: tagCount }),
   bookmarkAdded: (source: 'manual' | 'url_prefix' | 'pwa_share') =>
     metricCount('bookmark.added', 1, { source }),

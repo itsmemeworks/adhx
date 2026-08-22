@@ -8,7 +8,7 @@
  * The Live ⇄ My Collection switch is a pair of ROUTES rather than local state:
  *
  *   `/`            Live — the community's last 24 hours (the default)
- *   `/collection`  My Collection — your own unread queue, as a playlist
+ *   `/collection`  My Collection — your own active queue, as a playlist
  *   `/library`     the grid (filters, search, views) — `AuthedHome`
  *
  * Making each side a real URL means it's linkable, back/forward works, and a
@@ -52,7 +52,7 @@ export default function AuthedTheater({ seed, tab }: AuthedTheaterProps) {
   useEffect(() => {
     if (!needsCollection) return
     let cancelled = false
-    // Same query the grid's default view uses: unread first, newest-added
+    // Same query the grid's default view uses: active first, newest-added
     // first (`sort=added` is the API default — see /api/feed).
     const params = new URLSearchParams({ filter: 'all', hideArchived: 'true', limit: '50' })
     fetch(`/api/feed?${params}`)

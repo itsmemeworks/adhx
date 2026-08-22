@@ -133,7 +133,7 @@ export function fxTwitterToFeedItem(response: FxTwitterResponse): FeedItem {
     createdAt: tweet.created_at,
     processedAt: new Date().toISOString(),
     category,
-    isRead: false,
+    isArchived: false,
     isQuote: !!tweet.quote,
     quoteContext,
     quotedTweetId: tweet.quote?.id,

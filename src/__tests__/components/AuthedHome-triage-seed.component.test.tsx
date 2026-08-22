@@ -93,8 +93,8 @@ beforeEach(() => {
     if (url.startsWith('/api/feed')) {
       feedRequests.push(url)
       return jsonResponse({
-        items: [{ id: 't1', platform: 'twitter', isRead: false }],
-        stats: { total: 1, unread: 1 },
+        items: [{ id: 't1', platform: 'twitter', isArchived: false }],
+        stats: { total: 1, active: 1 },
         pagination: { page: 1, totalPages: 1 },
       })
     }

@@ -1130,7 +1130,7 @@ function SettingsPage() {
               <p className="text-ink-2">This will permanently delete:</p>
               <ul className="list-disc list-inside text-sm text-ink-2 space-y-1 ml-2">
                 <li>All synced bookmarks</li>
-                <li>Read/unread status</li>
+                <li>Archive status</li>
                 <li>Sync history</li>
                 <li>Collections and preferences</li>
               </ul>

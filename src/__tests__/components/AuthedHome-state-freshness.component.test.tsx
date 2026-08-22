@@ -81,7 +81,7 @@ function feedItem(id: string, extra: Partial<FeedItem> = {}): FeedItem {
     tweetUrl: `https://x.com/alice/status/${id}`,
     createdAt: '2026-08-18T00:00:00Z',
     processedAt: '2026-08-18T00:00:00Z',
-    isRead: false,
+    isArchived: false,
     tags: [],
     media: [],
     links: [],
@@ -112,7 +112,7 @@ beforeEach(() => {
       const items = feedPages.length > 1 ? (feedPages.shift() as FeedItem[]) : feedPages[0]
       return jsonResponse({
         items,
-        stats: { total: items.length, unread: items.length },
+        stats: { total: items.length, active: items.length },
         pagination: { page: 1, totalPages: 1 },
       })
     }

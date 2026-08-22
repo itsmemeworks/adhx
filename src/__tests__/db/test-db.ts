@@ -96,11 +96,11 @@ export function createTestDb(): BetterSQLite3Database<typeof schema> & { close: 
     CREATE INDEX bookmark_media_user_bookmark_idx ON bookmark_media(user_id, platform, bookmark_id);
 
     -- Read status with composite PK (userId, platform, bookmarkId)
-    CREATE TABLE read_status (
+    CREATE TABLE archived_posts (
       user_id TEXT NOT NULL,
       platform TEXT NOT NULL DEFAULT 'twitter',
       bookmark_id TEXT NOT NULL,
-      read_at TEXT NOT NULL,
+      archived_at TEXT NOT NULL,
       PRIMARY KEY (user_id, platform, bookmark_id)
     );
 

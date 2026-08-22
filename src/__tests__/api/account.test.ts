@@ -54,8 +54,8 @@ async function seedUserData(userId: string) {
     .insert(schema.bookmarkLinks)
     .values([{ userId, bookmarkId: 't1', expandedUrl: 'https://example.com' }])
   await testInstance.db
-    .insert(schema.readStatus)
-    .values([{ userId, bookmarkId: 't1', readAt: '2024-01-01T10:00:00Z' }])
+    .insert(schema.archivedPosts)
+    .values([{ userId, bookmarkId: 't1', archivedAt: '2024-01-01T10:00:00Z' }])
   await testInstance.db
     .insert(schema.userPreferences)
     .values([{ userId, key: 'theme', value: 'dark' }])
@@ -159,10 +159,10 @@ describe('API: /api/account/clear', () => {
       .select()
       .from(schema.bookmarkLinks)
       .where(eq(schema.bookmarkLinks.userId, USER_A))
-    const readStatuses = await testInstance.db
+    const archivedPostses = await testInstance.db
       .select()
-      .from(schema.readStatus)
-      .where(eq(schema.readStatus.userId, USER_A))
+      .from(schema.archivedPosts)
+      .where(eq(schema.archivedPosts.userId, USER_A))
     const prefs = await testInstance.db
       .select()
       .from(schema.userPreferences)
@@ -180,7 +180,7 @@ describe('API: /api/account/clear', () => {
     expect(tags).toHaveLength(0)
     expect(media).toHaveLength(0)
     expect(links).toHaveLength(0)
-    expect(readStatuses).toHaveLength(0)
+    expect(archivedPostses).toHaveLength(0)
     expect(prefs).toHaveLength(0)
     expect(syncStates).toHaveLength(0)
     expect(syncLogs).toHaveLength(0)
@@ -210,10 +210,10 @@ describe('API: /api/account/clear', () => {
       .select()
       .from(schema.bookmarkMedia)
       .where(eq(schema.bookmarkMedia.userId, USER_B))
-    const readStatuses = await testInstance.db
+    const archivedPostses = await testInstance.db
       .select()
-      .from(schema.readStatus)
-      .where(eq(schema.readStatus.userId, USER_B))
+      .from(schema.archivedPosts)
+      .where(eq(schema.archivedPosts.userId, USER_B))
     const oauth = await testInstance.db
       .select()
       .from(schema.oauthTokens)
@@ -222,7 +222,7 @@ describe('API: /api/account/clear', () => {
     expect(bookmarks).toHaveLength(2)
     expect(tags).toHaveLength(1)
     expect(media).toHaveLength(1)
-    expect(readStatuses).toHaveLength(1)
+    expect(archivedPostses).toHaveLength(1)
     expect(oauth).toHaveLength(1)
   })
 })

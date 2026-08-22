@@ -58,7 +58,7 @@ export function FeedListRow({
 }) {
   const type = feedItemType(item)
   const thumb = feedItemThumb(item)
-  const unread = !item.isRead
+  const unread = !item.isArchived
   const time = formatCompactRelativeTime(item.processedAt)
   const duration = formatDurationMs(item.media?.[0]?.durationMs)
   const TypeIcon = TYPE_ICON[type]

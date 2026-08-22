@@ -138,7 +138,7 @@ beforeEach(() => {
       feedRequests.push(url)
       return jsonResponse({
         items: [],
-        stats: { total: 0, unread: 0 },
+        stats: { total: 0, active: 0 },
         pagination: { page: 1, totalPages: 1 },
       })
     }
@@ -154,7 +154,7 @@ beforeEach(() => {
       })
     }
     if (url.startsWith('/api/tags')) return jsonResponse({ tags: [] })
-    if (url.startsWith('/api/stats')) return jsonResponse({ total: 0, unread: 0 })
+    if (url.startsWith('/api/stats')) return jsonResponse({ total: 0, active: 0 })
     if (url.startsWith('/api/sync/cooldown')) {
       return jsonResponse({ canSync: true, cooldownRemaining: 0, lastSyncAt: null })
     }

@@ -25,7 +25,7 @@ const base: FeedItem = {
   tweetUrl: 'https://x.com/jack/status/123',
   createdAt: '2026-06-08T00:00:00Z',
   processedAt: '2026-06-08T00:00:00Z',
-  isRead: false,
+  isArchived: false,
   media: null,
   links: null,
   tags: [],

@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db, runInTransaction } from '@/lib/db'
-import { bookmarks, bookmarkLinks, bookmarkTags, bookmarkMedia, readStatus } from '@/lib/db/schema'
+import {
+  bookmarks,
+  bookmarkLinks,
+  bookmarkTags,
+  bookmarkMedia,
+  archivedPosts,
+} from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { resolveMediaUrl, getShareableUrl, getThumbnailUrl } from '@/lib/media/fxembed'
 import { expandUrls } from '@/lib/utils/url-expander'
@@ -26,7 +32,7 @@ export const GET = withAuth(
       }
 
       // Get related data (filtered by composite key: userId + platform + bookmarkId)
-      const [links, tags, media, readStatusRecord] = await Promise.all([
+      const [links, tags, media, archivedPostsRecord] = await Promise.all([
         db
           .select()
           .from(bookmarkLinks)
@@ -59,12 +65,12 @@ export const GET = withAuth(
           ),
         db
           .select()
-          .from(readStatus)
+          .from(archivedPosts)
           .where(
             and(
-              eq(readStatus.userId, userId),
-              eq(readStatus.platform, platform),
-              eq(readStatus.bookmarkId, id),
+              eq(archivedPosts.userId, userId),
+              eq(archivedPosts.platform, platform),
+              eq(archivedPosts.bookmarkId, id),
             ),
           )
           .limit(1),
@@ -101,8 +107,8 @@ export const GET = withAuth(
         links,
         tags: tags.map((t) => t.tag),
         media: mediaWithUrls,
-        isRead: readStatusRecord.length > 0,
-        readAt: readStatusRecord[0]?.readAt || null,
+        isArchived: archivedPostsRecord.length > 0,
+        archivedAt: archivedPostsRecord[0]?.archivedAt || null,
       })
     } catch (error) {
       console.error('Error fetching bookmark:', error)
@@ -217,12 +223,12 @@ export const DELETE = withAuth(
             ),
           )
           .run()
-        db.delete(readStatus)
+        db.delete(archivedPosts)
           .where(
             and(
-              eq(readStatus.userId, userId),
-              eq(readStatus.platform, platform),
-              eq(readStatus.bookmarkId, id),
+              eq(archivedPosts.userId, userId),
+              eq(archivedPosts.platform, platform),
+              eq(archivedPosts.bookmarkId, id),
             ),
           )
           .run()

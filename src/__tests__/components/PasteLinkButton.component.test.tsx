@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { PasteLinkButton } from '@/components/PasteLinkButton'
 
 const pushSpy = vi.fn()
@@ -180,12 +180,14 @@ describe('PasteLinkButton — non-iOS (readText flow, unchanged)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Paste link' }))
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
 
-    fireEvent.keyDown(window, { key: 'Escape' })
-    // Poll: the dialog is portalled to <body>, so its unmount lands in a
-    // later commit than the keydown — a synchronous assertion passes locally
-    // and flakes on a slower CI runner (same failure mode as the
-    // outside-click test above).
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    // The dialog is portalled to <body>, so its unmount lands in a later
+    // commit than the keydown. `act` flushes that deterministically — polling
+    // with waitFor passed in isolation but timed out under a loaded parallel
+    // suite, which is a flaky test rather than a real signal.
+    await act(async () => {
+      fireEvent.keyDown(window, { key: 'Escape' })
+    })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('closes the overlay on the explicit close button', async () => {
@@ -195,8 +197,10 @@ describe('PasteLinkButton — non-iOS (readText flow, unchanged)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Paste link' }))
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
 
-    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+    })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('icon-only variant renders no label and still opens the overlay on a failed read', async () => {
@@ -293,8 +297,10 @@ describe('PasteLinkButton — iOS (input-paste flow)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Paste link' }))
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
 
-    fireEvent.keyDown(window, { key: 'Escape' })
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    await act(async () => {
+      fireEvent.keyDown(window, { key: 'Escape' })
+    })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('icon-only variant still autofocuses the input with no retry button', async () => {

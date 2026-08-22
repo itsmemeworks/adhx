@@ -92,14 +92,14 @@ export const FULL_SCHEMA_SQL = `
   );
   CREATE INDEX bookmark_media_user_bookmark_idx ON bookmark_media(user_id, platform, bookmark_id);
 
-  CREATE TABLE read_status (
+  CREATE TABLE archived_posts (
     user_id TEXT NOT NULL,
     platform TEXT NOT NULL DEFAULT 'twitter',
     bookmark_id TEXT NOT NULL,
-    read_at TEXT NOT NULL,
+    archived_at TEXT NOT NULL,
     PRIMARY KEY (user_id, platform, bookmark_id)
   );
-  CREATE INDEX read_status_user_id_idx ON read_status(user_id);
+  CREATE INDEX archived_posts_user_id_idx ON archived_posts(user_id);
 
   CREATE TABLE user_preferences (
     user_id TEXT NOT NULL,

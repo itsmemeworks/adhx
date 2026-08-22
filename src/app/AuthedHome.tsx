@@ -107,7 +107,7 @@ function FeedPageContent(): React.ReactElement {
   const [tagSelectTag, setTagSelectTag] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
-  const [stats, setStats] = useState({ total: 0, unread: 0 })
+  const [stats, setStats] = useState({ total: 0, active: 0 })
   const [personalOpen, setPersonalOpen] = useState(false)
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
@@ -257,7 +257,7 @@ function FeedPageContent(): React.ReactElement {
   // CURRENT filter/platform/tag/search state, so the theater's Collection tab
   // always matched whatever the grid happened to be showing. The owner
   // reversed that: "The collection theater is just about marking a post as read or not read."
-  // The collection theater is now strictly the full unread backlog, every time, regardless of
+  // The collection theater is now strictly the full active backlog, every time, regardless of
   // what's active in the grid behind it — a consistent queue instead of a
   // filtered snapshot. So the query below is fixed (hideArchived=true, no
   // filter/platform/tag/search) rather than derived from component state.
@@ -267,41 +267,41 @@ function FeedPageContent(): React.ReactElement {
     [],
   )
 
-  const fetchUnreadQueue = useCallback(async (): Promise<FeedItem[]> => {
-    let queue: FeedItem[] = items.filter((i) => !i.isRead)
+  const fetchActiveQueue = useCallback(async (): Promise<FeedItem[]> => {
+    let queue: FeedItem[] = items.filter((i) => !i.isArchived)
     try {
       const res = await fetch(`/api/feed?${buildActiveQueueQuery()}`)
       if (res.ok) {
         const data = await res.json()
-        const fetched: FeedItem[] = (data.items || []).filter((i: FeedItem) => !i.isRead)
+        const fetched: FeedItem[] = (data.items || []).filter((i: FeedItem) => !i.isArchived)
         if (fetched.length) queue = fetched
       }
     } catch {
-      /* fall back to the loaded items, filtered to unread */
+      /* fall back to the loaded items, filtered to active */
     }
     return queue
   }, [items, buildActiveQueueQuery])
 
   const startPersonalAll = useCallback(
     async (tab: PersonalTab = 'collection') => {
-      const queue = await fetchUnreadQueue()
+      const queue = await fetchActiveQueue()
       openPersonal(queue, 0, tab)
     },
-    [fetchUnreadQueue, openPersonal],
+    [fetchActiveQueue, openPersonal],
   )
 
-  // Open collection from a tapped gallery item: always the full unread backlog
+  // Open collection from a tapped gallery item: always the full active backlog
   // (see the decision-reversal note above), starting on the item the user
   // tapped — which may live outside that backlog (e.g. it's already read, or
-  // the grid is showing a tag/category view that mixes read + unread). Of the
+  // the grid is showing a tag/category view that mixes archived + active). Of the
   // two reasonable fallbacks (prepend it, or just open at the front of the
-  // unread queue and ignore the tap), prepending is the least surprising:
+  // active queue and ignore the tap), prepending is the least surprising:
   // tapping a specific card should always open ON that card, with the rest of
-  // the unread backlog queued up right behind it.
+  // the rest of the active collection queued up right behind it.
   const openPersonalFromItem = useCallback(
     async (idx: number) => {
       const clicked = items[idx]
-      let queue = await fetchUnreadQueue()
+      let queue = await fetchActiveQueue()
       const plat = (i: FeedItem) => i.platform ?? 'twitter'
       let start = clicked
         ? queue.findIndex((i) => i.id === clicked.id && plat(i) === plat(clicked))
@@ -312,7 +312,7 @@ function FeedPageContent(): React.ReactElement {
       }
       openPersonal(queue, Math.max(0, start))
     },
-    [items, fetchUnreadQueue, openPersonal],
+    [items, fetchActiveQueue, openPersonal],
   )
 
   const startSync = useCallback(
@@ -511,11 +511,11 @@ function FeedPageContent(): React.ReactElement {
         setLoading(true)
         // Add-posts mode browses the WHOLE collection: drop the tag filter
         // (else the grid only shows posts already carrying the tag — nothing
-        // left to add) and the unread-only gate (already-read posts are prime
+        // left to add) and the hide-archived gate (archived posts are prime
         // tagging candidates). The FilterBar's selected-tag UI state is
-        // untouched. VIEWING a tag also ignores unread: a tag is a deliberate
+        // untouched. VIEWING a tag also ignores archive state: a tag is a deliberate
         // collection the user curated — read state is irrelevant there, and
-        // the default unread-only filter otherwise greets a fully-read tag
+        // the default hide-archived filter otherwise greets a fully-archived tag
         // with a misleading "All caught up" empty state.
         const addingToTag = tagSelectTag !== null
         const tagActive = addingToTag || selectedTags.length > 0
@@ -543,7 +543,7 @@ function FeedPageContent(): React.ReactElement {
           setItems(data.items || [])
         } else {
           // Dedupe on append. The server pages by OFFSET, so every item this
-          // session removed locally (a Done while unread-only, a delete)
+          // session removed locally (an archive while hiding archived, a delete)
           // shifts the boundary and page N+1 re-sends a row already on
           // screen — React then renders two cards with the same key (state
           // review). Filtering by (platform, id) is the cheap correct fix.
@@ -557,7 +557,7 @@ function FeedPageContent(): React.ReactElement {
         }
 
         setHasMore(data.pagination?.page < data.pagination?.totalPages)
-        setStats({ total: data.stats?.total || 0, unread: data.stats?.unread || 0 })
+        setStats({ total: data.stats?.total || 0, active: data.stats?.active || 0 })
         if (data.lastSyncAt) setLastSyncAt(data.lastSyncAt)
       } catch (error) {
         console.error('Failed to fetch feed:', error)
@@ -813,7 +813,7 @@ function FeedPageContent(): React.ReactElement {
   // Header's Collection/Live nav (unified-theater-collection.md §1) dispatches
   // `open-theater` with `{ tab: 'collection' | 'live' }` for both the
   // pill and the Live nav item — open the collection overlay on the matching
-  // sub-tab, seeded from the current unread queue either way (so switching
+  // sub-tab, seeded from the current active queue either way (so switching
   // tabs mid-session always has a Collection queue to fall back to).
   useEffect(() => {
     function handler(e: Event) {
@@ -838,7 +838,7 @@ function FeedPageContent(): React.ReactElement {
     router.replace(qs ? `?${qs}` : pathname, { scroll: false })
   }, [searchParams, router, pathname])
 
-  // Arrived via ?collection=1 — open the full unread queue once authenticated.
+  // Arrived via ?collection=1 — open the full active queue once authenticated.
   useEffect(() => {
     if (!pendingCollection || isAuthenticated !== true) return
     setPendingCollection(false)
@@ -937,7 +937,7 @@ function FeedPageContent(): React.ReactElement {
           break
         case 'f':
         case 'F':
-          // Focus mode - open first item (full unread backlog)
+          // Focus mode - open first item (full active backlog)
           e.preventDefault()
           if (items.length > 0) {
             openPersonalFromItem(0)

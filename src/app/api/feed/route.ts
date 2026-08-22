@@ -4,7 +4,7 @@ import {
   bookmarks,
   bookmarkLinks,
   bookmarkMedia,
-  readStatus,
+  archivedPosts,
   syncLogs,
   bookmarkTags,
   collectionTweets,
@@ -187,13 +187,13 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
       conditions.push(or(eq(bookmarks.source, 'manual'), eq(bookmarks.source, 'url_prefix'))!)
     }
 
-    // Unread filter — composite key (bookmarkId, platform) matches read_status PK.
+    // Unread filter — composite key (bookmarkId, platform) matches archived_posts PK.
     // Skipped for direct id lookups so an already-read tweet still resolves.
     if (hideArchived && ids.length === 0) {
       const readSubquery = sql`(
-        SELECT ${readStatus.bookmarkId}, ${readStatus.platform}
-        FROM ${readStatus}
-        WHERE ${readStatus.userId} = ${userId}
+        SELECT ${archivedPosts.bookmarkId}, ${archivedPosts.platform}
+        FROM ${archivedPosts}
+        WHERE ${archivedPosts.userId} = ${userId}
       )`
       conditions.push(sql`(${bookmarks.id}, ${bookmarks.platform}) NOT IN ${readSubquery}`)
     }
@@ -221,17 +221,17 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
     // Early return if no results
     if (results.length === 0) {
       // Get global stats for empty result
-      const [totalBookmarks, readCount] = await Promise.all([
+      const [totalBookmarks, archivedCount] = await Promise.all([
         db.select({ count: count() }).from(bookmarks).where(eq(bookmarks.userId, userId)),
-        db.select({ count: count() }).from(readStatus).where(eq(readStatus.userId, userId)),
+        db.select({ count: count() }).from(archivedPosts).where(eq(archivedPosts.userId, userId)),
       ])
       const totalCount = totalBookmarks[0]?.count || 0
-      const unreadCount = totalCount - (readCount[0]?.count || 0)
+      const activeCount = totalCount - (archivedCount[0]?.count || 0)
 
       return NextResponse.json({
         items: [],
         pagination: { page, limit, total: 0, totalPages: 0 },
-        stats: { total: totalCount, unread: Math.max(0, unreadCount) },
+        stats: { total: totalCount, active: Math.max(0, activeCount) },
         lastSyncAt: null,
       })
     }
@@ -243,7 +243,7 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
     const compositeKey = (platform: string, id: string) => `${platform}:${id}`
 
     // Batch fetch all related data for result set only (not ALL user data)
-    const [media, links, resultTags, readStatusRecords] = await Promise.all([
+    const [media, links, resultTags, archivedPostsRecords] = await Promise.all([
       db
         .select()
         .from(bookmarkMedia)
@@ -261,9 +261,11 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
         .from(bookmarkTags)
         .where(and(eq(bookmarkTags.userId, userId), inArray(bookmarkTags.bookmarkId, bookmarkIds))),
       db
-        .select({ bookmarkId: readStatus.bookmarkId, platform: readStatus.platform })
-        .from(readStatus)
-        .where(and(eq(readStatus.userId, userId), inArray(readStatus.bookmarkId, bookmarkIds))),
+        .select({ bookmarkId: archivedPosts.bookmarkId, platform: archivedPosts.platform })
+        .from(archivedPosts)
+        .where(
+          and(eq(archivedPosts.userId, userId), inArray(archivedPosts.bookmarkId, bookmarkIds)),
+        ),
     ])
 
     // Build lookup maps keyed by composite (platform + bookmarkId)
@@ -295,7 +297,9 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
       tagsByBookmark.set(key, existing)
     }
 
-    const readKeys = new Set(readStatusRecords.map((r) => compositeKey(r.platform, r.bookmarkId)))
+    const readKeys = new Set(
+      archivedPostsRecords.map((r) => compositeKey(r.platform, r.bookmarkId)),
+    )
 
     // Build feed items (keyed by composite platform+id)
     const items = results.map((bookmark) => {
@@ -361,13 +365,13 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
               ),
             ),
           db
-            .select({ bookmarkId: readStatus.bookmarkId })
-            .from(readStatus)
+            .select({ bookmarkId: archivedPosts.bookmarkId })
+            .from(archivedPosts)
             .where(
               and(
-                eq(readStatus.userId, userId),
-                eq(readStatus.platform, 'twitter'),
-                inArray(readStatus.bookmarkId, quotedTweetIds),
+                eq(archivedPosts.userId, userId),
+                eq(archivedPosts.platform, 'twitter'),
+                inArray(archivedPosts.bookmarkId, quotedTweetIds),
               ),
             ),
         ],
@@ -473,13 +477,13 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
             ),
           ),
         db
-          .select({ bookmarkId: readStatus.bookmarkId })
-          .from(readStatus)
+          .select({ bookmarkId: archivedPosts.bookmarkId })
+          .from(archivedPosts)
           .where(
             and(
-              eq(readStatus.userId, userId),
-              eq(readStatus.platform, 'twitter'),
-              inArray(readStatus.bookmarkId, parentIds),
+              eq(archivedPosts.userId, userId),
+              eq(archivedPosts.platform, 'twitter'),
+              inArray(archivedPosts.bookmarkId, parentIds),
             ),
           ),
       ])
@@ -538,9 +542,9 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
     }
 
     // Get global stats
-    const [totalBookmarks, readCount, lastSync] = await Promise.all([
+    const [totalBookmarks, archivedCount, lastSync] = await Promise.all([
       db.select({ count: count() }).from(bookmarks).where(eq(bookmarks.userId, userId)),
-      db.select({ count: count() }).from(readStatus).where(eq(readStatus.userId, userId)),
+      db.select({ count: count() }).from(archivedPosts).where(eq(archivedPosts.userId, userId)),
       db
         .select({ startedAt: syncLogs.startedAt })
         .from(syncLogs)
@@ -550,7 +554,7 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
     ])
 
     const totalCount = totalBookmarks[0]?.count || 0
-    const unreadCount = totalCount - (readCount[0]?.count || 0)
+    const activeCount = totalCount - (archivedCount[0]?.count || 0)
 
     // Track feed metrics
     metrics.feedLoaded(items.length, filter !== 'all' ? filter : undefined)
@@ -572,7 +576,7 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
       },
       stats: {
         total: totalCount,
-        unread: Math.max(0, unreadCount),
+        active: Math.max(0, activeCount),
       },
       lastSyncAt: lastSync[0]?.startedAt || null,
     })

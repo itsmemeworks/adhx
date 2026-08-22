@@ -97,9 +97,9 @@ describe('API: /api/stats', () => {
       ])
 
     // Mark 2 as read
-    await testInstance.db.insert(schema.readStatus).values([
-      { userId: USER_A, bookmarkId: 't1', readAt: '2024-01-01T10:00:00Z' },
-      { userId: USER_A, bookmarkId: 't2', readAt: '2024-01-01T10:00:00Z' },
+    await testInstance.db.insert(schema.archivedPosts).values([
+      { userId: USER_A, bookmarkId: 't1', archivedAt: '2024-01-01T10:00:00Z' },
+      { userId: USER_A, bookmarkId: 't2', archivedAt: '2024-01-01T10:00:00Z' },
     ])
 
     const { GET } = await import('@/app/api/stats/route')
@@ -160,8 +160,8 @@ describe('API: /api/stats', () => {
         createTestBookmark(USER_A, 't3'),
       ])
     await testInstance.db
-      .insert(schema.readStatus)
-      .values([{ userId: USER_A, bookmarkId: 't1', readAt: '2024-01-01T10:00:00Z' }])
+      .insert(schema.archivedPosts)
+      .values([{ userId: USER_A, bookmarkId: 't1', archivedAt: '2024-01-01T10:00:00Z' }])
 
     // User B: 5 bookmarks, 3 read
     await testInstance.db
@@ -173,10 +173,10 @@ describe('API: /api/stats', () => {
         createTestBookmark(USER_B, 't4'),
         createTestBookmark(USER_B, 't5'),
       ])
-    await testInstance.db.insert(schema.readStatus).values([
-      { userId: USER_B, bookmarkId: 't1', readAt: '2024-01-01T10:00:00Z' },
-      { userId: USER_B, bookmarkId: 't2', readAt: '2024-01-01T10:00:00Z' },
-      { userId: USER_B, bookmarkId: 't3', readAt: '2024-01-01T10:00:00Z' },
+    await testInstance.db.insert(schema.archivedPosts).values([
+      { userId: USER_B, bookmarkId: 't1', archivedAt: '2024-01-01T10:00:00Z' },
+      { userId: USER_B, bookmarkId: 't2', archivedAt: '2024-01-01T10:00:00Z' },
+      { userId: USER_B, bookmarkId: 't3', archivedAt: '2024-01-01T10:00:00Z' },
     ])
 
     // User A stats

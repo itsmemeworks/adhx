@@ -120,7 +120,7 @@ export interface FeedItem {
   createdAt?: string | null
   processedAt: string
   category?: string | null
-  isRead: boolean
+  isArchived: boolean
   isQuote?: boolean
   quoteContext?: QuoteContext | null
   quotedTweetId?: string | null
@@ -190,7 +190,7 @@ export interface StreamedBookmark {
   createdAt: string | null
   processedAt: string
   category: string | null
-  isRead: boolean
+  isArchived: boolean
   isQuote: boolean
   isRetweet: boolean
   media: Array<{
@@ -232,7 +232,7 @@ export function streamedBookmarkToFeedItem(bookmark: StreamedBookmark): FeedItem
     createdAt: bookmark.createdAt,
     processedAt: bookmark.processedAt,
     category: bookmark.category,
-    isRead: bookmark.isRead,
+    isArchived: bookmark.isArchived,
     isQuote: bookmark.isQuote,
     isRetweet: bookmark.isRetweet,
     media:

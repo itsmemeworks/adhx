@@ -18,7 +18,7 @@ interface FeedGridProps {
   lastSyncAt: string | null
   sortField: 'processedAt' | 'createdAt'
   hideArchived: boolean
-  stats: { total: number; unread: number }
+  stats: { total: number; active: number }
   view?: FeedView
   onExpand: (index: number) => void
   onLoadMore: () => void
@@ -298,7 +298,7 @@ function LoadingSkeleton(): React.ReactElement {
 
 interface EmptyStateProps {
   hideArchived: boolean
-  stats: { total: number; unread: number }
+  stats: { total: number; active: number }
   onShowAll: () => void
 }
 

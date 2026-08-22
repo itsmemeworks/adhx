@@ -5,7 +5,7 @@ import {
   bookmarkLinks,
   bookmarkTags,
   bookmarkMedia,
-  readStatus,
+  archivedPosts,
   collections,
   collectionTweets,
   syncLogs,
@@ -58,7 +58,7 @@ export const DELETE = withAuth(async (_req, userId) => {
       db.delete(collections).where(eq(collections.userId, userId)).run()
 
       // 3. Delete read status
-      db.delete(readStatus).where(eq(readStatus.userId, userId)).run()
+      db.delete(archivedPosts).where(eq(archivedPosts.userId, userId)).run()
 
       // 4. Delete bookmark media
       db.delete(bookmarkMedia).where(eq(bookmarkMedia.userId, userId)).run()

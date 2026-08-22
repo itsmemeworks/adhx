@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { bookmarks, bookmarkMedia, readStatus } from '@/lib/db/schema'
+import { bookmarks, bookmarkMedia, archivedPosts } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { metrics } from '@/lib/sentry'
 import { recordActivity, previewPath } from '@/lib/activity/record'
@@ -38,12 +38,12 @@ export const POST = withAuth(
 
       const [existing] = await db
         .select()
-        .from(readStatus)
+        .from(archivedPosts)
         .where(
           and(
-            eq(readStatus.userId, userId),
-            eq(readStatus.platform, platform),
-            eq(readStatus.bookmarkId, id),
+            eq(archivedPosts.userId, userId),
+            eq(archivedPosts.platform, platform),
+            eq(archivedPosts.bookmarkId, id),
           ),
         )
         .limit(1)
@@ -51,17 +51,17 @@ export const POST = withAuth(
       if (existing) {
         return NextResponse.json({
           success: true,
-          isRead: true,
-          readAt: existing.readAt,
+          isArchived: true,
+          archivedAt: existing.archivedAt,
         })
       }
 
-      const readAt = new Date().toISOString()
-      await db.insert(readStatus).values({
+      const archivedAt = new Date().toISOString()
+      await db.insert(archivedPosts).values({
         userId,
         platform,
         bookmarkId: id,
-        readAt,
+        archivedAt,
       })
 
       metrics.bookmarkReadToggled(true)
@@ -91,7 +91,7 @@ export const POST = withAuth(
         userId,
       })
 
-      return NextResponse.json({ success: true, isRead: true, readAt })
+      return NextResponse.json({ success: true, isArchived: true, archivedAt })
     } catch (error) {
       return handleRouteError(error, {
         endpoint: '/api/bookmarks/[id]/read',
@@ -122,18 +122,18 @@ export const DELETE = withAuth(
       }
 
       await db
-        .delete(readStatus)
+        .delete(archivedPosts)
         .where(
           and(
-            eq(readStatus.userId, userId),
-            eq(readStatus.platform, platform),
-            eq(readStatus.bookmarkId, id),
+            eq(archivedPosts.userId, userId),
+            eq(archivedPosts.platform, platform),
+            eq(archivedPosts.bookmarkId, id),
           ),
         )
 
       metrics.bookmarkReadToggled(false)
 
-      return NextResponse.json({ success: true, isRead: false, readAt: null })
+      return NextResponse.json({ success: true, isArchived: false, archivedAt: null })
     } catch (error) {
       return handleRouteError(error, {
         endpoint: '/api/bookmarks/[id]/read',

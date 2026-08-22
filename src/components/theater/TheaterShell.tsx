@@ -157,7 +157,7 @@ export interface TheaterShellProps {
   playlist?: TheaterPlaylistMeta
   /**
    * Collection mode (`mode="personal"`, unified-theater-collection.md §2): the
-   * snapshot of the authed Collection's unread queue to collection — same
+   * snapshot of the authed Collection's active queue to collection — same
    * contract as the deleted `CollectionTheater`'s `initialQueue`. Taken once
    * at mount; AuthedHome remounts the shell (conditional render) for a fresh
    * collection session rather than this prop changing underneath an open one.
@@ -178,7 +178,7 @@ export interface TheaterShellProps {
   onPersonalTabChange?: (tab: PersonalTab) => void
   /** Notify the Collection feed so it can drop archived/deleted items without a refetch. */
   onPostResolved?: (id: string, action: 'archive' | 'delete') => void
-  /** Notify the Collection feed an archive was undone, so it can restore the item + unread count. */
+  /** Notify the Collection feed an archive was undone, so it can restore the item + active count. */
   onPostRestored?: (item: FeedItem) => void
   /**
    * A post was added to the collection from the theater (the Live tab's Save).

@@ -112,11 +112,11 @@ describe('API: GET /api/bookmarks', () => {
     ])
 
     // Only the TikTok bookmark has been read.
-    await testInstance.db.insert(schema.readStatus).values({
+    await testInstance.db.insert(schema.archivedPosts).values({
       userId: USER_A,
       platform: 'tiktok',
       bookmarkId: '1000',
-      readAt: new Date().toISOString(),
+      archivedAt: new Date().toISOString(),
     })
 
     const { GET } = await import('@/app/api/bookmarks/route')
@@ -134,11 +134,11 @@ describe('API: GET /api/bookmarks', () => {
     expect(twitterBookmark.tags).toEqual(['tweet-tag'])
     expect(twitterBookmark.media).toHaveLength(1)
     expect(twitterBookmark.media[0].id).toBe('twitter-media-1')
-    expect(twitterBookmark.isRead).toBe(false)
+    expect(twitterBookmark.isArchived).toBe(false)
 
     expect(tiktokBookmark.tags).toEqual(['tiktok-tag'])
     expect(tiktokBookmark.media).toHaveLength(1)
     expect(tiktokBookmark.media[0].id).toBe('tiktok-media-1')
-    expect(tiktokBookmark.isRead).toBe(true)
+    expect(tiktokBookmark.isArchived).toBe(true)
   })
 })

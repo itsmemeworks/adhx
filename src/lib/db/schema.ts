@@ -9,7 +9,7 @@ import { relations, sql } from 'drizzle-orm'
 // `platform` is one of 'twitter' | 'instagram' | 'tiktok' | 'youtube' — added so
 // a TikTok video id (numeric, 19 digits) can't collide with a tweet id (also
 // numeric, 18-19 digits), and YouTube's 11-char id stays in its own namespace.
-// All bookmark-derived tables (tags/media/links/read_status/collection_tweets)
+// All bookmark-derived tables (tags/media/links/archived_posts/collection_tweets)
 // carry platform too so the foreign-key tuple matches. It's a free-text column
 // (no enum/migration needed to add a platform).
 export const bookmarks = sqliteTable(
@@ -190,18 +190,20 @@ export const syncState = sqliteTable(
   }),
 )
 
-// Read status - PK: (userId, platform, bookmarkId)
-export const readStatus = sqliteTable(
-  'read_status',
+// Archived posts — taken out of the active collection. PK: (userId, platform,
+// bookmarkId). Was `read_status`/`read_at`, renamed when "read" became
+// "archived" in the product; see the guarded rename in migrate.ts.
+export const archivedPosts = sqliteTable(
+  'archived_posts',
   {
     userId: text('user_id').notNull(),
     platform: text('platform').notNull().default('twitter'),
     bookmarkId: text('bookmark_id').notNull(),
-    readAt: text('read_at').notNull(),
+    archivedAt: text('archived_at').notNull(),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.userId, table.platform, table.bookmarkId] }),
-    userIdIdx: index('read_status_user_id_idx').on(table.userId),
+    userIdIdx: index('archived_posts_user_id_idx').on(table.userId),
   }),
 )
 
@@ -456,7 +458,7 @@ export const bookmarksRelations = relations(bookmarks, ({ many, one }) => ({
   links: many(bookmarkLinks),
   tags: many(bookmarkTags),
   media: many(bookmarkMedia),
-  readStatus: one(readStatus),
+  archivedPost: one(archivedPosts),
   collectionTweets: many(collectionTweets),
 }))
 
@@ -481,9 +483,9 @@ export const bookmarkMediaRelations = relations(bookmarkMedia, ({ one }) => ({
   }),
 }))
 
-export const readStatusRelations = relations(readStatus, ({ one }) => ({
+export const archivedPostsRelations = relations(archivedPosts, ({ one }) => ({
   bookmark: one(bookmarks, {
-    fields: [readStatus.userId, readStatus.platform, readStatus.bookmarkId],
+    fields: [archivedPosts.userId, archivedPosts.platform, archivedPosts.bookmarkId],
     references: [bookmarks.userId, bookmarks.platform, bookmarks.id],
   }),
 }))
@@ -516,8 +518,8 @@ export type NewBookmarkTag = typeof bookmarkTags.$inferInsert
 export type BookmarkMedia = typeof bookmarkMedia.$inferSelect
 export type NewBookmarkMedia = typeof bookmarkMedia.$inferInsert
 export type OAuthToken = typeof oauthTokens.$inferSelect
-export type ReadStatus = typeof readStatus.$inferSelect
-export type NewReadStatus = typeof readStatus.$inferInsert
+export type ArchivedPost = typeof archivedPosts.$inferSelect
+export type NewArchivedPost = typeof archivedPosts.$inferInsert
 export type Collection = typeof collections.$inferSelect
 export type NewCollection = typeof collections.$inferInsert
 export type CollectionTweet = typeof collectionTweets.$inferSelect

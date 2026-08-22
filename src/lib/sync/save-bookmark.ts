@@ -485,7 +485,7 @@ export async function saveBookmark(
     createdAt: tweet.createdAt ? new Date(tweet.createdAt).toISOString() : null,
     processedAt: now,
     category,
-    isRead: false,
+    isArchived: false,
     isQuote,
     isRetweet,
     media:

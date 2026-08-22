@@ -6,13 +6,13 @@ import type { FeedItem } from '@/components/feed'
 interface UsePersonalQueueOptions {
   hideArchived: boolean
   setItems: Dispatch<SetStateAction<FeedItem[]>>
-  setStats: Dispatch<SetStateAction<{ total: number; unread: number }>>
+  setStats: Dispatch<SetStateAction<{ total: number; active: number }>>
 }
 
 interface UsePersonalQueueReturn {
   /** Drop/mark an item the collection mode resolved, keeping the feed in sync. */
   handlePostResolved: (id: string, action: 'archive' | 'delete') => void
-  /** Undo of a collection archive: restore the item to unread + bump the count back. */
+  /** Undo of an archive: put the post back and bump the active count. */
   handlePostRestored: (item: FeedItem) => void
 }
 
@@ -30,11 +30,11 @@ export function usePersonalQueue({
       if (action === 'delete' || hideArchived) {
         setItems((prev) => prev.filter((i) => i.id !== id))
       } else {
-        setItems((prev) => prev.map((i) => (i.id === id ? { ...i, isRead: true } : i)))
+        setItems((prev) => prev.map((i) => (i.id === id ? { ...i, isArchived: true } : i)))
       }
-      // Collection queue items are always unread, so both archiving and deleting
-      // one drops the unread count.
-      setStats((prev) => ({ ...prev, unread: Math.max(0, prev.unread - 1) }))
+      // Everything in this queue is active by definition, so archiving or
+      // deleting one drops the active count either way.
+      setStats((prev) => ({ ...prev, active: Math.max(0, prev.active - 1) }))
     },
     [hideArchived, setItems, setStats],
   )
@@ -44,10 +44,10 @@ export function usePersonalQueue({
       setItems(
         (prev) =>
           prev.some((i) => i.id === item.id)
-            ? prev.map((i) => (i.id === item.id ? { ...i, isRead: false } : i))
-            : [{ ...item, isRead: false }, ...prev], // was dropped under hideArchived — re-add it
+            ? prev.map((i) => (i.id === item.id ? { ...i, isArchived: false } : i))
+            : [{ ...item, isArchived: false }, ...prev], // was dropped under hideArchived — re-add it
       )
-      setStats((prev) => ({ ...prev, unread: prev.unread + 1 }))
+      setStats((prev) => ({ ...prev, active: prev.active + 1 }))
     },
     [setItems, setStats],
   )

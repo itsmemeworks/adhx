@@ -6,7 +6,7 @@ import {
   bookmarkTags,
   bookmarkMedia,
   bookmarkLinks,
-  readStatus,
+  archivedPosts,
   userPreferences,
 } from '@/lib/db/schema'
 
@@ -140,23 +140,23 @@ describe('Multi-User Database Isolation', () => {
       const now = new Date().toISOString()
 
       // User A marks tweet as read
-      await db.insert(readStatus).values({
+      await db.insert(archivedPosts).values({
         userId: USER_A,
         bookmarkId: SHARED_TWEET_ID,
-        readAt: now,
+        archivedAt: now,
       })
 
       // User A's read status exists
       const userAStatus = await db
         .select()
-        .from(readStatus)
-        .where(and(eq(readStatus.userId, USER_A), eq(readStatus.bookmarkId, SHARED_TWEET_ID)))
+        .from(archivedPosts)
+        .where(and(eq(archivedPosts.userId, USER_A), eq(archivedPosts.bookmarkId, SHARED_TWEET_ID)))
 
       // User B has no read status
       const userBStatus = await db
         .select()
-        .from(readStatus)
-        .where(and(eq(readStatus.userId, USER_B), eq(readStatus.bookmarkId, SHARED_TWEET_ID)))
+        .from(archivedPosts)
+        .where(and(eq(archivedPosts.userId, USER_B), eq(archivedPosts.bookmarkId, SHARED_TWEET_ID)))
 
       expect(userAStatus).toHaveLength(1)
       expect(userBStatus).toHaveLength(0)
@@ -166,23 +166,23 @@ describe('Multi-User Database Isolation', () => {
       const nowA = '2024-01-15T10:00:00Z'
       const nowB = '2024-01-15T12:00:00Z'
 
-      await db.insert(readStatus).values([
-        { userId: USER_A, bookmarkId: SHARED_TWEET_ID, readAt: nowA },
-        { userId: USER_B, bookmarkId: SHARED_TWEET_ID, readAt: nowB },
+      await db.insert(archivedPosts).values([
+        { userId: USER_A, bookmarkId: SHARED_TWEET_ID, archivedAt: nowA },
+        { userId: USER_B, bookmarkId: SHARED_TWEET_ID, archivedAt: nowB },
       ])
 
       const [userAStatus] = await db
         .select()
-        .from(readStatus)
-        .where(and(eq(readStatus.userId, USER_A), eq(readStatus.bookmarkId, SHARED_TWEET_ID)))
+        .from(archivedPosts)
+        .where(and(eq(archivedPosts.userId, USER_A), eq(archivedPosts.bookmarkId, SHARED_TWEET_ID)))
 
       const [userBStatus] = await db
         .select()
-        .from(readStatus)
-        .where(and(eq(readStatus.userId, USER_B), eq(readStatus.bookmarkId, SHARED_TWEET_ID)))
+        .from(archivedPosts)
+        .where(and(eq(archivedPosts.userId, USER_B), eq(archivedPosts.bookmarkId, SHARED_TWEET_ID)))
 
-      expect(userAStatus.readAt).toBe(nowA)
-      expect(userBStatus.readAt).toBe(nowB)
+      expect(userAStatus.archivedAt).toBe(nowA)
+      expect(userBStatus.archivedAt).toBe(nowB)
     })
 
     it('correctly counts unread bookmarks per user', async () => {
@@ -196,16 +196,22 @@ describe('Multi-User Database Isolation', () => {
         ])
 
       // User A reads 2 tweets (shared + a-1)
-      await db.insert(readStatus).values([
-        { userId: USER_A, bookmarkId: SHARED_TWEET_ID, readAt: new Date().toISOString() },
-        { userId: USER_A, bookmarkId: 'tweet-a-1', readAt: new Date().toISOString() },
+      await db.insert(archivedPosts).values([
+        { userId: USER_A, bookmarkId: SHARED_TWEET_ID, archivedAt: new Date().toISOString() },
+        { userId: USER_A, bookmarkId: 'tweet-a-1', archivedAt: new Date().toISOString() },
       ])
 
       // Count read for User A (should be 2)
-      const userAReadCount = await db.select().from(readStatus).where(eq(readStatus.userId, USER_A))
+      const userAReadCount = await db
+        .select()
+        .from(archivedPosts)
+        .where(eq(archivedPosts.userId, USER_A))
 
       // Count read for User B (should be 0)
-      const userBReadCount = await db.select().from(readStatus).where(eq(readStatus.userId, USER_B))
+      const userBReadCount = await db
+        .select()
+        .from(archivedPosts)
+        .where(eq(archivedPosts.userId, USER_B))
 
       expect(userAReadCount).toHaveLength(2)
       expect(userBReadCount).toHaveLength(0)
@@ -941,9 +947,9 @@ describe('Multi-User Database Isolation', () => {
           createTestBookmark(USER_B, 'tweet-b-3'),
         ])
 
-      await db.insert(readStatus).values([
-        { userId: USER_A, bookmarkId: 'tweet-a-1', readAt: new Date().toISOString() },
-        { userId: USER_B, bookmarkId: 'tweet-b-1', readAt: new Date().toISOString() },
+      await db.insert(archivedPosts).values([
+        { userId: USER_A, bookmarkId: 'tweet-a-1', archivedAt: new Date().toISOString() },
+        { userId: USER_B, bookmarkId: 'tweet-b-1', archivedAt: new Date().toISOString() },
       ])
 
       await db.insert(bookmarkTags).values([
@@ -955,31 +961,31 @@ describe('Multi-User Database Isolation', () => {
     it('clearing User A data does not affect User B', async () => {
       // Clear all of User A's data
       await db.delete(bookmarkTags).where(eq(bookmarkTags.userId, USER_A))
-      await db.delete(readStatus).where(eq(readStatus.userId, USER_A))
+      await db.delete(archivedPosts).where(eq(archivedPosts.userId, USER_A))
       await db.delete(bookmarks).where(eq(bookmarks.userId, USER_A))
 
       // User A should have nothing
       const userABookmarks = await db.select().from(bookmarks).where(eq(bookmarks.userId, USER_A))
-      const userAReadStatus = await db
+      const userAArchivedPost = await db
         .select()
-        .from(readStatus)
-        .where(eq(readStatus.userId, USER_A))
+        .from(archivedPosts)
+        .where(eq(archivedPosts.userId, USER_A))
       const userATags = await db.select().from(bookmarkTags).where(eq(bookmarkTags.userId, USER_A))
 
       expect(userABookmarks).toHaveLength(0)
-      expect(userAReadStatus).toHaveLength(0)
+      expect(userAArchivedPost).toHaveLength(0)
       expect(userATags).toHaveLength(0)
 
       // User B should still have all their data
       const userBBookmarks = await db.select().from(bookmarks).where(eq(bookmarks.userId, USER_B))
-      const userBReadStatus = await db
+      const userBArchivedPost = await db
         .select()
-        .from(readStatus)
-        .where(eq(readStatus.userId, USER_B))
+        .from(archivedPosts)
+        .where(eq(archivedPosts.userId, USER_B))
       const userBTags = await db.select().from(bookmarkTags).where(eq(bookmarkTags.userId, USER_B))
 
       expect(userBBookmarks).toHaveLength(3)
-      expect(userBReadStatus).toHaveLength(1)
+      expect(userBArchivedPost).toHaveLength(1)
       expect(userBTags).toHaveLength(1)
     })
 
@@ -1034,10 +1040,10 @@ describe('Multi-User Database Isolation', () => {
         { userId: USER_A, bookmarkId: 'complete-tweet', tag: 'tag2' },
       ])
 
-      await db.insert(readStatus).values({
+      await db.insert(archivedPosts).values({
         userId: USER_A,
         bookmarkId: 'complete-tweet',
-        readAt: new Date().toISOString(),
+        archivedAt: new Date().toISOString(),
       })
 
       // Verify all data can be queried
@@ -1067,8 +1073,10 @@ describe('Multi-User Database Isolation', () => {
 
       const status = await db
         .select()
-        .from(readStatus)
-        .where(and(eq(readStatus.userId, USER_A), eq(readStatus.bookmarkId, 'complete-tweet')))
+        .from(archivedPosts)
+        .where(
+          and(eq(archivedPosts.userId, USER_A), eq(archivedPosts.bookmarkId, 'complete-tweet')),
+        )
 
       expect(bookmark).toBeDefined()
       expect(media).toHaveLength(1)

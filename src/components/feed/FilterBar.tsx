@@ -51,7 +51,7 @@ interface FilterBarProps {
   selectedTags?: string[]
   onSelectedTagsChange?: (tags: string[]) => void
   availableTags?: TagItem[]
-  stats: { total: number; unread: number }
+  stats: { total: number; active: number }
   onTagUpdated?: (tag: string, isPublic: boolean, shareUrl: string) => void
   // Tags: create + fill (unified-theater-collection §4). `tagSelect` is the tag
   // currently in grid "Add posts" selection mode (null when inactive).
@@ -606,7 +606,7 @@ export function FilterBar({
             only the label and count change.
 
             Vocabulary note: the flag is still `hideArchived` and the column is
-            still read_status. Renaming a shipped API and a DB column is a
+            still archived_posts. Renaming a shipped API and a DB column is a
             separate job from fixing the words people read. */}
         {selectedTags.length === 0 && (
           <button
@@ -622,7 +622,7 @@ export function FilterBar({
             {hideArchived ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
             <span>{hideArchived ? 'Show archived' : 'Hide archived'}</span>
             <span className="rounded-full bg-inset px-[7px] py-px text-[11.5px] text-ink-2">
-              {hideArchived ? stats.unread : stats.total}
+              {hideArchived ? stats.active : stats.total}
             </span>
           </button>
         )}

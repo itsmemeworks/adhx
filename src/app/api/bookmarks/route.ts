@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { bookmarks, bookmarkLinks, bookmarkTags, bookmarkMedia, readStatus } from '@/lib/db/schema'
+import {
+  bookmarks,
+  bookmarkLinks,
+  bookmarkTags,
+  bookmarkMedia,
+  archivedPosts,
+} from '@/lib/db/schema'
 import { eq, desc, like, and, or, count, notInArray, inArray, SQL } from 'drizzle-orm'
 import { resolveMediaUrl, getShareableUrl, getThumbnailUrl } from '@/lib/media/fxembed'
 import { expandUrls } from '@/lib/utils/url-expander'
@@ -44,12 +50,12 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
       }
     }
 
-    // For unread filter, we need to exclude bookmarks that have read status (filtered by userId)
+    // For the active filter, exclude bookmarks that have been archived (filtered by userId)
     if (hideArchived) {
       const readBookmarkIds = await db
-        .select({ bookmarkId: readStatus.bookmarkId })
-        .from(readStatus)
-        .where(eq(readStatus.userId, userId))
+        .select({ bookmarkId: archivedPosts.bookmarkId })
+        .from(archivedPosts)
+        .where(eq(archivedPosts.userId, userId))
       const readIds = readBookmarkIds.map((r) => r.bookmarkId)
       if (readIds.length > 0) {
         conditions.push(notInArray(bookmarks.id, readIds))
@@ -80,7 +86,7 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
     const compositeKey = (platform: string, id: string) => `${platform}:${id}`
 
     // Fetch all related data in parallel batches instead of per-bookmark
-    const [allLinks, allTags, allMedia, allReadStatuses] =
+    const [allLinks, allTags, allMedia, allArchivedPostes] =
       bookmarkIds.length > 0
         ? await Promise.all([
             db
@@ -109,9 +115,12 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
               ),
             db
               .select()
-              .from(readStatus)
+              .from(archivedPosts)
               .where(
-                and(eq(readStatus.userId, userId), inArray(readStatus.bookmarkId, bookmarkIds)),
+                and(
+                  eq(archivedPosts.userId, userId),
+                  inArray(archivedPosts.bookmarkId, bookmarkIds),
+                ),
               ),
           ])
         : [[], [], [], []]
@@ -141,8 +150,8 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
       mediaByBookmark.set(key, existing)
     }
 
-    const readStatusMap = new Map(
-      allReadStatuses.map((r) => [compositeKey(r.platform, r.bookmarkId), r.readAt]),
+    const archivedPostsMap = new Map(
+      allArchivedPostes.map((r) => [compositeKey(r.platform, r.bookmarkId), r.archivedAt]),
     )
 
     // Transform bookmarks with related data (no additional queries)
@@ -174,8 +183,8 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
         }
       })
 
-      const isRead = readStatusMap.has(key)
-      const readAt = readStatusMap.get(key) || null
+      const isArchived = archivedPostsMap.has(key)
+      const archivedAt = archivedPostsMap.get(key) || null
 
       // Expand t.co URLs in the text
       const expandedText = expandUrls(bookmark.text, links)
@@ -186,12 +195,12 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
         links,
         tags,
         media: mediaWithUrls,
-        isRead,
-        readAt,
+        isArchived,
+        archivedAt,
       }
     })
 
-    // Get unread count for the current filter (without unread filter)
+    // Get active count for the current filter (without unread filter)
     const baseConditions: SQL[] = [eq(bookmarks.userId, userId)]
     if (category) baseConditions.push(eq(bookmarks.category, category))
     if (author) baseConditions.push(eq(bookmarks.author, author))
@@ -210,11 +219,11 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
       .where(and(...baseConditions))
 
     const totalUnfiltered = totalUnfilteredResult?.count || 0
-    const [readCountResult] = await db
+    const [archivedCountResult] = await db
       .select({ count: count() })
-      .from(readStatus)
-      .where(eq(readStatus.userId, userId))
-    const unreadCount = totalUnfiltered - (readCountResult?.count || 0)
+      .from(archivedPosts)
+      .where(eq(archivedPosts.userId, userId))
+    const activeCount = totalUnfiltered - (archivedCountResult?.count || 0)
 
     return NextResponse.json({
       bookmarks: bookmarksWithRelations,
@@ -225,7 +234,7 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
         totalPages: Math.ceil(total / limit),
       },
       stats: {
-        unreadCount: Math.max(0, unreadCount),
+        activeCount: Math.max(0, activeCount),
       },
     })
   } catch (error) {
