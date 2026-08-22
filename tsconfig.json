@@ -1,10 +1,6 @@
 {
   "compilerOptions": {
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -22,9 +18,7 @@
       }
     ],
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"]
     },
     "target": "ES2017"
   },
@@ -37,10 +31,5 @@
     ".next-e2e/types/**/*.ts",
     ".next-e2e/dev/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules",
-    "drizzle.config.ts",
-    "e2e",
-    "playwright.config.ts"
-  ]
+  "exclude": ["node_modules", "drizzle.config.ts", "e2e", "playwright.config.ts"]
 }

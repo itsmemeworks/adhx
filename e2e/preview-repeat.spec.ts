@@ -12,7 +12,7 @@ test.describe('preview pages repeat the shared post', () => {
     await expectTheaterReady(page)
     await expect(page.getByText(POST.preview.text).first()).toBeVisible()
     await expect(page.getByRole('button', { name: 'Repeat this post' })).toBeVisible()
-    await expect(page).toHaveURL(new RegExp(`${previewPath.replace(/\//g, '\\/')}`))
+    await expect(page).toHaveURL(new RegExp(`/${POST.preview.author}/status/${POST.preview.id}`))
 
     await page.waitForTimeout(11_000)
     await expect(page.getByText(POST.preview.text).first()).toBeVisible()
