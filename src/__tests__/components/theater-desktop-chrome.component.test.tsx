@@ -560,8 +560,8 @@ describe('DesktopStageChrome', () => {
     expect(toggle.querySelector('.lucide-minimize-2')).not.toBeInTheDocument()
   })
 
-  it('triage mode: the close button sits inside the tab-selector pill, not in the far-right cluster', () => {
-    const triage = {
+  it('collection mode: the close button sits inside the tab-selector pill, not in the far-right cluster', () => {
+    const collection = {
       tab: 'live' as const,
       onTabChange: vi.fn(),
       onDone: vi.fn(),
@@ -574,14 +574,14 @@ describe('DesktopStageChrome', () => {
       remaining: 0,
       onClose: vi.fn(),
     }
-    render(<DesktopStageChrome {...stageBase} current={videoItem()} triage={triage} />)
+    render(<DesktopStageChrome {...stageBase} current={videoItem()} collection={collection} />)
 
     const closeBtn = screen.getByLabelText('Close')
     const liveTab = screen.getByText('Live', { selector: 'button' })
     // Same immediate pill container as the tab buttons (contained cluster).
     expect(closeBtn.parentElement).toBe(liveTab.parentElement)
     fireEvent.click(closeBtn)
-    expect(triage.onClose).toHaveBeenCalled()
+    expect(collection.onClose).toHaveBeenCalled()
 
     // The far-right cluster (outside the tab pill) holds only the avatar
     // menu and the de-clutter toggle — no stray close button there.
@@ -673,7 +673,7 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
     expect(saveBtn.closest('button')!.className).toContain('border-clay')
   })
 
-  it('triage live-tab Save carries the clay-border outline, Download (when present) stays plain glass', () => {
+  it('collection live-tab Save carries the clay-border outline, Download (when present) stays plain glass', () => {
     mockUseSendFile.mockReturnValue({
       supported: true,
       ready: true,
@@ -681,7 +681,7 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
       mode: 'download' as const,
       send: vi.fn(),
     })
-    const triage = {
+    const collection = {
       tab: 'live' as const,
       onTabChange: vi.fn(),
       onDone: vi.fn(),
@@ -694,7 +694,7 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
       remaining: 0,
       onClose: vi.fn(),
     }
-    render(<DesktopStageChrome {...stageBase} current={videoItem()} triage={triage} />)
+    render(<DesktopStageChrome {...stageBase} current={videoItem()} collection={collection} />)
 
     const saveBtn = screen.getByText('Save').closest('button')!
     expect(saveBtn.className).toContain('border-clay')
@@ -731,7 +731,7 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
   })
 
   it('renders Live before My Collection, not the bare "Collection" label', () => {
-    const triage = {
+    const collection = {
       tab: 'live' as const,
       onTabChange: vi.fn(),
       onDone: vi.fn(),
@@ -744,7 +744,7 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
       remaining: 0,
       onClose: vi.fn(),
     }
-    render(<DesktopStageChrome {...stageBase} current={videoItem()} triage={triage} />)
+    render(<DesktopStageChrome {...stageBase} current={videoItem()} collection={collection} />)
 
     expect(screen.queryByText('Collection')).not.toBeInTheDocument()
     const liveTab = screen.getByText('Live', { selector: 'button' })
@@ -759,7 +759,7 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
  * Round 8: the Spotify-style repeat control in the transport cluster, after
  * the audio button and before the divider. Only renders when BOTH
  * `repeatMode` and `onCycleRepeat` are provided (home/shared mode) —
- * collection mode always loops on its own and triage is a finite backlog,
+ * collection mode always loops on its own and the collection theater is a finite backlog,
  * so neither passes these props.
  */
 describe('DesktopDock: repeat control', () => {
@@ -1054,7 +1054,7 @@ describe('DesktopStageChrome: tappable author row', () => {
  * Owner follow-up: the theater's URL-sync effect rewrites the address bar to
  * per-post preview paths mid-session, so `usePathname` alone can't tell the
  * chrome it's still inside the home theater — `theaterActive` is passed to
- * `TheaterAvatarMenu` explicitly as `mode === 'home' || !!triage`. Asserted
+ * `TheaterAvatarMenu` explicitly as `mode === 'home' || !!collection`. Asserted
  * directly on the mocked `TheaterAvatarMenu`'s captured props (see the
  * module mock above).
  */
@@ -1065,7 +1065,7 @@ describe('DesktopStageChrome: theaterActive prop wiring', () => {
     onToggleDeclutter: vi.fn(),
   }
 
-  const triage = {
+  const collection = {
     tab: 'live' as const,
     onTabChange: vi.fn(),
     onDone: vi.fn(),
@@ -1079,23 +1079,28 @@ describe('DesktopStageChrome: theaterActive prop wiring', () => {
     onClose: vi.fn(),
   }
 
-  it('passes theaterActive: true in home mode (no triage)', () => {
+  it('passes theaterActive: true in home mode (no collection)', () => {
     render(<DesktopStageChrome {...stageBase} mode="home" current={videoItem()} />)
     expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
       expect.objectContaining({ theaterActive: true }),
     )
   })
 
-  it('passes theaterActive: true whenever triage is present, regardless of mode', () => {
+  it('passes theaterActive: true whenever the collection theater is present, regardless of mode', () => {
     render(
-      <DesktopStageChrome {...stageBase} mode="triage" current={videoItem()} triage={triage} />,
+      <DesktopStageChrome
+        {...stageBase}
+        mode="personal"
+        current={videoItem()}
+        collection={collection}
+      />,
     )
     expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
       expect.objectContaining({ theaterActive: true }),
     )
   })
 
-  it('passes theaterActive: false in collection mode (no triage)', () => {
+  it('passes theaterActive: false in collection mode (no collection)', () => {
     render(
       <DesktopStageChrome
         {...stageBase}
@@ -1109,7 +1114,7 @@ describe('DesktopStageChrome: theaterActive prop wiring', () => {
     )
   })
 
-  it('passes theaterActive: false in shared mode (no triage)', () => {
+  it('passes theaterActive: false in shared mode (no collection)', () => {
     render(<DesktopStageChrome {...stageBase} mode="shared" current={videoItem()} />)
     expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
       expect.objectContaining({ theaterActive: false }),

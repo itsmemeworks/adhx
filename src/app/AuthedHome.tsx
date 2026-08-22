@@ -19,7 +19,7 @@ import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Loader2, CheckCircle2, MessageSquare } from 'lucide-react'
 import { TheaterShell } from '@/components/theater/TheaterShell'
-import type { TriageTab } from '@/components/theater/types'
+import type { PersonalTab } from '@/components/theater/types'
 import { PasteToPreview } from '@/components/PasteToPreview'
 import { PasteLinkButton } from '@/components/PasteLinkButton'
 import { useTheme } from '@/lib/theme/context'
@@ -27,18 +27,18 @@ import { cn } from '@/lib/utils'
 import { ConnectWithX } from '@/components/matter'
 import { parseSyncErrorEvent, type SyncErrorCode } from '@/lib/sync/messages'
 import { useSyncListener } from './useSyncListener'
-import { useTriageQueue } from './useTriageQueue'
+import { usePersonalQueue } from './usePersonalQueue'
 
 /**
- * Seed for triage's Live sub-tab (unified-theater-triage.md §2) — the same
+ * Seed for the personal theater's Live sub-tab (unified-theater-collection.md §2) — the same
  * live community pulse home mode uses, but AuthedHome has no server-rendered
  * trending items of its own to seed it with. `useTheaterFeed` polls
  * `/api/activity` immediately when seeded empty (see its 2026-08-20 change),
- * so this only costs a brief "Loading…" the first time a triage session's
+ * so this only costs a brief "Loading…" the first time a collection session's
  * Live tab is opened — module-level so it's a stable reference across
  * re-renders/re-opens.
  */
-const TRIAGE_LIVE_SEED = { items: [], savedToday: 0, recentActivity: 0 }
+const PERSONAL_LIVE_SEED = { items: [], savedToday: 0, recentActivity: 0 }
 
 export default function AuthedHome(): React.ReactElement {
   return (
@@ -94,17 +94,17 @@ function FeedPageContent(): React.ReactElement {
   const [unreadOnly, setUnreadOnly] = useState(searchParams.get('unreadOnly') !== 'false')
   const [view, setView] = useState<'grid' | 'list' | 'bento'>('grid')
   const [search, setSearch] = useState(searchParams.get('search') || '')
-  const [triageQueue, setTriageQueue] = useState<FeedItem[]>([])
-  const [triageStart, setTriageStart] = useState(0)
-  const [triageInitialTab, setTriageInitialTab] = useState<TriageTab>('collection')
-  // Tag-select plumbing (unified-theater-triage.md §4, built by a parallel
+  const [personalQueue, setPersonalQueue] = useState<FeedItem[]>([])
+  const [personalStart, setPersonalStart] = useState(0)
+  const [personalInitialTab, setPersonalInitialTab] = useState<PersonalTab>('collection')
+  // Tag-select plumbing (unified-theater-collection.md §4, built by a parallel
   // agent) — FilterBar owns entering/exiting select mode; FeedGrid reads it
   // to render the tap-to-toggle-membership grid.
   const [tagSelectTag, setTagSelectTag] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const [stats, setStats] = useState({ total: 0, unread: 0 })
-  const [triageOpen, setTriageOpen] = useState(false)
+  const [personalOpen, setPersonalOpen] = useState(false)
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)
@@ -132,9 +132,9 @@ function FeedPageContent(): React.ReactElement {
     id: string
     fallbackUrl?: string
   } | null>(null)
-  // Set when arriving via `?triage=1` (e.g. the Triage pill pressed on /discover);
+  // Set when arriving via `?collection=1` (e.g. the Collection entry pressed on /discover);
   // opens the focus queue once the feed has loaded.
-  const [pendingTriage, setPendingTriage] = useState(false)
+  const [pendingCollection, setPendingCollection] = useState(false)
   // Set when arriving via `?live=1` (e.g. the Header's Live nav pressed from
   // a page other than `/`, which has no `open-theater` listener of its own);
   // opens the theater on the Live tab once authenticated.
@@ -186,7 +186,7 @@ function FeedPageContent(): React.ReactElement {
    * without leaving the page (owner). The card is pulled from `/api/feed?id=`
    * rather than built from the add endpoint's raw DB row, so it renders
    * identically to every other card (media, links, tags, read state) — the
-   * same trick `handleTriageLiveSave` uses to pull a save into an open queue.
+   * same trick `handlePersonalLiveSave` uses to pull a save into an open queue.
    */
   const addPastedPost = useCallback(
     async (url: string) => {
@@ -237,28 +237,28 @@ function FeedPageContent(): React.ReactElement {
     [placeAddedItem],
   )
 
-  // Open the unified triage viewer on a snapshot of the queue at a given index.
-  const openTriage = useCallback(
-    (queue: FeedItem[], start: number, tab: TriageTab = 'collection') => {
-      setTriageQueue(queue)
-      setTriageStart(Math.max(0, start))
-      setTriageInitialTab(tab)
-      setTriageOpen(true)
+  // Open the unified collection viewer on a snapshot of the queue at a given index.
+  const openPersonal = useCallback(
+    (queue: FeedItem[], start: number, tab: PersonalTab = 'collection') => {
+      setPersonalQueue(queue)
+      setPersonalStart(Math.max(0, start))
+      setPersonalInitialTab(tab)
+      setPersonalOpen(true)
     },
     [],
   )
 
   // PRODUCT DECISION REVERSAL — do not "fix" this back to reading current
-  // view state. A previous iteration (#342) seeded the triage queue from the
+  // view state. A previous iteration (#342) seeded the collection queue from the
   // CURRENT filter/platform/tag/search state, so the theater's Collection tab
   // always matched whatever the grid happened to be showing. The owner
-  // reversed that: "Triage is just about marking a post as read or not read."
-  // Triage is now strictly the full unread backlog, every time, regardless of
+  // reversed that: "The collection theater is just about marking a post as read or not read."
+  // The collection theater is now strictly the full unread backlog, every time, regardless of
   // what's active in the grid behind it — a consistent queue instead of a
   // filtered snapshot. So the query below is fixed (unreadOnly=true, no
   // filter/platform/tag/search) rather than derived from component state.
   // The feed API caps at 100/request, which covers a typical backlog.
-  const buildUnreadTriageQuery = useCallback(
+  const buildActiveQueueQuery = useCallback(
     () => new URLSearchParams({ filter: 'all', unreadOnly: 'true', limit: '100' }),
     [],
   )
@@ -266,7 +266,7 @@ function FeedPageContent(): React.ReactElement {
   const fetchUnreadQueue = useCallback(async (): Promise<FeedItem[]> => {
     let queue: FeedItem[] = items.filter((i) => !i.isRead)
     try {
-      const res = await fetch(`/api/feed?${buildUnreadTriageQuery()}`)
+      const res = await fetch(`/api/feed?${buildActiveQueueQuery()}`)
       if (res.ok) {
         const data = await res.json()
         const fetched: FeedItem[] = (data.items || []).filter((i: FeedItem) => !i.isRead)
@@ -276,17 +276,17 @@ function FeedPageContent(): React.ReactElement {
       /* fall back to the loaded items, filtered to unread */
     }
     return queue
-  }, [items, buildUnreadTriageQuery])
+  }, [items, buildActiveQueueQuery])
 
-  const startTriageAll = useCallback(
-    async (tab: TriageTab = 'collection') => {
+  const startPersonalAll = useCallback(
+    async (tab: PersonalTab = 'collection') => {
       const queue = await fetchUnreadQueue()
-      openTriage(queue, 0, tab)
+      openPersonal(queue, 0, tab)
     },
-    [fetchUnreadQueue, openTriage],
+    [fetchUnreadQueue, openPersonal],
   )
 
-  // Open triage from a tapped gallery item: always the full unread backlog
+  // Open collection from a tapped gallery item: always the full unread backlog
   // (see the decision-reversal note above), starting on the item the user
   // tapped — which may live outside that backlog (e.g. it's already read, or
   // the grid is showing a tag/category view that mixes read + unread). Of the
@@ -294,7 +294,7 @@ function FeedPageContent(): React.ReactElement {
   // unread queue and ignore the tap), prepending is the least surprising:
   // tapping a specific card should always open ON that card, with the rest of
   // the unread backlog queued up right behind it.
-  const openTriageFromItem = useCallback(
+  const openPersonalFromItem = useCallback(
     async (idx: number) => {
       const clicked = items[idx]
       let queue = await fetchUnreadQueue()
@@ -306,9 +306,9 @@ function FeedPageContent(): React.ReactElement {
         queue = [clicked, ...queue]
         start = 0
       }
-      openTriage(queue, Math.max(0, start))
+      openPersonal(queue, Math.max(0, start))
     },
-    [items, fetchUnreadQueue, openTriage],
+    [items, fetchUnreadQueue, openPersonal],
   )
 
   const startSync = useCallback(
@@ -531,7 +531,7 @@ function FeedPageContent(): React.ReactElement {
         const data = await response.json()
         // A superseded response must touch NOTHING — including `loading`. The
         // pending-navigation effect below fires on any loading true→false
-        // edge, so clearing it here resolved deep links (`?open=`, `?triage=1`,
+        // edge, so clearing it here resolved deep links (`?open=`, `?collection=1`,
         // `added=success`) against the stale snapshot, once, with no retry.
         if (requestId !== feedRequestRef.current) return
 
@@ -612,7 +612,7 @@ function FeedPageContent(): React.ReactElement {
   ])
 
   // Any surface that changes a post's tags (grid Add-posts toggles, the
-  // triage TagQuickPicker) announces it — refetch tag counts so the toolbar
+  // collection TagQuickPicker) announces it — refetch tag counts so the toolbar
   // "{n} posts" and the Tags dropdown never go stale, AND patch the affected
   // card's own tags.
   //
@@ -691,7 +691,7 @@ function FeedPageContent(): React.ReactElement {
     if (pendingNavigation && wasLoading && !loading && items.length > 0) {
       const targetIndex = items.findIndex((i) => i.id === pendingNavigation.id)
       if (targetIndex !== -1) {
-        openTriage(items, targetIndex)
+        openPersonal(items, targetIndex)
       } else if (pendingNavigation.fallbackUrl) {
         // Parent tweet not in user's collection - open externally as fallback
         window.open(pendingNavigation.fallbackUrl, '_blank')
@@ -739,20 +739,20 @@ function FeedPageContent(): React.ReactElement {
     // Try to find it in current items first
     const currentIndex = items.findIndex((i) => i.id === openId)
     if (currentIndex !== -1) {
-      openTriage(items, currentIndex)
+      openPersonal(items, currentIndex)
       return
     }
 
     // Not in the loaded feed — e.g. an already-saved tweet that's already read,
     // or one on a later page. Fetch that specific bookmark by id (read state and
-    // pagination ignored) and open it directly in triage.
+    // pagination ignored) and open it directly in the collection theater.
     let alive = true
     fetch(`/api/feed?id=${encodeURIComponent(openId)}&unreadOnly=false&limit=1`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (!alive) return
         const item = data?.items?.[0]
-        if (item) openTriage([item], 0)
+        if (item) openPersonal([item], 0)
       })
       .catch(() => {})
     return () => {
@@ -789,7 +789,7 @@ function FeedPageContent(): React.ReactElement {
   }, [searchParams]) // Only run when searchParams changes
 
   // Preselect a tag from `?tag=` — the `/tags` screen's "View" action
-  // (unified-theater-triage.md §4). Applied once on arrival via a ref guard:
+  // (unified-theater-collection.md §4). Applied once on arrival via a ref guard:
   // unlike filter/sort/etc above, `selectedTags` has no URL round-trip (the
   // writer effect below never sets/clears `tag`), so continuously re-reading
   // it on every searchParams change would silently undo an explicit "clear
@@ -803,42 +803,45 @@ function FeedPageContent(): React.ReactElement {
     setSelectedTags([urlTag])
   }, [searchParams])
 
-  // Header's Collection/Live nav (unified-theater-triage.md §1) dispatches
-  // `open-theater` with `{ tab: 'triage' | 'live' }` for both the Triage
-  // pill and the Live nav item — open the triage overlay on the matching
+  // Header's Collection/Live nav (unified-theater-collection.md §1) dispatches
+  // `open-theater` with `{ tab: 'collection' | 'live' }` for both the
+  // pill and the Live nav item — open the collection overlay on the matching
   // sub-tab, seeded from the current unread queue either way (so switching
   // tabs mid-session always has a Collection queue to fall back to).
   useEffect(() => {
     function handler(e: Event) {
-      const detail = (e as CustomEvent<{ tab?: 'triage' | 'live' }>).detail
-      void startTriageAll(detail?.tab === 'live' ? 'live' : 'collection')
+      const detail = (e as CustomEvent<{ tab?: 'collection' | 'live' }>).detail
+      void startPersonalAll(detail?.tab === 'live' ? 'live' : 'collection')
     }
     window.addEventListener('open-theater', handler)
     return () => window.removeEventListener('open-theater', handler)
-  }, [startTriageAll])
+  }, [startPersonalAll])
 
-  // `?triage=1` — the Triage pill was pressed from another route (e.g. Discover),
-  // so we navigated here to open triage. Flag it, then clear the param.
+  // `?collection=1` — the Collection entry was pressed from another route (e.g. Discover),
+  // so we navigated here to open collection. Flag it, then clear the param.
   useEffect(() => {
-    if (searchParams.get('triage') !== '1') return
-    setPendingTriage(true)
+    // `?collection=1` is the current name; `?collection=1` is still honoured so
+    // links people already have keep working.
+    if (searchParams.get('collection') !== '1' && searchParams.get('collection') !== '1') return
+    setPendingCollection(true)
     const params = new URLSearchParams(searchParams.toString())
-    params.delete('triage')
+    params.delete('collection')
+    params.delete('collection')
     const qs = params.toString()
     router.replace(qs ? `?${qs}` : pathname, { scroll: false })
   }, [searchParams, router, pathname])
 
-  // Arrived via ?triage=1 — open the full unread queue once authenticated.
+  // Arrived via ?collection=1 — open the full unread queue once authenticated.
   useEffect(() => {
-    if (!pendingTriage || isAuthenticated !== true) return
-    setPendingTriage(false)
-    startTriageAll()
-  }, [pendingTriage, isAuthenticated, startTriageAll])
+    if (!pendingCollection || isAuthenticated !== true) return
+    setPendingCollection(false)
+    startPersonalAll()
+  }, [pendingCollection, isAuthenticated, startPersonalAll])
 
   // `?live=1` — the Live nav item was pressed from a route other than `/`
   // (Header's `open-theater` event has no listener outside the feed page),
   // so we navigated here to open the theater's Live tab. Flag it, then clear
-  // the param — mirrors the ?triage=1 handling above.
+  // the param — mirrors the ?collection=1 handling above.
   useEffect(() => {
     if (searchParams.get('live') !== '1') return
     setPendingLive(true)
@@ -852,11 +855,11 @@ function FeedPageContent(): React.ReactElement {
   useEffect(() => {
     if (!pendingLive || isAuthenticated !== true) return
     setPendingLive(false)
-    startTriageAll('live')
-  }, [pendingLive, isAuthenticated, startTriageAll])
+    startPersonalAll('live')
+  }, [pendingLive, isAuthenticated, startPersonalAll])
 
-  // Reconcile the feed's items/stats with actions taken inside the triage theater.
-  const { handleTriageResolved, handleTriageRestored } = useTriageQueue({
+  // Reconcile the feed's items/stats with actions taken inside the collection theater.
+  const { handlePostResolved, handlePostRestored } = usePersonalQueue({
     unreadOnly,
     setItems,
     setStats,
@@ -865,7 +868,7 @@ function FeedPageContent(): React.ReactElement {
   // Global keyboard shortcuts (when lightbox is NOT open)
   useEffect(() => {
     // Skip if lightbox is open (those shortcuts are handled above) or shortcuts modal is open
-    if (triageOpen || showShortcutsModal) return
+    if (personalOpen || showShortcutsModal) return
     // Skip if not authenticated
     if (!isAuthenticated) return
 
@@ -930,7 +933,7 @@ function FeedPageContent(): React.ReactElement {
           // Focus mode - open first item (full unread backlog)
           e.preventDefault()
           if (items.length > 0) {
-            openTriageFromItem(0)
+            openPersonalFromItem(0)
           }
           break
         case 't':
@@ -961,7 +964,7 @@ function FeedPageContent(): React.ReactElement {
     window.addEventListener('keydown', handleGlobalKeyDown)
     return () => window.removeEventListener('keydown', handleGlobalKeyDown)
   }, [
-    triageOpen,
+    personalOpen,
     isAuthenticated,
     router,
     showShortcutsModal,
@@ -1168,7 +1171,7 @@ function FeedPageContent(): React.ReactElement {
         </div>
       )}
 
-      {/* Paste-first add (unified-theater-triage.md §1): no more `+` Add
+      {/* Paste-first add (unified-theater-collection.md §1): no more `+` Add
           button/modal. On the LIBRARY a paste adds the post in place and puts
           it at the top (owner) rather than navigating to its preview page —
           you're already looking at the collection you're adding to. Everywhere
@@ -1257,7 +1260,7 @@ function FeedPageContent(): React.ReactElement {
             unreadOnly={unreadOnly}
             stats={stats}
             view={view}
-            onExpand={openTriageFromItem}
+            onExpand={openPersonalFromItem}
             onLoadMore={loadMore}
             onShowAll={() => setUnreadOnly(false)}
             tagSelectTag={tagSelectTag}
@@ -1266,19 +1269,19 @@ function FeedPageContent(): React.ReactElement {
         </ErrorBoundary>
       </div>
 
-      {triageOpen && (
+      {personalOpen && (
         <ErrorBoundary componentName="TheaterShell">
           <TheaterShell
-            mode="triage"
-            seed={TRIAGE_LIVE_SEED}
-            triageItems={triageQueue}
-            initialTriageIndex={triageStart}
-            initialTriageTab={triageInitialTab}
-            onTriageResolved={handleTriageResolved}
-            onTriageRestored={handleTriageRestored}
+            mode="personal"
+            seed={PERSONAL_LIVE_SEED}
+            personalItems={personalQueue}
+            initialPersonalIndex={personalStart}
+            initialPersonalTab={personalInitialTab}
+            onPostResolved={handlePostResolved}
+            onPostRestored={handlePostRestored}
             onCollectionAdded={placeAddedItem}
             onClose={() => {
-              setTriageOpen(false)
+              setPersonalOpen(false)
               // Refresh the top-bar counts after a collection session.
               window.dispatchEvent(new CustomEvent('stats-updated'))
             }}
@@ -1290,7 +1293,7 @@ function FeedPageContent(): React.ReactElement {
       <KeyboardShortcutsModal
         isOpen={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        inFocusMode={triageOpen}
+        inFocusMode={personalOpen}
       />
     </div>
   )

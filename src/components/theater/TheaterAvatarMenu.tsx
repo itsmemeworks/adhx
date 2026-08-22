@@ -11,7 +11,7 @@ import { usePathname } from 'next/navigation'
 import { Bookmark, LogIn, LogOut, Menu, Radio, Settings, Tag, Trophy } from 'lucide-react'
 import { useAuthMe } from '@/components/auth'
 import { cn } from '@/lib/utils'
-import { TRIAGE_TAB_ORDER, TRIAGE_TAB_LABEL, type TriageTab } from './types'
+import { PERSONAL_TAB_ORDER, PERSONAL_TAB_LABEL, type PersonalTab } from './types'
 import { generateAvatarDataUri, usableAvatarUrl } from '@/lib/avatar/generated-avatar'
 
 // The theater is ALWAYS dark regardless of the site's light/dark theme, so
@@ -141,8 +141,8 @@ function TheaterTabsGroup({
   onTabChange,
   onClose,
 }: {
-  tab: TriageTab
-  onTabChange: (tab: TriageTab) => void
+  tab: PersonalTab
+  onTabChange: (tab: PersonalTab) => void
   onClose: () => void
 }) {
   return (
@@ -154,7 +154,7 @@ function TheaterTabsGroup({
         <Radio size={13} />
         <span>Theater</span>
       </p>
-      {TRIAGE_TAB_ORDER.map((t) => (
+      {PERSONAL_TAB_ORDER.map((t) => (
         <button
           key={t}
           type="button"
@@ -167,7 +167,7 @@ function TheaterTabsGroup({
           className="flex w-full items-center gap-2.5 py-2.5 pr-4 pl-[2.4rem] text-left text-[13px] transition-colors hover:bg-white/[.06]"
           style={{ color: tab === t ? INK : SUBTLE }}
         >
-          <span>{TRIAGE_TAB_LABEL[t]}</span>
+          <span>{PERSONAL_TAB_LABEL[t]}</span>
           {tab === t && <CurrentDot />}
         </button>
       ))}
@@ -190,13 +190,13 @@ export interface TheaterAvatarMenuProps {
    * default "render nothing" behavior — one menu implementation covering
    * both auth states rather than a second component. Callers opt in per
    * mode: the home theater and shared preview pages pass this (signed-out
-   * visitors there had no navigation at all); triage is always reached
+   * visitors there had no navigation at all); the collection theater is always reached
    * authed, and playlist mode already has its own "Make your own"
    * signed-out conversion CTA, so neither passes it.
    */
   allowSignedOut?: boolean
   /**
-   * The mount site IS the home theater screen (home mode, or triage — the
+   * The mount site IS the home theater screen (home mode, or collection — the
    * theater overlaying `/`), regardless of what the address bar says (the
    * URL-sync effect rewrites it to per-post preview paths mid-session, and
    * usePathname follows). Marks the Theater entry as current and makes it
@@ -205,12 +205,12 @@ export interface TheaterAvatarMenuProps {
    */
   theaterActive?: boolean
   /**
-   * Mobile triage only: expands the Theater entry into its Live / My
+   * Mobile collection only: expands the Theater entry into its Live / My
    * Collection sub-options with the selected one marked. Desktop omits it —
    * its top bar carries the tab pill, and rendering both would be two
    * controls for one piece of state.
    */
-  theaterTabs?: { tab: TriageTab; onTabChange: (tab: TriageTab) => void }
+  theaterTabs?: { tab: PersonalTab; onTabChange: (tab: PersonalTab) => void }
 }
 
 /**

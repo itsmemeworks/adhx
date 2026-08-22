@@ -4,7 +4,7 @@ import AuthedHome from '../AuthedHome'
 
 /**
  * `/library` — the Collection GRID: masonry/list/bento views, the FilterBar
- * (category + platform filters, tags, search) and the triage overlay it opens.
+ * (category + platform filters, tags, search) and the collection overlay it opens.
  *
  * This is where `AuthedHome` moved to when `/` became the theater. The theater
  * covers "play me what's new" (`/` = Live, `/collection` = My Collection);

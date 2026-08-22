@@ -12,16 +12,16 @@ import { useTheaterKeyboard } from '@/components/theater/useTheaterKeyboard'
 
 function baseArgs(overrides: Partial<Parameters<typeof useTheaterKeyboard>[0]> = {}) {
   return {
-    isTriage: false,
-    triageTab: 'live' as const,
+    isPersonal: false,
+    personalTab: 'live' as const,
     goNext: vi.fn(),
     goPrev: vi.fn(),
     setMuted: vi.fn(),
-    triageDone: vi.fn(),
-    triageLater: vi.fn(),
-    triageDelete: vi.fn(),
-    triageStepBack: vi.fn(),
-    triageDoUndo: vi.fn(),
+    archiveCurrent: vi.fn(),
+    deferCurrent: vi.fn(),
+    deleteCurrent: vi.fn(),
+    personalStepBack: vi.fn(),
+    undoLastAction: vi.fn(),
     ...overrides,
   }
 }

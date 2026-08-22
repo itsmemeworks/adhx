@@ -185,7 +185,7 @@ export interface StageYouTubeProps {
    * player itself. */
   onRequestUnmute: () => void
   /** Ended, errored, or stalled — the same advance path StageVideo's
-   * `onEnded` drives. Triage's Collection tab now wires this through to pure
+   * `onEnded` drives. The personal theater's Collection tab now wires this through to pure
    * queue navigation ("My Collection is just a different playlist in that
    * same theater" — Done/Later/Delete still decide read state, finishing
    * playback just moves along). Omit to disable auto-advance entirely —

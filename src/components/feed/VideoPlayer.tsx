@@ -307,7 +307,7 @@ export function VideoPlayer({
   // src/components/feed/video-src.ts (twitterProxy / feedVideoSrc). Not
   // reconciled here because that module's exports take a full `FeedItem`
   // (item.author/item.id/item.media[0].url), while this component only has
-  // discrete author/tweetId/platform props from its caller (TriageStage.tsx)
+  // discrete author/tweetId/platform props from its caller (CollectionStage.tsx)
   // — there's no FeedItem to pass. Safely de-duplicating would mean either
   // exporting a raw (author, id, platform) => url builder from video-src.ts
   // (out of this change's file scope) or reshaping this component's public

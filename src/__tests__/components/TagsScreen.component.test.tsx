@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * TagsScreen (`/tags`) component tests (unified-theater-triage.md §4) —
+ * TagsScreen (`/tags`) component tests (unified-theater-collection.md §4) —
  * covers the poster-card grid render (counts + the Public/Private visibility
  * toggle), toggling to public (PATCH make-public + copy the friendly URL),
  * toggling to private, the empty state, and the card's `?tag=` link target.

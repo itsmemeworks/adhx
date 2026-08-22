@@ -28,7 +28,7 @@ interface OwnerStats {
 const PREVIEW_LIMIT = 4
 
 /**
- * `/tags` — a home for every tag playlist (unified-theater-triage.md §4):
+ * `/tags` — a home for every tag playlist (unified-theater-collection.md §4):
  * count, public status, a content-mosaic "poster" card (Option C), and the
  * same make-public flow FilterBar's selected-tag toolbar uses (`FilterBar.tsx`
  * — PATCH `/api/tags` idempotent make-public, then copy the friendly

@@ -13,7 +13,7 @@ import { formatCompactRelativeTime } from '@/lib/utils/format'
 import { cn } from '@/lib/utils'
 
 /**
- * Shared media-first card (the single triage/focus viewer) — Matter focus tokens.
+ * Shared media-first card (the single collection/focus viewer) — Matter focus tokens.
  *
  * Two layouts:
  *  - `fullBleed` (mobile, media items): media covers the whole screen
@@ -302,7 +302,7 @@ function FullBleedMedia({
   } else if (multiPhoto) {
     // Horizontal scroll-snap carousel — one full-screen photo per page. Touch
     // events stopPropagation so swiping between photos doesn't also trigger the
-    // triage Keep/Done swipe on the wrapper; triage those via the dock buttons.
+    // collection Keep/Done swipe on the wrapper; collection those via the dock buttons.
     media = (
       <div
         ref={carouselRef}
@@ -530,7 +530,7 @@ function AuthorCard({ item }: { item: FeedItem }) {
 
   return (
     <article
-      data-triage-content
+      data-collection-content
       className="w-full md:w-[330px] flex-shrink-0 bg-fsurface border border-fline rounded-2xl shadow-m-lg flex flex-col max-h-[32vh] md:max-h-full overflow-hidden"
     >
       <header className="flex items-start gap-3 p-4 pb-2 flex-shrink-0">
@@ -807,7 +807,7 @@ function ArticleReader({ item }: { item: FeedItem }) {
 
   return (
     <div
-      data-triage-content
+      data-collection-content
       className="w-full max-w-[700px] h-full flex flex-col gap-[18px] pt-1.5"
     >
       {/* source line */}
@@ -867,7 +867,7 @@ function QuoteView({ item }: { item: FeedItem }) {
 
   return (
     <div
-      data-triage-content
+      data-collection-content
       className="w-full max-w-[640px] max-h-full overflow-y-auto bg-fsurface border border-fline rounded-2xl shadow-m-lg p-6 lg:p-7"
     >
       {/* quoting post header */}
@@ -939,7 +939,7 @@ function TextCard({ item }: { item: FeedItem }) {
 
   return (
     <article
-      data-triage-content
+      data-collection-content
       className="w-full max-w-xl max-h-full overflow-y-auto bg-fsurface border border-fline rounded-2xl shadow-m-lg p-6 lg:p-7"
     >
       <div className="flex items-center gap-3 mb-4">
@@ -949,7 +949,7 @@ function TextCard({ item }: { item: FeedItem }) {
           <p className="text-xs font-mono text-fink-3 truncate">@{item.author}</p>
         </div>
         {/* Platform glyph + human time chip — links to the source post (no x.com
-            wordmark or external-link icon, matching the other triage cards). */}
+            wordmark or external-link icon, matching the other collection cards). */}
         <a
           href={item.tweetUrl}
           target="_blank"
@@ -989,7 +989,7 @@ export function MediaCard({
   fullBleed?: boolean
   /** Full-bleed video only: chrome (caption/scrim/mute) hidden for clean viewing. */
   immersive?: boolean
-  /** Tap-the-video handler that toggles immersive mode (owned by TriageMode). */
+  /** Tap-the-video handler that toggles immersive mode (owned by CollectionMode). */
   onToggleImmersive?: () => void
 }) {
   // Mobile full-bleed media — the whole viewer is the media, chrome overlays it.
@@ -1036,7 +1036,7 @@ export function MediaCard({
   return (
     <div className="w-full h-full flex flex-col md:flex-row gap-4 md:gap-8 items-center justify-center">
       <div
-        data-triage-content
+        data-collection-content
         className="min-w-0 max-w-full h-full min-h-0 flex items-center justify-center"
       >
         <MediaPanel item={item} />

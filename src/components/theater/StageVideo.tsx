@@ -238,7 +238,7 @@ export function StageVideo({
    *
    * Skipped while `repeat` is on — a pinned or looping post is deliberately
    * parked on, error or not — and when there's nowhere to advance to (`onEnded`
-   * absent, e.g. triage, where Delete is the way past a dead post).
+   * absent, e.g. collection, where Delete is the way past a dead post).
    */
   useEffect(() => {
     if (!errored || !onEnded || repeat) return
@@ -569,7 +569,7 @@ export function StageVideo({
           been removed at the source. The viewer gets ~10s to read why, then the
           errored-advance effect above moves the queue on; it used to sit here
           forever waiting for manual navigation, which stalls a playlist just as
-          badly as a failed load does. In triage (no `onEnded`) Delete is still
+          badly as a failed load does. In collection (no `onEnded`) Delete is still
           the way past it. */}
       {errored && unavailableReason && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#08070a]/70 px-6 text-center">

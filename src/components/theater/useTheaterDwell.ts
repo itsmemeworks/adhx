@@ -9,12 +9,12 @@
  * `preview` activity event, matching the pre-theater `/t/{username}/{tag}`
  * page's behavior.
  *
- * Only triage's COLLECTION tab opts out: read state there is explicit (Archive
+ * Only the collection theater's COLLECTION tab opts out: read state there is explicit (Archive
  * / Later / Delete), and it isn't even displaying `currentKey`'s item (see
- * `TriageStage`). Its LIVE tab is the same community feed the signed-out home
- * theater shows, so it dwells exactly like home — this used to say `isTriage`,
+ * `CollectionStage`). Its LIVE tab is the same community feed the signed-out home
+ * theater shows, so it dwells exactly like home — this used to say `isPersonal`,
  * which silently disabled seen-marking for every signed-in viewer the moment
- * authed `/` became a triage mount. The queue then never learned that anything
+ * authed `/` became a collection mount. The queue then never learned that anything
  * had been watched, so it could never reach the caught-up stage and looped
  * back into posts the viewer had just finished (found by the caught-up
  * permutation matrix, and consistent with the owner's stall report).
@@ -31,8 +31,8 @@ const SEEN_DWELL_MS = 2_000
 
 export interface UseTheaterDwellArgs {
   currentKey: string | null
-  /** Triage's Collection tab only — NOT the Live tab, which dwells like home. */
-  isTriageCollection: boolean
+  /** The personal theater's Collection tab only — NOT the Live tab, which dwells like home. */
+  isCollectionTab: boolean
   loop: boolean
   /** Fresh-item lookup — a ref so this effect only resets on `currentKey` changes, not on every unrelated re-render. */
   itemsRef: MutableRefObject<TheaterItem[]>
@@ -41,7 +41,7 @@ export interface UseTheaterDwellArgs {
 
 export function useTheaterDwell({
   currentKey,
-  isTriageCollection,
+  isCollectionTab,
   loop,
   itemsRef,
   seenSet,
@@ -50,7 +50,7 @@ export function useTheaterDwell({
   seenSetRef.current = seenSet
 
   useEffect(() => {
-    if (!currentKey || isTriageCollection) return
+    if (!currentKey || isCollectionTab) return
     const timer = window.setTimeout(() => {
       const item = itemsRef.current.find((it) => theaterItemKey(it) === currentKey)
       if (!item) return
@@ -64,5 +64,5 @@ export function useTheaterDwell({
       }
     }, SEEN_DWELL_MS)
     return () => window.clearTimeout(timer)
-  }, [currentKey, loop, isTriageCollection])
+  }, [currentKey, loop, isCollectionTab])
 }

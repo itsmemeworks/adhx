@@ -16,7 +16,7 @@ export function previewUrlForItem(item: Pick<FeedItem, 'platform' | 'author' | '
 
 /**
  * Copy a saved item's on-ADHX preview link to the clipboard. Returns true on
- * success. Powers the quick Share buttons in the gallery + triage mode.
+ * success. Powers the quick Share buttons in the gallery + collection mode.
  */
 export async function copyPreviewLink(
   item: Pick<FeedItem, 'platform' | 'author' | 'id'>,

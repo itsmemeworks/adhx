@@ -21,7 +21,7 @@ interface FeedCardProps {
   lastSyncAt: string | null
   sortField: 'processedAt' | 'createdAt'
   onExpand: () => void
-  // Tag "Add posts" selection mode (unified-theater-triage §4): when active,
+  // Tag "Add posts" selection mode (unified-theater-collection §4): when active,
   // clicking the card toggles tag membership instead of opening it.
   selectionMode?: boolean
   selected?: boolean
@@ -59,7 +59,7 @@ export function FeedCard({
   const [isHovered, setIsHovered] = useState(false)
   // Video hover-autoplay is desktop-only. On touch the browser emulates :hover
   // on the FIRST tap, which would start playback and swallow that tap; gate it to
-  // hover-capable devices so a tap just opens the item in triage.
+  // hover-capable devices so a tap just opens the item in the collection theater.
   const [canHover, setCanHover] = useState(false)
   useEffect(() => {
     setCanHover(window.matchMedia('(hover: hover)').matches)

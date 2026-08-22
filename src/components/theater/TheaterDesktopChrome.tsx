@@ -62,8 +62,8 @@ import { useClampExpand } from './useClampExpand'
 import {
   theaterItemKey,
   PLATFORM_LABEL,
-  TRIAGE_TAB_ORDER,
-  TRIAGE_TAB_LABEL,
+  PERSONAL_TAB_ORDER,
+  PERSONAL_TAB_LABEL,
   REPEAT_MODE_LABEL,
 } from './types'
 import { TheaterLinkedText, stripShortLinksForPreview } from './TheaterText'
@@ -78,7 +78,7 @@ import type {
   TheaterPlaylistMeta,
   TheaterItem,
   TheaterMode,
-  TheaterTriageChrome,
+  TheaterPersonalChrome,
 } from './types'
 
 export interface DesktopStageChromeProps {
@@ -101,8 +101,8 @@ export interface DesktopStageChromeProps {
   onRequestSignIn?: () => void
   /** Playlist mode, non-owner viewers: the "Make your own" CTA — opens the sign-in modal in place (authed non-owners are routed home instead, handled by the caller). */
   onRequestMakeYourOwn?: () => void
-  /** Triage mode (unified-theater-triage.md §2): swaps the top bar's Live/paste-input for a Collection↔Live tab switcher, and the bottom-right action set for Later/Tag/Delete/Done. */
-  triage?: TheaterTriageChrome
+  /** Collection mode (unified-theater-collection.md §2): swaps the top bar's Live/paste-input for a Collection↔Live tab switcher, and the bottom-right action set for Later/Tag/Delete/Done. */
+  collection?: TheaterPersonalChrome
 }
 
 export interface DesktopDockProps {
@@ -141,8 +141,8 @@ export interface DesktopDockProps {
   declutter: boolean
   /** Collection mode: appends a "loops" divider + a ghosted copy of the first card after the filmstrip, and hides the live-pulse-only savedToday/newCount lines in the end cap. */
   playlist?: TheaterPlaylistMeta
-  /** Triage mode: end cap shows "{remaining} left" instead of savedToday/newCount. */
-  triage?: TheaterTriageChrome
+  /** Collection mode: end cap shows "{remaining} left" instead of savedToday/newCount. */
+  collection?: TheaterPersonalChrome
   /**
    * shared-post-repeat (desktop parity with TheaterMobileChrome): the shared
    * post is pinned and repeating. The filmstrip's current card swaps its
@@ -158,7 +158,7 @@ export interface DesktopDockProps {
   /**
    * The Spotify-style repeat control (round 8): current mode + the cycling
    * handler. Both absent in playlist mode (that queue always loops) and
-   * triage (finite backlog) — the button only renders when the handler is
+   * collection (finite backlog) — the button only renders when the handler is
    * provided.
    */
   repeatMode?: RepeatMode
@@ -170,7 +170,7 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 const GLASS =
   'inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/[0.14] px-4 text-[12.5px] font-semibold text-white transition-colors hover:bg-white/20 disabled:opacity-60'
 /**
- * Solid clay-grad — since round 8 used ONLY by triage's Done button; every
+ * Solid clay-grad — since round 8 used ONLY by the collection theater's Done button; every
  * Save variant moved to SAVE_OUTLINE below (owner: the solid fill was "too
  * much"). Download/Copy are power-user affordances on GLASS alongside
  * Link/Open.
@@ -182,8 +182,8 @@ const PRIMARY =
  * The Save buttons (round 8, owner): a Bookmark glyph on the same
  * see-through glass as GLASS, distinguished by a clay border instead of the
  * old solid clay-grad PRIMARY fill ("too much"). Covers SavePostButton,
- * TriageLiveSaveButton, the signed-out Save prompt, AND SavePlaylistButton
- * (owner follow-up: same outline). PRIMARY remains only for triage's Done.
+ * PersonalLiveSaveButton, the signed-out Save prompt, AND SavePlaylistButton
+ * (owner follow-up: same outline). PRIMARY remains only for the collection theater's Done.
  * Mirrors `PILL_SAVE` in TheaterMobileChrome.
  */
 const SAVE_OUTLINE =
@@ -386,7 +386,7 @@ export function DesktopStageChrome({
   isPlaylistOwner = false,
   onRequestSignIn,
   onRequestMakeYourOwn,
-  triage,
+  collection,
 }: DesktopStageChromeProps) {
   const [pasteValue, setPasteValue] = useState('')
   const [pasteError, setPasteError] = useState(false)
@@ -432,11 +432,11 @@ export function DesktopStageChrome({
   // alongside a (future) mobile equivalent, and must never hijack a paste
   // aimed at an actual input/textarea/contentEditable.
   useEffect(() => {
-    // Triage mode's global paste-to-preview is already covered by
+    // Collection mode's global paste-to-preview is already covered by
     // `<PasteToPreview/>` (mounted once, app-wide, in AuthedHome) — this
-    // component doesn't even render the paste input in triage mode (see the
+    // component doesn't even render the paste input in collection mode (see the
     // top bar below), so a second listener here would just double-navigate.
-    if (triage) return
+    if (collection) return
     const handler = (e: ClipboardEvent) => {
       const target = e.target as HTMLElement | null
       if (target) {
@@ -451,13 +451,13 @@ export function DesktopStageChrome({
     }
     window.addEventListener('paste', handler)
     return () => window.removeEventListener('paste', handler)
-  }, [triage])
+  }, [collection])
 
   const kind = current ? inferType(current) : null
   const textLike = kind !== null && ['text', 'quote', 'article'].includes(kind)
   const isMedia = kind === 'video' || kind === 'photo'
   const trendCount = current ? (current.trendCount ?? current.saveCount ?? 0) : 0
-  const tagCount = triage?.tags?.length ?? 0
+  const tagCount = collection?.tags?.length ?? 0
   const handle = current?.author ? current.author.replace(/^@+/, '') : ''
   const caption = current ? (current.text || '').trim() : ''
   const platformLabel = current ? (PLATFORM_LABEL[current.platform] ?? current.platform) : ''
@@ -510,10 +510,10 @@ export function DesktopStageChrome({
             // Collection mode: the wordmark, tag name and curator line sit on
             // one shared text baseline (per live review) — other modes keep
             // vertical centering for their pill controls.
-            playlist && !triage ? 'items-baseline' : 'items-center',
+            playlist && !collection ? 'items-baseline' : 'items-center',
           )}
         >
-          {playlist && !triage ? (
+          {playlist && !collection ? (
             // Inline-flow brand: an inline anchor's baseline is its TEXT
             // baseline, so the wordmark sits on the same ruler as the tag
             // name + curator line (MatterLogo is a nested flex whose
@@ -538,7 +538,7 @@ export function DesktopStageChrome({
               <MatterLogo size={19} className="[&>span]:text-white" />
             </a>
           )}
-          {triage ? (
+          {collection ? (
             <>
               <span className="h-5 w-px flex-none bg-white/20" aria-hidden />
               {/* The close button lives INSIDE this same pill container, right
@@ -546,26 +546,26 @@ export function DesktopStageChrome({
                   one contained cluster with the tab selector, not stranded
                   among the far-right avatar/de-clutter controls. */}
               <div className="inline-flex flex-none items-center gap-0.5 rounded-full bg-white/10 p-1 text-[12.5px] font-semibold">
-                {TRIAGE_TAB_ORDER.map((t) => (
+                {PERSONAL_TAB_ORDER.map((t) => (
                   <button
                     key={t}
                     type="button"
-                    onClick={() => triage.onTabChange(t)}
-                    aria-current={triage.tab === t ? 'true' : undefined}
+                    onClick={() => collection.onTabChange(t)}
+                    aria-current={collection.tab === t ? 'true' : undefined}
                     className={cn(
                       'rounded-full px-4 py-1.5 whitespace-nowrap transition-colors',
                       // Hardcoded dark ink: `text-ink` flips light in dark theme and vanishes on the white pill.
-                      triage.tab === t
+                      collection.tab === t
                         ? 'bg-white text-[#1c1917]'
                         : 'text-white/60 hover:text-white',
                     )}
                   >
-                    {TRIAGE_TAB_LABEL[t]}
+                    {PERSONAL_TAB_LABEL[t]}
                   </button>
                 ))}
                 <button
                   type="button"
-                  onClick={triage.onClose}
+                  onClick={collection.onClose}
                   aria-label="Close"
                   className="ml-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full text-white/60 transition-colors hover:bg-white/15 hover:text-white"
                 >
@@ -607,8 +607,8 @@ export function DesktopStageChrome({
         </div>
 
         <div className="pointer-events-auto flex flex-none items-center gap-2.5">
-          {triage ? (
-            triage.tab === 'live' && current && textLike ? (
+          {collection ? (
+            collection.tab === 'live' && current && textLike ? (
               <>
                 <FlameChip trendCount={trendCount} />
                 <PlatformTimeChip item={current} />
@@ -668,12 +668,12 @@ export function DesktopStageChrome({
 
           {/* Signed-out visitors on desktop only get the burger fallback in
               home/shared mode — collection mode already has its own
-              "Make your own" CTA above, and triage is always reached
+              "Make your own" CTA above, and the collection theater is always reached
               authed — matching the mobile chrome's `allowSignedOut` gate. */}
           <TheaterAvatarMenu
             onRequestSignIn={onRequestSignIn}
-            allowSignedOut={!triage && !playlist}
-            theaterActive={mode === 'home' || !!triage}
+            allowSignedOut={!collection && !playlist}
+            theaterActive={mode === 'home' || !!collection}
           />
 
           {/* De-cluttering EXPANDS the stage, so the enter action reads
@@ -778,14 +778,14 @@ export function DesktopStageChrome({
             </div>
           )}
 
-          {/* Tag chips (unified-theater-triage.md §B) — the Collection tab's
+          {/* Tag chips (unified-theater-collection.md §B) — the Collection tab's
               current item only; display-only, nothing renders without tags.
               Text/quote/article posts render their own composition on the
               stage (no media overlay here), so their chips are rendered by
-              `TriageStage` itself, aligned to the text column instead. */}
-          {triage?.tags && triage.tags.length > 0 && (
+              `CollectionStage` itself, aligned to the text column instead. */}
+          {collection?.tags && collection.tags.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5">
-              {triage.tags.map((t) => (
+              {collection.tags.map((t) => (
                 <span
                   key={t}
                   className="flex-none rounded-full border border-white/12 bg-white/[.06] px-2 py-0.5 text-[10.5px] text-white/55"
@@ -798,35 +798,35 @@ export function DesktopStageChrome({
         </div>
       )}
 
-      {/* Bottom-right: action buttons. Triage's Collection tab replaces the
+      {/* Bottom-right: action buttons. The personal theater's Collection tab replaces the
           whole set with Later/Tag/Delete/Done — see
-          docs/specs/unified-theater-triage.md §2. */}
-      {current && triage && triage.tab === 'collection' ? (
+          docs/specs/unified-theater-collection.md §2. */}
+      {current && collection && collection.tab === 'collection' ? (
         <div
           className={cn(
             'pointer-events-auto absolute bottom-6 right-7 flex items-center gap-2 transition-[opacity,transform] duration-200 ease-out',
             declutter && 'translate-y-3 opacity-0 pointer-events-none',
           )}
         >
-          <button type="button" onClick={triage.onLater} className={GLASS}>
+          <button type="button" onClick={collection.onLater} className={GLASS}>
             <Clock size={14} />
             <span>Later</span>
           </button>
           <button
             type="button"
-            onClick={triage.onTag}
+            onClick={collection.onTag}
             className={cn(GLASS, tagCount > 0 && 'border-clay/50 text-clay')}
           >
             <TagIcon size={14} fill={tagCount > 0 ? 'currentColor' : 'none'} />
             <span>{tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}</span>
           </button>
-          <button type="button" onClick={triage.onDelete} className={GLASS}>
+          <button type="button" onClick={collection.onDelete} className={GLASS}>
             <Trash2 size={14} />
             <span>Delete</span>
           </button>
           <button
             type="button"
-            onClick={triage.onDone}
+            onClick={collection.onDone}
             title="Archive — take it out of your collection queue"
             className={PRIMARY}
           >
@@ -909,19 +909,23 @@ export function DesktopStageChrome({
                 className={SAVE_OUTLINE}
               />
             )
-          ) : (mode === 'shared' && authed) || triage?.tab === 'live' ? (
-            triage?.tab === 'live' ? (
+          ) : (mode === 'shared' && authed) || collection?.tab === 'live' ? (
+            collection?.tab === 'live' ? (
               <>
                 <button
                   type="button"
-                  onClick={() => triage.onLiveTag?.(current)}
+                  onClick={() => collection.onLiveTag?.(current)}
                   title="Tag this post (saves it to your collection first)"
                   className={GLASS}
                 >
                   <TagIcon size={14} />
                   <span>Tag</span>
                 </button>
-                <TriageLiveSaveButton current={current} triage={triage} className={SAVE_OUTLINE} />
+                <PersonalLiveSaveButton
+                  current={current}
+                  collection={collection}
+                  className={SAVE_OUTLINE}
+                />
               </>
             ) : (
               <SavePostButton current={current} className={SAVE_OUTLINE} />
@@ -951,22 +955,22 @@ export function DesktopStageChrome({
 }
 
 /**
- * Triage mode's Live-tab Save button: always-authed direct save (the theater
+ * Collection mode's Live-tab Save button: always-authed direct save (the theater
  * is only ever reached signed in from the authed Collection), tracked via
- * `TheaterTriageChrome.savedKeys` rather than owning its own fetch state —
+ * `TheaterPersonalChrome.savedKeys` rather than owning its own fetch state —
  * `SavePostButton` above assumes `mode === 'shared'`'s sign-in-modal flow,
  * which doesn't apply here.
  */
-function TriageLiveSaveButton({
+function PersonalLiveSaveButton({
   current,
-  triage,
+  collection,
   className,
 }: {
   current: TheaterItem
-  triage: TheaterTriageChrome
+  collection: TheaterPersonalChrome
   className: string
 }) {
-  const saved = triage.savedKeys.has(theaterItemKey(current))
+  const saved = collection.savedKeys.has(theaterItemKey(current))
   // Once saved, the button goes away rather than sitting there disabled saying
   // "Saved" (owner: "there's no point in showing 'Saved' for a post — simply
   // show the tag icon because that denotes that it's already saved"). Same
@@ -974,7 +978,7 @@ function TriageLiveSaveButton({
   // affordance and the state.
   if (saved) return null
   return (
-    <button type="button" onClick={() => triage.onSave(current)} className={className}>
+    <button type="button" onClick={() => collection.onSave(current)} className={className}>
       <Bookmark size={14} />
       <span>Save</span>
     </button>
@@ -1007,7 +1011,7 @@ export function DesktopDock({
   onNext,
   declutter,
   playlist,
-  triage,
+  collection,
   repeatCurrent = false,
   repeatMode,
   onCycleRepeat,
@@ -1370,12 +1374,12 @@ export function DesktopDock({
           <span className="text-[10.5px] font-semibold text-clay">{newCount} new</span>
         )}
         {/* savedToday/newCount are live-pulse concepts — collection mode is a
-            static curated queue, and triage's Collection tab is the user's
-            own backlog, so neither line is meaningful for either. Triage
+            static curated queue, and the personal theater's Collection tab is the user's
+            own backlog, so neither line is meaningful for either. Collection
             shows "{remaining} left" instead. */}
-        {triage && triage.tab === 'collection' ? (
+        {collection && collection.tab === 'collection' ? (
           <span className="flex items-center gap-1.5 text-[10.5px] text-ink-3">
-            <span className="font-mono">{triage.remaining} left</span>
+            <span className="font-mono">{collection.remaining} left</span>
           </span>
         ) : (
           <>
@@ -1406,7 +1410,7 @@ export function DesktopDock({
                   the title of Show all be relevant to the selection?"). It also
                   stops the header repeating the "Up next" group heading
                   directly below it. Falls back to "Up next" where repeat isn't
-                  offered (triage's Collection tab). */}
+                  offered (the personal theater's Collection tab). */}
               <span className="text-[11px] font-bold uppercase tracking-wide text-ink-3">
                 {repeatMode ? REPEAT_MODE_LABEL[repeatMode].queue : 'Up next'}
               </span>

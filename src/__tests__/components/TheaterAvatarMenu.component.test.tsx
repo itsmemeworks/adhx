@@ -62,7 +62,7 @@ describe('TheaterAvatarMenu', () => {
     invalidateAuthMe()
   })
 
-  it('renders nothing when signed out and allowSignedOut is not set (triage/collection mounts)', async () => {
+  it('renders nothing when signed out and allowSignedOut is not set (collection/collection mounts)', async () => {
     mockAuthMe(SIGNED_OUT_ME)
     const { container } = render(<TheaterAvatarMenu />)
     await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/auth/me'))

@@ -1,13 +1,13 @@
 /**
  * @vitest-environment jsdom
  *
- * Regression guard for the triage-seeding product decision reversal
- * (CLAUDE.md "Main Feed" / AuthedHome.tsx comment above `buildUnreadTriageQuery`):
- * a previous iteration (#342) seeded the triage queue from the CURRENT
- * filter/platform/tag/search state, so opening triage while e.g. viewing
- * "photos only" or a specific tag only triaged that subset. The owner
- * reversed that — triage is strictly the full unread backlog, every time.
- * This verifies opening the theater's triage tab while the grid has a
+ * Regression guard for the collection-seeding product decision reversal
+ * (CLAUDE.md "Main Feed" / AuthedHome.tsx comment above `buildActiveQueueQuery`):
+ * a previous iteration (#342) seeded the collection queue from the CURRENT
+ * filter/platform/tag/search state, so opening collection while e.g. viewing
+ * "photos only" or a specific tag only collectiond that subset. The owner
+ * reversed that — the collection theater is strictly the full unread backlog, every time.
+ * This verifies opening the theater's collection tab while the grid has a
  * non-default filter/platform/tag active still requests the FULL unread
  * queue (unreadOnly=true, filter=all, no platform/tag/search params).
  */
@@ -111,7 +111,7 @@ beforeEach(() => {
   }) as unknown as typeof fetch
 })
 
-describe('AuthedHome triage seeding ignores active filters', () => {
+describe('AuthedHome collection seeding ignores active filters', () => {
   it('requests the full unread queue (unreadOnly=true, filter=all) on open-theater, even with photos/instagram/tag/search active', async () => {
     render(<FeedPage />)
 
@@ -119,16 +119,16 @@ describe('AuthedHome triage seeding ignores active filters', () => {
     await waitFor(() => expect(feedRequests.length).toBeGreaterThan(0))
     feedRequests = []
 
-    window.dispatchEvent(new CustomEvent('open-theater', { detail: { tab: 'triage' } }))
+    window.dispatchEvent(new CustomEvent('open-theater', { detail: { tab: 'personal' } }))
 
     await waitFor(() => expect(screen.getByTestId('theater-shell')).toBeInTheDocument())
     await waitFor(() => expect(feedRequests.length).toBeGreaterThan(0))
 
-    const triageRequest = feedRequests[feedRequests.length - 1]
-    expect(triageRequest).toContain('unreadOnly=true')
-    expect(triageRequest).toContain('filter=all')
-    expect(triageRequest).not.toContain('platform=')
-    expect(triageRequest).not.toContain('tag=')
-    expect(triageRequest).not.toContain('search=')
+    const collectionRequest = feedRequests[feedRequests.length - 1]
+    expect(collectionRequest).toContain('unreadOnly=true')
+    expect(collectionRequest).toContain('filter=all')
+    expect(collectionRequest).not.toContain('platform=')
+    expect(collectionRequest).not.toContain('tag=')
+    expect(collectionRequest).not.toContain('search=')
   })
 })

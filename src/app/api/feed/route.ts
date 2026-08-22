@@ -49,7 +49,7 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
   const collectionId = searchParams.get('collection') // Filter by collection
   const platformFilter = (searchParams.get('platform') || 'all') as PlatformFilter // 'all' | 'twitter' | 'instagram' | 'tiktok'
   // Direct id lookup (?id=...). Returns the specific bookmark(s) regardless of
-  // read state / pagination — used to open a saved tweet in triage (e.g. the
+  // read state / pagination — used to open a saved tweet in the collection theater (e.g. the
   // "View in Collection" action on an already-saved preview).
   const ids = searchParams.getAll('id')
 

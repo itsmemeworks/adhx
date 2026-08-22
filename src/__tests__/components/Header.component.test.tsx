@@ -221,7 +221,7 @@ describe('Header', () => {
     expect(navTagsLink).toHaveAttribute('href', '/tags')
 
     // Avatar menu also carries a Tags entry
-    // Distinguish from the Triage pill and mobile search icon, which also
+    // Distinguish from the Collection entry and mobile search icon, which also
     // carry `rounded-full` — the avatar toggle is the only 33px round button.
     // Use fireEvent (not a raw `.click()`) so the resulting setState is
     // flushed before we assert on the menu contents.
@@ -233,17 +233,17 @@ describe('Header', () => {
     expect(menuTagsLinks.some((l) => l.getAttribute('href') === '/tags')).toBe(true)
   })
 
-  // The Triage pill is gone with the concept it was named for (owner: "remove
-  // the concept of triage… it's essentially 'show me everything that's not
+  // The Collection entry is gone with the concept it was named for (owner: "remove
+  // the concept of collection… it's essentially 'show me everything that's not
   // archived'"). Its job — reach your collection — is the nav's own entries,
   // and it carried both the gamified streak and an accent CTA.
-  it('no longer renders a Triage pill', async () => {
+  it('no longer renders a Collection entry', async () => {
     mockFetch(true)
     render(<Header />)
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
-    expect(screen.queryByTitle('Triage your unread')).not.toBeInTheDocument()
-    expect(screen.queryByText('Triage')).not.toBeInTheDocument()
+    expect(screen.queryByTitle('Collection your unread')).not.toBeInTheDocument()
+    expect(screen.queryByText('Collection')).not.toBeInTheDocument()
   })
 
   it('keeps Theater pointing at `/` from any route (no ?live=1 hand-off)', async () => {
@@ -306,7 +306,7 @@ describe('Header', () => {
     render(<Header />)
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
-    // Distinguish from the Triage pill and mobile search icon, which also
+    // Distinguish from the Collection entry and mobile search icon, which also
     // carry `rounded-full` — the avatar toggle is the only 33px round button.
     // Use fireEvent (not a raw `.click()`) so the resulting setState is
     // flushed before we assert on the menu contents.
@@ -323,7 +323,7 @@ describe('Header', () => {
     render(<Header />)
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
-    // Distinguish from the Triage pill and mobile search icon, which also
+    // Distinguish from the Collection entry and mobile search icon, which also
     // carry `rounded-full` — the avatar toggle is the only 33px round button.
     // Use fireEvent (not a raw `.click()`) so the resulting setState is
     // flushed before we assert on the menu contents.

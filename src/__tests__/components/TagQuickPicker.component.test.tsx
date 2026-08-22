@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * TagQuickPicker Component Tests (unified-theater-triage §4 — tags: create + fill)
+ * TagQuickPicker Component Tests (unified-theater-collection §4 — tags: create + fill)
  *
  * Covers: loading the tag list + current post tags on open, toggling
  * membership via POST/DELETE with optimistic checkbox state, inline

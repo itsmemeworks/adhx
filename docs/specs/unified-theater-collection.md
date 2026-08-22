@@ -1,7 +1,7 @@
-# Unified theater: triage, nav simplification, tags-first
+# Unified theater: My Collection, nav simplification, tags-first
 
 **Status: building (2026-08-20).** From live user review after the accounts launch: the theater
-(filmstrip dock + stage) is THE interaction model. Every other browsing/triage UX is a competing
+(filmstrip dock + stage) is THE interaction model. Every other browsing UX is a competing
 mental model and must fold into it. Nav shrinks to what a signed-in person actually does:
 their Collection, the Live pulse, and their tags.
 
@@ -12,33 +12,33 @@ their Collection, the Live pulse, and their tags.
   longer surfaced to signed-in users).
 - **Live** does not navigate — it dispatches `window.dispatchEvent(new CustomEvent('open-theater',
 { detail: { tab: 'live' } }))`; AuthedHome listens and opens the theater overlay on the live
-  feed. The Triage pill keeps working and is equivalent to `{ tab: 'triage' }`.
+  feed. The Collection entry keeps working and is equivalent to `{ tab: 'personal' }`.
 - The **`+` Add button and its modal trigger are removed**. Adding by URL is paste-first: a
   global paste listener on the authed Collection (new `PasteToPreview` component) catches a
   pasted platform URL anywhere outside an input/textarea and routes it through
   `resolvePastedLink()` to its preview page (same behavior as the theater's paste input).
   The `open-add-tweet` / `close-add-tweet` event plumbing goes away.
-- Search, Triage pill, avatar menu stay. Mobile width budget unchanged (nothing new at bar level).
+- Search, Collection entry, avatar menu stay. Mobile width budget unchanged (nothing new at bar level).
 
-## 2. Triage IS the theater (kill the vertical rail)
+## 2. My Collection IS the theater (kill the vertical rail)
 
 `CollectionTheater` + `CollectionRail` (vertical list column) are replaced by the same
 `TheaterShell` filmstrip experience used everywhere else.
 
-- New `TheaterShell` mode: **`'triage'`** — seeded from AuthedHome's current filtered feed
+- New `TheaterShell` mode: **`'personal'`** — seeded from AuthedHome's current filtered feed
   (unread-first, exactly the items CollectionTheater receives today), `live: false`, no
   activity-pulse writes, no URL rewriting (the overlay lives on `/`), loop off, StageWaiting
   replaced by a "Pile clear 🎉" done-state with a Close button.
-- **Bottom-right actions (desktop) / action row (mobile)** in triage mode:
+- **Bottom-right actions (desktop) / action row (mobile)** in collection mode:
   `Done` (primary gradient, ✓) · `Later` · `Tag` (opens `TagQuickPicker`) · `Delete` (5s undo
   toast) · `Open`. Done POSTs the existing `/api/bookmarks/[id]/read?platform=` then advances;
   Later just advances; Delete uses the existing deferred-delete semantics.
 - **Keyboard map preserved verbatim from CollectionTheater**: `→` Done+advance, `←` Later,
   `↓`/`Backspace`/`Delete` = Delete (undo window), `U` undo, `Esc` close. `↑` steps back.
-- **Filmstrip** shows the triage queue; triaged cards get the seen/checked treatment and the
+- **Filmstrip** shows the collection queue; resolved cards get the seen/checked treatment and the
   strip advances like the live theater. Dock end-cap shows `{n} left today` + streak flame.
 - **Collection ↔ Live toggle** lives in the theater top bar (desktop) / peek-bar label (mobile):
-  switching tabs swaps the seed between the triage queue and the live pulse feed
+  switching tabs swaps the seed between the collection queue and the live pulse feed
   (`useTheaterFeed` live mode). Live items show the authed `SavePostButton`. Marking state never
   leaks between tabs.
 - `CollectionTheater.tsx` + `CollectionRail.tsx` + the already-unmounted `TriageMode.tsx` are
@@ -63,7 +63,7 @@ their Collection, the Live pulse, and their tags.
   active tag via the existing `/api/bookmarks/[id]/tags` POST/DELETE. A sticky bottom bar shows
   `{tag} · {n} posts · Done`. Esc or Done exits. No new endpoints.
 - **`TagQuickPicker`** (shared component): compact dark popover listing the user's tags
-  (checkbox per tag for the current post) + inline create-new; used by the triage theater's
+  (checkbox per tag for the current post) + inline create-new; used by the collection theater's
   `Tag` action. Contract: `<TagQuickPicker platform bookmarkId open onClose />`, self-contained
   fetching via `/api/tags` + `/api/bookmarks/[id]/tags`.
 
@@ -75,8 +75,7 @@ their Collection, the Live pulse, and their tags.
 
 ## Invariants
 
-- One `TheaterShell`; modes: `home | shared | collection | triage`. Every mode-specific behavior
+- One `TheaterShell`; modes: `home | shared | playlist | personal`. Every mode-specific behavior
   is gated on the mode, never forked into a second shell.
-- Mobile chrome and desktop dock must both work in triage mode (the old CollectionTheater was
-  desktop-leaning; the reel UX on phones applies to triage too).
-- Streak metrics (`/api/triage/streak`) keep ticking off the same read-marking calls.
+- Mobile chrome and desktop dock must both work in collection mode (the old CollectionTheater was
+  desktop-leaning; the reel UX on phones applies to the personal theater too).

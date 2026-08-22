@@ -33,7 +33,7 @@ export interface PasteToPreviewProps {
 
 /**
  * Global paste-to-add: the authed Collection has no `+` Add button anymore
- * (see docs/specs/unified-theater-triage.md §1) — pasting a platform URL
+ * (see docs/specs/unified-theater-collection.md §1) — pasting a platform URL
  * anywhere outside an input/textarea/contenteditable is picked up here.
  * Default action is to route to the post's preview page (same as the
  * theater's paste-a-link input); a caller that would rather act in place

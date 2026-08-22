@@ -1,9 +1,9 @@
 'use client'
 
 /**
- * Triage mode's end-of-queue done-state (docs/specs/unified-theater-triage.md
+ * Collection mode's end-of-queue done-state (docs/specs/unified-theater-collection.md
  * §2) — deliberately NOT `<StageWaiting/>` (that's the live-pulse "waiting
- * for new sends" stage; triage's queue is a fixed snapshot that's genuinely
+ * for new sends" stage; the collection theater's queue is a fixed snapshot that's genuinely
  * finished, not "more is coming"). Ported from the deleted `CollectionRail`'s
  * `FinishedPanel`.
  */
@@ -11,12 +11,12 @@
 import { PartyPopper } from 'lucide-react'
 import { StageHeadline } from './stage-primitives'
 
-export interface TriageAllClearProps {
+export interface CollectionAllClearProps {
   total: number
   onClose: () => void
 }
 
-export function TriageAllClear({ total, onClose }: TriageAllClearProps) {
+export function CollectionAllClear({ total, onClose }: CollectionAllClearProps) {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-[#08070a] px-6 text-center">
       <PartyPopper className="h-10 w-10 text-clay" />

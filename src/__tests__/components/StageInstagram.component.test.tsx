@@ -106,7 +106,7 @@ describe('StageInstagram auto-advance guards', () => {
     expect(onEnded).not.toHaveBeenCalled()
   })
 
-  it('does not throw or schedule anything without an onEnded callback (e.g. triage)', async () => {
+  it('does not throw or schedule anything without an onEnded callback (e.g. collection)', async () => {
     vi.mocked(probeInstagramVideo).mockResolvedValue(false)
 
     expect(() => {

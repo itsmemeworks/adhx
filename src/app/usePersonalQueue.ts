@@ -3,43 +3,43 @@
 import { useCallback, type Dispatch, type SetStateAction } from 'react'
 import type { FeedItem } from '@/components/feed'
 
-interface UseTriageQueueOptions {
+interface UsePersonalQueueOptions {
   unreadOnly: boolean
   setItems: Dispatch<SetStateAction<FeedItem[]>>
   setStats: Dispatch<SetStateAction<{ total: number; unread: number }>>
 }
 
-interface UseTriageQueueReturn {
-  /** Drop/mark an item the triage mode resolved, keeping the feed in sync. */
-  handleTriageResolved: (id: string, action: 'archive' | 'delete') => void
-  /** Undo of a triage archive: restore the item to unread + bump the count back. */
-  handleTriageRestored: (item: FeedItem) => void
+interface UsePersonalQueueReturn {
+  /** Drop/mark an item the collection mode resolved, keeping the feed in sync. */
+  handlePostResolved: (id: string, action: 'archive' | 'delete') => void
+  /** Undo of a collection archive: restore the item to unread + bump the count back. */
+  handlePostRestored: (item: FeedItem) => void
 }
 
 /**
  * Reconciles the main feed's `items`/`stats` state with actions taken inside
- * the triage theater (archive/delete an item, or undo an archive).
+ * the collection theater (archive/delete an item, or undo an archive).
  */
-export function useTriageQueue({
+export function usePersonalQueue({
   unreadOnly,
   setItems,
   setStats,
-}: UseTriageQueueOptions): UseTriageQueueReturn {
-  const handleTriageResolved = useCallback(
+}: UsePersonalQueueOptions): UsePersonalQueueReturn {
+  const handlePostResolved = useCallback(
     (id: string, action: 'archive' | 'delete') => {
       if (action === 'delete' || unreadOnly) {
         setItems((prev) => prev.filter((i) => i.id !== id))
       } else {
         setItems((prev) => prev.map((i) => (i.id === id ? { ...i, isRead: true } : i)))
       }
-      // Triage queue items are always unread, so both archiving and deleting
+      // Collection queue items are always unread, so both archiving and deleting
       // one drops the unread count.
       setStats((prev) => ({ ...prev, unread: Math.max(0, prev.unread - 1) }))
     },
     [unreadOnly, setItems, setStats],
   )
 
-  const handleTriageRestored = useCallback(
+  const handlePostRestored = useCallback(
     (item: FeedItem) => {
       setItems(
         (prev) =>
@@ -52,5 +52,5 @@ export function useTriageQueue({
     [setItems, setStats],
   )
 
-  return { handleTriageResolved, handleTriageRestored }
+  return { handlePostResolved, handlePostRestored }
 }

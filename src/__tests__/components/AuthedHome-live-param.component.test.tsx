@@ -4,8 +4,8 @@
  * Regression test: the Header's "Live" nav item dispatches `open-theater`,
  * but that event only has a listener while AuthedHome (the feed page, `/`)
  * is mounted. From any other route (e.g. /tags), Header now navigates to
- * `/?live=1` instead — mirroring the existing `?triage=1` pattern used by
- * the Triage pill. This verifies AuthedHome actually honors that param:
+ * `/?live=1` instead — mirroring the existing `?collection=1` pattern used by
+ * the Collection entry. This verifies AuthedHome actually honors that param:
  * it should open the theater on the "live" tab once authenticated, then
  * strip the param from the URL.
  */
@@ -72,9 +72,9 @@ vi.mock('@/components/sync/SyncProgress', () => ({ SyncProgress: () => null }))
 // real (heavy) theater.
 const theaterShellSpy = vi.fn()
 vi.mock('@/components/theater/TheaterShell', () => ({
-  TheaterShell: (props: { initialTriageTab?: string; mode: string }) => {
+  TheaterShell: (props: { initialPersonalTab?: string; mode: string }) => {
     theaterShellSpy(props)
-    return <div data-testid="theater-shell" data-tab={props.initialTriageTab} />
+    return <div data-testid="theater-shell" data-tab={props.initialPersonalTab} />
   },
 }))
 

@@ -2,17 +2,17 @@
  * @vitest-environment jsdom
  *
  * "My Collection is just a different playlist in that same theater" (owner
- * directive, reversing the earlier "videos never auto-advance in triage's
- * Collection tab" rule): TriageStage now forwards an `onEnded` prop through
+ * directive, reversing the earlier "videos never auto-advance in the collection theater's
+ * Collection tab" rule): CollectionStage now forwards an `onEnded` prop through
  * to every video-capable stage variant it dispatches to, so those players'
- * own end-of-playback signal reaches `TheaterShell.triageAdvanceOnEnded`
+ * own end-of-playback signal reaches `TheaterShell.personalAdvanceOnEnded`
  * (pure queue navigation — Done/Later/Delete still decide read state). This
  * stubs every stage component so it can assert purely on the dispatch +
  * prop-forwarding logic, not real playback.
  */
 import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
-import { TriageStage } from '@/components/theater/TriageStage'
+import { CollectionStage } from '@/components/theater/CollectionStage'
 import type { FeedItem } from '@/components/feed/types'
 
 vi.mock('@/components/theater/StageVideo', () => ({
@@ -59,10 +59,10 @@ function feedItem(overrides: Partial<FeedItem> = {}): FeedItem {
   } as FeedItem
 }
 
-describe('TriageStage: onEnded wiring to the video-capable stages', () => {
+describe('CollectionStage: onEnded wiring to the video-capable stages', () => {
   it('forwards onEnded to StageVideo for a twitter video item', () => {
     const { getByTestId } = render(
-      <TriageStage
+      <CollectionStage
         feedItem={feedItem({ media: [{ mediaType: 'video' }] as FeedItem['media'] })}
         muted
         onRequestUnmute={vi.fn()}
@@ -74,7 +74,7 @@ describe('TriageStage: onEnded wiring to the video-capable stages', () => {
 
   it('forwards onEnded to StageVideo for a tiktok video item', () => {
     const { getByTestId } = render(
-      <TriageStage
+      <CollectionStage
         feedItem={feedItem({
           platform: 'tiktok',
           media: [{ mediaType: 'video' }] as FeedItem['media'],
@@ -91,7 +91,7 @@ describe('TriageStage: onEnded wiring to the video-capable stages', () => {
     useInstagramStageSpy.mockClear()
     const onEnded = vi.fn()
     const { getByTestId } = render(
-      <TriageStage
+      <CollectionStage
         feedItem={feedItem({ platform: 'instagram' })}
         muted
         onRequestUnmute={vi.fn()}
@@ -106,7 +106,7 @@ describe('TriageStage: onEnded wiring to the video-capable stages', () => {
 
   it('forwards onEnded to StageYouTube', () => {
     const { getByTestId } = render(
-      <TriageStage
+      <CollectionStage
         feedItem={feedItem({ platform: 'youtube' })}
         muted
         onRequestUnmute={vi.fn()}
@@ -116,9 +116,9 @@ describe('TriageStage: onEnded wiring to the video-capable stages', () => {
     expect(getByTestId('stage-youtube').dataset.hasOnended).toBe('true')
   })
 
-  it("renders StageVideo WITHOUT onEnded when the prop is omitted (e.g. triage's Live tab, which never passes it)", () => {
+  it("renders StageVideo WITHOUT onEnded when the prop is omitted (e.g. the personal theater's Live tab, which never passes it)", () => {
     const { getByTestId } = render(
-      <TriageStage
+      <CollectionStage
         feedItem={feedItem({ media: [{ mediaType: 'video' }] as FeedItem['media'] })}
         muted
         onRequestUnmute={vi.fn()}
@@ -130,7 +130,7 @@ describe('TriageStage: onEnded wiring to the video-capable stages', () => {
   it('a text-only item ignores onEnded (StageText has no such affordance) and still renders', () => {
     expect(() =>
       render(
-        <TriageStage
+        <CollectionStage
           feedItem={feedItem({ text: 'just words, no media' })}
           muted
           onRequestUnmute={vi.fn()}

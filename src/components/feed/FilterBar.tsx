@@ -53,7 +53,7 @@ interface FilterBarProps {
   availableTags?: TagItem[]
   stats: { total: number; unread: number }
   onTagUpdated?: (tag: string, isPublic: boolean, shareUrl: string) => void
-  // Tags: create + fill (unified-theater-triage §4). `tagSelect` is the tag
+  // Tags: create + fill (unified-theater-collection §4). `tagSelect` is the tag
   // currently in grid "Add posts" selection mode (null when inactive).
   tagSelect?: string | null
   onTagSelectChange?: (tag: string | null) => void

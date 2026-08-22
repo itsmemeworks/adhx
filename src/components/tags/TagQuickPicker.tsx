@@ -41,8 +41,8 @@ const THEATER_SHORTCUT_KEYS = new Set([
 ])
 
 /**
- * Shared dark popover for tagging a single post — used by the triage
- * theater's `Tag` action (unified-theater-triage.md §4). Self-contained: it
+ * Shared dark popover for tagging a single post — used by the collection
+ * theater's `Tag` action (unified-theater-collection.md §4). Self-contained: it
  * fetches the user's tags (`/api/tags`) and this post's current tags
  * (`/api/feed?id=&platform=`, the only endpoint that returns a bookmark's
  * tags outside a full feed page) on open, then toggles membership via
@@ -145,8 +145,8 @@ export function TagQuickPicker({
             : [...prev, { tag, count: 1 }],
         )
       }
-      // Announce the post's full updated tag list (unified-theater-triage.md
-      // §4/§B) so any open triage queue can patch its snapshot without a
+      // Announce the post's full updated tag list (unified-theater-collection.md
+      // §4/§B) so any open collection queue can patch its snapshot without a
       // refetch — see TheaterShell's `bookmark-tags-changed` listener.
       notifyTagsChanged({ platform, bookmarkId, tags: Array.from(nextChecked) })
     } catch {

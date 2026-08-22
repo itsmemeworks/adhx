@@ -410,9 +410,9 @@ describe('StageYouTube', () => {
     expect(onEnded).toHaveBeenCalledTimes(1)
   })
 
-  it('does nothing without an onEnded callback (triage never auto-advances)', () => {
+  it('does nothing without an onEnded callback (collection never auto-advances)', () => {
     // No onEnded passed at all — every internal advance path must be a
-    // silent no-op, matching StageVideo's triage call sites.
+    // silent no-op, matching StageVideo's collection call sites.
     const { container } = render(<StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />)
     const iframe = container.querySelector('iframe') as HTMLIFrameElement
     const { fakeWindow } = stubContentWindow(iframe)

@@ -15,7 +15,7 @@
  * reload keeps you where you were. The switch still flips the shell's tab
  * locally first so it responds on tap, then navigates.
  *
- * `TheaterShell` snapshots `triageItems` at mount (a triage session is a fixed
+ * `TheaterShell` snapshots `personalItems` at mount (a collection session is a fixed
  * queue), so the collection queue has to be in hand BEFORE the shell mounts —
  * hence the fetch-then-render on the `/collection` route only. Live never waits
  * on it: switching tabs is a navigation, so the collection queue is always
@@ -28,10 +28,10 @@ import { Loader2 } from 'lucide-react'
 import { TheaterShell } from '@/components/theater/TheaterShell'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import type { FeedItem } from '@/components/feed/types'
-import type { TheaterFeedSeed, TriageTab } from '@/components/theater/types'
+import type { TheaterFeedSeed, PersonalTab } from '@/components/theater/types'
 
 /** Which route each side of the switch lives on. */
-export const TAB_ROUTES: Record<TriageTab, string> = {
+export const TAB_ROUTES: Record<PersonalTab, string> = {
   live: '/',
   collection: '/collection',
 }
@@ -39,7 +39,7 @@ export const TAB_ROUTES: Record<TriageTab, string> = {
 export interface AuthedTheaterProps {
   /** Server-rendered live seed — present on BOTH routes so flipping to Live has something to show before the navigation lands. */
   seed: TheaterFeedSeed
-  tab: TriageTab
+  tab: PersonalTab
 }
 
 export default function AuthedTheater({ seed, tab }: AuthedTheaterProps) {
@@ -70,8 +70,8 @@ export default function AuthedTheater({ seed, tab }: AuthedTheaterProps) {
     }
   }, [needsCollection])
 
-  const onTriageTabChange = useCallback(
-    (next: TriageTab) => {
+  const onPersonalTabChange = useCallback(
+    (next: PersonalTab) => {
       if (next === tab) return
       router.push(TAB_ROUTES[next])
     },
@@ -93,12 +93,12 @@ export default function AuthedTheater({ seed, tab }: AuthedTheaterProps) {
   return (
     <ErrorBoundary componentName="TheaterShell">
       <TheaterShell
-        mode="triage"
+        mode="personal"
         seed={seed}
         authed
-        triageItems={collectionItems}
-        initialTriageTab={tab}
-        onTriageTabChange={onTriageTabChange}
+        personalItems={collectionItems}
+        initialPersonalTab={tab}
+        onPersonalTabChange={onPersonalTabChange}
         onClose={onClose}
       />
     </ErrorBoundary>

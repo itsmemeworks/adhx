@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from 'next/server'
  * Algorithm: fixed window per key. A key's counter resets once `windowMs` has
  * elapsed since the window started, rather than sliding continuously — simpler
  * than a token bucket and generous enough that a legitimate browsing session
- * (gallery hover previews, a handful of triage swipes) never trips it.
+ * (gallery hover previews, a handful of collection swipes) never trips it.
  */
 
 export interface RateLimitOptions {

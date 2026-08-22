@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { TheaterMobileChrome } from '@/components/theater/TheaterMobileChrome'
 import { theaterItemKey } from '@/components/theater/types'
-import type { TheaterItem, TheaterTriageChrome } from '@/components/theater/types'
+import type { TheaterItem, TheaterPersonalChrome } from '@/components/theater/types'
 
 /**
  * Save-is-always-primary / Download-is-secondary on the mobile bottom scrim —
@@ -145,7 +145,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     expect(saveBtn.className).toContain('border-clay')
   })
 
-  it('triage live-tab Save carries the clay-border outline, Download (when present) stays plain glass', () => {
+  it('collection live-tab Save carries the clay-border outline, Download (when present) stays plain glass', () => {
     mockUseSendFile.mockReturnValue({
       supported: true,
       ready: true,
@@ -153,7 +153,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
       mode: 'download' as const,
       send: vi.fn(),
     })
-    const triage: TheaterTriageChrome = {
+    const collection: TheaterPersonalChrome = {
       tab: 'live',
       onTabChange: vi.fn(),
       onDone: vi.fn(),
@@ -166,7 +166,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
       remaining: 0,
       onClose: vi.fn(),
     }
-    render(<TheaterMobileChrome {...base} current={videoItem()} triage={triage} />)
+    render(<TheaterMobileChrome {...base} current={videoItem()} collection={collection} />)
 
     const saveBtn = screen.getByText('Save').closest('button')!
     expect(saveBtn.className).toContain('border-clay')
@@ -184,7 +184,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
    */
   it('hands the Live/Collection switch to the burger instead of drawing tabs', () => {
     const onTabChange = vi.fn()
-    const triage: TheaterTriageChrome = {
+    const collection: TheaterPersonalChrome = {
       tab: 'live',
       onTabChange,
       onDone: vi.fn(),
@@ -197,7 +197,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
       remaining: 0,
       onClose: vi.fn(),
     }
-    render(<TheaterMobileChrome {...base} current={videoItem()} triage={triage} />)
+    render(<TheaterMobileChrome {...base} current={videoItem()} collection={collection} />)
 
     expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
       expect.objectContaining({ theaterTabs: { tab: 'live', onTabChange } }),
@@ -210,11 +210,11 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
 
   /**
    * The slot the tabs vacated: the peek bar's centre now carries the queue
-   * position in triage too (owner asked the count to be boundary-aware, and
-   * triage was the one mode with nowhere to put it).
+   * position in the collection theater too (owner asked the count to be boundary-aware, and
+   * collection was the one mode with nowhere to put it).
    */
   it('spends the freed peek-bar centre on the queue position', () => {
-    const triage: TheaterTriageChrome = {
+    const collection: TheaterPersonalChrome = {
       tab: 'collection',
       onTabChange: vi.fn(),
       onDone: vi.fn(),
@@ -235,7 +235,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
         items={items}
         currentKey="twitter:2"
         queueTotal={2}
-        triage={triage}
+        collection={collection}
       />,
     )
 
@@ -248,7 +248,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
    * so the suffix would be counting posts that aren't in the queue on screen.
    */
   it('omits the "N new" suffix on the Collection tab', () => {
-    const triage: TheaterTriageChrome = {
+    const collection: TheaterPersonalChrome = {
       tab: 'collection',
       onTabChange: vi.fn(),
       onDone: vi.fn(),
@@ -269,7 +269,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
         items={items}
         currentKey="twitter:1"
         newCount={3}
-        triage={triage}
+        collection={collection}
       />,
     )
     expect(peekCentreText()).toBe('1 / 1')
@@ -282,7 +282,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
         items={items}
         currentKey="twitter:1"
         newCount={3}
-        triage={{ ...triage, tab: 'live' }}
+        collection={{ ...collection, tab: 'live' }}
       />,
     )
     expect(peekCentreText()).toBe('1 / 1 · 3 new')
@@ -617,7 +617,7 @@ describe('TheaterMobileChrome: queue position label', () => {
  * Owner follow-up: the theater's URL-sync effect rewrites the address bar to
  * per-post preview paths mid-session, so `usePathname` alone can't tell the
  * chrome it's still inside the home theater — `theaterActive` is passed to
- * `TheaterAvatarMenu` explicitly instead. Triage's scrim always mounts
+ * `TheaterAvatarMenu` explicitly instead. The collection theater's scrim always mounts
  * inside the theater (always true, regardless of `mode`); the home/shared
  * scrim only mounts it truthy in home mode. Asserted directly on the mocked
  * `TheaterAvatarMenu`'s captured props (see the module mock above) — the
@@ -625,8 +625,8 @@ describe('TheaterMobileChrome: queue position label', () => {
  * TheaterAvatarMenu.component.test.tsx.
  */
 describe('TheaterMobileChrome: theaterActive prop wiring', () => {
-  it('passes theaterActive: true to the triage scrim unconditionally, even in shared mode', () => {
-    const triage: TheaterTriageChrome = {
+  it('passes theaterActive: true to the collection scrim unconditionally, even in shared mode', () => {
+    const collection: TheaterPersonalChrome = {
       tab: 'live',
       onTabChange: vi.fn(),
       onDone: vi.fn(),
@@ -639,7 +639,9 @@ describe('TheaterMobileChrome: theaterActive prop wiring', () => {
       remaining: 0,
       onClose: vi.fn(),
     }
-    render(<TheaterMobileChrome {...base} mode="shared" current={videoItem()} triage={triage} />)
+    render(
+      <TheaterMobileChrome {...base} mode="shared" current={videoItem()} collection={collection} />,
+    )
     expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
       expect.objectContaining({ theaterActive: true }),
     )
@@ -652,7 +654,7 @@ describe('TheaterMobileChrome: theaterActive prop wiring', () => {
     )
   })
 
-  it('passes theaterActive: false in shared mode (no triage)', () => {
+  it('passes theaterActive: false in shared mode (no collection)', () => {
     render(<TheaterMobileChrome {...base} mode="shared" current={videoItem()} />)
     expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
       expect.objectContaining({ theaterActive: false }),
@@ -670,7 +672,9 @@ describe('TheaterMobileChrome: theaterActive prop wiring', () => {
  * (`.bg-clay`) only renders when `<TheaterProgressLine/>`'s `kind` isn't
  * 'none'.
  */
-function collectionTriage(overrides: Partial<TheaterTriageChrome> = {}): TheaterTriageChrome {
+function collectionCollection(
+  overrides: Partial<TheaterPersonalChrome> = {},
+): TheaterPersonalChrome {
   return {
     tab: 'collection',
     onTabChange: vi.fn(),
@@ -690,14 +694,14 @@ function collectionTriage(overrides: Partial<TheaterTriageChrome> = {}): Theater
 describe('TheaterMobileChrome: Collection-tab progress line (video flows, timed still waits)', () => {
   it('keeps the progress line for a video item in the Collection tab', () => {
     const { container } = render(
-      <TheaterMobileChrome {...base} current={videoItem()} triage={collectionTriage()} />,
+      <TheaterMobileChrome {...base} current={videoItem()} collection={collectionCollection()} />,
     )
     expect(container.querySelector('.bg-clay')).not.toBeNull()
   })
 
   it('suppresses the progress line for a timed (text) item in the Collection tab', () => {
     const { container } = render(
-      <TheaterMobileChrome {...base} current={textItem()} triage={collectionTriage()} />,
+      <TheaterMobileChrome {...base} current={textItem()} collection={collectionCollection()} />,
     )
     expect(container.querySelector('.bg-clay')).toBeNull()
   })
@@ -707,13 +711,13 @@ describe('TheaterMobileChrome: Collection-tab progress line (video flows, timed 
       <TheaterMobileChrome
         {...base}
         current={textItem()}
-        triage={collectionTriage({ tab: 'live' })}
+        collection={collectionCollection({ tab: 'live' })}
       />,
     )
     expect(container.querySelector('.bg-clay')).not.toBeNull()
   })
 
-  it('a video item shows the progress line outside triage entirely (home/shared/collection-mode theaters)', () => {
+  it('a video item shows the progress line outside collection entirely (home/shared/collection-mode theaters)', () => {
     const { container } = render(<TheaterMobileChrome {...base} current={videoItem()} />)
     expect(container.querySelector('.bg-clay')).not.toBeNull()
   })
@@ -806,7 +810,7 @@ describe('TheaterMobileChrome: audio button gesture-context unmute', () => {
  * between de-clutter and the (video-only) audio button so neither ever
  * shifts. Only renders when BOTH `repeatMode` and `onCycleRepeat` are
  * provided — home/shared mode; collection mode always loops on its own and
- * triage is a finite backlog, so neither passes these props.
+ * the collection theater is a finite backlog, so neither passes these props.
  */
 describe('TheaterMobileChrome: repeat control', () => {
   it('does not render when repeatMode/onCycleRepeat are both absent', () => {

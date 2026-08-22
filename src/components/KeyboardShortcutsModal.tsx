@@ -142,7 +142,7 @@ export function KeyboardShortcutsModal({
             </>
           ) : (
             <>
-              {/* The real theater keymap (`triageKeyAction` in
+              {/* The real theater keymap (`personalKeyAction` in
                   useTheaterKeyboard.ts). Everything previously listed here —
                   r/u for read state, s, x, and q/p for quoted/parent — belonged
                   to the Lightbox that was replaced by the theater and had been

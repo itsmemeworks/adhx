@@ -42,7 +42,7 @@
     --m-accent2: #a87b3a;
     --m-grad: linear-gradient(135deg, #cb6a47, #b5532f);
     --m-glow: 0 4px 16px rgba(194, 96, 63, 0.22);
-    /* focus / triage surfaces (LIGHT in Matter light) */
+    /* focus / collection surfaces (LIGHT in Matter light) */
     --m-fbg: linear-gradient(180deg, #fbf7ef 0%, #f1e9db 100%);
     --m-fcard: #fffdf8;
     --m-fink: #2c2620;

@@ -23,7 +23,7 @@ interface FeedGridProps {
   onExpand: (index: number) => void
   onLoadMore: () => void
   onShowAll: () => void
-  // Tags: "Add posts" selection mode (unified-theater-triage §4). Non-null
+  // Tags: "Add posts" selection mode (unified-theater-collection §4). Non-null
   // puts the grid view into selection mode for that tag; FilterBar owns the
   // toggle/exit (Escape + the toolbar's "Done adding" button) — this prop is
   // display + membership-toggling only.

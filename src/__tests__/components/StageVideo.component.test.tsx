@@ -512,7 +512,7 @@ describe('StageVideo: a failed video does not stall the playlist', () => {
     expect(onEnded).not.toHaveBeenCalled()
   })
 
-  it('does nothing when there is nowhere to advance to (triage)', () => {
+  it('does nothing when there is nowhere to advance to (collection)', () => {
     renderErrored({})
     // No onEnded: nothing is scheduled and nothing throws.
     act(() => {

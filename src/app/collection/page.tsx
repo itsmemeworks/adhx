@@ -7,7 +7,7 @@ import AuthedTheater from '../AuthedTheater'
 /**
  * `/collection` — the My Collection side of the theater's Live ⇄ My Collection
  * switch (the Live side is `/`). Your own unread queue as a playlist, with the
- * triage actions; the grid with filters and search is `/library`.
+ * collection actions; the grid with filters and search is `/library`.
  *
  * Signed-out visitors have no collection to play, so they land on the public
  * theater instead.

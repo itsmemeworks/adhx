@@ -104,7 +104,7 @@ vi.mock('@/components/feed', async (importOriginal) => {
     FilterBar: () => null,
   }
 })
-vi.mock('@/components/feed/TriageMode', () => ({ TriageMode: () => null }))
+vi.mock('@/components/feed/CollectionMode', () => ({ CollectionMode: () => null }))
 vi.mock('@/components/KeyboardShortcutsModal', () => ({ KeyboardShortcutsModal: () => null }))
 vi.mock('@/components/LandingPage', () => ({ LandingPage: () => null }))
 vi.mock('@/components/AddTweetModal', () => ({ AddTweetModal: () => null }))

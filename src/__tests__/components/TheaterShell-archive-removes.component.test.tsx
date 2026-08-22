@@ -19,8 +19,8 @@ import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
 import type { FeedItem } from '@/components/feed/types'
 
 vi.mock('@/components/theater/Stage', () => ({ Stage: () => <div data-testid="stage" /> }))
-vi.mock('@/components/theater/TriageStage', () => ({
-  TriageStage: () => <div data-testid="triage-stage" />,
+vi.mock('@/components/theater/CollectionStage', () => ({
+  CollectionStage: () => <div data-testid="collection-stage" />,
   useInstagramStage: () => ({ status: 'idle', slow: false, src: null, poster: null }),
 }))
 vi.mock('@/components/theater/TheaterDesktopChrome', () => ({
@@ -67,8 +67,8 @@ function feedItem(id: string): FeedItem {
 
 const emptySeed: TheaterFeedSeed = { items: [] as TheaterItem[], savedToday: 0, recentActivity: 0 }
 
-/** Latest triage props handed to the chrome. */
-function triageProps() {
+/** Latest collection props handed to the chrome. */
+function collectionProps() {
   const call = mockMobileChrome.mock.calls.at(-1)
   if (!call) throw new Error('chrome never rendered')
   return call[0]
@@ -80,7 +80,7 @@ function triageProps() {
  * `bookmarkId`.
  */
 function queueState() {
-  const props = triageProps()
+  const props = collectionProps()
   const items = (props.items ?? []) as { bookmarkId?: string | null; id?: string }[]
   return {
     ids: items.map((i) => i.bookmarkId ?? i.id),
@@ -92,9 +92,9 @@ function renderCollection(ids: string[]) {
   return render(
     <TheaterShell
       seed={emptySeed}
-      mode="triage"
-      initialTriageTab="collection"
-      triageItems={ids.map(feedItem)}
+      mode="personal"
+      initialPersonalTab="collection"
+      personalItems={ids.map(feedItem)}
       onClose={vi.fn()}
     />,
   )
@@ -117,7 +117,7 @@ describe('TheaterShell: Archive removes the post from the collection queue', () 
     })
     expect(queueState().ids).toEqual(['1', '2', '3'])
 
-    const onDone = triageProps().triage as { onDone: () => void }
+    const onDone = collectionProps().collection as { onDone: () => void }
     await act_(() => onDone.onDone())
 
     // Gone from the list — and the count the viewer sees drops with it.
@@ -128,7 +128,7 @@ describe('TheaterShell: Archive removes the post from the collection queue', () 
     await act_(() => {
       renderCollection(['1', '2', '3'])
     })
-    const onDone = triageProps().triage as { onDone: () => void }
+    const onDone = collectionProps().collection as { onDone: () => void }
     await act_(() => onDone.onDone())
 
     // Removing index 0 shifts '2' into index 0, so staying put IS advancing —
@@ -141,7 +141,7 @@ describe('TheaterShell: Archive removes the post from the collection queue', () 
     await act_(() => {
       renderCollection(['only'])
     })
-    const onDone = triageProps().triage as { onDone: () => void }
+    const onDone = collectionProps().collection as { onDone: () => void }
     await act_(() => onDone.onDone())
     expect(queueState().ids).toEqual([])
   })
@@ -150,7 +150,7 @@ describe('TheaterShell: Archive removes the post from the collection queue', () 
     await act_(() => {
       renderCollection(['1', '2', '3'])
     })
-    const t = triageProps().triage as { onDone: () => void }
+    const t = collectionProps().collection as { onDone: () => void }
     await act_(() => t.onDone())
     expect(queueState().ids).toEqual(['2', '3'])
 
@@ -169,7 +169,7 @@ describe('TheaterShell: Archive removes the post from the collection queue', () 
     await act_(() => {
       renderCollection(['1', '2', '3'])
     })
-    const t = triageProps().triage as { onDelete: () => void }
+    const t = collectionProps().collection as { onDelete: () => void }
     await act_(() => t.onDelete())
     expect(queueState().ids).toEqual(['2', '3'])
   })
@@ -178,7 +178,7 @@ describe('TheaterShell: Archive removes the post from the collection queue', () 
     await act_(() => {
       renderCollection(['1', '2', '3'])
     })
-    const t = triageProps().triage as { onLater: () => void }
+    const t = collectionProps().collection as { onLater: () => void }
     await act_(() => t.onLater())
 
     expect(queueState().ids).toEqual(['1', '2', '3'])

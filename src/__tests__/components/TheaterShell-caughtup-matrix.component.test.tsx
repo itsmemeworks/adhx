@@ -21,7 +21,7 @@
  * `seed`, `textItem`) with one addition: a controllable `useAuthMe` stub so
  * the SAME matrix can be driven for both the signed-out public theater
  * (`mode="home"`, the default) and the signed-in Live tab
- * (`mode="triage" initialTriageTab="live"`, how AuthedHome mounts the shell
+ * (`mode="personal" initialPersonalTab="live"`, how AuthedHome mounts the shell
  * for `/`). The owner hits this signed in; the public site hits it signed
  * out — the state machine is supposed to behave identically either way, and
  * several tests below assert that equivalence explicitly rather than assume
@@ -173,23 +173,23 @@ async function renderHome(items: TheaterItem[]) {
 
 /**
  * Signed-in Live tab — how `AuthedHome` mounts the shell for authed `/`
- * (`mode="triage"`, `initialTriageTab="live"`, empty `triageItems` since the
- * Live tab never reads that prop — see AuthedHome.tsx's `TRIAGE_LIVE_SEED`).
+ * (`mode="personal"`, `initialPersonalTab="live"`, empty `personalItems` since the
+ * Live tab never reads that prop — see AuthedHome.tsx's `PERSONAL_LIVE_SEED`).
  * `global.fetch` must be stubbed before this: once the live queue renders it
  * fires a bulk `/api/feed` membership lookup — a harmless no-op against a
  * generic `{ ok: false }`.
  */
-async function renderTriageLive(items: TheaterItem[]) {
+async function renderCollectionLive(items: TheaterItem[]) {
   authMeState.me = { authenticated: true, user: { username: 'owner' } }
   let utils!: ReturnType<typeof render>
   await act(async () => {
     utils = render(
       <TheaterShell
         seed={seed(items)}
-        mode="triage"
-        initialTriageTab="live"
+        mode="personal"
+        initialPersonalTab="live"
         authed
-        triageItems={[]}
+        personalItems={[]}
       />,
     )
   })
@@ -231,7 +231,7 @@ describe('TheaterShell caught-up matrix: mount-time seen-state', () => {
   it('[signed in, live tab] everything watched at mount → identical to signed-out', async () => {
     const items = [textItem('1'), textItem('2'), textItem('3')]
     markWatched(items)
-    await renderTriageLive(items)
+    await renderCollectionLive(items)
 
     expect(screen.getByText(CAUGHT_UP_TEXT)).toBeInTheDocument()
     expect(queuePosition()).toEqual({ index: 0, length: 3 })
@@ -253,11 +253,11 @@ describe('TheaterShell caught-up matrix: mount-time seen-state', () => {
   })
 
   /** Same fix, signed in — the mount-time park logic doesn't touch
-   * dwell/isTriage at all, so this one is expected (and confirmed) to hold. */
+   * dwell/isPersonal at all, so this one is expected (and confirmed) to hold. */
   it('[signed in, live tab] "Keep playing" also resumes ON item 1', async () => {
     const items = [textItem('1'), textItem('2'), textItem('3')]
     markWatched(items)
-    await renderTriageLive(items)
+    await renderCollectionLive(items)
     expect(queuePosition()).toEqual({ index: 0, length: 3 })
 
     await keepPlaying()
@@ -432,21 +432,21 @@ describe('TheaterShell caught-up matrix: walking an unwatched run to the end (si
   /**
    * REGRESSION GUARD (was a live defect, fixed 2026-08-22).
    *
-   * `useTheaterDwell` used to no-op for `isTriage` — both tabs — so a post
+   * `useTheaterDwell` used to no-op for `isPersonal` — both tabs — so a post
    * played to the end on the signed-in Live tab was never marked seen, even
    * though that tab reuses the same live-queue/goNext/waiting machinery as the
    * signed-out theater. `computeLiveNext`'s "protect a still-unwatched post"
    * check reads that same live seen state, so it kept finding an earlier,
    * never-marked post and redirecting BACKWARD into it rather than ever
    * showing "You're all caught up" — the signed-in theater looped its own
-   * finished posts forever. The gate is `isTriageCollection` now: only the
+   * finished posts forever. The gate is `isCollectionTab` now: only the
    * Collection tab opts out, where read state is explicit.
    */
   it('reaching the end via Stage onEnded shows caught-up on the signed-in Live tab', async () => {
     const item1 = textItem('1')
     const item2 = textItem('2')
     const item3 = textItem('3')
-    await renderTriageLive([item1, item2, item3])
+    await renderCollectionLive([item1, item2, item3])
 
     await letDwellSettle()
     await endCurrentItem()
@@ -473,7 +473,7 @@ describe('TheaterShell caught-up matrix: walking an unwatched run to the end (si
     const item1 = textItem('1')
     const item2 = textItem('2')
     const item3 = textItem('3')
-    await renderTriageLive([item1, item2, item3])
+    await renderCollectionLive([item1, item2, item3])
 
     await letDwellSettle()
     await act(async () => pressArrowDown())
@@ -565,13 +565,13 @@ describe('TheaterShell caught-up matrix: arrivals', () => {
   })
 
   /** Equivalence: this mechanism (the waiting-stage auto-arrival effect) is
-   * NOT gated on `isTriage` — unlike dwell (section D), it must behave
+   * NOT gated on `isPersonal` — unlike dwell (section D), it must behave
    * identically signed in. */
   it('[signed in, live tab] an arrival landing WHILE caught-up behaves identically', async () => {
     const item1 = textItem('1')
     const item2 = textItem('2')
     markWatched([item1, item2])
-    await renderTriageLive([item1, item2])
+    await renderCollectionLive([item1, item2])
     expect(screen.getByText(CAUGHT_UP_TEXT)).toBeInTheDocument()
 
     const arrival = textItem('fresh')

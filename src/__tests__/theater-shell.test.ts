@@ -174,7 +174,7 @@ describe('isSharedPostPinned', () => {
   it('is false for every other mode, even if pinned=true and the keys match', () => {
     expect(isSharedPostPinned('home', sharedKey, true, sharedKey)).toBe(false)
     expect(isSharedPostPinned('playlist', sharedKey, true, sharedKey)).toBe(false)
-    expect(isSharedPostPinned('triage', sharedKey, true, sharedKey)).toBe(false)
+    expect(isSharedPostPinned('personal', sharedKey, true, sharedKey)).toBe(false)
   })
 
   it('is false once the visitor has navigated to a different post, even if the pin flag is stale', () => {
@@ -214,7 +214,7 @@ describe('isSharedItemUnavailable', () => {
   it('is false for every other mode, even if flagged unavailable and the keys match', () => {
     expect(isSharedItemUnavailable('home', true, sharedKey, sharedKey)).toBe(false)
     expect(isSharedItemUnavailable('playlist', true, sharedKey, sharedKey)).toBe(false)
-    expect(isSharedItemUnavailable('triage', true, sharedKey, sharedKey)).toBe(false)
+    expect(isSharedItemUnavailable('personal', true, sharedKey, sharedKey)).toBe(false)
   })
 
   it('is false once the queue has auto-advanced (or the visitor navigated) past the unavailable lead', () => {

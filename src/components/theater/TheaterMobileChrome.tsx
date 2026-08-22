@@ -69,7 +69,7 @@ import type {
   TheaterPlaylistMeta,
   TheaterItem,
   TheaterMode,
-  TheaterTriageChrome,
+  TheaterPersonalChrome,
 } from './types'
 
 export interface TheaterMobileChromeProps {
@@ -133,13 +133,13 @@ export interface TheaterMobileChromeProps {
   /**
    * The Spotify-style repeat control (round 8): current mode + the cycling
    * handler. Both absent in playlist mode (that queue always loops) and
-   * triage (finite backlog) — the button only renders when the handler is
+   * collection (finite backlog) — the button only renders when the handler is
    * provided.
    */
   repeatMode?: RepeatMode
   onCycleRepeat?: () => void
-  /** Triage mode (unified-theater-triage.md §2): swaps the top scrim's post meta for a close button + the burger (which carries the Live↔Collection switch as Theater sub-options — the top scrim is too tight for a tab pill at phone widths, unlike desktop's top bar), and the bottom action row for Later/Tag/Delete/Done. */
-  triage?: TheaterTriageChrome
+  /** Collection mode (unified-theater-collection.md §2): swaps the top scrim's post meta for a close button + the burger (which carries the Live↔Collection switch as Theater sub-options — the top scrim is too tight for a tab pill at phone widths, unlike desktop's top bar), and the bottom action row for Later/Tag/Delete/Done. */
+  collection?: TheaterPersonalChrome
 }
 
 /** Height of the collapsed sheet's peek bar — kept in sync with the transform below. Two rows now (drag handle + the nav/pause/audio/de-clutter controls), taller than the old label-only bar. */
@@ -152,7 +152,7 @@ const PEEK_ICON_BTN_DISABLED =
   'opacity-35 hover:bg-transparent hover:text-ink-3 active:bg-transparent active:text-ink-3 disabled:cursor-default'
 
 /**
- * Bottom-scrim action pills. Save (sign-in prompt, the triage live-tab
+ * Bottom-scrim action pills. Save (sign-in prompt, the collection live-tab
  * Save/Saved button) uses PILL_SAVE — glass with a clay border (round 8: the
  * solid clay fill was "too much"). Download/Copy are power-user affordances
  * on PILL_GLASS alongside Share/Open (mirrors GLASS/SAVE_OUTLINE in
@@ -201,7 +201,7 @@ export function TheaterMobileChrome({
   repeatCurrent = false,
   repeatMode,
   onCycleRepeat,
-  triage,
+  collection,
 }: TheaterMobileChromeProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -222,7 +222,7 @@ export function TheaterMobileChrome({
 
   // `mediaKind` is the REAL content kind — drives the audio/pause buttons,
   // `paused`/`soundPulse` state, and the pause/resume handler in every tab.
-  // `progressKind` additionally demotes 'timed' to 'none' in triage's
+  // `progressKind` additionally demotes 'timed' to 'none' in the collection theater's
   // Collection tab (photo/text/quote/article still wait on a deliberate
   // Done/Later/Delete there — no 10s dwell auto-advance) and feeds ONLY
   // <TheaterProgressLine/> — the two must not be conflated, or forcing off
@@ -232,7 +232,7 @@ export function TheaterMobileChrome({
   // "My Collection is just a different playlist in that same theater").
   const mediaKind = progressKindFor(current)
   const progressKind = progressKindForPin(
-    collectionTabProgressKind(mediaKind, triage?.tab === 'collection'),
+    collectionTabProgressKind(mediaKind, collection?.tab === 'collection'),
     repeatCurrent,
   )
 
@@ -385,7 +385,7 @@ export function TheaterMobileChrome({
   const queueIndex = currentKey ? items.findIndex((it) => theaterItemKey(it) === currentKey) : -1
 
   const trendCount = current ? (current.trendCount ?? current.saveCount ?? 0) : 0
-  const tagCount = triage?.tags?.length ?? 0
+  const tagCount = collection?.tags?.length ?? 0
   const handle = current?.author ? current.author.replace(/^@+/, '') : ''
   // The stage IS the text for text/quote/article posts — repeating the body
   // (and the author header) in the bottom scrim doubles it up and buries the
@@ -403,7 +403,7 @@ export function TheaterMobileChrome({
           bottom scrim. De-clutter hides this whole scrim (meta included) —
           expected: immersion hides meta too. Collection mode replaces post
           meta with the tag/curator identity chrome (two rows). */}
-      {triage ? (
+      {collection ? (
         <div
           className={cn(
             'pointer-events-auto absolute inset-x-0 top-0 flex items-center justify-between gap-3 px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
@@ -425,11 +425,11 @@ export function TheaterMobileChrome({
                 position. */}
             <TheaterAvatarMenu
               theaterActive
-              theaterTabs={{ tab: triage.tab, onTabChange: triage.onTabChange }}
+              theaterTabs={{ tab: collection.tab, onTabChange: collection.onTabChange }}
             />
             <button
               type="button"
-              onClick={triage.onClose}
+              onClick={collection.onClose}
               aria-label="Close"
               className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full border border-white/25 bg-white/[0.14] text-white"
             >
@@ -521,13 +521,13 @@ export function TheaterMobileChrome({
             {/* Mobile equivalent of the desktop top bar's ⌘V paste-to-preview
                 input (spec §8/DesktopStageChrome) — touch Safari has no
                 paste gesture, so this covers the signed-out home theater and
-                shared preview pages (triage/collection top scrims above
+                shared preview pages (collection/collection top scrims above
                 have their own chrome and skip this). */}
             <PasteLinkButton iconOnly />
             {/* Signed-out visitors here (the home theater + shared preview
                 pages) get a burger fallback in this same slot — Theater /
                 Leaderboard / Sign in — instead of no navigation at all.
-                Triage above never passes this (always reached authed);
+                Collection above never passes this (always reached authed);
                 playlist mode's top scrim doesn't mount this component at
                 all — its plain home logo plus the bottom scrim's
                 Save-playlist CTA cover both navigation and signed-out
@@ -630,12 +630,12 @@ export function TheaterMobileChrome({
               </div>
             )}
 
-            {/* Tag chips (unified-theater-triage.md §B) — the Collection
+            {/* Tag chips (unified-theater-collection.md §B) — the Collection
                 tab's current item only; display-only, nothing renders
                 without tags. */}
-            {triage?.tags && triage.tags.length > 0 && (
+            {collection?.tags && collection.tags.length > 0 && (
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                {triage.tags.map((t) => (
+                {collection.tags.map((t) => (
                   <span
                     key={t}
                     className="flex-none rounded-full border border-white/12 bg-white/[.06] px-2 py-0.5 text-[10.5px] text-white/55"
@@ -647,11 +647,11 @@ export function TheaterMobileChrome({
             )}
           </div>
 
-          {triage && triage.tab === 'collection' ? (
+          {collection && collection.tab === 'collection' ? (
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={triage.onLater}
+                onClick={collection.onLater}
                 className="inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/25 bg-white/[0.14] text-[11px] font-semibold text-white"
               >
                 <Clock size={16} />
@@ -659,7 +659,7 @@ export function TheaterMobileChrome({
               </button>
               <button
                 type="button"
-                onClick={triage.onTag}
+                onClick={collection.onTag}
                 className={cn(
                   'inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border bg-white/10 text-[11px] font-semibold backdrop-blur-md',
                   tagCount > 0 ? 'border-clay/50 text-clay' : 'border-white/25 text-white',
@@ -670,7 +670,7 @@ export function TheaterMobileChrome({
               </button>
               <button
                 type="button"
-                onClick={triage.onDelete}
+                onClick={collection.onDelete}
                 className="inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-white/25 bg-white/[0.14] text-[11px] font-semibold text-white"
               >
                 <Trash2 size={16} />
@@ -678,7 +678,7 @@ export function TheaterMobileChrome({
               </button>
               <button
                 type="button"
-                onClick={triage.onDone}
+                onClick={collection.onDone}
                 title="Archive — take it out of your collection queue"
                 className="inline-flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl bg-done/25 text-[11px] font-semibold text-done"
               >
@@ -775,12 +775,12 @@ export function TheaterMobileChrome({
                       <span>{textCopied ? 'Copied' : 'Copy'}</span>
                     </button>
                   ) : null}
-                  {triage?.tab === 'live' ? (
+                  {collection?.tab === 'live' ? (
                     <>
                       <StageIconButton
                         onClick={(e) => {
                           e.stopPropagation()
-                          triage.onLiveTag?.(current)
+                          collection.onLiveTag?.(current)
                         }}
                         onTouchEnd={(e) => e.stopPropagation()}
                         aria-label="Tag this post"
@@ -792,10 +792,10 @@ export function TheaterMobileChrome({
                           simply show the tag icon because that denotes that
                           it's already saved"). The tag icon beside it is both
                           the affordance and the state. */}
-                      {!triage.savedKeys.has(theaterItemKey(current)) && (
+                      {!collection.savedKeys.has(theaterItemKey(current)) && (
                         <button
                           type="button"
-                          onClick={() => triage.onSave(current)}
+                          onClick={() => collection.onSave(current)}
                           className={PILL_SAVE}
                         >
                           <Bookmark size={15} />
@@ -973,7 +973,7 @@ export function TheaterMobileChrome({
               )}
             </div>
 
-            {/* Centre slot: where you are in the queue. Triage used to spend
+            {/* Centre slot: where you are in the queue. Collection used to spend
                 this on the Live/Collection tabs — they're in the top scrim
                 now (see above), so every mode gets the position, which is
                 what the owner asked the count to be aware of. */}
@@ -1008,9 +1008,9 @@ export function TheaterMobileChrome({
                   // where "new" means anything: the Collection tab is a finite
                   // backlog, not the live pulse.
                   `${queueIndex + 1} / ${queueTotal ?? items.length}${
-                    newCount > 0 && triage?.tab !== 'collection' ? ` · ${newCount} new` : ''
+                    newCount > 0 && collection?.tab !== 'collection' ? ` · ${newCount} new` : ''
                   }`
-                ) : newCount > 0 && triage?.tab !== 'collection' ? (
+                ) : newCount > 0 && collection?.tab !== 'collection' ? (
                   `${newCount} new`
                 ) : (
                   'Up next'
