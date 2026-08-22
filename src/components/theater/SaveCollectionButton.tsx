@@ -15,7 +15,7 @@ export interface SaveCollectionButtonProps {
   count: number
   status: SaveCollectionStatus
   onSave: () => void
-  /** Full button class string — callers own the visual style (desktop glass pill vs mobile full-width gradient bar). */
+  /** Full button class string — callers own the visual style (both chromes pass their Save-outline style: clay border on glass). */
   className: string
 }
 

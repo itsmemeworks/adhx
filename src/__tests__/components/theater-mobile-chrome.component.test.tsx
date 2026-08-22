@@ -4,6 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { TheaterMobileChrome } from '@/components/theater/TheaterMobileChrome'
+import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterItem, TheaterTriageChrome } from '@/components/theater/types'
 
 /**
@@ -25,6 +26,16 @@ const mockUseSendFile = vi.fn((..._args: unknown[]) => ({
 
 vi.mock('@/components/theater/useSendFile', () => ({
   useSendFile: (...args: unknown[]) => mockUseSendFile(...args),
+}))
+
+// Captures the props TheaterMobileChrome passes down, so the `theaterActive`
+// wiring tests below can assert on it directly rather than through
+// TheaterAvatarMenu's own rendering (which the global setup-components.ts
+// mock pins `usePathname()` to '/' for, making `isHome` true regardless of
+// `theaterActive` — no observable behavioral difference to assert on there).
+const mockTheaterAvatarMenu = vi.fn((_props: Record<string, unknown>) => null)
+vi.mock('@/components/theater/TheaterAvatarMenu', () => ({
+  TheaterAvatarMenu: (props: Record<string, unknown>) => mockTheaterAvatarMenu(props),
 }))
 
 function videoItem(overrides: Partial<TheaterItem> = {}): TheaterItem {
@@ -89,6 +100,7 @@ beforeEach(() => {
     mode: 'download' as const,
     send: vi.fn(),
   })
+  mockTheaterAvatarMenu.mockClear()
 })
 
 // Round 8 (owner: the solid clay-grad Save fill was "too much") — Save now
@@ -278,6 +290,20 @@ describe('TheaterMobileChrome: collection mode brand logo is always home', () =>
     )
     expect(screen.getByText('Save collection · 12')).toBeInTheDocument()
   })
+
+  it('the Save-collection CTA carries the clay-border outline (PILL_SAVE), not the old solid clay-grad fill', () => {
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={videoItem()}
+        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        isCollectionOwner={false}
+      />,
+    )
+    const saveCollectionBtn = screen.getByText('Save collection · 12').closest('button')!
+    expect(saveCollectionBtn.className).toContain('border-clay')
+    expect(saveCollectionBtn.className).not.toContain('bg-clay-grad')
+  })
 })
 
 // Owner (mobile screenshot): a shared post repeats until deliberate
@@ -318,6 +344,169 @@ describe('TheaterMobileChrome: shared-post-repeat cue', () => {
   it('does not accent a disabled next chevron even while pinned (nowhere to go)', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} repeatCurrent canNext={false} />)
     expect(screen.getByLabelText('Next post').className).not.toContain('text-clay')
+  })
+})
+
+/**
+ * Owner follow-up: the peek bar's center label used to always read "Up
+ * next" (or "N new") — now it shows the viewer's actual position in the
+ * queue ("3 / 17"), with the fresh-arrival count folded in as a suffix.
+ * Collection ("#tag · count") and repeatCurrent ("On repeat") stay
+ * unchanged and still take priority. Falls back to the old "N new"/"Up
+ * next" copy only when the current key doesn't resolve into `items`.
+ */
+describe('TheaterMobileChrome: queue position label', () => {
+  function buildItems(count: number): TheaterItem[] {
+    return Array.from({ length: count }, (_, i) => videoItem({ bookmarkId: String(i + 1) }))
+  }
+
+  it('renders the 1-based queue position (e.g. "2 / 5") for the current item', () => {
+    const items = buildItems(5)
+    render(
+      <TheaterMobileChrome
+        {...base}
+        items={items}
+        current={items[1]}
+        currentKey={theaterItemKey(items[1])}
+      />,
+    )
+    expect(screen.getByText('2 / 5')).toBeInTheDocument()
+    expect(screen.queryByText('Up next')).not.toBeInTheDocument()
+  })
+
+  it('appends the new-count suffix when newCount > 0', () => {
+    const items = buildItems(5)
+    render(
+      <TheaterMobileChrome
+        {...base}
+        items={items}
+        current={items[1]}
+        currentKey={theaterItemKey(items[1])}
+        newCount={3}
+      />,
+    )
+    expect(screen.getByText('2 / 5 · 3 new')).toBeInTheDocument()
+  })
+
+  it('omits the new-count suffix when newCount is 0', () => {
+    const items = buildItems(5)
+    render(
+      <TheaterMobileChrome
+        {...base}
+        items={items}
+        current={items[1]}
+        currentKey={theaterItemKey(items[1])}
+        newCount={0}
+      />,
+    )
+    expect(screen.getByText('2 / 5')).toBeInTheDocument()
+    expect(screen.queryByText(/new/)).not.toBeInTheDocument()
+  })
+
+  it('falls back to "N new" when the current key does not resolve into items', () => {
+    const items = buildItems(5)
+    render(
+      <TheaterMobileChrome
+        {...base}
+        items={items}
+        current={null}
+        currentKey="twitter:does-not-exist"
+        newCount={4}
+      />,
+    )
+    expect(screen.getByText('4 new')).toBeInTheDocument()
+    expect(screen.queryByText(/\d+ \/ \d+/)).not.toBeInTheDocument()
+  })
+
+  it('falls back to "Up next" when the current key does not resolve and there is no new count', () => {
+    const items = buildItems(5)
+    render(
+      <TheaterMobileChrome
+        {...base}
+        items={items}
+        current={null}
+        currentKey="twitter:does-not-exist"
+      />,
+    )
+    expect(screen.getByText('Up next')).toBeInTheDocument()
+  })
+
+  it('collection mode still shows the tag/count label, not the queue position', () => {
+    const items = buildItems(5)
+    render(
+      <TheaterMobileChrome
+        {...base}
+        items={items}
+        current={items[1]}
+        currentKey={theaterItemKey(items[1])}
+        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+      />,
+    )
+    expect(screen.getByText('#claude-code · 12')).toBeInTheDocument()
+    expect(screen.queryByText('2 / 5')).not.toBeInTheDocument()
+  })
+
+  it('repeatCurrent still shows "On repeat", not the queue position', () => {
+    const items = buildItems(5)
+    render(
+      <TheaterMobileChrome
+        {...base}
+        items={items}
+        current={items[1]}
+        currentKey={theaterItemKey(items[1])}
+        repeatCurrent
+      />,
+    )
+    expect(screen.getByText('On repeat')).toBeInTheDocument()
+    expect(screen.queryByText('2 / 5')).not.toBeInTheDocument()
+  })
+})
+
+/**
+ * Owner follow-up: the theater's URL-sync effect rewrites the address bar to
+ * per-post preview paths mid-session, so `usePathname` alone can't tell the
+ * chrome it's still inside the home theater — `theaterActive` is passed to
+ * `TheaterAvatarMenu` explicitly instead. Triage's scrim always mounts
+ * inside the theater (always true, regardless of `mode`); the home/shared
+ * scrim only mounts it truthy in home mode. Asserted directly on the mocked
+ * `TheaterAvatarMenu`'s captured props (see the module mock above) — the
+ * real component's own `isHome` derivation is covered by
+ * TheaterAvatarMenu.component.test.tsx.
+ */
+describe('TheaterMobileChrome: theaterActive prop wiring', () => {
+  it('passes theaterActive: true to the triage scrim unconditionally, even in shared mode', () => {
+    const triage: TheaterTriageChrome = {
+      tab: 'live',
+      onTabChange: vi.fn(),
+      onDone: vi.fn(),
+      onLater: vi.fn(),
+      onDelete: vi.fn(),
+      onTag: vi.fn(),
+      onSave: vi.fn(),
+      onLiveTag: vi.fn(),
+      savedKeys: new Set<string>(),
+      remaining: 0,
+      streak: { current: 0, longest: 0 },
+      onClose: vi.fn(),
+    }
+    render(<TheaterMobileChrome {...base} mode="shared" current={videoItem()} triage={triage} />)
+    expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
+      expect.objectContaining({ theaterActive: true }),
+    )
+  })
+
+  it('passes theaterActive: true in home mode', () => {
+    render(<TheaterMobileChrome {...base} mode="home" current={videoItem()} />)
+    expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
+      expect.objectContaining({ theaterActive: true }),
+    )
+  })
+
+  it('passes theaterActive: false in shared mode (no triage)', () => {
+    render(<TheaterMobileChrome {...base} mode="shared" current={videoItem()} />)
+    expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
+      expect.objectContaining({ theaterActive: false }),
+    )
   })
 })
 
@@ -534,6 +723,26 @@ describe('TheaterMobileChrome: repeat control', () => {
     // Sheet stays collapsed — the repeat button stops propagation so it
     // never also toggles the drag-handle's open/closed state.
     expect(screen.queryAllByLabelText('Collapse up next')).toHaveLength(0)
+  })
+
+  // Owner follow-up: collection mode now exposes the repeat control too
+  // (TheaterShell defaults it to 'all' there, and wires cycling through
+  // `nextRepeatMode`'s `wrapOnly`) — the chrome itself doesn't gate the
+  // button on `collection` at all, it just renders whatever `repeatMode`/
+  // `onCycleRepeat` it's given, so a collection-mode mount showing 'all'
+  // active is the same rendering path as home/shared.
+  it('renders active ("Repeat: whole queue") when mounted in collection mode with repeatMode "all"', () => {
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={videoItem()}
+        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        repeatMode="all"
+        onCycleRepeat={vi.fn()}
+      />,
+    )
+    const btn = screen.getByLabelText('Repeat: whole queue')
+    expect(btn.className).toContain('text-clay')
   })
 })
 

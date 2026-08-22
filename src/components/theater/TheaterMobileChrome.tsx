@@ -140,8 +140,8 @@ const PEEK_ICON_BTN_DISABLED =
  * Save/Saved button) uses PILL_SAVE — glass with a clay border (round 8: the
  * solid clay fill was "too much"). Download/Copy are power-user affordances
  * on PILL_GLASS alongside Share/Open (mirrors GLASS/SAVE_OUTLINE in
- * TheaterDesktopChrome). SaveCollectionButton keeps the solid clay-grad —
- * it's the collection page's one conversion CTA.
+ * TheaterDesktopChrome). SaveCollectionButton uses PILL_SAVE too (owner:
+ * same orange outline as the Save button).
  */
 const PILL_GLASS =
   'inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/[0.14] px-3 text-[13px] font-semibold text-white disabled:opacity-70'
@@ -158,6 +158,7 @@ const PILL_SAVE =
   'inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-clay bg-white/[0.14] px-3 text-[13px] font-semibold text-white disabled:opacity-70'
 
 export function TheaterMobileChrome({
+  mode,
   current,
   items,
   currentKey,
@@ -346,6 +347,11 @@ export function TheaterMobileChrome({
     }
   }
 
+  // Queue position for the peek bar's center label (owner: "Up next" wasn't
+  // useful — show where you are in the queue instead). -1 (no current item /
+  // empty list) falls back to the old label.
+  const queueIndex = currentKey ? items.findIndex((it) => theaterItemKey(it) === currentKey) : -1
+
   const trendCount = current ? (current.trendCount ?? current.saveCount ?? 0) : 0
   const tagCount = triage?.tags?.length ?? 0
   const handle = current?.author ? current.author.replace(/^@+/, '') : ''
@@ -377,7 +383,7 @@ export function TheaterMobileChrome({
             <MatterLogo size={16} className="[&>span]:text-white" />
           </a>
           <div className="flex flex-none items-center gap-1.5">
-            <TheaterAvatarMenu />
+            <TheaterAvatarMenu theaterActive />
             <button
               type="button"
               onClick={triage.onClose}
@@ -473,7 +479,11 @@ export function TheaterMobileChrome({
                 all — its plain home logo plus the bottom scrim's
                 Save-collection CTA cover both navigation and signed-out
                 conversion there. */}
-            <TheaterAvatarMenu onRequestSignIn={onRequestSignIn} allowSignedOut />
+            <TheaterAvatarMenu
+              onRequestSignIn={onRequestSignIn}
+              allowSignedOut
+              theaterActive={mode === 'home'}
+            />
           </div>
         </div>
       )}
@@ -656,7 +666,7 @@ export function TheaterMobileChrome({
                   count={collection.count}
                   status={saveStatus}
                   onSave={() => onSaveCollection?.()}
-                  className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full bg-clay-grad px-3 text-[13px] font-semibold text-white shadow-glow transition-opacity disabled:opacity-70"
+                  className={PILL_SAVE}
                 />
               ) : (
                 <>
@@ -940,6 +950,10 @@ export function TheaterMobileChrome({
                       <Repeat size={11} className="flex-none" aria-hidden />
                       <span className="truncate">On repeat</span>
                     </>
+                  ) : queueIndex !== -1 ? (
+                    // Queue position ("3 / 17"), with the fresh-arrival count
+                    // folded in when there is one.
+                    `${queueIndex + 1} / ${items.length}${newCount > 0 ? ` · ${newCount} new` : ''}`
                   ) : newCount > 0 ? (
                     `${newCount} new`
                   ) : (

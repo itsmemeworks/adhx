@@ -125,6 +125,38 @@ describe('TheaterAvatarMenu', () => {
     expect(screen.getByText('Theater').closest('a')).toHaveAttribute('href', '/')
   })
 
+  // Owner follow-up: the home theater's URL-sync effect rewrites the
+  // address bar to per-post preview paths mid-session (theaterUrlSyncPath),
+  // so `usePathname` alone reads as a shared-preview-page pathname even
+  // while the visitor is still inside the home theater. `theaterActive`
+  // lets the mounting chrome override that.
+  it('theaterActive marks Theater current (close-only button) even when the URL has been rewritten mid-session', async () => {
+    mockPathname = '/naval/status/123'
+    mockAuthMe(AUTHED_ME)
+    render(<TheaterAvatarMenu theaterActive />)
+    fireEvent.click(await screen.findByLabelText('Account menu'))
+
+    const theaterEntry = screen.getByText('Theater').closest('button')
+    expect(theaterEntry).toBeInTheDocument()
+    expect(theaterEntry).toHaveAttribute('aria-current', 'page')
+    expect(theaterEntry!.querySelector('[data-testid="menu-current-dot"]')).toBeInTheDocument()
+
+    fireEvent.click(theaterEntry!)
+    expect(screen.queryByText('Theater')).not.toBeInTheDocument()
+  })
+
+  it('without theaterActive, the same rewritten pathname still renders Theater as an unmarked link', async () => {
+    mockPathname = '/naval/status/123'
+    mockAuthMe(AUTHED_ME)
+    render(<TheaterAvatarMenu />)
+    fireEvent.click(await screen.findByLabelText('Account menu'))
+
+    const theaterLink = screen.getByText('Theater').closest('a')!
+    expect(theaterLink).toHaveAttribute('href', '/')
+    expect(theaterLink).not.toHaveAttribute('aria-current')
+    expect(theaterLink.querySelector('[data-testid="menu-current-dot"]')).not.toBeInTheDocument()
+  })
+
   it('POSTs logout and redirects on Sign out', async () => {
     mockAuthMe(AUTHED_ME)
     const originalLocation = window.location
@@ -252,6 +284,18 @@ describe('TheaterAvatarMenu — signed-out burger (allowSignedOut)', () => {
     fireEvent.click(await screen.findByLabelText('Menu'))
 
     expect(screen.getByText('Theater').closest('a')).toHaveAttribute('href', '/')
+  })
+
+  it('theaterActive marks Theater current (close-only button) even with a rewritten pathname', async () => {
+    mockPathname = '/naval/status/123'
+    mockAuthMe(SIGNED_OUT_ME)
+    render(<TheaterAvatarMenu allowSignedOut theaterActive />)
+    fireEvent.click(await screen.findByLabelText('Menu'))
+
+    const theaterEntry = screen.getByText('Theater').closest('button')
+    expect(theaterEntry).toBeInTheDocument()
+    expect(theaterEntry).toHaveAttribute('aria-current', 'page')
+    expect(theaterEntry!.querySelector('[data-testid="menu-current-dot"]')).toBeInTheDocument()
   })
 
   it('marks Leaderboard as current (clay dot + aria-current) when on /leaderboard, including sub-paths', async () => {

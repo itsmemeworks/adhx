@@ -82,11 +82,18 @@ function MenuLink({
 /**
  * The "Theater" nav entry — identical in the signed-in and signed-out
  * menus, and identical semantics to the Header's own Theater nav item:
- * already on the home theater (`/`), it just closes the menu (a real
+ * already inside the home theater, it just closes the menu (a real
  * navigation would restart the stage the visitor is already watching) and
  * carries the current-screen marker — the front page IS the theater;
  * anywhere else (a shared preview page, the leaderboard), it's a real link
- * home.
+ * home. `isHome` can NOT be derived from the pathname alone: the home
+ * theater rewrites the address bar to each staged post's preview path
+ * (TheaterShell's URL-sync effect), and Next's `usePathname` tracks native
+ * `replaceState` — so mid-session the URL reads `/{author}/status/{id}`
+ * while the visitor is still on the home theater (owner report: Theater
+ * never showed as selected). The theater chromes therefore pass
+ * `theaterActive` explicitly (see that prop), OR'd into `isHome` by the
+ * caller below.
  */
 function TheaterMenuEntry({ isHome, onClose }: { isHome: boolean; onClose: () => void }) {
   if (isHome) {
@@ -133,6 +140,15 @@ export interface TheaterAvatarMenuProps {
    * signed-out conversion CTA, so neither passes it.
    */
   allowSignedOut?: boolean
+  /**
+   * The mount site IS the home theater screen (home mode, or triage — the
+   * theater overlaying `/`), regardless of what the address bar says (the
+   * URL-sync effect rewrites it to per-post preview paths mid-session, and
+   * usePathname follows). Marks the Theater entry as current and makes it
+   * close-only. Shared preview pages and the leaderboard omit it — there,
+   * Theater is a real link home and never marked.
+   */
+  theaterActive?: boolean
 }
 
 /**
@@ -149,6 +165,7 @@ export function TheaterAvatarMenu({
   className,
   onRequestSignIn,
   allowSignedOut = false,
+  theaterActive = false,
 }: TheaterAvatarMenuProps) {
   const { me, loading } = useAuthMe()
   const [open, setOpen] = useState(false)
@@ -194,7 +211,10 @@ export function TheaterAvatarMenu({
   // visitor is already watching). From anywhere else (a shared preview
   // page), it's a real link home. Shared by both the signed-in and
   // signed-out menus below.
-  const isHome = pathname === '/'
+  // `theaterActive` folds in because the home theater's URL-sync rewrites
+  // the pathname to per-post preview paths mid-session — see
+  // TheaterMenuEntry's doc comment.
+  const isHome = pathname === '/' || theaterActive
   // Current-screen markers for the other nav entries (round 8). Prefix match
   // so /leaderboard/[window] etc. still count.
   const isLeaderboard = pathname === '/leaderboard' || pathname?.startsWith('/leaderboard/')

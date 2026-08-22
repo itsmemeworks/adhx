@@ -268,8 +268,14 @@ export function findFreshArrival(
 // import it too); re-exported here for tests/callers.
 export type { RepeatMode } from './types'
 
-/** Pure: the repeat button's cycle order — off → all → one → off. */
-export function nextRepeatMode(mode: RepeatMode): RepeatMode {
+/**
+ * Pure: the repeat button's cycle order — off → all → one → off. Collection
+ * mode (`wrapOnly`) has no 'off': a curated tag collection is a loop by
+ * definition (there's no live feed to wait on), so the button just toggles
+ * whole-queue ⇄ this-post there.
+ */
+export function nextRepeatMode(mode: RepeatMode, wrapOnly = false): RepeatMode {
+  if (wrapOnly) return mode === 'all' ? 'one' : 'all'
   return mode === 'off' ? 'all' : mode === 'all' ? 'one' : 'off'
 }
 
@@ -789,32 +795,38 @@ export function TheaterShell({
 
   // Repeat mode (round 8): session-persisted like the sound preference —
   // read on mount (not the initializer, for the same SSR-hydration reason),
-  // written on change. Only the free-browsing queues (home/shared) expose
-  // the button, so `effectiveRepeatMode` neutralizes a session-carried value
-  // everywhere else: collection mode always loops on its own, and triage is
-  // a finite backlog with its own Done/Later semantics — a stale 'one'/'all'
-  // leaking in there would repeat/wrap a queue with no visible control to
-  // turn it off.
-  const [repeatMode, setRepeatMode] = useState<RepeatMode>('off')
-  const repeatEnabled = !loop && !isTriage
+  // written on change. Triage never exposes the button (`effectiveRepeatMode`
+  // neutralizes a session-carried value there — a finite backlog with its
+  // own Done/Later semantics; a stale 'one'/'all' leaking in would
+  // repeat/wrap a queue with no visible control to turn it off). Collection
+  // mode DOES expose it (owner: the tag-collection player should show the
+  // repeat icon, selected): it opens on 'all' — looping IS the collection's
+  // resting state — and toggles all ⇄ one (`nextRepeatMode`'s wrapOnly), so
+  // it deliberately skips the sessionStorage read/write below: a collection
+  // page's toggle is per-visit and must never bleed into the home theater's
+  // persisted preference (or vice versa).
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>(loop ? 'all' : 'off')
+  const repeatEnabled = !isTriage
   const effectiveRepeatMode: RepeatMode = repeatEnabled ? repeatMode : 'off'
   const repeatModeRef = useRef(effectiveRepeatMode)
   repeatModeRef.current = effectiveRepeatMode
   useEffect(() => {
+    if (loop) return
     try {
       const stored = sessionStorage.getItem('adhx-theater-repeat')
       if (stored === 'all' || stored === 'one') setRepeatMode(stored)
     } catch {
       // Storage unavailable — keep 'off'.
     }
-  }, [])
+  }, [loop])
   useEffect(() => {
+    if (loop) return
     try {
       sessionStorage.setItem('adhx-theater-repeat', repeatMode)
     } catch {
       // Never let a storage failure break playback.
     }
-  }, [repeatMode])
+  }, [loop, repeatMode])
 
   const isDesktop = useIsDesktopViewport()
   // Desktop de-clutter: collapses the rail column for a full-bleed stage.
@@ -1127,7 +1139,7 @@ export function TheaterShell({
     // Computed from the ref (not a state updater) so the waiting-stage exit
     // below is a plain side effect, never smuggled into an updater that
     // React may re-invoke (StrictMode double-render safety).
-    const next = nextRepeatMode(repeatModeRef.current)
+    const next = nextRepeatMode(repeatModeRef.current, loop)
     if (next === 'all' && waitingRef.current) {
       stagedFromWaitingKeyRef.current = null
       setWaiting(false)
@@ -1135,7 +1147,7 @@ export function TheaterShell({
       if (first) setCurrentKey(theaterItemKey(first))
     }
     setRepeatMode(next)
-  }, [clearSharedPin])
+  }, [clearSharedPin, loop])
 
   // "Start from the beginning" on the waiting stage (round 8) — a deliberate
   // navigation back to the top of the queue.

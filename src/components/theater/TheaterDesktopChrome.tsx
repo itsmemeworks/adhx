@@ -157,20 +157,21 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 const GLASS =
   'inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/[0.14] px-4 text-[12.5px] font-semibold text-white transition-colors hover:bg-white/20 disabled:opacity-60'
 /**
- * Save drives account signups, so it's ALWAYS the visually primary action —
- * every Save variant (sign-in prompt, SavePostButton, TriageLiveSaveButton,
- * SaveCollectionButton) uses this class. Download is a power-user affordance,
- * not a headline feature, so it stays on GLASS alongside Link/Open.
+ * Solid clay-grad — since round 8 used ONLY by triage's Done button; every
+ * Save variant moved to SAVE_OUTLINE below (owner: the solid fill was "too
+ * much"). Download/Copy are power-user affordances on GLASS alongside
+ * Link/Open.
  */
 const PRIMARY =
   'inline-flex h-11 items-center justify-center gap-1.5 rounded-full bg-clay-grad px-5 text-[12.5px] font-semibold text-white shadow-glow transition-opacity hover:opacity-90 disabled:opacity-60'
 
 /**
- * The Save-post button (round 8, owner): a Bookmark glyph on the same
+ * The Save buttons (round 8, owner): a Bookmark glyph on the same
  * see-through glass as GLASS, distinguished by a clay border instead of the
- * old solid clay-grad PRIMARY fill ("too much"). PRIMARY remains for the
- * true conversion CTAs (Save-collection, triage Done). Mirrors `PILL_SAVE`
- * in TheaterMobileChrome.
+ * old solid clay-grad PRIMARY fill ("too much"). Covers SavePostButton,
+ * TriageLiveSaveButton, the signed-out Save prompt, AND SaveCollectionButton
+ * (owner follow-up: same outline). PRIMARY remains only for triage's Done.
+ * Mirrors `PILL_SAVE` in TheaterMobileChrome.
  */
 const SAVE_OUTLINE =
   'inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-clay bg-white/[0.14] px-5 text-[12.5px] font-semibold text-white transition-colors hover:bg-white/20 disabled:opacity-60'
@@ -641,6 +642,7 @@ export function DesktopStageChrome({
           <TheaterAvatarMenu
             onRequestSignIn={onRequestSignIn}
             allowSignedOut={!triage && !collection}
+            theaterActive={mode === 'home' || !!triage}
           />
 
           {/* De-cluttering EXPANDS the stage, so the enter action reads
@@ -862,7 +864,7 @@ export function DesktopStageChrome({
                 count={collection.count}
                 status={saveStatus}
                 onSave={() => onSaveCollection?.()}
-                className={PRIMARY}
+                className={SAVE_OUTLINE}
               />
             )
           ) : (mode === 'shared' && authed) || triage?.tab === 'live' ? (
@@ -1228,8 +1230,10 @@ export function DesktopDock({
 
         {/* Collection mode loops: a dashed divider announces the wrap, then a
             ghosted (opacity-45) copy of the first card previews where "next"
-            after the last item goes — matching goNext's actual wrap target. */}
-        {collection && items.length > 0 && (
+            after the last item goes — matching goNext's actual wrap target.
+            Hidden while the repeat button is on 'one' — the queue isn't
+            wrapping then, the current post is looping. */}
+        {collection && items.length > 0 && repeatMode !== 'one' && (
           <>
             <div
               aria-hidden
@@ -1292,14 +1296,22 @@ export function DesktopDock({
 
       {/* End cap */}
       <div className="relative flex flex-none flex-col items-end justify-center gap-1 pl-1">
+        {/* Vertical stack (owner: the count and new-count sit BELOW the
+            "Show all" text so the end cap doesn't eat filmstrip width). */}
         <button
           type="button"
           onClick={() => setShowAll((v) => !v)}
           className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-ink-2 hover:text-ink"
         >
           {showAll ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
-          Show all · {items.length}
+          Show all
         </button>
+        <span className="text-[10.5px] text-ink-3">
+          <span className="font-mono">{items.length} posts</span>
+          {!collection && newCount > 0 && (
+            <span className="font-semibold text-clay"> · {newCount} new</span>
+          )}
+        </span>
         {/* savedToday/newCount are live-pulse concepts — collection mode is a
             static curated queue, and triage's Collection tab is the user's
             own backlog, so neither line is meaningful for either. Triage
@@ -1322,6 +1334,8 @@ export function DesktopDock({
                 "facts shown once"). The current card IS the state cue on
                 desktop, same as the mobile peek bar's relabeled center
                 button; the chevron accent is the "way out" cue. */}
+            {/* newCount now rides the count line under "Show all" above —
+                only the ambient savedToday/waiting line remains here. */}
             {!collection &&
               (waiting ? (
                 <span className="text-[10.5px] text-ink-3">Waiting for new sends…</span>
@@ -1330,9 +1344,6 @@ export function DesktopDock({
                   <span className="text-[10.5px] text-ink-3">{savedToday} saved today</span>
                 )
               ))}
-            {!collection && newCount > 0 && (
-              <span className="text-[10.5px] font-semibold text-clay">{newCount} new</span>
-            )}
           </>
         )}
 

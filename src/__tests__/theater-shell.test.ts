@@ -261,10 +261,30 @@ describe('findFreshArrival', () => {
  * fresh arrival re-enters waiting instead of continuing into the queue.
  */
 describe('nextRepeatMode', () => {
-  it('cycles off -> all -> one -> off', () => {
+  it('cycles off -> all -> one -> off (default, wrapOnly omitted)', () => {
     expect(nextRepeatMode('off')).toBe('all')
     expect(nextRepeatMode('all')).toBe('one')
     expect(nextRepeatMode('one')).toBe('off')
+  })
+
+  it('cycles off -> all -> one -> off when wrapOnly is explicitly false', () => {
+    expect(nextRepeatMode('off', false)).toBe('all')
+    expect(nextRepeatMode('all', false)).toBe('one')
+    expect(nextRepeatMode('one', false)).toBe('off')
+  })
+
+  /**
+   * Collection mode (a curated tag collection): looping is the resting
+   * state, so there's no 'off' to cycle to — the button just toggles
+   * whole-queue <-> this-post.
+   */
+  it('wrapOnly: toggles all <-> one, with no "off" state', () => {
+    expect(nextRepeatMode('all', true)).toBe('one')
+    expect(nextRepeatMode('one', true)).toBe('all')
+  })
+
+  it('wrapOnly: an "off" input (shouldn\'t normally occur in collection mode) resolves to "all", never "off"', () => {
+    expect(nextRepeatMode('off', true)).toBe('all')
   })
 })
 

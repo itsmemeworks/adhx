@@ -26,6 +26,17 @@ vi.mock('@/components/theater/useSendFile', () => ({
   useSendFile: (...args: unknown[]) => mockUseSendFile(...args),
 }))
 
+// Captures the props DesktopStageChrome passes down, so the `theaterActive`
+// wiring tests below can assert on it directly rather than through
+// TheaterAvatarMenu's own rendering (the global setup-components.ts mock
+// pins `usePathname()` to '/' for every test file, making `isHome` true
+// regardless of `theaterActive` — no observable behavioral difference to
+// assert on there).
+const mockTheaterAvatarMenu = vi.fn((_props: Record<string, unknown>) => null)
+vi.mock('@/components/theater/TheaterAvatarMenu', () => ({
+  TheaterAvatarMenu: (props: Record<string, unknown>) => mockTheaterAvatarMenu(props),
+}))
+
 function videoItem(overrides: Partial<TheaterItem> = {}): TheaterItem {
   return {
     action: 'save',
@@ -90,6 +101,7 @@ beforeEach(() => {
     mode: 'download' as const,
     send: vi.fn(),
   })
+  mockTheaterAvatarMenu.mockClear()
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: vi.fn().mockImplementation((query: string) => ({
@@ -158,6 +170,128 @@ describe('DesktopDock', () => {
 
     fireEvent.keyDown(window, { key: 'Escape' })
     expect(screen.queryByText('Up next')).not.toBeInTheDocument()
+  })
+})
+
+/**
+ * Owner follow-up: the end cap's button text is now just "Show all" (the
+ * item count + new-count moved to a line below it, so the button doesn't
+ * eat filmstrip width). The old standalone "{newCount} new" span is gone —
+ * the new-count now rides the count line instead.
+ */
+describe('DesktopDock: end cap restructure', () => {
+  it('the toggle button reads "Show all" alone, without the item count', () => {
+    const items = [videoItem({ bookmarkId: '1' }), videoItem({ bookmarkId: '2' })]
+    render(<DesktopDock {...dockBase} items={items} current={items[0]} currentKey={null} />)
+    const toggle = screen.getByText('Show all').closest('button')!
+    expect(toggle.textContent).toBe('Show all')
+  })
+
+  it('shows the item count on its own line below "Show all"', () => {
+    const items = [videoItem({ bookmarkId: '1' }), videoItem({ bookmarkId: '2' })]
+    render(<DesktopDock {...dockBase} items={items} current={items[0]} currentKey={null} />)
+    expect(screen.getByText('2 posts')).toBeInTheDocument()
+  })
+
+  it('appends the clay new-count suffix on the count line when newCount > 0 and not collection mode', () => {
+    const items = [videoItem({ bookmarkId: '1' })]
+    render(
+      <DesktopDock {...dockBase} items={items} current={items[0]} currentKey={null} newCount={5} />,
+    )
+    const suffix = screen.getByText('· 5 new')
+    expect(suffix).toBeInTheDocument()
+    expect(suffix.className).toContain('text-clay')
+  })
+
+  it('omits the new-count suffix when newCount is 0', () => {
+    const items = [videoItem({ bookmarkId: '1' })]
+    render(
+      <DesktopDock {...dockBase} items={items} current={items[0]} currentKey={null} newCount={0} />,
+    )
+    expect(screen.queryByText(/new/)).not.toBeInTheDocument()
+  })
+
+  it('never shows the new-count suffix in collection mode, even with newCount > 0', () => {
+    const items = [videoItem({ bookmarkId: '1' })]
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={null}
+        newCount={5}
+        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+      />,
+    )
+    expect(screen.queryByText(/new/)).not.toBeInTheDocument()
+    // The item count line itself still renders.
+    expect(screen.getByText('1 posts')).toBeInTheDocument()
+  })
+
+  it('does not render a standalone "{newCount} new" span outside the count line', () => {
+    const items = [videoItem({ bookmarkId: '1' })]
+    render(
+      <DesktopDock {...dockBase} items={items} current={items[0]} currentKey={null} newCount={5} />,
+    )
+    // Exactly one "new"-bearing node — the suffix on the count line — not a
+    // second standalone one elsewhere in the end cap.
+    expect(screen.getAllByText(/new/)).toHaveLength(1)
+  })
+})
+
+/**
+ * Owner follow-up: the collection-mode "Loops" divider + ghosted first-card
+ * preview announce the wrap — but while the repeat button is on 'one', the
+ * queue isn't wrapping at all (the current post is looping in place), so
+ * showing "Loops" there would be misleading.
+ */
+describe('DesktopDock: collection Loops divider hidden under repeat "one"', () => {
+  const collection = { tag: 'claude-code', curator: 'weedauwl', count: 2 }
+
+  it('shows the Loops divider + ghost first card by default (repeatMode absent/not "one")', () => {
+    const items = [videoItem({ bookmarkId: '1' }), videoItem({ bookmarkId: '2' })]
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+        collection={collection}
+      />,
+    )
+    expect(screen.getByText('Loops')).toBeInTheDocument()
+    expect(screen.getByLabelText('Back to the first post')).toBeInTheDocument()
+  })
+
+  it('hides the Loops divider + ghost first card when repeatMode is "one"', () => {
+    const items = [videoItem({ bookmarkId: '1' }), videoItem({ bookmarkId: '2' })]
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+        collection={collection}
+        repeatMode="one"
+      />,
+    )
+    expect(screen.queryByText('Loops')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Back to the first post')).not.toBeInTheDocument()
+  })
+
+  it('still shows the Loops divider when repeatMode is "all"', () => {
+    const items = [videoItem({ bookmarkId: '1' }), videoItem({ bookmarkId: '2' })]
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+        collection={collection}
+        repeatMode="all"
+      />,
+    )
+    expect(screen.getByText('Loops')).toBeInTheDocument()
   })
 })
 
@@ -568,6 +702,21 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
     expect(downloadBtn.className).not.toContain('border-clay')
   })
 
+  it('collection mode: the Save-collection CTA also carries the clay-border outline, not the old solid clay-grad fill', () => {
+    render(
+      <DesktopStageChrome
+        {...stageBase}
+        mode="collection"
+        current={videoItem()}
+        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        isCollectionOwner={false}
+      />,
+    )
+    const saveCollectionBtn = screen.getByText(/Save collection/).closest('button')!
+    expect(saveCollectionBtn.className).toContain('border-clay')
+    expect(saveCollectionBtn.className).not.toContain('bg-clay-grad')
+  })
+
   it('text posts never show Download (nothing sendable)', () => {
     mockUseSendFile.mockReturnValue({
       supported: false,
@@ -685,6 +834,27 @@ describe('DesktopDock: repeat control', () => {
     fireEvent.click(screen.getByLabelText('Repeat: off'))
     expect(onCycleRepeat).toHaveBeenCalledTimes(1)
   })
+
+  // Owner follow-up: collection mode now exposes the repeat control too
+  // (TheaterShell defaults it to 'all' there, cycling through
+  // `nextRepeatMode`'s `wrapOnly`) — the transport itself doesn't gate the
+  // button on `collection`, it just renders whatever `repeatMode`/
+  // `onCycleRepeat` it's given.
+  it('renders active ("Repeat: whole queue") when mounted in collection mode with repeatMode "all"', () => {
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={currentKey}
+        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        repeatMode="all"
+        onCycleRepeat={vi.fn()}
+      />,
+    )
+    const btn = screen.getByLabelText('Repeat: whole queue')
+    expect(btn.className).toContain('text-clay')
+  })
 })
 
 /**
@@ -777,5 +947,73 @@ describe('DesktopStageChrome: tappable author row', () => {
     )
     expect(screen.queryByTitle(/^View @/)).not.toBeInTheDocument()
     expect(screen.getByText('Saved post')).toBeInTheDocument()
+  })
+})
+
+/**
+ * Owner follow-up: the theater's URL-sync effect rewrites the address bar to
+ * per-post preview paths mid-session, so `usePathname` alone can't tell the
+ * chrome it's still inside the home theater — `theaterActive` is passed to
+ * `TheaterAvatarMenu` explicitly as `mode === 'home' || !!triage`. Asserted
+ * directly on the mocked `TheaterAvatarMenu`'s captured props (see the
+ * module mock above).
+ */
+describe('DesktopStageChrome: theaterActive prop wiring', () => {
+  const stageBase = {
+    mode: 'home' as const,
+    declutter: false,
+    onToggleDeclutter: vi.fn(),
+  }
+
+  const triage = {
+    tab: 'live' as const,
+    onTabChange: vi.fn(),
+    onDone: vi.fn(),
+    onLater: vi.fn(),
+    onDelete: vi.fn(),
+    onTag: vi.fn(),
+    onSave: vi.fn(),
+    onLiveTag: vi.fn(),
+    savedKeys: new Set<string>(),
+    remaining: 0,
+    streak: { current: 0, longest: 0 },
+    onClose: vi.fn(),
+  }
+
+  it('passes theaterActive: true in home mode (no triage)', () => {
+    render(<DesktopStageChrome {...stageBase} mode="home" current={videoItem()} />)
+    expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
+      expect.objectContaining({ theaterActive: true }),
+    )
+  })
+
+  it('passes theaterActive: true whenever triage is present, regardless of mode', () => {
+    render(
+      <DesktopStageChrome {...stageBase} mode="triage" current={videoItem()} triage={triage} />,
+    )
+    expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
+      expect.objectContaining({ theaterActive: true }),
+    )
+  })
+
+  it('passes theaterActive: false in collection mode (no triage)', () => {
+    render(
+      <DesktopStageChrome
+        {...stageBase}
+        mode="collection"
+        current={videoItem()}
+        collection={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+      />,
+    )
+    expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
+      expect.objectContaining({ theaterActive: false }),
+    )
+  })
+
+  it('passes theaterActive: false in shared mode (no triage)', () => {
+    render(<DesktopStageChrome {...stageBase} mode="shared" current={videoItem()} />)
+    expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
+      expect.objectContaining({ theaterActive: false }),
+    )
   })
 })
