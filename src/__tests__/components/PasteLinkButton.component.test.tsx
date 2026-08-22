@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { PasteLinkButton } from '@/components/PasteLinkButton'
 
@@ -181,7 +181,11 @@ describe('PasteLinkButton — non-iOS (readText flow, unchanged)', () => {
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
 
     fireEvent.keyDown(window, { key: 'Escape' })
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    // Poll: the dialog is portalled to <body>, so its unmount lands in a
+    // later commit than the keydown — a synchronous assertion passes locally
+    // and flakes on a slower CI runner (same failure mode as the
+    // outside-click test above).
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
   it('closes the overlay on the explicit close button', async () => {
@@ -192,7 +196,7 @@ describe('PasteLinkButton — non-iOS (readText flow, unchanged)', () => {
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
 
     fireEvent.click(screen.getByRole('button', { name: 'Close' }))
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
   it('icon-only variant renders no label and still opens the overlay on a failed read', async () => {
@@ -290,7 +294,7 @@ describe('PasteLinkButton — iOS (input-paste flow)', () => {
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
 
     fireEvent.keyDown(window, { key: 'Escape' })
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
   it('icon-only variant still autofocuses the input with no retry button', async () => {
@@ -318,6 +322,13 @@ describe('PasteLinkButton — the helper is a centred dialog, not an anchored po
     mockIos = true
     pushSpy.mockClear()
     Object.assign(navigator, { clipboard: undefined })
+  })
+
+  // These tests replace `navigator` and define `window.visualViewport`; both
+  // must be put back or they leak into every test that runs after them.
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    Reflect.deleteProperty(window, 'visualViewport')
   })
 
   /** Pretend a keyboard is open: a short visual viewport, offset down the page. */
