@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.56.0](https://github.com/itsmemeworks/adhx/compare/v1.55.1...v1.56.0) (2026-08-22)
+
+
+### Features
+
+* collection repeat, live actions, and youtube progress ([#392](https://github.com/itsmemeworks/adhx/issues/392)) ([dfd9c13](https://github.com/itsmemeworks/adhx/commit/dfd9c131e3925e97d09a5e6313096564337f07fd))
+
 ## [1.55.1](https://github.com/itsmemeworks/adhx/compare/v1.55.0...v1.55.1) (2026-08-22)
 
 
