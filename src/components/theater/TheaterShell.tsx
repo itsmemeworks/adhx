@@ -159,25 +159,23 @@ export interface TheaterShellProps {
    * Collection mode (`mode="personal"`, unified-theater-collection.md §2): the
    * snapshot of the authed Collection's active queue to collection — same
    * contract as the deleted `CollectionTheater`'s `initialQueue`. Taken once
-   * at mount; AuthedHome remounts the shell (conditional render) for a fresh
-   * collection session rather than this prop changing underneath an open one.
+   * at mount; AuthedTheater fetches the queue before mounting the shell.
    */
   personalItems?: FeedItem[]
   /** Where to start in the collection queue — a gallery click jumps to the clicked item (same contract as the deleted `CollectionTheater`'s `startIndex`). */
   initialPersonalIndex?: number
-  /** Which collection sub-tab to open on (the Collection entry vs. the Live pill in Header both dispatch `open-theater`, differing only in this). */
+  /** Which collection sub-tab to open on (`/` is Live, `/collection` is My Collection). */
   initialPersonalTab?: PersonalTab
   /**
    * Called when the viewer flips the Live ⇄ My Collection switch. The switch
    * is a ROUTE on the signed-in theater (`/` is Live, `/collection` is My
    * Collection — owner: "a specific route that they select"), so the page
    * passes a `router.push` here. The tab still flips locally first, so the
-   * switch responds instantly and doesn't wait on navigation; callers that
-   * are a plain overlay (the `/library` grid's collection session) omit it.
+   * switch responds instantly and doesn't wait on navigation.
    */
   onPersonalTabChange?: (tab: PersonalTab) => void
-  /** Notify the Collection feed so it can drop archived/deleted items without a refetch. */
-  onPostResolved?: (id: string, action: 'archive' | 'delete') => void
+  /** Notify a caller an archive/delete landed. Identity is the full item — same numeric id exists across platforms. */
+  onPostResolved?: (item: FeedItem, action: 'archive' | 'delete') => void
   /** Notify the Collection feed an archive was undone, so it can restore the item + active count. */
   onPostRestored?: (item: FeedItem) => void
   /**
@@ -728,7 +726,8 @@ export function TheaterShell({
         fetch(`/api/bookmarks/${u.item.id}?platform=${u.item.platform ?? 'twitter'}`, {
           method: 'DELETE',
         }).catch(() => {})
-        onPostResolved?.(u.item.id, 'delete')
+        onPostResolved?.(u.item, 'delete')
+        notifyCollectionChanged()
       }
       return null
     })
@@ -772,7 +771,8 @@ export function TheaterShell({
     fetch(`/api/bookmarks/${item.id}/read?platform=${item.platform ?? 'twitter'}`, {
       method: 'POST',
     }).catch(() => {})
-    onPostResolved?.(item.id, 'archive')
+    onPostResolved?.(item, 'archive')
+    notifyCollectionChanged()
     commitPendingDelete()
     const action: PersonalUndoAction = { type: 'archive', item, index: idx }
     setPersonalUndo(action)
@@ -813,7 +813,8 @@ export function TheaterShell({
       fetch(`/api/bookmarks/${item.id}?platform=${item.platform ?? 'twitter'}`, {
         method: 'DELETE',
       }).catch(() => {})
-      onPostResolved?.(item.id, 'delete')
+      onPostResolved?.(item, 'delete')
+      notifyCollectionChanged()
       setPersonalUndo((u) => (u && u.type === 'delete' && u.item.id === item.id ? null : u))
     }, 5000)
     personalUndoTimerRef.current = timer
@@ -838,6 +839,7 @@ export function TheaterShell({
         },
       ).catch(() => {})
       onPostRestored?.(personalUndo.item)
+      notifyCollectionChanged()
     } else if (personalUndo.type === 'delete') {
       clearPersonalUndoTimer()
     }
@@ -1249,7 +1251,10 @@ export function TheaterShell({
     if (unknown.length === 0) return
     unknown.forEach((it) => membershipCheckedRef.current.add(theaterItemKey(it)))
     const params = new URLSearchParams({ hideArchived: 'false', filter: 'all', limit: '50' })
-    unknown.forEach((it) => params.append('id', it.bookmarkId as string))
+    unknown.forEach((it) => {
+      params.append('id', it.bookmarkId as string)
+      params.append('idPlatform', it.platform ?? 'twitter')
+    })
     const attempted = unknown.map((it) => theaterItemKey(it))
     fetch(`/api/feed?${params}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error('lookup failed'))))
@@ -1704,11 +1709,12 @@ export function TheaterShell({
   // so this also fires once for the very first item — currentKey starts null
   // and transitions to that item's key exactly like any other selection, so
   // landing on `/` ends up indistinguishable from landing on its post URL.
-  // Collection mode is exempt — `/t/{username}/{tag}` is the stable address
-  // for the whole collection; browsing within it must never rewrite the URL
-  // to a per-post preview path (that's a different, off-collection surface).
+  // Playlist mode is exempt — `/t/{username}/{tag}` is the stable address
+  // for the whole playlist. My Collection is also exempt (`/collection` is
+  // the stable address). The signed-in Live tab is NOT — it rewrites like
+  // signed-out `/` so a reload or copied URL lands on the staged post.
   useEffect(() => {
-    if (typeof window === 'undefined' || mode === 'playlist' || isPersonal) return
+    if (typeof window === 'undefined' || mode === 'playlist' || isCollectionTab) return
     const item = itemsRef.current.find((it) => theaterItemKey(it) === currentKey) ?? null
     const path = theaterUrlSyncPath(item)
     if (!path || window.location.pathname === path) return
@@ -1717,7 +1723,7 @@ export function TheaterShell({
     } catch {
       // Blocked in some embedded/sandboxed contexts — never worth breaking playback over.
     }
-  }, [currentKey, mode, isPersonal])
+  }, [currentKey, mode, isCollectionTab])
 
   // Stories-style auto-advance: a finished video advances via <Stage>'s
   // `onEnded` prop directly (all viewports — see below); a non-video item's

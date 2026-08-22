@@ -7,12 +7,12 @@ their Collection, the Live pulse, and their tags.
 
 ## 1. Navigation (authed Header)
 
-- Tabs become **Collection · Live** (Trending removed from the authed nav; the public
+- Tabs are **Library · Theater · Tags · Leaderboard** (Trending removed from the authed nav; the public
   `/trending` + `/trending/[filter]` routes and all their SEO stay untouched — they're just no
   longer surfaced to signed-in users).
-- **Live** does not navigate — it dispatches `window.dispatchEvent(new CustomEvent('open-theater',
-{ detail: { tab: 'live' } }))`; AuthedHome listens and opens the theater overlay on the live
-  feed. The Collection entry keeps working and is equivalent to `{ tab: 'personal' }`.
+- **Theater** is a pair of routes, not an overlay: `/` is Live, `/collection` is My Collection.
+  The library grid at `/library` navigates to `/collection` (card tap / leftover deep links) —
+  it does not mount a second TheaterShell.
 - The **`+` Add button and its modal trigger are removed**. Adding by URL is paste-first: a
   global paste listener on the authed Collection (new `PasteToPreview` component) catches a
   pasted platform URL anywhere outside an input/textarea and routes it through

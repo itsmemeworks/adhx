@@ -16,7 +16,11 @@ import AuthedTheater from '../AuthedTheater'
  */
 export const dynamic = 'force-dynamic'
 
-export default async function CollectionTheaterPage() {
+export default async function CollectionTheaterPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ open?: string; platform?: string }>
+}) {
   const userId = await getCurrentUserId()
   if (!userId) redirect('/')
 
@@ -25,5 +29,6 @@ export default async function CollectionTheaterPage() {
   const seed = await getTheaterFeed()
   metrics.theaterOpened('collection')
 
-  return <AuthedTheater seed={seed} tab="collection" />
+  const { open, platform } = await searchParams
+  return <AuthedTheater seed={seed} tab="collection" openId={open} openPlatform={platform} />
 }

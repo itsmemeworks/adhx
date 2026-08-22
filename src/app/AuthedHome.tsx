@@ -18,8 +18,6 @@ import {
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Loader2, CheckCircle2, MessageSquare } from 'lucide-react'
-import { TheaterShell } from '@/components/theater/TheaterShell'
-import type { PersonalTab } from '@/components/theater/types'
 import { PasteToPreview } from '@/components/PasteToPreview'
 import { PasteLinkButton } from '@/components/PasteLinkButton'
 import { useTheme } from '@/lib/theme/context'
@@ -27,18 +25,7 @@ import { cn } from '@/lib/utils'
 import { ConnectWithX } from '@/components/matter'
 import { parseSyncErrorEvent, type SyncErrorCode } from '@/lib/sync/messages'
 import { useSyncListener } from './useSyncListener'
-import { usePersonalQueue } from './usePersonalQueue'
-
-/**
- * Seed for the personal theater's Live sub-tab (unified-theater-collection.md §2) — the same
- * live community pulse home mode uses, but AuthedHome has no server-rendered
- * trending items of its own to seed it with. `useTheaterFeed` polls
- * `/api/activity` immediately when seeded empty (see its 2026-08-20 change),
- * so this only costs a brief "Loading…" the first time a collection session's
- * Live tab is opened — module-level so it's a stable reference across
- * re-renders/re-opens.
- */
-const PERSONAL_LIVE_SEED = { items: [], savedToday: 0, recentActivity: 0 }
+import { collectionPath } from '@/lib/theater/collection-href'
 
 export default function AuthedHome(): React.ReactElement {
   return (
@@ -98,9 +85,6 @@ function FeedPageContent(): React.ReactElement {
   )
   const [view, setView] = useState<'grid' | 'list' | 'bento'>('grid')
   const [search, setSearch] = useState(searchParams.get('search') || '')
-  const [personalQueue, setPersonalQueue] = useState<FeedItem[]>([])
-  const [personalStart, setPersonalStart] = useState(0)
-  const [personalInitialTab, setPersonalInitialTab] = useState<PersonalTab>('collection')
   // Tag-select plumbing (unified-theater-collection.md §4, built by a parallel
   // agent) — FilterBar owns entering/exiting select mode; FeedGrid reads it
   // to render the tap-to-toggle-membership grid.
@@ -108,7 +92,6 @@ function FeedPageContent(): React.ReactElement {
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const [stats, setStats] = useState({ total: 0, active: 0 })
-  const [personalOpen, setPersonalOpen] = useState(false)
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)
@@ -132,18 +115,6 @@ function FeedPageContent(): React.ReactElement {
   const [streamedItems, setStreamedItems] = useState<FeedItem[]>([])
   const syncTriggeredRef = useRef(false)
   const syncTerminalRef = useRef(false)
-  const [pendingNavigation, setPendingNavigation] = useState<{
-    id: string
-    fallbackUrl?: string
-  } | null>(null)
-  // Set when arriving via `?collection=1` (e.g. the Collection entry pressed on /discover);
-  // opens the focus queue once the feed has loaded.
-  const [pendingCollection, setPendingCollection] = useState(false)
-  // Set when arriving via `?live=1` (e.g. the Header's Live nav pressed from
-  // a page other than `/`, which has no `open-theater` listener of its own);
-  // opens the theater on the Live tab once authenticated.
-  const [pendingLive, setPendingLive] = useState(false)
-  const prevLoadingRef = useRef(false)
   // Track seen item IDs for O(1) duplicate detection during sync streaming
   const seenItemIdsRef = useRef<Set<string>>(new Set())
   // Track EventSource for cleanup on unmount to prevent memory leaks
@@ -216,6 +187,7 @@ function FeedPageContent(): React.ReactElement {
         if (id) {
           const q = new URLSearchParams({ hideArchived: 'false', filter: 'all', limit: '5' })
           q.append('id', id)
+          q.append('idPlatform', platform)
           const fres = await fetch(`/api/feed?${q}`)
           if (fres.ok) {
             const feed = await fres.json()
@@ -241,78 +213,16 @@ function FeedPageContent(): React.ReactElement {
     [placeAddedItem],
   )
 
-  // Open the unified collection viewer on a snapshot of the queue at a given index.
-  const openPersonal = useCallback(
-    (queue: FeedItem[], start: number, tab: PersonalTab = 'collection') => {
-      setPersonalQueue(queue)
-      setPersonalStart(Math.max(0, start))
-      setPersonalInitialTab(tab)
-      setPersonalOpen(true)
+  // One personal theater: a card tap / `F` leaves the grid for `/collection`.
+  // AuthedTheater fetches the full active queue (API cap 100) and starts on
+  // this post — prepends it when it's archived or outside the first page.
+  const goToCollectionFromItem = useCallback(
+    (idx: number) => {
+      const item = items[idx]
+      if (!item) return
+      router.push(collectionPath({ open: item.id, platform: item.platform }))
     },
-    [],
-  )
-
-  // PRODUCT DECISION REVERSAL — do not "fix" this back to reading current
-  // view state. A previous iteration (#342) seeded the collection queue from the
-  // CURRENT filter/platform/tag/search state, so the theater's Collection tab
-  // always matched whatever the grid happened to be showing. The owner
-  // reversed that: "The collection theater is just about marking a post as read or not read."
-  // The collection theater is now strictly the full active backlog, every time, regardless of
-  // what's active in the grid behind it — a consistent queue instead of a
-  // filtered snapshot. So the query below is fixed (hideArchived=true, no
-  // filter/platform/tag/search) rather than derived from component state.
-  // The feed API caps at 100/request, which covers a typical backlog.
-  const buildActiveQueueQuery = useCallback(
-    () => new URLSearchParams({ filter: 'all', hideArchived: 'true', limit: '100' }),
-    [],
-  )
-
-  const fetchActiveQueue = useCallback(async (): Promise<FeedItem[]> => {
-    let queue: FeedItem[] = items.filter((i) => !i.isArchived)
-    try {
-      const res = await fetch(`/api/feed?${buildActiveQueueQuery()}`)
-      if (res.ok) {
-        const data = await res.json()
-        const fetched: FeedItem[] = (data.items || []).filter((i: FeedItem) => !i.isArchived)
-        if (fetched.length) queue = fetched
-      }
-    } catch {
-      /* fall back to the loaded items, filtered to active */
-    }
-    return queue
-  }, [items, buildActiveQueueQuery])
-
-  const startPersonalAll = useCallback(
-    async (tab: PersonalTab = 'collection') => {
-      const queue = await fetchActiveQueue()
-      openPersonal(queue, 0, tab)
-    },
-    [fetchActiveQueue, openPersonal],
-  )
-
-  // Open collection from a tapped gallery item: always the full active backlog
-  // (see the decision-reversal note above), starting on the item the user
-  // tapped — which may live outside that backlog (e.g. it's already read, or
-  // the grid is showing a tag/category view that mixes archived + active). Of the
-  // two reasonable fallbacks (prepend it, or just open at the front of the
-  // active queue and ignore the tap), prepending is the least surprising:
-  // tapping a specific card should always open ON that card, with the rest of
-  // the rest of the active collection queued up right behind it.
-  const openPersonalFromItem = useCallback(
-    async (idx: number) => {
-      const clicked = items[idx]
-      let queue = await fetchActiveQueue()
-      const plat = (i: FeedItem) => i.platform ?? 'twitter'
-      let start = clicked
-        ? queue.findIndex((i) => i.id === clicked.id && plat(i) === plat(clicked))
-        : 0
-      if (start === -1 && clicked) {
-        queue = [clicked, ...queue]
-        start = 0
-      }
-      openPersonal(queue, Math.max(0, start))
-    },
-    [items, fetchActiveQueue, openPersonal],
+    [items, router],
   )
 
   const startSync = useCallback(
@@ -533,10 +443,7 @@ function FeedPageContent(): React.ReactElement {
 
         const response = await fetch(`/api/feed?${params}`)
         const data = await response.json()
-        // A superseded response must touch NOTHING — including `loading`. The
-        // pending-navigation effect below fires on any loading true→false
-        // edge, so clearing it here resolved deep links (`?open=`, `?collection=1`,
-        // `added=success`) against the stale snapshot, once, with no retry.
+        // A superseded response must touch NOTHING — including `loading`.
         if (requestId !== feedRequestRef.current) return
 
         if (resetPage) {
@@ -562,9 +469,7 @@ function FeedPageContent(): React.ReactElement {
       } catch (error) {
         console.error('Failed to fetch feed:', error)
       } finally {
-        // Only the newest request owns the spinner. A superseded one clearing
-        // it produced a spurious true→false→true flicker mid-flight, which the
-        // pending-navigation effect reads as "the feed is ready".
+        // Only the newest request owns the spinner.
         if (requestId === feedRequestRef.current) setLoading(false)
       }
     },
@@ -686,26 +591,6 @@ function FeedPageContent(): React.ReactElement {
   // tweet-added (URL-prefix add flow) events and refresh the feed/tags.
   useSyncListener({ isSyncing, fetchFeed, fetchTags })
 
-  // Handle pending navigation after filter change and items reload
-  // Only navigate when loading transitions from true to false (fetch completed)
-  useEffect(() => {
-    const wasLoading = prevLoadingRef.current
-    prevLoadingRef.current = loading
-
-    // Only proceed if we have a pending navigation AND loading just finished
-    if (pendingNavigation && wasLoading && !loading && items.length > 0) {
-      const targetIndex = items.findIndex((i) => i.id === pendingNavigation.id)
-      if (targetIndex !== -1) {
-        openPersonal(items, targetIndex)
-      } else if (pendingNavigation.fallbackUrl) {
-        // Parent tweet not in user's collection - open externally as fallback
-        window.open(pendingNavigation.fallbackUrl, '_blank')
-      }
-      // Clear pending navigation regardless of outcome
-      setPendingNavigation(null)
-    }
-  }, [pendingNavigation, items, loading])
-
   // Rebuild the URL from the CURRENT URL (searchParams), not from scratch. `search`
   // is written to the URL by Header's own debounced push (Header.tsx), and this
   // component's `search` state only catches up to it a render later (via the sync
@@ -732,68 +617,33 @@ function FeedPageContent(): React.ReactElement {
     router.replace(queryString ? `?${queryString}` : pathname, { scroll: false })
   }, [filter, platformFilter, sort, sortDirection, hideArchived, router, searchParams, pathname])
 
-  // Handle ?open=tweetId URL parameter to open a specific tweet in lightbox
+  // Leftover overlay deep links — there is one personal theater, at `/collection`.
   useEffect(() => {
     const openId = searchParams.get('open')
-    if (!openId) return
-
-    // Clear the open param from URL immediately
-    const params = new URLSearchParams(searchParams.toString())
-    params.delete('open')
-    const queryString = params.toString()
-    router.replace(queryString ? `?${queryString}` : pathname, { scroll: false })
-
-    // Try to find it in current items first
-    const currentIndex = items.findIndex((i) => i.id === openId)
-    if (currentIndex !== -1) {
-      openPersonal(items, currentIndex)
+    if (openId) {
+      const fromGrid = items.find((i) => i.id === openId)
+      router.replace(
+        collectionPath({
+          open: openId,
+          platform: fromGrid?.platform ?? searchParams.get('platform'),
+        }),
+      )
       return
     }
-
-    // Not in the loaded feed — e.g. an already-saved tweet that's already read,
-    // or one on a later page. Fetch that specific bookmark by id (read state and
-    // pagination ignored) and open it directly in the collection theater.
-    let alive = true
-    fetch(`/api/feed?id=${encodeURIComponent(openId)}&hideArchived=false&limit=1`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (!alive) return
-        const item = data?.items?.[0]
-        if (item) openPersonal([item], 0)
-      })
-      .catch(() => {})
-    return () => {
-      alive = false
-    }
-  }, [searchParams]) // Only run when searchParams changes
-
-  // Handle ?added=success URL parameter after adding tweet via URL prefix
-  useEffect(() => {
     const added = searchParams.get('added')
-    const tweetId = searchParams.get('tweetId')
-
-    if (!added || !tweetId) return
-
-    // Clear the added params from URL immediately
-    const params = new URLSearchParams(searchParams.toString())
-    params.delete('added')
-    params.delete('tweetId')
-    params.delete('author')
-    params.delete('text')
-    params.delete('error')
-    const queryString = params.toString()
-    router.replace(queryString ? `?${queryString}` : pathname, { scroll: false })
-
-    // Refresh the feed to include the newly added tweet. Rather than reading
-    // `items` from this closure after the refresh resolves (which is always a
-    // stale pre-fetch snapshot — this effect only depends on [searchParams],
-    // so `items` here never reflects the fetchFeed below), set the pending
-    // navigation up front and let the dedicated reconciliation effect (which
-    // depends on [pendingNavigation, items, loading]) open it deterministically
-    // once loading actually transitions back to false with the refreshed items.
-    setPendingNavigation({ id: tweetId })
-    fetchFeed(true)
-  }, [searchParams]) // Only run when searchParams changes
+    const addedId = searchParams.get('id') ?? searchParams.get('tweetId')
+    if ((added === 'success' || added === 'duplicate') && addedId) {
+      router.replace(collectionPath({ open: addedId, platform: searchParams.get('platform') }))
+      return
+    }
+    if (searchParams.get('collection') === '1' || searchParams.get('triage') === '1') {
+      router.replace('/collection')
+      return
+    }
+    if (searchParams.get('live') === '1') {
+      router.replace('/')
+    }
+  }, [searchParams, router, items])
 
   // Preselect a tag from `?tag=` — the `/tags` screen's "View" action
   // (unified-theater-collection.md §4). Applied once on arrival via a ref guard:
@@ -810,73 +660,19 @@ function FeedPageContent(): React.ReactElement {
     setSelectedTags([urlTag])
   }, [searchParams])
 
-  // Header's Collection/Live nav (unified-theater-collection.md §1) dispatches
-  // `open-theater` with `{ tab: 'collection' | 'live' }` for both the
-  // pill and the Live nav item — open the collection overlay on the matching
-  // sub-tab, seeded from the current active queue either way (so switching
-  // tabs mid-session always has a Collection queue to fall back to).
+  // Leftover `open-theater` from older chrome — navigate, don't overlay.
   useEffect(() => {
     function handler(e: Event) {
-      const detail = (e as CustomEvent<{ tab?: 'collection' | 'live' }>).detail
-      void startPersonalAll(detail?.tab === 'live' ? 'live' : 'collection')
+      const tab = (e as CustomEvent<{ tab?: string }>).detail?.tab
+      router.push(tab === 'live' ? '/' : '/collection')
     }
     window.addEventListener('open-theater', handler)
     return () => window.removeEventListener('open-theater', handler)
-  }, [startPersonalAll])
+  }, [router])
 
-  // `?collection=1` — the Collection entry was pressed from another route (e.g. Discover),
-  // so we navigated here to open collection. Flag it, then clear the param.
+  // Global keyboard shortcuts
   useEffect(() => {
-    // `?collection=1` is the current name; the superseded `?triage=1` is still
-    // honoured so links people already have keep working. (The rename's own sed
-    // collapsed these two into the same param — caught in review.)
-    if (searchParams.get('collection') !== '1' && searchParams.get('triage') !== '1') return
-    setPendingCollection(true)
-    const params = new URLSearchParams(searchParams.toString())
-    params.delete('collection')
-    params.delete('triage')
-    const qs = params.toString()
-    router.replace(qs ? `?${qs}` : pathname, { scroll: false })
-  }, [searchParams, router, pathname])
-
-  // Arrived via ?collection=1 — open the full active queue once authenticated.
-  useEffect(() => {
-    if (!pendingCollection || isAuthenticated !== true) return
-    setPendingCollection(false)
-    startPersonalAll()
-  }, [pendingCollection, isAuthenticated, startPersonalAll])
-
-  // `?live=1` — the Live nav item was pressed from a route other than `/`
-  // (Header's `open-theater` event has no listener outside the feed page),
-  // so we navigated here to open the theater's Live tab. Flag it, then clear
-  // the param — mirrors the ?collection=1 handling above.
-  useEffect(() => {
-    if (searchParams.get('live') !== '1') return
-    setPendingLive(true)
-    const params = new URLSearchParams(searchParams.toString())
-    params.delete('live')
-    const qs = params.toString()
-    router.replace(qs ? `?${qs}` : pathname, { scroll: false })
-  }, [searchParams, router, pathname])
-
-  // Arrived via ?live=1 — open the theater on the Live tab once authenticated.
-  useEffect(() => {
-    if (!pendingLive || isAuthenticated !== true) return
-    setPendingLive(false)
-    startPersonalAll('live')
-  }, [pendingLive, isAuthenticated, startPersonalAll])
-
-  // Reconcile the feed's items/stats with actions taken inside the collection theater.
-  const { handlePostResolved, handlePostRestored } = usePersonalQueue({
-    hideArchived,
-    setItems,
-    setStats,
-  })
-
-  // Global keyboard shortcuts (when lightbox is NOT open)
-  useEffect(() => {
-    // Skip if lightbox is open (those shortcuts are handled above) or shortcuts modal is open
-    if (personalOpen || showShortcutsModal) return
+    if (showShortcutsModal) return
     // Skip if not authenticated
     if (!isAuthenticated) return
 
@@ -938,11 +734,8 @@ function FeedPageContent(): React.ReactElement {
           break
         case 'f':
         case 'F':
-          // Focus mode - open first item (full active backlog)
           e.preventDefault()
-          if (items.length > 0) {
-            openPersonalFromItem(0)
-          }
+          if (items.length > 0) goToCollectionFromItem(0)
           break
         case 't':
         case 'T':
@@ -972,11 +765,11 @@ function FeedPageContent(): React.ReactElement {
     window.addEventListener('keydown', handleGlobalKeyDown)
     return () => window.removeEventListener('keydown', handleGlobalKeyDown)
   }, [
-    personalOpen,
     isAuthenticated,
     router,
     showShortcutsModal,
     items.length,
+    goToCollectionFromItem,
     resolvedTheme,
     setTheme,
   ])
@@ -1255,8 +1048,6 @@ function FeedPageContent(): React.ReactElement {
         <PasteLinkButton className="w-full justify-center" />
       </div>
 
-      {/* Collection/Live now live in the top bar (Matter); Live opens the
-          theater via `open-theater`, which we listen for below. */}
       <div className="px-4 sm:px-[26px] py-4">
         <ErrorBoundary componentName="FeedGrid">
           <FeedGrid
@@ -1268,7 +1059,7 @@ function FeedPageContent(): React.ReactElement {
             hideArchived={hideArchived}
             stats={stats}
             view={view}
-            onExpand={openPersonalFromItem}
+            onExpand={goToCollectionFromItem}
             onLoadMore={loadMore}
             onShowAll={() => setHideArchived(false)}
             tagSelectTag={tagSelectTag}
@@ -1277,31 +1068,10 @@ function FeedPageContent(): React.ReactElement {
         </ErrorBoundary>
       </div>
 
-      {personalOpen && (
-        <ErrorBoundary componentName="TheaterShell">
-          <TheaterShell
-            mode="personal"
-            seed={PERSONAL_LIVE_SEED}
-            personalItems={personalQueue}
-            initialPersonalIndex={personalStart}
-            initialPersonalTab={personalInitialTab}
-            onPostResolved={handlePostResolved}
-            onPostRestored={handlePostRestored}
-            onCollectionAdded={placeAddedItem}
-            onClose={() => {
-              setPersonalOpen(false)
-              // Refresh the top-bar counts after a collection session.
-              window.dispatchEvent(new CustomEvent('stats-updated'))
-            }}
-          />
-        </ErrorBoundary>
-      )}
-
-      {/* Keyboard Shortcuts Modal */}
       <KeyboardShortcutsModal
         isOpen={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        inFocusMode={personalOpen}
+        inFocusMode={false}
       />
     </div>
   )

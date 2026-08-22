@@ -4,6 +4,17 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-22 — Five before-merge theater foundations
+
+PR 390 review blockers, implemented on this branch (not committed — owner commits). One personal theater, honest archive, platform-safe keys, private Done, signed-in Live URL sync.
+
+- **One personal theater**: `/library` no longer overlays TheaterShell. Card tap / `F` / leftover `?open=` `?collection=1` `?triage=1` `?live=1` `open-theater` / `/?added=success` navigate to `/collection` or `/`. AuthedTheater fetches `limit=100`; `!ok` is an error + Retry, not CollectionAllClear.
+- **Archive notifies** Header + library via `notifyCollectionChanged()` (archive, committed delete, archive-undo). Later does not.
+- **`(platform, id)`**: `/api/feed` accepts paired `id`+`idPlatform` (does not overload feed-wide `platform=`); membership lookup and `usePersonalQueue` match on both.
+- **Archive is private**: POST `/api/bookmarks/[id]/read` no longer writes a public `read` pulse.
+- **Signed-in Live URL sync**: `history.replaceState` gated on `isCollectionTab` / playlist, not `isPersonal`.
+- **Follow-ups** (post-merge): cut dead collections product, MediaCard/PreviewShell/VideoPlayer, Dockerfile directory COPY, TheaterShell decompose, drop `?triage=1` / `unreadOnly` shims.
+
 ## 2026-08-22 — Triage/streak removed, three renames, and a staging outage I caused
 
 Owner asked for the triage concept and the gamification gone, then for the internal names too ("otherwise we'll forget"). Three renames, each its own commit: `triage` → `personal` mode (deliberately NOT `collection`, which is already one of its two TABS — `isCollectionMode && isCollectionTab` would be a riddle); `unreadOnly` → `hideArchived`; and the DB's `read_status`/`read_at` → `archived_posts`/`archived_at`, with `isRead` → `isArchived` and `stats.unread` → `stats.active`.

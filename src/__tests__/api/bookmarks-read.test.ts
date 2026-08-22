@@ -98,6 +98,10 @@ describe('API: /api/bookmarks/[id]/read', () => {
         )
 
       expect(status).toBeDefined()
+
+      // Archive is private — a Done in My Collection must not write a public pulse.
+      const pulse = await testInstance.db.select().from(schema.activity)
+      expect(pulse).toHaveLength(0)
     })
 
     it('returns existing read status if already read', async () => {

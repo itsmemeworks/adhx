@@ -1,8 +1,10 @@
+import { redirect } from 'next/navigation'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { getTheaterFeed } from '@/lib/theater/feed'
 import { TheaterStaticList } from '@/components/theater/TheaterStaticList'
 import { TheaterShell } from '@/components/theater/TheaterShell'
 import { metrics } from '@/lib/sentry'
+import { collectionPath } from '@/lib/theater/collection-href'
 import AuthedTheater from './AuthedTheater'
 
 /**
@@ -22,8 +24,25 @@ import AuthedTheater from './AuthedTheater'
  */
 export const dynamic = 'force-dynamic'
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    added?: string
+    id?: string
+    tweetId?: string
+    platform?: string
+  }>
+}) {
   const userId = await getCurrentUserId()
+  const params = await searchParams
+  const addedId = params.id ?? params.tweetId
+  // Save-after-add still lands on `/?added=success&id=` — send it to the
+  // one personal theater, not an overlay on this Live route.
+  if (userId && (params.added === 'success' || params.added === 'duplicate') && addedId) {
+    redirect(collectionPath({ open: addedId, platform: params.platform }))
+  }
+
   const seed = await getTheaterFeed()
   metrics.theaterOpened('home')
 

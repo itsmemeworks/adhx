@@ -174,6 +174,40 @@ describe('TheaterShell: Archive removes the post from the collection queue', () 
     expect(queueState().ids).toEqual(['2', '3'])
   })
 
+  it('notifies Header + library counts when a post is archived', async () => {
+    const stats = vi.fn()
+    const feed = vi.fn()
+    window.addEventListener('stats-updated', stats)
+    window.addEventListener('tweet-added', feed)
+    try {
+      await act_(() => {
+        renderCollection(['1', '2'])
+      })
+      const onDone = collectionProps().collection as { onDone: () => void }
+      await act_(() => onDone.onDone())
+      expect(stats).toHaveBeenCalled()
+      expect(feed).toHaveBeenCalled()
+    } finally {
+      window.removeEventListener('stats-updated', stats)
+      window.removeEventListener('tweet-added', feed)
+    }
+  })
+
+  it('does not notify on Later — the collection did not change', async () => {
+    const stats = vi.fn()
+    window.addEventListener('stats-updated', stats)
+    try {
+      await act_(() => {
+        renderCollection(['1', '2'])
+      })
+      const t = collectionProps().collection as { onLater: () => void }
+      await act_(() => t.onLater())
+      expect(stats).not.toHaveBeenCalled()
+    } finally {
+      window.removeEventListener('stats-updated', stats)
+    }
+  })
+
   it('KEEPS the post on Later — "show me again" is not a resolution', async () => {
     await act_(() => {
       renderCollection(['1', '2', '3'])

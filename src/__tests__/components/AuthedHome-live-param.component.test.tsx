@@ -1,17 +1,13 @@
 /**
  * @vitest-environment jsdom
  *
- * Regression test: the Header's "Live" nav item dispatches `open-theater`,
- * but that event only has a listener while AuthedHome (the feed page, `/`)
- * is mounted. From any other route (e.g. /tags), Header now navigates to
- * `/?live=1` instead — mirroring the existing `?collection=1` pattern used by
- * the Collection entry. This verifies AuthedHome actually honors that param:
- * it should open the theater on the "live" tab once authenticated, then
- * strip the param from the URL.
+ * Leftover `?live=1` (from when Live was an overlay on the grid) now
+ * navigates to `/` — the signed-in Live theater — instead of mounting a
+ * second TheaterShell over the library.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useState, useEffect } from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, waitFor } from '@testing-library/react'
 import FeedPage from '@/app/AuthedHome'
 
 let currentQuery = 'live=1'
@@ -36,7 +32,7 @@ const replaceSpy = vi.fn((url: string) => {
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushSpy, replace: replaceSpy, prefetch: vi.fn(), refresh: vi.fn() }),
-  usePathname: () => '/',
+  usePathname: () => '/library',
   useSearchParams: () => {
     const [, forceRender] = useState(0)
     useEffect(() => {
@@ -68,8 +64,6 @@ vi.mock('@/components/LandingPage', () => ({ LandingPage: () => null }))
 vi.mock('@/components/PasteToPreview', () => ({ PasteToPreview: () => null }))
 vi.mock('@/components/sync/SyncProgress', () => ({ SyncProgress: () => null }))
 
-// Capture the props TheaterShell is opened with, rather than rendering the
-// real (heavy) theater.
 const theaterShellSpy = vi.fn()
 vi.mock('@/components/theater/TheaterShell', () => ({
   TheaterShell: (props: { initialPersonalTab?: string; mode: string }) => {
@@ -118,13 +112,10 @@ beforeEach(() => {
 })
 
 describe('AuthedHome ?live=1 handling', () => {
-  it('opens the theater on the "live" tab and strips the param from the URL', async () => {
-    render(<FeedPage />)
+  it('navigates to `/` and does not mount a theater overlay', async () => {
+    const { queryByTestId } = render(<FeedPage />)
 
-    await waitFor(() => expect(screen.getByTestId('theater-shell')).toBeInTheDocument())
-    expect(screen.getByTestId('theater-shell')).toHaveAttribute('data-tab', 'live')
-
-    // The `live` param should have been stripped from the URL.
-    await waitFor(() => expect(currentQuery).not.toContain('live=1'))
+    await waitFor(() => expect(replaceSpy).toHaveBeenCalledWith('/'))
+    expect(queryByTestId('theater-shell')).not.toBeInTheDocument()
   })
 })

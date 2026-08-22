@@ -1,19 +1,13 @@
 /**
  * @vitest-environment jsdom
  *
- * Regression guard for the collection-seeding product decision reversal
- * (CLAUDE.md "Main Feed" / AuthedHome.tsx comment above `buildActiveQueueQuery`):
- * a previous iteration (#342) seeded the collection queue from the CURRENT
- * filter/platform/tag/search state, so opening collection while e.g. viewing
- * "photos only" or a specific tag only worked through that subset. The owner
- * reversed that — the collection theater is strictly the full active backlog, every time.
- * This verifies opening the theater's collection tab while the grid has a
- * non-default filter/platform/tag active still requests the FULL active
- * queue (hideArchived=true, filter=all, no platform/tag/search params).
+ * The library grid no longer mounts a personal TheaterShell overlay. Leftover
+ * deep links (`?collection=1`, `?triage=1`, `open-theater`) navigate to the
+ * one personal theater at `/collection`.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useState, useEffect } from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, waitFor } from '@testing-library/react'
 import FeedPage from '@/app/AuthedHome'
 
 let currentQuery = 'filter=photos&platform=instagram&tag=work&search=hello'
@@ -38,7 +32,7 @@ const replaceSpy = vi.fn((url: string) => {
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushSpy, replace: replaceSpy, prefetch: vi.fn(), refresh: vi.fn() }),
-  usePathname: () => '/',
+  usePathname: () => '/library',
   useSearchParams: () => {
     const [, forceRender] = useState(0)
     useEffect(() => {
@@ -111,64 +105,44 @@ beforeEach(() => {
   }) as unknown as typeof fetch
 })
 
-describe('AuthedHome collection seeding ignores active filters', () => {
-  it('requests the full unread queue (hideArchived=true, filter=all) on open-theater, even with photos/instagram/tag/search active', async () => {
-    render(<FeedPage />)
+describe('AuthedHome leaves the personal theater to /collection', () => {
+  it('navigates to /collection on leftover open-theater, and never mounts an overlay', async () => {
+    const { queryByTestId } = render(<FeedPage />)
 
-    // Let the initial (filtered) grid fetch happen first.
     await waitFor(() => expect(feedRequests.length).toBeGreaterThan(0))
-    feedRequests = []
-
     window.dispatchEvent(new CustomEvent('open-theater', { detail: { tab: 'personal' } }))
 
-    await waitFor(() => expect(screen.getByTestId('theater-shell')).toBeInTheDocument())
-    await waitFor(() => expect(feedRequests.length).toBeGreaterThan(0))
-
-    const collectionRequest = feedRequests[feedRequests.length - 1]
-    expect(collectionRequest).toContain('hideArchived=true')
-    expect(collectionRequest).toContain('filter=all')
-    expect(collectionRequest).not.toContain('platform=')
-    expect(collectionRequest).not.toContain('tag=')
-    expect(collectionRequest).not.toContain('search=')
+    await waitFor(() => expect(pushSpy).toHaveBeenCalledWith('/collection'))
+    expect(queryByTestId('theater-shell')).not.toBeInTheDocument()
   })
 })
 
-/**
- * The deep link that opens the collection theater from another route. It was
- * `?triage=1` and is now `?collection=1`; the old name has to keep working
- * because it is in links people have already shared.
- *
- * This exists because the rename's own search-and-replace collapsed the two
- * checks into the SAME param — leaving `?triage=1` silently dead, with no
- * error, and nothing testing it. Caught in review, not by the suite.
- */
 describe('AuthedHome collection deep link', () => {
-  async function opensCollection(query: string): Promise<boolean> {
+  async function navigatesToCollection(query: string): Promise<boolean> {
     currentQuery = query
     currentParamsObj = new URLSearchParams(query)
     feedRequests = []
-    const { unmount } = render(<FeedPage />)
+    replaceSpy.mockClear()
+    const { unmount, queryByTestId } = render(<FeedPage />)
     try {
       await waitFor(() => expect(feedRequests.length).toBeGreaterThan(0))
-      // The theater mounts only once the active queue has been fetched.
-      await waitFor(() => expect(screen.queryByTestId('theater-shell')).toBeInTheDocument(), {
-        timeout: 2000,
-      }).catch(() => {})
-      return !!screen.queryByTestId('theater-shell')
+      const hit = replaceSpy.mock.calls.some(([url]) => String(url).startsWith('/collection'))
+      expect(queryByTestId('theater-shell')).not.toBeInTheDocument()
+      return hit
     } finally {
       unmount()
     }
   }
 
-  it('opens on ?collection=1', async () => {
-    expect(await opensCollection('collection=1')).toBe(true)
+  it('sends ?collection=1 to /collection', async () => {
+    expect(await navigatesToCollection('collection=1')).toBe(true)
   })
 
-  it('still opens on the superseded ?triage=1', async () => {
-    expect(await opensCollection('triage=1')).toBe(true)
+  it('still sends the superseded ?triage=1 to /collection', async () => {
+    expect(await navigatesToCollection('triage=1')).toBe(true)
   })
 
-  it('does not open without either param', async () => {
-    expect(await opensCollection('filter=all')).toBe(false)
+  it('does not navigate without either param', async () => {
+    expect(await navigatesToCollection('filter=all')).toBe(false)
   })
 })

@@ -258,6 +258,33 @@ describe('API: /api/feed', () => {
       const data = await response.json()
       expect(data.items).toHaveLength(0)
     })
+
+    it('pairs id + idPlatform so the same numeric id on X and TikTok stay distinct', async () => {
+      await testInstance.db.insert(schema.bookmarks).values([
+        createTestBookmark(USER_A, '123', { platform: 'twitter' }),
+        createTestBookmark(USER_A, '123', {
+          platform: 'tiktok',
+          tweetUrl: 'https://www.tiktok.com/@x/video/123',
+        }),
+      ])
+
+      const { GET } = await import('@/app/api/feed/route')
+
+      const both = await GET(createRequest({ id: '123', hideArchived: 'false' }))
+      expect(both.status).toBe(200)
+      expect((await both.json()).items).toHaveLength(2)
+
+      const url = new URL('http://localhost:3000/api/feed')
+      url.searchParams.set('hideArchived', 'false')
+      url.searchParams.append('id', '123')
+      url.searchParams.append('idPlatform', 'tiktok')
+      const one = await GET(new NextRequest(url))
+      expect(one.status).toBe(200)
+      const data = await one.json()
+      expect(data.items).toHaveLength(1)
+      expect(data.items[0].id).toBe('123')
+      expect(data.items[0].platform).toBe('tiktok')
+    })
   })
 
   describe('Tag filtering', () => {

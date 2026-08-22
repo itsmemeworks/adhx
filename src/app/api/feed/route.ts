@@ -55,7 +55,11 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
   // Direct id lookup (?id=...). Returns the specific bookmark(s) regardless of
   // read state / pagination — used to open a saved tweet in the collection theater (e.g. the
   // "View in Collection" action on an already-saved preview).
+  // Pair each `id` with `idPlatform` when lengths match: the same numeric id
+  // exists on X and TikTok. Do NOT overload `platform=` — that is the
+  // feed-wide filter. Bare `?id=` without `idPlatform` stays an id-only lookup.
   const ids = searchParams.getAll('id')
+  const idPlatforms = searchParams.getAll('idPlatform')
 
   const offset = (page - 1) * limit
 
@@ -68,7 +72,16 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
 
     // Direct id lookup short-circuits the read/pagination filters below.
     if (ids.length > 0) {
-      conditions.push(inArray(bookmarks.id, ids))
+      const paired = idPlatforms.length === ids.length && idPlatforms.every((p) => p.length > 0)
+      if (paired) {
+        const pairs = ids.map((id, i) =>
+          and(eq(bookmarks.id, id), eq(bookmarks.platform, idPlatforms[i])),
+        )
+        const pairClause = pairs.length === 1 ? pairs[0] : or(...pairs)
+        if (pairClause) conditions.push(pairClause)
+      } else {
+        conditions.push(inArray(bookmarks.id, ids))
+      }
     }
 
     // Platform filter (X / Instagram / TikTok / all)

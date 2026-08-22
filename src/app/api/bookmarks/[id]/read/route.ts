@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { bookmarks, bookmarkMedia, archivedPosts } from '@/lib/db/schema'
+import { bookmarks, archivedPosts } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { metrics } from '@/lib/sentry'
-import { recordActivity, previewPath } from '@/lib/activity/record'
 import { withAuth } from '@/lib/api/with-auth'
 import { handleRouteError } from '@/lib/api/response'
 
@@ -19,13 +18,7 @@ export const POST = withAuth(
       const platform = getPlatform(request)
 
       const [bookmark] = await db
-        .select({
-          id: bookmarks.id,
-          author: bookmarks.author,
-          authorName: bookmarks.authorName,
-          text: bookmarks.text,
-          authorProfileImageUrl: bookmarks.authorProfileImageUrl,
-        })
+        .select({ id: bookmarks.id })
         .from(bookmarks)
         .where(
           and(eq(bookmarks.userId, userId), eq(bookmarks.platform, platform), eq(bookmarks.id, id)),
@@ -66,30 +59,9 @@ export const POST = withAuth(
 
       metrics.bookmarkReadToggled(true)
 
-      // Push to the public activity pulse (anonymous, server-resolved content).
-      const [media] = await db
-        .select({ previewUrl: bookmarkMedia.previewUrl, originalUrl: bookmarkMedia.originalUrl })
-        .from(bookmarkMedia)
-        .where(
-          and(
-            eq(bookmarkMedia.userId, userId),
-            eq(bookmarkMedia.platform, platform),
-            eq(bookmarkMedia.bookmarkId, id),
-          ),
-        )
-        .limit(1)
-      recordActivity({
-        action: 'read',
-        platform,
-        bookmarkId: id,
-        author: bookmark.author,
-        authorName: bookmark.authorName,
-        text: bookmark.text,
-        // Real media only — no avatar fallback, so text posts stay "text".
-        thumbnailUrl: media?.previewUrl || media?.originalUrl || null,
-        url: previewPath(platform, bookmark.author, id),
-        userId,
-      })
+      // Archive is private — do not write a public `read` pulse. Preview /
+      // save / share still feed the community feed; marking something done
+      // in My Collection does not.
 
       return NextResponse.json({ success: true, isArchived: true, archivedAt })
     } catch (error) {
