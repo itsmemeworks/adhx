@@ -17,12 +17,13 @@ import {
 } from '@/components/feed'
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { Loader2, CheckCircle2, MessageSquare } from 'lucide-react'
+import { Loader2, CheckCircle2, MessageSquare, Check } from 'lucide-react'
 import { TheaterShell } from '@/components/theater/TheaterShell'
 import type { TriageTab } from '@/components/theater/types'
 import { PasteToPreview } from '@/components/PasteToPreview'
 import { PasteLinkButton } from '@/components/PasteLinkButton'
 import { useTheme } from '@/lib/theme/context'
+import { cn } from '@/lib/utils'
 import { ConnectWithX } from '@/components/matter'
 import { parseSyncErrorEvent, type SyncErrorCode } from '@/lib/sync/messages'
 import { useSyncListener } from './useSyncListener'
@@ -65,6 +66,18 @@ function FeedPageContent(): React.ReactElement {
 
   const [items, setItems] = useState<FeedItem[]>([])
   const [loading, setLoading] = useState(true)
+  /**
+   * Paste-to-add status. A paste adds the post to the collection in place
+   * (owner: "it should simply just add it straight away at the top of my
+   * library. Nothing else needs to happen") — but adding involves a network
+   * round trip to the platform's resolver, so the wait and any failure need
+   * SOME acknowledgement or the paste reads as ignored. One transient pill,
+   * no modal, no navigation.
+   */
+  const [pasteAdd, setPasteAdd] = useState<{
+    status: 'adding' | 'added' | 'duplicate' | 'error'
+    message?: string
+  } | null>(null)
   const [filter, setFilter] = useState<FilterType>(
     (searchParams.get('filter') as FilterType) || 'all',
   )
@@ -148,6 +161,65 @@ function FeedPageContent(): React.ReactElement {
       localStorage.setItem('adhx-feed-view', v)
     } catch {
       /* ignore */
+    }
+  }, [])
+
+  /**
+   * Paste a post link while on the library → add it and put it at the top,
+   * without leaving the page (owner). The card is pulled from `/api/feed?id=`
+   * rather than built from the add endpoint's raw DB row, so it renders
+   * identically to every other card (media, links, tags, read state) — the
+   * same trick `handleTriageLiveSave` uses to pull a save into an open queue.
+   */
+  const addPastedPost = useCallback(async (url: string) => {
+    setPasteAdd({ status: 'adding' })
+    try {
+      const res = await fetch('/api/bookmarks/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, source: 'manual' }),
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        setPasteAdd({
+          status: 'error',
+          message: typeof data?.error === 'string' ? data.error : "Couldn't add that link",
+        })
+        return
+      }
+
+      const platform: string = data?.platform ?? 'twitter'
+      const id: string | undefined = data?.bookmark?.id
+      const duplicate = data?.isDuplicate === true
+
+      if (id) {
+        const q = new URLSearchParams({ unreadOnly: 'false', filter: 'all', limit: '5' })
+        q.append('id', id)
+        const fres = await fetch(`/api/feed?${q}`)
+        if (fres.ok) {
+          const feed = await fres.json()
+          const added: FeedItem | undefined = (feed.items ?? []).find(
+            (f: FeedItem) => (f.platform ?? 'twitter') === platform && f.id === id,
+          )
+          if (added) {
+            // Newest-first, and deduped: a re-paste of something already saved
+            // moves the existing card to the top rather than showing it twice.
+            setItems((prev) => [
+              added,
+              ...prev.filter((f) => !((f.platform ?? 'twitter') === platform && f.id === id)),
+            ])
+          }
+        }
+      }
+
+      setPasteAdd({ status: duplicate ? 'duplicate' : 'added' })
+      // Refresh the header's counts only. Deliberately NOT `tweet-added`,
+      // which `useSyncListener` turns into a full `fetchFeed(true)` — that
+      // would throw away the prepend above and, with a filter or search
+      // active, drop the just-added post out of view entirely.
+      window.dispatchEvent(new CustomEvent('stats-updated'))
+    } catch {
+      setPasteAdd({ status: 'error', message: "Couldn't add that link" })
     }
   }, [])
 
@@ -520,6 +592,16 @@ function FeedPageContent(): React.ReactElement {
   useEffect(() => {
     if (page > 1) fetchFeed(false)
   }, [page])
+
+  // The paste pill is an acknowledgement, not a permanent state — clear it.
+  // Errors linger longer than successes: the card appearing at the top of the
+  // grid is its own confirmation, but a failure is the only signal there is.
+  useEffect(() => {
+    if (!pasteAdd) return
+    const ms = pasteAdd.status === 'error' ? 6_000 : pasteAdd.status === 'adding' ? 30_000 : 2_500
+    const timer = setTimeout(() => setPasteAdd(null), ms)
+    return () => clearTimeout(timer)
+  }, [pasteAdd])
 
   // Listen for sync-complete (Header's SyncProgress component) and
   // tweet-added (URL-prefix add flow) events and refresh the feed/tags.
@@ -1013,10 +1095,40 @@ function FeedPageContent(): React.ReactElement {
       )}
 
       {/* Paste-first add (unified-theater-triage.md §1): no more `+` Add
-          button/modal — pasting a platform URL anywhere outside an
-          input/textarea routes straight to its preview page. No UI of its
-          own. */}
-      <PasteToPreview />
+          button/modal. On the LIBRARY a paste adds the post in place and puts
+          it at the top (owner) rather than navigating to its preview page —
+          you're already looking at the collection you're adding to. Everywhere
+          else PasteToPreview still routes to the preview page. */}
+      <PasteToPreview onPastePost={addPastedPost} />
+
+      {pasteAdd && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center justify-center gap-2 px-4 pb-2 text-[12.5px]"
+        >
+          <span
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5',
+              pasteAdd.status === 'error'
+                ? 'border-clay/40 text-ink-2'
+                : 'border-hairline text-ink-3',
+            )}
+          >
+            {pasteAdd.status === 'adding' && <Loader2 size={13} className="animate-spin" />}
+            {pasteAdd.status === 'added' && <Check size={13} className="text-done" />}
+            <span>
+              {pasteAdd.status === 'adding'
+                ? 'Adding to your library\u2026'
+                : pasteAdd.status === 'added'
+                  ? 'Added'
+                  : pasteAdd.status === 'duplicate'
+                    ? 'Already in your library \u2014 moved to the top'
+                    : (pasteAdd.message ?? "Couldn't add that link")}
+            </span>
+          </span>
+        </div>
+      )}
 
       <ErrorBoundary componentName="FilterBar">
         <FilterBar

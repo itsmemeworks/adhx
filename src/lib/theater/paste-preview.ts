@@ -17,7 +17,25 @@ import { extractSharedUrl, parseShareUrl } from '@/lib/utils/parse-share-url'
  * "x.com/user/status/1" is ambiguous with ordinary text).
  */
 export function resolvePastedLink(text: string): string | null {
+  return resolvePastedPost(text)?.path ?? null
+}
+
+/**
+ * Same resolution, keeping the ORIGINAL url beside the path. The library's
+ * paste-to-add needs both: `path` proves the text really is a supported post
+ * link (so we never POST a playlist page or arbitrary text at the add
+ * endpoint), while `url` is what `/api/bookmarks/add` actually takes.
+ */
+export interface PastedPost {
+  /** The url as pasted — what the add endpoint resolves server-side. */
+  url: string
+  /** Its on-ADHX preview path — also the proof it's a supported post link. */
+  path: string
+}
+
+export function resolvePastedPost(text: string): PastedPost | null {
   const url = extractSharedUrl(text)
   if (!url) return null
-  return parseShareUrl(url)?.path ?? null
+  const path = parseShareUrl(url)?.path
+  return path ? { url, path } : null
 }

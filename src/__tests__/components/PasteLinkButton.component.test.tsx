@@ -302,3 +302,94 @@ describe('PasteLinkButton — iOS (input-paste flow)', () => {
     expect(screen.queryByRole('button', { name: 'Paste' })).not.toBeInTheDocument()
   })
 })
+
+/**
+ * Owner report with a screenshot: tapping the icon-only Paste button in the
+ * theater's mobile top bar opened the helper anchored under the button, then
+ * iOS's keyboard appeared and Safari's focus-scroll dragged the panel off the
+ * top of the screen — "not intuitive at all. Maybe we just need to use a
+ * better model for capturing the paste that will automatically center?"
+ *
+ * The panel is now a portalled dialog centred in the VISIBLE viewport, so the
+ * keyboard shrinks the box it centres in instead of pushing it away.
+ */
+describe('PasteLinkButton — the helper is a centred dialog, not an anchored popover', () => {
+  beforeEach(() => {
+    mockIos = true
+    pushSpy.mockClear()
+    Object.assign(navigator, { clipboard: undefined })
+  })
+
+  /** Pretend a keyboard is open: a short visual viewport, offset down the page. */
+  function stubVisualViewport(height: number, offsetTop = 0) {
+    const listeners: Record<string, (() => void)[]> = {}
+    Object.defineProperty(window, 'visualViewport', {
+      configurable: true,
+      value: {
+        height,
+        offsetTop,
+        addEventListener: (t: string, fn: () => void) => {
+          ;(listeners[t] ??= []).push(fn)
+        },
+        removeEventListener: () => {},
+      },
+    })
+  }
+
+  it('renders outside the button subtree, so no transformed ancestor can trap it', async () => {
+    stubVisualViewport(844)
+    const { container } = render(<PasteLinkButton iconOnly />)
+    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog).toBeInTheDocument()
+    // Portalled to <body>: `position: fixed` resolves against the viewport
+    // rather than the theater's transformed scrims.
+    expect(container.contains(dialog)).toBe(false)
+  })
+
+  it('centres itself in the space the keyboard leaves', async () => {
+    // 844-tall screen with a ~420px keyboard open.
+    stubVisualViewport(424, 0)
+    render(<PasteLinkButton iconOnly />)
+    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+
+    const dialog = await screen.findByRole('dialog')
+    const box = dialog.parentElement!
+    expect(box).toHaveStyle({ height: '424px' })
+    // Flex-centred inside that box, so the panel sits above the keyboard.
+    expect(box.className).toContain('items-center')
+    expect(box.className).toContain('fixed')
+  })
+
+  it('follows the viewport when Safari scrolls the page under the keyboard', async () => {
+    stubVisualViewport(424, 130)
+    render(<PasteLinkButton iconOnly />)
+    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+
+    const box = (await screen.findByRole('dialog')).parentElement!
+    // Offset, not pinned to 0 — this is what kept the panel on screen.
+    expect(box).toHaveStyle({ top: '130px' })
+  })
+
+  it('falls back to the full screen where visualViewport is unavailable', async () => {
+    Object.defineProperty(window, 'visualViewport', { configurable: true, value: undefined })
+    render(<PasteLinkButton iconOnly />)
+    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+
+    const box = (await screen.findByRole('dialog')).parentElement!
+    expect(box).toHaveStyle({ top: '0px' })
+  })
+
+  it('keeps a tap inside the dialog from dismissing it', async () => {
+    stubVisualViewport(424)
+    render(<PasteLinkButton iconOnly />)
+    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+
+    const dialog = await screen.findByRole('dialog')
+    // The panel lives outside containerRef now, so the outside-click handler
+    // has to know about it explicitly or every tap in the field closes it.
+    fireEvent.mouseDown(screen.getByPlaceholderText(/paste a link/i))
+    expect(screen.queryByRole('dialog')).toBe(dialog)
+  })
+})

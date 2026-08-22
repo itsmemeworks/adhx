@@ -107,3 +107,70 @@ describe('navigateToAppPath', () => {
     )
   })
 })
+
+/**
+ * Owner: "if I'm on my library and then I just paste a new link to a post, it
+ * should simply just add it straight away at the top of my library. Nothing
+ * else needs to happen." The library passes `onPastePost` and handles the add
+ * itself; every other mount keeps navigating to the preview page.
+ */
+describe('PasteToPreview — onPastePost (add in place)', () => {
+  let assignSpy: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    assignSpy = vi.fn()
+    Object.defineProperty(window, 'location', {
+      value: { ...window.location, assign: assignSpy },
+      writable: true,
+    })
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+  })
+
+  afterEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it('hands the pasted URL over instead of navigating', () => {
+    const onPastePost = vi.fn()
+    render(<PasteToPreview onPastePost={onPastePost} />)
+
+    dispatchPaste('https://x.com/naval/status/2064012969239859490')
+
+    // The URL as pasted — the add endpoint resolves it server-side — and NOT
+    // the preview path, which is only useful for navigating.
+    expect(onPastePost).toHaveBeenCalledWith('https://x.com/naval/status/2064012969239859490')
+    expect(assignSpy).not.toHaveBeenCalled()
+  })
+
+  it('passes through the link found inside pasted caption text', () => {
+    const onPastePost = vi.fn()
+    render(<PasteToPreview onPastePost={onPastePost} />)
+
+    dispatchPaste('look at this https://www.tiktok.com/@someone/video/7123456789012345678 lol')
+
+    expect(onPastePost).toHaveBeenCalledWith(
+      'https://www.tiktok.com/@someone/video/7123456789012345678',
+    )
+  })
+
+  it('does nothing at all for a link that is not a post', () => {
+    const onPastePost = vi.fn()
+    render(<PasteToPreview onPastePost={onPastePost} />)
+
+    // An ADHX PLAYLIST url (the owner pasted one of these as their example):
+    // there's no single post behind it, so there is nothing to add — and it
+    // must not be POSTed at the add endpoint either.
+    dispatchPaste('https://adhx.com/t/weedauwl/investments')
+    expect(onPastePost).not.toHaveBeenCalled()
+    expect(assignSpy).not.toHaveBeenCalled()
+
+    dispatchPaste('just some words')
+    expect(onPastePost).not.toHaveBeenCalled()
+  })
+
+  it('still navigates when no handler is given (every non-library mount)', () => {
+    render(<PasteToPreview />)
+    dispatchPaste('https://x.com/naval/status/2064012969239859490')
+    expect(assignSpy).toHaveBeenCalledTimes(1)
+  })
+})
