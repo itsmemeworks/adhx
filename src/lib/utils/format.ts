@@ -54,6 +54,42 @@ export function hasKnownTimestamp(dateStr: string | null | undefined): boolean {
 }
 
 /**
+ * Long-form relative time, for tooltips and accessible labels where an
+ * abbreviation is no help. Same buckets as `formatCompactRelativeTime`, so
+ * "3w" and "3 weeks ago" can never disagree.
+ *
+ * @example formatVerboseRelativeTime('2024-01-10T12:00:00Z') // "3 weeks ago"
+ */
+export function formatVerboseRelativeTime(dateStr: string): string {
+  const diffMs = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diffMs / 60_000)
+  const hours = Math.floor(diffMs / 3_600_000)
+  const days = Math.floor(diffMs / 86_400_000)
+  const plural = (n: number, unit: string) => `${n} ${unit}${n === 1 ? '' : 's'} ago`
+
+  if (mins < 1) return 'just now'
+  if (mins < 60) return plural(mins, 'minute')
+  if (hours < 24) return plural(hours, 'hour')
+  if (days < 7) return plural(days, 'day')
+  if (days < 30) return plural(Math.floor(days / 7), 'week')
+  if (days < 365) return plural(Math.floor(days / 30), 'month')
+  return plural(Math.floor(days / 365), 'year')
+}
+
+/**
+ * The label for an "added to ADHX" time chip.
+ *
+ * Everywhere else on the internet a bare relative time beside a post means the
+ * POST's age, so the chip has to say WHICH time it is or it gets misread —
+ * owner report: a post first linked three weeks ago showed "3w" and read as a
+ * three-week-old post. The chip keeps the compact value; this is what goes in
+ * its `title`/`aria-label`.
+ */
+export function addedToAdhxLabel(dateStr: string): string {
+  return `Added to ADHX ${formatVerboseRelativeTime(dateStr)}`
+}
+
+/**
  * Format a date as compact relative time (no "ago" suffix)
  * @example formatCompactRelativeTime('2024-01-10T12:00:00Z') // "5d"
  */

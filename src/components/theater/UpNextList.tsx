@@ -11,7 +11,7 @@ import {
   Repeat,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatCompactRelativeTime, hasKnownTimestamp } from '@/lib/utils/format'
+import { addedToAdhxLabel, formatCompactRelativeTime, hasKnownTimestamp } from '@/lib/utils/format'
 import { PlatformGlyph, type ContentType } from '@/components/matter'
 import { inferType } from '@/lib/trending/filter'
 import { instagramWarmSrc, prefetchPlayback } from './usePlaybackSource'
@@ -157,9 +157,18 @@ function Row({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <PlatformGlyph platform={item.platform} size={11} className="text-ink-3 flex-none" />
+          {/* "added" prefix only here — the rows have the horizontal room, and
+              a bare relative time beside a post reads as the POST's age
+              everywhere else on the internet. The stage chip and dock cards
+              carry the same meaning via `title`/`aria-label` instead. */}
           {hasKnownTimestamp(item.addedAt) && (
-            <span className="font-mono text-[10.5px] text-ink-3" suppressHydrationWarning>
-              {formatCompactRelativeTime(item.addedAt as string)}
+            <span
+              className="font-mono text-[10.5px] text-ink-3"
+              title={addedToAdhxLabel(item.addedAt as string)}
+              aria-label={addedToAdhxLabel(item.addedAt as string)}
+              suppressHydrationWarning
+            >
+              added {formatCompactRelativeTime(item.addedAt as string)}
             </span>
           )}
           <div className="ml-auto flex flex-none items-center gap-1.5">

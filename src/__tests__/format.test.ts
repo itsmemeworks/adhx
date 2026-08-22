@@ -5,6 +5,8 @@ import {
   formatCompactRelativeTime,
   truncate,
   hasKnownTimestamp,
+  formatVerboseRelativeTime,
+  addedToAdhxLabel,
 } from '@/lib/utils/format'
 
 /**
@@ -248,5 +250,60 @@ describe('hasKnownTimestamp', () => {
 
   it('is true right at the 2006 boundary', () => {
     expect(hasKnownTimestamp('2006-01-01T00:00:00.000Z')).toBe(true)
+  })
+})
+
+/**
+ * A bare relative time beside a post reads as the POST's age everywhere else
+ * on the internet, so the theater's chips carry this as their title/aria —
+ * owner report: a post first linked three weeks ago showed "3w" and read as a
+ * three-week-old post.
+ */
+describe('formatVerboseRelativeTime / addedToAdhxLabel', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2024-06-15T12:00:00Z'))
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('spells the unit out, singular and plural', () => {
+    expect(formatVerboseRelativeTime('2024-06-15T11:59:30Z')).toBe('just now')
+    expect(formatVerboseRelativeTime('2024-06-15T11:59:00Z')).toBe('1 minute ago')
+    expect(formatVerboseRelativeTime('2024-06-15T11:30:00Z')).toBe('30 minutes ago')
+    expect(formatVerboseRelativeTime('2024-06-15T10:00:00Z')).toBe('2 hours ago')
+    expect(formatVerboseRelativeTime('2024-06-12T12:00:00Z')).toBe('3 days ago')
+    expect(formatVerboseRelativeTime('2024-05-25T12:00:00Z')).toBe('3 weeks ago')
+    expect(formatVerboseRelativeTime('2024-03-15T12:00:00Z')).toBe('3 months ago')
+    expect(formatVerboseRelativeTime('2022-06-15T12:00:00Z')).toBe('2 years ago')
+  })
+
+  it('agrees with the compact chip it labels — same buckets, never contradicts it', () => {
+    const cases = [
+      '2024-06-15T11:59:30Z',
+      '2024-06-15T11:30:00Z',
+      '2024-06-15T10:00:00Z',
+      '2024-06-12T12:00:00Z',
+      '2024-05-25T12:00:00Z',
+      '2024-03-15T12:00:00Z',
+      '2022-06-15T12:00:00Z',
+    ]
+    for (const iso of cases) {
+      const compact = formatCompactRelativeTime(iso) // e.g. "3w"
+      const verbose = formatVerboseRelativeTime(iso) // e.g. "3 weeks ago"
+      if (compact === 'now') {
+        expect(verbose).toBe('just now')
+        continue
+      }
+      const [, n, unit] = compact.match(/^(\d+)(m|h|d|w|mo|y)$/) as RegExpMatchArray
+      const word = { m: 'minute', h: 'hour', d: 'day', w: 'week', mo: 'month', y: 'year' }[unit]
+      expect(verbose).toBe(`${n} ${word}${Number(n) === 1 ? '' : 's'} ago`)
+    }
+  })
+
+  it('names WHICH time it is, so the chip cannot be read as the post date', () => {
+    expect(addedToAdhxLabel('2024-05-25T12:00:00Z')).toBe('Added to ADHX 3 weeks ago')
+    expect(addedToAdhxLabel('2024-06-15T11:59:30Z')).toBe('Added to ADHX just now')
   })
 })

@@ -50,7 +50,7 @@ import {
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatCompactRelativeTime, hasKnownTimestamp } from '@/lib/utils/format'
+import { addedToAdhxLabel, formatCompactRelativeTime, hasKnownTimestamp } from '@/lib/utils/format'
 import { MatterLogo, PlatformGlyph } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { authorProfileUrl, previewPath, sourceUrl } from '@/lib/activity/preview-path'
@@ -306,7 +306,12 @@ function PlatformTimeChip({ item }: { item: TheaterItem }) {
           never the source platform's date, never the moving event time).
           Unknown → no time, just the glyph. */}
       {hasKnownTimestamp(item.addedAt) && (
-        <span className="font-mono text-[11px]" suppressHydrationWarning>
+        <span
+          className="font-mono text-[11px]"
+          title={addedToAdhxLabel(item.addedAt as string)}
+          aria-label={addedToAdhxLabel(item.addedAt as string)}
+          suppressHydrationWarning
+        >
           {formatCompactRelativeTime(item.addedAt as string)}
         </span>
       )}
@@ -1207,7 +1212,12 @@ export function DesktopDock({
                   className="flex-none text-ink-3"
                 />
                 {hasKnownTimestamp(item.addedAt) && (
-                  <span className="font-mono text-[10px] text-ink-3" suppressHydrationWarning>
+                  <span
+                    className="font-mono text-[10px] text-ink-3"
+                    title={addedToAdhxLabel(item.addedAt as string)}
+                    aria-label={addedToAdhxLabel(item.addedAt as string)}
+                    suppressHydrationWarning
+                  >
                     {formatCompactRelativeTime(item.addedAt as string)}
                   </span>
                 )}
@@ -1295,7 +1305,12 @@ export function DesktopDock({
                       className="flex-none text-ink-3"
                     />
                     {hasKnownTimestamp(first.addedAt) && (
-                      <span className="font-mono text-[10px] text-ink-3" suppressHydrationWarning>
+                      <span
+                        className="font-mono text-[10px] text-ink-3"
+                        title={addedToAdhxLabel(first.addedAt as string)}
+                        aria-label={addedToAdhxLabel(first.addedAt as string)}
+                        suppressHydrationWarning
+                      >
                         {formatCompactRelativeTime(first.addedAt as string)}
                       </span>
                     )}

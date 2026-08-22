@@ -40,7 +40,7 @@ import {
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatCompactRelativeTime, hasKnownTimestamp } from '@/lib/utils/format'
+import { addedToAdhxLabel, formatCompactRelativeTime, hasKnownTimestamp } from '@/lib/utils/format'
 import { MatterLogo, PlatformGlyph } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { PasteLinkButton } from '@/components/PasteLinkButton'
@@ -465,7 +465,12 @@ export function TheaterMobileChrome({
                           (owner decision — never the source platform's date,
                           never the moving event time). Unknown → no time. */}
                       {hasKnownTimestamp(current.addedAt) && (
-                        <span className="font-mono text-[11px]" suppressHydrationWarning>
+                        <span
+                          className="font-mono text-[11px]"
+                          title={addedToAdhxLabel(current.addedAt as string)}
+                          aria-label={addedToAdhxLabel(current.addedAt as string)}
+                          suppressHydrationWarning
+                        >
                           {formatCompactRelativeTime(current.addedAt as string)}
                         </span>
                       )}
