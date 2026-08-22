@@ -967,15 +967,16 @@ function TriageLiveSaveButton({
   className: string
 }) {
   const saved = triage.savedKeys.has(theaterItemKey(current))
+  // Once saved, the button goes away rather than sitting there disabled saying
+  // "Saved" (owner: "there's no point in showing 'Saved' for a post — simply
+  // show the tag icon because that denotes that it's already saved"). Same
+  // treatment as the mobile chrome; the tag control beside it is both the
+  // affordance and the state.
+  if (saved) return null
   return (
-    <button
-      type="button"
-      onClick={() => !saved && triage.onSave(current)}
-      disabled={saved}
-      className={className}
-    >
-      {saved ? <Check size={14} /> : <Bookmark size={14} />}
-      <span>{saved ? 'Saved' : 'Save'}</span>
+    <button type="button" onClick={() => triage.onSave(current)} className={className}>
+      <Bookmark size={14} />
+      <span>Save</span>
     </button>
   )
 }

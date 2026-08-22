@@ -1682,7 +1682,7 @@ export function TheaterShell({
   // Mark seen + fire the preview pulse once the current post has been staged
   // (extracted to useTheaterDwell.ts — see its doc comment for the full
   // collection/triage exemption rationale).
-  useTheaterDwell({ currentKey, isTriage, loop, itemsRef, seenSet })
+  useTheaterDwell({ currentKey, isTriageCollection, loop, itemsRef, seenSet })
 
   // Keep the address bar's path in lockstep with the item currently staged
   // (theater-first.md §7): a reload — or a URL someone copies mid-session —
