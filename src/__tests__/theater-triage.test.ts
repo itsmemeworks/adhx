@@ -20,19 +20,14 @@ import {
 } from '@/components/theater/TheaterShell'
 
 describe('personalKeyAction', () => {
-  it('reproduces the old CollectionTheater/CollectionMode key -> action map', () => {
-    expect(personalKeyAction({ key: 'ArrowRight' })).toBe('done')
-    expect(personalKeyAction({ key: 'ArrowLeft' })).toBe('later')
-    expect(personalKeyAction({ key: 'ArrowDown' })).toBe('delete')
-    expect(personalKeyAction({ key: 'Backspace' })).toBe('delete')
-    expect(personalKeyAction({ key: 'Delete' })).toBe('delete')
+  it('only maps undo and close — arrows are the Live keymap', () => {
     expect(personalKeyAction({ key: 'u' })).toBe('undo')
     expect(personalKeyAction({ key: 'U' })).toBe('undo')
     expect(personalKeyAction({ key: 'Escape' })).toBe('close')
-  })
-
-  it('adds ArrowUp as pure "back" navigation (new in the unified shell)', () => {
-    expect(personalKeyAction({ key: 'ArrowUp' })).toBe('back')
+    expect(personalKeyAction({ key: 'ArrowRight' })).toBe(null)
+    expect(personalKeyAction({ key: 'ArrowLeft' })).toBe(null)
+    expect(personalKeyAction({ key: 'ArrowDown' })).toBe(null)
+    expect(personalKeyAction({ key: 'Delete' })).toBe(null)
   })
 
   it('ignores unmapped keys', () => {
@@ -41,8 +36,8 @@ describe('personalKeyAction', () => {
   })
 
   it('ignores keys with a modifier held', () => {
-    expect(personalKeyAction({ key: 'ArrowRight', metaKey: true })).toBe(null)
-    expect(personalKeyAction({ key: 'ArrowLeft', ctrlKey: true })).toBe(null)
+    expect(personalKeyAction({ key: 'u', metaKey: true })).toBe(null)
+    expect(personalKeyAction({ key: 'Escape', ctrlKey: true })).toBe(null)
     expect(personalKeyAction({ key: 'u', altKey: true })).toBe(null)
   })
 
@@ -52,14 +47,14 @@ describe('personalKeyAction', () => {
     const editable = document.createElement('div')
     Object.defineProperty(editable, 'isContentEditable', { value: true })
 
-    expect(personalKeyAction({ key: 'ArrowRight', target: input })).toBe(null)
-    expect(personalKeyAction({ key: 'ArrowRight', target: textarea })).toBe(null)
+    expect(personalKeyAction({ key: 'u', target: input })).toBe(null)
+    expect(personalKeyAction({ key: 'u', target: textarea })).toBe(null)
     expect(personalKeyAction({ key: 'u', target: editable })).toBe(null)
   })
 
   it('still acts on a non-typing target', () => {
     const div = document.createElement('div')
-    expect(personalKeyAction({ key: 'ArrowRight', target: div })).toBe('done')
+    expect(personalKeyAction({ key: 'u', target: div })).toBe('undo')
   })
 })
 

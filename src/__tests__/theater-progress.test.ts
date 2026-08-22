@@ -12,8 +12,9 @@ import type { TrendingItem } from '@/lib/trending/query'
  * on its own timeline, a non-video post gets a fixed 10s dwell. YouTube also
  * gets the video treatment — StageYouTube drives real play/pause/ended/mute
  * via the raw postMessage protocol — so the dock/peek-bar transport + audio
- * buttons render for it (they're gated on this kind), even though the shared
- * top progress line never actually fills for it.
+ * buttons render for it (they're gated on this kind). The clay line fills
+ * from StageYouTube's `theater-video-progress` events (payload time, or a
+ * play-start clock when YouTube withholds `currentTime`).
  */
 
 function make(

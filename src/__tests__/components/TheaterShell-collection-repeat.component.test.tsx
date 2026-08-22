@@ -140,8 +140,8 @@ describe('TheaterShell: collection tab has the repeat control', () => {
         />,
       )
     })
-    const later = (chromeProps().collection as { onLater: () => void }).onLater
-    await act(async () => later())
+    const onNext = chromeProps().onNext as () => void
+    await act(async () => onNext())
     expect(screen.getByText('All caught up')).toBeInTheDocument()
 
     await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Keep playing' })))

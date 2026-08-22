@@ -8,7 +8,7 @@
  * page loaded the JS wrapper, so a bare `postMessage`/`message` exchange is
  * enough:
  *
- *   parent  -> iframe   {event:'listening', id}                 (handshake, on iframe load)
+ *   parent  -> iframe   {event:'listening', id, channel:'widget'} (handshake, on iframe load)
  *   iframe  -> parent   {event:'onReady'}                       (player booted)
  *   iframe  -> parent   {event:'onStateChange', info: <state>}  (-1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 cued)
  *   iframe  -> parent   {event:'onError', info: <code>}         (101/150 = embedding disabled, etc.)
@@ -31,8 +31,16 @@
  * but observed reliable) `currentTime`/`duration` fields feed the same
  * `theater-video-progress` window event StageVideo dispatches on
  * `timeupdate`, so `TheaterProgressLine`'s 'video'-kind listener can't tell
- * the two apart. No rAF interpolation between heartbeats yet (v1) — upgrade
- * path if the fill looks steppy on-device.
+ * the two apart.
+ *
+ * Round 9 (owner: bar still dead on autoplay until a click inside the
+ * iframe — desktop and iOS). YouTube often streams `playerState` without
+ * `currentTime` until the embed itself has a gesture; re-sending `listening`
+ * (round 8) does not wake that reporter. When we have a duration we clock
+ * the bar from play-start (or the last real time), snap whenever a real
+ * `currentTime` / `mediaReferenceTime` arrives, and while starved also
+ * pull `getCurrentTime`/`getDuration`. Interpolated times are display-only
+ * — they never feed the catch-up unmute evidence path.
  *
  * Round 6 (owner on-device report: audio icon needed two presses to unmute):
  * `infoDelivery`'s `muted` field can be STALE — a heartbeat reflecting the
@@ -166,12 +174,36 @@ function describeYtPlayerState(state: number): string {
  */
 const STARTUP_RETRY_DELAYS_MS = [1_000, 2_500, 5_000]
 
-/** Round 8 progress-starvation poll (see `lastTimeSignalAtRef`): how often to
- * check for starvation while playing, and how long without a time-bearing
- * payload counts as starved. Desktop heartbeats arrive several times a
- * second, so a healthy stream never trips the 1.5s window. */
-const PROGRESS_POLL_MS = 750
+/** Round 9 progress tick (see `lastTimeSignalAtRef`): interpolate the clay
+ * bar while playing, and how long without a time-bearing payload counts as
+ * starved (then pull listening + getCurrentTime + getDuration). A healthy
+ * desktop heartbeat stream never trips the pull. */
+const PROGRESS_TICK_MS = 250
 const PROGRESS_STARVED_MS = 1_500
+
+/** Playback seconds from a YT info payload. iOS/desktop often omit
+ * `currentTime` until an in-iframe gesture but still send
+ * `mediaReferenceTime`. */
+export function readYtCurrentTime(info: Record<string, unknown>): number | null {
+  if (typeof info.currentTime === 'number' && Number.isFinite(info.currentTime)) {
+    return info.currentTime
+  }
+  if (typeof info.mediaReferenceTime === 'number' && Number.isFinite(info.mediaReferenceTime)) {
+    return info.mediaReferenceTime
+  }
+  return null
+}
+
+export function readYtDuration(info: Record<string, unknown>): number | null {
+  if (typeof info.duration === 'number' && Number.isFinite(info.duration) && info.duration > 0) {
+    return info.duration
+  }
+  return null
+}
+
+function listeningMessage(playerId: string): string {
+  return JSON.stringify({ event: 'listening', id: playerId, channel: 'widget' })
+}
 
 export interface StageYouTubeProps {
   item: TheaterItem
@@ -316,6 +348,13 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
   // state-attribution timer — the round-4 "no timers" rule (about *judging
   // unmute success* by wall-clock silence) is untouched.
   const lastTimeSignalAtRef = useRef(0)
+  // Round 9: last duration / playbackRate from any payload, plus a wall-clock
+  // origin used to interpolate the clay bar when YouTube starves currentTime.
+  // `progressOriginMsRef` is null while paused (originTime is frozen).
+  const lastKnownDurationRef = useRef<number | null>(null)
+  const lastKnownRateRef = useRef(1)
+  const progressOriginTimeRef = useRef<number | null>(null)
+  const progressOriginMsRef = useRef<number | null>(null)
   // Round 6: what we last explicitly told the player to be (via `mute`/
   // `unMute`) — the mute-state counterpart of `hasPlayedRef`'s "only trust
   // evidence" discipline. `infoDelivery` streams frequently enough that a
@@ -408,6 +447,35 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     if (!win) return
     win.postMessage(JSON.stringify({ event: 'command', func, args }), YT_ORIGIN)
   }, [])
+
+  const estimatePlaybackSeconds = useCallback((): number | null => {
+    const originTime = progressOriginTimeRef.current
+    if (originTime == null) return lastKnownCurrentTimeRef.current
+    const originMs = progressOriginMsRef.current
+    if (originMs == null) return originTime
+    return originTime + ((Date.now() - originMs) / 1000) * lastKnownRateRef.current
+  }, [])
+
+  const publishEstimatedProgress = useCallback(() => {
+    const duration = lastKnownDurationRef.current
+    if (duration == null || duration <= 0) return
+    const t = estimatePlaybackSeconds()
+    if (t == null) return
+    window.dispatchEvent(
+      new CustomEvent('theater-video-progress', { detail: { progress: t / duration } }),
+    )
+  }, [estimatePlaybackSeconds])
+
+  const startProgressClock = useCallback((time: number) => {
+    progressOriginTimeRef.current = time
+    progressOriginMsRef.current = Date.now()
+  }, [])
+
+  const freezeProgressClock = useCallback(() => {
+    const t = estimatePlaybackSeconds()
+    if (t != null) progressOriginTimeRef.current = t
+    progressOriginMsRef.current = null
+  }, [estimatePlaybackSeconds])
 
   // Round 2: never trust the embed URL's `autoplay=1&mute=1` params alone —
   // drive startup explicitly, mute BEFORE play every time. Used by the load
@@ -561,6 +629,10 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     unmuteConfirmSourceRef.current = 'catchup'
     catchupUnmuteBaselineTimeRef.current = null
     lastKnownCurrentTimeRef.current = null
+    lastKnownDurationRef.current = null
+    lastKnownRateRef.current = 1
+    progressOriginTimeRef.current = null
+    progressOriginMsRef.current = null
     lastLoggedStateRef.current = null
     clearStartupRetryTimers()
     setPlaying(false)
@@ -678,6 +750,11 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
           hasPlayedRef.current = true
           clearStallTimer()
           clearStartupRetryTimers()
+          if (progressOriginMsRef.current == null) {
+            startProgressClock(
+              lastKnownCurrentTimeRef.current ?? progressOriginTimeRef.current ?? 0,
+            )
+          }
           setPlaying(true)
           if (unmuteAwaitingConfirmRef.current && unmuteConfirmSourceRef.current === 'user') {
             // Kept playing right through the unmute — it took. Stop
@@ -693,6 +770,7 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
           // whichever `source` it was originally requested with.
           if (pendingUnmuteRef.current) requestUnmute(pendingUnmuteSourceRef.current)
         } else if (state === 2) {
+          freezeProgressClock()
           setPlaying(false)
           if (unmuteAwaitingConfirmRef.current) {
             // iOS rejected the unmuted resume by silently pausing instead
@@ -702,6 +780,7 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
             fallBackToMuted()
           }
         } else if (state === 0) {
+          freezeProgressClock()
           setPlaying(false)
           // Mirror StageVideo's own ended-state dispatch: the bar visibly
           // reaches full before either looping (repeat) or the item
@@ -709,6 +788,10 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
           window.dispatchEvent(
             new CustomEvent('theater-video-progress', { detail: { progress: 1 } }),
           )
+          if (repeatRef.current) {
+            lastKnownCurrentTimeRef.current = 0
+            progressOriginTimeRef.current = 0
+          }
           // shared-post-repeat: stand in for `<video loop>` — the embed has
           // no reliable native loop param on the JS-API path, so an ended
           // state is answered with a seek-and-replay instead of advancing.
@@ -760,6 +843,7 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
         // flows through the same parsing (round 8: it's also the progress
         // poll's data source when iOS starves the heartbeat stream of
         // currentTime — see `lastTimeSignalAtRef`).
+        case 'apiInfoDelivery':
         case 'initialDelivery':
         case 'infoDelivery': {
           const info = data.info as
@@ -768,7 +852,9 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
                 muted?: unknown
                 volume?: unknown
                 currentTime?: unknown
+                mediaReferenceTime?: unknown
                 duration?: unknown
+                playbackRate?: unknown
               }
             | null
             | undefined
@@ -829,49 +915,46 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
                 )
               }
             }
-            // Round 5: drive the shared clay progress bar the same way
-            // StageVideo does — the SAME `theater-video-progress` window
-            // event, the SAME `{ progress }` detail shape (a 0..1 fraction;
-            // `TheaterProgressLine`'s 'video'-kind listener clamps it, so no
-            // clamping needed on the send side either — mirrors StageVideo's
-            // own `handleTimeUpdate`, which doesn't clamp there). infoDelivery
-            // streams `currentTime`/`duration` frequently while playing — v1
-            // dispatches on every heartbeat with no interpolation; if that
-            // looks steppy on-device (heartbeat cadence is undocumented),
-            // rAF-interpolating between heartbeats is the upgrade path.
-            // Unlike `logStage`, this dispatch is NOT gated behind
-            // `?ytdebug=1` — it's the feature, not a diagnostic.
-            if (
-              typeof info.currentTime === 'number' &&
-              typeof info.duration === 'number' &&
-              info.duration > 0
-            ) {
-              const progress = info.currentTime / info.duration
+            // Round 5/9: drive the shared clay progress bar the same way
+            // StageVideo does. Prefer a real time payload; otherwise keep
+            // interpolating from duration + play-start (YouTube often
+            // withholds currentTime until an in-iframe gesture).
+            const reportedTime = readYtCurrentTime(info)
+            const reportedDuration = readYtDuration(info)
+            if (reportedDuration != null) lastKnownDurationRef.current = reportedDuration
+            if (typeof info.playbackRate === 'number' && info.playbackRate > 0) {
+              lastKnownRateRef.current = info.playbackRate
+            }
+            if (reportedTime != null) {
+              startProgressClock(reportedTime)
+              lastKnownCurrentTimeRef.current = reportedTime
+              lastTimeSignalAtRef.current = Date.now()
+            }
+            if (reportedTime != null && lastKnownDurationRef.current) {
               window.dispatchEvent(
-                new CustomEvent('theater-video-progress', { detail: { progress } }),
+                new CustomEvent('theater-video-progress', {
+                  detail: { progress: reportedTime / lastKnownDurationRef.current },
+                }),
               )
+            } else {
+              publishEstimatedProgress()
             }
             // Round 7: the sustained-playback-progress evidence a `catchup`
             // unmute needs (see `catchupUnmuteBaselineTimeRef`'s comment) —
-            // tracked independent of the progress-bar block above (that one
-            // additionally requires `duration`, this doesn't). Runs AFTER
-            // `applyPlayerState` above in this same payload, so if this
-            // heartbeat also carried `playerState: 2`, `fallBackToMuted()`
-            // has already cleared `unmuteAwaitingConfirmRef` and this is a
-            // harmless no-op — currentTime progress can only ever confirm a
-            // catchup unmute that a pause, observed in the same or an
-            // earlier payload, hasn't already reverted.
-            if (typeof info.currentTime === 'number') {
-              lastKnownCurrentTimeRef.current = info.currentTime
-              lastTimeSignalAtRef.current = Date.now()
+            // REAL payload time only, never the interpolated clock. Runs
+            // AFTER `applyPlayerState` above in this same payload, so if
+            // this heartbeat also carried `playerState: 2`,
+            // `fallBackToMuted()` has already cleared
+            // `unmuteAwaitingConfirmRef` and this is a harmless no-op.
+            if (reportedTime != null) {
               if (
                 unmuteAwaitingConfirmRef.current &&
                 unmuteConfirmSourceRef.current === 'catchup' &&
                 catchupUnmuteBaselineTimeRef.current !== null &&
-                info.currentTime - catchupUnmuteBaselineTimeRef.current > 1.5
+                reportedTime - catchupUnmuteBaselineTimeRef.current > 1.5
               ) {
                 logStage(
-                  `catchup unmute sustained (currentTime ${info.currentTime.toFixed(2)} vs baseline ${catchupUnmuteBaselineTimeRef.current.toFixed(2)}) — clearing pending`,
+                  `catchup unmute sustained (currentTime ${reportedTime.toFixed(2)} vs baseline ${catchupUnmuteBaselineTimeRef.current.toFixed(2)}) — clearing pending`,
                 )
                 unmuteAwaitingConfirmRef.current = false
                 catchupUnmuteBaselineTimeRef.current = null
@@ -907,29 +990,40 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     advance,
     requestUnmute,
     fallBackToMuted,
+    startProgressClock,
+    freezeProgressClock,
+    publishEstimatedProgress,
   ])
 
-  // Round 8: the progress-starvation poll (mechanism documented on
-  // `lastTimeSignalAtRef`). Armed only while the player is confirmed playing;
-  // each tick re-sends the `listening` handshake ONLY when no
-  // currentTime-bearing payload has arrived within the starvation window, so
-  // a healthy heartbeat stream (desktop) never triggers a single extra
-  // message. The `initialDelivery` answer is parsed by the same handler as
-  // `infoDelivery` above, which dispatches `theater-video-progress`.
+  // Round 9: while playing, interpolate the clay bar from duration + the
+  // progress clock, and if no real time payload arrives within the
+  // starvation window, pull listening + getCurrentTime + getDuration.
+  // A healthy heartbeat stream never trips the pull. Interpolated ticks
+  // never write `lastTimeSignalAtRef` (that's payload-only).
   useEffect(() => {
     if (!playing) return
-    // A fresh playing state starts the clock now — never inherit a stale
-    // timestamp from a previous item or a pre-pause stretch.
+    if (progressOriginMsRef.current == null) {
+      startProgressClock(lastKnownCurrentTimeRef.current ?? progressOriginTimeRef.current ?? 0)
+    }
     lastTimeSignalAtRef.current = Date.now()
     const timer = setInterval(() => {
+      publishEstimatedProgress()
       if (Date.now() - lastTimeSignalAtRef.current <= PROGRESS_STARVED_MS) return
       const win = iframeRef.current?.contentWindow
       if (!win) return
-      logStage('progress starved — re-sending listening handshake for initialDelivery')
-      win.postMessage(JSON.stringify({ event: 'listening', id: playerId }), YT_ORIGIN)
-    }, PROGRESS_POLL_MS)
+      logStage('progress starved — pulling listening + getCurrentTime + getDuration')
+      win.postMessage(listeningMessage(playerId), YT_ORIGIN)
+      win.postMessage(
+        JSON.stringify({ event: 'command', func: 'getCurrentTime', args: [] }),
+        YT_ORIGIN,
+      )
+      win.postMessage(
+        JSON.stringify({ event: 'command', func: 'getDuration', args: [] }),
+        YT_ORIGIN,
+      )
+    }, PROGRESS_TICK_MS)
     return () => clearInterval(timer)
-  }, [playing, playerId])
+  }, [playing, playerId, startProgressClock, publishEstimatedProgress])
 
   // Space bar / the stage's play-pause affordance (`theater-toggle-play`,
   // dispatched by TheaterShell) — flips based on the last known state.
@@ -964,7 +1058,7 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     const win = iframeRef.current?.contentWindow
     if (!win) return
     logStage('iframe onLoad — listening handshake + defensive mute/play nudge')
-    win.postMessage(JSON.stringify({ event: 'listening', id: playerId }), YT_ORIGIN)
+    win.postMessage(listeningMessage(playerId), YT_ORIGIN)
     // Round 2: a defensive early nudge, before `onReady` even confirms the
     // player is listening — harmless if ignored (the player isn't ready
     // yet), but on iOS a command sent this early sometimes lands before the
@@ -988,6 +1082,10 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     unmuteConfirmSourceRef.current = 'catchup'
     catchupUnmuteBaselineTimeRef.current = null
     lastKnownCurrentTimeRef.current = null
+    lastKnownDurationRef.current = null
+    lastKnownRateRef.current = 1
+    progressOriginTimeRef.current = null
+    progressOriginMsRef.current = null
     lastLoggedStateRef.current = null
     clearStartupRetryTimers()
     setPlaying(false)

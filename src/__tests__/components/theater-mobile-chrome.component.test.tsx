@@ -157,8 +157,6 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
       tab: 'live',
       onTabChange: vi.fn(),
       onDone: vi.fn(),
-      onLater: vi.fn(),
-      onDelete: vi.fn(),
       onTag: vi.fn(),
       onSave: vi.fn(),
       onLiveTag: vi.fn(),
@@ -175,6 +173,36 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     expect(downloadBtn.className).not.toContain('border-clay')
   })
 
+  it('collection tab uses Live actions plus Archive — no Later or Delete', () => {
+    mockUseSendFile.mockReturnValue({
+      supported: true,
+      ready: true,
+      sending: false,
+      mode: 'download' as const,
+      send: vi.fn(),
+    })
+    const collection: TheaterPersonalChrome = {
+      tab: 'collection',
+      onTabChange: vi.fn(),
+      onDone: vi.fn(),
+      onTag: vi.fn(),
+      onSave: vi.fn(),
+      onLiveTag: vi.fn(),
+      savedKeys: new Set<string>(),
+      remaining: 3,
+      onClose: vi.fn(),
+    }
+    render(<TheaterMobileChrome {...base} current={videoItem()} collection={collection} />)
+    expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Share link' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Tag' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open on X' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Archive' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Later' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
+  })
+
   /**
    * The Live ⇄ My Collection switch is NOT a control this chrome draws. A tab
    * pill in the top scrim overlapped the logo, trend/time chips and paste
@@ -188,8 +216,6 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
       tab: 'live',
       onTabChange,
       onDone: vi.fn(),
-      onLater: vi.fn(),
-      onDelete: vi.fn(),
       onTag: vi.fn(),
       onSave: vi.fn(),
       onLiveTag: vi.fn(),
@@ -218,8 +244,6 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
       tab: 'collection',
       onTabChange: vi.fn(),
       onDone: vi.fn(),
-      onLater: vi.fn(),
-      onDelete: vi.fn(),
       onTag: vi.fn(),
       onSave: vi.fn(),
       onLiveTag: vi.fn(),
@@ -252,8 +276,6 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
       tab: 'collection',
       onTabChange: vi.fn(),
       onDone: vi.fn(),
-      onLater: vi.fn(),
-      onDelete: vi.fn(),
       onTag: vi.fn(),
       onSave: vi.fn(),
       onLiveTag: vi.fn(),
@@ -630,8 +652,6 @@ describe('TheaterMobileChrome: theaterActive prop wiring', () => {
       tab: 'live',
       onTabChange: vi.fn(),
       onDone: vi.fn(),
-      onLater: vi.fn(),
-      onDelete: vi.fn(),
       onTag: vi.fn(),
       onSave: vi.fn(),
       onLiveTag: vi.fn(),
@@ -679,8 +699,6 @@ function collectionCollection(
     tab: 'collection',
     onTabChange: vi.fn(),
     onDone: vi.fn(),
-    onLater: vi.fn(),
-    onDelete: vi.fn(),
     onTag: vi.fn(),
     onSave: vi.fn(),
     onLiveTag: vi.fn(),
