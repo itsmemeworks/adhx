@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.55.0](https://github.com/itsmemeworks/adhx/compare/v1.54.0...v1.55.0) (2026-08-22)
+
+
+### Features
+
+* theater round 8 — repeat modes, waiting-stage fixes, YT autoplay progress, chrome polish ([#388](https://github.com/itsmemeworks/adhx/issues/388)) ([f1552b7](https://github.com/itsmemeworks/adhx/commit/f1552b7bd1ba69b4d02d10f9e8335fd2cf253a8f))
+
 ## [1.54.0](https://github.com/itsmemeworks/adhx/compare/v1.53.0...v1.54.0) (2026-08-21)
 
 
