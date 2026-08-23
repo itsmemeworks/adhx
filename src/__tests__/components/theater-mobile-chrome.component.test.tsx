@@ -277,6 +277,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
       expect.objectContaining({ theaterTabs: { tab: 'live', onTabChange } }),
     )
+    expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument()
     // No tab buttons of its own — in the scrim or the peek bar.
     expect(screen.queryByText('My Collection')).not.toBeInTheDocument()
     expect(screen.queryByText('Collection')).not.toBeInTheDocument()
@@ -788,7 +789,7 @@ describe('TheaterMobileChrome: theaterActive prop wiring', () => {
     )
   })
 
-  it('signed-in shared preview wires Live ⇄ My Collection into the avatar menu and shows Close', () => {
+  it('signed-in shared preview wires Live ⇄ My Collection into the avatar menu and omits Close', () => {
     const onTabChange = vi.fn()
     const onClose = vi.fn()
     render(
@@ -805,8 +806,7 @@ describe('TheaterMobileChrome: theaterActive prop wiring', () => {
         theaterTabs: { tab: 'live', onTabChange },
       }),
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
-    expect(onClose).toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument()
   })
 })
 

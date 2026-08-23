@@ -32,7 +32,6 @@ import {
   VolumeX,
   Minimize2,
   Maximize2,
-  X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MatterLogo } from '@/components/matter'
@@ -400,14 +399,6 @@ export function TheaterMobileChrome({
               theaterActive
               theaterTabs={{ tab: collection.tab, onTabChange: collection.onTabChange }}
             />
-            <button
-              type="button"
-              onClick={collection.onClose}
-              aria-label="Close"
-              className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full border border-white/25 bg-white/[0.14] text-white"
-            >
-              <X size={16} />
-            </button>
           </div>
         </div>
       ) : playlist ? (
@@ -479,16 +470,6 @@ export function TheaterMobileChrome({
                   : undefined
               }
             />
-            {accountTabs ? (
-              <button
-                type="button"
-                onClick={accountTabs.onClose}
-                aria-label="Close"
-                className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full border border-white/25 bg-white/[0.14] text-white"
-              >
-                <X size={16} />
-              </button>
-            ) : null}
           </div>
         </div>
       )}

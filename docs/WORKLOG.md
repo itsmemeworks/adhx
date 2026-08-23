@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-23 — Mobile theater drops the Close X when signed in
+
+Avatar/burger already lives top-right and has Library. The extra Close next to it on collection + signed-in shared preview was redundant and shifted the menu. Desktop Close in the tab pill stays. Follow-up: none.
+
 ## 2026-08-23 — Article splash uses author; tags move to the action row
 
 `StageArticle` splash now shows the tweet-style avatar + name + `@handle` instead of an ARTICLE chip. Theater tag chips sit in the action row (not under the caption) so author/caption stay at a fixed height when scrolling, and article tags are visible. Follow-up: none.
