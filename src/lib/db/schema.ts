@@ -347,6 +347,51 @@ export const analyticsEvents = sqliteTable(
   }),
 )
 
+// Moderated posts — durable public-visibility block for a (platform, id).
+// Hiding a risky post writes here AND flips `activity.hidden` so every
+// trending/pulse/sitemap path drops it. Preview pages tombstone + noindex
+// when a row exists with hidden=1. Does NOT delete anyone's bookmark.
+export const moderatedPosts = sqliteTable(
+  'moderated_posts',
+  {
+    platform: text('platform').notNull(),
+    bookmarkId: text('bookmark_id').notNull(),
+    hidden: integer('hidden').notNull().default(1),
+    reason: text('reason'),
+    createdAt: text('created_at').notNull(),
+    createdBy: text('created_by').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.platform, table.bookmarkId] }),
+  }),
+)
+
+// Banned accounts — session + sign-in treated as signed-out. Public
+// profile / playlist pages 404; leaderboards skip the owner. Data is kept
+// so an unban restores access.
+export const userBans = sqliteTable('user_bans', {
+  userId: text('user_id').primaryKey(),
+  reason: text('reason'),
+  createdAt: text('created_at').notNull(),
+  createdBy: text('created_by').notNull(),
+})
+
+// Admin action log — who hid/banned what. `actorUserId` is never exposed
+// on a public surface; the admin overview lists actions, not raw ids.
+export const adminAudit = sqliteTable(
+  'admin_audit',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    actorUserId: text('actor_user_id').notNull(),
+    action: text('action').notNull(),
+    target: text('target'),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => ({
+    createdAtIdx: index('admin_audit_created_at_idx').on(table.createdAt),
+  }),
+)
+
 // ===========================================
 // ACCOUNTS - users + linked sign-in identities
 // ===========================================
@@ -487,6 +532,12 @@ export type CollectionEvent = typeof collectionEvents.$inferSelect
 export type NewCollectionEvent = typeof collectionEvents.$inferInsert
 export type AnalyticsEvent = typeof analyticsEvents.$inferSelect
 export type NewAnalyticsEvent = typeof analyticsEvents.$inferInsert
+export type ModeratedPost = typeof moderatedPosts.$inferSelect
+export type NewModeratedPost = typeof moderatedPosts.$inferInsert
+export type UserBan = typeof userBans.$inferSelect
+export type NewUserBan = typeof userBans.$inferInsert
+export type AdminAudit = typeof adminAudit.$inferSelect
+export type NewAdminAudit = typeof adminAudit.$inferInsert
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 export type UserIdentity = typeof userIdentities.$inferSelect

@@ -18,6 +18,8 @@ import type { TextLinkRef, TheaterQuoteRef } from '@/components/theater/types'
 import { metrics } from '@/lib/sentry'
 import { recordAnalytic } from '@/lib/analytics/record'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
+import { isPostModerated } from '@/lib/admin/moderation'
+import { MODERATED_PAGE_METADATA } from '@/lib/theater/shared-preview'
 
 type FxTweet = NonNullable<FxTwitterResponse['tweet']>
 
@@ -91,6 +93,26 @@ export default async function QuickAddPage({ params }: Props) {
   // Validate tweet ID (numeric only)
   if (!/^\d+$/.test(id)) {
     redirect('/')
+  }
+
+  if (isPostModerated('twitter', id)) {
+    const unavailableItem = tweetToTheaterItem({
+      id,
+      author: username,
+      contentType: 'text',
+      createdAt: new Date().toISOString(),
+    })
+    const { seed } = await buildSharedSeed(unavailableItem)
+    const userId = await getCurrentUserId()
+    return (
+      <TheaterShell
+        seed={seed}
+        mode="shared"
+        sharedItem={unavailableItem}
+        sharedUnavailable
+        authed={!!userId}
+      />
+    )
   }
 
   // Fetch tweet data server-side for rich preview
@@ -315,6 +337,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: 'For people who bookmark everything and read nothing.',
     }
   }
+
+  if (isPostModerated('twitter', id)) return MODERATED_PAGE_METADATA
 
   // Fetch tweet data for rich metadata
   const tweet = await getTweetData(username, id)

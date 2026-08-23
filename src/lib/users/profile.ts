@@ -12,6 +12,7 @@ import { eq, and, inArray, desc } from 'drizzle-orm'
 import { getUserIdForUsername } from '@/lib/users/lookup'
 import { getThumbnailUrl } from '@/lib/media/fxembed'
 import { getOwnerCollectionStats } from '@/lib/discovery/rank'
+import { isUserBanned } from '@/lib/admin/moderation'
 
 /**
  * Public curator-profile query — the data layer for `/t/{username}`.
@@ -143,6 +144,7 @@ function resolveThumbnail(
 async function fetchPublicProfile(usernameParam: string): Promise<PublicProfileResult> {
   const userId = await getUserIdForUsername(usernameParam)
   if (!userId) return { status: 'not_found' }
+  if (isUserBanned(userId)) return { status: 'not_found' }
 
   const shares = db
     .select({ tag: tagShares.tag })

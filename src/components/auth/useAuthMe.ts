@@ -25,6 +25,7 @@ export interface AuthMe {
     email: { email: string } | null
   }
   xConnected: boolean
+  isAdmin?: boolean
 }
 
 // Module-level cache + in-flight dedupe so every mounted consumer shares one

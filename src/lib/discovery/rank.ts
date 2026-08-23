@@ -11,6 +11,7 @@ import {
 } from '@/lib/db/schema'
 import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm'
 import { getThumbnailUrl } from '@/lib/media/fxembed'
+import { listBannedUserIds } from '@/lib/admin/moderation'
 
 /**
  * Discovery leaderboard ranking — the SINGLE audited read choke point over
@@ -362,9 +363,13 @@ function computeLeaderboard(window: RankWindow, mode: RankMode): LeaderboardEntr
 
   if (rows.length === 0) return []
 
-  const usernames = resolveUsernames([...new Set(rows.map((r) => r.ownerUserId))])
+  const banned = listBannedUserIds()
+  const visible = banned.size === 0 ? rows : rows.filter((r) => !banned.has(r.ownerUserId))
+  if (visible.length === 0) return []
 
-  const scored = rows
+  const usernames = resolveUsernames([...new Set(visible.map((r) => r.ownerUserId))])
+
+  const scored = visible
     .map((r) => {
       const viewCount = Number(r.viewCount) || 0
       const cloneCount = Number(r.cloneCount) || 0

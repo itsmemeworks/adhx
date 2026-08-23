@@ -1,4 +1,5 @@
 import { headers } from 'next/headers'
+import type { Metadata } from 'next'
 import { SharedPostStatic, type SharedPostStaticProps } from '@/components/theater/SharedPostStatic'
 import { TheaterShell } from '@/components/theater/TheaterShell'
 import { jsonLdScriptContent } from '@/lib/utils/structured-data'
@@ -8,6 +9,13 @@ import { metrics } from '@/lib/sentry'
 import { recordAnalytic } from '@/lib/analytics/record'
 import { buildSharedSeed } from './shared-seed'
 import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
+import { isPostModerated } from '@/lib/admin/moderation'
+
+export const MODERATED_PAGE_METADATA: Metadata = {
+  title: 'Post unavailable - ADHX',
+  description: 'This post is no longer available.',
+  robots: { index: false },
+}
 
 /**
  * Pulse a preview when a human opened it. Shared by Reels / TikTok / Shorts
@@ -18,6 +26,7 @@ export async function recordHumanPreview(
   event: Omit<ActivityInput, 'action'>,
 ): Promise<void> {
   if (!available) return
+  if (isPostModerated(event.platform, event.bookmarkId)) return
   if (isLikelyBot((await headers()).get('user-agent'))) return
   recordActivity({ action: 'preview', ...event })
   metrics.theaterOpened('shared')
@@ -42,13 +51,26 @@ export function SharedPreviewPage({
   seed,
   sharedItem,
   authed,
+  unavailable,
 }: {
   jsonLd: unknown
   staticPost: SharedPostStaticProps
   seed: TheaterFeedSeed
   sharedItem: TheaterItem
   authed: boolean
+  unavailable?: boolean
 }) {
+  if (unavailable) {
+    return (
+      <TheaterShell
+        seed={seed}
+        mode="shared"
+        sharedItem={sharedItem}
+        sharedUnavailable
+        authed={authed}
+      />
+    )
+  }
   return (
     <>
       <script

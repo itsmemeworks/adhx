@@ -3,6 +3,7 @@ import { consumeLoginToken, findOrCreateUserForEmail, linkEmailToUser } from '@/
 import { setSessionCookie } from '@/lib/auth/session'
 import { isSafeReturnUrl } from '@/lib/auth/return-url'
 import { recordAnalytic } from '@/lib/analytics/record'
+import { isUserBanned } from '@/lib/admin/moderation'
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
@@ -33,6 +34,9 @@ export async function GET(request: NextRequest) {
   }
 
   const { userId, username, created } = await findOrCreateUserForEmail(row.email)
+  if (isUserBanned(userId)) {
+    return NextResponse.redirect(new URL('/?auth_error=banned', BASE_URL))
+  }
   recordAnalytic({ name: 'auth.complete', userId, source: 'email' })
   const destination = row.returnTo && isSafeReturnUrl(row.returnTo) ? row.returnTo : '/'
   // Brand-new email accounts get one chance to pick a public username before

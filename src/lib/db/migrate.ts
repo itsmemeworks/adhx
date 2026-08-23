@@ -478,6 +478,37 @@ try {
 }
 
 try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS moderated_posts (
+      platform TEXT NOT NULL,
+      bookmark_id TEXT NOT NULL,
+      hidden INTEGER NOT NULL DEFAULT 1,
+      reason TEXT,
+      created_at TEXT NOT NULL,
+      created_by TEXT NOT NULL,
+      PRIMARY KEY (platform, bookmark_id)
+    );
+    CREATE TABLE IF NOT EXISTS user_bans (
+      user_id TEXT PRIMARY KEY,
+      reason TEXT,
+      created_at TEXT NOT NULL,
+      created_by TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS admin_audit (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      actor_user_id TEXT NOT NULL,
+      action TEXT NOT NULL,
+      target TEXT,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS admin_audit_created_at_idx ON admin_audit(created_at);
+  `)
+  console.log('[migrate] Ensured moderated_posts / user_bans / admin_audit tables')
+} catch (error) {
+  console.log('[migrate] Warning: failed to create admin moderation tables', error)
+}
+
+try {
   const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
   const res = db.prepare('DELETE FROM analytics_events WHERE created_at < ?').run(cutoff)
   if (res.changes > 0) {

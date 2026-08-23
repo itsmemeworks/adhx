@@ -12,6 +12,7 @@ import { findOrCreateUserForX } from '@/lib/auth/account'
 import { isSafeReturnUrl } from '@/lib/auth/return-url'
 import { metrics, captureException } from '@/lib/sentry'
 import { recordAnalytic } from '@/lib/analytics/record'
+import { isUserBanned } from '@/lib/admin/moderation'
 
 const CLIENT_ID = process.env.TWITTER_CLIENT_ID!
 const CLIENT_SECRET = process.env.TWITTER_CLIENT_SECRET!
@@ -103,6 +104,10 @@ export async function GET(request: NextRequest) {
 
     const appUserId = linkResult.userId
     const appUsername = linkResult.username
+
+    if (isUserBanned(appUserId)) {
+      return NextResponse.redirect(new URL('/?auth_error=banned', BASE_URL))
+    }
 
     // Check if this is a new user (for metrics) — keyed by the app userId,
     // since an email user linking X already has no oauth_tokens row yet.

@@ -3,12 +3,15 @@ import { getSession } from '@/lib/auth/session'
 import { getAccount } from '@/lib/auth/account'
 import { db } from '@/lib/db'
 import { users } from '@/lib/db/schema'
+import { isAdminUsername } from '@/lib/admin/guard'
+import { isUserBanned } from '@/lib/admin/moderation'
 
 const SIGNED_OUT = {
   authenticated: false,
   user: null,
   identities: { x: null, email: null },
   xConnected: false,
+  isAdmin: false,
 } as const
 
 // GET /api/auth/me - the account-aware replacement for reading auth state.
@@ -17,6 +20,10 @@ const SIGNED_OUT = {
 export async function GET() {
   const session = await getSession()
   if (!session?.userId) {
+    return NextResponse.json(SIGNED_OUT)
+  }
+
+  if (isUserBanned(session.userId)) {
     return NextResponse.json(SIGNED_OUT)
   }
 
@@ -50,5 +57,6 @@ export async function GET() {
     },
     identities: account.identities,
     xConnected: account.xConnected,
+    isAdmin: isAdminUsername(account.user.username),
   })
 }

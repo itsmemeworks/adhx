@@ -155,6 +155,42 @@ export function getAnalyticsSummary(window: AnalyticsWindow = 'week'): Analytics
   return { window, totals, byPlatform, byContentType, topPosts }
 }
 
+export interface PostAnalytics {
+  platform: string
+  bookmarkId: string
+  window: AnalyticsWindow
+  totals: Record<string, number>
+}
+
+export function getPostAnalytics(
+  platform: string,
+  bookmarkId: string,
+  window: AnalyticsWindow = 'week',
+): PostAnalytics {
+  const since = sinceIso(window)
+  const rows = db
+    .select({
+      name: analyticsEvents.name,
+      count: sql<number>`count(*)`.as('count'),
+    })
+    .from(analyticsEvents)
+    .where(
+      since
+        ? and(
+            eq(analyticsEvents.platform, platform),
+            eq(analyticsEvents.bookmarkId, bookmarkId),
+            gt(analyticsEvents.createdAt, since),
+          )
+        : and(eq(analyticsEvents.platform, platform), eq(analyticsEvents.bookmarkId, bookmarkId)),
+    )
+    .groupBy(analyticsEvents.name)
+    .all()
+
+  const totals: Record<string, number> = {}
+  for (const row of rows) totals[row.name] = Number(row.count) || 0
+  return { platform, bookmarkId, window, totals }
+}
+
 /** Test helper — unused in prod, keeps unused-import of `eq` honest if we add filters later. */
 export function analyticsEventCount(name: AnalyticEventName, sinceIsoStamp?: string): number {
   const rows = db

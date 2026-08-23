@@ -16,10 +16,12 @@ import {
 import { RelatedSaves } from '@/components/RelatedSaves'
 import { reelToTheaterItem } from '@/lib/theater/shared-seed'
 import {
+  MODERATED_PAGE_METADATA,
   recordHumanPreview,
   SharedPreviewPage,
   sharedPreviewSeed,
 } from '@/lib/theater/shared-preview'
+import { isPostModerated } from '@/lib/admin/moderation'
 import { getSavedPreviewDisplay } from '@/lib/theater/saved-preview'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
@@ -56,7 +58,8 @@ export default async function ReelPreviewPage({ params }: Props) {
   const imageUrl = hasImage
     ? `/api/media/instagram/thumbnail?id=${encodeURIComponent(id)}`
     : undefined
-  const available = saved ? true : !!meta
+  const moderated = isPostModerated('instagram', id)
+  const available = moderated ? false : saved ? true : !!meta
 
   const ua = (await headers()).get('user-agent')
   const human = !isLikelyBot(ua)
@@ -113,6 +116,7 @@ export default async function ReelPreviewPage({ params }: Props) {
       seed={seed}
       sharedItem={sharedItem}
       authed={!!userId}
+      unavailable={moderated}
       staticPost={{
         kind: 'instagram-reel',
         authorName: authorName || author,
@@ -141,6 +145,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: 'ADHX - Save now. Read never. Find always.',
     }
   }
+
+  if (isPostModerated('instagram', id)) return MODERATED_PAGE_METADATA
 
   const baseUrl = PUBLIC_BASE_URL
   const canonicalUrl = `${baseUrl}/reels/${id}`

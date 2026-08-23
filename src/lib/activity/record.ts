@@ -4,6 +4,7 @@ import { and, desc, eq, gt } from 'drizzle-orm'
 import { previewPath } from './preview-path'
 import type { TextLinkRef, TheaterQuoteRef } from '@/lib/trending/query'
 import { recordPostAnalytic } from '@/lib/analytics/record'
+import { isPostModerated, isUserBanned } from '@/lib/admin/moderation'
 
 /**
  * The public activity "pulse".
@@ -144,6 +145,8 @@ function safeParse<T>(json: string | null | undefined): T | undefined {
 export function recordActivity(input: ActivityInput): void {
   try {
     if (!input.bookmarkId || !input.author || !input.url) return
+    if (isPostModerated(input.platform, input.bookmarkId)) return
+    if (input.userId && isUserBanned(input.userId)) return
 
     // De-dupe: skip if the same (action, platform, bookmark) landed in the last
     // minute. Stops refreshes, prefetches, and double-fires from flooding.

@@ -12,6 +12,7 @@ import {
   completedWeekSlugs,
 } from '@/lib/sitemap/queries'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
+import { listModeratedPostKeys } from '@/lib/admin/moderation'
 
 /**
  * Single sitemap served at /sitemap.xml (where robots.txt points).
@@ -152,6 +153,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // collected into `twitterAuthors` for the author-hub section below.
   const seen = new Set<string>()
   const twitterAuthors = new Map<string, string>() // handle -> most-recent ISO timestamp seen
+  const moderated = listModeratedPostKeys()
   for (const platform of PLATFORMS) {
     try {
       // Saved content: distinct (platform, id) across all users — one preview
@@ -171,6 +173,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         .all()
       for (const b of saved) {
         if (!b.id || !b.author) continue
+        if (moderated.has(`${platform}:${b.id}`)) continue
         const path = previewPath(platform, b.author, b.id)
         if (seen.has(path)) continue
         seen.add(path)
@@ -207,6 +210,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         .all()
       for (const a of previewed) {
         if (!a.bookmarkId || !a.author) continue
+        if (moderated.has(`${platform}:${a.bookmarkId}`)) continue
         const path = previewPath(platform, a.author, a.bookmarkId)
         if (seen.has(path)) continue
         // Mark visited regardless of gate outcome so an older duplicate event

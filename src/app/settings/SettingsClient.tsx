@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, Suspense, useRef, type FormEvent } from 'react'
+import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import {
   CheckCircle,
@@ -21,6 +22,7 @@ import {
   Mail,
   Lock,
   AtSign,
+  Shield,
 } from 'lucide-react'
 import { SyncProgress } from '@/components/sync/SyncProgress'
 import { usePreferences, FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
@@ -49,6 +51,7 @@ interface AuthMe {
     email: { email: string } | null
   }
   xConnected: boolean
+  isAdmin?: boolean
 }
 
 interface CooldownStatus {
@@ -905,6 +908,22 @@ function SettingsPage() {
               <XCircle className="h-4 w-4" />
             </button>
           </div>
+        )}
+
+        {me?.isAdmin && (
+          <SCard
+            icon={Shield}
+            title="Admin"
+            sub="Analytics, hide posts, ban accounts"
+            right={
+              <Link
+                href="/admin"
+                className="inline-flex items-center min-h-[40px] px-4 rounded-[10px] bg-clay-grad text-white text-[13px] font-semibold"
+              >
+                Open
+              </Link>
+            }
+          />
         )}
 
         {/* Sign-in & connection */}

@@ -17,6 +17,7 @@ Allow: /api/media/
 # Everything else under /api/ is session-gated (feed, sync, auth, bookmarks)
 Disallow: /api/
 Disallow: /settings
+Disallow: /admin
 Disallow: /dev/
 Disallow: /tags
 Disallow: /welcome

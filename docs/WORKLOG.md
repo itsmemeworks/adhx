@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-23 — Admin console on Settings
+
+`/admin` (noindex) for `ADMIN_USERNAMES`. Settings shows the link when `/api/auth/me` returns `isAdmin`. Overview + analytics auto-refresh every 30s; inspect a post (URL or `platform:id`) with per-post counts and hide/restore; inspect a user and ban/unban (cannot ban self/admins); hide a playlist from the leaderboard. Hide writes `moderated_posts` so preview pages tombstone and the sitemap/pulse skip the post — bookmarks stay. Ban signs the account out and 404s their public profile/playlists. Follow-up: wire overview stats into a public `/this-week` later if wanted.
+
+---
+
 ## 2026-08-22 — Growth analytics event log
 
 Private `analytics_events` table + `recordAnalytic` choke point so we can count saves/views/shares/tags/archive/copy/open/auth/shortcut by platform and type without dumping those into the public pulse. Pulse actions dual-write; client POSTs are an allowlist. `GET /api/analytics?window=` returns aggregates and top posts with no userId. 90-day prune. Follow-up: wire these rollups into leaderboards.
