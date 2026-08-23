@@ -10,6 +10,10 @@ import {
 } from './helpers'
 
 authedTest.describe('save and clone', () => {
+  authedTest.beforeEach(async ({ page }) => {
+    await apiDeleteBookmark(page, POST.preview.id)
+  })
+
   authedTest.afterEach(async ({ page }) => {
     await apiDeleteBookmark(page, POST.preview.id)
     for (const post of CURATOR_POSTS) {
@@ -18,13 +22,16 @@ authedTest.describe('save and clone', () => {
     await apiDeleteTag(page, CLONE_TAG)
   })
 
-  authedTest('signed-in Save on a preview writes the bookmark', async ({ page }) => {
+  authedTest('signed-in landing on a preview writes the bookmark', async ({ page }) => {
     expect(await feedHasId(page, POST.preview.id)).toBe(false)
     await page.goto(`/${POST.preview.author}/status/${POST.preview.id}`)
     await expectTheaterReady(page)
-    await page.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByRole('button', { name: 'Saved' })).toBeVisible()
-    expect(await feedHasId(page, POST.preview.id)).toBe(true)
+    // New-open autosave may already have flipped Save → Saved → Tag before
+    // we click. `name: 'Save'` also matches "Saved" — use exact.
+    const save = page.getByRole('button', { name: 'Save', exact: true })
+    if (await save.isVisible()) await save.click()
+    await expect(page.getByRole('button', { name: /^(Saved|Tag)/ })).toBeVisible()
+    await expect.poll(() => feedHasId(page, POST.preview.id)).toBe(true)
   })
 
   authedTest('Save playlist clones a curator tag the viewer does not own', async ({ page }) => {

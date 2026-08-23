@@ -1,8 +1,12 @@
 import { expect } from '@playwright/test'
 import { E2E_USERNAME, PLAYLIST_TAG, POST } from './constants'
-import { authedTest, caption, expectTheaterReady, goNext } from './helpers'
+import { apiDeleteBookmark, authedTest, caption, expectTheaterReady, goNext } from './helpers'
 
 authedTest.describe('signed-in navigation', () => {
+  authedTest.afterEach(async ({ page }) => {
+    await apiDeleteBookmark(page, POST.preview.id)
+  })
+
   authedTest(
     'header and account menu reach Theater, Library, Tags, and Settings',
     async ({ page }) => {

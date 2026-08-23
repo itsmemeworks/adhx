@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-23 — E2E save-clone vs signed-in preview autosave
+
+`nav.spec` visiting a preview while authed now autosaves `POST.preview`, so `save-clone` saw the bookmark already there and then missed the Saved pill (it had become Tag; `name: 'Save'` also matches Saved). Delete first, accept Saved or Tag, poll `feedHasId`. Follow-up: none.
+
+---
+
 ## 2026-08-23 — Extension local-install docs
 
 `extension/README.md` is the walkthrough: separate `pnpm --dir extension install`, `.env` → `localhost:3001`, load unpacked from `dist/chromium`, reload after rebuild, signed-in autosave vs × badge. Root README, CONTRIBUTING, ARCHITECTURE, and CLAUDE.md point at it. Follow-up: none.
