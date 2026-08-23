@@ -36,6 +36,11 @@ export function getPhotoUrl(author: string, tweetId: string, index: number = 1):
   return `https://d.fixupx.com/${author}/status/${tweetId}/photo/${index}`
 }
 
+/** Same-origin photo proxy — Twitter's CDN often 403s hotlinks from localhost / Safari. */
+export function proxiedPhotoSrc(author: string, tweetId: string, index: number = 1): string {
+  return `/api/media/image?author=${encodeURIComponent(author)}&tweetId=${encodeURIComponent(tweetId)}&index=${index}`
+}
+
 /**
  * Get original Twitter image URL (pbs.twimg.com)
  * These URLs are more reliable but may expire

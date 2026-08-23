@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-23 — Theater photos load via the image proxy
+
+Stage photo variant was hotlinking `pbs.twimg.com`, which often 403s from localhost / Safari. Now uses `/api/media/image` (same as download) with the CDN URL as onError fallback. Follow-up: dock thumbs still use the raw pulse URL.
+
 ## 2026-08-23 — Download / Copy labels, kind lives in the icon
 
 Visible label is Download for video+photo and Copy for tweet+article. Film / image / copy / file-text icons and titles still name the kind. Follow-up: none.

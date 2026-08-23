@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { textSizeClass } from '@/components/theater/StageText'
+import { stagePhotoSrc, textSizeClass } from '@/components/theater/StageText'
 
 describe('textSizeClass', () => {
   it('renders the largest tier for short posts', () => {
@@ -27,5 +27,29 @@ describe('textSizeClass', () => {
 
   it('handles empty text', () => {
     expect(textSizeClass('')).toBe('text-4xl sm:text-5xl lg:text-6xl')
+  })
+})
+
+describe('stagePhotoSrc', () => {
+  it('uses the image proxy for Twitter photos, not a raw pbs.twimg.com URL', () => {
+    expect(
+      stagePhotoSrc({
+        platform: 'twitter',
+        author: '5Pillarsuk',
+        bookmarkId: '2063962309815345268',
+        thumbnailUrl: 'https://pbs.twimg.com/media/HKSqyHcXUAArUT8.jpg?name=orig',
+      }),
+    ).toBe('/api/media/image?author=5Pillarsuk&tweetId=2063962309815345268&index=1')
+  })
+
+  it('keeps non-Twitter thumbs as-is', () => {
+    expect(
+      stagePhotoSrc({
+        platform: 'instagram',
+        author: 'ladybird',
+        bookmarkId: 'abc',
+        thumbnailUrl: 'https://example.com/poster.jpg',
+      }),
+    ).toBe('https://example.com/poster.jpg')
   })
 })
