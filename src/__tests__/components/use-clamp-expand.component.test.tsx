@@ -10,8 +10,8 @@
  * deleted Rail.tsx into its own module.
  */
 
-import { describe, it, expect, afterEach } from 'vitest'
-import { act, renderHook } from '@testing-library/react'
+import { describe, it, expect, afterEach, vi } from 'vitest'
+import { act, render, renderHook, screen } from '@testing-library/react'
 import { resetClampExpandPreference, useClampExpand } from '@/components/theater/useClampExpand'
 
 afterEach(() => {
@@ -60,5 +60,36 @@ describe('useClampExpand — sticky expand preference', () => {
     expect(result.current.expanded).toBe(true)
     act(() => result.current.toggle())
     expect(result.current.expanded).toBe(false)
+  })
+
+  it('re-measures overflow when the caption resizes after first paint', () => {
+    let notify: ResizeObserverCallback = () => undefined
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(cb: ResizeObserverCallback) {
+          notify = cb
+        }
+        observe() {}
+        disconnect() {}
+        unobserve() {}
+      },
+    )
+
+    function Probe() {
+      const { ref, overflowing } = useClampExpand('late-layout')
+      return <p ref={ref} data-testid="cap" data-overflow={String(overflowing)} />
+    }
+
+    render(<Probe />)
+    const el = screen.getByTestId('cap')
+    expect(el.dataset.overflow).toBe('false')
+
+    Object.defineProperty(el, 'scrollHeight', { configurable: true, get: () => 200 })
+    Object.defineProperty(el, 'clientHeight', { configurable: true, get: () => 40 })
+    act(() => notify([] as unknown as ResizeObserverEntry[], {} as ResizeObserver))
+    expect(el.dataset.overflow).toBe('true')
+
+    vi.unstubAllGlobals()
   })
 })

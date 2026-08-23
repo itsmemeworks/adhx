@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-23 — Caption overflow re-measures after late layout
+
+`useClampExpand` only measured once on item change, so a 0-height first paint (hidden chrome / fonts) left overflowing false and tap-to-expand dead. ResizeObserver remasures. Follow-up: none.
+
 ## 2026-08-23 — Theater captions expand on tap
 
 Replaced the small more/less link on media captions with X-style tap-to-expand: two clamped lines with an ellipsis, tap the text to expand, tap again to collapse. Expanded state slightly darkens the media so the white text reads. Copy still lives on the action pills. Follow-up: none.

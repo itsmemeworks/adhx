@@ -29,9 +29,19 @@ export function useClampExpand(resetKey: string | null) {
   }, [resetKey])
 
   useLayoutEffect(() => {
-    if (expanded) return
     const el = ref.current
-    setOverflowing(!!el && el.scrollHeight > el.clientHeight + 1)
+    if (!el) return
+
+    const measure = () => {
+      if (expanded) return
+      setOverflowing(el.scrollHeight > el.clientHeight + 1)
+    }
+
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
   }, [resetKey, expanded])
 
   const setExpanded = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
