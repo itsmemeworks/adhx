@@ -316,6 +316,8 @@ describe('Header', () => {
 
     expect(screen.queryByText('Sync bookmarks')).not.toBeInTheDocument()
     expect(screen.queryByText(/^Sync in /)).not.toBeInTheDocument()
+    expect(screen.getByText('@tester')).toBeInTheDocument()
+    expect(screen.queryByText('tester@example.com')).not.toBeInTheDocument()
   })
 
   it('shows "Sync bookmarks" in the avatar menu for an X-connected account', async () => {

@@ -518,9 +518,8 @@ export function Header() {
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
                     <div className="absolute right-0 top-full mt-2 w-64 bg-surface rounded-card shadow-m-lg border border-hairline py-2 z-50">
-                      {/* User info at top. Email-only accounts have no @handle
-                          from X, so lead with the email instead; accounts
-                          with both show the handle plus a small email line. */}
+                      {/* User info at top. Always the ADHX username — email
+                          is a sign-in method, not the account name. */}
                       {authStatus?.authenticated && authStatus.user && (
                         <div className="px-4 py-3 border-b border-hairline">
                           <div className="flex items-center gap-3 min-w-0">
@@ -532,18 +531,11 @@ export function Header() {
                             />
                             <div className="min-w-0">
                               <p className="font-semibold text-ink font-mono truncate">
-                                {identities?.x
-                                  ? `@${identities.x.username}`
-                                  : identities?.email?.email || `@${authStatus.user.username}`}
+                                @{authStatus.user.username}
                               </p>
                               <p className="text-xs text-ink-3">
                                 {identities?.x ? 'Connected' : 'Signed in with email'}
                               </p>
-                              {identities?.x && identities?.email && (
-                                <p className="text-[11px] text-ink-3 truncate">
-                                  {identities.email.email}
-                                </p>
-                              )}
                             </div>
                           </div>
                         </div>
