@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-23 — Exclude extension from app tsc
+
+Root `tsconfig` includes `**/*.ts`, so `pnpm typecheck` / `next build` typed `extension/src` and failed in CI (`Cannot find namespace 'chrome'`) — `@types/chrome` only exists after `pnpm --dir extension install`. Exclude `extension`; it has its own tsconfig. Follow-up: none.
+
+---
+
 ## 2026-08-23 — Shared preview tags + signed-in account tabs
 
 Tagging a just-autosaved shared lead wrote the tag but the preview chrome stayed empty — `bookmark-tags-changed` only patched the personal queue. Shared mode now seeds `liveTagsByKey` and listens, so chips and Tag · N update. Signed-in previews also get the Live ⇄ My Collection cluster (same routes as `/`); the visitor LIVE badge was leftover from the signed-out chrome. Covered by chrome + TheaterShell `router.push` tests and an authed e2e on the preview path. Follow-up: none.
