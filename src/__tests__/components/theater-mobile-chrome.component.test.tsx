@@ -128,6 +128,18 @@ describe('TheaterMobileChrome: caption', () => {
     expect(screen.queryByRole('button', { name: 'more' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'less' })).not.toBeInTheDocument()
   })
+
+  it('shows tag chips in the action row, including on articles', () => {
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={textItem({ contentType: 'article', text: 'Army title' })}
+        itemTags={['ai']}
+      />,
+    )
+    expect(screen.getByText('#ai')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument()
+  })
 })
 
 describe('TheaterMobileChrome: Save/Download button hierarchy', () => {

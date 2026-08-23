@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-23 — Article splash uses author; tags move to the action row
+
+`StageArticle` splash now shows the tweet-style avatar + name + `@handle` instead of an ARTICLE chip. Theater tag chips sit in the action row (not under the caption) so author/caption stay at a fixed height when scrolling, and article tags are visible. Follow-up: none.
+
 ## 2026-08-23 — Caption overflow re-measures after late layout
 
 `useClampExpand` only measured once on item change, so a 0-height first paint (hidden chrome / fonts) left overflowing false and tap-to-expand dead. ResizeObserver remasures. Follow-up: none.

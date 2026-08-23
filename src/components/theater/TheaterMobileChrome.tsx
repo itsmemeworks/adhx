@@ -568,15 +568,13 @@ export function TheaterMobileChrome({
                 expandedMaxClass="max-h-[38dvh]"
               />
             )}
-
-            {/* Tag chips — collection / live / signed-in shared preview. */}
-            <TheaterTagChips
-              tags={displayTags}
-              className="mt-1.5 flex flex-wrap items-center gap-1.5"
-            />
           </div>
 
           <div className="flex items-center justify-end gap-2">
+            <TheaterTagChips
+              tags={displayTags}
+              className="flex min-w-0 flex-1 flex-nowrap items-center justify-end gap-1.5 overflow-x-auto"
+            />
             {sendFile.supported ? (
               <StageIconButton
                 onClick={() => {

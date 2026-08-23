@@ -564,14 +564,12 @@ export function DesktopStageChrome({
               className="text-[15px] leading-snug"
             />
           )}
-
-          {/* Tag chips — collection / live / signed-in shared preview.
-              Text/quote/article on the collection stage paint their own. */}
-          <TheaterTagChips tags={displayTags} />
         </div>
       )}
 
-      {/* Bottom-right: Download / Link / Tag / Open — Collection adds Archive. */}
+      {/* Bottom-right: chips sit in the action row so author+caption stay
+          at a fixed height whether the post is tagged or not. Articles
+          (no left overlay) still show their tags here. */}
       {current ? (
         <div
           className={cn(
@@ -579,133 +577,139 @@ export function DesktopStageChrome({
             declutter && 'translate-y-3 opacity-0 pointer-events-none',
           )}
         >
-          {sendFile.supported ? (
-            <button
-              type="button"
-              onClick={() => void sendFile.send()}
-              disabled={sendFile.sending}
-              title={
-                sendFile.mode === 'share'
-                  ? `Opens your share sheet with the ${kind === 'photo' ? 'photo' : 'video'}`
-                  : fileAction.title
-              }
-              className={cn(GLASS, sendFile.primed && 'border-clay')}
-            >
-              {/* Same contract as the mobile pill: the spinner covers the file
+          <TheaterTagChips
+            tags={displayTags}
+            className="flex max-w-[min(28vw,16rem)] flex-nowrap items-center justify-end gap-1.5 overflow-x-auto"
+          />
+          <div className="flex items-center gap-2">
+            {sendFile.supported ? (
+              <button
+                type="button"
+                onClick={() => void sendFile.send()}
+                disabled={sendFile.sending}
+                title={
+                  sendFile.mode === 'share'
+                    ? `Opens your share sheet with the ${kind === 'photo' ? 'photo' : 'video'}`
+                    : fileAction.title
+                }
+                className={cn(GLASS, sendFile.primed && 'border-clay')}
+              >
+                {/* Same contract as the mobile pill: the spinner covers the file
                   fetch a tap starts, and `primed` asks for the second tap the
                   share sheet needs rather than downgrading to a link. Reachable
                   here on a tablet, which gets this chrome at lg+ widths. */}
-              {sendFile.sending ? (
-                <Loader2 size={14} className="animate-spin" />
+                {sendFile.sending ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <fileAction.Icon size={14} />
+                )}
+                <span>
+                  {sendFile.sending
+                    ? 'Getting file'
+                    : sendFile.primed
+                      ? 'Tap again'
+                      : fileAction.label}
+                </span>
+              </button>
+            ) : textLike && caption ? (
+              // Text-like posts have no file — the slot copies tweet text or
+              // the article, labeled so it's clear what you get.
+              <button
+                type="button"
+                onClick={() => void copyText()}
+                title={copyAction.title}
+                className={GLASS}
+              >
+                {textCopied ? (
+                  <Check size={14} className="text-done" />
+                ) : (
+                  <copyAction.Icon size={14} />
+                )}
+                <span>{textCopied ? copyAction.copiedLabel : copyAction.idleLabel}</span>
+              </button>
+            ) : null}
+            <button type="button" onClick={() => void copyLink()} className={GLASS}>
+              {linkCopied ? <Check size={14} className="text-done" /> : <LinkIcon size={14} />}
+              <span>{linkCopied ? 'Copied' : 'Link'}</span>
+            </button>
+            {playlist ? (
+              isPlaylistOwner ? (
+                <a href={`/library?tag=${encodeURIComponent(playlist.tag)}`} className={GLASS}>
+                  <TagIcon size={14} />
+                  <span>Manage playlist</span>
+                </a>
               ) : (
-                <fileAction.Icon size={14} />
-              )}
-              <span>
-                {sendFile.sending
-                  ? 'Getting file'
-                  : sendFile.primed
-                    ? 'Tap again'
-                    : fileAction.label}
-              </span>
-            </button>
-          ) : textLike && caption ? (
-            // Text-like posts have no file — the slot copies tweet text or
-            // the article, labeled so it's clear what you get.
-            <button
-              type="button"
-              onClick={() => void copyText()}
-              title={copyAction.title}
-              className={GLASS}
-            >
-              {textCopied ? (
-                <Check size={14} className="text-done" />
-              ) : (
-                <copyAction.Icon size={14} />
-              )}
-              <span>{textCopied ? copyAction.copiedLabel : copyAction.idleLabel}</span>
-            </button>
-          ) : null}
-          <button type="button" onClick={() => void copyLink()} className={GLASS}>
-            {linkCopied ? <Check size={14} className="text-done" /> : <LinkIcon size={14} />}
-            <span>{linkCopied ? 'Copied' : 'Link'}</span>
-          </button>
-          {playlist ? (
-            isPlaylistOwner ? (
-              <a href={`/library?tag=${encodeURIComponent(playlist.tag)}`} className={GLASS}>
-                <TagIcon size={14} />
-                <span>Manage playlist</span>
-              </a>
-            ) : (
-              <SavePlaylistButton
-                count={playlist.count}
-                status={saveStatus}
-                onSave={() => onSavePlaylist?.()}
-                className={SAVE_OUTLINE}
-              />
-            )
-          ) : collection?.tab === 'collection' ? (
-            <button
-              type="button"
-              onClick={collection.onTag}
-              className={cn(GLASS, tagCount > 0 && 'border-clay/50 text-clay')}
-            >
-              <TagIcon size={14} fill={tagCount > 0 ? 'currentColor' : 'none'} />
-              <span>{tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}</span>
-            </button>
-          ) : (mode === 'shared' && authed) || collection?.tab === 'live' ? (
-            collection?.tab === 'live' ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => collection.onLiveTag?.(current)}
-                  title="Tag this post (saves it to your collection first)"
-                  className={cn(GLASS, tagCount > 0 && 'border-clay/50 text-clay')}
-                >
-                  <TagIcon size={14} fill={tagCount > 0 ? 'currentColor' : 'none'} />
-                  <span>{tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}</span>
-                </button>
-                <PersonalLiveSaveButton
-                  current={current}
-                  collection={collection}
+                <SavePlaylistButton
+                  count={playlist.count}
+                  status={saveStatus}
+                  onSave={() => onSavePlaylist?.()}
                   className={SAVE_OUTLINE}
                 />
-              </>
+              )
+            ) : collection?.tab === 'collection' ? (
+              <button
+                type="button"
+                onClick={collection.onTag}
+                className={cn(GLASS, tagCount > 0 && 'border-clay/50 text-clay')}
+              >
+                <TagIcon size={14} fill={tagCount > 0 ? 'currentColor' : 'none'} />
+                <span>{tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}</span>
+              </button>
+            ) : (mode === 'shared' && authed) || collection?.tab === 'live' ? (
+              collection?.tab === 'live' ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => collection.onLiveTag?.(current)}
+                    title="Tag this post (saves it to your collection first)"
+                    className={cn(GLASS, tagCount > 0 && 'border-clay/50 text-clay')}
+                  >
+                    <TagIcon size={14} fill={tagCount > 0 ? 'currentColor' : 'none'} />
+                    <span>{tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}</span>
+                  </button>
+                  <PersonalLiveSaveButton
+                    current={current}
+                    collection={collection}
+                    className={SAVE_OUTLINE}
+                  />
+                </>
+              ) : (
+                <SavePostButton
+                  current={current}
+                  className={SAVE_OUTLINE}
+                  tags={displayTags}
+                  onTag={onSharedTag ? () => onSharedTag(current) : undefined}
+                />
+              )
             ) : (
-              <SavePostButton
-                current={current}
-                className={SAVE_OUTLINE}
-                tags={displayTags}
-                onTag={onSharedTag ? () => onSharedTag(current) : undefined}
-              />
-            )
-          ) : (
-            <button type="button" onClick={() => onRequestSignIn?.()} className={SAVE_OUTLINE}>
-              <Bookmark size={14} />
-              <span>Save</span>
-            </button>
-          )}
-          {openUrl && (
-            <a
-              href={openUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              title={`Open on ${platformLabel}`}
-              className={GLASS}
-              onClick={() =>
-                current &&
-                pingAnalytic('post.open', {
-                  platform: current.platform,
-                  id: current.bookmarkId || undefined,
-                })
-              }
-            >
-              <ExternalLink size={14} />
-              <span>Open</span>
-            </a>
-          )}
-          {collection?.tab === 'collection' && (
-            <TheaterCollectionActions collection={collection} variant="desktop" />
-          )}
+              <button type="button" onClick={() => onRequestSignIn?.()} className={SAVE_OUTLINE}>
+                <Bookmark size={14} />
+                <span>Save</span>
+              </button>
+            )}
+            {openUrl && (
+              <a
+                href={openUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`Open on ${platformLabel}`}
+                className={GLASS}
+                onClick={() =>
+                  current &&
+                  pingAnalytic('post.open', {
+                    platform: current.platform,
+                    id: current.bookmarkId || undefined,
+                  })
+                }
+              >
+                <ExternalLink size={14} />
+                <span>Open</span>
+              </a>
+            )}
+            {collection?.tab === 'collection' && (
+              <TheaterCollectionActions collection={collection} variant="desktop" />
+            )}
+          </div>
         </div>
       ) : null}
     </div>

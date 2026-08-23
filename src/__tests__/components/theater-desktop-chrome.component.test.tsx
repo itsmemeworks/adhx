@@ -703,7 +703,19 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
     expect(saveBtn.closest('button')!.className).toContain('border-clay')
   })
 
-  it('shared+authed shows caption chips and Tag · N when the lead has tags', async () => {
+  it('shows tag chips next to the actions, including on articles', () => {
+    render(
+      <DesktopStageChrome
+        {...stageBase}
+        current={textItem({ contentType: 'article', text: 'Army title' })}
+        itemTags={['ai']}
+      />,
+    )
+    expect(screen.getByText('#ai')).toBeInTheDocument()
+    expect(screen.getByText('Copy')).toBeInTheDocument()
+  })
+
+  it('shared+authed shows action-row chips and Tag · N when the lead has tags', async () => {
     resetSavePostOwnershipCache()
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
