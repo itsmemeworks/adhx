@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.60.0](https://github.com/itsmemeworks/adhx/compare/v1.59.0...v1.60.0) (2026-08-23)
+
+
+### Features
+
+* name theater download/copy by what you get ([#402](https://github.com/itsmemeworks/adhx/issues/402)) ([400d47f](https://github.com/itsmemeworks/adhx/commit/400d47f4433b883a524cbdd87fff19b4740a73f7))
+
+
+### Bug Fixes
+
+* load theater photos through the image proxy ([#403](https://github.com/itsmemeworks/adhx/issues/403)) ([e3fffbe](https://github.com/itsmemeworks/adhx/commit/e3fffbe52134e833864a6afa4fc7c55332539e95))
+
 ## [1.59.0](https://github.com/itsmemeworks/adhx/compare/v1.58.0...v1.59.0) (2026-08-23)
 
 
