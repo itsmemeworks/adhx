@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-23 — Desktop Save to ADHX extension
+
+`extension/` is an [Extension.js](https://extension.js.org) MV3 package: toolbar click, right-click, or ⌘⇧A on an X / IG / TikTok / YouTube post opens `/share?url=` (same target as the iOS shortcut and PWA share). No content scripts; `activeTab` + `contextMenus` only. Not on the Chrome Web Store yet — load unpacked from `extension/dist/chromium`. Bookmarklet stays the no-install fallback. Follow-up: store listing once it feels as easy as Share → ADHX.
+
+---
+
 ## 2026-08-23 — Autosave shared preview on new open
 
 Signed-in landing on a preview URL now saves that lead (`TheaterShell` + `sharedAutoSaveReason`). Fires only for a new open: prefix / typed URL / paste (`adhx-preview-open-intent`) / `/share`. Skips reload (theater address-bar rewrite), back/forward, `/trending` clicks, home/personal/playlist, signed-out, and unavailable leads. `?save=1` still completes an explicit save after sign-in. Dwell is unchanged (`/api/activity/preview` only). The shared Save pill pops "Saved" then morphs to Tag (opens the picker); live-tab Save collapses out next to Tag. Follow-up: none.

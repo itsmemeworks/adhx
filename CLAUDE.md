@@ -538,11 +538,11 @@ Key files:
 
 The app offers multiple ways to save tweets, shown contextually based on the user's platform:
 
-| Platform | Primary Method                                   | Fallback                                                             |
-| -------- | ------------------------------------------------ | -------------------------------------------------------------------- |
-| iOS      | One-tap iCloud shortcut (Share → ADHX) — X today | URL prefix + hand-built `/share?url=` shortcut for IG/TikTok/YouTube |
-| Desktop  | Bookmarklet (drag to toolbar)                    | URL prefix trick                                                     |
-| Android  | Bookmarklet + PWA Share Target                   | URL prefix trick                                                     |
+| Platform | Primary Method                                                         | Fallback                                                             |
+| -------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| iOS      | One-tap iCloud shortcut (Share → ADHX) — X today                       | URL prefix + hand-built `/share?url=` shortcut for IG/TikTok/YouTube |
+| Desktop  | Extension (`extension/` — toolbar / right-click / ⌘⇧A → `/share?url=`) | Bookmarklet + URL prefix + theater paste                             |
+| Android  | Bookmarklet + PWA Share Target                                         | URL prefix trick                                                     |
 
 **Mobile paste-first save (Tier 1)**: "Copy Link" in any share sheet → open ADHX → tap **Paste link**. `PasteLinkButton` (`src/components/PasteLinkButton.tsx`) reads the clipboard via a user-gesture-gated `navigator.clipboard.readText()` (must fire directly inside the click handler, never on mount) and navigates through the shared `navigateToPastedLink` helper (`src/lib/utils/parse-share-url.ts`) — the same CodeQL-hardened navigation shape (TikTok short links → hard nav to `/api/tiktok/resolve?url=…&go=1` built from a constant prefix + `encodeURIComponent`; everything else → `router.push` guarded by `isSafeInternalPath`) shared with `LandingPage`'s hero input. States: idle / resolving / a brief self-clearing "not a supported link" error; when the Clipboard API is unavailable, denied, or the clipboard is empty, it expands an inline URL input instead of dead-ending. Mounted mobile-only (`sm:hidden`) above the Collection feed (`src/app/AuthedHome.tsx`) and in the empty-state onboarding (`EmptyAccountOnboarding.tsx`), and icon-only (`iconOnly`) in the theater's mobile top bar (`TheaterMobileChrome.tsx`) — the touch equivalent of desktop's ⌘V paste-to-preview, which has no paste gesture on mobile Safari.
 
@@ -590,6 +590,7 @@ javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tikt
 - `src/app/settings/SettingsClient.tsx` — `ShortcutCard` component (platform-aware)
 - `src/app/share/page.tsx` — PWA Share Target landing page
 - `src/lib/utils/parse-share-url.ts` — Tweet URL parsing for share target
+- `extension/` — desktop Save to ADHX (Extension.js). Toolbar / context menu / ⌘⇧A → `/share?url=`. Unpacked only until a store listing.
 
 ### Typography & Reading Preferences
 

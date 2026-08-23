@@ -15,7 +15,7 @@ ADHX turns the stuff you save from **X, Instagram, TikTok, and YouTube** into so
 
 ## What it does
 
-- **Save from four platforms** — swap any link's host to `adhx.com` (`x.com/user/status/123` → `adhx.com/user/status/123`), use the share sheet / bookmarklet / iOS shortcut, or sync your X bookmarks in one click. On mobile: **Copy Link** in any share sheet → open ADHX → tap **Paste link**.
+- **Save from four platforms** — swap any link's host to `adhx.com` (`x.com/user/status/123` → `adhx.com/user/status/123`), use the share sheet / iOS shortcut / desktop extension (`extension/`) / bookmarklet, or sync your X bookmarks in one click. On mobile: **Copy Link** in any share sheet → open ADHX → tap **Paste link**.
 - **Every post gets a preview page** — clean, fast, shareable, and indexable, with inline playback. No login needed to view.
 - **The theater** — one full-screen player for everything: the community **Live** pulse at `/`, **My Collection** at `/collection`, and any shared playlist. Keyboard-driven, autoplaying, auto-advancing. The grid over your saves is the **library** at `/library`.
 - **Archive** — take a post out of the active queue (private — it never appears on the public pulse). Flip **Show archived** in the library when you want it back.

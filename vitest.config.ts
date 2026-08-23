@@ -9,7 +9,7 @@ export default defineConfig({
     // Anchored to src/ — a bare '**/*.test.ts' sweeps copies of the repo
     // under .claude/worktrees/ (parallel agent checkouts) and their
     // node_modules, ballooning the run to thousands of foreign tests.
-    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'extension/src/**/*.test.ts'],
     exclude: ['node_modules', '.next'],
     globals: true,
     // jsdom is opted into per-file via a `@vitest-environment jsdom` docblock
