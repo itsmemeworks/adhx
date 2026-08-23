@@ -590,7 +590,7 @@ javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tikt
 - `src/app/settings/SettingsClient.tsx` — `ShortcutCard` component (platform-aware)
 - `src/app/share/page.tsx` — PWA Share Target landing page
 - `src/lib/utils/parse-share-url.ts` — Tweet URL parsing for share target
-- `extension/` — desktop Save to ADHX (Extension.js). Toolbar / context menu / ⌘⇧A → `/share?url=`. Unpacked only until a store listing.
+- `extension/` — desktop Save to ADHX (Extension.js). Toolbar / context menu / ⌘⇧A → `/share?url=`. Unpacked only until a store listing. **Local:** `pnpm --dir extension install`, set `EXTENSION_PUBLIC_APP_ORIGIN=http://localhost:3001` in `extension/.env` (gitignored; copy `.env.example`), `pnpm --dir extension build`, Chrome → Load unpacked → `extension/dist/chromium`. Rebuild + Reload after env/source changes. Root `tsconfig` **excludes** `extension` so CI `tsc` / `next build` do not need `@types/chrome`. Walkthrough: `extension/README.md`.
 
 ### Typography & Reading Preferences
 

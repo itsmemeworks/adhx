@@ -67,6 +67,21 @@ pnpm build       # production build
 
 See [`.env.example`](.env.example) for every variable, [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow, and [CLAUDE.md](CLAUDE.md) if you're pointing a coding agent at this repo.
 
+### Desktop extension (optional)
+
+Save an X / Instagram / TikTok / YouTube post in one click while you browse. Not on the Chrome Web Store yet — load it unpacked. Full walkthrough: [`extension/README.md`](extension/README.md).
+
+```bash
+# App already running at http://localhost:3001
+pnpm --dir extension install
+cp extension/.env.example extension/.env   # EXTENSION_PUBLIC_APP_ORIGIN=http://localhost:3001
+pnpm --dir extension build
+```
+
+Chrome → `chrome://extensions` → **Developer mode** → **Load unpacked** → `extension/dist/chromium`. Pin the toolbar icon. Then on a post: toolbar click, right-click → **Save to ADHX**, or `⌘⇧A` / `Ctrl+Shift+A`. That opens `/share?url=` on your local app (signed-in autosave + theater). After you change `.env` or source, rebuild and click **Reload** on the extension card.
+
+A session on `adhx.com` does not apply to `localhost:3001` — sign in on the origin the extension opens. On an unsupported tab the toolbar flashes **×** and stays put; right-click a real post link still works.
+
 ## Self-hosting
 
 The `Dockerfile` builds a standalone image that migrates its own database on startup:

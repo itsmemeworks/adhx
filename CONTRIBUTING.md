@@ -92,6 +92,10 @@ pnpm typecheck
 
 # Browser tests (isolated Next on :3002 + data/e2e.db — not your :3001 / adhdone.db)
 pnpm test:e2e
+
+# Desktop extension (separate package — see extension/README.md)
+pnpm --dir extension install
+pnpm extension:build
 ```
 
 Do not point Playwright at a personal local database. `pnpm test` does not run e2e.

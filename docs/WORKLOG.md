@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-23 — Extension local-install docs
+
+`extension/README.md` is the walkthrough: separate `pnpm --dir extension install`, `.env` → `localhost:3001`, load unpacked from `dist/chromium`, reload after rebuild, signed-in autosave vs × badge. Root README, CONTRIBUTING, ARCHITECTURE, and CLAUDE.md point at it. Follow-up: none.
+
+---
+
 ## 2026-08-23 — Exclude extension from app tsc
 
 Root `tsconfig` includes `**/*.ts`, so `pnpm typecheck` / `next build` typed `extension/src` and failed in CI (`Cannot find namespace 'chrome'`) — `@types/chrome` only exists after `pnpm --dir extension install`. Exclude `extension`; it has its own tsconfig. Follow-up: none.
