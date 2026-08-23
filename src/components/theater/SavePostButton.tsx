@@ -138,6 +138,8 @@ export function SavePostButton({
 
   const tagCount = tags?.length ?? 0
   const tagLabel = tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'
+  const hotkeyAction =
+    status === 'tag' ? 'tag' : status === 'idle' || status === 'error' ? 'save' : undefined
   const visibleLabel =
     status === 'saved'
       ? 'Saved'
@@ -187,6 +189,7 @@ export function SavePostButton({
               : tagLabel
             : undefined
       }
+      data-theater-action={hotkeyAction}
     >
       <span
         key={status}
@@ -249,6 +252,7 @@ export function PersonalLiveSaveButton({
       )}
       aria-label={iconOnly ? 'Save' : undefined}
       tabIndex={exiting ? -1 : undefined}
+      data-theater-action={exiting ? undefined : 'save'}
     >
       <Bookmark size={iconSize} />
       {!iconOnly && <span>Save</span>}

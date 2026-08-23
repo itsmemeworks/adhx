@@ -22,6 +22,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { useTheaterActionHotkeys } from './useTheaterActionHotkeys'
 import Link from 'next/link'
 import {
   Bookmark,
@@ -283,9 +284,11 @@ export function DesktopStageChrome({
     ? sourceUrl(current.platform, current.author, current.bookmarkId ?? '')
     : null
   const { linkCopied, textCopied, copyLink, copyText } = useTheaterCopy(current, caption)
+  const rootRef = useRef<HTMLDivElement>(null)
+  useTheaterActionHotkeys('desktop', rootRef)
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-10 hidden lg:block">
+    <div ref={rootRef} className="pointer-events-none absolute inset-0 z-10 hidden lg:block">
       {/* Top bar: brand + LIVE left, meta chips (text-like
           posts only) + paste-a-link + de-clutter right. */}
       <div
@@ -592,6 +595,7 @@ export function DesktopStageChrome({
                   : fileAction.title
               }
               className={cn(GLASS, sendFile.primed && 'border-clay')}
+              data-theater-action="download"
             >
               {/* Same contract as the mobile pill: the spinner covers the file
                   fetch a tap starts, and `primed` asks for the second tap the
@@ -618,6 +622,7 @@ export function DesktopStageChrome({
               onClick={() => void copyText()}
               title={copyAction.title}
               className={GLASS}
+              data-theater-action="copy"
             >
               {textCopied ? (
                 <Check size={14} className="text-done" />
@@ -627,7 +632,12 @@ export function DesktopStageChrome({
               <span>{textCopied ? copyAction.copiedLabel : copyAction.idleLabel}</span>
             </button>
           ) : null}
-          <button type="button" onClick={() => void copyLink()} className={GLASS}>
+          <button
+            type="button"
+            onClick={() => void copyLink()}
+            className={GLASS}
+            data-theater-action="link"
+          >
             {linkCopied ? <Check size={14} className="text-done" /> : <LinkIcon size={14} />}
             <span>{linkCopied ? 'Copied' : 'Link'}</span>
           </button>
@@ -650,6 +660,7 @@ export function DesktopStageChrome({
               type="button"
               onClick={collection.onTag}
               className={cn(GLASS, tagCount > 0 && 'border-clay/50 text-clay')}
+              data-theater-action="tag"
             >
               <TagIcon size={14} fill={tagCount > 0 ? 'currentColor' : 'none'} />
               <span>{tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}</span>
@@ -662,6 +673,7 @@ export function DesktopStageChrome({
                   onClick={() => collection.onLiveTag?.(current)}
                   title="Tag this post (saves it to your collection first)"
                   className={cn(GLASS, tagCount > 0 && 'border-clay/50 text-clay')}
+                  data-theater-action="tag"
                 >
                   <TagIcon size={14} fill={tagCount > 0 ? 'currentColor' : 'none'} />
                   <span>{tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}</span>
@@ -681,7 +693,12 @@ export function DesktopStageChrome({
               />
             )
           ) : (
-            <button type="button" onClick={() => onRequestSignIn?.()} className={SAVE_OUTLINE}>
+            <button
+              type="button"
+              onClick={() => onRequestSignIn?.()}
+              className={SAVE_OUTLINE}
+              data-theater-action="save"
+            >
               <Bookmark size={14} />
               <span>Save</span>
             </button>
@@ -693,6 +710,7 @@ export function DesktopStageChrome({
               rel="noopener noreferrer"
               title={`Open on ${platformLabel}`}
               className={GLASS}
+              data-theater-action="open"
               onClick={() =>
                 current &&
                 pingAnalytic('post.open', {

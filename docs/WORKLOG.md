@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-23 — Theater is the only keyboard surface
+
+Library and Settings no longer bind keys (the old gallery/focus cheatsheet is gone). Theater gets a full desktop map: arrows/jk, Space, M, S/T/L/C/D/O/A, U undo, `.` menu, ⌘V/Ctrl+V paste (OS event), Shift+? help overlay. Action keys click `[data-theater-action]` on the visible chrome only. Covered by unit tests plus `e2e/theater-shortcuts.spec.ts` (help, menu, S/T/A/U, library no-ops). Follow-up: none.
+
 ## 2026-08-23 — Theater photos load via the image proxy
 
 Stage photo variant was hotlinking `pbs.twimg.com`, which often 403s from localhost / Safari. Now uses `/api/media/image` (same as download) with the CDN URL as onError fallback. Follow-up: dock thumbs still use the raw pulse URL.

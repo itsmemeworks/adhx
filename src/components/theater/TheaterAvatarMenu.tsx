@@ -13,6 +13,7 @@ import { useAuthMe } from '@/components/auth'
 import { cn } from '@/lib/utils'
 import { PERSONAL_TAB_ORDER, PERSONAL_TAB_LABEL, type PersonalTab } from './types'
 import { generateAvatarDataUri, usableAvatarUrl } from '@/lib/avatar/generated-avatar'
+import { THEATER_SHORTCUT_KEYS } from './theater-shortcuts'
 
 // The theater is ALWAYS dark regardless of the site's light/dark theme, so
 // the dropdown panel uses a hardcoded palette rather than the Matter theme
@@ -22,23 +23,6 @@ const BORDER = '#322b23'
 const INK = '#f3ece0'
 const MUTED = '#857a69'
 const SUBTLE = '#b8ac99'
-
-// Keys the theater's window-level keydown handler acts on. Stop them from
-// bubbling past the open menu so ↓/↑/space/m don't drive the background
-// stage. Escape is handled separately (it closes the menu instead).
-const THEATER_SHORTCUT_KEYS = new Set([
-  ' ',
-  'ArrowUp',
-  'ArrowDown',
-  'ArrowLeft',
-  'ArrowRight',
-  'm',
-  'M',
-  'j',
-  'J',
-  'k',
-  'K',
-])
 
 /** The "you are here" marker for the current screen's menu row (round 8,
  * owner: it wasn't obvious from the burger which screen was loaded). */
@@ -257,6 +241,12 @@ export function TheaterAvatarMenu({
       const target = e.target as HTMLElement | null
       const tag = target?.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return
+      // `.` toggles this menu via the theater handler clicking the trigger.
+      // `?` opens help — close the menu so the overlay is not stacked under it.
+      if (e.key === '.' || e.key === '?' || (e.key === '/' && e.shiftKey)) {
+        if (e.key !== '.') setOpen(false)
+        return
+      }
       if (THEATER_SHORTCUT_KEYS.has(e.key)) {
         e.stopPropagation()
       }
@@ -303,6 +293,7 @@ export function TheaterAvatarMenu({
           aria-label="Menu"
           aria-haspopup="menu"
           aria-expanded={open}
+          data-theater-action="menu"
           onClick={() => setOpen((v) => !v)}
           className="flex h-10 w-10 flex-none items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md transition-colors hover:bg-white/20"
         >
@@ -378,6 +369,7 @@ export function TheaterAvatarMenu({
         aria-label="Account menu"
         aria-haspopup="menu"
         aria-expanded={open}
+        data-theater-action="menu"
         onClick={() => setOpen((v) => !v)}
         className="flex h-10 w-10 flex-none items-center justify-center overflow-hidden rounded-full border border-white/25 bg-white/10 text-[13px] font-semibold text-white backdrop-blur-md transition-colors hover:bg-white/20"
       >

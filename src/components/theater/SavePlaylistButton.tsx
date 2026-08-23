@@ -57,6 +57,7 @@ export function SavePlaylistButton({
               : `Save playlist · ${count}`
         }
         className={className}
+        data-theater-action="save"
       >
         {status === 'saving' ? (
           <Loader2 size={16} className="animate-spin" />
@@ -77,7 +78,13 @@ export function SavePlaylistButton({
   }
 
   return (
-    <button type="button" onClick={onSave} disabled={status === 'saving'} className={className}>
+    <button
+      type="button"
+      onClick={onSave}
+      disabled={status === 'saving'}
+      className={className}
+      data-theater-action="save"
+    >
       {status === 'saving' ? (
         <Loader2 size={14} className="animate-spin" />
       ) : (

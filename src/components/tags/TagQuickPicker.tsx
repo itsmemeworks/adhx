@@ -5,6 +5,7 @@ import { notifyTagsChanged } from '@/lib/client-events'
 import { Check, Loader2, Plus, Tag as TagIcon, X } from 'lucide-react'
 import { kebabTagInput, sanitizeTag } from '@/lib/utils/tag'
 import type { TagItem } from '@/components/feed/types'
+import { THEATER_SHORTCUT_KEYS } from '@/components/theater/theater-shortcuts'
 
 export interface TagQuickPickerProps {
   platform: string
@@ -23,22 +24,6 @@ const PANEL = '#201b16'
 const BORDER = '#322b23'
 const ACCENT = '#d26b40'
 const ERROR = '#e08a6a'
-
-// Keys the theater's window-level keydown handler acts on — blocked from
-// bubbling past the popover while it's open, mirroring SignInModal.tsx.
-const THEATER_SHORTCUT_KEYS = new Set([
-  ' ',
-  'ArrowUp',
-  'ArrowDown',
-  'ArrowLeft',
-  'ArrowRight',
-  'm',
-  'M',
-  'j',
-  'J',
-  'k',
-  'K',
-])
 
 /**
  * Shared dark popover for tagging a single post — used by the collection

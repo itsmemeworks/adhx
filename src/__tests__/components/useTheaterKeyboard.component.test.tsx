@@ -106,4 +106,98 @@ describe('useTheaterKeyboard: isPlaybackHidden space guard', () => {
     act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' })))
     expect(args.goNext).toHaveBeenCalledTimes(1)
   })
+
+  it('dispatches action events for save/tag/link/menu', () => {
+    const heard = vi.fn()
+    window.addEventListener('theater-save', heard)
+    window.addEventListener('theater-tag', heard)
+    window.addEventListener('theater-copy-link', heard)
+    window.addEventListener('theater-toggle-menu', heard)
+    try {
+      renderHook(() => useTheaterKeyboard(baseArgs()))
+      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 's' })))
+      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 't' })))
+      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'l' })))
+      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: '.' })))
+      expect(heard).toHaveBeenCalledTimes(4)
+    } finally {
+      window.removeEventListener('theater-save', heard)
+      window.removeEventListener('theater-tag', heard)
+      window.removeEventListener('theater-copy-link', heard)
+      window.removeEventListener('theater-toggle-menu', heard)
+    }
+  })
+
+  it('Shift+? toggles help and blocks other keys while help is open', () => {
+    const onToggleHelp = vi.fn()
+    const args = baseArgs({ helpOpen: true, onToggleHelp })
+    renderHook(() => useTheaterKeyboard(args))
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: '?' })))
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' })))
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 's' })))
+    expect(onToggleHelp).toHaveBeenCalledTimes(1)
+    expect(args.goNext).not.toHaveBeenCalled()
+  })
+
+  it('opens help when closed, mutes, and dispatches the rest of the action map', () => {
+    const onToggleHelp = vi.fn()
+    const heard: string[] = []
+    const names = [
+      'theater-copy-text',
+      'theater-send-file',
+      'theater-open',
+      'theater-archive',
+    ] as const
+    const listeners = names.map((name) => {
+      const fn = () => heard.push(name)
+      window.addEventListener(name, fn)
+      return { name, fn }
+    })
+    const args = baseArgs({ onToggleHelp })
+    try {
+      renderHook(() => useTheaterKeyboard(args))
+      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: '?' })))
+      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'm' })))
+      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'c' })))
+      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'd' })))
+      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'o' })))
+      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' })))
+      expect(onToggleHelp).toHaveBeenCalledTimes(1)
+      expect(args.setMuted).toHaveBeenCalledTimes(1)
+      expect(heard).toEqual([...names])
+    } finally {
+      for (const { name, fn } of listeners) {
+        window.removeEventListener(name, fn)
+      }
+    }
+  })
+
+  it('Escape closes the personal theater and is ignored on Live', () => {
+    const personal = baseArgs({ isPersonal: true, personalTab: 'live', onClose: vi.fn() })
+    renderHook(() => useTheaterKeyboard(personal))
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })))
+    expect(personal.onClose).toHaveBeenCalledTimes(1)
+
+    const live = baseArgs({ isPersonal: false, onClose: vi.fn() })
+    renderHook(() => useTheaterKeyboard(live))
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })))
+    expect(live.onClose).not.toHaveBeenCalled()
+  })
+
+  it('ignores keys while typing and ⌘S / Ctrl+S', () => {
+    const heard = vi.fn()
+    window.addEventListener('theater-save', heard)
+    const input = document.createElement('input')
+    document.body.appendChild(input)
+    try {
+      renderHook(() => useTheaterKeyboard(baseArgs()))
+      act(() => input.dispatchEvent(new KeyboardEvent('keydown', { key: 's', bubbles: true })))
+      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 's', metaKey: true })))
+      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 's', ctrlKey: true })))
+      expect(heard).not.toHaveBeenCalled()
+    } finally {
+      input.remove()
+      window.removeEventListener('theater-save', heard)
+    }
+  })
 })

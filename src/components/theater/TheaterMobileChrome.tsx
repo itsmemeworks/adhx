@@ -62,6 +62,7 @@ import { TheaterTagChips } from './TheaterTagChips'
 import { TheaterCollectionActions } from './TheaterCollectionActions'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
 import { StageIconButton } from './stage-primitives'
+import { useTheaterActionHotkeys } from './useTheaterActionHotkeys'
 import { logAV } from './YtDebugOverlay'
 import type {
   RepeatMode,
@@ -211,6 +212,8 @@ export function TheaterMobileChrome({
   // inside the tap's own user activation. Elsewhere the 2s skim guard stands.
   const sendFile = useSendFile(current, { eager: mode === 'shared' })
   const { textCopied, copyText } = useTheaterCopy(current, (current?.text || '').trim())
+  const rootRef = useRef<HTMLDivElement>(null)
+  useTheaterActionHotkeys('mobile', rootRef)
   const { ref: captionRef, expanded, setExpanded, overflowing } = useClampExpand(currentKey)
 
   // `mediaKind` is the REAL content kind — drives the audio/pause buttons,
@@ -362,7 +365,7 @@ export function TheaterMobileChrome({
   const copyAction = textCopyAction(kind)
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-10 lg:hidden">
+    <div ref={rootRef} className="pointer-events-none absolute inset-0 z-10 lg:hidden">
       <TheaterProgressLine itemKey={currentKey} kind={progressKind} />
 
       {/* Top scrim: brand (left) + post meta (right) — the flame/trend badge
@@ -606,6 +609,7 @@ export function TheaterMobileChrome({
                       : fileAction.label
                 }
                 className={sendFile.primed ? ICON_SAVE : undefined}
+                data-theater-action="download"
               >
                 {sendFile.sending ? (
                   <Loader2 size={16} className="animate-spin" />
@@ -618,6 +622,7 @@ export function TheaterMobileChrome({
                 onClick={() => void copyText()}
                 title={copyAction.title}
                 aria-label={textCopied ? copyAction.copiedLabel : copyAction.idleLabel}
+                data-theater-action="copy"
               >
                 {textCopied ? (
                   <Check size={16} className="text-done" />
@@ -649,6 +654,7 @@ export function TheaterMobileChrome({
                 }}
                 onTouchEnd={(e) => e.stopPropagation()}
                 aria-label={tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}
+                data-theater-action="tag"
               >
                 <TagIcon size={16} fill={tagCount > 0 ? 'currentColor' : 'none'} />
               </StageIconButton>
@@ -661,6 +667,7 @@ export function TheaterMobileChrome({
                   }}
                   onTouchEnd={(e) => e.stopPropagation()}
                   aria-label={tagCount > 0 ? `Tag · ${tagCount}` : 'Tag this post'}
+                  data-theater-action="tag"
                 >
                   <TagIcon size={16} fill={tagCount > 0 ? 'currentColor' : 'none'} />
                 </StageIconButton>
@@ -691,11 +698,16 @@ export function TheaterMobileChrome({
                 onClick={() => onRequestSignIn?.()}
                 aria-label="Save"
                 className={ICON_SAVE}
+                data-theater-action="save"
               >
                 <Bookmark size={16} />
               </StageIconButton>
             )}
-            <StageIconButton onClick={() => void handleShare()} aria-label="Share link">
+            <StageIconButton
+              onClick={() => void handleShare()}
+              aria-label="Share link"
+              data-theater-action="link"
+            >
               {copied ? <Check size={16} className="text-done" /> : <Share2 size={16} />}
             </StageIconButton>
             {(() => {
@@ -708,6 +720,7 @@ export function TheaterMobileChrome({
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={`Open on ${platformLabel}`}
+                  data-theater-action="open"
                   onClick={() =>
                     pingAnalytic('post.open', {
                       platform: current.platform,

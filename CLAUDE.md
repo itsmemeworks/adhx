@@ -651,18 +651,27 @@ className = 'text-xs ...'
 className = 'text-base sm:text-xs ...'
 ```
 
+**Theater keyboard (desktop power users):**
+The library grid and Settings bind **no** keys. The theater keymap lives in `src/components/theater/theater-shortcuts.ts` (`resolveTheaterShortcut`, `THEATER_SHORTCUT_KEYS`) and `useTheaterKeyboard`:
+
+- Navigate: `←` `→` `↑` `↓` / `J` `K`
+- Playback: `Space` play/pause (`theater-toggle-play`), `M` mute
+- Actions: `S` Save, `T` Tag, `L` copy link, `C` copy text, `D` download/send, `O` open original, `A` Archive (collection), `U` undo Archive
+- Also: `.` menu, `?` (Shift+/) help overlay (`TheaterShortcutsHelp`), `Esc` close help / collection
+- Paste a link is the OS shortcut (`⌘V` / `Ctrl+V`) — the chrome listens for the `paste` event, not a keydown
+
+Action keys dispatch `theater-*` window events; each chrome clicks the matching `[data-theater-action]` control and no-ops when that surface is CSS-hidden (`lg` split). Overlays (sign-in, tag picker, avatar menu, help) stop `THEATER_SHORTCUT_KEYS` so they don't drive the stage.
+
 **Cross-Component Keyboard Feedback:**
-When keyboard shortcuts in `page.tsx` need to trigger UI feedback in child components (like button animations), use custom events:
+When keyboard shortcuts need to trigger UI in child components, use custom events:
 
 ```tsx
-// In page.tsx (keyboard handler)
-window.dispatchEvent(new CustomEvent('trigger-share'))
+window.dispatchEvent(new CustomEvent('theater-toggle-play'))
 
-// In child component
 useEffect(() => {
   const handler = () => triggerAnimation()
-  window.addEventListener('trigger-share', handler)
-  return () => window.removeEventListener('trigger-share', handler)
+  window.addEventListener('theater-toggle-play', handler)
+  return () => window.removeEventListener('theater-toggle-play', handler)
 }, [])
 ```
 
@@ -696,7 +705,7 @@ The Live ⇄ My Collection switch is a pair of ROUTES, not local state, so each 
 
 `src/app/page.tsx` is a **server component** (`force-dynamic` — reads cookies + SQLite). The theater spec is `docs/specs/theater-first.md`. The theater is a full-bleed near-black stage (`#08070a`, both themes) + viewport-responsive chrome, built from `src/components/theater/`:
 
-- `TheaterShell` (`fixed inset-0 z-[60]` — deliberately overlays the global Header since AppShell can't see auth; revisit in Phase 3) owns current-item state, keyboard (↓↑/jk, ←→, space via `theater-toggle-play` custom event, m), the 2s-dwell seen-marking + `POST /api/activity/preview` pulse, and prefetch-next. Desktop (`lg+`) mounts `DesktopStageChrome` (overlays: top bar with brand + LIVE + paste-to-preview input for ⌘V, de-clutter button; stage meta/flame/caption overlays; bottom actions) + `DesktopDock` (bottom filmstrip: transport controls, horizontal queue cards auto-scrolled to keep current visible, "Show all" panel reusing `UpNextList`). Mobile (<lg) mounts `TheaterMobileChrome` (top/bottom scrims, peek bar with transport/audio/de-clutter — no swipe gesture; nav is buttons + keyboard + video-ended auto-advance). Shared wiring lives in `SavePostButton`, `TheaterCollectionActions`, `TheaterMetaChips`, `TheaterTagChips`, `useTheaterCopy`, `useTheaterStageEvents` — do not copy those back into either chrome.
+- `TheaterShell` (`fixed inset-0 z-[60]` — deliberately overlays the global Header since AppShell can't see auth; revisit in Phase 3) owns current-item state, keyboard (`useTheaterKeyboard` + Shift+? `TheaterShortcutsHelp` — see "Theater keyboard" above), the 2s-dwell seen-marking + `POST /api/activity/preview` pulse, and prefetch-next. Desktop (`lg+`) mounts `DesktopStageChrome` (overlays: top bar with brand + LIVE + paste-to-preview input for ⌘V, de-clutter button; stage meta/flame/caption overlays; bottom actions) + `DesktopDock` (bottom filmstrip: transport controls, horizontal queue cards auto-scrolled to keep current visible, "Show all" panel reusing `UpNextList`). Mobile (<lg) mounts `TheaterMobileChrome` (top/bottom scrims, peek bar with transport/audio/de-clutter — no swipe gesture; nav is buttons + keyboard + video-ended auto-advance). Shared wiring lives in `SavePostButton`, `TheaterCollectionActions`, `TheaterMetaChips`, `TheaterTagChips`, `useTheaterCopy`, `useTheaterStageEvents` — do not copy those back into either chrome.
 - `TheaterAvatarMenu` (mounted in the top bar/scrim by both chromes) is authed-only by default — signed in: the account dropdown (collection/settings/sign out). Callers that pass `allowSignedOut` get a burger-menu fallback (Menu icon, same slot/geometry) for signed-out visitors instead of nothing: **Theater** (closes the menu if already on `/`, else links home) / **Leaderboard** (`/leaderboard`) / **Privacy** (`/privacy`) / **Sign in** (fires `onRequestSignIn`, wired to the shell's existing `openSignIn`/save-post sign-in-modal flow). Only the home/shared-mode mounts pass `allowSignedOut` — the collection theater is always reached authed, and collection mode's own "Make your own" CTA is its signed-out conversion path, so neither does.
 - Feed = `getTheaterFeed()` (`src/lib/theater/feed.ts`): `getTrendingItems()` + public-tag backfill when < 12 items. **Seed limit must match `/api/activity`'s LIMIT (30)** or the first poll surfaces old items as "fresh". Crawlable SEO content is server-rendered by `TheaterStaticList` (sr-only list + CollectionPage/ItemList JSON-LD + hero copy).
 - Seen model: localStorage `adhx-seen-v1` (cap 500) + `adhx-last-visit` (written on pagehide/hide only) → "N new since your last visit" divider in `UpNextList`. Zero per-user server cost.
@@ -714,7 +723,7 @@ The Live ⇄ My Collection switch is a pair of ROUTES, not local state, so each 
 The authed Collection (moved verbatim from the old client `page.tsx`). Client component with:
 
 - **FeedGrid** (`src/components/feed/FeedGrid.tsx`): three view modes toggled in the FilterBar — **grid** (masonry via CSS columns, `FeedCard`), **list** (dense rows, `FeedListRow`), **bento** (mixed-size mosaic, `FeedBentoTile`). Infinite scroll via an `IntersectionObserver` sentinel.
-- **Focus / My Collection**: there is **one** personal theater, at `/collection` (`AuthedTheater` + `TheaterShell mode="personal"`). The library grid does **not** overlay a second shell — a card tap / `F` / leftover `?open=` / `?collection=1` navigates there (`collectionPath()`, start index or prepend). AuthedTheater fetches the active queue at the API cap (`limit=100`) before mount; a failed fetch is an error + Retry, not a fake all-clear. Actions match Live (Download for video/photo / Copy for tweet/article / Link / Tag / Open) plus **Archive**. Copy on an article writes the full markdown body from `/api/share/tweet`, not just the title. Icons still distinguish kind (film/image/copy/file-text). (POST `/api/bookmarks/[id]/read?platform=`, then the post is REMOVED from the queue; `notifyCollectionChanged()` so Header + `/library` refresh). No Later or Delete. Identity is `(platform, id)`. Archive is **private** (no public `read` pulse). Keyboard matches Live (`↓`/`↑`/`←`/`→`/space/m); `U` undoes Archive, Esc closes. Videos auto-advance on end. End-of-queue shows `CollectionAllClear`. **Collection ↔ Live** is a pair of routes (`/collection` ⇄ `/`). The signed-in Live tab rewrites the address bar like signed-out `/`; My Collection does not. The old `CollectionTheater`/`CollectionRail`/`TriageMode`/`AddTweetModal` are DELETED.
+- **Focus / My Collection**: there is **one** personal theater, at `/collection` (`AuthedTheater` + `TheaterShell mode="personal"`). The library grid does **not** overlay a second shell — a card tap / leftover `?open=` / `?collection=1` navigates there (`collectionPath()`, start index or prepend). AuthedTheater fetches the active queue at the API cap (`limit=100`) before mount; a failed fetch is an error + Retry, not a fake all-clear. Actions match Live (Download for video/photo / Copy for tweet/article / Link / Tag / Open) plus **Archive**. Copy on an article writes the full markdown body from `/api/share/tweet`, not just the title. Icons still distinguish kind (film/image/copy/file-text). (POST `/api/bookmarks/[id]/read?platform=`, then the post is REMOVED from the queue; `notifyCollectionChanged()` so Header + `/library` refresh). No Later or Delete. Identity is `(platform, id)`. Archive is **private** (no public `read` pulse). Keyboard is the shared theater map (`A` Archive, `U` undo, `Esc` close — see "Theater keyboard" above). The library itself binds no keys. Videos auto-advance on end. End-of-queue shows `CollectionAllClear`. **Collection ↔ Live** is a pair of routes (`/collection` ⇄ `/`). The signed-in Live tab rewrites the address bar like signed-out `/`; My Collection does not. The old `CollectionTheater`/`CollectionRail`/`TriageMode`/`AddTweetModal` are DELETED.
 - **FilterBar**: category filters + **platform filter** (All / X / Instagram / TikTok) + view toggles + tags + search.
 - **Nav**: the top bar carries **Library · Theater · Tags · Leaderboard**. Theater is `/` (Live) / `/collection` (My Collection); Library is `/library`. Trending was removed from the authed nav — the public `/trending` SEO routes are untouched. The `+` Add button is gone: adding by URL is paste-first via `PasteToPreview`. Mobile collapses search to an icon.
 - **FeedCard**: tweet-style per-type cards with a `PlatformChip` + `TimePill`; non-Twitter items show their platform glyph.

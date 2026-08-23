@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { isValidEmail } from '@/lib/utils/email'
 import { Mail } from 'lucide-react'
 import { PlatformGlyph } from '@/components/matter'
+import { THEATER_SHORTCUT_KEYS } from '@/components/theater/theater-shortcuts'
 
 export interface SignInModalProps {
   open: boolean
@@ -27,24 +28,6 @@ const PANEL = '#201b16'
 const BORDER = '#322b23'
 const INPUT_BG = '#2a241d'
 const ACCENT_GRADIENT = 'linear-gradient(135deg,#e88a5e,#d26b40)'
-
-// Keys the theater's window-level keydown handler (and similar global
-// shortcuts) act on. We block these from bubbling past the modal so ↓/↑/space
-// don't drive the background stage while this overlay is open. Escape is
-// handled separately below (theater doesn't bind it, but the modal must).
-const THEATER_SHORTCUT_KEYS = new Set([
-  ' ',
-  'ArrowUp',
-  'ArrowDown',
-  'ArrowLeft',
-  'ArrowRight',
-  'm',
-  'M',
-  'j',
-  'J',
-  'k',
-  'K',
-])
 
 type Stage = 'form' | 'success'
 
