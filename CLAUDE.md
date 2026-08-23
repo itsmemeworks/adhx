@@ -821,7 +821,7 @@ const tagsSubquery = db
 FxTwitter (`api.fxtwitter.com`) provides reliable media URLs (Twitter has CORS issues).
 
 - **Videos**: `/api/media/video?author=xxx&tweetId=xxx&quality=preview|hd|full`
-- **Photos**: `https://d.fixupx.com/{author}/status/{tweetId}/photo/{index}`
+- **Photos**: `https://d.fixupx.com/{author}/status/{tweetId}/photo/{index}` — theater stage loads these via `/api/media/image` (pbs.twimg.com hotlinks 403 off twitter.com)
 
 **Video Quality Levels:**
 

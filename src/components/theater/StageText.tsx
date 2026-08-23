@@ -16,8 +16,20 @@ import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { PlatformChip } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
+import { fallbackToOriginal } from '@/components/feed/media-actions'
+import { proxiedPhotoSrc } from '@/lib/media/fxembed'
 import { TheaterLinkedText } from './TheaterText'
 import type { TheaterItem } from './types'
+
+/** Twitter photos go through `/api/media/image` — pbs.twimg.com often 403s off twitter.com. */
+export function stagePhotoSrc(
+  item: Pick<TheaterItem, 'platform' | 'author' | 'bookmarkId' | 'thumbnailUrl'>,
+): string | null {
+  if (item.platform === 'twitter' && item.author && item.bookmarkId) {
+    return proxiedPhotoSrc(item.author, item.bookmarkId)
+  }
+  return item.thumbnailUrl ?? null
+}
 
 export interface StageTextProps {
   item: TheaterItem
@@ -111,13 +123,15 @@ export function StageText({
   }, [text, expanded])
 
   if (photo) {
+    const src = stagePhotoSrc(item)
     return (
       <div className="relative flex h-full w-full items-center justify-center bg-[#08070a]">
-        {item.thumbnailUrl ? (
+        {src ? (
           <img
-            src={item.thumbnailUrl}
+            src={src}
             alt=""
             referrerPolicy="no-referrer"
+            onError={fallbackToOriginal(item.thumbnailUrl)}
             className="h-full w-full object-contain"
           />
         ) : (

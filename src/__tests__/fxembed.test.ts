@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   getVideoUrl,
   getPhotoUrl,
+  proxiedPhotoSrc,
   getTwitterImageUrl,
   getEmbedUrl,
   resolveMediaUrl,
@@ -113,6 +114,14 @@ describe('FxEmbed URL utilities', () => {
     it('returns correct photo URL with custom index', () => {
       const url = getPhotoUrl(author, tweetId, 3)
       expect(url).toBe('https://d.fixupx.com/testuser/status/1234567890/photo/3')
+    })
+  })
+
+  describe('proxiedPhotoSrc', () => {
+    it('builds the same-origin image proxy path', () => {
+      expect(proxiedPhotoSrc(author, tweetId)).toBe(
+        '/api/media/image?author=testuser&tweetId=1234567890&index=1',
+      )
     })
   })
 
