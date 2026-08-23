@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "allowJs": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "lib": ["dom", "esnext"],
+    "moduleResolution": "bundler",
+    "module": "esnext",
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "strict": true,
+    "target": "esnext",
+    "skipLibCheck": true,
+    "types": ["chrome"]
+  },
+  "include": ["./src/**/*.ts", "./env.d.ts"],
+  "exclude": ["node_modules", "dist"]
+}

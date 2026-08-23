@@ -1,0 +1,21 @@
+{
+  "private": true,
+  "name": "adhx-save",
+  "description": "Save an X, Instagram, TikTok, or YouTube post to ADHX in one click.",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "devDependencies": {
+    "@types/chrome": "^0.1.4",
+    "extension": "^4.1.5",
+    "typescript": "^5.9.2"
+  },
+  "scripts": {
+    "dev": "extension dev",
+    "start": "extension start",
+    "build": "extension build",
+    "preview": "extension preview",
+    "build:chrome": "extension build --browser chrome",
+    "build:firefox": "extension build --browser firefox"
+  }
+}

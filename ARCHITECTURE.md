@@ -27,16 +27,19 @@ write a public pulse.
 Saves arrive three ways, then everything plays in one theater:
 
 ```
-URL prefix / paste / share sheet  ──►  preview page  ──►  Save  ──►  SQLite
+URL prefix / paste / share sheet / desktop extension  ──►  preview page  ──►  Save  ──►  SQLite
 X bookmark sync (SSE)             ──►  /api/sync     ──►  SQLite
 SQLite  ──►  /api/feed (library)  ·  theater seed (Live / collection / playlist)
       └──►  /api/media/* proxies (Twitter / TikTok MP4; IG probe; YouTube iframe)
 ```
 
 1. **Preview** — swap any supported host for `adhx.com` (or paste the full
-   URL after it). Middleware (`src/proxy.ts`) 307s full-URL pastes onto the
-   preview route. The page records an anonymous `preview` pulse (bots skipped)
-   and renders `TheaterShell` in shared mode.
+   URL after it). The desktop extension (`extension/`) and the iOS / PWA share
+   target open `/share?url=` instead; that page maps the source URL onto the
+   same preview routes. Middleware (`src/proxy.ts`) 307s full-URL pastes onto
+   the preview route. The page records an anonymous `preview` pulse (bots
+   skipped) and renders `TheaterShell` in shared mode. The extension never
+   calls the API — it only navigates the tab.
 2. **Save** — authenticated POST `/api/bookmarks/add` (Twitter goes through
    `/api/tweets/add` + FxTwitter; IG / TikTok / YouTube through their
    resolvers). Writes a `save` pulse.

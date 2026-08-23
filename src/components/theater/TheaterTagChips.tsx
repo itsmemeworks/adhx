@@ -1,6 +1,6 @@
 'use client'
 
-/** Display-only collection-tab tags. Nothing renders without tags. */
+/** Display-only tags under the caption. Nothing renders without tags. */
 export function TheaterTagChips({ tags, className }: { tags?: string[]; className?: string }) {
   if (!tags || tags.length === 0) return null
   return (

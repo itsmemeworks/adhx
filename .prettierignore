@@ -8,3 +8,5 @@ CHANGELOG.md
 drizzle/*.md
 coverage
 .claude
+extension/dist
+extension/.extension-js

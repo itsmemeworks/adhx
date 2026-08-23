@@ -1,8 +1,12 @@
 import { expect } from '@playwright/test'
 import { E2E_USERNAME, PLAYLIST_TAG, POST } from './constants'
-import { authedTest, caption, expectTheaterReady, goNext } from './helpers'
+import { apiDeleteBookmark, authedTest, caption, expectTheaterReady, goNext } from './helpers'
 
 authedTest.describe('signed-in navigation', () => {
+  authedTest.afterEach(async ({ page }) => {
+    await apiDeleteBookmark(page, POST.preview.id)
+  })
+
   authedTest(
     'header and account menu reach Theater, Library, Tags, and Settings',
     async ({ page }) => {
@@ -39,6 +43,28 @@ authedTest.describe('signed-in navigation', () => {
     await page.getByRole('button', { name: 'My Collection' }).click()
     await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
   })
+
+  authedTest(
+    'signed-in preview shows Live ⇄ My Collection; Close goes to library',
+    async ({ page }) => {
+      const previewPath = `/${POST.preview.author}/status/${POST.preview.id}`
+      await page.goto(previewPath)
+      await expectTheaterReady(page)
+      await expect(page.getByRole('button', { name: 'Live' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'My Collection' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Archive' })).toHaveCount(0)
+
+      await page.getByRole('button', { name: 'My Collection' }).click()
+      await expect(page).toHaveURL(/\/collection/)
+      await expectTheaterReady(page)
+      await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
+
+      await page.goto(previewPath)
+      await expectTheaterReady(page)
+      await page.getByRole('button', { name: 'Close' }).click()
+      await expect(page).toHaveURL(/\/library/)
+    },
+  )
 
   authedTest('collection Close lands on the library grid', async ({ page }) => {
     await page.goto('/collection')

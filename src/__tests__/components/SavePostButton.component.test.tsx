@@ -94,6 +94,24 @@ describe('SavePostButton — save to tag', () => {
     expect(screen.queryByText('Save')).not.toBeInTheDocument()
   })
 
+  it('shows Tag · N and a filled icon once the post has tags', async () => {
+    const current = item('owned')
+    global.fetch = vi.fn(async (url: string | URL | Request) => {
+      const href = String(url)
+      if (href.includes('/api/feed')) {
+        return {
+          ok: true,
+          json: async () => ({ items: [{ id: 'owned', platform: 'twitter' }] }),
+        }
+      }
+      return { ok: true, json: async () => ({}) }
+    }) as never
+
+    render(<SavePostButton current={current} className={CLASS} onTag={vi.fn()} tags={['social']} />)
+    await waitFor(() => expect(screen.getByText('Tag · 1')).toBeInTheDocument())
+    expect(screen.getByRole('button', { name: 'Tag · 1' }).className).toContain('text-clay')
+  })
+
   it('stays on Saved when there is no onTag (no handoff)', async () => {
     const current = item()
     render(<SavePostButton current={current} className={CLASS} />)

@@ -71,6 +71,7 @@ import type {
   TheaterItem,
   TheaterMode,
   TheaterPersonalChrome,
+  TheaterAccountTabs,
 } from './types'
 
 export interface TheaterMobileChromeProps {
@@ -143,6 +144,10 @@ export interface TheaterMobileChromeProps {
   collection?: TheaterPersonalChrome
   /** Shared+authed: open the tag picker after the Save pill morphs to Tag. */
   onSharedTag?: (item: TheaterItem) => void
+  /** Shared-lead tags (chips + Tag · N). Collection/live use `collection.tags`. */
+  itemTags?: string[]
+  /** Signed-in shared preview: Live ⇄ My Collection in the avatar menu + close. */
+  accountTabs?: TheaterAccountTabs
 }
 
 /** Height of the collapsed sheet's peek bar — kept in sync with the transform below. Two rows now (drag handle + the nav/pause/audio/de-clutter controls), taller than the old label-only bar. */
@@ -192,6 +197,8 @@ export function TheaterMobileChrome({
   onCycleRepeat,
   collection,
   onSharedTag,
+  itemTags,
+  accountTabs,
 }: TheaterMobileChromeProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -343,7 +350,8 @@ export function TheaterMobileChrome({
   const queueIndex = currentKey ? items.findIndex((it) => theaterItemKey(it) === currentKey) : -1
 
   const trendCount = current ? (current.trendCount ?? current.saveCount ?? 0) : 0
-  const tagCount = collection?.tags?.length ?? 0
+  const displayTags = collection?.tags ?? itemTags
+  const tagCount = displayTags?.length ?? 0
   const handle = current?.author ? current.author.replace(/^@+/, '') : ''
   // The stage IS the text for text/quote/article posts — repeating the body
   // (and the author header) in the bottom scrim doubles it up and buries the
@@ -457,8 +465,23 @@ export function TheaterMobileChrome({
             <TheaterAvatarMenu
               onRequestSignIn={onRequestSignIn}
               allowSignedOut
-              theaterActive={mode === 'home'}
+              theaterActive={mode === 'home' || !!accountTabs}
+              theaterTabs={
+                accountTabs
+                  ? { tab: accountTabs.tab, onTabChange: accountTabs.onTabChange }
+                  : undefined
+              }
             />
+            {accountTabs ? (
+              <button
+                type="button"
+                onClick={accountTabs.onClose}
+                aria-label="Close"
+                className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full border border-white/25 bg-white/[0.14] text-white"
+              >
+                <X size={16} />
+              </button>
+            ) : null}
           </div>
         </div>
       )}
@@ -552,11 +575,9 @@ export function TheaterMobileChrome({
               </div>
             )}
 
-            {/* Tag chips (unified-theater-collection.md §B) — the Collection
-                tab's current item only; display-only, nothing renders
-                without tags. */}
+            {/* Tag chips — collection / live / signed-in shared preview. */}
             <TheaterTagChips
-              tags={collection?.tags}
+              tags={displayTags}
               className="mt-1.5 flex flex-wrap items-center gap-1.5"
             />
           </div>
@@ -628,9 +649,9 @@ export function TheaterMobileChrome({
                     collection.onLiveTag?.(current)
                   }}
                   onTouchEnd={(e) => e.stopPropagation()}
-                  aria-label="Tag this post"
+                  aria-label={tagCount > 0 ? `Tag · ${tagCount}` : 'Tag this post'}
                 >
-                  <TagIcon size={16} />
+                  <TagIcon size={16} fill={tagCount > 0 ? 'currentColor' : 'none'} />
                 </StageIconButton>
                 <PersonalLiveSaveButton
                   current={current}
@@ -651,6 +672,7 @@ export function TheaterMobileChrome({
                   'inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border bg-white/[0.14] text-white disabled:opacity-70',
                   ICON_SAVE,
                 )}
+                tags={displayTags}
                 onTag={onSharedTag ? () => onSharedTag(current) : undefined}
               />
             ) : (

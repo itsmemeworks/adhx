@@ -47,6 +47,8 @@ export default [
       '*.config.mjs',
       '*.config.ts',
       'drizzle.config.ts',
+      'extension/dist/**',
+      'extension/node_modules/**',
     ],
   },
   // Disable stylistic rules that conflict with Prettier. Must be last so it
