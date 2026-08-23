@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.58.0](https://github.com/itsmemeworks/adhx/compare/v1.57.1...v1.58.0) (2026-08-23)
+
+
+### Features
+
+* autosave shared preview on a new signed-in open ([#398](https://github.com/itsmemeworks/adhx/issues/398)) ([43a9f71](https://github.com/itsmemeworks/adhx/commit/43a9f719e4bfc62d1e92f9e572cb7383fc8310d1))
+
 ## [1.57.1](https://github.com/itsmemeworks/adhx/compare/v1.57.0...v1.57.1) (2026-08-23)
 
 
