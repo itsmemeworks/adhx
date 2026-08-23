@@ -60,6 +60,7 @@ import { useTheaterStageEvents } from './useTheaterStageEvents'
 import { SavePostButton, PersonalLiveSaveButton } from './SavePostButton'
 import { FlameChip, PlatformTimeChip } from './TheaterMetaChips'
 import { TheaterTagChips } from './TheaterTagChips'
+import { STAGE_GLASS_FILL } from './stage-primitives'
 import { TheaterCollectionActions } from './TheaterCollectionActions'
 import { useClampExpand } from './useClampExpand'
 import {
@@ -177,16 +178,20 @@ export interface DesktopDockProps {
 export { navigateToAppPath } from '@/lib/theater/navigate-app-path'
 export { SavePostButton } from './SavePostButton'
 
-const GLASS =
-  'inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/[0.14] px-4 text-[12.5px] font-semibold text-white transition-colors hover:bg-white/20 disabled:opacity-60'
+const GLASS = cn(
+  'inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-white/25 px-4 text-[12.5px] font-semibold text-white transition-colors hover:bg-white/25 disabled:opacity-60',
+  STAGE_GLASS_FILL,
+)
 /**
- * The Save buttons: a Bookmark glyph on the same see-through glass as GLASS,
+ * The Save buttons: a Bookmark glyph on the same frosted glass as GLASS,
  * distinguished by a clay border. Covers SavePostButton,
  * PersonalLiveSaveButton, the signed-out Save prompt, AND SavePlaylistButton.
  * Archive's solid fill lives on TheaterCollectionActions.
  */
-const SAVE_OUTLINE =
-  'inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-clay bg-white/[0.14] px-5 text-[12.5px] font-semibold text-white transition-colors hover:bg-white/20 disabled:opacity-60'
+const SAVE_OUTLINE = cn(
+  'inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-clay px-5 text-[12.5px] font-semibold text-white transition-colors hover:bg-white/25 disabled:opacity-60',
+  STAGE_GLASS_FILL,
+)
 
 export function DesktopStageChrome({
   mode,

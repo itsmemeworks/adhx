@@ -24,8 +24,16 @@ import { PLATFORM_LABEL, type TheaterItem } from './types'
  * Named props (rather than extending the full HTML attribute types) since
  * only these are actually used across the 4 call sites.
  */
-const STAGE_ICON_BUTTON_CLASS =
-  'inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 bg-white/[0.14] text-white disabled:opacity-70'
+/** Frosted fill for theater actions/chips — blurs the stage so body text
+ * doesn't read through the glass. Shared by icon buttons, desktop pills,
+ * and tag chips. Border color stays on the caller (white vs clay). */
+export const STAGE_GLASS_FILL =
+  'bg-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,.22)] backdrop-blur-xl backdrop-saturate-150'
+
+const STAGE_ICON_BUTTON_CLASS = cn(
+  'inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 text-white disabled:opacity-70',
+  STAGE_GLASS_FILL,
+)
 
 export interface StageIconButtonProps {
   href?: string

@@ -60,7 +60,7 @@ import { FlameChip, PlatformTimeChip } from './TheaterMetaChips'
 import { TheaterTagChips } from './TheaterTagChips'
 import { TheaterCollectionActions } from './TheaterCollectionActions'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
-import { StageIconButton } from './stage-primitives'
+import { StageIconButton, STAGE_GLASS_FILL } from './stage-primitives'
 import { logAV } from './YtDebugOverlay'
 import type {
   RepeatMode,
@@ -486,12 +486,15 @@ export function TheaterMobileChrome({
 
       {/* Bottom scrim: author/caption + Send / Save / Share / Open. Padded
           above the sheet's peek bar (opaque, themed) so the gradient tucks
-          under it. */}
+          under it. The scrim itself is pointer-events-none so text-like
+          posts (article/tweet) stay scrollable in the empty caption zone —
+          that's where a thumb naturally drags. Only the caption (media) and
+          the action row capture taps. */}
       {current && (
         <div
           className={cn(
-            'pointer-events-auto absolute inset-x-0 bottom-0 flex flex-col gap-3 px-4 pb-3 pt-12 transition-[opacity,transform] duration-200 ease-out',
-            declutter && 'pointer-events-none translate-y-3 opacity-0',
+            'pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-3 px-4 pb-3 pt-12 transition-[opacity,transform] duration-200 ease-out',
+            declutter && 'translate-y-3 opacity-0',
           )}
           style={{
             paddingBottom: `calc(${PEEK_H} + 0.75rem)`,
@@ -499,7 +502,7 @@ export function TheaterMobileChrome({
               'linear-gradient(to top, rgba(11,11,17,.88) 0%, rgba(11,11,17,.55) 55%, transparent 100%)',
           }}
         >
-          <div>
+          <div className={cn((!textLike || caption) && 'pointer-events-auto')}>
             {/* The poster's avatar + name — only for media posts. Text-like
                 posts (text/quote/article) show the author on the stage
                 itself, so this row stays hidden for them to avoid doubling
@@ -551,7 +554,7 @@ export function TheaterMobileChrome({
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-2">
+          <div className="pointer-events-auto flex items-center justify-end gap-2">
             <TheaterTagChips
               tags={displayTags}
               className="flex min-w-0 flex-1 flex-nowrap items-center justify-end gap-1.5 overflow-x-auto"
@@ -639,7 +642,8 @@ export function TheaterMobileChrome({
                   current={current}
                   collection={collection}
                   className={cn(
-                    'inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border bg-white/[0.14] text-white',
+                    'inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border text-white',
+                    STAGE_GLASS_FILL,
                     ICON_SAVE,
                   )}
                   iconSize={16}
@@ -651,7 +655,8 @@ export function TheaterMobileChrome({
                 current={current}
                 iconOnly
                 className={cn(
-                  'inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border bg-white/[0.14] text-white disabled:opacity-70',
+                  'inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border text-white disabled:opacity-70',
+                  STAGE_GLASS_FILL,
                   ICON_SAVE,
                 )}
                 tags={displayTags}

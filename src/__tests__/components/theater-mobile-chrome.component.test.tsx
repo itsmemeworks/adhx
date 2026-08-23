@@ -140,6 +140,22 @@ describe('TheaterMobileChrome: caption', () => {
     expect(screen.getByText('#ai')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument()
   })
+
+  it('lets article body scroll through the empty caption zone', () => {
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={textItem({ contentType: 'article', text: 'Army title' })}
+        itemTags={['ai']}
+      />,
+    )
+    const copy = screen.getByRole('button', { name: 'Copy' })
+    const actionRow = copy.parentElement
+    expect(actionRow?.className).toContain('pointer-events-auto')
+    expect(actionRow?.parentElement?.className).toContain('pointer-events-none')
+    expect(copy.className).toContain('backdrop-blur-xl')
+    expect(screen.getByText('#ai').className).toContain('backdrop-blur-xl')
+  })
 })
 
 describe('TheaterMobileChrome: Save/Download button hierarchy', () => {

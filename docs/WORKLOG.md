@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-23 — Frosted theater actions; article scroll through the caption zone
+
+Action pills and tag chips use a shared frosted glass fill (blur + saturate) so stage text doesn't read through them. Mobile bottom scrim is pointer-events-none except caption + actions, so an article's empty caption zone scrolls the body. Follow-up: none.
+
 ## 2026-08-23 — Text and article author rows link to the profile
 
 `StageAuthorRow` (shared by `StageText` and `StageArticle`) wraps avatar + name + `@handle` in the same `authorProfileUrl` link media chrome already uses. Follow-up: none.
