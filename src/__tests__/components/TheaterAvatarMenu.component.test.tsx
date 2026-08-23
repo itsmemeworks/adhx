@@ -92,6 +92,29 @@ describe('TheaterAvatarMenu', () => {
     expect(screen.getByText('@weedauwl')).toBeInTheDocument()
   })
 
+  it('leads with the ADHX username, never the email, for an email-only account', async () => {
+    mockAuthMe({
+      authenticated: true,
+      user: {
+        id: 'u_abc',
+        username: 'oioiii',
+        displayName: null,
+        avatarUrl: null,
+      },
+      identities: {
+        x: null,
+        email: { email: 'pete.cheyne@gmail.com' },
+      },
+      xConnected: false,
+    })
+    render(<TheaterAvatarMenu />)
+    fireEvent.click(await screen.findByLabelText('Account menu'))
+
+    expect(screen.getByText('@oioiii')).toBeInTheDocument()
+    expect(screen.getByText('Signed in with email')).toBeInTheDocument()
+    expect(screen.queryByText(/pete\.cheyne@gmail\.com/)).not.toBeInTheDocument()
+  })
+
   it('matches the authed Header avatar menu’s nav hrefs — Library/Tags/Leaderboard/Settings', async () => {
     mockAuthMe(AUTHED_ME)
     render(<TheaterAvatarMenu />)

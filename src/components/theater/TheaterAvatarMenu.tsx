@@ -350,9 +350,7 @@ export function TheaterAvatarMenu({
   const remoteAvatar = usableAvatarUrl(user.avatarUrl)
   const showAvatarImage = Boolean(remoteAvatar) && !avatarBroken
   const generatedAvatarUri = generateAvatarDataUri(user.username || user.displayName)
-  const identityLabel = identities?.x
-    ? `@${identities.x.username}`
-    : identities?.email?.email || `@${user.username}`
+  const identityLabel = `@${user.username}`
   const identitySubtitle = identities?.x
     ? 'Connected'
     : identities?.email

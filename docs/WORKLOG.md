@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-23 — Avatar menu shows the ADHX username
+
+Header + theater burger led with the email for email-only accounts (and the X handle when connected). Both now show `@username` — email is a sign-in method, not the account name. Follow-up: none.
+
+---
+
 ## 2026-08-23 — Trending archive matches the ranked list
 
 `/trending/archive` and `/trending/archive/[week]` dropped the leftover light paper/card-grid chrome. Same dark `#08070a` bar + numbered rows as live `/trending` (`TrendingListHeader`, `TrendingRankedRow`, `rankItems`). Week pages stay frozen (no poll, no filter pills); SEO list + JSON-LD unchanged. Follow-up: none.
