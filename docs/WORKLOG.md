@@ -6,6 +6,66 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-23 — Theater Read/Watch review pass
+
+Self-review of the caption/Read PR: Collection now uses the same reader split as Live (photo + Instagram + YouTube), YouTube keeps one iframe across Read, and `useClampExpand` only measures overflow (dead expand state hid Read). E2E covers signed-out/signed-in desktop and mobile icon-only on a video+quote preview. Follow-up: none.
+
+## 2026-08-23 — Mobile Read/Watch is icon-only
+
+Mobile action buttons never carry a label, so Read/Watch is the same 44px glass circle as Download/Share (book / TV), aria-label only. Desktop still uses the labeled pill under the caption. Follow-up: none.
+
+## 2026-08-23 — Mobile caption stays two lines; Read is left of actions
+
+Mobile keeps the 2-line caption above the action row. **Read** sits on the left of that row (Watch too); Download/Tag/Share stay on the right. Follow-up: none.
+
+## 2026-08-23 — Read sits with the caption
+
+Read/Watch was first in the action row, so empty tag `flex-1` shoved it left on some posts. It's now under the caption on purpose (Watch stays in that left slot). Download/Save/Share stay on the right. Follow-up: none.
+
+## 2026-08-23 — Read replaces caption expand; video keeps playing
+
+Long media captions (and quotes) go through **Read** instead of tap-to-expand / dim. **Watch** uses `TvMinimalPlay`, not Film (that's Download). Article mode keeps the same parent `<video>` playing in a top band so you can read while it continues; quote clips stay inline below. Progress/dock stay on the video. Follow-up: none.
+
+## 2026-08-23 — Video+quote is media-first, with a Read switch
+
+A tweet with its own video (or photo) that also quotes another post plays full-bleed again — caption is the parent text. **Read** flips to the stacked article (parent essay + both media + full quote); **Watch** goes back. Text-only quotes still use the reader. My Collection was taking the video branch first and dropping the caption/quote; it now shares this rule. Follow-up: none.
+
+## 2026-08-23 — Personal theater paste stays on the tab
+
+Signed-in Live (`/`) and My Collection (`/collection`) hid desktop paste and skipped ⌘V (a stale comment claimed `PasteToPreview` on AuthedHome covered it — that's `/library` only). Paste is back on both tabs: it POSTs `/api/bookmarks/add` in place so the save lands in the collection and the live pulse, and does **not** navigate to a preview page. Playlist mode still has no paste. Follow-up: none.
+
+## 2026-08-23 — Typeset tweets clear the top chrome
+
+StageText's reader now pads below the brand/paste cluster (`STAGE_TEXT_TOP_PAD`) and vertically centers a short tweet. Long posts, quotes, and inline media stay top-aligned and scroll. Follow-up: none.
+
+## 2026-08-23 — Desktop paste starts as an icon
+
+The theater top bar no longer shows the 420px paste field by default. A clipboard button sits with the avatar / de-clutter cluster; click expands the existing "Paste a link to preview" pill (Escape / click-outside collapse). Global ⌘V is unchanged. Follow-up: none.
+
+## 2026-08-23 — Video+quote uses the stacked reader
+
+A tweet with its own video that also quotes another tweet no longer takes the full-bleed player (which hid the parent essay and reduced the quote to a poster). `isQuoteReader` routes those posts through StageText: full parent text, inline parent video, full quoted tweet, inline quote video. Chrome treats them as text-like (no media caption overlay; 10s timed progress). Follow-up: none.
+
+## 2026-08-23 — Full quoted tweets (and long text) on the stage
+
+Quotes are no longer a 4-line stub. The text/quote reader shows the full parent, parent photos, and the full quoted tweet (text + photos), hydrated from `/api/share/tweet` when the pulse row is thin. Photo+quote uses the reader; video+quote overlays the quote card on the player. Share API now includes quote media. Follow-up: quote videos still show a poster, not inline playback.
+
+## 2026-08-23 — Action pills match the paste-button frost
+
+Dropped kube.io liquid-glass refraction. `StageGlass` now uses the same flat frost as the mobile paste button and avatar trigger (`bg-white/10 backdrop-blur-md`). Follow-up: none.
+
+## 2026-08-23 — Text stages scroll above the action row
+
+Article, tweet, and collection-quote stages now pad their scrollers (`STAGE_TEXT_SCROLL_PAD`) so the last lines can sit above the overlay actions and the mobile peek bar. Media captions are unchanged. Follow-up: none.
+
+## 2026-08-23 — Theater glass via CSS/SVG refraction
+
+Dropped `react-glassy`. Tags and action pills (`StageGlass`) use kube.io's liquid-glass approach: a convex-squircle bezel displacement map + `backdrop-filter: url(#…)` on Chromium, blur+tint+specular inset everywhere else. Follow-up: tune scale on small icon pills if the bend reads too strong.
+
+## 2026-08-23 — Open is the source platform glyph
+
+Dropped the platform+added-to-ADHX chip from desktop and mobile stage chrome. The Open action is now the post's social glyph (X / TikTok / Instagram / YouTube) with `Open on {platform}` as the accessible name — no ExternalLink, no "Open" label. Filmstrip and Up-next still show added-to-ADHX time. Follow-up: none.
+
 ## 2026-08-23 — Frosted theater actions; article scroll through the caption zone
 
 Action pills and tag chips use a shared frosted glass fill (blur + saturate) so stage text doesn't read through them. Mobile bottom scrim is pointer-events-none except caption + actions, so an article's empty caption zone scrolls the body. Follow-up: none.

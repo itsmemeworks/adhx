@@ -11,13 +11,19 @@ import { PlatformGlyph } from '@/components/matter'
 import { inferType } from '@/lib/trending/filter'
 import { previewPath } from '@/lib/activity/preview-path'
 import { usePlaybackSource } from './usePlaybackSource'
-import { StageFrame, StageHeadline, StageCTA } from './stage-primitives'
+import {
+  STAGE_ARTICLE_TEXT_PANE,
+  STAGE_ARTICLE_VIDEO_BAND,
+  StageFrame,
+  StageHeadline,
+  StageCTA,
+} from './stage-primitives'
 import { StageVideo } from './StageVideo'
 import { StageText } from './StageText'
 import { StageInstagram, useInstagramStage } from './StageInstagram'
 import { StageYouTube } from './StageYouTube'
 import { StageArticle } from './StageArticle'
-import type { TheaterItem } from './types'
+import { isArticleReader, isQuoteReader, type TheaterItem } from './types'
 
 export interface StageProps {
   item: TheaterItem | null
@@ -43,9 +49,23 @@ export interface StageProps {
    * kind, since they have no player to loop).
    */
   repeat?: boolean
+  /**
+   * Video/photo + quote or a long caption: default is full-bleed parent
+   * media. Flip this to read the article. A playing parent video stays
+   * mounted in a top band so you can read while it continues.
+   */
+  articleMode?: boolean
 }
 
-export function Stage({ item, muted, onRequestUnmute, onEnded, photoCaption, repeat }: StageProps) {
+export function Stage({
+  item,
+  muted,
+  onRequestUnmute,
+  onEnded,
+  photoCaption,
+  repeat,
+  articleMode = false,
+}: StageProps) {
   const playback = usePlaybackSource(item)
 
   // Instagram's mirror MP4 has to be Range-probed before a <video src> is
@@ -58,8 +78,11 @@ export function Stage({ item, muted, onRequestUnmute, onEnded, photoCaption, rep
 
   // Does THIS item render through the shared <video> element? YouTube never
   // does — it's an iframe, which is a genuine platform ceiling for the grant.
+  // Article mode keeps this true for parent video so the same element
+  // (and unmute grant) keeps playing above the reader.
   const isStageVideoItem =
     !!item &&
+    !isQuoteReader(item, false) &&
     item.platform !== 'youtube' &&
     (isInstagram ? instagram.status === 'ready' : playback.kind === 'video' && !!playback.src)
   const videoSrc = isInstagram ? instagram.src : playback.src
@@ -89,31 +112,28 @@ export function Stage({ item, muted, onRequestUnmute, onEnded, photoCaption, rep
     )
   }
 
+  const isYouTube = item.platform === 'youtube'
+  const articleWithLiveVideo = articleMode && isStageVideoItem
+  const articleWithYouTube = articleMode && isYouTube
+  const keepPlayingInArticle = articleWithLiveVideo || articleWithYouTube
+
   // What goes ON TOP of the video layer — null when the video IS the stage.
+  // YouTube lives in the video layer (same slot as StageVideo) so Read does
+  // not remount the iframe. Overlay is only the article pane.
   let overlay: React.ReactNode = null
-  if (!isStageVideoItem) {
+  if (keepPlayingInArticle) {
+    overlay = <StageText item={item} omitParentVideo flushTop />
+  } else if (!isStageVideoItem && !isYouTube) {
     const type = inferType(item)
     if (isInstagram) {
       // Not ready yet (or the mirror never answered): poster + spinner, or the
       // official-embed fallback. No player here — see `useInstagramStage`.
       overlay = <StageInstagram item={item} status={instagram.status} slow={instagram.slow} />
-    } else if (item.platform === 'youtube') {
-      // No MP4 — official youtube-nocookie iframe only, driven by the raw
-      // postMessage protocol for autoplay/ended/transport.
-      overlay = (
-        <StageYouTube
-          item={item}
-          muted={muted}
-          onRequestUnmute={onRequestUnmute}
-          onEnded={onEnded}
-          repeat={repeat}
-        />
-      )
     } else if (type === 'article') {
       overlay = <StageArticle item={item} />
-    } else if (type === 'photo') {
+    } else if (type === 'photo' && !isArticleReader(item, articleMode)) {
       overlay = <StageText item={item} photo photoCaption={photoCaption} />
-    } else if (type === 'text' || type === 'quote') {
+    } else if (type === 'text' || type === 'quote' || isArticleReader(item, articleMode)) {
       overlay = <StageText item={item} />
     } else {
       // Anything unresolvable: a graceful poster fallback — never a dead stage.
@@ -131,11 +151,21 @@ export function Stage({ item, muted, onRequestUnmute, onEnded, photoCaption, rep
   return (
     <div className="relative h-full w-full">
       {isStageVideoItem && videoSrc ? (
-        <div className="absolute inset-0">
+        <div className={articleWithLiveVideo ? STAGE_ARTICLE_VIDEO_BAND : 'absolute inset-0'}>
           <StageVideo
             item={item}
             src={videoSrc}
             poster={videoPoster}
+            muted={muted}
+            onRequestUnmute={onRequestUnmute}
+            onEnded={onEnded}
+            repeat={repeat}
+          />
+        </div>
+      ) : isYouTube ? (
+        <div className={articleWithYouTube ? STAGE_ARTICLE_VIDEO_BAND : 'absolute inset-0'}>
+          <StageYouTube
+            item={item}
             muted={muted}
             onRequestUnmute={onRequestUnmute}
             onEnded={onEnded}
@@ -155,9 +185,15 @@ export function Stage({ item, muted, onRequestUnmute, onEnded, photoCaption, rep
         </div>
       ) : null}
       {overlay && (
-        // Opaque, above, and owns the pointer — a covered video must never be
-        // seen, heard, or tappable.
-        <div className="absolute inset-0 z-10 bg-[#08070a]">{overlay}</div>
+        // Opaque over a covered (paused) video. In article mode with a live
+        // player the pane sits *below* the band so the same video stays visible.
+        <div
+          className={
+            keepPlayingInArticle ? STAGE_ARTICLE_TEXT_PANE : 'absolute inset-0 z-10 bg-[#08070a]'
+          }
+        >
+          {overlay}
+        </div>
       )}
     </div>
   )

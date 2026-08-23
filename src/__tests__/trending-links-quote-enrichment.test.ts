@@ -138,6 +138,7 @@ describe('getTrendingItems textLinks/quote enrichment', () => {
       authorName: 'Bookmark Quoter',
       text: 'context quote text',
       authorAvatarUrl: 'https://pbs.twimg.com/bq.jpg',
+      bookmarkId: '999',
     })
   })
 

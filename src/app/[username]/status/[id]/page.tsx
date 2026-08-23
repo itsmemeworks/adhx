@@ -14,7 +14,8 @@ import { RelatedSaves } from '@/components/RelatedSaves'
 import { SharedPostStatic } from '@/components/theater/SharedPostStatic'
 import { TheaterShell } from '@/components/theater/TheaterShell'
 import { buildSharedSeed, tweetToTheaterItem } from '@/lib/theater/shared-seed'
-import type { TextLinkRef, TheaterQuoteRef } from '@/components/theater/types'
+import { quoteRefFromSource } from '@/lib/theater/quote-ref'
+import type { TextLinkRef } from '@/components/theater/types'
 import { metrics } from '@/lib/sentry'
 import { recordAnalytic } from '@/lib/analytics/record'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
@@ -151,13 +152,16 @@ export default async function QuickAddPage({ params }: Props) {
     // tweet.text/media), so resolve those explicitly — otherwise a
     // preview-only article would land in the pulse as a bare "Saved post".
     const articleCover = tweet.article?.cover_media?.media_info?.original_img_url || null
+    const quote = quoteRefFromSource(tweet.quote)
     const previewType = tweet.article?.title
       ? 'article'
       : tweet.media?.videos?.length
         ? 'video'
-        : tweet.media?.photos?.length
-          ? 'photo'
-          : 'text'
+        : quote
+          ? 'quote'
+          : tweet.media?.photos?.length
+            ? 'photo'
+            : 'text'
 
     // Real media (or the article cover) only — no avatar fallback, so text
     // tweets stay "text" rather than being mistaken for photos.
@@ -177,21 +181,6 @@ export default async function QuickAddPage({ params }: Props) {
       textLinks.push({ shortUrl: link.url, expandedUrl: link.expanded_url })
       if (textLinks.length >= 8) break
     }
-
-    // The quoted post, when this tweet quotes another (FxTwitter already
-    // fetched it above). Deleted/protected quotes can arrive with a missing
-    // author or text — only pass one through when there's at least something
-    // to show, so the stage never renders an empty quote card.
-    const quoteAuthor = tweet.quote?.author?.screen_name
-    const quote: TheaterQuoteRef | undefined =
-      tweet.quote && (quoteAuthor || tweet.quote.text)
-        ? {
-            author: quoteAuthor || '',
-            authorName: tweet.quote.author?.name || null,
-            text: tweet.quote.text || null,
-            authorAvatarUrl: tweet.quote.author?.avatar_url || null,
-          }
-        : undefined
 
     // Record a human preview for the public pulse (skip OG-unfurl crawlers).
     // Carries the same server-resolved textLinks/quote as the shared seed

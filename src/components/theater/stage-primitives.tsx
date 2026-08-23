@@ -14,6 +14,32 @@ import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { PlatformChip } from '@/components/matter'
 import { authorProfileUrl } from '@/lib/activity/preview-path'
 import { PLATFORM_LABEL, type TheaterItem } from './types'
+import { StageGlass } from './StageGlass'
+
+/**
+ * Bottom padding on scrollable text/article stages so the last lines can
+ * sit above the overlay action row. Mobile also clears the peek bar
+ * (`PEEK_H` 4.25rem in TheaterMobileChrome) + the 0.75rem scrim gap +
+ * the 44px action pills + a little air. Desktop only needs the action
+ * pills (`absolute bottom-6`).
+ */
+export const STAGE_TEXT_SCROLL_PAD = 'pb-[calc(4.25rem+0.75rem+44px+1.25rem)] lg:pb-24'
+
+/**
+ * Top padding on the typeset tweet column so the author row clears the
+ * theater chrome (desktop brand + paste/avatar cluster; mobile top scrim).
+ * Short posts still vertically center — this pad is inside that block.
+ */
+export const STAGE_TEXT_TOP_PAD = 'pt-24 lg:pt-28'
+
+/**
+ * When Read keeps the parent video playing, the player sits in this top
+ * band and the article scroller fills the rest — same <video> element,
+ * same unmute grant, so you can read while it continues.
+ */
+export const STAGE_ARTICLE_VIDEO_BAND = 'absolute inset-x-0 top-0 h-[38dvh] lg:h-[42vh]'
+export const STAGE_ARTICLE_TEXT_PANE =
+  'absolute inset-x-0 bottom-0 top-[38dvh] z-10 bg-[#08070a] lg:top-[42vh]'
 
 /**
  * 44px icon-button chrome (dark scrim actions) — was repeated identically 4×
@@ -24,16 +50,8 @@ import { PLATFORM_LABEL, type TheaterItem } from './types'
  * Named props (rather than extending the full HTML attribute types) since
  * only these are actually used across the 4 call sites.
  */
-/** Frosted fill for theater actions/chips — blurs the stage so body text
- * doesn't read through the glass. Shared by icon buttons, desktop pills,
- * and tag chips. Border color stays on the caller (white vs clay). */
-export const STAGE_GLASS_FILL =
-  'bg-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,.22)] backdrop-blur-xl backdrop-saturate-150'
-
-const STAGE_ICON_BUTTON_CLASS = cn(
-  'inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 text-white disabled:opacity-70',
-  STAGE_GLASS_FILL,
-)
+const STAGE_ICON_BUTTON_CLASS =
+  'inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 text-white disabled:opacity-70'
 
 export interface StageIconButtonProps {
   href?: string
@@ -63,7 +81,8 @@ export function StageIconButton({
   const cls = cn(STAGE_ICON_BUTTON_CLASS, className)
   if (href) {
     return (
-      <a
+      <StageGlass
+        as="a"
         href={href}
         target={target}
         rel={rel}
@@ -73,11 +92,12 @@ export function StageIconButton({
         {...rest}
       >
         {children}
-      </a>
+      </StageGlass>
     )
   }
   return (
-    <button
+    <StageGlass
+      as="button"
       type="button"
       title={title}
       disabled={disabled}
@@ -87,7 +107,7 @@ export function StageIconButton({
       {...rest}
     >
       {children}
-    </button>
+    </StageGlass>
   )
 }
 

@@ -5,6 +5,7 @@ import { Bookmark, Check, Loader2, Tag as TagIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { sourceUrl } from '@/lib/activity/preview-path'
 import { theaterItemKey, type TheaterItem, type TheaterPersonalChrome } from './types'
+import { StageGlass } from './StageGlass'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'tag' | 'error'
 
@@ -159,7 +160,8 @@ export function SavePostButton({
     )
 
   return (
-    <button
+    <StageGlass
+      as="button"
       type="button"
       onClick={() => {
         if (status === 'tag') {
@@ -200,7 +202,7 @@ export function SavePostButton({
           Saved to your collection
         </span>
       )}
-    </button>
+    </StageGlass>
   )
 }
 
@@ -239,7 +241,8 @@ export function PersonalLiveSaveButton({
 
   if (gone) return null
   return (
-    <button
+    <StageGlass
+      as="button"
       type="button"
       onClick={() => collection.onSave(current)}
       className={cn(
@@ -252,6 +255,6 @@ export function PersonalLiveSaveButton({
     >
       <Bookmark size={iconSize} />
       {!iconOnly && <span>Save</span>}
-    </button>
+    </StageGlass>
   )
 }

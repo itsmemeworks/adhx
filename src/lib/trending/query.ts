@@ -4,6 +4,7 @@ import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm'
 import type { PlatformId } from '@/lib/platform/url'
 import { asContentType, inferContentType } from '@/lib/content-type'
 import type { ContentType } from '@/components/matter'
+import { quoteRefFromStoredContext, type StoredQuoteContext } from '@/lib/theater/quote-ref'
 
 /**
  * Anonymity-safe trending query — the SINGLE audited choke point for the
@@ -56,6 +57,14 @@ export interface TheaterQuoteRef {
   authorName?: string | null
   text?: string | null
   authorAvatarUrl?: string | null
+  /** Quoted tweet id — used to proxy photos and link the card. */
+  bookmarkId?: string | null
+  /** First photo / video poster / article cover on the quoted tweet. */
+  thumbnailUrl?: string | null
+  /** Proxied photo URLs on the quoted tweet (capped). */
+  photoUrls?: string[]
+  /** Quoted tweet has a video — the card plays it via the media proxy. */
+  hasVideo?: boolean
 }
 
 /** Parse a stored JSON column back into a value, defensively — malformed JSON serves absent, never throws. */
@@ -68,31 +77,9 @@ function safeParse<T>(json: string | null | undefined): T | undefined {
   }
 }
 
-/**
- * Shape of `bookmarks.quote_context` (legacy JSON, see `QuoteContext` in
- * `src/components/feed/types.ts`) — read defensively, mapped to the public
- * `TheaterQuoteRef` shape below.
- */
-interface StoredQuoteContext {
-  author?: string | null
-  authorName?: string | null
-  text?: string | null
-  authorProfileImageUrl?: string | null
-}
-
 /** Map a saved bookmark's legacy `quoteContext` JSON to a `TheaterQuoteRef`, when it has anything worth showing. */
 function quoteFromBookmarkContext(json: string | null | undefined): TheaterQuoteRef | undefined {
-  const parsed = safeParse<StoredQuoteContext>(json)
-  if (!parsed) return undefined
-  const author = parsed.author || ''
-  const text = parsed.text || null
-  if (!author && !text) return undefined
-  return {
-    author,
-    authorName: parsed.authorName || null,
-    text,
-    authorAvatarUrl: parsed.authorProfileImageUrl || null,
-  }
+  return quoteRefFromStoredContext(safeParse<StoredQuoteContext>(json))
 }
 
 /**

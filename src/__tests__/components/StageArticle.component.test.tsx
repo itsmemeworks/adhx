@@ -4,6 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { StageArticle } from '@/components/theater/StageArticle'
+import { STAGE_TEXT_SCROLL_PAD } from '@/components/theater/stage-primitives'
 import type { TheaterItem } from '@/components/theater/types'
 
 vi.mock('@/lib/theater/article-body', () => ({
@@ -49,6 +50,15 @@ describe('StageArticle splash', () => {
     const profile = screen.getByTitle('View @adriamatz on X')
     expect(profile).toHaveAttribute('href', 'https://x.com/adriamatz')
     expect(profile).toHaveAttribute('target', '_blank')
+    await waitFor(() => {
+      expect(screen.getByText(/Couldn't load the full article here/)).toBeInTheDocument()
+    })
+  })
+
+  it('pads the reader so the last lines can scroll above the action row', async () => {
+    render(<StageArticle item={articleItem()} />)
+    const scroller = document.querySelector('.overflow-y-auto')
+    expect(scroller?.className).toContain(STAGE_TEXT_SCROLL_PAD)
     await waitFor(() => {
       expect(screen.getByText(/Couldn't load the full article here/)).toBeInTheDocument()
     })

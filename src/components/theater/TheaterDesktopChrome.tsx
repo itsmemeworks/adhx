@@ -9,9 +9,9 @@
  *
  * Two components, one file:
  *  - `DesktopStageChrome` — absolutely-positioned overlays INSIDE the stage
- *    wrapper (brand + LIVE, paste-a-link input, de-clutter, per-type meta
- *    chips, the media post's author/caption overlay (tap the text to
- *    expand), and the action buttons).
+ *    wrapper (brand + LIVE, paste-a-link input, de-clutter, flame chip,
+ *    the media post's author/caption overlay (tap the text to expand),
+ *    and the action buttons — Open is the source platform glyph).
  *  - `DesktopDock` — the in-flow bottom dock AFTER the stage wrapper
  *    (transport cluster + horizontal filmstrip + end cap), plus the
  *    "Show all" overlay panel reusing `UpNextList`.
@@ -21,7 +21,7 @@
  * viewport gating beyond CSS.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
   Bookmark,
@@ -30,7 +30,6 @@ import {
   Clipboard,
   Maximize2,
   Link as LinkIcon,
-  ExternalLink,
   Repeat,
   Repeat1,
   Tag as TagIcon,
@@ -51,20 +50,23 @@ import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { authorProfileUrl, sourceUrl } from '@/lib/activity/preview-path'
 import { pingAnalytic } from '@/lib/analytics/client'
 import { inferType } from '@/lib/trending/filter'
-import { resolvePastedLink } from '@/lib/theater/paste-preview'
+import { resolvePastedPost } from '@/lib/theater/paste-preview'
 import { navigateToAppPath } from '@/lib/theater/navigate-app-path'
 import { useSendFile } from './useSendFile'
 import { fileSendCopy, textCopyAction } from './send-action'
 import { useTheaterCopy } from './useTheaterCopy'
 import { useTheaterStageEvents } from './useTheaterStageEvents'
 import { SavePostButton, PersonalLiveSaveButton } from './SavePostButton'
-import { FlameChip, PlatformTimeChip } from './TheaterMetaChips'
+import { FlameChip } from './TheaterMetaChips'
 import { TheaterTagChips } from './TheaterTagChips'
-import { STAGE_GLASS_FILL } from './stage-primitives'
+import { StageGlass } from './StageGlass'
+import { QuoteArticleToggle } from './QuoteArticleToggle'
 import { TheaterCollectionActions } from './TheaterCollectionActions'
 import { useClampExpand } from './useClampExpand'
 import {
   theaterItemKey,
+  isQuoteReader,
+  offerArticleMode,
   PLATFORM_LABEL,
   PERSONAL_TAB_ORDER,
   PERSONAL_TAB_LABEL,
@@ -96,7 +98,7 @@ export interface DesktopStageChromeProps {
   /** De-clutter fades the overlays out (mobile-chrome pattern: opacity + slight translate, pointer-events-none). */
   declutter: boolean
   onToggleDeclutter: () => void
-  /** Playlist mode (`/t/{username}/{tag}`): identity chrome + swaps the top bar's LIVE/paste-input right side for "Make your own", and the bottom-right Save action for the Save-playlist CTA. */
+  /** Playlist mode (`/t/{username}/{tag}`): identity chrome + swaps the top bar's LIVE/paste-button right side for "Make your own", and the bottom-right Save action for the Save-playlist CTA. */
   playlist?: TheaterPlaylistMeta
   saveStatus?: SavePlaylistStatus
   onSavePlaylist?: () => void
@@ -113,6 +115,16 @@ export interface DesktopStageChromeProps {
   itemTags?: string[]
   /** Signed-in shared preview: same Live ⇄ My Collection cluster as `/`. */
   accountTabs?: TheaterAccountTabs
+  /**
+   * Personal Live / My Collection: add the pasted post in place instead of
+   * navigating to its preview page. Receives the url as pasted (already a
+   * supported post link). Signed-out home and shared previews omit this and
+   * still `location.assign` to the preview.
+   */
+  onPastePost?: (url: string) => boolean | Promise<boolean>
+  /** Video/photo + quote: stacked article reader instead of full-bleed media. */
+  articleMode?: boolean
+  onToggleArticleMode?: () => void
 }
 
 export interface DesktopDockProps {
@@ -173,25 +185,23 @@ export interface DesktopDockProps {
    */
   repeatMode?: RepeatMode
   onCycleRepeat?: () => void
+  /** Video/photo + quote in article mode — dock pause/audio follow the reader. */
+  articleMode?: boolean
 }
 
 export { navigateToAppPath } from '@/lib/theater/navigate-app-path'
 export { SavePostButton } from './SavePostButton'
 
-const GLASS = cn(
-  'inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-white/25 px-4 text-[12.5px] font-semibold text-white transition-colors hover:bg-white/25 disabled:opacity-60',
-  STAGE_GLASS_FILL,
-)
+const GLASS =
+  'inline-flex h-11 items-center justify-center gap-1.5 rounded-full px-4 text-[12.5px] font-semibold text-white transition-colors disabled:opacity-60'
 /**
  * The Save buttons: a Bookmark glyph on the same frosted glass as GLASS,
  * distinguished by a clay border. Covers SavePostButton,
  * PersonalLiveSaveButton, the signed-out Save prompt, AND SavePlaylistButton.
  * Archive's solid fill lives on TheaterCollectionActions.
  */
-const SAVE_OUTLINE = cn(
-  'inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-clay px-5 text-[12.5px] font-semibold text-white transition-colors hover:bg-white/25 disabled:opacity-60',
-  STAGE_GLASS_FILL,
-)
+const SAVE_OUTLINE =
+  'inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-clay px-5 text-[12.5px] font-semibold text-white transition-colors hover:bg-white/10 disabled:opacity-60'
 
 export function DesktopStageChrome({
   mode,
@@ -209,17 +219,18 @@ export function DesktopStageChrome({
   onSharedTag,
   itemTags,
   accountTabs,
+  onPastePost,
+  articleMode = false,
+  onToggleArticleMode,
 }: DesktopStageChromeProps) {
+  const [pasteOpen, setPasteOpen] = useState(false)
   const [pasteValue, setPasteValue] = useState('')
   const [pasteError, setPasteError] = useState(false)
   const pasteErrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pasteWrapRef = useRef<HTMLDivElement>(null)
+  const pasteInputRef = useRef<HTMLInputElement>(null)
   const currentKey = current ? theaterItemKey(current) : null
-  const {
-    ref: captionRef,
-    expanded,
-    toggle: toggleCaption,
-    overflowing,
-  } = useClampExpand(currentKey)
+  const { ref: captionRef, overflowing } = useClampExpand(currentKey)
   // Eager on a shared preview page: there's one post the visitor followed a
   // link FOR (pinned + repeating, not skimmed past), so the file should be
   // ready before they reach for Send — the only way the share sheet opens
@@ -233,29 +244,78 @@ export function DesktopStageChrome({
     [],
   )
 
-  const tryResolve = (text: string) => {
-    const path = resolvePastedLink(text)
-    if (path) {
-      setPasteValue('')
+  useEffect(() => {
+    if (!pasteOpen) return
+    pasteInputRef.current?.focus()
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      setPasteOpen(false)
       setPasteError(false)
-      navigateToAppPath(path)
-      return
+      setPasteValue('')
     }
+    const onPointer = (e: PointerEvent) => {
+      if (pasteWrapRef.current?.contains(e.target as Node)) return
+      setPasteOpen(false)
+      setPasteError(false)
+      setPasteValue('')
+    }
+    window.addEventListener('keydown', onKey)
+    window.addEventListener('pointerdown', onPointer)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('pointerdown', onPointer)
+    }
+  }, [pasteOpen])
+
+  const onPastePostRef = useRef(onPastePost)
+  onPastePostRef.current = onPastePost
+
+  const flashPasteError = () => {
     setPasteError(true)
     if (pasteErrorTimeoutRef.current) clearTimeout(pasteErrorTimeoutRef.current)
     pasteErrorTimeoutRef.current = setTimeout(() => setPasteError(false), 2000)
   }
 
+  const tryResolve = useCallback(
+    async (text: string) => {
+      const pasted = resolvePastedPost(text)
+      if (!pasted) {
+        flashPasteError()
+        return
+      }
+      // Personal Live / My Collection: add in place and stay on this tab.
+      // Never bounce to a preview page — PasteToPreview on /library is a
+      // different surface; AuthedTheater does not mount it.
+      const handle = onPastePostRef.current
+      if (handle) {
+        const ok = await handle(pasted.url)
+        if (!ok) {
+          flashPasteError()
+          return
+        }
+        setPasteValue('')
+        setPasteError(false)
+        setPasteOpen(false)
+        return
+      }
+      if (collection) {
+        // Personal chrome without a handler must not navigate away.
+        flashPasteError()
+        return
+      }
+      setPasteValue('')
+      setPasteError(false)
+      navigateToAppPath(pasted.path)
+    },
+    [collection],
+  )
+
   // Global ⌘V: only below lg is this component mounted-but-hidden — a global
   // paste listener must respect the same breakpoint so it doesn't fire twice
-  // alongside a (future) mobile equivalent, and must never hijack a paste
-  // aimed at an actual input/textarea/contentEditable.
+  // alongside the mobile paste button, and must never hijack a paste aimed
+  // at an actual input/textarea/contentEditable. Playlist mode has no paste.
   useEffect(() => {
-    // Collection mode's global paste-to-preview is already covered by
-    // `<PasteToPreview/>` (mounted once, app-wide, in AuthedHome) — this
-    // component doesn't even render the paste input in collection mode (see the
-    // top bar below), so a second listener here would just double-navigate.
-    if (collection) return
+    if (playlist && !collection) return
     const handler = (e: ClipboardEvent) => {
       const target = e.target as HTMLElement | null
       if (target) {
@@ -265,16 +325,18 @@ export function DesktopStageChrome({
       if (typeof window === 'undefined' || !window.matchMedia('(min-width: 1024px)').matches) return
       const text = e.clipboardData?.getData('text')
       if (!text) return
-      const path = resolvePastedLink(text)
-      if (path) navigateToAppPath(path)
+      void tryResolve(text)
     }
     window.addEventListener('paste', handler)
     return () => window.removeEventListener('paste', handler)
-  }, [collection])
+  }, [collection, playlist, tryResolve])
 
   const kind = current ? inferType(current) : null
-  const textLike = kind !== null && ['text', 'quote', 'article'].includes(kind)
-  const isMedia = kind === 'video' || kind === 'photo'
+  const quoteReader = isQuoteReader(current, false)
+  const textLike = (kind !== null && ['text', 'quote', 'article'].includes(kind)) || quoteReader
+  const isMedia = (kind === 'video' || kind === 'photo') && !quoteReader
+  const showMediaCaption = isMedia && !articleMode
+  const showArticleToggle = offerArticleMode(current, overflowing, articleMode)
   const fileAction = fileSendCopy(kind)
   const copyAction = textCopyAction(kind)
   const trendCount = current ? (current.trendCount ?? current.saveCount ?? 0) : 0
@@ -407,68 +469,83 @@ export function DesktopStageChrome({
         </div>
 
         <div className="pointer-events-auto flex flex-none items-center gap-2.5">
-          {collection ? (
-            collection.tab === 'live' && current && textLike ? (
-              <>
-                <FlameChip trendCount={trendCount} />
-                <PlatformTimeChip item={current} />
-              </>
-            ) : null
-          ) : playlist ? (
+          {playlist && !collection ? (
             !isPlaylistOwner && (
-              <button type="button" onClick={() => onRequestMakeYourOwn?.()} className={GLASS}>
+              <StageGlass
+                as="button"
+                type="button"
+                onClick={() => onRequestMakeYourOwn?.()}
+                className={GLASS}
+              >
                 Make your own
-              </button>
+              </StageGlass>
             )
           ) : (
             <>
-              {current && textLike && (
-                <>
-                  <FlameChip trendCount={trendCount} />
-                  <PlatformTimeChip item={current} />
-                </>
-              )}
+              {(!collection || collection.tab === 'live') && current && textLike ? (
+                <FlameChip trendCount={trendCount} />
+              ) : null}
 
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  tryResolve(pasteValue)
-                }}
-                className={cn(
-                  'flex h-11 w-[420px] items-center gap-2.5 rounded-full border bg-white/[.08] px-4 pr-2 backdrop-blur-md transition-colors',
-                  pasteError ? 'border-red-400/60' : 'border-white/[.18]',
-                )}
-              >
-                <Clipboard size={15} className="flex-none text-white/55" />
-                <input
-                  type="text"
-                  aria-label="Paste a link to preview"
-                  placeholder="Paste a link to preview — X, Instagram, TikTok, YouTube"
-                  spellCheck={false}
-                  value={pasteValue}
-                  onChange={(e) => setPasteValue(e.target.value)}
-                  onPaste={(e) => {
-                    const text = e.clipboardData.getData('text')
-                    if (!text) return
-                    e.preventDefault()
-                    tryResolve(text)
-                  }}
-                  className="min-w-0 flex-1 bg-transparent text-[13px] text-white outline-none placeholder:text-white/45"
-                />
-                {pasteError ? (
-                  <span className="flex-none text-[11px] text-red-300">Not a supported link</span>
+              <div ref={pasteWrapRef}>
+                {pasteOpen ? (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault()
+                      void tryResolve(pasteValue)
+                    }}
+                    className={cn(
+                      'flex h-10 w-[420px] items-center gap-2.5 rounded-full border bg-white/[.08] px-4 pr-2 backdrop-blur-md transition-colors',
+                      pasteError ? 'border-red-400/60' : 'border-white/[.18]',
+                    )}
+                  >
+                    <Clipboard size={15} className="flex-none text-white/55" />
+                    <input
+                      ref={pasteInputRef}
+                      type="text"
+                      aria-label="Paste a link to preview"
+                      placeholder={
+                        onPastePost
+                          ? 'Paste a link to save — X, Instagram, TikTok, YouTube'
+                          : 'Paste a link to preview — X, Instagram, TikTok, YouTube'
+                      }
+                      spellCheck={false}
+                      value={pasteValue}
+                      onChange={(e) => setPasteValue(e.target.value)}
+                      onPaste={(e) => {
+                        const text = e.clipboardData.getData('text')
+                        if (!text) return
+                        e.preventDefault()
+                        void tryResolve(text)
+                      }}
+                      className="min-w-0 flex-1 bg-transparent text-[13px] text-white outline-none placeholder:text-white/45"
+                    />
+                    {pasteError ? (
+                      <span className="flex-none text-[11px] text-red-300">
+                        Not a supported link
+                      </span>
+                    ) : (
+                      <span className="flex-none rounded-md border border-white/[.22] px-1.5 py-0.5 font-mono text-[10.5px] text-white/50">
+                        ⌘V
+                      </span>
+                    )}
+                  </form>
                 ) : (
-                  <span className="flex-none rounded-md border border-white/[.22] px-1.5 py-0.5 font-mono text-[10.5px] text-white/50">
-                    ⌘V
-                  </span>
+                  <button
+                    type="button"
+                    aria-label="Paste a link"
+                    aria-expanded={false}
+                    onClick={() => setPasteOpen(true)}
+                    className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md transition-colors hover:bg-white/20"
+                  >
+                    <Clipboard size={16} />
+                  </button>
                 )}
-              </form>
+              </div>
             </>
           )}
 
           {/* Signed-out visitors on desktop only get the burger fallback in
-              home/shared mode — collection mode already has its own
-              "Make your own" CTA above, and the collection theater is always reached
+              home/shared mode — the personal theater is always reached
               authed — matching the mobile chrome's `allowSignedOut` gate. */}
           <TheaterAvatarMenu
             onRequestSignIn={onRequestSignIn}
@@ -490,78 +567,74 @@ export function DesktopStageChrome({
         </div>
       </div>
 
-      {/* Media veil: a light bottom fade when collapsed; the whole stage
-          darkens a touch once the caption is expanded so the white text
-          reads over the video/photo (X's expand gesture). */}
-      {current && isMedia && (
+      {/* Media veil: a light bottom fade under the 2-line caption. Long
+          text goes to Read, not an expand/dim overlay. */}
+      {current && showMediaCaption && (
         <div
           className={cn(
             'pointer-events-none absolute inset-0 transition-opacity duration-200',
             declutter && 'opacity-0',
           )}
           style={{
-            background: expanded
-              ? 'rgba(0,0,0,.42)'
-              : 'linear-gradient(transparent 55%, rgba(11,11,17,.84))',
+            background: 'linear-gradient(transparent 55%, rgba(11,11,17,.84))',
           }}
         />
       )}
 
-      {/* Bottom-left: the post overlay — merged meta line + caption. Media
-          posts only; text/quote/article render their own composition on the
-          stage itself. */}
-      {current && isMedia && (
+      {/* Bottom-left: author + caption + Read. Read sits with the text
+          (not the Download/Save row) so it's obvious it's about the
+          caption. Article mode hides the caption but keeps Watch here. */}
+      {current && (showMediaCaption || (showArticleToggle && onToggleArticleMode)) && (
         <div
           className={cn(
-            'pointer-events-auto absolute bottom-6 left-7 flex w-[min(640px,46vw)] flex-col gap-2.5 transition-[opacity,transform] duration-200 ease-out',
+            'pointer-events-auto absolute bottom-6 left-7 flex w-[min(640px,46vw)] flex-col items-start gap-2.5 transition-[opacity,transform] duration-200 ease-out',
             declutter && 'translate-y-3 opacity-0 pointer-events-none',
           )}
         >
-          <div className="flex min-w-0 items-center gap-2">
-            {(() => {
-              const profileUrl = authorProfileUrl(current.platform, current.author)
-              const inner = (
-                <>
-                  <AuthorAvatar
-                    src={current.authorAvatarUrl ?? current.thumbnailUrl}
-                    author={current.author}
-                    size="sm"
-                  />
-                  <span className="truncate text-[13.5px] font-bold text-white">
-                    {current.authorName || (handle ? `@${handle}` : 'Saved post')}
-                  </span>
-                  {handle && (
-                    <span className="truncate font-mono text-[11px] text-white/50">@{handle}</span>
-                  )}
-                </>
-              )
-              // Tappable author (round 8): jump to the creator's profile on
-              // their own platform. Plain row when there's no handle.
-              return profileUrl ? (
-                <a
-                  href={profileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex min-w-0 items-center gap-2 transition-opacity hover:opacity-85"
-                  title={`View @${handle} on ${PLATFORM_LABEL[current.platform] ?? current.platform}`}
-                >
-                  {inner}
-                </a>
-              ) : (
-                <div className="flex min-w-0 items-center gap-2">{inner}</div>
-              )
-            })()}
-            <span className="h-[3px] w-[3px] flex-none rounded-full bg-white/[.35]" />
-            <PlatformTimeChip item={current} />
-            <FlameChip trendCount={trendCount} />
-          </div>
+          {showMediaCaption && (
+            <div className="flex min-w-0 items-center gap-2">
+              {(() => {
+                const profileUrl = authorProfileUrl(current.platform, current.author)
+                const inner = (
+                  <>
+                    <AuthorAvatar
+                      src={current.authorAvatarUrl ?? current.thumbnailUrl}
+                      author={current.author}
+                      size="sm"
+                    />
+                    <span className="truncate text-[13.5px] font-bold text-white">
+                      {current.authorName || (handle ? `@${handle}` : 'Saved post')}
+                    </span>
+                    {handle && (
+                      <span className="truncate font-mono text-[11px] text-white/50">
+                        @{handle}
+                      </span>
+                    )}
+                  </>
+                )
+                // Tappable author (round 8): jump to the creator's profile on
+                // their own platform. Plain row when there's no handle.
+                return profileUrl ? (
+                  <a
+                    href={profileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex min-w-0 items-center gap-2 transition-opacity hover:opacity-85"
+                    title={`View @${handle} on ${PLATFORM_LABEL[current.platform] ?? current.platform}`}
+                  >
+                    {inner}
+                  </a>
+                ) : (
+                  <div className="flex min-w-0 items-center gap-2">{inner}</div>
+                )
+              })()}
+              <FlameChip trendCount={trendCount} />
+            </div>
+          )}
 
-          {caption && (
+          {showMediaCaption && caption && (
             <TheaterCaption
               captionRef={captionRef}
-              expanded={expanded}
-              overflowing={overflowing}
-              onToggle={toggleCaption}
               platform={current.platform}
               text={caption}
               links={current.textLinks}
@@ -569,6 +642,9 @@ export function DesktopStageChrome({
               className="text-[15px] leading-snug"
             />
           )}
+          {showArticleToggle && onToggleArticleMode ? (
+            <QuoteArticleToggle articleMode={articleMode} onToggle={onToggleArticleMode} />
+          ) : null}
         </div>
       )}
 
@@ -588,7 +664,8 @@ export function DesktopStageChrome({
           />
           <div className="flex items-center gap-2">
             {sendFile.supported ? (
-              <button
+              <StageGlass
+                as="button"
                 type="button"
                 onClick={() => void sendFile.send()}
                 disabled={sendFile.sending}
@@ -615,11 +692,12 @@ export function DesktopStageChrome({
                       ? 'Tap again'
                       : fileAction.label}
                 </span>
-              </button>
+              </StageGlass>
             ) : textLike && caption ? (
               // Text-like posts have no file — the slot copies tweet text or
               // the article, labeled so it's clear what you get.
-              <button
+              <StageGlass
+                as="button"
                 type="button"
                 onClick={() => void copyText()}
                 title={copyAction.title}
@@ -631,18 +709,22 @@ export function DesktopStageChrome({
                   <copyAction.Icon size={14} />
                 )}
                 <span>{textCopied ? copyAction.copiedLabel : copyAction.idleLabel}</span>
-              </button>
+              </StageGlass>
             ) : null}
-            <button type="button" onClick={() => void copyLink()} className={GLASS}>
+            <StageGlass as="button" type="button" onClick={() => void copyLink()} className={GLASS}>
               {linkCopied ? <Check size={14} className="text-done" /> : <LinkIcon size={14} />}
               <span>{linkCopied ? 'Copied' : 'Link'}</span>
-            </button>
+            </StageGlass>
             {playlist ? (
               isPlaylistOwner ? (
-                <a href={`/library?tag=${encodeURIComponent(playlist.tag)}`} className={GLASS}>
+                <StageGlass
+                  as="a"
+                  href={`/library?tag=${encodeURIComponent(playlist.tag)}`}
+                  className={GLASS}
+                >
                   <TagIcon size={14} />
                   <span>Manage playlist</span>
-                </a>
+                </StageGlass>
               ) : (
                 <SavePlaylistButton
                   count={playlist.count}
@@ -652,18 +734,20 @@ export function DesktopStageChrome({
                 />
               )
             ) : collection?.tab === 'collection' ? (
-              <button
+              <StageGlass
+                as="button"
                 type="button"
                 onClick={collection.onTag}
                 className={cn(GLASS, tagCount > 0 && 'border-clay/50 text-clay')}
               >
                 <TagIcon size={14} fill={tagCount > 0 ? 'currentColor' : 'none'} />
                 <span>{tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}</span>
-              </button>
+              </StageGlass>
             ) : (mode === 'shared' && authed) || collection?.tab === 'live' ? (
               collection?.tab === 'live' ? (
                 <>
-                  <button
+                  <StageGlass
+                    as="button"
                     type="button"
                     onClick={() => collection.onLiveTag?.(current)}
                     title="Tag this post (saves it to your collection first)"
@@ -671,7 +755,7 @@ export function DesktopStageChrome({
                   >
                     <TagIcon size={14} fill={tagCount > 0 ? 'currentColor' : 'none'} />
                     <span>{tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}</span>
-                  </button>
+                  </StageGlass>
                   <PersonalLiveSaveButton
                     current={current}
                     collection={collection}
@@ -687,29 +771,34 @@ export function DesktopStageChrome({
                 />
               )
             ) : (
-              <button type="button" onClick={() => onRequestSignIn?.()} className={SAVE_OUTLINE}>
+              <StageGlass
+                as="button"
+                type="button"
+                onClick={() => onRequestSignIn?.()}
+                className={SAVE_OUTLINE}
+              >
                 <Bookmark size={14} />
                 <span>Save</span>
-              </button>
+              </StageGlass>
             )}
-            {openUrl && (
-              <a
+            {openUrl && current && (
+              <StageGlass
+                as="a"
                 href={openUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 title={`Open on ${platformLabel}`}
-                className={GLASS}
+                aria-label={`Open on ${platformLabel}`}
+                className={cn(GLASS, 'w-11 px-0')}
                 onClick={() =>
-                  current &&
                   pingAnalytic('post.open', {
                     platform: current.platform,
                     id: current.bookmarkId || undefined,
                   })
                 }
               >
-                <ExternalLink size={14} />
-                <span>Open</span>
-              </a>
+                <PlatformGlyph platform={current.platform} size={14} />
+              </StageGlass>
             )}
             {collection?.tab === 'collection' && (
               <TheaterCollectionActions collection={collection} variant="desktop" />
@@ -751,11 +840,12 @@ export function DesktopDock({
   repeatCurrent = false,
   repeatMode,
   onCycleRepeat,
+  articleMode = false,
 }: DesktopDockProps) {
   const [showAll, setShowAll] = useState(false)
   const cardRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
 
-  const kind = progressKindFor(current)
+  const kind = progressKindFor(current, articleMode)
   const { videoPlaying, timedPaused, setTimedPaused, liveMuted, setLiveMuted } =
     useTheaterStageEvents()
 

@@ -122,11 +122,45 @@ function peekCentreText(): string {
 // Mobile action row is icon-only. Save keeps a clay border on the same
 // 44px glass circle as Share/Open; Download stays `border-white/25`.
 describe('TheaterMobileChrome: caption', () => {
-  it('has no more/less control — the text itself is the expand target', () => {
+  it('shows a two-line caption and no more/less control', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
-    expect(screen.getByText('a caption for the video')).toBeInTheDocument()
+    const caption = screen.getByText('a caption for the video')
+    expect(caption.closest('p')).toHaveClass('line-clamp-2')
     expect(screen.queryByRole('button', { name: 'more' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'less' })).not.toBeInTheDocument()
+  })
+
+  it('puts Read on the left of the action row, under the caption', () => {
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={videoItem({
+          quote: { author: 'other', text: 'the quoted tweet' },
+        })}
+        onToggleArticleMode={vi.fn()}
+      />,
+    )
+    const caption = screen.getByText('a caption for the video')
+    const read = screen.getByRole('button', { name: 'Read' })
+    expect(caption.compareDocumentPosition(read) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(read.nextElementSibling?.className).toContain('justify-end')
+    expect(read).not.toHaveTextContent('Read')
+  })
+
+  it('hides the caption in article mode and keeps Watch on the left of the action row', () => {
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={videoItem({
+          quote: { author: 'other', text: 'the quoted tweet' },
+        })}
+        articleMode
+        onToggleArticleMode={vi.fn()}
+      />,
+    )
+    expect(screen.queryByText('a caption for the video')).not.toBeInTheDocument()
+    const watch = screen.getByRole('button', { name: 'Watch' })
+    expect(watch.nextElementSibling?.className).toContain('justify-end')
+    expect(watch).not.toHaveTextContent('Watch')
   })
 
   it('shows tag chips in the action row, including on articles', () => {
@@ -150,11 +184,16 @@ describe('TheaterMobileChrome: caption', () => {
       />,
     )
     const copy = screen.getByRole('button', { name: 'Copy' })
-    const actionRow = copy.parentElement
+    const icons = copy.parentElement
+    expect(icons?.className).toContain('justify-end')
+    const actionRow = icons?.parentElement
     expect(actionRow?.className).toContain('pointer-events-auto')
     expect(actionRow?.parentElement?.className).toContain('pointer-events-none')
-    expect(copy.className).toContain('backdrop-blur-xl')
-    expect(screen.getByText('#ai').className).toContain('backdrop-blur-xl')
+    expect(copy.className).toContain('bg-white/10')
+    expect(copy.className).toContain('backdrop-blur-md')
+    const tag = screen.getByText('#ai')
+    expect(tag.className).toContain('bg-white/10')
+    expect(tag.className).toContain('backdrop-blur-md')
   })
 })
 
@@ -266,6 +305,23 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     expect(screen.queryByRole('button', { name: 'Later' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Paste a link' })).toBeInTheDocument()
+  })
+
+  it('shows paste on the personal Live tab too', () => {
+    const collection: TheaterPersonalChrome = {
+      tab: 'live',
+      onTabChange: vi.fn(),
+      onDone: vi.fn(),
+      onTag: vi.fn(),
+      onSave: vi.fn(),
+      onLiveTag: vi.fn(),
+      savedKeys: new Set<string>(),
+      remaining: 0,
+      onClose: vi.fn(),
+    }
+    render(<TheaterMobileChrome {...base} current={videoItem()} collection={collection} />)
+    expect(screen.getByRole('button', { name: 'Paste a link' })).toBeInTheDocument()
   })
 
   /**
@@ -384,39 +440,15 @@ describe('TheaterMobileChrome: text posts', () => {
   })
 })
 
-/**
- * Owner report: the collection theater rendered "56y" for a saved TikTok
- * whose `createdAt` fell back to an epoch sentinel. The chip renders
- * `addedAt` (when the post was first saved to ADHX — never the source
- * platform's own publish date), gated by `hasKnownTimestamp` — a
- * missing/unknown `addedAt` hides the relative-time span but the platform
- * glyph must still render either way.
- */
-describe('TheaterMobileChrome: hides the time text for an unknown addedAt', () => {
-  it('omits the relative-time span but keeps the platform glyph when addedAt is null', () => {
-    const { container } = render(
-      <TheaterMobileChrome {...base} current={videoItem({ addedAt: null })} />,
-    )
-    const chip = container.querySelector('a[href="https://x.com/alice/status/1"]')
-    expect(chip).toBeInTheDocument()
-    expect(chip!.querySelector('svg')).toBeInTheDocument()
-    expect(chip!.querySelector('span')).not.toBeInTheDocument()
-  })
-
-  it('omits the relative-time span when addedAt is the epoch sentinel', () => {
-    const { container } = render(
-      <TheaterMobileChrome {...base} current={videoItem({ addedAt: new Date(0).toISOString() })} />,
-    )
-    const chip = container.querySelector('a[href="https://x.com/alice/status/1"]')
-    expect(chip!.querySelector('span')).not.toBeInTheDocument()
-  })
-
-  it('shows the relative-time span for a real addedAt', () => {
-    const { container } = render(
+describe('TheaterMobileChrome: Open action uses the source platform glyph', () => {
+  it('is a platform-glyph link with no added-to-ADHX time', () => {
+    render(
       <TheaterMobileChrome {...base} current={videoItem({ addedAt: '2026-08-18T00:00:00Z' })} />,
     )
-    const chip = container.querySelector('a[href="https://x.com/alice/status/1"]')
-    expect(chip!.querySelector('span')).toBeInTheDocument()
+    const open = screen.getByRole('link', { name: 'Open on X' })
+    expect(open).toHaveAttribute('href', 'https://x.com/alice/status/1')
+    expect(open.querySelector('svg')).toBeInTheDocument()
+    expect(screen.queryByLabelText(/Added to ADHX/)).not.toBeInTheDocument()
   })
 })
 

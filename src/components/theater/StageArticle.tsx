@@ -25,7 +25,7 @@ import {
   type ArticleMdBlock,
   type InlineNode,
 } from '@/lib/theater/article-markdown'
-import { StageAuthorRow, StageCTA } from './stage-primitives'
+import { STAGE_TEXT_SCROLL_PAD, StageAuthorRow, StageCTA } from './stage-primitives'
 import type { TheaterItem } from './types'
 
 export interface StageArticleProps {
@@ -175,7 +175,11 @@ export function StageArticle({ item }: StageArticleProps) {
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-[#08070a]">
-      <div ref={scrollRef} onScroll={handleScroll} className="h-full w-full overflow-y-auto">
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className={cn('h-full w-full overflow-y-auto', STAGE_TEXT_SCROLL_PAD)}
+      >
         {/* Splash: cover + headline. Renders from `item` alone — looks
             complete even if the body fetch below never resolves. */}
         <div className="relative flex min-h-[46vh] w-full flex-col justify-end overflow-hidden sm:min-h-[52vh]">
@@ -203,15 +207,13 @@ export function StageArticle({ item }: StageArticleProps) {
         </div>
 
         {hasReader && (
-          <div className="mx-auto max-w-prose px-6 pb-16 pt-2 sm:px-10">
-            {renderBlocks(blocks!)}
-          </div>
+          <div className="mx-auto max-w-prose px-6 pt-2 sm:px-10">{renderBlocks(blocks!)}</div>
         )}
 
         {/* Fetch failure or no article content — stay on the splash, never a
             dead stage. */}
         {failed && !hasReader && (
-          <div className="flex flex-col items-center gap-4 px-6 pb-16 pt-6 text-center">
+          <div className="flex flex-col items-center gap-4 px-6 pt-6 text-center">
             <p className="text-sm text-white/50">Couldn&apos;t load the full article here.</p>
             <StageCTA href={href} />
           </div>

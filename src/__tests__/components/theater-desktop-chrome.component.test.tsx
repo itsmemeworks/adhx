@@ -474,34 +474,74 @@ describe('DesktopStageChrome', () => {
     expect(screen.getByText('@alice')).toBeInTheDocument()
     expect(screen.getByText('a caption for the video')).toBeInTheDocument()
 
-    // The platform/time link-out chip lives in the merged meta line for media
-    // posts — it must not ALSO appear duplicated in the top bar. (The
-    // bottom-right "Open" action button carries the same title, so exclude
-    // it by its visible "Open" label to isolate the chip.)
-    const chips = screen
-      .getAllByTitle('Open on X')
-      .filter((el) => !el.textContent?.includes('Open'))
-    expect(chips).toHaveLength(1)
+    expect(screen.getByRole('link', { name: 'Open on X' })).toHaveAttribute(
+      'href',
+      'https://x.com/alice/status/1',
+    )
+    expect(screen.queryByText('Open')).not.toBeInTheDocument()
   })
 
-  it('has no more/less caption control — the text itself is the expand target', () => {
+  it('has no more/less caption control — overflow uses Read, not tap-to-expand', () => {
     render(<DesktopStageChrome {...stageBase} current={videoItem()} />)
     expect(screen.getByText('a caption for the video')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'more' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'less' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Read' })).not.toBeInTheDocument()
   })
 
-  it('renders no caption overlay for a text item, but does render the top-bar platform/time chip', () => {
+  it('keeps the media caption on a video+quote item and offers Read', () => {
+    const onToggleArticleMode = vi.fn()
+    render(
+      <DesktopStageChrome
+        {...stageBase}
+        current={videoItem({
+          quote: { author: 'other', text: 'the quoted tweet' },
+        })}
+        onToggleArticleMode={onToggleArticleMode}
+      />,
+    )
+    const caption = screen.getByText('a caption for the video')
+    const read = screen.getByRole('button', { name: 'Read' })
+    expect(caption.compareDocumentPosition(read) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    fireEvent.click(read)
+    expect(onToggleArticleMode).toHaveBeenCalled()
+  })
+
+  it('hides the media caption in article mode, offers Watch, and keeps Download', () => {
+    mockUseSendFile.mockReturnValue({
+      supported: true,
+      ready: true,
+      sending: false,
+      mode: 'download' as const,
+      send: vi.fn(),
+    })
+    render(
+      <DesktopStageChrome
+        {...stageBase}
+        current={videoItem({
+          quote: { author: 'other', text: 'the quoted tweet' },
+        })}
+        articleMode
+        onToggleArticleMode={vi.fn()}
+      />,
+    )
+    expect(screen.queryByText('a caption for the video')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Watch' })).toHaveAttribute(
+      'title',
+      'Back to watching',
+    )
+    expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument()
+  })
+
+  it('renders no caption overlay for a text item, and opens the source via the platform glyph', () => {
     const item = textItem()
     render(<DesktopStageChrome {...stageBase} current={item} />)
 
     expect(screen.queryByText('a text-only post with no media')).not.toBeInTheDocument()
-    // The top-bar chip carries the platform glyph + relative time — assert via
-    // title, excluding the bottom-right "Open" action button which shares it.
-    const chips = screen
-      .getAllByTitle('Open on X')
-      .filter((el) => !el.textContent?.includes('Open'))
-    expect(chips).toHaveLength(1)
+    const open = screen.getByRole('link', { name: 'Open on X' })
+    expect(open).toHaveAttribute('href', 'https://x.com/bob/status/2')
+    expect(open.querySelector('svg')).toBeInTheDocument()
+    expect(screen.queryByText('Open')).not.toBeInTheDocument()
   })
 
   it('resolves a pasted x.com URL to the preview path via window.location.assign', () => {
@@ -512,6 +552,7 @@ describe('DesktopStageChrome', () => {
     })
 
     render(<DesktopStageChrome {...stageBase} current={null} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
     const input = screen.getByLabelText('Paste a link to preview')
     fireEvent.change(input, { target: { value: 'https://x.com/alice/status/123' } })
     fireEvent.submit(input.closest('form')!)
@@ -554,13 +595,144 @@ describe('DesktopStageChrome', () => {
     expect(peekPreviewOpenIntent()).toBe('paste')
   })
 
+  it('keeps the paste field collapsed until the paste button is clicked', () => {
+    render(<DesktopStageChrome {...stageBase} current={null} />)
+    expect(screen.queryByLabelText('Paste a link to preview')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+    expect(screen.getByLabelText('Paste a link to preview')).toBeInTheDocument()
+  })
+
+  it('keeps the expanded paste field the same height as the icon cluster', () => {
+    const { rerender } = render(<DesktopStageChrome {...stageBase} current={null} />)
+    expect(screen.getByRole('button', { name: 'Paste a link' }).className).toContain('h-10')
+    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+    expect(screen.getByLabelText('Paste a link to preview').closest('form')?.className).toContain(
+      'h-10',
+    )
+    expect(screen.getByLabelText('Hide controls').className).toContain('h-10')
+    rerender(<DesktopStageChrome {...stageBase} current={null} />)
+  })
+
+  it('collapses the paste field on Escape', () => {
+    render(<DesktopStageChrome {...stageBase} current={null} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+    expect(screen.getByLabelText('Paste a link to preview')).toBeInTheDocument()
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.queryByLabelText('Paste a link to preview')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Paste a link' })).toBeInTheDocument()
+  })
+
   it('shows "Not a supported link" for a garbage paste', () => {
     render(<DesktopStageChrome {...stageBase} current={null} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
     const input = screen.getByLabelText('Paste a link to preview')
     fireEvent.change(input, { target: { value: 'not a link at all' } })
     fireEvent.submit(input.closest('form')!)
 
     expect(screen.getByText('Not a supported link')).toBeInTheDocument()
+  })
+
+  const personalCollection = {
+    tab: 'live' as const,
+    onTabChange: vi.fn(),
+    onDone: vi.fn(),
+    onTag: vi.fn(),
+    onSave: vi.fn(),
+    onLiveTag: vi.fn(),
+    savedKeys: new Set<string>(),
+    remaining: 0,
+    onClose: vi.fn(),
+  }
+
+  it('shows the paste control on the personal Live tab', () => {
+    render(
+      <DesktopStageChrome
+        {...stageBase}
+        mode="personal"
+        current={videoItem()}
+        collection={personalCollection}
+        onPastePost={vi.fn()}
+      />,
+    )
+    expect(screen.getByRole('button', { name: 'Paste a link' })).toBeInTheDocument()
+  })
+
+  it('shows the paste control on My Collection', () => {
+    render(
+      <DesktopStageChrome
+        {...stageBase}
+        mode="personal"
+        current={videoItem()}
+        collection={{ ...personalCollection, tab: 'collection' }}
+        onPastePost={vi.fn()}
+      />,
+    )
+    expect(screen.getByRole('button', { name: 'Paste a link' })).toBeInTheDocument()
+  })
+
+  it('adds in place on the personal theater and does not navigate away', async () => {
+    const assignSpy = vi.fn()
+    Object.defineProperty(window, 'location', {
+      value: { ...window.location, assign: assignSpy },
+      writable: true,
+    })
+    const onPastePost = vi.fn().mockResolvedValue(true)
+
+    render(
+      <DesktopStageChrome
+        {...stageBase}
+        mode="personal"
+        current={videoItem()}
+        collection={personalCollection}
+        onPastePost={onPastePost}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+    const input = screen.getByLabelText('Paste a link to preview')
+    fireEvent.change(input, { target: { value: 'https://x.com/alice/status/123' } })
+    fireEvent.submit(input.closest('form')!)
+
+    await waitFor(() => {
+      expect(onPastePost).toHaveBeenCalledWith('https://x.com/alice/status/123')
+    })
+    expect(assignSpy).not.toHaveBeenCalled()
+  })
+
+  it('does not fall back to navigating away when personal paste has no handler', () => {
+    const assignSpy = vi.fn()
+    Object.defineProperty(window, 'location', {
+      value: { ...window.location, assign: assignSpy },
+      writable: true,
+    })
+
+    render(
+      <DesktopStageChrome
+        {...stageBase}
+        mode="personal"
+        current={videoItem()}
+        collection={personalCollection}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+    const input = screen.getByLabelText('Paste a link to preview')
+    fireEvent.change(input, { target: { value: 'https://x.com/alice/status/123' } })
+    fireEvent.submit(input.closest('form')!)
+
+    expect(assignSpy).not.toHaveBeenCalled()
+    expect(screen.getByText('Not a supported link')).toBeInTheDocument()
+  })
+
+  it('hides paste on a playlist (Make your own stays)', () => {
+    render(
+      <DesktopStageChrome
+        {...stageBase}
+        mode="playlist"
+        current={videoItem()}
+        playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: 'Paste a link' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Make your own' })).toBeInTheDocument()
   })
 
   // De-cluttering EXPANDS the stage (owner review: the previous icon was
@@ -594,8 +766,8 @@ describe('DesktopStageChrome', () => {
     fireEvent.click(closeBtn)
     expect(collection.onClose).toHaveBeenCalled()
 
-    // The far-right cluster (outside the tab pill) holds only the avatar
-    // menu and the de-clutter toggle — no stray close button there.
+    // The far-right cluster (outside the tab pill) holds paste + avatar
+    // + de-clutter — no stray close button there.
     const declutterBtn = screen.getByLabelText('Hide controls')
     const rightCluster = declutterBtn.parentElement!
     expect(rightCluster.querySelector('[aria-label="Close"]')).toBeNull()
@@ -822,7 +994,7 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
     expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Link' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Tag' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Open' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open on X' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Archive' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Later' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
@@ -966,53 +1138,24 @@ describe('DesktopDock: repeat control', () => {
   })
 })
 
-/**
- * Owner report: the collection theater rendered "56y" for a saved TikTok
- * whose `createdAt` fell back to an epoch sentinel. Every time-chip site now
- * renders `addedAt` (when the post was first saved to ADHX — never the
- * source platform's own publish date) gated by `hasKnownTimestamp` — a
- * missing/unknown `addedAt` hides the relative-time span but the platform
- * glyph must still render either way.
- */
-describe('DesktopStageChrome: hides the time text for an unknown addedAt (PlatformTimeChip)', () => {
+describe('DesktopStageChrome: Open action uses the source platform glyph', () => {
   const stageBase = {
     mode: 'home' as const,
     declutter: false,
     onToggleDeclutter: vi.fn(),
   }
 
-  // Two elements share the "Open on X" title (this chip AND the bottom-right
-  // "Open" link-out button) — the chip is the one with the dark pill
-  // background (`bg-black/40`), distinct from the glass `Open` button.
-  function findChip() {
-    return screen.getAllByTitle('Open on X').find((el) => el.className.includes('bg-black/40'))!
-  }
-
-  it('omits the relative-time span but keeps the platform glyph when addedAt is null', () => {
-    render(<DesktopStageChrome {...stageBase} current={videoItem({ addedAt: null })} />)
-    const chip = findChip()
-    expect(chip.querySelector('svg')).toBeInTheDocument()
-    expect(chip.querySelector('span')).not.toBeInTheDocument()
-  })
-
-  it('omits the relative-time span when addedAt is the epoch sentinel', () => {
-    render(
-      <DesktopStageChrome
-        {...stageBase}
-        current={videoItem({ addedAt: new Date(0).toISOString() })}
-      />,
-    )
-    expect(findChip().querySelector('span')).not.toBeInTheDocument()
-  })
-
-  it('shows the relative-time span for a real addedAt', () => {
+  it('is a platform-glyph link with no added-to-ADHX time', () => {
     render(
       <DesktopStageChrome
         {...stageBase}
         current={videoItem({ addedAt: '2026-08-18T00:00:00Z' })}
       />,
     )
-    expect(findChip().querySelector('span')).toBeInTheDocument()
+    const open = screen.getByRole('link', { name: 'Open on X' })
+    expect(open.querySelector('svg')).toBeInTheDocument()
+    expect(open.textContent?.trim()).toBe('')
+    expect(screen.queryByLabelText(/Added to ADHX/)).not.toBeInTheDocument()
   })
 })
 
