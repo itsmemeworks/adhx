@@ -36,6 +36,12 @@ import { notifyCollectionChanged } from '@/lib/client-events'
 import { theaterItemKey } from './types'
 import { sourceUrl } from '@/lib/activity/preview-path'
 import {
+  claimSharedAutoSave,
+  consumePreviewOpenIntent,
+  readSharedOpenContext,
+  sharedAutoSaveReason,
+} from '@/lib/theater/autosave-shared'
+import {
   shouldCommitDelete,
   shouldDismissUndo,
   personalAdvance,
@@ -570,6 +576,11 @@ export function TheaterShell({
       // Best effort — the button simply won't flip to "Saved".
     }
     return false
+  }, [])
+
+  const handleSharedTag = useCallback((item: TheaterItem) => {
+    if (!item.bookmarkId) return
+    setLiveTagTarget({ platform: item.platform, bookmarkId: item.bookmarkId })
   }, [])
 
   const handlePersonalLiveTag = useCallback(
@@ -1381,37 +1392,61 @@ export function TheaterShell({
     setShowSignIn(true)
   }, [])
 
-  // Deferred single-post save: landing on a preview path with ?save=1 after
-  // the sign-in round-trip (magic link or X OAuth) completes the save the
-  // viewer originally asked for. Waits for authMe to settle; if the link
-  // expired and they sign in via the modal instead, authMe's refresh re-runs
-  // this and the intent still completes. Announces success via a window
-  // event so the chrome's SavePostButton flips to "Saved".
+  // Shared-lead save. Two ways in, one POST:
+  //  1. `?save=1` after a sign-in round-trip — explicit, even on reload.
+  //  2. A *new open* of this preview (prefix / paste / /share). Refresh of
+  //     a theater-rewritten address bar, back/forward, and in-app hops
+  //     (e.g. /trending → preview) do not save. `useTheaterDwell` is
+  //     unrelated — it only pulses `/api/activity/preview`.
+  // Waits for authMe to settle; signed-out landings never save (Save still
+  // opens the modal). Announces success so SavePostButton flips to "Saved".
   useEffect(() => {
-    if (!saveIntentOnLoad || mode !== 'shared' || !sharedItem) return
+    if (mode !== 'shared' || !sharedItem) return
+    if (authMe.loading) return
     if (sharedAutoSaveRef.current) return
-    if (authMe.loading || !authMe.me?.authenticated) return
+    const authenticated = !!authMe.me?.authenticated
+    const ctx = readSharedOpenContext()
+    const reason = sharedAutoSaveReason({
+      mode,
+      hasSharedItem: true,
+      sharedUnavailable,
+      authenticated,
+      saveIntentOnLoad,
+      navigationType: ctx.navigationType,
+      documentPath: ctx.documentPath,
+      currentPath: ctx.currentPath,
+      openIntent: ctx.openIntent,
+    })
+    if (!reason) {
+      // `?save=1` after an expired link: wait for in-modal sign-in.
+      if (saveIntentOnLoad && !authenticated) return
+      consumePreviewOpenIntent()
+      sharedAutoSaveRef.current = true
+      return
+    }
+    consumePreviewOpenIntent()
     sharedAutoSaveRef.current = true
+    const key = theaterItemKey(sharedItem)
+    if (!claimSharedAutoSave(key)) return
     const url = sourceUrl(sharedItem.platform, sharedItem.author, sharedItem.bookmarkId ?? '')
     if (!url) return
+    const body = reason === 'save-intent' ? { url } : { url, source: 'url_prefix' as const }
     void fetch('/api/bookmarks/add', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url }),
+      body: JSON.stringify(body),
     })
       .then((res) => {
         if (!res.ok) return
         window.dispatchEvent(
           new CustomEvent('theater-post-saved', {
-            detail: { key: theaterItemKey(sharedItem) },
+            detail: { key },
           }),
         )
-        // …and tell the rest of the app a post was added, which this path
-        // never did: only the local Save button knew (state review).
         notifyCollectionChanged()
       })
       .catch(() => {})
-  }, [saveIntentOnLoad, mode, sharedItem, authMe.loading, authMe.me])
+  }, [saveIntentOnLoad, mode, sharedItem, sharedUnavailable, authMe.loading, authMe.me])
 
   const performClone = useCallback(async () => {
     if (!playlist) return
@@ -1699,6 +1734,7 @@ export function TheaterShell({
           repeatMode={displayRepeatMode}
           onCycleRepeat={cycleRepeatMode}
           collection={personalChrome}
+          onSharedTag={mode === 'shared' ? handleSharedTag : undefined}
         />
         <DesktopStageChrome
           mode={mode}
@@ -1713,6 +1749,7 @@ export function TheaterShell({
           onRequestSignIn={openSignIn}
           onRequestMakeYourOwn={handleMakeYourOwn}
           collection={personalChrome}
+          onSharedTag={mode === 'shared' ? handleSharedTag : undefined}
         />
         {/* Collection Archive undo toast — auto-dismisses after 5s
             (`armUndoDismiss`). Same placement on both viewports. `bottom-36`

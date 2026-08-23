@@ -1,38 +1,62 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { Bookmark, Check, Loader2 } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Bookmark, Check, Loader2, Tag as TagIcon } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { sourceUrl } from '@/lib/activity/preview-path'
 import { theaterItemKey, type TheaterItem, type TheaterPersonalChrome } from './types'
 
-type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'tag' | 'error'
+
+/** How long the "Saved" confirmation holds before the pill becomes Tag. */
+export const SAVE_TO_TAG_MS = 1_050
 
 /** Cross-mount cache of "is this post already in the viewer's collection?" */
 const ownershipCache = new Map<string, boolean>()
+
+/** Test-only: drop cached ownership so cases can share a post id. */
+export function resetSavePostOwnershipCache(): void {
+  ownershipCache.clear()
+}
 
 export function SavePostButton({
   current,
   className,
   iconOnly,
+  onTag,
 }: {
   current: TheaterItem
   /** Full button class string — the caller owns the visual style. */
   className: string
   /** Mobile action row: icon + aria-label only. */
   iconOnly?: boolean
+  /**
+   * After a just-now save (autosave or tap), the pill morphs Save → Saved →
+   * Tag. Already-owned posts skip the celebration and land on Tag. Without
+   * this callback the button stays on Saved (the old dead-end).
+   */
+  onTag?: () => void
 }) {
   const [status, setStatus] = useState<SaveStatus>('idle')
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const celebratingRef = useRef(false)
   const key = theaterItemKey(current)
 
   useEffect(() => {
     setStatus('idle')
+    celebratingRef.current = false
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+      timeoutRef.current = null
+    }
   }, [key])
 
   useEffect(() => {
     if (!current.bookmarkId) return
     if (ownershipCache.has(key)) {
-      if (ownershipCache.get(key)) setStatus('saved')
+      if (ownershipCache.get(key) && !celebratingRef.current) {
+        setStatus(onTag ? 'tag' : 'saved')
+      }
       return
     }
     let cancelled = false
@@ -46,22 +70,40 @@ export function SavePostButton({
             (f.platform ?? 'twitter') === current.platform && f.id === current.bookmarkId,
         )
         ownershipCache.set(key, owned)
-        if (!cancelled && owned) setStatus('saved')
+        if (!cancelled && owned && !celebratingRef.current) {
+          setStatus(onTag ? 'tag' : 'saved')
+        }
       })
       .catch(() => {})
     return () => {
       cancelled = true
     }
-  }, [key, current.bookmarkId, current.platform])
+  }, [key, current.bookmarkId, current.platform, onTag])
+
+  const onTagRef = useRef(onTag)
+  onTagRef.current = onTag
+
+  const landOnSaved = useCallback(() => {
+    celebratingRef.current = true
+    ownershipCache.set(key, true)
+    setStatus('saved')
+    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    if (!onTagRef.current) return
+    timeoutRef.current = setTimeout(() => {
+      celebratingRef.current = false
+      setStatus('tag')
+      timeoutRef.current = null
+    }, SAVE_TO_TAG_MS)
+  }, [key])
 
   useEffect(() => {
     function handleSaved(e: Event) {
       const detail = (e as CustomEvent<{ key?: string }>).detail
-      if (detail?.key === key) setStatus('saved')
+      if (detail?.key === key) landOnSaved()
     }
     window.addEventListener('theater-post-saved', handleSaved)
     return () => window.removeEventListener('theater-post-saved', handleSaved)
-  }, [key])
+  }, [key, landOnSaved])
 
   useEffect(
     () => () => {
@@ -71,7 +113,7 @@ export function SavePostButton({
   )
 
   const handleSave = async () => {
-    if (status === 'saving' || status === 'saved' || !current.bookmarkId) return
+    if (status === 'saving' || status === 'saved' || status === 'tag' || !current.bookmarkId) return
     setStatus('saving')
     try {
       const url = sourceUrl(current.platform, current.author, current.bookmarkId)
@@ -83,8 +125,7 @@ export function SavePostButton({
       })
       const data = await res.json().catch(() => null)
       if (!res.ok || data?.error) throw new Error(data?.error || 'Save failed')
-      ownershipCache.set(key, true)
-      setStatus('saved')
+      landOnSaved()
     } catch {
       setStatus('error')
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
@@ -92,34 +133,72 @@ export function SavePostButton({
     }
   }
 
-  const visibleLabel = status === 'saved' ? 'Saved' : status === 'error' ? 'Try again' : 'Save'
+  const visibleLabel =
+    status === 'saved'
+      ? 'Saved'
+      : status === 'tag'
+        ? 'Tag'
+        : status === 'error'
+          ? 'Try again'
+          : 'Save'
+  const iconSize = iconOnly ? 16 : 14
   const icon =
     status === 'saving' ? (
-      <Loader2 size={iconOnly ? 16 : 14} className="animate-spin" />
+      <Loader2 size={iconSize} className="animate-spin" />
     ) : status === 'saved' ? (
-      <Check size={iconOnly ? 16 : 14} />
+      <Check size={iconSize} className="text-done" />
+    ) : status === 'tag' ? (
+      <TagIcon size={iconSize} />
     ) : (
-      <Bookmark size={iconOnly ? 16 : 14} />
+      <Bookmark size={iconSize} />
     )
 
   return (
     <button
       type="button"
-      onClick={() => void handleSave()}
+      onClick={() => {
+        if (status === 'tag') {
+          onTag?.()
+          return
+        }
+        void handleSave()
+      }}
       disabled={status === 'saving' || status === 'saved'}
-      className={className}
-      aria-label={iconOnly ? (status === 'saving' ? 'Saving' : visibleLabel) : undefined}
+      className={cn(
+        className,
+        status === 'tag' && 'border-white/25',
+        status === 'saved' && 'animate-save-pop',
+      )}
+      aria-label={
+        iconOnly
+          ? status === 'saving'
+            ? 'Saving'
+            : visibleLabel
+          : status === 'tag'
+            ? 'Tag this post'
+            : undefined
+      }
     >
-      {icon}
-      {!iconOnly && <span>{visibleLabel}</span>}
+      <span
+        key={status}
+        className={cn('inline-flex items-center gap-1.5', status === 'tag' && 'animate-tag-in')}
+      >
+        {icon}
+        {!iconOnly && <span>{visibleLabel}</span>}
+      </span>
+      {status === 'saved' && (
+        <span className="sr-only" aria-live="polite">
+          Saved to your collection
+        </span>
+      )}
     </button>
   )
 }
 
 /**
  * Live-tab save for the personal theater. Uses `savedKeys` from the shell
- * rather than owning a fetch — once saved the button disappears so the Tag
- * icon beside it is both the affordance and the state.
+ * rather than owning a fetch — once saved the button collapses out so the
+ * Tag icon beside it is both the affordance and the state.
  */
 export function PersonalLiveSaveButton({
   current,
@@ -135,13 +214,32 @@ export function PersonalLiveSaveButton({
   iconOnly?: boolean
 }) {
   const saved = collection.savedKeys.has(theaterItemKey(current))
-  if (saved) return null
+  const [exiting, setExiting] = useState(false)
+  const [gone, setGone] = useState(false)
+
+  useEffect(() => {
+    if (!saved) {
+      setExiting(false)
+      setGone(false)
+      return
+    }
+    setExiting(true)
+    const timer = window.setTimeout(() => setGone(true), 280)
+    return () => window.clearTimeout(timer)
+  }, [saved])
+
+  if (gone) return null
   return (
     <button
       type="button"
       onClick={() => collection.onSave(current)}
-      className={className}
+      className={cn(
+        className,
+        'overflow-hidden',
+        exiting && 'animate-save-slot-out pointer-events-none',
+      )}
       aria-label={iconOnly ? 'Save' : undefined}
+      tabIndex={exiting ? -1 : undefined}
     >
       <Bookmark size={iconSize} />
       {!iconOnly && <span>Save</span>}

@@ -375,8 +375,8 @@ All preview routes render the shared-mode theater (`SharedPostStatic` + `<Theate
 
 **Tweet preview**:
 
-- Authenticated: **Save** POSTs `/api/bookmarks/add` (no auto-add)
-- Unauthenticated: rich preview; saving opens `SignInModal` at save-intent
+- Authenticated: landing on a preview via a **new open** (URL prefix, paste, `/share`) auto-saves the shared lead (`POST /api/bookmarks/add`, `source: 'url_prefix'`). Refresh of a theater-rewritten address bar, back/forward, and in-app hops (`/trending` → preview) do **not**. `?save=1` after sign-in still completes an explicit save even on reload. Watching in Live (`useTheaterDwell`) only pulses `/api/activity/preview` — it never saves. The Save pill pops **Saved** then morphs to **Tag** (same `TagQuickPicker` as Live).
+- Unauthenticated: rich preview; saving opens `SignInModal` at save-intent. A later in-modal sign-in does not auto-save unless the URL already had `?save=1`.
 
 **Reel preview** (media resolution):
 
@@ -403,7 +403,7 @@ All preview routes render the shared-mode theater (`SharedPostStatic` + `<Theate
 
 **Send** is the file (video or photo); **Share link** is the preview URL. Touch **Send** prefetches the MP4 and shares `files` + `text: "via <canonical url>"` — never `url` alongside `files` (WhatsApp concatenates them into `via URL URL`). iOS needs the file ready before the tap so `navigator.share` stays a user gesture (implemented by `useSendFile` in the theater).
 
-**Save-to-collection**: when the visiting user is authenticated, all three preview pages show an "Add to Collection" button that POSTs to `/api/bookmarks/add` and redirects to `/?added=success&platform=...&id=...`. Saved Reels and TikToks land in the same feed as tweets, distinguished by the platform badge on the FeedCard.
+**Save-to-collection**: a signed-in new-open of a preview autosaves the lead (see Tweet preview above). The chrome Save button still POSTs `/api/bookmarks/add` and flips to Saved. Saved Reels and TikToks land in the same feed as tweets, distinguished by the platform badge on the FeedCard.
 
 **AppShell** suppresses the global Header for these preview paths via the `isFullWidth` regex — see `src/components/AppShell.tsx`. Add new preview paths there to avoid the double-header issue.
 

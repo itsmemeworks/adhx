@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { parseShareUrl, extractSharedUrl } from '@/lib/utils/parse-share-url'
+import { markPreviewOpenIntent } from '@/lib/theater/autosave-shared'
 
 function ShareRedirect() {
   const searchParams = useSearchParams()
@@ -31,7 +32,10 @@ function ShareRedirect() {
 
     // TikTok short links resolve via an /api route that 307s to the preview;
     // the client router can't follow a cross-route redirect, so do a real
-    // navigation. App routes use the client router (no full reload).
+    // navigation. App routes use the client router (no full reload). Stamp
+    // share-intent so a signed-in viewer autosaves the lead; /trending
+    // clicks never set this flag.
+    markPreviewOpenIntent('share')
     if (parsed.path.startsWith('/api/')) {
       window.location.replace(parsed.path)
     } else {
