@@ -138,7 +138,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
       send: vi.fn(),
     })
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
-    const downloadBtn = screen.getByRole('button', { name: 'Video' })
+    const downloadBtn = screen.getByRole('button', { name: 'Download' })
     expect(downloadBtn.className).not.toContain('border-clay')
     expect(downloadBtn.className).toContain('border-white/25')
     expect(downloadBtn).not.toHaveTextContent('Download')
@@ -147,7 +147,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     expect(saveBtn.className).toContain('border-clay')
   })
 
-  it('labels a video file Video and a photo file Photo', () => {
+  it('labels video and photo Download, distinguished by film vs image icon', () => {
     mockUseSendFile.mockReturnValue({
       supported: true,
       ready: true,
@@ -156,10 +156,14 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
       send: vi.fn(),
     })
     const { rerender } = render(<TheaterMobileChrome {...base} current={videoItem()} />)
-    expect(screen.getByRole('button', { name: 'Video' })).toBeInTheDocument()
+    const videoBtn = screen.getByRole('button', { name: 'Download' })
+    expect(videoBtn.querySelector('.lucide-film')).toBeTruthy()
+    expect(screen.getByTitle('Download the video')).toBeInTheDocument()
     rerender(<TheaterMobileChrome {...base} current={videoItem({ contentType: 'photo' })} />)
-    expect(screen.getByRole('button', { name: 'Photo' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Video' })).not.toBeInTheDocument()
+    const photoBtn = screen.getByRole('button', { name: 'Download' })
+    expect(photoBtn.querySelector('.lucide-image')).toBeTruthy()
+    expect(screen.getByTitle('Download the photo')).toBeInTheDocument()
+    expect(screen.queryByTitle('Download the video')).not.toBeInTheDocument()
   })
 
   it('collection live-tab Save carries the clay-border outline, Download (when present) stays plain glass', () => {
@@ -187,7 +191,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     expect(saveBtn.className).toContain('border-clay')
     expect(saveBtn).not.toHaveTextContent('Save')
 
-    const downloadBtn = screen.getByRole('button', { name: 'Video' })
+    const downloadBtn = screen.getByRole('button', { name: 'Download' })
     expect(downloadBtn.className).not.toContain('border-clay')
   })
 
@@ -211,7 +215,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
       onClose: vi.fn(),
     }
     render(<TheaterMobileChrome {...base} current={videoItem()} collection={collection} />)
-    expect(screen.getByRole('button', { name: 'Video' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Share link' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Tag' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Open on X' })).toBeInTheDocument()
@@ -517,7 +521,7 @@ describe('TheaterMobileChrome: collection mode brand logo is always home', () =>
         isPlaylistOwner={false}
       />,
     )
-    expect(screen.getByRole('button', { name: 'Video' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save playlist · 12' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Share link' })).toBeInTheDocument()
   })
@@ -531,7 +535,7 @@ describe('TheaterMobileChrome: collection mode brand logo is always home', () =>
         isPlaylistOwner={false}
       />,
     )
-    expect(screen.getByRole('button', { name: 'Copy text' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save playlist · 12' })).toBeInTheDocument()
   })
 
@@ -551,7 +555,7 @@ describe('TheaterMobileChrome: collection mode brand logo is always home', () =>
         isPlaylistOwner
       />,
     )
-    expect(screen.getByRole('button', { name: 'Video' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Manage playlist' })).toBeInTheDocument()
   })
 })
@@ -1038,15 +1042,20 @@ describe('TheaterMobileChrome: Copy button for text-like posts', () => {
 
   it('shows a Copy icon (not Download) for a text-like post with no sendable file', () => {
     render(<TheaterMobileChrome {...base} current={textItem()} />)
-    expect(screen.getByRole('button', { name: 'Copy text' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Download' })).not.toBeInTheDocument()
     expect(screen.queryByText('Copy')).not.toBeInTheDocument()
   })
 
-  it('labels an article Copy article, not Copy text', () => {
-    render(<TheaterMobileChrome {...base} current={textItem({ contentType: 'article' })} />)
-    expect(screen.getByRole('button', { name: 'Copy article' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Copy text' })).not.toBeInTheDocument()
+  it('uses a file-text icon for articles and a copy icon for tweets', () => {
+    const { rerender } = render(
+      <TheaterMobileChrome {...base} current={textItem({ contentType: 'article' })} />,
+    )
+    expect(
+      screen.getByRole('button', { name: 'Copy' }).querySelector('.lucide-file-text'),
+    ).toBeTruthy()
+    rerender(<TheaterMobileChrome {...base} current={textItem()} />)
+    expect(screen.getByRole('button', { name: 'Copy' }).querySelector('.lucide-copy')).toBeTruthy()
   })
 
   it('copies the article body, not just the title', async () => {
@@ -1067,7 +1076,7 @@ describe('TheaterMobileChrome: Copy button for text-like posts', () => {
         })}
       />,
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Copy article' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Copy' }))
     await waitFor(() =>
       expect(writeText).toHaveBeenCalledWith(
         'Army title\n\n# Why an army\n\nOne account has a ceiling.',
@@ -1077,7 +1086,7 @@ describe('TheaterMobileChrome: Copy button for text-like posts', () => {
 
   it("copies the post's full text and flashes Copied on tap", async () => {
     render(<TheaterMobileChrome {...base} current={textItem({ text: 'the full post body' })} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Copy text' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Copy' }))
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('the full post body'))
     expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument()
   })

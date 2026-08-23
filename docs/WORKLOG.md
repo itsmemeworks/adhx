@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-23 — Download / Copy labels, kind lives in the icon
+
+Visible label is Download for video+photo and Copy for tweet+article. Film / image / copy / file-text icons and titles still name the kind. Follow-up: none.
+
 ## 2026-08-23 — Copy article copies the body, not just the title
 
 `item.text` for articles is the headline. Copy article now fetches the same `/api/share/tweet` markdown `StageArticle` renders (shared in-flight cache) and puts title + body on the clipboard. Follow-up: none.

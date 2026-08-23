@@ -616,6 +616,7 @@ export function TheaterMobileChrome({
             ) : textLike && (current.text || '').trim() ? (
               <StageIconButton
                 onClick={() => void copyText()}
+                title={copyAction.title}
                 aria-label={textCopied ? copyAction.copiedLabel : copyAction.idleLabel}
               >
                 {textCopied ? (

@@ -46,7 +46,7 @@ authedTest.describe('collection actions', () => {
       await expect(page.getByRole('button', { name: 'Tag', exact: true })).toBeVisible()
       await expect(page.getByRole('link', { name: 'Open' })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
-      await expect(page.getByRole('button', { name: 'Copy text' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Copy' })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Later' })).toHaveCount(0)
       await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(0)
       await expect(page.getByRole('button', { name: 'Save' })).toHaveCount(0)

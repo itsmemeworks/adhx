@@ -659,7 +659,7 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
       send: vi.fn(),
     })
     render(<DesktopStageChrome {...stageBase} current={videoItem()} />)
-    const downloadBtn = screen.getByText('Video').closest('button')!
+    const downloadBtn = screen.getByText('Download').closest('button')!
     expect(downloadBtn.className).not.toContain('bg-clay-grad')
     expect(downloadBtn.className).not.toContain('border-clay')
     expect(downloadBtn.className).toContain('border-white/25')
@@ -669,7 +669,7 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
     expect(saveBtn.className).toContain('border-clay')
   })
 
-  it('labels a video file Video and a photo file Photo', () => {
+  it('labels video and photo Download, distinguished by film vs image icon', () => {
     mockUseSendFile.mockReturnValue({
       supported: true,
       ready: true,
@@ -678,10 +678,14 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
       send: vi.fn(),
     })
     const { rerender } = render(<DesktopStageChrome {...stageBase} current={videoItem()} />)
-    expect(screen.getByRole('button', { name: 'Video' })).toBeInTheDocument()
+    const videoBtn = screen.getByRole('button', { name: 'Download' })
+    expect(videoBtn.querySelector('.lucide-film')).toBeTruthy()
+    expect(screen.getByTitle('Download the video')).toBeInTheDocument()
     rerender(<DesktopStageChrome {...stageBase} current={videoItem({ contentType: 'photo' })} />)
-    expect(screen.getByRole('button', { name: 'Photo' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Video' })).not.toBeInTheDocument()
+    const photoBtn = screen.getByRole('button', { name: 'Download' })
+    expect(photoBtn.querySelector('.lucide-image')).toBeTruthy()
+    expect(screen.getByTitle('Download the photo')).toBeInTheDocument()
+    expect(screen.queryByTitle('Download the video')).not.toBeInTheDocument()
   })
 
   it('shared+authed SavePostButton carries the clay-border outline', async () => {
@@ -755,7 +759,7 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
     const saveBtn = screen.getByText('Save').closest('button')!
     expect(saveBtn.className).toContain('border-clay')
 
-    const downloadBtn = screen.getByText('Video').closest('button')!
+    const downloadBtn = screen.getByText('Download').closest('button')!
     expect(downloadBtn.className).not.toContain('border-clay')
   })
 
@@ -794,7 +798,7 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
       onClose: vi.fn(),
     }
     render(<DesktopStageChrome {...stageBase} current={videoItem()} collection={collection} />)
-    expect(screen.getByRole('button', { name: 'Video' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Link' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Tag' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Open' })).toBeInTheDocument()
@@ -1067,21 +1071,28 @@ describe('DesktopStageChrome: Copy button for text-like posts', () => {
 
   it('shows a Copy pill (not Download) for a text-like post with no sendable file', () => {
     render(<DesktopStageChrome {...stageBase} current={textItem()} />)
-    expect(screen.getByText('Copy text')).toBeInTheDocument()
+    expect(screen.getByText('Copy')).toBeInTheDocument()
     expect(screen.queryByText('Download')).not.toBeInTheDocument()
   })
 
   it('copies the post\'s full text and flashes "Copied" on click', async () => {
     render(<DesktopStageChrome {...stageBase} current={textItem({ text: 'the full post body' })} />)
-    fireEvent.click(screen.getByText('Copy text'))
+    fireEvent.click(screen.getByText('Copy'))
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('the full post body'))
     expect(await screen.findByText('Copied')).toBeInTheDocument()
   })
 
-  it('labels an article Copy article, not Copy text', () => {
-    render(<DesktopStageChrome {...stageBase} current={textItem({ contentType: 'article' })} />)
-    expect(screen.getByText('Copy article')).toBeInTheDocument()
-    expect(screen.queryByText('Copy text')).not.toBeInTheDocument()
+  it('uses a file-text icon for articles and a copy icon for tweets', () => {
+    const { rerender } = render(
+      <DesktopStageChrome {...stageBase} current={textItem({ contentType: 'article' })} />,
+    )
+    expect(
+      screen.getByRole('button', { name: 'Copy' }).querySelector('.lucide-file-text'),
+    ).toBeTruthy()
+    expect(screen.getByTitle('Copy the article')).toBeInTheDocument()
+    rerender(<DesktopStageChrome {...stageBase} current={textItem()} />)
+    expect(screen.getByRole('button', { name: 'Copy' }).querySelector('.lucide-copy')).toBeTruthy()
+    expect(screen.getByTitle("Copy the post's text")).toBeInTheDocument()
   })
 
   it('copies the article body, not just the title', async () => {
@@ -1102,7 +1113,7 @@ describe('DesktopStageChrome: Copy button for text-like posts', () => {
         })}
       />,
     )
-    fireEvent.click(screen.getByText('Copy article'))
+    fireEvent.click(screen.getByText('Copy'))
     await waitFor(() =>
       expect(writeText).toHaveBeenCalledWith(
         'Army title\n\n# Why an army\n\nOne account has a ceiling.',

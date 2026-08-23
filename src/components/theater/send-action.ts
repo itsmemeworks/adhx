@@ -9,9 +9,9 @@ export function fileSendCopy(kind: ContentType | null): {
   Icon: LucideIcon
 } {
   if (kind === 'photo') {
-    return { label: 'Photo', title: 'Download the photo', Icon: ImageIcon }
+    return { label: 'Download', title: 'Download the photo', Icon: ImageIcon }
   }
-  return { label: 'Video', title: 'Download the video', Icon: Film }
+  return { label: 'Download', title: 'Download the video', Icon: Film }
 }
 
 /** Idle label + icon for the text-like Copy slot (tweet vs article). */
@@ -23,14 +23,14 @@ export function textCopyAction(kind: ContentType | null): {
 } {
   if (kind === 'article') {
     return {
-      idleLabel: 'Copy article',
+      idleLabel: 'Copy',
       copiedLabel: 'Copied',
       title: 'Copy the article',
       Icon: FileText,
     }
   }
   return {
-    idleLabel: 'Copy text',
+    idleLabel: 'Copy',
     copiedLabel: 'Copied',
     title: "Copy the post's text",
     Icon: Copy,
