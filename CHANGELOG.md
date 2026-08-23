@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.57.1](https://github.com/itsmemeworks/adhx/compare/v1.57.0...v1.57.1) (2026-08-23)
+
+
+### Bug Fixes
+
+* show the adhx username in the avatar menu ([#396](https://github.com/itsmemeworks/adhx/issues/396)) ([dff3309](https://github.com/itsmemeworks/adhx/commit/dff330929a018f62bba5b261720c07c545ae0f66))
+
 ## [1.57.0](https://github.com/itsmemeworks/adhx/compare/v1.56.0...v1.57.0) (2026-08-23)
 
 
