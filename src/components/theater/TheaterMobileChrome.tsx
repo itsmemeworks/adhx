@@ -141,6 +141,8 @@ export interface TheaterMobileChromeProps {
   onCycleRepeat?: () => void
   /** Collection mode: burger carries Live↔Collection; Collection tab adds Archive to the Live action row (Download/Share/Tag/Open). */
   collection?: TheaterPersonalChrome
+  /** Shared+authed: open the tag picker after the Save pill morphs to Tag. */
+  onSharedTag?: (item: TheaterItem) => void
 }
 
 /** Height of the collapsed sheet's peek bar — kept in sync with the transform below. Two rows now (drag handle + the nav/pause/audio/de-clutter controls), taller than the old label-only bar. */
@@ -189,6 +191,7 @@ export function TheaterMobileChrome({
   repeatMode,
   onCycleRepeat,
   collection,
+  onSharedTag,
 }: TheaterMobileChromeProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -648,6 +651,7 @@ export function TheaterMobileChrome({
                   'inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border bg-white/[0.14] text-white disabled:opacity-70',
                   ICON_SAVE,
                 )}
+                onTag={onSharedTag ? () => onSharedTag(current) : undefined}
               />
             ) : (
               <StageIconButton

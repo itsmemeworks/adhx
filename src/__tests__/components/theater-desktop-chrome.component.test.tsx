@@ -10,6 +10,7 @@ import {
 } from '@/components/theater/TheaterDesktopChrome'
 import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterItem } from '@/components/theater/types'
+import { peekPreviewOpenIntent } from '@/lib/theater/autosave-shared'
 
 // jsdom has no scrollIntoView — the dock auto-scrolls the current filmstrip card into view.
 Element.prototype.scrollIntoView = vi.fn()
@@ -539,6 +540,7 @@ describe('DesktopStageChrome', () => {
     expect(assignSpy).toHaveBeenCalledWith(
       new URL('/alice/status/123', window.location.origin).toString(),
     )
+    expect(peekPreviewOpenIntent()).toBe('paste')
   })
 
   it('shows "Not a supported link" for a garbage paste', () => {

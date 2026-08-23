@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-23 — Autosave shared preview on new open
+
+Signed-in landing on a preview URL now saves that lead (`TheaterShell` + `sharedAutoSaveReason`). Fires only for a new open: prefix / typed URL / paste (`adhx-preview-open-intent`) / `/share`. Skips reload (theater address-bar rewrite), back/forward, `/trending` clicks, home/personal/playlist, signed-out, and unavailable leads. `?save=1` still completes an explicit save after sign-in. Dwell is unchanged (`/api/activity/preview` only). The shared Save pill pops "Saved" then morphs to Tag (opens the picker); live-tab Save collapses out next to Tag. Follow-up: none.
+
+---
+
 ## 2026-08-23 — Avatar menu shows the ADHX username
 
 Header + theater burger led with the email for email-only accounts (and the X handle when connected). Both now show `@username` — email is a sign-in method, not the account name. Follow-up: none.

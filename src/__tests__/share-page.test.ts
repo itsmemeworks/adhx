@@ -9,6 +9,7 @@ import {
   navigateToPastedLink,
   type PastedLinkRouter,
 } from '@/lib/utils/parse-share-url'
+import { peekPreviewOpenIntent } from '@/lib/theater/autosave-shared'
 
 /**
  * Share Page URL Parsing Tests
@@ -165,6 +166,7 @@ describe('navigateToPastedLink — the shared paste-a-link navigation sink', () 
   })
 
   beforeEach(() => {
+    sessionStorage.clear()
     // A plain object standing in for `window.location` — assigning `.href`
     // on the real jsdom Location attempts a navigation and logs a noisy
     // "not implemented" error; this just records the value instead.
@@ -181,6 +183,7 @@ describe('navigateToPastedLink — the shared paste-a-link navigation sink', () 
     )
     expect(router.push).toHaveBeenCalledWith('/naval/status/2064012969239859490')
     expect(window.location.href).toBe('')
+    expect(peekPreviewOpenIntent()).toBe('paste')
   })
 
   it('navigates an Instagram reel URL via the router', () => {
@@ -210,6 +213,7 @@ describe('navigateToPastedLink — the shared paste-a-link navigation sink', () 
     expect(window.location.href).toBe(
       '/api/tiktok/resolve?url=https%3A%2F%2Fvm.tiktok.com%2FZMABcd123&go=1',
     )
+    expect(peekPreviewOpenIntent()).toBe('paste')
   })
 
   it('returns false and navigates nowhere for unsupported text', () => {
@@ -217,6 +221,7 @@ describe('navigateToPastedLink — the shared paste-a-link navigation sink', () 
     expect(navigateToPastedLink(router, 'just some ordinary text, no link here')).toBe(false)
     expect(router.push).not.toHaveBeenCalled()
     expect(window.location.href).toBe('')
+    expect(peekPreviewOpenIntent()).toBeNull()
   })
 
   it('refuses a javascript: URL smuggled in as pasted text', () => {

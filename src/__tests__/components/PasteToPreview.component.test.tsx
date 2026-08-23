@@ -4,6 +4,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render } from '@testing-library/react'
 import { PasteToPreview, navigateToAppPath } from '@/components/PasteToPreview'
+import { peekPreviewOpenIntent } from '@/lib/theater/autosave-shared'
 
 function dispatchPaste(text: string, target: EventTarget = window) {
   const event = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent
@@ -105,6 +106,7 @@ describe('navigateToAppPath', () => {
     expect(assignSpy).toHaveBeenCalledWith(
       new URL('/alice/status/123', window.location.origin).toString(),
     )
+    expect(peekPreviewOpenIntent()).toBe('paste')
   })
 })
 

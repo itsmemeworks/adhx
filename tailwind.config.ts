@@ -135,6 +135,22 @@ const config: Config = {
           '0%': { transform: 'translateY(6px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
         },
+        // Shared-lead save confirmation — a single pop so autosave is visible
+        // before the pill hands off to Tag.
+        'save-pop': {
+          '0%': { transform: 'scale(0.88)' },
+          '55%': { transform: 'scale(1.08)' },
+          '100%': { transform: 'scale(1)' },
+        },
+        'tag-in': {
+          '0%': { transform: 'translateX(5px)', opacity: '0' },
+          '100%': { transform: 'translateX(0)', opacity: '1' },
+        },
+        // Live-tab Save collapsing so Tag is left as the only affordance.
+        'save-slot-out': {
+          '0%': { opacity: '1', transform: 'scale(1)', maxWidth: '10rem' },
+          '100%': { opacity: '0', transform: 'scale(0.84)', maxWidth: '0' },
+        },
       },
       animation: {
         'bounce-in': 'bounce-in 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
@@ -146,6 +162,9 @@ const config: Config = {
         'live-pulse': 'live-pulse 1.8s infinite',
         'sound-pulse': 'sound-pulse 2.2s ease-in-out infinite',
         'toast-in': 'toast-in 0.18s ease-out',
+        'save-pop': 'save-pop 0.38s cubic-bezier(0.34, 1.3, 0.64, 1)',
+        'tag-in': 'tag-in 0.22s ease-out',
+        'save-slot-out': 'save-slot-out 0.28s ease-in forwards',
       },
     },
   },

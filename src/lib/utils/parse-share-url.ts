@@ -1,4 +1,5 @@
 import { detectPlatformPost } from '@/lib/platform/url'
+import { markPreviewOpenIntent } from '@/lib/theater/autosave-shared'
 
 /**
  * TikTok's native share sheet hands over a SHORT link
@@ -108,12 +109,14 @@ export function navigateToPastedLink(router: PastedLinkRouter, raw: string): boo
 
   const shortLink = matchTikTokShortLink(trimmed)
   if (shortLink) {
+    markPreviewOpenIntent('paste')
     window.location.href = `/api/tiktok/resolve?url=${encodeURIComponent(shortLink)}&go=1`
     return true
   }
 
   const result = parseShareUrl(trimmed)
   if (result && isSafeInternalPath(result.path)) {
+    markPreviewOpenIntent('paste')
     router.push(result.path)
     return true
   }

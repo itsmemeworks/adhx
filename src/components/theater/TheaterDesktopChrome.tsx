@@ -105,6 +105,8 @@ export interface DesktopStageChromeProps {
   onRequestMakeYourOwn?: () => void
   /** Collection mode: Collection↔Live tab switcher in the top bar; Collection tab adds Archive to the Live action row. */
   collection?: TheaterPersonalChrome
+  /** Shared+authed: open the tag picker after the Save pill morphs to Tag. */
+  onSharedTag?: (item: TheaterItem) => void
 }
 
 export interface DesktopDockProps {
@@ -194,6 +196,7 @@ export function DesktopStageChrome({
   onRequestSignIn,
   onRequestMakeYourOwn,
   collection,
+  onSharedTag,
 }: DesktopStageChromeProps) {
   const [pasteValue, setPasteValue] = useState('')
   const [pasteError, setPasteError] = useState(false)
@@ -651,7 +654,11 @@ export function DesktopStageChrome({
                 />
               </>
             ) : (
-              <SavePostButton current={current} className={SAVE_OUTLINE} />
+              <SavePostButton
+                current={current}
+                className={SAVE_OUTLINE}
+                onTag={onSharedTag ? () => onSharedTag(current) : undefined}
+              />
             )
           ) : (
             <button type="button" onClick={() => onRequestSignIn?.()} className={SAVE_OUTLINE}>
