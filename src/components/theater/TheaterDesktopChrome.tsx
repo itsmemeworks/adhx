@@ -28,9 +28,7 @@ import {
   Check,
   Loader2,
   Clipboard,
-  Copy as CopyIcon,
   Maximize2,
-  Download as DownloadIcon,
   Link as LinkIcon,
   ExternalLink,
   Repeat,
@@ -56,6 +54,7 @@ import { inferType } from '@/lib/trending/filter'
 import { resolvePastedLink } from '@/lib/theater/paste-preview'
 import { navigateToAppPath } from '@/lib/theater/navigate-app-path'
 import { useSendFile } from './useSendFile'
+import { fileSendCopy, textCopyAction } from './send-action'
 import { useTheaterCopy } from './useTheaterCopy'
 import { useTheaterStageEvents } from './useTheaterStageEvents'
 import { SavePostButton, PersonalLiveSaveButton } from './SavePostButton'
@@ -265,6 +264,8 @@ export function DesktopStageChrome({
   const kind = current ? inferType(current) : null
   const textLike = kind !== null && ['text', 'quote', 'article'].includes(kind)
   const isMedia = kind === 'video' || kind === 'photo'
+  const fileAction = fileSendCopy(kind)
+  const copyAction = textCopyAction(kind)
   const trendCount = current ? (current.trendCount ?? current.saveCount ?? 0) : 0
   const displayTags = collection?.tags ?? itemTags
   const tagCount = displayTags?.length ?? 0
@@ -587,8 +588,8 @@ export function DesktopStageChrome({
               disabled={sendFile.sending}
               title={
                 sendFile.mode === 'share'
-                  ? 'Opens your share sheet with the file'
-                  : 'Download the file'
+                  ? `Opens your share sheet with the ${kind === 'photo' ? 'photo' : 'video'}`
+                  : fileAction.title
               }
               className={cn(GLASS, sendFile.primed && 'border-clay')}
             >
@@ -599,23 +600,31 @@ export function DesktopStageChrome({
               {sendFile.sending ? (
                 <Loader2 size={14} className="animate-spin" />
               ) : (
-                <DownloadIcon size={14} />
+                <fileAction.Icon size={14} />
               )}
               <span>
-                {sendFile.sending ? 'Getting file' : sendFile.primed ? 'Tap again' : 'Download'}
+                {sendFile.sending
+                  ? 'Getting file'
+                  : sendFile.primed
+                    ? 'Tap again'
+                    : fileAction.label}
               </span>
             </button>
           ) : textLike && caption ? (
-            // Text-like posts have no file — the Download slot copies the
-            // post's full text instead (round 8, owner request).
+            // Text-like posts have no file — the slot copies tweet text or
+            // the article, labeled so it's clear what you get.
             <button
               type="button"
               onClick={() => void copyText()}
-              title="Copy the post's text"
+              title={copyAction.title}
               className={GLASS}
             >
-              {textCopied ? <Check size={14} className="text-done" /> : <CopyIcon size={14} />}
-              <span>{textCopied ? 'Copied' : 'Copy'}</span>
+              {textCopied ? (
+                <Check size={14} className="text-done" />
+              ) : (
+                <copyAction.Icon size={14} />
+              )}
+              <span>{textCopied ? copyAction.copiedLabel : copyAction.idleLabel}</span>
             </button>
           ) : null}
           <button type="button" onClick={() => void copyLink()} className={GLASS}>

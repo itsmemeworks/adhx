@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-23 — Download/copy pills name the thing you get
+
+Theater file slot is Video (film) or Photo (image), not a generic Download. Text-like slot is Copy text vs Copy article. Same on desktop labels and mobile aria-labels. Follow-up: none.
+
+---
+
 ## 2026-08-23 — E2E save-clone vs signed-in preview autosave
 
 `nav.spec` visiting a preview while authed now autosaves `POST.preview`, so `save-clone` saw the bookmark already there and then missed the Saved pill (it had become Tag; `name: 'Save'` also matches Saved). Delete first, accept Saved or Tag, poll `feedHasId`. Follow-up: none.

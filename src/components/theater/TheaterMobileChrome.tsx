@@ -16,13 +16,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSheetDrag } from './useSheetDrag'
 import {
-  Download as DownloadIcon,
   Loader2,
   Share2,
   ExternalLink,
   Bookmark,
   Check,
-  Copy as CopyIcon,
   Repeat,
   Repeat1,
   Tag as TagIcon,
@@ -44,6 +42,7 @@ import { authorProfileUrl, previewPath, sourceUrl } from '@/lib/activity/preview
 import { pingAnalytic } from '@/lib/analytics/client'
 import { inferType } from '@/lib/trending/filter'
 import { useSendFile } from './useSendFile'
+import { fileSendCopy, textCopyAction } from './send-action'
 import { useTheaterCopy } from './useTheaterCopy'
 import { useTheaterStageEvents } from './useTheaterStageEvents'
 import { useClampExpand } from './useClampExpand'
@@ -356,8 +355,11 @@ export function TheaterMobileChrome({
   // The stage IS the text for text/quote/article posts — repeating the body
   // (and the author header) in the bottom scrim doubles it up and buries the
   // stage. Those posts get a compact scrim: chip + actions only.
-  const textLike = current ? ['text', 'quote', 'article'].includes(inferType(current)) : false
+  const kind = current ? inferType(current) : null
+  const textLike = kind !== null && ['text', 'quote', 'article'].includes(kind)
   const caption = textLike ? '' : (current?.text || '').trim()
+  const fileAction = fileSendCopy(kind)
+  const copyAction = textCopyAction(kind)
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10 lg:hidden">
@@ -593,26 +595,34 @@ export function TheaterMobileChrome({
                 disabled={sendFile.sending}
                 title={
                   sendFile.mode === 'share'
-                    ? 'Opens your share sheet with the file'
-                    : 'Download the file'
+                    ? `Opens your share sheet with the ${kind === 'photo' ? 'photo' : 'video'}`
+                    : fileAction.title
                 }
                 aria-label={
-                  sendFile.sending ? 'Getting file' : sendFile.primed ? 'Tap again' : 'Download'
+                  sendFile.sending
+                    ? 'Getting file'
+                    : sendFile.primed
+                      ? 'Tap again'
+                      : fileAction.label
                 }
                 className={sendFile.primed ? ICON_SAVE : undefined}
               >
                 {sendFile.sending ? (
                   <Loader2 size={16} className="animate-spin" />
                 ) : (
-                  <DownloadIcon size={16} />
+                  <fileAction.Icon size={16} />
                 )}
               </StageIconButton>
             ) : textLike && (current.text || '').trim() ? (
               <StageIconButton
                 onClick={() => void copyText()}
-                aria-label={textCopied ? 'Copied' : 'Copy'}
+                aria-label={textCopied ? copyAction.copiedLabel : copyAction.idleLabel}
               >
-                {textCopied ? <Check size={16} className="text-done" /> : <CopyIcon size={16} />}
+                {textCopied ? (
+                  <Check size={16} className="text-done" />
+                ) : (
+                  <copyAction.Icon size={16} />
+                )}
               </StageIconButton>
             ) : null}
             {playlist && isPlaylistOwner ? (
