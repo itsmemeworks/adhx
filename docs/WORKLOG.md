@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-23 — Copy article copies the body, not just the title
+
+`item.text` for articles is the headline. Copy article now fetches the same `/api/share/tweet` markdown `StageArticle` renders (shared in-flight cache) and puts title + body on the clipboard. Follow-up: none.
+
 ## 2026-08-23 — Download/copy pills name the thing you get
 
 Theater file slot is Video (film) or Photo (image), not a generic Download. Text-like slot is Copy text vs Copy article. Same on desktop labels and mobile aria-labels. Follow-up: none.

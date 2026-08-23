@@ -11,6 +11,7 @@ import {
 import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterItem } from '@/components/theater/types'
 import { peekPreviewOpenIntent } from '@/lib/theater/autosave-shared'
+import { resetArticleMarkdownCache } from '@/lib/theater/article-body'
 import { resetSavePostOwnershipCache } from '@/components/theater/SavePostButton'
 
 // jsdom has no scrollIntoView — the dock auto-scrolls the current filmstrip card into view.
@@ -1055,6 +1056,7 @@ describe('DesktopStageChrome: Copy button for text-like posts', () => {
   const writeText = vi.fn().mockResolvedValue(undefined)
 
   beforeEach(() => {
+    resetArticleMarkdownCache()
     global.fetch = vi.fn().mockResolvedValue({ ok: false })
     writeText.mockClear()
     Object.defineProperty(navigator, 'clipboard', {
@@ -1080,6 +1082,32 @@ describe('DesktopStageChrome: Copy button for text-like posts', () => {
     render(<DesktopStageChrome {...stageBase} current={textItem({ contentType: 'article' })} />)
     expect(screen.getByText('Copy article')).toBeInTheDocument()
     expect(screen.queryByText('Copy text')).not.toBeInTheDocument()
+  })
+
+  it('copies the article body, not just the title', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        article: { content: '# Why an army\n\nOne account has a ceiling.' },
+      }),
+    })
+    render(
+      <DesktopStageChrome
+        {...stageBase}
+        current={textItem({
+          contentType: 'article',
+          text: 'Army title',
+          author: 'adriamatz',
+          bookmarkId: '99',
+        })}
+      />,
+    )
+    fireEvent.click(screen.getByText('Copy article'))
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith(
+        'Army title\n\n# Why an army\n\nOne account has a ceiling.',
+      ),
+    )
   })
 
   it('renders no Copy pill for a text-like post with empty text', () => {

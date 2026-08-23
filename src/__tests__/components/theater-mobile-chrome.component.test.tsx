@@ -6,6 +6,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { TheaterMobileChrome } from '@/components/theater/TheaterMobileChrome'
 import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterItem, TheaterPersonalChrome } from '@/components/theater/types'
+import { resetArticleMarkdownCache } from '@/lib/theater/article-body'
 
 /**
  * Save-is-always-primary / Download-is-secondary on the mobile bottom scrim —
@@ -1026,6 +1027,8 @@ describe('TheaterMobileChrome: Copy button for text-like posts', () => {
   const writeText = vi.fn().mockResolvedValue(undefined)
 
   beforeEach(() => {
+    resetArticleMarkdownCache()
+    global.fetch = vi.fn().mockResolvedValue({ ok: false })
     writeText.mockClear()
     Object.defineProperty(navigator, 'clipboard', {
       value: { writeText },
@@ -1044,6 +1047,32 @@ describe('TheaterMobileChrome: Copy button for text-like posts', () => {
     render(<TheaterMobileChrome {...base} current={textItem({ contentType: 'article' })} />)
     expect(screen.getByRole('button', { name: 'Copy article' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Copy text' })).not.toBeInTheDocument()
+  })
+
+  it('copies the article body, not just the title', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        article: { content: '# Why an army\n\nOne account has a ceiling.' },
+      }),
+    })
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={textItem({
+          contentType: 'article',
+          text: 'Army title',
+          author: 'adriamatz',
+          bookmarkId: '99',
+        })}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Copy article' }))
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith(
+        'Army title\n\n# Why an army\n\nOne account has a ceiling.',
+      ),
+    )
   })
 
   it("copies the post's full text and flashes Copied on tap", async () => {
