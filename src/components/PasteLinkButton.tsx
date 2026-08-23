@@ -8,24 +8,7 @@ import { cn } from '@/lib/utils'
 import { PlatformGlyph } from '@/components/matter'
 import { isIOSDevice } from '@/lib/platform'
 import { navigateToPastedLink } from '@/lib/utils/parse-share-url'
-
-// Copied from `TheaterAvatarMenu`'s dismissal machinery: while the overlay is
-// open, keep the theater's window-level keydown handler from acting on these
-// (harmless outside the theater — there's no such listener there to compete
-// with). Escape is handled separately below (it closes the overlay).
-const THEATER_SHORTCUT_KEYS = new Set([
-  ' ',
-  'ArrowUp',
-  'ArrowDown',
-  'ArrowLeft',
-  'ArrowRight',
-  'm',
-  'M',
-  'j',
-  'J',
-  'k',
-  'K',
-])
+import { THEATER_SHORTCUT_KEYS } from '@/components/theater/theater-shortcuts'
 
 type ReadResult = 'navigated' | 'unsupported' | 'no-text'
 
