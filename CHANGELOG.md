@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.59.0](https://github.com/itsmemeworks/adhx/compare/v1.58.0...v1.59.0) (2026-08-23)
+
+
+### Features
+
+* add a desktop save-to-adhx browser extension ([#400](https://github.com/itsmemeworks/adhx/issues/400)) ([bdb339d](https://github.com/itsmemeworks/adhx/commit/bdb339d8d1f7a4f314fbe40cc0c8760a75c14a11))
+
 ## [1.58.0](https://github.com/itsmemeworks/adhx/compare/v1.57.1...v1.58.0) (2026-08-23)
 
 
