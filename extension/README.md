@@ -83,12 +83,12 @@ Then `about:debugging` → **This Firefox** → **Load Temporary Add-on…** →
 
 With ADHX running locally (and the env above), sign in on [http://localhost:3001](http://localhost:3001) first (magic-link email prints the URL in the Next terminal).
 
-| Action                         | What it uses                         | Result                                      |
-| ------------------------------ | ------------------------------------ | ------------------------------------------- |
-| Toolbar icon                   | Current tab URL                      | Tab navigates to `/share?url=…`             |
-| `⌘⇧A` (Mac) / `Ctrl+Shift+A`   | Current tab URL                      | Same                                        |
-| Right-click a **link**         | The link href (preferred)            | Same                                        |
-| Right-click a page / selection | Tab URL, or a URL inside the selection | Same                                      |
+| Action                         | What it uses                           | Result                          |
+| ------------------------------ | -------------------------------------- | ------------------------------- |
+| Toolbar icon                   | Current tab URL                        | Tab navigates to `/share?url=…` |
+| `⌘⇧A` (Mac) / `Ctrl+Shift+A`   | Current tab URL                        | Same                            |
+| Right-click a **link**         | The link href (preferred)              | Same                            |
+| Right-click a page / selection | Tab URL, or a URL inside the selection | Same                            |
 
 Supported URLs (same set `/share` already routes):
 
@@ -142,13 +142,13 @@ pnpm --dir extension exec tsc --noEmit
 
 ## Layout
 
-| Path                  | Role                                                                 |
-| --------------------- | -------------------------------------------------------------------- |
-| `src/background.ts`   | Toolbar, context menu, `×` badge, keyboard command                   |
-| `src/share-url.ts`    | Which links we will send (standalone copy of the app detector)       |
-| `src/manifest.json`   | MV3 Chromium + Firefox adapters via [Extension.js](https://extension.js.org) |
-| `src/images/`         | Toolbar icons                                                        |
-| `.env.example`        | `EXTENSION_PUBLIC_APP_ORIGIN`                                        |
+| Path                | Role                                                                         |
+| ------------------- | ---------------------------------------------------------------------------- |
+| `src/background.ts` | Toolbar, context menu, `×` badge, keyboard command                           |
+| `src/share-url.ts`  | Which links we will send (standalone copy of the app detector)               |
+| `src/manifest.json` | MV3 Chromium + Firefox adapters via [Extension.js](https://extension.js.org) |
+| `src/images/`       | Toolbar icons                                                                |
+| `.env.example`      | `EXTENSION_PUBLIC_APP_ORIGIN`                                                |
 
 `src/content/` and `src/sidebar/` are unused Extension.js template leftovers and are **not** in the manifest. Do not wire them in — the product decision is no content scripts.
 
@@ -156,12 +156,12 @@ pnpm --dir extension exec tsc --noEmit
 
 ## Troubleshooting
 
-| Symptom                                         | Likely cause                                                                 |
-| ----------------------------------------------- | ---------------------------------------------------------------------------- |
-| Lands on `adhx.com` instead of localhost        | `.env` missing / empty, or you did not rebuild + Reload                      |
-| Preview loads but does not autosave             | Not signed in **on that origin**, or this was a refresh / back navigation    |
-| Toolbar does nothing except a red **×**         | Current tab is not a supported post — right-click the post link instead      |
-| Load unpacked greyed out / fails                | Pick the `dist/chromium` folder, not `extension/` or `src/`                  |
-| `Cannot find namespace 'chrome'` in root `tsc`  | Do not add `extension` back to the app `tsconfig` include                    |
-| Shortcut does nothing                           | Remap at `chrome://extensions/shortcuts`                                     |
-| `pnpm --dir extension install` after a clone    | Required — this package is not part of the root workspace install            |
+| Symptom                                        | Likely cause                                                              |
+| ---------------------------------------------- | ------------------------------------------------------------------------- |
+| Lands on `adhx.com` instead of localhost       | `.env` missing / empty, or you did not rebuild + Reload                   |
+| Preview loads but does not autosave            | Not signed in **on that origin**, or this was a refresh / back navigation |
+| Toolbar does nothing except a red **×**        | Current tab is not a supported post — right-click the post link instead   |
+| Load unpacked greyed out / fails               | Pick the `dist/chromium` folder, not `extension/` or `src/`               |
+| `Cannot find namespace 'chrome'` in root `tsc` | Do not add `extension` back to the app `tsconfig` include                 |
+| Shortcut does nothing                          | Remap at `chrome://extensions/shortcuts`                                  |
+| `pnpm --dir extension install` after a clone   | Required — this package is not part of the root workspace install         |
