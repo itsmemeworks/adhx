@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.57.0](https://github.com/itsmemeworks/adhx/compare/v1.56.0...v1.57.0) (2026-08-23)
+
+
+### Features
+
+* capture growth analytics for every save, view, share, and tag ([#394](https://github.com/itsmemeworks/adhx/issues/394)) ([24aa2c1](https://github.com/itsmemeworks/adhx/commit/24aa2c1cf85ba37aa080bcc0bccbfde88896b299))
+
 ## [1.56.0](https://github.com/itsmemeworks/adhx/compare/v1.55.1...v1.56.0) (2026-08-22)
 
 
