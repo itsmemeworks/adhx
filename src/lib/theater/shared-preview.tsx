@@ -12,8 +12,8 @@ import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
 import { isPostModerated } from '@/lib/admin/moderation'
 
 export const MODERATED_PAGE_METADATA: Metadata = {
-  title: 'Post unavailable - ADHX',
-  description: 'This post is no longer available.',
+  title: 'Post removed - ADHX',
+  description: 'This post was removed from ADHX.',
   robots: { index: false },
 }
 
@@ -67,6 +67,7 @@ export function SharedPreviewPage({
         mode="shared"
         sharedItem={sharedItem}
         sharedUnavailable
+        sharedUnavailableReason="hidden"
         authed={authed}
       />
     )

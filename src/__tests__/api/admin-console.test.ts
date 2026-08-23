@@ -162,8 +162,14 @@ describe('admin console APIs', () => {
     const profile = await looked.json()
     expect(profile.bookmarkCount).toBe(1)
     expect(profile.banned).toBe(false)
+    expect(profile.isSelf).toBe(false)
     expect(profile).not.toHaveProperty('userId')
     expect(profile).not.toHaveProperty('email')
+
+    const self = await getUser(
+      new NextRequest('http://localhost/api/admin/users?username=admin-user'),
+    )
+    expect((await self.json()).isSelf).toBe(true)
 
     const banSelf = await postUser(
       new NextRequest('http://localhost/api/admin/users', {

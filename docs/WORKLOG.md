@@ -6,6 +6,18 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-23 — Trending archive matches the ranked list
+
+`/trending/archive` and `/trending/archive/[week]` dropped the leftover light paper/card-grid chrome. Same dark `#08070a` bar + numbered rows as live `/trending` (`TrendingListHeader`, `TrendingRankedRow`, `rankItems`). Week pages stay frozen (no poll, no filter pills); SEO list + JSON-LD unchanged. Follow-up: none.
+
+---
+
+## 2026-08-23 — Hidden-post tombstone is not "gone from X"
+
+Admin hide reused `StageUnavailable`'s deleted-tweet copy, so a hidden YouTube Short (`/shorts/dQw4w9WgXcQ`) read "no longer available on X". Hide now passes `sharedUnavailableReason="hidden"`: headline "This post was removed from ADHX" plus a line that it is off preview pages and the live feed. Source-gone still names the real network (X / YouTube / Instagram / TikTok). Metadata for hides is "Post removed - ADHX". Follow-up: none.
+
+---
+
 ## 2026-08-23 — Admin console on Settings
 
 `/admin` (noindex) for `ADMIN_USERNAMES`. Settings shows the link when `/api/auth/me` returns `isAdmin`. Overview + analytics auto-refresh every 30s; inspect a post (URL or `platform:id`) with per-post counts and hide/restore; inspect a user and ban/unban (cannot ban self/admins); hide a playlist from the leaderboard. Hide writes `moderated_posts` so preview pages tombstone and the sitemap/pulse skip the post — bookmarks stay. Ban signs the account out and 404s their public profile/playlists. Follow-up: wire overview stats into a public `/this-week` later if wanted.

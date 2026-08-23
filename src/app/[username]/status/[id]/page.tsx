@@ -110,6 +110,7 @@ export default async function QuickAddPage({ params }: Props) {
         mode="shared"
         sharedItem={unavailableItem}
         sharedUnavailable
+        sharedUnavailableReason="hidden"
         authed={!!userId}
       />
     )

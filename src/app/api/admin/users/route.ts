@@ -12,7 +12,7 @@ export const GET = withAdmin(async (request: NextRequest, actor) => {
     if (!username) {
       return NextResponse.json({ error: 'username is required' }, { status: 400 })
     }
-    const user = await inspectUser(username)
+    const user = await inspectUser(username, actor.userId)
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
     return NextResponse.json(user, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch (error) {

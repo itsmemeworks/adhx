@@ -27,10 +27,35 @@ function makeItem(overrides: Partial<TheaterItem> = {}): TheaterItem {
 }
 
 describe('StageUnavailable', () => {
-  it('shows the "no longer available" headline and the author handle', () => {
+  it('shows the source-gone headline for X and the author handle', () => {
     render(<StageUnavailable item={makeItem()} />)
     expect(screen.getByText('This post is no longer available on X')).toBeInTheDocument()
     expect(screen.getByText('@HazBrown1')).toBeInTheDocument()
+  })
+
+  it('names the real source network, not X, for a YouTube Short', () => {
+    render(
+      <StageUnavailable
+        item={makeItem({ platform: 'youtube', author: 'RickAstley', bookmarkId: 'dQw4w9WgXcQ' })}
+      />,
+    )
+    expect(screen.getByText('This post is no longer available on YouTube')).toBeInTheDocument()
+    expect(screen.queryByText(/on X/)).not.toBeInTheDocument()
+  })
+
+  it('says ADHX removed a hidden post, without blaming the source network', () => {
+    render(
+      <StageUnavailable
+        item={makeItem({ platform: 'youtube', author: 'RickAstley' })}
+        reason="hidden"
+      />,
+    )
+    expect(screen.getByText('This post was removed from ADHX')).toBeInTheDocument()
+    expect(
+      screen.getByText('It no longer appears on preview pages or the live feed.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/on X/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/on YouTube/)).not.toBeInTheDocument()
   })
 
   it('renders no retry, save, or X-connect affordance — nothing behind this item to act on', () => {

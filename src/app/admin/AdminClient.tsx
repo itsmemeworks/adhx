@@ -46,6 +46,12 @@ function labelEvent(name: string): string {
   return EVENT_LABELS[name] || name
 }
 
+function banBlockReason(user: InspectedUser): string | null {
+  if (user.isSelf) return 'You cannot ban your own account.'
+  if (user.isAdmin) return 'You cannot ban an admin.'
+  return null
+}
+
 function formatWhen(iso: string | null | undefined): string {
   if (!iso) return '—'
   const t = new Date(iso).getTime()
@@ -593,66 +599,94 @@ export function AdminClient() {
           {userError && <p className="text-sm text-red-600 mb-3">{userError}</p>}
           {user && (
             <div className="rounded-[12px] border border-hairline p-4 flex flex-col gap-3">
-              <div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="font-semibold text-ink">@{user.username}</p>
-                <p className="text-[13px] text-ink-3">
-                  {user.displayName || 'No display name'} · {user.bookmarkCount} bookmarks ·{' '}
-                  {user.publicPlaylistCount} public playlists
-                  {user.lastSyncAt ? ` · last sync ${formatWhen(user.lastSyncAt)}` : ''}
-                  {user.createdAt ? ` · joined ${formatWhen(user.createdAt)}` : ''}
-                </p>
-                <p className="text-[13px] text-ink-3">
-                  Sign-in: {user.identities.x ? 'X' : 'no X'}
-                  {user.identities.email ? ' · email' : ' · no email'}
-                  {user.isAdmin ? ' · admin' : ''}
-                </p>
-                {user.banned && (
-                  <p className="text-[13px] text-red-600 mt-1">
-                    Banned {user.bannedAt ? formatWhen(user.bannedAt) : ''}
-                    {user.banReason ? ` — ${user.banReason}` : ''}
-                  </p>
-                )}
+                <div className="flex flex-wrap gap-1.5">
+                  {user.isAdmin && (
+                    <span className="rounded-full bg-clay/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.06em] text-clay">
+                      Admin
+                    </span>
+                  )}
+                  {user.banned && (
+                    <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.06em] text-red-600">
+                      Banned
+                    </span>
+                  )}
+                </div>
               </div>
-              {!user.isAdmin && (
-                <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-[13px]">
+                  <tbody>
+                    {(
+                      [
+                        ['Display name', user.displayName || '—'],
+                        ['Bookmarks', user.bookmarkCount.toLocaleString()],
+                        ['Public playlists', user.publicPlaylistCount.toLocaleString()],
+                        ['Joined', user.createdAt ? formatWhen(user.createdAt) : '—'],
+                        ['Last sync', user.lastSyncAt ? formatWhen(user.lastSyncAt) : '—'],
+                        ['X connected', user.identities.x ? 'Yes' : 'No'],
+                        ['Email linked', user.identities.email ? 'Yes' : 'No'],
+                        ['Role', user.isAdmin ? 'Admin' : 'User'],
+                        ['Status', user.banned ? 'Banned' : 'Active'],
+                        ...(user.banned
+                          ? ([
+                              ['Banned', user.bannedAt ? formatWhen(user.bannedAt) : '—'],
+                              ['Ban reason', user.banReason || '—'],
+                            ] as const)
+                          : []),
+                      ] as const
+                    ).map(([label, value]) => (
+                      <tr key={label} className="border-t border-hairline first:border-t-0">
+                        <th className="w-[40%] py-2 pr-3 font-semibold text-ink-3 align-top">
+                          {label}
+                        </th>
+                        <td className="py-2 text-ink tabular-nums">{value}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {user.banned ? (
+                <button
+                  type="button"
+                  disabled={userBusy}
+                  onClick={() => void toggleBan(false)}
+                  className="self-start min-h-[44px] px-4 rounded-[12px] border border-hairline text-[13px] font-semibold"
+                >
+                  Unban
+                </button>
+              ) : (
+                <div className="flex flex-col gap-2">
                   <input
                     value={banReason}
                     onChange={(e) => setBanReason(e.target.value)}
                     placeholder="Reason (optional, stays private)"
-                    className="min-h-[44px] rounded-[12px] border border-hairline bg-inset px-3 text-base sm:text-sm"
+                    disabled={!!banBlockReason(user)}
+                    className="min-h-[44px] rounded-[12px] border border-hairline bg-inset px-3 text-base sm:text-sm disabled:opacity-50"
                   />
-                  {user.banned ? (
-                    <button
-                      type="button"
-                      disabled={userBusy}
-                      onClick={() => void toggleBan(false)}
-                      className="self-start min-h-[44px] px-4 rounded-[12px] border border-hairline text-[13px] font-semibold"
-                    >
-                      Unban
-                    </button>
-                  ) : (
-                    <div className="flex flex-col gap-2">
-                      <input
-                        value={banConfirm}
-                        onChange={(e) => setBanConfirm(e.target.value)}
-                        placeholder={`Type ${user.username} to confirm`}
-                        className="min-h-[44px] rounded-[12px] border border-hairline bg-inset px-3 text-base sm:text-sm"
-                      />
-                      <button
-                        type="button"
-                        disabled={userBusy}
-                        onClick={() => void toggleBan(true)}
-                        className="self-start min-h-[44px] px-4 rounded-[12px] bg-red-600 text-white text-[13px] font-semibold"
-                      >
-                        Ban this account
-                      </button>
-                    </div>
+                  <input
+                    value={banConfirm}
+                    onChange={(e) => setBanConfirm(e.target.value)}
+                    placeholder={`Type ${user.username} to confirm`}
+                    disabled={!!banBlockReason(user)}
+                    className="min-h-[44px] rounded-[12px] border border-hairline bg-inset px-3 text-base sm:text-sm disabled:opacity-50"
+                  />
+                  <button
+                    type="button"
+                    disabled={userBusy || !!banBlockReason(user)}
+                    onClick={() => void toggleBan(true)}
+                    className="self-start min-h-[44px] px-4 rounded-[12px] bg-red-600 text-white text-[13px] font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Ban this account
+                  </button>
+                  {banBlockReason(user) && (
+                    <p className="text-[12px] font-medium text-ink-2">{banBlockReason(user)}</p>
                   )}
-                </>
+                </div>
               )}
               <p className="text-[12px] text-ink-3">
                 A ban keeps their data, signs them out, 404s their public profile and playlists, and
-                drops them from the leaderboard. You cannot ban an admin or yourself.
+                drops them from the leaderboard.
               </p>
             </div>
           )}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { rankItems } from '@/components/trending/TrendingRankedList'
+import { rankItems } from '@/lib/trending/rank'
 import type { TheaterItem } from '@/components/theater/types'
 
 /**

@@ -334,6 +334,7 @@ export interface InspectedUser {
   displayName: string | null
   createdAt: string | null
   isAdmin: boolean
+  isSelf: boolean
   banned: boolean
   banReason: string | null
   bannedAt: string | null
@@ -343,7 +344,10 @@ export interface InspectedUser {
   lastSyncAt: string | null
 }
 
-export async function inspectUser(username: string): Promise<InspectedUser | null> {
+export async function inspectUser(
+  username: string,
+  actorUserId?: string | null,
+): Promise<InspectedUser | null> {
   const trimmed = username.trim()
   if (!trimmed) return null
 
@@ -423,6 +427,7 @@ export async function inspectUser(username: string): Promise<InspectedUser | nul
     displayName: user.displayName,
     createdAt: user.createdAt ?? null,
     isAdmin: isAdminUsername(user.username),
+    isSelf: !!actorUserId && user.id === actorUserId,
     banned: !!ban || isUserBanned(user.id),
     banReason: ban?.reason ?? null,
     bannedAt: ban?.createdAt ?? null,
