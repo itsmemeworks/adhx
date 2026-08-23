@@ -10,6 +10,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Minimize2 } from 'lucide-react'
 import type { FeedItem } from '@/components/feed/types'
 import { Stage } from './Stage'
@@ -82,6 +83,7 @@ import type {
   TheaterItem,
   TheaterMode,
   TheaterPersonalChrome,
+  TheaterAccountTabs,
   PersonalTab,
 } from './types'
 
@@ -199,6 +201,8 @@ export function TheaterShell({
   onCollectionAdded,
   onClose,
 }: TheaterShellProps) {
+  const router = useRouter()
+  const authMe = useAuthMe()
   const isPersonal = mode === 'personal'
   // Playlist mode (`/t/{username}/{tag}`) is a fixed curated queue that loops.
   // My Collection (`/collection`) is also a playlist, but its default is still
@@ -454,19 +458,22 @@ export function TheaterShell({
     }
   }, [isPersonal, commitPendingDelete, clearUndoDismissTimer])
 
-  // Keep the OPEN collection queue's tags live (unified-theater-collection.md §B):
-  // `TagQuickPicker` broadcasts a post's full updated tag list on every
-  // successful toggle/create. The queue itself is a fixed snapshot taken at
-  // mount (see the comment above `personalQueue`'s declaration), so this is the
-  // one place its items mutate in place — same immutable-map pattern used
-  // elsewhere in this file, never a splice/replace.
+  // Keep tags live wherever the picker can open: Collection queue, Live tab,
+  // and a signed-in shared preview (autosave → Tag). `TagQuickPicker`
+  // broadcasts the post's full list on every toggle/create. The collection
+  // queue is a mount snapshot, so this is the one place those items mutate
+  // in place. Shared/live chips read `liveTagsByKey`.
   useEffect(() => {
-    if (!isPersonal) return
     function handleTagsChanged(e: Event) {
       const detail = (e as CustomEvent<{ platform?: string; bookmarkId?: string; tags?: string[] }>)
         .detail
       if (!detail?.bookmarkId) return
       const platform = detail.platform ?? 'twitter'
+      setLiveTagsByKey((prev) => ({
+        ...prev,
+        [`${platform}:${detail.bookmarkId}`]: detail.tags ?? [],
+      }))
+      if (!isPersonal) return
       setPersonalQueue((prev) =>
         prev.map((item) =>
           item.id === detail.bookmarkId && (item.platform ?? 'twitter') === platform
@@ -474,11 +481,6 @@ export function TheaterShell({
             : item,
         ),
       )
-      // …and the live tab's own tag map, which is what renders the chips there.
-      setLiveTagsByKey((prev) => ({
-        ...prev,
-        [`${platform}:${detail.bookmarkId}`]: detail.tags ?? [],
-      }))
     }
     window.addEventListener('bookmark-tags-changed', handleTagsChanged)
     return () => window.removeEventListener('bookmark-tags-changed', handleTagsChanged)
@@ -820,6 +822,38 @@ export function TheaterShell({
         for (const k of attempted) membershipCheckedRef.current.delete(k)
       })
   }, [isPersonal, personalTab, displayItems])
+
+  // Shared preview: seed tags for the lead (and any pulse items we land on)
+  // so a reload of an already-tagged save shows chips / Tag · N. The
+  // tags-changed listener above covers in-session adds.
+  useEffect(() => {
+    if (mode !== 'shared' || !authMe.me?.authenticated) return
+    const unknown = displayItems
+      .filter((it) => it.bookmarkId && !membershipCheckedRef.current.has(theaterItemKey(it)))
+      .slice(0, 50)
+    if (unknown.length === 0) return
+    unknown.forEach((it) => membershipCheckedRef.current.add(theaterItemKey(it)))
+    const params = new URLSearchParams({ hideArchived: 'false', filter: 'all', limit: '50' })
+    unknown.forEach((it) => {
+      params.append('id', it.bookmarkId as string)
+      params.append('idPlatform', it.platform ?? 'twitter')
+    })
+    const attempted = unknown.map((it) => theaterItemKey(it))
+    fetch(`/api/feed?${params}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('lookup failed'))))
+      .then((d) => {
+        const owned: FeedItem[] = d?.items ?? []
+        if (!owned.length) return
+        setLiveTagsByKey((prev) => {
+          const next = { ...prev }
+          for (const f of owned) next[`${f.platform ?? 'twitter'}:${f.id}`] = f.tags ?? []
+          return next
+        })
+      })
+      .catch(() => {
+        for (const k of attempted) membershipCheckedRef.current.delete(k)
+      })
+  }, [mode, authMe.me?.authenticated, displayItems])
 
   // Kept in a ref (rather than effect deps) so goNext/goPrev/the dwell timer
   // (useTheaterDwell) only reset when `currentKey` itself changes, not on
@@ -1344,12 +1378,27 @@ export function TheaterShell({
   // state is `useAuthMe()`'s live client read rather than the `authed` SSR
   // prop, so a sign-in completed inside the modal (no full reload) is picked
   // up immediately via `refresh()` below.
-  const authMe = useAuthMe()
   const isPlaylistAuthed = loop ? !!authMe.me?.authenticated : authed
   // Viewing your OWN public playlist: cloning it (or being told to "make
   // your own") is nonsense — the chromes swap those CTAs for a Manage link.
   const isPlaylistOwner =
     !!playlist && !!authMe.me?.user?.username && authMe.me.user.username === playlist.curator
+  // Signed-in preview: same Live ⇄ My Collection cluster as `/`. Live is
+  // current (this page is the live pulse with a pinned lead); My Collection
+  // and Close are the personal-theater routes. Do not pass `personalChrome`
+  // — that would swap the shared Save/Tag pill for the live-tab pair.
+  const signedIn = authed || !!authMe.me?.authenticated
+  const sharedAccountTabs: TheaterAccountTabs | undefined =
+    mode === 'shared' && signedIn
+      ? {
+          tab: 'live',
+          onTabChange: (tab) => {
+            if (tab === 'live') return
+            router.push('/collection')
+          },
+          onClose: () => router.push('/library'),
+        }
+      : undefined
   const [saveStatus, setSaveStatus] = useState<SavePlaylistStatus>('idle')
   const [showSignIn, setShowSignIn] = useState(false)
   // Which flavor of the shared sign-in modal is open — a single modal
@@ -1735,6 +1784,8 @@ export function TheaterShell({
           onCycleRepeat={cycleRepeatMode}
           collection={personalChrome}
           onSharedTag={mode === 'shared' ? handleSharedTag : undefined}
+          itemTags={mode === 'shared' ? liveTagsByKey[chromeCurrentKey ?? ''] : undefined}
+          accountTabs={sharedAccountTabs}
         />
         <DesktopStageChrome
           mode={mode}
@@ -1750,6 +1801,8 @@ export function TheaterShell({
           onRequestMakeYourOwn={handleMakeYourOwn}
           collection={personalChrome}
           onSharedTag={mode === 'shared' ? handleSharedTag : undefined}
+          itemTags={mode === 'shared' ? liveTagsByKey[chromeCurrentKey ?? ''] : undefined}
+          accountTabs={sharedAccountTabs}
         />
         {/* Collection Archive undo toast — auto-dismisses after 5s
             (`armUndoDismiss`). Same placement on both viewports. `bottom-36`

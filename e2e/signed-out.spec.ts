@@ -39,6 +39,7 @@ test.describe('signed out', () => {
   test('preview Save opens sign-in', async ({ page }) => {
     await page.goto(`/${POST.preview.author}/status/${POST.preview.id}`)
     await expectTheaterReady(page)
+    await expect(page.getByRole('button', { name: 'My Collection' })).toHaveCount(0)
     await page.getByRole('button', { name: 'Save' }).click()
     await expectSignInModal(page)
   })

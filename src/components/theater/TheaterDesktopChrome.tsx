@@ -83,6 +83,7 @@ import type {
   TheaterItem,
   TheaterMode,
   TheaterPersonalChrome,
+  TheaterAccountTabs,
 } from './types'
 
 export interface DesktopStageChromeProps {
@@ -107,6 +108,10 @@ export interface DesktopStageChromeProps {
   collection?: TheaterPersonalChrome
   /** Shared+authed: open the tag picker after the Save pill morphs to Tag. */
   onSharedTag?: (item: TheaterItem) => void
+  /** Shared-lead tags (chips + Tag · N). Collection/live use `collection.tags`. */
+  itemTags?: string[]
+  /** Signed-in shared preview: same Live ⇄ My Collection cluster as `/`. */
+  accountTabs?: TheaterAccountTabs
 }
 
 export interface DesktopDockProps {
@@ -197,6 +202,8 @@ export function DesktopStageChrome({
   onRequestMakeYourOwn,
   collection,
   onSharedTag,
+  itemTags,
+  accountTabs,
 }: DesktopStageChromeProps) {
   const [pasteValue, setPasteValue] = useState('')
   const [pasteError, setPasteError] = useState(false)
@@ -259,7 +266,15 @@ export function DesktopStageChrome({
   const textLike = kind !== null && ['text', 'quote', 'article'].includes(kind)
   const isMedia = kind === 'video' || kind === 'photo'
   const trendCount = current ? (current.trendCount ?? current.saveCount ?? 0) : 0
-  const tagCount = collection?.tags?.length ?? 0
+  const displayTags = collection?.tags ?? itemTags
+  const tagCount = displayTags?.length ?? 0
+  const tabs = collection
+    ? {
+        tab: collection.tab,
+        onTabChange: collection.onTabChange,
+        onClose: collection.onClose,
+      }
+    : accountTabs
   const handle = current?.author ? current.author.replace(/^@+/, '') : ''
   const caption = current ? (current.text || '').trim() : ''
   const platformLabel = current ? (PLATFORM_LABEL[current.platform] ?? current.platform) : ''
@@ -313,7 +328,7 @@ export function DesktopStageChrome({
               <MatterLogo size={19} className="[&>span]:text-white" />
             </a>
           )}
-          {collection ? (
+          {tabs ? (
             <>
               <span className="h-5 w-px flex-none bg-white/20" aria-hidden />
               {/* The close button lives INSIDE this same pill container, right
@@ -325,14 +340,12 @@ export function DesktopStageChrome({
                   <button
                     key={t}
                     type="button"
-                    onClick={() => collection.onTabChange(t)}
-                    aria-current={collection.tab === t ? 'true' : undefined}
+                    onClick={() => tabs.onTabChange(t)}
+                    aria-current={tabs.tab === t ? 'true' : undefined}
                     className={cn(
                       'rounded-full px-4 py-1.5 whitespace-nowrap transition-colors',
                       // Hardcoded dark ink: `text-ink` flips light in dark theme and vanishes on the white pill.
-                      collection.tab === t
-                        ? 'bg-white text-[#1c1917]'
-                        : 'text-white/60 hover:text-white',
+                      tabs.tab === t ? 'bg-white text-[#1c1917]' : 'text-white/60 hover:text-white',
                     )}
                   >
                     {PERSONAL_TAB_LABEL[t]}
@@ -340,7 +353,7 @@ export function DesktopStageChrome({
                 ))}
                 <button
                   type="button"
-                  onClick={collection.onClose}
+                  onClick={tabs.onClose}
                   aria-label="Close"
                   className="ml-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full text-white/60 transition-colors hover:bg-white/15 hover:text-white"
                 >
@@ -448,7 +461,7 @@ export function DesktopStageChrome({
           <TheaterAvatarMenu
             onRequestSignIn={onRequestSignIn}
             allowSignedOut={!collection && !playlist}
-            theaterActive={mode === 'home' || !!collection}
+            theaterActive={mode === 'home' || !!collection || !!accountTabs}
           />
 
           {/* De-cluttering EXPANDS the stage, so the enter action reads
@@ -553,12 +566,9 @@ export function DesktopStageChrome({
             </div>
           )}
 
-          {/* Tag chips (unified-theater-collection.md §B) — the Collection tab's
-              current item only; display-only, nothing renders without tags.
-              Text/quote/article posts render their own composition on the
-              stage (no media overlay here), so their chips are rendered by
-              `CollectionStage` itself, aligned to the text column instead. */}
-          <TheaterTagChips tags={collection?.tags} />
+          {/* Tag chips — collection / live / signed-in shared preview.
+              Text/quote/article on the collection stage paint their own. */}
+          <TheaterTagChips tags={displayTags} />
         </div>
       )}
 
@@ -642,10 +652,10 @@ export function DesktopStageChrome({
                   type="button"
                   onClick={() => collection.onLiveTag?.(current)}
                   title="Tag this post (saves it to your collection first)"
-                  className={GLASS}
+                  className={cn(GLASS, tagCount > 0 && 'border-clay/50 text-clay')}
                 >
-                  <TagIcon size={14} />
-                  <span>Tag</span>
+                  <TagIcon size={14} fill={tagCount > 0 ? 'currentColor' : 'none'} />
+                  <span>{tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}</span>
                 </button>
                 <PersonalLiveSaveButton
                   current={current}
@@ -657,6 +667,7 @@ export function DesktopStageChrome({
               <SavePostButton
                 current={current}
                 className={SAVE_OUTLINE}
+                tags={displayTags}
                 onTag={onSharedTag ? () => onSharedTag(current) : undefined}
               />
             )

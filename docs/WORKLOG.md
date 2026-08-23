@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-23 — Shared preview tags + signed-in account tabs
+
+Tagging a just-autosaved shared lead wrote the tag but the preview chrome stayed empty — `bookmark-tags-changed` only patched the personal queue. Shared mode now seeds `liveTagsByKey` and listens, so chips and Tag · N update. Signed-in previews also get the Live ⇄ My Collection cluster (same routes as `/`); the visitor LIVE badge was leftover from the signed-out chrome. Covered by chrome + TheaterShell `router.push` tests and an authed e2e on the preview path. Follow-up: none.
+
+---
+
 ## 2026-08-23 — Desktop Save to ADHX extension
 
 `extension/` is an [Extension.js](https://extension.js.org) MV3 package: toolbar click, right-click, or ⌘⇧A on an X / IG / TikTok / YouTube post opens `/share?url=` (same target as the iOS shortcut and PWA share). No content scripts; `activeTab` + `contextMenus` only. Not on the Chrome Web Store yet — load unpacked from `extension/dist/chromium`. Bookmarklet stays the no-install fallback. Follow-up: store listing once it feels as easy as Share → ADHX.

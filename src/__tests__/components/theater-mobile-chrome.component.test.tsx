@@ -744,6 +744,27 @@ describe('TheaterMobileChrome: theaterActive prop wiring', () => {
       expect.objectContaining({ theaterActive: false }),
     )
   })
+
+  it('signed-in shared preview wires Live ⇄ My Collection into the avatar menu and shows Close', () => {
+    const onTabChange = vi.fn()
+    const onClose = vi.fn()
+    render(
+      <TheaterMobileChrome
+        {...base}
+        mode="shared"
+        current={videoItem()}
+        accountTabs={{ tab: 'live', onTabChange, onClose }}
+      />,
+    )
+    expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
+      expect.objectContaining({
+        theaterActive: true,
+        theaterTabs: { tab: 'live', onTabChange },
+      }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+    expect(onClose).toHaveBeenCalled()
+  })
 })
 
 /**

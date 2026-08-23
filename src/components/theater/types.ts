@@ -105,12 +105,14 @@ export interface TheaterPlaylistMeta {
 /** Save-collection CTA status, shared by the desktop and mobile chrome. */
 export type SavePlaylistStatus = 'idle' | 'saving' | 'saved' | 'error'
 
-/**
- * Bundled collection-mode chrome contract (unified-theater-collection.md §2) —
- * passed as a single optional prop to `DesktopStageChrome`/
- * `TheaterMobileChrome`/`DesktopDock` instead of a dozen separate ones.
- * Present only when `mode === 'personal'`.
- */
+/** Live ⇄ My Collection cluster — personal theater, or a signed-in shared preview. */
+export interface TheaterAccountTabs {
+  tab: PersonalTab
+  onTabChange: (tab: PersonalTab) => void
+  onClose: () => void
+}
+
+/** Collection-mode chrome contract — present only when `mode === 'personal'`. */
 export interface TheaterPersonalChrome {
   tab: PersonalTab
   onTabChange: (tab: PersonalTab) => void

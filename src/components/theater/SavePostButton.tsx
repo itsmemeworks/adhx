@@ -24,6 +24,7 @@ export function SavePostButton({
   className,
   iconOnly,
   onTag,
+  tags,
 }: {
   current: TheaterItem
   /** Full button class string — the caller owns the visual style. */
@@ -36,6 +37,8 @@ export function SavePostButton({
    * this callback the button stays on Saved (the old dead-end).
    */
   onTag?: () => void
+  /** Current tags on this post — fills the Tag icon and shows Tag · N. */
+  tags?: string[]
 }) {
   const [status, setStatus] = useState<SaveStatus>('idle')
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -133,11 +136,13 @@ export function SavePostButton({
     }
   }
 
+  const tagCount = tags?.length ?? 0
+  const tagLabel = tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'
   const visibleLabel =
     status === 'saved'
       ? 'Saved'
       : status === 'tag'
-        ? 'Tag'
+        ? tagLabel
         : status === 'error'
           ? 'Try again'
           : 'Save'
@@ -148,7 +153,7 @@ export function SavePostButton({
     ) : status === 'saved' ? (
       <Check size={iconSize} className="text-done" />
     ) : status === 'tag' ? (
-      <TagIcon size={iconSize} />
+      <TagIcon size={iconSize} fill={tagCount > 0 ? 'currentColor' : 'none'} />
     ) : (
       <Bookmark size={iconSize} />
     )
@@ -166,16 +171,20 @@ export function SavePostButton({
       disabled={status === 'saving' || status === 'saved'}
       className={cn(
         className,
-        status === 'tag' && 'border-white/25',
+        status === 'tag' && (tagCount > 0 ? 'border-clay/50 text-clay' : 'border-white/25'),
         status === 'saved' && 'animate-save-pop',
       )}
       aria-label={
         iconOnly
           ? status === 'saving'
             ? 'Saving'
-            : visibleLabel
+            : status === 'tag'
+              ? tagLabel
+              : visibleLabel
           : status === 'tag'
-            ? 'Tag this post'
+            ? tagLabel === 'Tag'
+              ? 'Tag this post'
+              : tagLabel
             : undefined
       }
     >

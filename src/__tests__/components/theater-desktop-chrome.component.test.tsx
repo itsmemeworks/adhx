@@ -11,6 +11,7 @@ import {
 import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterItem } from '@/components/theater/types'
 import { peekPreviewOpenIntent } from '@/lib/theater/autosave-shared'
+import { resetSavePostOwnershipCache } from '@/components/theater/SavePostButton'
 
 // jsdom has no scrollIntoView — the dock auto-scrolls the current filmstrip card into view.
 Element.prototype.scrollIntoView = vi.fn()
@@ -673,6 +674,47 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
     expect(saveBtn.closest('button')!.className).toContain('border-clay')
   })
 
+  it('shared+authed shows caption chips and Tag · N when the lead has tags', async () => {
+    resetSavePostOwnershipCache()
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ items: [{ id: '1', platform: 'twitter' }] }),
+    })
+    render(
+      <DesktopStageChrome
+        {...stageBase}
+        mode="shared"
+        authed
+        current={videoItem()}
+        itemTags={['social']}
+        onSharedTag={vi.fn()}
+      />,
+    )
+    expect(screen.getByText('#social')).toBeInTheDocument()
+    expect(await screen.findByText('Tag · 1')).toBeInTheDocument()
+  })
+
+  it('signed-in shared preview shows Live ⇄ My Collection, not the visitor LIVE badge', () => {
+    const onTabChange = vi.fn()
+    const onClose = vi.fn()
+    render(
+      <DesktopStageChrome
+        {...stageBase}
+        mode="shared"
+        authed
+        current={videoItem()}
+        accountTabs={{ tab: 'live', onTabChange, onClose }}
+      />,
+    )
+    expect(screen.getByRole('button', { name: 'Live' })).toHaveAttribute('aria-current', 'true')
+    fireEvent.click(screen.getByRole('button', { name: 'My Collection' }))
+    expect(onTabChange).toHaveBeenCalledWith('collection')
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+    expect(onClose).toHaveBeenCalled()
+    // Visitor live-dot badge is gone — only the Live tab button remains.
+    expect(screen.getAllByText('Live')).toHaveLength(1)
+  })
+
   it('collection live-tab Save carries the clay-border outline, Download (when present) stays plain glass', () => {
     mockUseSendFile.mockReturnValue({
       supported: true,
@@ -1142,6 +1184,20 @@ describe('DesktopStageChrome: theaterActive prop wiring', () => {
     render(<DesktopStageChrome {...stageBase} mode="shared" current={videoItem()} />)
     expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
       expect.objectContaining({ theaterActive: false }),
+    )
+  })
+
+  it('passes theaterActive: true in shared mode when account tabs are set', () => {
+    render(
+      <DesktopStageChrome
+        {...stageBase}
+        mode="shared"
+        current={videoItem()}
+        accountTabs={{ tab: 'live', onTabChange: vi.fn(), onClose: vi.fn() }}
+      />,
+    )
+    expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
+      expect.objectContaining({ theaterActive: true }),
     )
   })
 })
