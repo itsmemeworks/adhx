@@ -46,6 +46,9 @@ describe('StageArticle splash', () => {
     ).toBeInTheDocument()
     expect(screen.queryByText('Article')).not.toBeInTheDocument()
     expect(document.querySelector('.lucide-file-text')).toBeNull()
+    const profile = screen.getByTitle('View @adriamatz on X')
+    expect(profile).toHaveAttribute('href', 'https://x.com/adriamatz')
+    expect(profile).toHaveAttribute('target', '_blank')
     await waitFor(() => {
       expect(screen.getByText(/Couldn't load the full article here/)).toBeInTheDocument()
     })

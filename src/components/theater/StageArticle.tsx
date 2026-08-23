@@ -18,8 +18,6 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import { PlatformChip } from '@/components/matter'
-import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { previewPath } from '@/lib/activity/preview-path'
 import { fetchArticleMarkdown } from '@/lib/theater/article-body'
 import {
@@ -27,7 +25,7 @@ import {
   type ArticleMdBlock,
   type InlineNode,
 } from '@/lib/theater/article-markdown'
-import { StageCTA } from './stage-primitives'
+import { StageAuthorRow, StageCTA } from './stage-primitives'
 import type { TheaterItem } from './types'
 
 export interface StageArticleProps {
@@ -199,22 +197,7 @@ export function StageArticle({ item }: StageArticleProps) {
             aria-hidden
           />
           <div className="relative px-6 pb-8 pt-16 sm:px-10 sm:pb-10">
-            <div className="mb-6 flex items-center gap-3">
-              <AuthorAvatar
-                src={item.authorAvatarUrl ?? undefined}
-                author={item.author ?? ''}
-                size="md"
-              />
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-base font-bold text-white">
-                  {item.authorName || (item.author ? `@${item.author}` : 'Saved post')}
-                </div>
-                {item.author && (
-                  <div className="truncate font-mono text-sm text-white/50">@{item.author}</div>
-                )}
-              </div>
-              <PlatformChip platform={item.platform} />
-            </div>
+            <StageAuthorRow item={item} />
             <h1 className="font-serif text-3xl leading-tight text-white sm:text-4xl">{headline}</h1>
           </div>
         </div>

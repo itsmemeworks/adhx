@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-23 — Text and article author rows link to the profile
+
+`StageAuthorRow` (shared by `StageText` and `StageArticle`) wraps avatar + name + `@handle` in the same `authorProfileUrl` link media chrome already uses. Follow-up: none.
+
 ## 2026-08-23 — Mobile theater drops the Close X when signed in
 
 Avatar/burger already lives top-right and has Library. The extra Close next to it on collection + signed-in shared preview was redundant and shifted the menu. Desktop Close in the tab pill stays. Follow-up: none.

@@ -20,6 +20,7 @@ import { fallbackToOriginal } from '@/components/feed/media-actions'
 import { proxiedPhotoSrc } from '@/lib/media/fxembed'
 import { TheaterCaption } from './TheaterCaption'
 import { TheaterLinkedText } from './TheaterText'
+import { StageAuthorRow } from './stage-primitives'
 import type { TheaterItem } from './types'
 
 /** Twitter photos go through `/api/media/image` — pbs.twimg.com often 403s off twitter.com. */
@@ -207,16 +208,7 @@ export function StageText({
   return (
     <div className="flex h-full w-full items-center justify-center bg-[#08070a] px-6 sm:px-10">
       <div className="max-h-full w-full max-w-2xl">
-        <div className="mb-6 flex items-center gap-3">
-          <AuthorAvatar src={item.authorAvatarUrl ?? undefined} author={item.author} size="md" />
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-base font-bold text-white">{authorName}</div>
-            {item.author && (
-              <div className="truncate font-mono text-sm text-white/50">@{item.author}</div>
-            )}
-          </div>
-          <PlatformChip platform={item.platform} />
-        </div>
+        <StageAuthorRow item={item} />
         {/* Capped + scrollable so a long-form post never overflows off-stage;
             short posts (the common case) size to content and stay centered
             by the outer flex, exactly as before. */}

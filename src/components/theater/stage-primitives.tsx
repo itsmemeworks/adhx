@@ -10,6 +10,10 @@
 import type { MouseEvent, ReactNode, TouchEvent } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
+import { PlatformChip } from '@/components/matter'
+import { authorProfileUrl } from '@/lib/activity/preview-path'
+import { PLATFORM_LABEL, type TheaterItem } from './types'
 
 /**
  * 44px icon-button chrome (dark scrim actions) — was repeated identically 4×
@@ -121,6 +125,45 @@ export function StageFrame({ children }: { children: ReactNode }) {
   return (
     <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-[#08070a]">
       {children}
+    </div>
+  )
+}
+
+/**
+ * Tweet-style author row on text/quote/article stages — avatar + name +
+ * `@handle` + platform chip. Links to the creator's profile on their own
+ * platform (same `authorProfileUrl` the media chrome uses). Plain row when
+ * there's no handle.
+ */
+export function StageAuthorRow({ item }: { item: TheaterItem }) {
+  const handle = (item.author || '').replace(/^@+/, '').trim()
+  const profileUrl = authorProfileUrl(item.platform, item.author ?? '')
+  const authorName = item.authorName || (handle ? `@${handle}` : 'Saved post')
+  const inner = (
+    <>
+      <AuthorAvatar src={item.authorAvatarUrl ?? undefined} author={item.author ?? ''} size="md" />
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-base font-bold text-white">{authorName}</div>
+        {handle ? <div className="truncate font-mono text-sm text-white/50">@{handle}</div> : null}
+      </div>
+    </>
+  )
+  return (
+    <div className="mb-6 flex items-center gap-3">
+      {profileUrl ? (
+        <a
+          href={profileUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex min-w-0 flex-1 items-center gap-3 transition-opacity hover:opacity-85"
+          title={`View @${handle} on ${PLATFORM_LABEL[item.platform] ?? item.platform}`}
+        >
+          {inner}
+        </a>
+      ) : (
+        <div className="flex min-w-0 flex-1 items-center gap-3">{inner}</div>
+      )}
+      <PlatformChip platform={item.platform} />
     </div>
   )
 }
