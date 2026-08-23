@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-23 — Theater captions expand on tap
+
+Replaced the small more/less link on media captions with X-style tap-to-expand: two clamped lines with an ellipsis, tap the text to expand, tap again to collapse. Expanded state slightly darkens the media so the white text reads. Copy still lives on the action pills. Follow-up: none.
+
 ## 2026-08-23 — Theater photos load via the image proxy
 
 Stage photo variant was hotlinking `pbs.twimg.com`, which often 403s from localhost / Safari. Now uses `/api/media/image` (same as download) with the CDN URL as onError fallback. Follow-up: dock thumbs still use the raw pulse URL.

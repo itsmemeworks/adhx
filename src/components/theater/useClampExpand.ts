@@ -42,5 +42,14 @@ export function useClampExpand(resetKey: string | null) {
     })
   }, [])
 
-  return { ref, expanded, setExpanded, overflowing }
+  const toggle = useCallback(() => {
+    setExpanded((v) => !v)
+  }, [setExpanded])
+
+  return { ref, expanded, setExpanded, toggle, overflowing }
+}
+
+/** Test-only: the sticky preference is module state shared by every hook. */
+export function resetClampExpandPreference() {
+  preferExpanded = false
 }

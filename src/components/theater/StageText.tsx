@@ -9,7 +9,7 @@
  * strips media t.co tails, decodes entities) so long-form X posts — which can
  * run to thousands of characters — never dead-end in unreadable overflow:
  * the typeset variant scrolls within a capped region once it outgrows the
- * stage, and the photo caption gets a "more" toggle into a scrollable panel.
+ * stage, and the photo caption expands on tap (same as the chrome overlay).
  */
 
 import { useEffect, useRef, useState } from 'react'
@@ -18,6 +18,7 @@ import { PlatformChip } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { fallbackToOriginal } from '@/components/feed/media-actions'
 import { proxiedPhotoSrc } from '@/lib/media/fxembed'
+import { TheaterCaption } from './TheaterCaption'
 import { TheaterLinkedText } from './TheaterText'
 import type { TheaterItem } from './types'
 
@@ -146,13 +147,16 @@ export function StageText({
           </div>
         )}
 
+        {photoCaption && expanded && (
+          <div className="pointer-events-none absolute inset-0 bg-black/40" />
+        )}
+
         {/* Bottom scrim: author + up-to-2-line caption. Padding on the
             wrapper, line-clamp on a child with no vertical padding, so the
-            clamp doesn't let a clipped extra line peek through. Expanding
-            grows the caption into a scrollable panel over a stronger scrim.
-            Suppressed when `photoCaption` is false (TheaterShell) — its rail
-            (desktop) and mobile chrome already show the author + caption, so
-            the stage's own scrim would just duplicate them. */}
+            clamp doesn't let a clipped extra line peek through. Tap the
+            caption to expand (chrome does the same). Suppressed when
+            `photoCaption` is false (TheaterShell) — desktop/mobile chrome
+            already show the author + caption. */}
         {photoCaption && (
           <div
             className={cn(
@@ -161,7 +165,7 @@ export function StageText({
             )}
             style={{
               background: expanded
-                ? 'linear-gradient(transparent, rgba(8,7,10,.94) 25%, rgba(8,7,10,.94))'
+                ? 'linear-gradient(transparent, rgba(8,7,10,.72) 40%, rgba(8,7,10,.72))'
                 : 'linear-gradient(transparent, rgba(11,11,17,.84))',
             }}
           >
@@ -175,38 +179,18 @@ export function StageText({
               <PlatformChip platform={item.platform} />
             </div>
             {text && (
-              <div>
-                <p
-                  ref={captionRef}
-                  className={cn(
-                    'text-[15px] leading-snug text-white/90',
-                    expanded
-                      ? 'max-h-[45vh] overflow-y-auto overscroll-contain pr-1'
-                      : 'line-clamp-2',
-                  )}
-                >
-                  <TheaterLinkedText
-                    platform={item.platform}
-                    text={text}
-                    hasMedia
-                    links={item.textLinks}
-                    hideTweetLinks={hideTweetLinks}
-                  />
-                </p>
-                {overflowing && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setExpanded((v) => !v)
-                    }}
-                    onTouchEnd={(e) => e.stopPropagation()}
-                    className="mt-1 flex min-h-[44px] items-center text-[13px] font-semibold text-clay"
-                  >
-                    {expanded ? 'less' : 'more'}
-                  </button>
-                )}
-              </div>
+              <TheaterCaption
+                captionRef={captionRef}
+                expanded={expanded}
+                overflowing={overflowing}
+                onToggle={() => setExpanded((v) => !v)}
+                platform={item.platform}
+                text={text}
+                links={item.textLinks}
+                hideTweetLinks={hideTweetLinks}
+                className="text-[15px] leading-snug"
+                expandedMaxClass="max-h-[45vh]"
+              />
             )}
           </div>
         )}

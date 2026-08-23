@@ -47,7 +47,7 @@ import { useTheaterCopy } from './useTheaterCopy'
 import { useTheaterStageEvents } from './useTheaterStageEvents'
 import { useClampExpand } from './useClampExpand'
 import { theaterItemKey, PLATFORM_LABEL, REPEAT_MODE_LABEL } from './types'
-import { TheaterLinkedText } from './TheaterText'
+import { TheaterCaption } from './TheaterCaption'
 import {
   TheaterProgressLine,
   progressKindFor,
@@ -211,7 +211,12 @@ export function TheaterMobileChrome({
   // inside the tap's own user activation. Elsewhere the 2s skim guard stands.
   const sendFile = useSendFile(current, { eager: mode === 'shared' })
   const { textCopied, copyText } = useTheaterCopy(current, (current?.text || '').trim())
-  const { ref: captionRef, expanded, setExpanded, overflowing } = useClampExpand(currentKey)
+  const {
+    ref: captionRef,
+    expanded,
+    toggle: toggleCaption,
+    overflowing,
+  } = useClampExpand(currentKey)
 
   // `mediaKind` is the REAL content kind — drives the audio/pause buttons,
   // `paused`/`soundPulse` state, and the pause/resume handler in every tab.
@@ -488,6 +493,16 @@ export function TheaterMobileChrome({
         </div>
       )}
 
+      {/* Expanded caption: slightly darken the media so the white text reads. */}
+      {current && expanded && !textLike && (
+        <div
+          className={cn(
+            'pointer-events-none absolute inset-0 bg-black/40 transition-opacity duration-200',
+            declutter && 'opacity-0',
+          )}
+        />
+      )}
+
       {/* Bottom scrim: author/caption + Send / Save / Share / Open. Padded
           above the sheet's peek bar (opaque, themed) so the gradient tucks
           under it. */}
@@ -540,41 +555,18 @@ export function TheaterMobileChrome({
                 )
               })()}
             {caption && (
-              <div
-                className={cn(
-                  'mt-1.5',
-                  expanded && 'rounded-lg bg-black/70 px-2 py-1.5 backdrop-blur-sm',
-                )}
-              >
-                <p
-                  ref={captionRef}
-                  className={cn(
-                    'text-[13.5px] leading-snug text-white/90 [text-shadow:0_1px_3px_rgba(0,0,0,.6)]',
-                    expanded ? 'max-h-[38dvh] overflow-y-auto overscroll-contain' : 'line-clamp-2',
-                  )}
-                >
-                  <TheaterLinkedText
-                    platform={current.platform}
-                    text={caption}
-                    hasMedia
-                    links={current?.textLinks}
-                    hideTweetLinks={!!current?.quote}
-                  />
-                </p>
-                {overflowing && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setExpanded((v) => !v)
-                    }}
-                    onTouchEnd={(e) => e.stopPropagation()}
-                    className="mt-1 flex min-h-[44px] items-center text-[12.5px] font-semibold text-white/80 [text-shadow:0_1px_3px_rgba(0,0,0,.6)]"
-                  >
-                    {expanded ? 'less' : 'more'}
-                  </button>
-                )}
-              </div>
+              <TheaterCaption
+                captionRef={captionRef}
+                expanded={expanded}
+                overflowing={overflowing}
+                onToggle={toggleCaption}
+                platform={current.platform}
+                text={caption}
+                links={current?.textLinks}
+                hideTweetLinks={!!current?.quote}
+                className="mt-1.5 text-[13.5px] leading-snug"
+                expandedMaxClass="max-h-[38dvh]"
+              />
             )}
 
             {/* Tag chips — collection / live / signed-in shared preview. */}

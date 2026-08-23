@@ -10,8 +10,8 @@
  * Two components, one file:
  *  - `DesktopStageChrome` — absolutely-positioned overlays INSIDE the stage
  *    wrapper (brand + LIVE, paste-a-link input, de-clutter, per-type meta
- *    chips, the media post's author/caption overlay with the sticky
- *    show-more expand, and the action buttons).
+ *    chips, the media post's author/caption overlay (tap the text to
+ *    expand), and the action buttons).
  *  - `DesktopDock` — the in-flow bottom dock AFTER the stage wrapper
  *    (transport cluster + horizontal filmstrip + end cap), plus the
  *    "Show all" overlay panel reusing `UpNextList`.
@@ -69,7 +69,8 @@ import {
   PERSONAL_TAB_LABEL,
   REPEAT_MODE_LABEL,
 } from './types'
-import { TheaterLinkedText, stripShortLinksForPreview } from './TheaterText'
+import { TheaterCaption } from './TheaterCaption'
+import { stripShortLinksForPreview } from './TheaterText'
 import { progressKindFor } from './TheaterProgressLine'
 import { UpNextList, TYPE_TILE, warmOnHover } from './UpNextList'
 import { SavePlaylistButton } from './SavePlaylistButton'
@@ -208,7 +209,12 @@ export function DesktopStageChrome({
   const [pasteError, setPasteError] = useState(false)
   const pasteErrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const currentKey = current ? theaterItemKey(current) : null
-  const { ref: captionRef, expanded, setExpanded, overflowing } = useClampExpand(currentKey)
+  const {
+    ref: captionRef,
+    expanded,
+    toggle: toggleCaption,
+    overflowing,
+  } = useClampExpand(currentKey)
   // Eager on a shared preview page: there's one post the visitor followed a
   // link FOR (pinned + repeating, not skimmed past), so the file should be
   // ready before they reach for Send — the only way the share sheet opens
@@ -479,13 +485,20 @@ export function DesktopStageChrome({
         </div>
       </div>
 
-      {/* Bottom scrim: non-interactive, media posts only (text-like stages
-          carry their own composition). `current` is already null during the
-          waiting/end-of-feed stage, so no separate `waiting` check is needed. */}
+      {/* Media veil: a light bottom fade when collapsed; the whole stage
+          darkens a touch once the caption is expanded so the white text
+          reads over the video/photo (X's expand gesture). */}
       {current && isMedia && (
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-56"
-          style={{ background: 'linear-gradient(transparent, rgba(11,11,17,.84))' }}
+          className={cn(
+            'pointer-events-none absolute inset-0 transition-opacity duration-200',
+            declutter && 'opacity-0',
+          )}
+          style={{
+            background: expanded
+              ? 'rgba(0,0,0,.42)'
+              : 'linear-gradient(transparent 55%, rgba(11,11,17,.84))',
+          }}
         />
       )}
 
@@ -539,32 +552,17 @@ export function DesktopStageChrome({
           </div>
 
           {caption && (
-            <div className={cn(expanded && 'rounded-lg bg-black/70 px-3 py-2 backdrop-blur-sm')}>
-              <p
-                ref={captionRef}
-                className={cn(
-                  'text-[15px] leading-snug text-white/90 [text-shadow:0_1px_3px_rgba(0,0,0,.6)]',
-                  expanded ? 'max-h-[38vh] overflow-y-auto overscroll-contain' : 'line-clamp-2',
-                )}
-              >
-                <TheaterLinkedText
-                  platform={current.platform}
-                  text={caption}
-                  hasMedia
-                  links={current.textLinks}
-                  hideTweetLinks={!!current.quote}
-                />
-              </p>
-              {(overflowing || expanded) && (
-                <button
-                  type="button"
-                  onClick={() => setExpanded((v) => !v)}
-                  className="mt-1 flex h-8 items-center text-[13px] font-semibold text-clay"
-                >
-                  {expanded ? 'less' : 'more'}
-                </button>
-              )}
-            </div>
+            <TheaterCaption
+              captionRef={captionRef}
+              expanded={expanded}
+              overflowing={overflowing}
+              onToggle={toggleCaption}
+              platform={current.platform}
+              text={caption}
+              links={current.textLinks}
+              hideTweetLinks={!!current.quote}
+              className="text-[15px] leading-snug"
+            />
           )}
 
           {/* Tag chips — collection / live / signed-in shared preview.

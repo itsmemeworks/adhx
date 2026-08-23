@@ -13,6 +13,7 @@ import type { TheaterItem } from '@/components/theater/types'
 import { peekPreviewOpenIntent } from '@/lib/theater/autosave-shared'
 import { resetArticleMarkdownCache } from '@/lib/theater/article-body'
 import { resetSavePostOwnershipCache } from '@/components/theater/SavePostButton'
+import { resetClampExpandPreference } from '@/components/theater/useClampExpand'
 
 // jsdom has no scrollIntoView — the dock auto-scrolls the current filmstrip card into view.
 Element.prototype.scrollIntoView = vi.fn()
@@ -97,6 +98,7 @@ const dockBase = {
 }
 
 beforeEach(() => {
+  resetClampExpandPreference()
   mockUseSendFile.mockReturnValue({
     supported: false,
     ready: false,
@@ -480,6 +482,13 @@ describe('DesktopStageChrome', () => {
       .getAllByTitle('Open on X')
       .filter((el) => !el.textContent?.includes('Open'))
     expect(chips).toHaveLength(1)
+  })
+
+  it('has no more/less caption control — the text itself is the expand target', () => {
+    render(<DesktopStageChrome {...stageBase} current={videoItem()} />)
+    expect(screen.getByText('a caption for the video')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'more' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'less' })).not.toBeInTheDocument()
   })
 
   it('renders no caption overlay for a text item, but does render the top-bar platform/time chip', () => {

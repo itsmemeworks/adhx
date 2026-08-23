@@ -10,9 +10,13 @@
  * deleted Rail.tsx into its own module.
  */
 
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, afterEach } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
-import { useClampExpand } from '@/components/theater/useClampExpand'
+import { resetClampExpandPreference, useClampExpand } from '@/components/theater/useClampExpand'
+
+afterEach(() => {
+  resetClampExpandPreference()
+})
 
 describe('useClampExpand — sticky expand preference', () => {
   it('an explicit expand survives a resetKey change (theater advancing to a new item)', () => {
@@ -48,5 +52,13 @@ describe('useClampExpand — sticky expand preference', () => {
     // the same preference as its initial state.
     const { result: mobile } = renderHook(() => useClampExpand('shared-a'))
     expect(mobile.current.expanded).toBe(true)
+  })
+
+  it('toggle flips the sticky preference', () => {
+    const { result } = renderHook(() => useClampExpand('item-a'))
+    act(() => result.current.toggle())
+    expect(result.current.expanded).toBe(true)
+    act(() => result.current.toggle())
+    expect(result.current.expanded).toBe(false)
   })
 })

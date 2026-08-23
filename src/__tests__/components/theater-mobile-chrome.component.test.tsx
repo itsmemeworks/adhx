@@ -7,6 +7,7 @@ import { TheaterMobileChrome } from '@/components/theater/TheaterMobileChrome'
 import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterItem, TheaterPersonalChrome } from '@/components/theater/types'
 import { resetArticleMarkdownCache } from '@/lib/theater/article-body'
+import { resetClampExpandPreference } from '@/components/theater/useClampExpand'
 
 /**
  * Save-is-always-primary / Download-is-secondary on the mobile bottom scrim —
@@ -94,6 +95,7 @@ const base = {
 }
 
 beforeEach(() => {
+  resetClampExpandPreference()
   mockUseSendFile.mockReturnValue({
     supported: false,
     ready: false,
@@ -119,6 +121,15 @@ function peekCentreText(): string {
 
 // Mobile action row is icon-only. Save keeps a clay border on the same
 // 44px glass circle as Share/Open; Download stays `border-white/25`.
+describe('TheaterMobileChrome: caption', () => {
+  it('has no more/less control — the text itself is the expand target', () => {
+    render(<TheaterMobileChrome {...base} current={videoItem()} />)
+    expect(screen.getByText('a caption for the video')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'more' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'less' })).not.toBeInTheDocument()
+  })
+})
+
 describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
   it('sign-in prompt Save is outlined with a clay border, never the old solid fill', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
