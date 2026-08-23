@@ -19,6 +19,7 @@ import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { fallbackToOriginal } from '@/components/feed/media-actions'
 import { proxiedPhotoSrc } from '@/lib/media/fxembed'
 import { TheaterLinkedText } from './TheaterText'
+import { dispatchTheaterStageTap } from './useTheaterStageEvents'
 import type { TheaterItem } from './types'
 
 /** Twitter photos go through `/api/media/image` — pbs.twimg.com often 403s off twitter.com. */
@@ -125,7 +126,10 @@ export function StageText({
   if (photo) {
     const src = stagePhotoSrc(item)
     return (
-      <div className="relative flex h-full w-full items-center justify-center bg-[#08070a]">
+      <div
+        className="relative flex h-full w-full items-center justify-center bg-[#08070a]"
+        onClick={() => dispatchTheaterStageTap()}
+      >
         {src ? (
           <img
             src={src}

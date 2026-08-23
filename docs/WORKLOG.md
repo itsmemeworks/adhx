@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-23 — Stage tap declutter + start (not play/pause)
+
+Tapping a video or photo hides chrome and starts playback; tapping again restores overlays without pausing. Pause stays on the peek-bar / dock button and Space. Sound stays on the audio button (tap no longer unmutes). YouTube iframe still eats its own taps. Follow-up: none.
+
 ## 2026-08-23 — Theater photos load via the image proxy
 
 Stage photo variant was hotlinking `pbs.twimg.com`, which often 403s from localhost / Safari. Now uses `/api/media/image` (same as download) with the CDN URL as onError fallback. Follow-up: dock thumbs still use the raw pulse URL.

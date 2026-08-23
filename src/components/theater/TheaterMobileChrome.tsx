@@ -44,7 +44,7 @@ import { inferType } from '@/lib/trending/filter'
 import { useSendFile } from './useSendFile'
 import { fileSendCopy, textCopyAction } from './send-action'
 import { useTheaterCopy } from './useTheaterCopy'
-import { useTheaterStageEvents } from './useTheaterStageEvents'
+import { useTheaterStageEvents, useTheaterStageTapDeclutter } from './useTheaterStageEvents'
 import { useClampExpand } from './useClampExpand'
 import { theaterItemKey, PLATFORM_LABEL, REPEAT_MODE_LABEL } from './types'
 import { TheaterLinkedText } from './TheaterText'
@@ -230,19 +230,20 @@ export function TheaterMobileChrome({
   )
 
   // Pause/play button state. `'video'`-kind items mirror StageVideo's real
-  // playing state (so a tap on the video itself, or an autoplay retry, keeps
-  // the button honest); `'timed'`-kind items have no underlying element to
-  // ask, so the button owns that state itself, reset to playing whenever the
+  // playing state (so the peek-bar button, or an autoplay retry, keeps the
+  // button honest); `'timed'`-kind items have no underlying element to ask,
+  // so the button owns that state itself, reset to playing whenever the
   // current post changes (a paused state must never leak to the next post).
   const { videoPlaying, timedPaused, setTimedPaused, liveMuted, setLiveMuted } =
     useTheaterStageEvents()
   // De-clutter: hides the top and bottom scrims (brand + caption/actions) for
   // an unobstructed view of the stage. The peek bar (nav/pause/audio + the
   // up-next sheet) deliberately stays visible and functional — the point is
-  // an unobstructed view while still being able to skip quickly. Deliberately
-  // NOT reset on `currentKey` — a viewer who de-clutters wants it to stay
-  // that way while browsing, not fight it back open on every navigation.
+  // an unobstructed view while still being able to skip quickly. A tap on
+  // the video/photo also toggles this (and starts playback on enter).
+  // Deliberately NOT reset on `currentKey`.
   const [declutter, setDeclutter] = useState(false)
+  useTheaterStageTapDeclutter(declutter, setDeclutter)
 
   useEffect(
     () => () => {

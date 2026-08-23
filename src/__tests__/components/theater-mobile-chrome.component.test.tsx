@@ -395,6 +395,23 @@ describe('TheaterMobileChrome: de-clutter icon', () => {
     expect(restored.querySelector('.lucide-minimize-2')).toBeInTheDocument()
     expect(restored.querySelector('.lucide-maximize-2')).not.toBeInTheDocument()
   })
+
+  it('a stage tap hides chrome and resumes; a second tap only restores overlays', () => {
+    const resumes: Event[] = []
+    const onResume = (e: Event) => resumes.push(e)
+    window.addEventListener('theater-resume', onResume)
+    render(<TheaterMobileChrome {...base} current={videoItem()} />)
+
+    expect(screen.getByLabelText('Hide controls')).toBeInTheDocument()
+    fireEvent(window, new CustomEvent('theater-stage-tap'))
+    expect(screen.getByLabelText('Show controls')).toBeInTheDocument()
+    expect(resumes).toHaveLength(1)
+
+    fireEvent(window, new CustomEvent('theater-stage-tap'))
+    expect(screen.getByLabelText('Hide controls')).toBeInTheDocument()
+    expect(resumes).toHaveLength(1)
+    window.removeEventListener('theater-resume', onResume)
+  })
 })
 
 // The drag mechanics themselves (live-follow, snap thresholds, flick
