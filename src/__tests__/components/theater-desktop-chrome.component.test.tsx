@@ -11,6 +11,7 @@ import {
 import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterItem } from '@/components/theater/types'
 import { peekPreviewOpenIntent } from '@/lib/theater/autosave-shared'
+import { resetArticleMarkdownCache } from '@/lib/theater/article-body'
 import { resetSavePostOwnershipCache } from '@/components/theater/SavePostButton'
 
 // jsdom has no scrollIntoView — the dock auto-scrolls the current filmstrip card into view.
@@ -668,6 +669,25 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
     expect(saveBtn.className).toContain('border-clay')
   })
 
+  it('labels video and photo Download, distinguished by film vs image icon', () => {
+    mockUseSendFile.mockReturnValue({
+      supported: true,
+      ready: true,
+      sending: false,
+      mode: 'download' as const,
+      send: vi.fn(),
+    })
+    const { rerender } = render(<DesktopStageChrome {...stageBase} current={videoItem()} />)
+    const videoBtn = screen.getByRole('button', { name: 'Download' })
+    expect(videoBtn.querySelector('.lucide-film')).toBeTruthy()
+    expect(screen.getByTitle('Download the video')).toBeInTheDocument()
+    rerender(<DesktopStageChrome {...stageBase} current={videoItem({ contentType: 'photo' })} />)
+    const photoBtn = screen.getByRole('button', { name: 'Download' })
+    expect(photoBtn.querySelector('.lucide-image')).toBeTruthy()
+    expect(screen.getByTitle('Download the photo')).toBeInTheDocument()
+    expect(screen.queryByTitle('Download the video')).not.toBeInTheDocument()
+  })
+
   it('shared+authed SavePostButton carries the clay-border outline', async () => {
     render(<DesktopStageChrome {...stageBase} mode="shared" authed current={videoItem()} />)
     const saveBtn = await screen.findByText('Save')
@@ -1040,6 +1060,7 @@ describe('DesktopStageChrome: Copy button for text-like posts', () => {
   const writeText = vi.fn().mockResolvedValue(undefined)
 
   beforeEach(() => {
+    resetArticleMarkdownCache()
     global.fetch = vi.fn().mockResolvedValue({ ok: false })
     writeText.mockClear()
     Object.defineProperty(navigator, 'clipboard', {
@@ -1059,6 +1080,45 @@ describe('DesktopStageChrome: Copy button for text-like posts', () => {
     fireEvent.click(screen.getByText('Copy'))
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('the full post body'))
     expect(await screen.findByText('Copied')).toBeInTheDocument()
+  })
+
+  it('uses a file-text icon for articles and a copy icon for tweets', () => {
+    const { rerender } = render(
+      <DesktopStageChrome {...stageBase} current={textItem({ contentType: 'article' })} />,
+    )
+    expect(
+      screen.getByRole('button', { name: 'Copy' }).querySelector('.lucide-file-text'),
+    ).toBeTruthy()
+    expect(screen.getByTitle('Copy the article')).toBeInTheDocument()
+    rerender(<DesktopStageChrome {...stageBase} current={textItem()} />)
+    expect(screen.getByRole('button', { name: 'Copy' }).querySelector('.lucide-copy')).toBeTruthy()
+    expect(screen.getByTitle("Copy the post's text")).toBeInTheDocument()
+  })
+
+  it('copies the article body, not just the title', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        article: { content: '# Why an army\n\nOne account has a ceiling.' },
+      }),
+    })
+    render(
+      <DesktopStageChrome
+        {...stageBase}
+        current={textItem({
+          contentType: 'article',
+          text: 'Army title',
+          author: 'adriamatz',
+          bookmarkId: '99',
+        })}
+      />,
+    )
+    fireEvent.click(screen.getByText('Copy'))
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith(
+        'Army title\n\n# Why an army\n\nOne account has a ceiling.',
+      ),
+    )
   })
 
   it('renders no Copy pill for a text-like post with empty text', () => {

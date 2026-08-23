@@ -19,8 +19,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 import { previewPath } from '@/lib/activity/preview-path'
+import { fetchArticleMarkdown } from '@/lib/theater/article-body'
 import {
   parseArticleMarkdown,
   type ArticleMdBlock,
@@ -31,12 +31,6 @@ import type { TheaterItem } from './types'
 
 export interface StageArticleProps {
   item: TheaterItem
-}
-
-interface ShareTweetResponse {
-  article?: {
-    content?: string | null
-  } | null
 }
 
 function renderInline(nodes: InlineNode[], keyPrefix: string): ReactNode[] {
@@ -151,12 +145,9 @@ export function StageArticle({ item }: StageArticleProps) {
       return
     }
 
-    const url = `/api/share/tweet/${encodeURIComponent(item.author)}/${encodeURIComponent(item.bookmarkId)}`
-    fetchWithTimeout(url, 10_000)
-      .then((res) => (res.ok ? (res.json() as Promise<ShareTweetResponse>) : null))
-      .then((data) => {
+    fetchArticleMarkdown(item.author, item.bookmarkId)
+      .then((markdown) => {
         if (cancelled) return
-        const markdown = data?.article?.content
         if (!markdown) {
           setFailed(true)
           return

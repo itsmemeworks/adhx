@@ -6,6 +6,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { TheaterMobileChrome } from '@/components/theater/TheaterMobileChrome'
 import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterItem, TheaterPersonalChrome } from '@/components/theater/types'
+import { resetArticleMarkdownCache } from '@/lib/theater/article-body'
 
 /**
  * Save-is-always-primary / Download-is-secondary on the mobile bottom scrim —
@@ -144,6 +145,25 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
 
     const saveBtn = screen.getByRole('button', { name: 'Save' })
     expect(saveBtn.className).toContain('border-clay')
+  })
+
+  it('labels video and photo Download, distinguished by film vs image icon', () => {
+    mockUseSendFile.mockReturnValue({
+      supported: true,
+      ready: true,
+      sending: false,
+      mode: 'download' as const,
+      send: vi.fn(),
+    })
+    const { rerender } = render(<TheaterMobileChrome {...base} current={videoItem()} />)
+    const videoBtn = screen.getByRole('button', { name: 'Download' })
+    expect(videoBtn.querySelector('.lucide-film')).toBeTruthy()
+    expect(screen.getByTitle('Download the video')).toBeInTheDocument()
+    rerender(<TheaterMobileChrome {...base} current={videoItem({ contentType: 'photo' })} />)
+    const photoBtn = screen.getByRole('button', { name: 'Download' })
+    expect(photoBtn.querySelector('.lucide-image')).toBeTruthy()
+    expect(screen.getByTitle('Download the photo')).toBeInTheDocument()
+    expect(screen.queryByTitle('Download the video')).not.toBeInTheDocument()
   })
 
   it('collection live-tab Save carries the clay-border outline, Download (when present) stays plain glass', () => {
@@ -1011,6 +1031,8 @@ describe('TheaterMobileChrome: Copy button for text-like posts', () => {
   const writeText = vi.fn().mockResolvedValue(undefined)
 
   beforeEach(() => {
+    resetArticleMarkdownCache()
+    global.fetch = vi.fn().mockResolvedValue({ ok: false })
     writeText.mockClear()
     Object.defineProperty(navigator, 'clipboard', {
       value: { writeText },
@@ -1023,6 +1045,43 @@ describe('TheaterMobileChrome: Copy button for text-like posts', () => {
     expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Download' })).not.toBeInTheDocument()
     expect(screen.queryByText('Copy')).not.toBeInTheDocument()
+  })
+
+  it('uses a file-text icon for articles and a copy icon for tweets', () => {
+    const { rerender } = render(
+      <TheaterMobileChrome {...base} current={textItem({ contentType: 'article' })} />,
+    )
+    expect(
+      screen.getByRole('button', { name: 'Copy' }).querySelector('.lucide-file-text'),
+    ).toBeTruthy()
+    rerender(<TheaterMobileChrome {...base} current={textItem()} />)
+    expect(screen.getByRole('button', { name: 'Copy' }).querySelector('.lucide-copy')).toBeTruthy()
+  })
+
+  it('copies the article body, not just the title', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        article: { content: '# Why an army\n\nOne account has a ceiling.' },
+      }),
+    })
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={textItem({
+          contentType: 'article',
+          text: 'Army title',
+          author: 'adriamatz',
+          bookmarkId: '99',
+        })}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Copy' }))
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith(
+        'Army title\n\n# Why an army\n\nOne account has a ceiling.',
+      ),
+    )
   })
 
   it("copies the post's full text and flashes Copied on tap", async () => {
