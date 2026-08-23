@@ -1,14 +1,13 @@
 'use client'
 
 /**
- * The signed-in theater — what `/` renders once you're logged in (owner: "most
- * people, when logged in, will want to keep the live view of the theater on, so
- * that should be the default route").
+ * The signed-in theater. Default landing is My Collection (`/collection`) —
+ * continue / next unread. Live is `/live`.
  *
  * The Live ⇄ My Collection switch is a pair of ROUTES rather than local state:
  *
- *   `/`            Live — the community's last 24 hours (the default)
- *   `/collection`  My Collection — your own active queue, as a playlist
+ *   `/live`        Live — the community's last 24 hours
+ *   `/collection`  My Collection — your own active queue (signed-in home)
  *   `/library`     the grid (filters, search, views) — `AuthedHome`
  *
  * Making each side a real URL means it's linkable, back/forward works, and a
@@ -36,8 +35,8 @@ import { COLLECTION_QUEUE_LIMIT, sameBookmark } from '@/lib/theater/collection-h
 import { theaterTabNavRestore } from '@/components/theater/theater-math'
 
 /** Which route each side of the switch lives on. */
-export const TAB_ROUTES: Record<PersonalTab, '/' | '/collection'> = {
-  live: '/',
+export const TAB_ROUTES: Record<PersonalTab, '/live' | '/collection'> = {
+  live: '/live',
   collection: '/collection',
 }
 

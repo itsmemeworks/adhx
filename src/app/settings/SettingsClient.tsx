@@ -31,6 +31,7 @@ import { useTheme } from '@/lib/theme/context'
 import { PlatformGlyph, ConnectWithX } from '@/components/matter'
 import { UsernameChooser, type UsernameClaimSuccess } from '@/components/auth/UsernameChooser'
 import { IosShortcutSettingsCard } from '@/components/IosShortcutInstall'
+import { AndroidSettingsCard } from '@/components/AndroidInstall'
 import { MAX_USERNAME_CHANGES } from '@/lib/auth/username-rules'
 import { cn } from '@/lib/utils'
 
@@ -939,6 +940,7 @@ function SettingsPage() {
         )}
 
         <IosShortcutSettingsCard />
+        <AndroidSettingsCard />
 
         {/* Sync X bookmarks */}
         {!meLoading && me && (

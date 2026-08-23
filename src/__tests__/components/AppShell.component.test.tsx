@@ -26,7 +26,7 @@ describe('AppShell theater surfaces', () => {
     mockPathname = '/'
   })
 
-  it.each(['/', '/collection', '/t/you/cats', '/alice/status/123'])(
+  it.each(['/', '/live', '/collection', '/t/you/cats', '/alice/status/123'])(
     'hides Header on %s but still mounts the install banner',
     (path) => {
       mockPathname = path

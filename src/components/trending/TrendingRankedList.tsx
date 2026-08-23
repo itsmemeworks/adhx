@@ -92,7 +92,7 @@ export function TrendingRankedList({
         }
         links={[
           { href: '/leaderboard', label: 'Leaderboard →' },
-          { href: '/', label: 'Watch as theater →' },
+          { href: '/live', label: 'Watch as theater →' },
         ]}
       />
 

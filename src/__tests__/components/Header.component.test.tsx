@@ -262,13 +262,17 @@ describe('Header', () => {
   it('marks Theater as current on both of its routes', async () => {
     mockPathname = '/collection'
     mockFetch(true)
-    render(<Header />)
+    const { rerender } = render(<Header />)
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
     // `/collection` is the theater's My Collection tab, so the Theater entry —
     // not Library — is the active one there.
     expect(screen.getByRole('link', { name: 'Theater' }).className).toContain('text-clay')
     expect(screen.getByRole('link', { name: 'Library' }).className).not.toContain('bg-clay')
+
+    mockPathname = '/live'
+    rerender(<Header />)
+    expect(screen.getByRole('link', { name: 'Theater' }).className).toContain('text-clay')
   })
 
   it('on /tags: search placeholder changes and typing dispatches "tags-search" instead of navigating', async () => {

@@ -36,7 +36,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // TheaterShell is `fixed inset-0 z-[60]` and owns the chrome. Hide the
   // Header; the install banner still mounts (z-70, under the top-left logo).
   const isTheaterPage =
-    pathname === '/' || pathname === '/collection' || pathname.startsWith('/t/') || isPreviewPage
+    pathname === '/' ||
+    pathname === '/live' ||
+    pathname === '/collection' ||
+    pathname.startsWith('/t/') ||
+    isPreviewPage
   const isFullWidth =
     isTheaterPage ||
     pathname === '/trending/play' ||

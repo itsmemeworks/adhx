@@ -31,6 +31,9 @@ describe('isValidTwitterHandle', () => {
     expect(isValidTwitterHandle('shorts')).toBe(false)
     expect(isValidTwitterHandle('leaderboard')).toBe(false)
     expect(isValidTwitterHandle('privacy')).toBe(false)
+    expect(isValidTwitterHandle('live')).toBe(false)
+    expect(isValidTwitterHandle('collection')).toBe(false)
+    expect(isValidTwitterHandle('library')).toBe(false)
   })
 
   it('still accepts an ordinary handle that is not reserved', () => {

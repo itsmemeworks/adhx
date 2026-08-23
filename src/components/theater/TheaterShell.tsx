@@ -159,11 +159,11 @@ export interface TheaterShellProps {
   personalItems?: FeedItem[]
   /** Where to start in the collection queue — a gallery click jumps to the clicked item (same contract as the deleted `CollectionTheater`'s `startIndex`). */
   initialPersonalIndex?: number
-  /** Which collection sub-tab to open on (`/` is Live, `/collection` is My Collection). */
+  /** Which collection sub-tab to open on (`/live` is Live, `/collection` is My Collection). */
   initialPersonalTab?: PersonalTab
   /**
    * Called when the viewer flips the Live ⇄ My Collection switch. The switch
-   * is a ROUTE on the signed-in theater (`/` is Live, `/collection` is My
+   * is a ROUTE on the signed-in theater (`/live` is Live, `/collection` is My
    * Collection — owner: "a specific route that they select"), so the page
    * passes a `router.push` here. The tab still flips locally first, so the
    * switch responds instantly and doesn't wait on navigation.

@@ -6,22 +6,15 @@ import { TheaterShell } from '@/components/theater/TheaterShell'
 import { metrics } from '@/lib/sentry'
 import { recordAnalytic } from '@/lib/analytics/record'
 import { collectionPath } from '@/lib/theater/collection-href'
-import AuthedTheater from './AuthedTheater'
 
 /**
- * `/` — the theater, signed in or out (docs/specs/theater-first.md).
+ * `/` — signed-out public live theater + crawlable static list.
  *
- * Signed OUT it's the public live theater plus the crawlable static list.
- * Signed IN it's the same theater with the Live ⇄ My Collection switch, opened
- * on **Live** — the owner's call: "most people, when logged in, will want to
- * keep the live view of the theater on, so that should be the default route".
- * The other side of that switch is `/collection`, and the grid (filters,
- * search, views) moved to `/library`.
+ * Signed IN this redirects to `/collection` (next unread). Live is `/live`.
+ * The pair stays two routes so Live ⇄ My Collection is linkable; `/` cannot
+ * be both "home = unread" and the Live tab.
  *
- * force-dynamic: this reads the session cookie (`getCurrentUserId`, via
- * next/headers) and the runtime SQLite DB — which is only migrated at
- * container startup. Pre-rendering at build time would either bake a
- * signed-out response for everyone or query a table-less DB.
+ * force-dynamic: session cookie + runtime SQLite (migrated at container start).
  */
 export const dynamic = 'force-dynamic'
 
@@ -38,19 +31,16 @@ export default async function HomePage({
   const userId = await getCurrentUserId()
   const params = await searchParams
   const addedId = params.id ?? params.tweetId
-  // Save-after-add still lands on `/?added=success&id=` — send it to the
-  // one personal theater, not an overlay on this Live route.
-  if (userId && (params.added === 'success' || params.added === 'duplicate') && addedId) {
-    redirect(collectionPath({ open: addedId, platform: params.platform }))
+  if (userId) {
+    if ((params.added === 'success' || params.added === 'duplicate') && addedId) {
+      redirect(collectionPath({ open: addedId, platform: params.platform }))
+    }
+    redirect('/collection')
   }
 
   const seed = await getTheaterFeed()
   metrics.theaterOpened('home')
   recordAnalytic({ name: 'theater.open', userId, surface: 'live' })
-
-  if (userId) {
-    return <AuthedTheater seed={seed} tab="live" />
-  }
 
   return (
     <>

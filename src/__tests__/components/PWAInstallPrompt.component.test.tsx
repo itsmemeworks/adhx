@@ -5,6 +5,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { PWAInstallPrompt } from '@/components/PWAInstallPrompt'
 import { SHORTCUT_DISMISS_KEY } from '@/components/IosShortcutInstall'
+import { ANDROID_A2HS_DISMISS_KEY } from '@/components/AndroidInstall'
 import { X_ONLY_SHORTCUT_URL } from '@/lib/share/ios'
 
 let mockPlatform: 'ios' | 'android' | 'desktop' = 'desktop'
@@ -81,17 +82,34 @@ describe('PWAInstallPrompt', () => {
     expect(screen.getByText('Install the iOS shortcut')).toBeInTheDocument()
   })
 
+  it('shows the Android banner without waiting for beforeinstallprompt', async () => {
+    mockPlatform = 'android'
+    render(<PWAInstallPrompt />)
+    expect(await screen.findByText('Add ADHX to your home screen')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'How' })).toHaveAttribute(
+      'href',
+      '/settings#android-install',
+    )
+    expect(screen.queryByRole('button', { name: 'Add' })).not.toBeInTheDocument()
+  })
+
   it('offers a one-tap Add button on Android once beforeinstallprompt fires', async () => {
     mockPlatform = 'android'
     render(<PWAInstallPrompt />)
-    expect(screen.queryByText('Add ADHX to your home screen')).not.toBeInTheDocument()
-
-    const evt = fireBeforeInstallPrompt()
     expect(await screen.findByText('Add ADHX to your home screen')).toBeInTheDocument()
 
-    const addBtn = screen.getByRole('button', { name: 'Add' })
+    const evt = fireBeforeInstallPrompt()
+    const addBtn = await screen.findByRole('button', { name: 'Add' })
+    expect(screen.queryByRole('link', { name: 'How' })).not.toBeInTheDocument()
     fireEvent.click(addBtn)
     expect(evt.prompt).toHaveBeenCalled()
+  })
+
+  it('stays hidden on Android once the home-screen nudge is dismissed', () => {
+    mockPlatform = 'android'
+    localStorage.setItem(ANDROID_A2HS_DISMISS_KEY, '1')
+    const { container } = render(<PWAInstallPrompt />)
+    expect(container).toBeEmptyDOMElement()
   })
 
   it('stays hidden on Android when already installed (standalone)', () => {

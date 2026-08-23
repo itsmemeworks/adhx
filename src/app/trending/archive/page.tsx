@@ -78,7 +78,7 @@ export default async function TrendingArchiveIndexPage() {
         }
         links={[
           { href: '/trending', label: 'Trending →' },
-          { href: '/', label: 'Watch as theater →' },
+          { href: '/live', label: 'Watch as theater →' },
         ]}
       />
 

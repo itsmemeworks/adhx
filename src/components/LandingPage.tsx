@@ -23,6 +23,7 @@ import { PublicNav } from '@/components/PublicNav'
 import { DiscoverCard } from '@/components/discover/DiscoverCard'
 import type { ActivityItem } from '@/components/discover/types'
 import { IosShortcutHow, IosShortcutInstallButton } from '@/components/IosShortcutInstall'
+import { AndroidLandingPromo } from '@/components/AndroidInstall'
 import { BOOKMARKLET_CODE } from '@/lib/share/ios'
 
 /* ---------- Live activity (the real, anonymous community pulse) ---------- */
@@ -449,16 +450,20 @@ function ShortcutPromo() {
       <div className="bg-surface border border-hairline rounded-card p-6 sm:p-7">
         <div className="flex flex-col sm:flex-row items-center gap-6">
           <div className="w-14 h-14 rounded-[14px] bg-clay/12 text-clay flex items-center justify-center flex-shrink-0">
-            {platform === 'ios' ? (
-              <Smartphone className="w-7 h-7" />
-            ) : (
+            {platform === 'desktop' ? (
               <Monitor className="w-7 h-7" />
+            ) : (
+              <Smartphone className="w-7 h-7" />
             )}
           </div>
 
           <div className="flex-1 text-center sm:text-left">
             <h2 className="font-serif font-semibold text-ink text-[18px] mb-2">
-              {platform === 'ios' ? 'Send any post from iPhone' : 'Save posts with one click'}
+              {platform === 'ios'
+                ? 'Send any post from iPhone'
+                : platform === 'android'
+                  ? 'Send any post from Android'
+                  : 'Save posts with one click'}
             </h2>
 
             {platform === 'ios' ? (
@@ -471,6 +476,8 @@ function ShortcutPromo() {
                 <IosShortcutInstallButton />
                 <IosShortcutHow />
               </>
+            ) : platform === 'android' ? (
+              <AndroidLandingPromo />
             ) : (
               <>
                 <p className="text-[14px] text-ink-2 leading-[1.5] mb-4">
@@ -491,12 +498,6 @@ function ShortcutPromo() {
                     {copied ? 'Copied!' : 'Copy Bookmarklet'}
                   </button>
                 </div>
-                {platform === 'android' && (
-                  <p className="text-[13px] text-ink-3 mt-3">
-                    You can also install ADHX as a PWA from your browser menu for share sheet
-                    access.
-                  </p>
-                )}
               </>
             )}
           </div>

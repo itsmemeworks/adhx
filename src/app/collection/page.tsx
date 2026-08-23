@@ -7,8 +7,8 @@ import AuthedTheater from '../AuthedTheater'
 
 /**
  * `/collection` — the My Collection side of the theater's Live ⇄ My Collection
- * switch (the Live side is `/`). Your own active queue as a playlist, with the
- * collection actions; the grid with filters and search is `/library`.
+ * switch (the Live side is `/live`). Signed-in `/` redirects here — next unread
+ * is the default landing. The grid with filters and search is `/library`.
  *
  * Signed-out visitors have no collection to play, so they land on the public
  * theater instead.
@@ -25,7 +25,7 @@ export default async function CollectionTheaterPage({
   const userId = await getCurrentUserId()
   if (!userId) redirect('/')
 
-  // The live seed is fetched here too, not just on `/`: flipping the switch
+  // The live seed is fetched here too, not just on `/live`: flipping the switch
   // back to Live shows the tab immediately, before the navigation lands.
   const seed = await getTheaterFeed()
   metrics.theaterOpened('collection')

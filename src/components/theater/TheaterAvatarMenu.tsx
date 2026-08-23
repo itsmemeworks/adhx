@@ -132,7 +132,7 @@ function TheaterMenuEntry({ isHome, onClose }: { isHome: boolean; onClose: () =>
  * duplicated.
  *
  * Selecting a tab goes through `onTabChange` rather than an `<a href>`: the
- * pair is routes (`/` and `/collection`) but the chrome flips the tab locally
+ * pair is routes (`/live` and `/collection`) but the chrome flips the tab locally
  * first so the switch is instant, then navigates — a plain link would reload
  * the stage the viewer is watching.
  */
@@ -280,7 +280,8 @@ export function TheaterAvatarMenu({
   // `theaterActive` folds in because the home theater's URL-sync rewrites
   // the pathname to per-post preview paths mid-session — see
   // TheaterMenuEntry's doc comment.
-  const isHome = pathname === '/' || theaterActive
+  const isHome =
+    pathname === '/' || pathname === '/live' || pathname === '/collection' || theaterActive
   // Current-screen markers for the other nav entries (round 8). Prefix match
   // so /leaderboard/[window] etc. still count.
   const isLeaderboard = pathname === '/leaderboard' || pathname?.startsWith('/leaderboard/')

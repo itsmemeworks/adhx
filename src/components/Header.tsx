@@ -402,11 +402,9 @@ export function Header() {
             </Link>
 
             {/* Primary nav — every entry is a real route now that the theater
-                has its own: `/` is the theater on Live, `/collection` is the
-                theater on My Collection (the switch inside the theater moves
-                between those two), and the grid + filters + search moved to
-                `/library`. "Theater" names the surface rather than one tab,
-                since it holds both.
+                has its own: signed-in `/` (and this Theater link) lands on
+                `/collection` (next unread); `/live` is Live; the grid is
+                `/library`. "Theater" names the surface rather than one tab.
                 Only when authenticated, hidden on mobile (mobile uses the menu). */}
             {authStatus?.authenticated && (
               <nav className="hidden lg:flex items-center gap-1 text-[13.5px]">
@@ -425,7 +423,7 @@ export function Header() {
                   href="/"
                   className={cn(
                     'rounded-full px-3 py-1.5 font-semibold transition-colors',
-                    pathname === '/' || pathname === '/collection'
+                    pathname === '/' || pathname === '/live' || pathname === '/collection'
                       ? 'bg-clay/[0.12] text-clay'
                       : 'text-ink-2 hover:text-ink',
                   )}
@@ -573,7 +571,7 @@ export function Header() {
                           onClick={() => setShowUserMenu(false)}
                           className={cn(
                             'flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset transition-colors',
-                            pathname === '/' || pathname === '/collection'
+                            pathname === '/' || pathname === '/live' || pathname === '/collection'
                               ? 'font-semibold text-clay'
                               : 'text-ink-2 hover:text-ink',
                           )}
