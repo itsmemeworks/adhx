@@ -42,6 +42,7 @@ describe('API: /api/auth/me', () => {
       user: null,
       identities: { x: null, email: null },
       xConnected: false,
+      isAdmin: false,
     })
   })
 
@@ -83,6 +84,7 @@ describe('API: /api/auth/me', () => {
     expect(data.identities.x).toEqual({ providerId: 'x-user-1', username: 'xuser' })
     expect(data.identities.email).toBeNull()
     expect(data.xConnected).toBe(true)
+    expect(data.isAdmin).toBe(false)
   })
 
   it('reports an email-only user with xConnected: false', async () => {
@@ -107,6 +109,7 @@ describe('API: /api/auth/me', () => {
     expect(data.identities.x).toBeNull()
     expect(data.identities.email).toEqual({ email: 'reader@example.com' })
     expect(data.xConnected).toBe(false)
+    expect(data.isAdmin).toBe(false)
   })
 
   it('reports both identities for a user who linked email + X', async () => {
@@ -155,5 +158,39 @@ describe('API: /api/auth/me', () => {
 
     const rows = await testInstance.db.select().from(schema.users)
     expect(rows).toHaveLength(1)
+    expect(data.isAdmin).toBe(false)
+  })
+
+  it('sets isAdmin when the username is in ADMIN_USERNAMES', async () => {
+    const prev = process.env.ADMIN_USERNAMES
+    process.env.ADMIN_USERNAMES = 'xuser'
+    await testInstance.db.insert(schema.users).values({
+      id: 'admin-1',
+      username: 'xuser',
+    })
+    mockSession = { userId: 'admin-1', username: 'xuser' }
+    const { GET } = await import('@/app/api/auth/me/route')
+    const data = await (await GET()).json()
+    expect(data.isAdmin).toBe(true)
+    if (prev === undefined) delete process.env.ADMIN_USERNAMES
+    else process.env.ADMIN_USERNAMES = prev
+  })
+
+  it('returns the signed-out shape for a banned session', async () => {
+    await testInstance.db.insert(schema.users).values({
+      id: 'banned-1',
+      username: 'spammer',
+    })
+    await testInstance.db.insert(schema.userBans).values({
+      userId: 'banned-1',
+      reason: 'spam',
+      createdAt: new Date().toISOString(),
+      createdBy: 'admin-1',
+    })
+    mockSession = { userId: 'banned-1', username: 'spammer' }
+    const { GET } = await import('@/app/api/auth/me/route')
+    const data = await (await GET()).json()
+    expect(data.authenticated).toBe(false)
+    expect(data.isAdmin).toBe(false)
   })
 })

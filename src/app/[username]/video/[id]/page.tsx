@@ -13,10 +13,12 @@ import {
 import { RelatedSaves } from '@/components/RelatedSaves'
 import { tiktokToTheaterItem } from '@/lib/theater/shared-seed'
 import {
+  MODERATED_PAGE_METADATA,
   recordHumanPreview,
   SharedPreviewPage,
   sharedPreviewSeed,
 } from '@/lib/theater/shared-preview'
+import { isPostModerated } from '@/lib/admin/moderation'
 import { getSavedPreviewDisplay } from '@/lib/theater/saved-preview'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
@@ -55,7 +57,8 @@ export default async function TikTokPreviewPage({ params }: Props) {
   const authorName = saved?.authorName || meta?.authorName || null
   const description = saved?.text || meta?.description || null
   const hasVideo = saved ? true : !!meta?.videoUrl
-  const available = saved ? true : !!meta
+  const moderated = isPostModerated('tiktok', id)
+  const available = moderated ? false : saved ? true : !!meta
 
   await recordHumanPreview(available, {
     platform: 'tiktok',
@@ -96,6 +99,7 @@ export default async function TikTokPreviewPage({ params }: Props) {
       seed={seed}
       sharedItem={sharedItem}
       authed={!!userId}
+      unavailable={moderated}
       staticPost={{
         kind: 'tiktok-video',
         authorName,
@@ -123,6 +127,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!isValidUsername(handle) || !isValidVideoId(id)) {
     return { title: 'ADHX - Save now. Read never. Find always.' }
   }
+
+  if (isPostModerated('tiktok', id)) return MODERATED_PAGE_METADATA
 
   const baseUrl = PUBLIC_BASE_URL
   const canonicalUrl = `${baseUrl}/@${handle}/video/${id}`

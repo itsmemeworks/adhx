@@ -126,8 +126,13 @@ export interface TheaterShellProps {
    * there's nothing to repeat, so the stub's 'timed' progress kind is left
    * free to auto-advance the queue into the live pulse after its normal 10s
    * dwell, exactly like any other timed item.
+   *
+   * `sharedUnavailableReason` distinguishes a gone source (`source`, the
+   * default) from an admin hide (`hidden`) so the stage does not claim a
+   * YouTube Short "is no longer available on X".
    */
   sharedUnavailable?: boolean
+  sharedUnavailableReason?: 'source' | 'hidden'
   /**
    * Whether the visiting user is signed in. Shared mode: swaps Connect for a
    * direct Save. Playlist mode: initial SSR hint for the Save-playlist
@@ -176,6 +181,7 @@ export function TheaterShell({
   mode = 'home',
   sharedItem,
   sharedUnavailable = false,
+  sharedUnavailableReason = 'source',
   authed = false,
   playlist,
   personalItems,
@@ -1597,7 +1603,7 @@ export function TheaterShell({
               />
             ) : null
           ) : isSharedUnavailableOnCurrent && current ? (
-            <StageUnavailable item={current} />
+            <StageUnavailable item={current} reason={sharedUnavailableReason} />
           ) : (
             <>
               {/* The stage stays MOUNTED (paused — see the waiting-pause

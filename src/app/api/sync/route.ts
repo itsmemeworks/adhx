@@ -13,6 +13,7 @@ import { recordActivity, previewPath } from '@/lib/activity/record'
 import { getSyncCooldownMs } from '@/lib/sync/config'
 import { saveBookmark } from '@/lib/sync/save-bookmark'
 import { addedAtForIndex } from '@/lib/sync/added-at'
+import { recordAnalytic } from '@/lib/analytics/record'
 
 /**
  * Cap on how many newly-synced tweets feed the public pulse per sync. Bookmarks
@@ -245,6 +246,7 @@ export const GET = withAuth(async (request, userId) => {
                 contentType: savedBookmark.category,
                 url: previewPath('twitter', savedBookmark.author, savedBookmark.id),
                 userId,
+                source: 'sync',
               })
             }
 
@@ -304,6 +306,7 @@ export const GET = withAuth(async (request, userId) => {
         const syncDuration = Date.now() - syncStartTime
         metrics.syncCompleted(newBookmarks, pageNumber, syncDuration)
         metrics.trackUser(userId)
+        recordAnalytic({ name: 'sync.complete', userId, source: 'sync' })
 
         send('complete', {
           stats: {

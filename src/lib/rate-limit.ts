@@ -127,6 +127,23 @@ export function mediaRateLimit(request: NextRequest, opts?: RateLimitOptions): N
  * media bucket so a gallery hover session cannot starve share/preview,
  * and so we can keep the write cap tighter (15 / minute / IP).
  */
+export function analyticsWriteLimit(request: NextRequest): NextResponse | null {
+  const ip = getClientIp(request)
+  const result = checkRateLimit(`analytics:${ip}`, { windowMs: 60_000, max: 30 })
+
+  if (result.limited) {
+    return NextResponse.json(
+      { error: 'Too many requests' },
+      {
+        status: 429,
+        headers: { 'Retry-After': Math.ceil(result.resetMs / 1000).toString() },
+      },
+    )
+  }
+
+  return null
+}
+
 export function activityWriteLimit(request: NextRequest): NextResponse | null {
   const ip = getClientIp(request)
   const result = checkRateLimit(`activity:${ip}`, { windowMs: 60_000, max: 15 })

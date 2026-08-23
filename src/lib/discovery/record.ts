@@ -1,6 +1,7 @@
 import { db } from '@/lib/db'
 import { collectionEvents, tagShares } from '@/lib/db/schema'
 import { and, eq, gt } from 'drizzle-orm'
+import { recordAnalytic } from '@/lib/analytics/record'
 
 /**
  * The Discovery leaderboard event log (docs/specs/discovery-leaderboards.md §3–§4).
@@ -107,6 +108,13 @@ export function recordCollectionEvent(opts: {
         createdAt: new Date().toISOString(),
       })
       .run()
+    recordAnalytic({
+      name: action === 'clone' ? 'playlist.clone' : 'playlist.view',
+      userId: viewerId,
+      tag,
+      source: action === 'clone' ? 'clone' : undefined,
+      surface: 'playlist',
+    })
   } catch {
     // Best-effort: a stats write must never break a page view or a clone.
   }

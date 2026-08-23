@@ -5,6 +5,7 @@ import { getUserIdForUsername } from '@/lib/users/lookup'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { getThumbnailUrl } from '@/lib/media/fxembed'
 import { inferContentType } from '@/lib/content-type'
+import { isUserBanned } from '@/lib/admin/moderation'
 
 /**
  * Public tag-collection query — the data layer for `/t/{username}/{tag}`.
@@ -135,6 +136,7 @@ async function fetchTagCollection(username: string, tagName: string): Promise<Ta
   const ownerId = await getUserIdForUsername(username)
   const user = ownerId ? { userId: ownerId } : null
   if (!user) return { status: 'not_found' }
+  if (isUserBanned(user.userId)) return { status: 'not_found' }
 
   const [share] = await db
     .select()

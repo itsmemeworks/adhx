@@ -7,6 +7,7 @@ import { eq, sql, and } from 'drizzle-orm'
 import { withAuth } from '@/lib/api/with-auth'
 import { getOwnerCollectionStats } from '@/lib/discovery/rank'
 import { invalidateTagCollectionCache } from '@/lib/tags/query'
+import { recordAnalytic } from '@/lib/analytics/record'
 
 // Username for friendly share URLs — users-table-first (email-only accounts
 // have no oauth_tokens row; reading only that table 404'd their shares).
@@ -120,6 +121,13 @@ export const PATCH = withAuth(async (request, userId) => {
   invalidateTagCollectionCache(username, tag)
   revalidatePath(`/t/${username}/${tag}`)
   revalidatePath(`/t/${username}`)
+
+  recordAnalytic({
+    name: isPublic ? 'playlist.publish' : 'playlist.unpublish',
+    userId,
+    tag,
+    surface: 'playlist',
+  })
 
   // Return friendly URL format: /t/{username}/{tag}
   return NextResponse.json({ success: true, shareUrl: `/t/${username}/${tag}`, isPublic })

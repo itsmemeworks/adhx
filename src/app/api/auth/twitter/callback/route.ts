@@ -11,6 +11,8 @@ import { getSession, setSessionCookie } from '@/lib/auth/session'
 import { findOrCreateUserForX } from '@/lib/auth/account'
 import { isSafeReturnUrl } from '@/lib/auth/return-url'
 import { metrics, captureException } from '@/lib/sentry'
+import { recordAnalytic } from '@/lib/analytics/record'
+import { isUserBanned } from '@/lib/admin/moderation'
 
 const CLIENT_ID = process.env.TWITTER_CLIENT_ID!
 const CLIENT_SECRET = process.env.TWITTER_CLIENT_SECRET!
@@ -49,6 +51,7 @@ export async function GET(request: NextRequest) {
   if (error) {
     console.error('OAuth error:', error, errorDescription)
     metrics.authFailed(error)
+    recordAnalytic({ name: 'auth.fail', source: 'oauth' })
     return NextResponse.redirect(
       new URL(`/?error=${encodeURIComponent(errorDescription || error)}`, BASE_URL),
     )
@@ -102,6 +105,10 @@ export async function GET(request: NextRequest) {
     const appUserId = linkResult.userId
     const appUsername = linkResult.username
 
+    if (isUserBanned(appUserId)) {
+      return NextResponse.redirect(new URL('/?auth_error=banned', BASE_URL))
+    }
+
     // Check if this is a new user (for metrics) — keyed by the app userId,
     // since an email user linking X already has no oauth_tokens row yet.
     const isNewUser = !(await hasExistingTokens(appUserId))
@@ -123,6 +130,7 @@ export async function GET(request: NextRequest) {
     // Track successful auth completion
     metrics.authCompleted(isNewUser)
     metrics.trackUser(appUserId)
+    recordAnalytic({ name: 'auth.complete', userId: appUserId, source: 'oauth' })
 
     // Check for a return URL cookie (from URL prefix feature)
     const returnUrlCookie = request.cookies.get('adhx_return_url')
@@ -163,6 +171,7 @@ export async function GET(request: NextRequest) {
     captureException(err, { endpoint: '/api/auth/twitter/callback' })
     const message = err instanceof Error ? err.message : 'Unknown error'
     metrics.authFailed(message)
+    recordAnalytic({ name: 'auth.fail', source: 'oauth' })
     return NextResponse.redirect(new URL(`/?error=${encodeURIComponent(message)}`, BASE_URL))
   }
 }

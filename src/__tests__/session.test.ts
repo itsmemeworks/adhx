@@ -21,6 +21,10 @@ vi.mock('next/headers', () => ({
   cookies: vi.fn(() => Promise.resolve(mockCookieStore)),
 }))
 
+vi.mock('@/lib/admin/moderation', () => ({
+  isUserBanned: () => false,
+}))
+
 describe('Session Module', () => {
   beforeEach(() => {
     vi.clearAllMocks()

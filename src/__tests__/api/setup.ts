@@ -183,6 +183,48 @@ export const FULL_SCHEMA_SQL = `
   CREATE INDEX collection_events_collection_idx ON collection_events(owner_user_id, tag, created_at);
   CREATE INDEX collection_events_created_at_idx ON collection_events(created_at);
 
+  CREATE TABLE analytics_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    platform TEXT,
+    content_type TEXT,
+    surface TEXT,
+    source TEXT,
+    bookmark_id TEXT,
+    tag TEXT,
+    user_id TEXT,
+    created_at TEXT NOT NULL
+  );
+  CREATE INDEX analytics_events_created_at_idx ON analytics_events(created_at);
+  CREATE INDEX analytics_events_name_created_at_idx ON analytics_events(name, created_at);
+  CREATE INDEX analytics_events_platform_created_at_idx ON analytics_events(platform, created_at);
+
+  CREATE TABLE moderated_posts (
+    platform TEXT NOT NULL,
+    bookmark_id TEXT NOT NULL,
+    hidden INTEGER NOT NULL DEFAULT 1,
+    reason TEXT,
+    created_at TEXT NOT NULL,
+    created_by TEXT NOT NULL,
+    PRIMARY KEY (platform, bookmark_id)
+  );
+
+  CREATE TABLE user_bans (
+    user_id TEXT PRIMARY KEY,
+    reason TEXT,
+    created_at TEXT NOT NULL,
+    created_by TEXT NOT NULL
+  );
+
+  CREATE TABLE admin_audit (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    actor_user_id TEXT NOT NULL,
+    action TEXT NOT NULL,
+    target TEXT,
+    created_at TEXT NOT NULL
+  );
+  CREATE INDEX admin_audit_created_at_idx ON admin_audit(created_at);
+
   CREATE TABLE users (
     id TEXT PRIMARY KEY,
     username TEXT NOT NULL UNIQUE,

@@ -6,6 +6,30 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-23 — Trending archive matches the ranked list
+
+`/trending/archive` and `/trending/archive/[week]` dropped the leftover light paper/card-grid chrome. Same dark `#08070a` bar + numbered rows as live `/trending` (`TrendingListHeader`, `TrendingRankedRow`, `rankItems`). Week pages stay frozen (no poll, no filter pills); SEO list + JSON-LD unchanged. Follow-up: none.
+
+---
+
+## 2026-08-23 — Hidden-post tombstone is not "gone from X"
+
+Admin hide reused `StageUnavailable`'s deleted-tweet copy, so a hidden YouTube Short (`/shorts/dQw4w9WgXcQ`) read "no longer available on X". Hide now passes `sharedUnavailableReason="hidden"`: headline "This post was removed from ADHX" plus a line that it is off preview pages and the live feed. Source-gone still names the real network (X / YouTube / Instagram / TikTok). Metadata for hides is "Post removed - ADHX". Follow-up: none.
+
+---
+
+## 2026-08-23 — Admin console on Settings
+
+`/admin` (noindex) for `ADMIN_USERNAMES`. Settings shows the link when `/api/auth/me` returns `isAdmin`. Overview + analytics auto-refresh every 30s; inspect a post (URL or `platform:id`) with per-post counts and hide/restore; inspect a user and ban/unban (cannot ban self/admins); hide a playlist from the leaderboard. Hide writes `moderated_posts` so preview pages tombstone and the sitemap/pulse skip the post — bookmarks stay. Ban signs the account out and 404s their public profile/playlists. Follow-up: wire overview stats into a public `/this-week` later if wanted.
+
+---
+
+## 2026-08-22 — Growth analytics event log
+
+Private `analytics_events` table + `recordAnalytic` choke point so we can count saves/views/shares/tags/archive/copy/open/auth/shortcut by platform and type without dumping those into the public pulse. Pulse actions dual-write; client POSTs are an allowlist. `GET /api/analytics?window=` returns aggregates and top posts with no userId. 90-day prune. Follow-up: wire these rollups into leaderboards.
+
+---
+
 ## 2026-08-22 — iOS shortcut banner dismisses on tap-away
 
 The iOS install banner is a soft nudge: any tap outside it (or the X) hides it and remembers. Settings now has an iOS-only "iOS shortcut" card with the iCloud link + the four-platform recipe, so dismissing the banner never loses the install path.

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { getTheaterFeed } from '@/lib/theater/feed'
 import { metrics } from '@/lib/sentry'
+import { recordAnalytic } from '@/lib/analytics/record'
 import AuthedTheater from '../AuthedTheater'
 
 /**
@@ -28,6 +29,7 @@ export default async function CollectionTheaterPage({
   // back to Live shows the tab immediately, before the navigation lands.
   const seed = await getTheaterFeed()
   metrics.theaterOpened('collection')
+  recordAnalytic({ name: 'theater.open', userId, surface: 'collection' })
 
   const { open, platform } = await searchParams
   return <AuthedTheater seed={seed} tab="collection" openId={open} openPlatform={platform} />

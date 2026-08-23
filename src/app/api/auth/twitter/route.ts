@@ -11,6 +11,7 @@ import {
 import { getSession, clearSessionCookie } from '@/lib/auth/session'
 import { isSafeReturnUrl } from '@/lib/auth/return-url'
 import { metrics } from '@/lib/sentry'
+import { recordAnalytic } from '@/lib/analytics/record'
 
 const CLIENT_ID = process.env.TWITTER_CLIENT_ID!
 
@@ -34,6 +35,7 @@ export async function GET(request: NextRequest) {
 
   // Track auth flow start
   metrics.authStarted()
+  recordAnalytic({ name: 'auth.start', source: 'oauth' })
 
   // Check for returnUrl parameter
   const returnUrl = request.nextUrl.searchParams.get('returnUrl')

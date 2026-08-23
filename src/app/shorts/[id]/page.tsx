@@ -18,10 +18,12 @@ import {
 import { RelatedSaves } from '@/components/RelatedSaves'
 import { youtubeToTheaterItem } from '@/lib/theater/shared-seed'
 import {
+  MODERATED_PAGE_METADATA,
   recordHumanPreview,
   SharedPreviewPage,
   sharedPreviewSeed,
 } from '@/lib/theater/shared-preview'
+import { isPostModerated } from '@/lib/admin/moderation'
 import { getSavedPreviewDisplay } from '@/lib/theater/saved-preview'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
@@ -50,7 +52,8 @@ export default async function ShortPreviewPage({ params }: Props) {
   const author = saved?.author || meta?.author || null
   const authorName = saved?.authorName || meta?.authorName || null
   const title = saved?.text || meta?.title || null
-  const available = saved ? true : !!meta
+  const moderated = isPostModerated('youtube', id)
+  const available = moderated ? false : saved ? true : !!meta
   const previewAuthor = author?.replace(/^@/, '') || authorName || 'youtube'
 
   await recordHumanPreview(available, {
@@ -85,6 +88,7 @@ export default async function ShortPreviewPage({ params }: Props) {
       seed={seed}
       sharedItem={sharedItem}
       authed={!!userId}
+      unavailable={moderated}
       staticPost={{
         kind: 'youtube-short',
         authorName,
@@ -111,6 +115,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!isValidVideoId(id)) {
     return { title: 'ADHX - Save now. Read never. Find always.' }
   }
+
+  if (isPostModerated('youtube', id)) return MODERATED_PAGE_METADATA
 
   const baseUrl = PUBLIC_BASE_URL
   const canonicalUrl = `${baseUrl}/shorts/${id}`

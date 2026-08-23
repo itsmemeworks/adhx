@@ -128,6 +128,7 @@ async function addInstagramReel(userId: string, reelId: string, source: string) 
       thumbnailUrl: `/api/media/instagram/thumbnail?id=${encodeURIComponent(reelId)}`,
       url: previewPath('instagram', existing.author, reelId),
       userId,
+      source: source as 'manual' | 'url_prefix' | 'pwa_share',
     })
     return NextResponse.json(
       { success: false, isDuplicate: true, platform: 'instagram', bookmark: existing },
@@ -193,6 +194,7 @@ async function addInstagramReel(userId: string, reelId: string, source: string) 
       : null,
     url: previewPath('instagram', handle, reelId),
     userId,
+    source: source as 'manual' | 'url_prefix' | 'pwa_share',
   })
 
   const [newBookmark] = await db
@@ -242,6 +244,7 @@ async function addTikTokVideo(userId: string, handle: string, videoId: string, s
       thumbnailUrl: null, // tnktok exposes no poster; card falls back to the glyph
       url: previewPath('tiktok', existing.author, videoId),
       userId,
+      source: source as 'manual' | 'url_prefix' | 'pwa_share',
     })
     return NextResponse.json(
       { success: false, isDuplicate: true, platform: 'tiktok', bookmark: existing },
@@ -303,6 +306,7 @@ async function addTikTokVideo(userId: string, handle: string, videoId: string, s
     thumbnailUrl: null, // tnktok exposes no poster; card falls back to the glyph
     url: previewPath('tiktok', handle, videoId),
     userId,
+    source: source as 'manual' | 'url_prefix' | 'pwa_share',
   })
 
   const [newBookmark] = await db
@@ -352,6 +356,7 @@ async function addYouTubeShort(userId: string, videoId: string, source: string) 
       thumbnailUrl: youtubeThumbnail(videoId),
       url: previewPath('youtube', existing.author, videoId),
       userId,
+      source: source as 'manual' | 'url_prefix' | 'pwa_share',
     })
     return NextResponse.json(
       { success: false, isDuplicate: true, platform: 'youtube', bookmark: existing },
@@ -408,6 +413,7 @@ async function addYouTubeShort(userId: string, videoId: string, source: string) 
     thumbnailUrl: youtubeThumbnail(videoId),
     url: previewPath('youtube', handle, videoId),
     userId,
+    source: source as 'manual' | 'url_prefix' | 'pwa_share',
   })
 
   const [newBookmark] = await db

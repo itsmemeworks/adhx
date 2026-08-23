@@ -1,9 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
 import { listArchiveWeeks } from '@/lib/trending/archive'
-import { MatterLogo } from '@/components/matter'
-import { ThemeToggle } from '@/components/ThemeToggle'
+import { TrendingListHeader } from '@/components/trending/TrendingListHeader'
 import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
@@ -13,8 +11,7 @@ import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
  * `/trending` feed, these pages never disappear — this index links to all of
  * them, newest first.
  *
- * Fully server-rendered (only the theme toggle hydrates as an island); no
- * data fetching happens client-side.
+ * Fully server-rendered; chrome matches the dark ranked list on `/trending`.
  */
 
 // Reads the runtime SQLite DB (migrated at container startup, absent at
@@ -67,65 +64,67 @@ export default async function TrendingArchiveIndexPage() {
   })
 
   return (
-    <div className="min-h-screen bg-paper">
+    <div className="min-h-screen bg-[#08070a] text-white/90">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScriptContent(jsonLd) }}
       />
 
-      <nav className="flex items-center border-b border-hairline px-5 py-4 sm:px-11">
-        <Link href="/" aria-label="ADHX home">
-          <MatterLogo size={20} />
-        </Link>
-        <div className="ml-auto flex items-center gap-4">
-          <Link
-            href="/trending"
-            className="text-sm font-medium text-ink-2 transition-colors hover:text-ink"
-          >
-            Trending
-          </Link>
-          <ThemeToggle />
-        </div>
-      </nav>
+      <TrendingListHeader
+        status={
+          <span className="text-[12.5px] font-semibold text-white/60">
+            <span>Archive</span>
+          </span>
+        }
+        links={[
+          { href: '/trending', label: 'Trending →' },
+          { href: '/', label: 'Watch as theater →' },
+        ]}
+      />
 
-      <main className="mx-auto max-w-3xl px-5 py-10 sm:px-8 sm:py-14">
-        <Link
-          href="/trending"
-          className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-ink-2 transition-colors hover:text-ink"
-        >
-          <ArrowLeft size={15} />
-          <span>Back to Trending</span>
-        </Link>
-
-        <h1 className="font-serif text-3xl font-semibold tracking-[-0.015em] text-ink sm:text-4xl">
-          Trending Archive
+      <div className="mx-auto max-w-2xl">
+        <h1 className="px-4 pt-5 font-serif text-[22px] font-semibold tracking-[-0.015em] text-white sm:px-6 sm:text-[26px]">
+          <span>Trending Archive</span>
         </h1>
-        <p className="mt-2.5 max-w-xl text-[15px] leading-relaxed text-ink-2">
-          What the community saved and previewed, permanently archived one ISO week at a time.
+        <p className="mt-2 max-w-xl px-4 text-[14px] leading-relaxed text-white/45 sm:px-6">
+          <span>
+            What the community saved and previewed, permanently archived one ISO week at a time.
+          </span>
         </p>
 
         {weeks.length === 0 ? (
-          <p className="mt-10 text-sm text-ink-3">
-            No archived weeks yet — check back after the first full week of activity.
-          </p>
+          <div className="flex min-h-[40vh] items-center justify-center px-4">
+            <p className="text-center text-[15px] text-white/40">
+              <span>No archived weeks yet — check back after the first full week of activity.</span>
+            </p>
+          </div>
         ) : (
-          <ul className="mt-8 divide-y divide-hairline border-y border-hairline">
-            {weeks.map((w) => (
+          <ol className="mt-4">
+            {weeks.map((w, i) => (
               <li key={w.slug}>
                 <Link
                   href={`/trending/archive/${w.slug}`}
-                  className="flex items-center justify-between gap-4 py-4 transition-colors hover:bg-inset"
+                  className="group flex items-start gap-4 border-b border-white/[0.06] px-4 py-4 transition-colors hover:bg-white/[0.03] sm:px-5"
                 >
-                  <span className="font-serif text-[17px] font-medium text-ink">{w.label}</span>
-                  <span className="flex-none font-mono text-[12.5px] text-ink-3">
-                    {w.itemCount} {w.itemCount === 1 ? 'item' : 'items'}
+                  <span className="w-7 flex-none pt-0.5 text-right font-mono text-[15px] tabular-nums text-white/35 sm:w-9 sm:text-[17px]">
+                    {i + 1}
                   </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[14.5px] font-medium leading-snug text-white/90 sm:text-[15.5px]">
+                      <span>{w.label}</span>
+                    </p>
+                    <p className="mt-1.5 text-[12px] text-white/45">
+                      <span>
+                        {w.itemCount} {w.itemCount === 1 ? 'post' : 'posts'}
+                      </span>
+                    </p>
+                  </div>
                 </Link>
               </li>
             ))}
-          </ul>
+          </ol>
         )}
-      </main>
+      </div>
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { bookmarks, archivedPosts } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { metrics } from '@/lib/sentry'
+import { recordPostAnalytic } from '@/lib/analytics/record'
 import { withAuth } from '@/lib/api/with-auth'
 import { handleRouteError } from '@/lib/api/response'
 
@@ -58,6 +59,12 @@ export const POST = withAuth(
       })
 
       metrics.bookmarkReadToggled(true)
+      recordPostAnalytic('post.archive', {
+        userId,
+        platform,
+        bookmarkId: id,
+        surface: 'collection',
+      })
 
       // Archive is private — do not write a public `read` pulse. Preview /
       // save / share still feed the community feed; marking something done
@@ -104,6 +111,12 @@ export const DELETE = withAuth(
         )
 
       metrics.bookmarkReadToggled(false)
+      recordPostAnalytic('post.unarchive', {
+        userId,
+        platform,
+        bookmarkId: id,
+        surface: 'collection',
+      })
 
       return NextResponse.json({ success: true, isArchived: false, archivedAt: null })
     } catch (error) {

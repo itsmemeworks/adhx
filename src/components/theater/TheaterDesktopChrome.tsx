@@ -51,6 +51,7 @@ import { addedToAdhxLabel, formatCompactRelativeTime, hasKnownTimestamp } from '
 import { MatterLogo, PlatformGlyph } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { authorProfileUrl, sourceUrl } from '@/lib/activity/preview-path'
+import { pingAnalytic } from '@/lib/analytics/client'
 import { inferType } from '@/lib/trending/filter'
 import { resolvePastedLink } from '@/lib/theater/paste-preview'
 import { navigateToAppPath } from '@/lib/theater/navigate-app-path'
@@ -665,6 +666,13 @@ export function DesktopStageChrome({
               rel="noopener noreferrer"
               title={`Open on ${platformLabel}`}
               className={GLASS}
+              onClick={() =>
+                current &&
+                pingAnalytic('post.open', {
+                  platform: current.platform,
+                  id: current.bookmarkId || undefined,
+                })
+              }
             >
               <ExternalLink size={14} />
               <span>Open</span>

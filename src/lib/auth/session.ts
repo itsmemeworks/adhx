@@ -63,7 +63,10 @@ export async function getSession(): Promise<Session | null> {
  */
 export async function getCurrentUserId(): Promise<string | null> {
   const session = await getSession()
-  return session?.userId ?? null
+  if (!session?.userId) return null
+  const { isUserBanned } = await import('@/lib/admin/moderation')
+  if (isUserBanned(session.userId)) return null
+  return session.userId
 }
 
 /**
