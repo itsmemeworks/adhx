@@ -12,7 +12,7 @@ routes _are_ the backend, and they talk to SQLite via Drizzle ORM.
 
 | Route                                                                       | What it is                                                              |
 | --------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `/`                                                                         | Signed-out public live theater. Signed-in: redirects to `/saved`.  |
+| `/`                                                                         | Signed-out public live theater. Signed-in: redirects to `/saved`.       |
 | `/live`                                                                     | Signed-in **Live** tab — community pulse. Signed-out: redirects to `/`. |
 | `/saved`                                                                    | **Saved** — unread queue. Signed-in default landing.                    |
 | `/collection`                                                               | 308 → `/saved` (legacy URL).                                            |

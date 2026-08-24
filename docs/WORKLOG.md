@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-24 — CI: Saved tab is not Save; Tag count is not a chip
+
+Collection e2e still looked for action-row `#tag` chips and used `name: 'Save'` which matches the Saved tab. Format: table padding in ARCHITECTURE.md / CLAUDE.md. Follow-up: none.
+
 ## 2026-08-24 — Album pager is one next-photo pill
 
 Dots are no longer individually tappable. The whole frost chip is one button that advances (wraps). Mobile uses a lighter `bg-black/40` plate; desktop keeps `lg:bg-black/80`. Follow-up: none.

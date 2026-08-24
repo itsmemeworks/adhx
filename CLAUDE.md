@@ -694,20 +694,20 @@ This avoids prop drilling and keeps keyboard logic centralized while allowing di
 | Surface                     | Time shown                                      | Source                                                                                    |
 | --------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | Live / trending (community) | when the post first entered ADHX, by anyone     | `getTrendingItems`' `addedAt` = MIN(earliest saver's `processedAt`, first activity event) |
-| Saved, `/library`   | when **this** user saved it                     | their own `bookmarks.processed_at`                                                        |
+| Saved, `/library`           | when **this** user saved it                     | their own `bookmarks.processed_at`                                                        |
 | A playlist (`/t/{u}/{tag}`) | when the curator added the post **to that tag** | `bookmark_tags.created_at`                                                                |
 
 Owner rule: on a user-owned surface the user's own timestamp always wins, even when the post entered ADHX earlier via somebody else — "users get control over when they are creating things that are related to them". `bookmark_tags.created_at` exists precisely because "saved it" and "curated it into this playlist" are different events, often months apart; it's nullable (added to an existing table) and `migrate.ts` backfills old rows from the bookmark's save time, which is what readers also fall back to. Never the source platform's publish date, anywhere.
 
 **Routes:**
 
-| Route         | What renders                                                                                                                            |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Route         | What renders                                                                                                                       |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `/`           | signed-out: public live theater + crawlable static list. Signed-in: **redirects to `/saved`** (next unread is the default landing) |
-| `/live`       | signed-in Live tab (community pulse). Signed-out: redirects to `/`                                                                      |
-| `/saved`      | Saved — your unread queue as a playlist. Signed-in home                                                                                 |
-| `/collection` | 308 → `/saved` (legacy URL)                                                                                                             |
-| `/library`    | the grid: `AuthedHome`, three view modes, FilterBar, search, tags                                                                       |
+| `/live`       | signed-in Live tab (community pulse). Signed-out: redirects to `/`                                                                 |
+| `/saved`      | Saved — your unread queue as a playlist. Signed-in home                                                                            |
+| `/collection` | 308 → `/saved` (legacy URL)                                                                                                        |
+| `/library`    | the grid: `AuthedHome`, three view modes, FilterBar, search, tags                                                                  |
 
 The Live ⇄ Saved switch is a pair of ROUTES (`/live` ⇄ `/saved`), not local state, so each side is linkable and survives a reload — `TheaterShell`'s `onPersonalTabChange` flips the tab locally (instant) then the page navigates. Live `replaceState`s the address bar onto the staged post (same as signed-out `/`); Saved stays on `/saved`, and flipping back writes `/saved` even if Live left a preview path in the bar. `TheaterShell` snapshots `personalItems` at mount, so `/saved` fetches the queue BEFORE mounting the shell; `/live` never waits on it. Signed-in `/` cannot be Live — that would bounce the Live tab back to unread.
 
