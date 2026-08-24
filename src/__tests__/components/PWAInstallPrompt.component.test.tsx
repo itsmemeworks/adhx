@@ -236,4 +236,13 @@ describe('PWAInstallPrompt', () => {
     render(<PWAInstallPrompt />)
     expect(navigator.serviceWorker.register).toHaveBeenCalledWith('/sw.js')
   })
+
+  it('skips the Android nudge on Settings so the always-on card is not doubled', async () => {
+    mockPlatform = 'android'
+    mockPathname = '/settings'
+    render(<PWAInstallPrompt />)
+    await waitFor(() => {
+      expect(screen.queryByText('Share a post directly to ADHX')).not.toBeInTheDocument()
+    })
+  })
 })

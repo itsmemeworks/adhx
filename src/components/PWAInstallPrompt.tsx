@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { Plus, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getPlatformType, type PlatformType } from '@/lib/platform'
 import { SHORTCUT_DISMISS_KEY } from '@/components/IosShortcutInstall'
-import { ANDROID_A2HS_DISMISS_KEY, AndroidHow } from '@/components/AndroidInstall'
+import { ANDROID_A2HS_DISMISS_KEY, AndroidInstallBanner } from '@/components/AndroidInstall'
 import { X_ONLY_SHORTCUT_URL } from '@/lib/share/ios'
 import { pingAnalytic } from '@/lib/analytics/client'
 
@@ -14,20 +14,15 @@ import { pingAnalytic } from '@/lib/analytics/client'
  * Mobile install nudge.
  *
  * - **Android**: show even without `beforeinstallprompt` (Samsung / Firefox
- *   often never fire it). Add when the prompt exists; otherwise How expands
- *   the steps in the banner (Settings still has the always-on card). Do not
- *   send How to `/settings` — that page requires a session.
+ *   often never fire it). Uses `AndroidInstallBanner` (same chrome as Settings).
+ *   Add when the prompt exists; otherwise How expands the steps. Skip on
+ *   `/settings` so the always-on card is not doubled. Hidden in standalone.
  * - **iOS / Safari**: Share Sheet shortcut is the useful install (home screen
  *   is a 3-step dance and doesn't help send from Instagram/X). One tap opens
  *   the iCloud shortcut. Still shown in standalone — the shortcut is separate.
  *
  * Hidden on desktop, when Android is already installed, and once dismissed.
  */
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
-}
 
 function isStandalone(): boolean {
   if (typeof window === 'undefined') return false
@@ -56,9 +51,7 @@ function isTheaterPath(pathname: string): boolean {
 export function PWAInstallPrompt() {
   const pathname = usePathname()
   const [platform, setPlatform] = useState<PlatformType>('desktop')
-  const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null)
   const [visible, setVisible] = useState(false)
-  const [howOpen, setHowOpen] = useState(false)
   const bannerRef = useRef<HTMLDivElement>(null)
   const pinUnderTheaterLogo = isTheaterPath(pathname)
 
@@ -91,7 +84,6 @@ export function PWAInstallPrompt() {
 
     const onBeforeInstall = (e: Event) => {
       e.preventDefault()
-      setDeferred(e as BeforeInstallPromptEvent)
       setVisible(true)
     }
     window.addEventListener('beforeinstallprompt', onBeforeInstall)
@@ -120,15 +112,9 @@ export function PWAInstallPrompt() {
     return () => document.removeEventListener('pointerdown', onPointerDown, true)
   }, [visible, platform])
 
-  const install = async () => {
-    if (!deferred) return
-    await deferred.prompt()
-    await deferred.userChoice
-    setDeferred(null)
-    dismiss()
-  }
-
   if (!visible || platform === 'desktop') return null
+  // Settings mounts the same AndroidInstallBanner as an always-on card.
+  if (platform === 'android' && pathname === '/settings') return null
 
   if (platform === 'ios') {
     return (
@@ -179,53 +165,13 @@ export function PWAInstallPrompt() {
         pinUnderTheaterLogo ? `fixed left-3 ${THEATER_BANNER_TOP}` : 'relative mx-3 mt-2',
       )}
     >
-      <div
-        className={cn(
-          'flex items-center gap-3 rounded-2xl bg-surface border border-hairline shadow-2xl px-4 py-3',
-          pinUnderTheaterLogo ? 'w-[min(22rem,calc(100vw-1.5rem))]' : 'mx-auto max-w-md',
-        )}
-      >
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-ink">Share a post directly to ADHX</p>
-          <p className="text-xs leading-snug text-ink-3">
-            Add to your home screen once. Then in X, Instagram, TikTok, or YouTube: Share → ADHX.
-          </p>
-        </div>
-        {deferred ? (
-          <button
-            onClick={install}
-            className="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 min-h-[36px] rounded-full text-sm font-semibold text-white bg-clay-grad shadow-glow transition-transform hover:scale-105"
-          >
-            <Plus className="w-4 h-4" /> Add
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setHowOpen((open) => !open)}
-            aria-expanded={howOpen}
-            className="flex-shrink-0 inline-flex items-center px-3 py-1.5 min-h-[36px] rounded-full text-sm font-semibold text-ink border border-hairline"
-          >
-            How
-          </button>
-        )}
-        <button
-          onClick={dismiss}
-          aria-label="Dismiss"
-          className="flex-shrink-0 p-1.5 min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-ink-3 hover:text-ink-2"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </div>
-      {howOpen && !deferred && (
-        <div
-          className={cn(
-            'mt-2 rounded-2xl border border-hairline bg-surface px-4 py-3 shadow-2xl',
-            pinUnderTheaterLogo ? 'w-[min(22rem,calc(100vw-1.5rem))]' : 'mx-auto max-w-md',
-          )}
-        >
-          <AndroidHow className="mt-0" />
-        </div>
-      )}
+      <AndroidInstallBanner
+        dismissible
+        onDismiss={dismiss}
+        cardClassName={
+          pinUnderTheaterLogo ? 'w-[min(22rem,calc(100vw-1.5rem))]' : 'mx-auto max-w-md'
+        }
+      />
     </div>
   )
 }

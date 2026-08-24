@@ -560,8 +560,8 @@ The app offers multiple ways to save tweets, shown contextually based on the use
 
 **Android install** (`src/components/AndroidInstall.tsx`):
 
-- Settings card (`AndroidSettingsCard`) is always on Android — same job as the iOS shortcut card. Standalone: “Installed. Share → ADHX.” `beforeinstallprompt`: one-tap Add. Else: Chrome ⋮ → Add to Home screen → open once → Share → ADHX. Anchor `#android-install`.
-- Banner (`PWAInstallPrompt`) shows on Android even **without** `beforeinstallprompt` (Samsung/Firefox often never fire it). Add when the prompt exists; otherwise How expands the steps in the banner (Settings requires a session, so How must not send signed-out visitors there). Copy leads with why (Share a post directly to ADHX). Tap away or X dismisses it, same as iOS. On theater paths it hangs under the logo at `z-[70]` so it does not cover the peek bar. Hidden in standalone. Dismiss key `adhx-a2hs-dismissed`.
+- Settings (`AndroidSettingsCard`) mounts the same `AndroidInstallBanner` as the nudge — always on Android so the path is never lost. Standalone: “Installed. Share → ADHX.” `beforeinstallprompt`: one-tap Add. Else: How expands the steps. Anchor `#android-install`. No dismiss (it is not a nudge).
+- Banner (`PWAInstallPrompt`) shows on Android even **without** `beforeinstallprompt` (Samsung/Firefox often never fire it). Same `AndroidInstallBanner`; skipped on `/settings` so the card is not doubled. Tap away or X dismisses it. On theater paths it hangs under the logo at `z-[70]` so it does not cover the peek bar. Hidden in standalone. Dismiss key `adhx-a2hs-dismissed`.
 - Landing `ShortcutPromo` is Android-first (install + share), not bookmarklet-first.
 
 **Bookmarklet** (desktop):
@@ -585,7 +585,7 @@ javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tikt
 **Add to Home Screen (PWA install)**:
 
 - `src/components/PWAInstallPrompt.tsx` — mobile-only bottom banner, mounted app-wide in `AppShell` (preview pages too). Hidden on desktop.
-  - **Android**: show even without `beforeinstallprompt`. Add when the event fires; otherwise How. Hidden in standalone. Dismiss key `adhx-a2hs-dismissed`. Settings card always available.
+  - **Android**: show even without `beforeinstallprompt`. Add when the event fires; otherwise How. Hidden in standalone. Dismiss key `adhx-a2hs-dismissed`. Settings mounts the same banner, always available.
   - **iOS/Safari**: Share Sheet shortcut install (iCloud link), not Add to Home Screen. Still shown in standalone. Dismiss key `adhx-shortcut-dismissed`.
 - `public/sw.js` — a deliberately **cache-free** service worker (no-op `fetch` handler, no `respondWith`). It exists only to satisfy Chrome's installability criteria so `beforeinstallprompt` fires; it never serves stale content. Registered from `PWAInstallPrompt` on mount.
 

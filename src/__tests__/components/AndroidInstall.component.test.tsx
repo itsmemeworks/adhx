@@ -38,11 +38,16 @@ describe('AndroidHow', () => {
 })
 
 describe('AndroidSettingsCard', () => {
-  it('shows the walkthrough on Android', () => {
+  it('uses the same install chrome as the nudge', () => {
     render(<AndroidSettingsCard />)
-    expect(screen.getByText('Android install')).toBeInTheDocument()
+    expect(screen.getByText('Share a post directly to ADHX')).toBeInTheDocument()
     expect(document.getElementById('android-install')).not.toBeNull()
-    expect(screen.getByText(/Add to Home screen, then Share → ADHX/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Add to your home screen once\. Then in X, Instagram, TikTok, or YouTube/),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'How' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Dismiss')).not.toBeInTheDocument()
+    expect(screen.queryByText('Android install')).not.toBeInTheDocument()
   })
 
   it('stays hidden on non-Android', () => {
@@ -57,7 +62,7 @@ describe('AndroidSettingsCard', () => {
     expect(
       screen.getByText(/Installed. From X, Instagram, TikTok, or YouTube: Share → ADHX/),
     ).toBeInTheDocument()
-    expect(screen.queryByText(/Browser menu/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'How' })).not.toBeInTheDocument()
   })
 
   it('scrolls the Settings card into view when the hash is #android-install', async () => {
@@ -69,7 +74,7 @@ describe('AndroidSettingsCard', () => {
     window.location.hash = ''
   })
 
-  it('offers Add to Home screen when beforeinstallprompt fires', async () => {
+  it('offers Add when beforeinstallprompt fires', async () => {
     render(<AndroidSettingsCard />)
     const evt = new Event('beforeinstallprompt') as Event & {
       prompt: () => Promise<void>
@@ -80,7 +85,7 @@ describe('AndroidSettingsCard', () => {
     await act(async () => {
       window.dispatchEvent(evt)
     })
-    expect(await screen.findByRole('button', { name: 'Add to Home screen' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Add' })).toBeInTheDocument()
   })
 })
 

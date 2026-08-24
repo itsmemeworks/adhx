@@ -1,11 +1,17 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Plus, Share, Smartphone } from 'lucide-react'
+import { Plus, Share, X } from 'lucide-react'
 import { getPlatformType } from '@/lib/platform'
 import { cn } from '@/lib/utils'
 
 export const ANDROID_A2HS_DISMISS_KEY = 'adhx-a2hs-dismissed'
+
+export const ANDROID_INSTALL_TITLE = 'Share a post directly to ADHX'
+export const ANDROID_INSTALL_BODY =
+  'Add to your home screen once. Then in X, Instagram, TikTok, or YouTube: Share → ADHX.'
+export const ANDROID_INSTALL_STANDALONE =
+  'Installed. From X, Instagram, TikTok, or YouTube: Share → ADHX.'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -62,15 +68,101 @@ function useAndroidInstallPrompt() {
   return { deferred, install }
 }
 
-/** Always-available install path in Settings — Android only. */
-export function AndroidSettingsCard() {
-  const [show, setShow] = useState(false)
+/**
+ * Shared Android install chrome — the theater/library nudge and Settings
+ * mount this. Copy leads with why (share a post into ADHX). How expands the
+ * steps; Add appears when `beforeinstallprompt` fires.
+ */
+export function AndroidInstallBanner({
+  id,
+  className,
+  cardClassName,
+  dismissible = false,
+  onDismiss,
+}: {
+  id?: string
+  className?: string
+  cardClassName?: string
+  dismissible?: boolean
+  onDismiss?: () => void
+}) {
+  const [howOpen, setHowOpen] = useState(false)
   const [standalone, setStandalone] = useState(false)
   const { deferred, install } = useAndroidInstallPrompt()
 
   useEffect(() => {
-    setShow(getPlatformType() === 'android')
     setStandalone(isStandaloneDisplay())
+  }, [])
+
+  const runInstall = async () => {
+    await install()
+    onDismiss?.()
+  }
+
+  return (
+    <div id={id} className={className}>
+      <div
+        className={cn(
+          'flex items-center gap-3 rounded-2xl border border-hairline bg-surface px-4 py-3 shadow-2xl',
+          cardClassName,
+        )}
+      >
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-ink">{ANDROID_INSTALL_TITLE}</p>
+          <p className="text-xs leading-snug text-ink-3">
+            {standalone ? ANDROID_INSTALL_STANDALONE : ANDROID_INSTALL_BODY}
+          </p>
+        </div>
+        {!standalone &&
+          (deferred ? (
+            <button
+              type="button"
+              onClick={runInstall}
+              className="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 min-h-[36px] rounded-full text-sm font-semibold text-white bg-clay-grad shadow-glow transition-transform hover:scale-105"
+            >
+              <Plus className="w-4 h-4" /> Add
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setHowOpen((open) => !open)}
+              aria-expanded={howOpen}
+              className="flex-shrink-0 inline-flex items-center px-3 py-1.5 min-h-[36px] rounded-full text-sm font-semibold text-ink border border-hairline"
+            >
+              How
+            </button>
+          ))}
+        {dismissible && (
+          <button
+            type="button"
+            onClick={onDismiss}
+            aria-label="Dismiss"
+            className="flex-shrink-0 p-1.5 min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-ink-3 hover:text-ink-2"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+      {howOpen && !deferred && !standalone && (
+        <div
+          className={cn(
+            'mt-2 rounded-2xl border border-hairline bg-surface px-4 py-3 shadow-2xl',
+            cardClassName,
+          )}
+        >
+          <AndroidHow className="mt-0" />
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Always-available install path in Settings — Android only. Same chrome as the nudge. */
+export function AndroidSettingsCard() {
+  const [show, setShow] = useState(false)
+
+  useEffect(() => {
+    setShow(getPlatformType() === 'android')
   }, [])
 
   useEffect(() => {
@@ -81,49 +173,7 @@ export function AndroidSettingsCard() {
 
   if (!show) return null
 
-  return (
-    <div
-      id="android-install"
-      className="overflow-hidden rounded-card border border-hairline bg-surface shadow-m-sm"
-    >
-      <div className="flex items-center gap-3 px-5 pt-[18px]">
-        <div className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-[11px] bg-clay/10">
-          <Smartphone className="h-[19px] w-[19px] text-clay" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="font-serif text-base font-semibold text-ink">Android install</div>
-          <div className="mt-0.5 text-[13px] text-ink-3">
-            {standalone ? (
-              <span>Installed. From X, Instagram, TikTok, or YouTube: Share → ADHX.</span>
-            ) : (
-              <span>Add to Home screen, then Share → ADHX from any app.</span>
-            )}
-          </div>
-        </div>
-      </div>
-      <div className="px-5 pb-5 pt-4">
-        {standalone ? (
-          <p className="text-[13px] leading-relaxed text-ink-2">
-            <span>Open a post, tap Share, and pick ADHX. The preview opens here.</span>
-          </p>
-        ) : (
-          <>
-            {deferred && (
-              <button
-                type="button"
-                onClick={install}
-                className="mb-3 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-clay-grad px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-transform hover:scale-[1.02]"
-              >
-                <Plus className="h-4 w-4" aria-hidden />
-                <span>Add to Home screen</span>
-              </button>
-            )}
-            <AndroidHow className="mt-0" />
-          </>
-        )}
-      </div>
-    </div>
-  )
+  return <AndroidInstallBanner id="android-install" />
 }
 
 /** Landing-card copy — Android first, bookmarklet is desktop. */

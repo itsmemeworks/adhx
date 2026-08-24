@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-24 — Settings uses the same Android install banner
+
+`AndroidInstallBanner` is the single chrome for the theater/library nudge and Settings. Settings stays always-on (no tap-away / X); the nudge skips `/settings` so the card is not doubled. Follow-up: none.
+
 ## 2026-08-24 — Android install banner: why, no logo, tap away
 
 Android A2HS banner no longer repeats the ADHX icon. Copy leads with sharing a post directly into ADHX. Tap outside dismisses it, same as the iOS shortcut nudge. Follow-up: none.
