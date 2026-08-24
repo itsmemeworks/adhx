@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.64.0](https://github.com/itsmemeworks/adhx/compare/v1.63.0...v1.64.0) (2026-08-24)
+
+
+### Features
+
+* saved theater, album pager, tag count, and on-brand magic-link mail ([#412](https://github.com/itsmemeworks/adhx/issues/412)) ([e735ad6](https://github.com/itsmemeworks/adhx/commit/e735ad64f5e7b8bdfacb8ca817476dffba361e28))
+
 ## [1.63.0](https://github.com/itsmemeworks/adhx/compare/v1.62.0...v1.63.0) (2026-08-24)
 
 
