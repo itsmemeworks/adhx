@@ -22,7 +22,7 @@
  *   long posts.
  * - kind 'none': no item, or a 'timed' item while Repeat-one / the shared
  *   post is pinned (`progressKindForPin`) — the line must not tick toward
- *   an advance that will never happen. My Collection uses the same 'timed'
+ *   an advance that will never happen. Saved uses the same 'timed'
  *   dwell as Live; videos keep their real 'video' kind and auto-advance on
  *   end via Stage `onEnded`.
  *

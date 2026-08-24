@@ -35,8 +35,8 @@ export function WelcomeClient({ suggestedUsername, returnTo }: WelcomeClientProp
   }
 
   function finish(toCollection = false) {
-    // The primary CTA says "your collection" — `/` is the Live theater.
-    window.location.assign(toCollection ? '/collection' : returnTo)
+    // The primary CTA says "Continue to Saved" — `/` is the Live theater.
+    window.location.assign(toCollection ? '/saved' : returnTo)
   }
 
   const onStarterStep = claimedUsername !== null
@@ -47,7 +47,7 @@ export function WelcomeClient({ suggestedUsername, returnTo }: WelcomeClientProp
         <div
           role="dialog"
           aria-modal="true"
-          aria-label={onStarterStep ? 'Start your collection' : 'Choose your username'}
+          aria-label={onStarterStep ? 'Go to Saved' : 'Choose your username'}
           className={cn(
             'w-full rounded-2xl border p-5 shadow-2xl transition-[max-width] sm:p-7',
             onStarterStep ? 'max-w-[720px]' : 'max-w-[420px]',
@@ -88,7 +88,7 @@ export function WelcomeClient({ suggestedUsername, returnTo }: WelcomeClientProp
                   className="h-12 w-full rounded-full text-[14.5px] font-semibold text-white transition-transform hover:scale-[1.01]"
                   style={{ background: 'linear-gradient(135deg,#e88a5e,#d26b40)' }}
                 >
-                  Continue to your collection
+                  Continue to Saved
                 </button>
                 <button
                   type="button"

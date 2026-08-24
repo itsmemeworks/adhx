@@ -151,7 +151,7 @@ export async function GET(request: NextRequest) {
       redirectUrl = new URL(returnUrl, BASE_URL)
     } else {
       // X is a Settings link, not a sign-in. Signed-in `/` redirects to
-      // `/collection` and drops query strings, so `/?firstLogin=true` never
+      // `/saved` and drops query strings, so `/?firstLogin=true` never
       // reached the library sync modal. Land on Settings instead.
       redirectUrl = new URL('/settings', BASE_URL)
     }

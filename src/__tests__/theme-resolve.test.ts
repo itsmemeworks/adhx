@@ -18,6 +18,7 @@ describe('resolveInitialTheme', () => {
     expect(resolveInitialTheme(undefined, '/', false)).toBe('dark')
     expect(resolveInitialTheme(null, '/', true)).toBe('dark')
     expect(resolveInitialTheme(null, '/live', false)).toBe('dark')
+    expect(resolveInitialTheme(null, '/saved', true)).toBe('dark')
     expect(resolveInitialTheme(null, '/collection', true)).toBe('dark')
   })
 

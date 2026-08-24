@@ -1,4 +1,4 @@
-# Unified theater: My Collection, nav simplification, tags-first
+# Unified theater: Saved, nav simplification, tags-first
 
 **Status: building (2026-08-20).** From live user review after the accounts launch: the theater
 (filmstrip dock + stage) is THE interaction model. Every other browsing UX is a competing
@@ -10,8 +10,8 @@ their Collection, the Live pulse, and their tags.
 - Tabs are **Library · Theater · Tags · Leaderboard** (Trending removed from the authed nav; the public
   `/trending` + `/trending/[filter]` routes and all their SEO stay untouched — they're just no
   longer surfaced to signed-in users).
-- **Theater** is a pair of routes, not an overlay: `/live` is Live, `/collection` is My Collection (signed-in `/` redirects here).
-  The library grid at `/library` navigates to `/collection` (card tap / leftover deep links) —
+- **Theater** is a pair of routes, not an overlay: `/live` is Live, `/saved` is Saved (signed-in `/` redirects here).
+  The library grid at `/library` navigates to `/saved` (card tap / leftover deep links) —
   it does not mount a second TheaterShell.
 - The **`+` Add button and its modal trigger are removed**. Adding by URL is paste-first: a
   global paste listener on the authed Collection (new `PasteToPreview` component) catches a
@@ -20,7 +20,7 @@ their Collection, the Live pulse, and their tags.
   The `open-add-tweet` / `close-add-tweet` event plumbing goes away.
 - Search, Collection entry, avatar menu stay. Mobile width budget unchanged (nothing new at bar level).
 
-## 2. My Collection IS the theater (kill the vertical rail)
+## 2. Saved IS the theater (kill the vertical rail)
 
 `CollectionTheater` + `CollectionRail` (vertical list column) are replaced by the same
 `TheaterShell` filmstrip experience used everywhere else.

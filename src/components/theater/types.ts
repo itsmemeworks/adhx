@@ -1,6 +1,6 @@
 import type { TrendingItem } from '@/lib/trending/query'
 
-export type { TextLinkRef, TheaterQuoteRef } from '@/lib/trending/query'
+export type { TextLinkRef, TheaterQuoteRef, TheaterLinkPreview } from '@/lib/trending/query'
 
 /**
  * Shared contract for the theater surfaces (docs/specs/theater-first.md).
@@ -95,8 +95,8 @@ export type TheaterMode = 'home' | 'shared' | 'playlist' | 'personal'
  * Internal values are unchanged (plumbed through TheaterShell, AuthedHome,
  * and the Header's `open-theater` dispatches) — only display order/label
  * changed: Live reads first and is the default landing tab, "Collection" is
- * labeled "My Collection" so it's clear it's the viewer's own, not a shared
- * one. See `PERSONAL_TAB_ORDER`/`PERSONAL_TAB_LABEL` below for the chrome's
+ * labeled "Saved" so it's the viewer's own pile, not a shared playlist.
+ * See `PERSONAL_TAB_ORDER`/`PERSONAL_TAB_LABEL` below for the chrome's
  * single source of truth for both. */
 export type PersonalTab = 'collection' | 'live'
 
@@ -138,16 +138,14 @@ export const REPEAT_MODE_LABEL: Record<
   },
 }
 
-/** Left-to-right render order for the Live/My-Collection tab switcher —
+/** Left-to-right render order for the Live/Saved tab switcher —
  * Live first, matching the default in TheaterShell's `useState`. */
 export const PERSONAL_TAB_ORDER: readonly PersonalTab[] = ['live', 'collection']
 
-/** Display labels for the tab switcher (desktop top bar + mobile peek bar) —
- * "My Collection" rather than a bare "Collection" so it reads as the
- * viewer's own saved posts, not a shared/public one. */
+/** Display labels for the tab switcher (desktop top bar + mobile peek bar). */
 export const PERSONAL_TAB_LABEL: Record<PersonalTab, string> = {
   live: 'Live',
-  collection: 'My Collection',
+  collection: 'Saved',
 }
 
 /** Identity + loop metadata for a public playlist theater (a shared tag — mode `'playlist'`). */
@@ -163,7 +161,7 @@ export interface TheaterPlaylistMeta {
 /** Save-collection CTA status, shared by the desktop and mobile chrome. */
 export type SavePlaylistStatus = 'idle' | 'saving' | 'saved' | 'error'
 
-/** Live ⇄ My Collection cluster — personal theater, or a signed-in shared preview. */
+/** Live ⇄ Saved cluster — personal theater, or a signed-in shared preview. */
 export interface TheaterAccountTabs {
   tab: PersonalTab
   onTabChange: (tab: PersonalTab) => void

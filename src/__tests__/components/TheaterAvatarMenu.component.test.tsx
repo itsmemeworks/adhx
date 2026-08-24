@@ -125,7 +125,7 @@ describe('TheaterAvatarMenu', () => {
     fireEvent.click(await screen.findByLabelText('Account menu'))
 
     // `/` is the theater now, so the grid entry points at the library — and
-    // it's LABELLED "Library" since the Theater group gained a "My Collection"
+    // it's LABELLED "Library" since the Theater group gained a "Saved"
     // sub-tab, which made "Your collection" read as the same destination.
     expect(screen.getByText('Library').closest('a')).toHaveAttribute('href', '/library')
     expect(screen.getByText('Tags').closest('a')).toHaveAttribute('href', '/tags')
@@ -435,7 +435,7 @@ describe('TheaterAvatarMenu — signed-out burger (allowSignedOut)', () => {
 })
 
 /**
- * Live ⇄ My Collection under Theater (owner: "Theater just has two sub
+ * Live ⇄ Saved under Theater (owner: "Theater just has two sub
  * options: live and collection and we can just highlight which one is
  * selected"). Mobile has no room for a tab pill, so this is the only
  * switcher there. Desktop keeps the top-bar pill and still passes
@@ -458,12 +458,12 @@ describe('TheaterAvatarMenu — Theater sub-options (theaterTabs)', () => {
     return onTabChange
   }
 
-  it('lists Live then My Collection under Theater, same 13px row as Library', async () => {
+  it('lists Live then Saved under Theater, same 13px row as Library', async () => {
     await openWith('live')
 
     const theater = screen.getByRole('menuitem', { name: 'Theater' })
     const live = screen.getByRole('menuitem', { name: 'Live' })
-    const collection = screen.getByRole('menuitem', { name: 'My Collection' })
+    const collection = screen.getByRole('menuitem', { name: 'Saved' })
     const library = screen.getByRole('menuitem', { name: 'Library' })
     expect(theater.className).toContain('text-[13px]')
     expect(live.className).toContain('text-[13px]')
@@ -480,7 +480,7 @@ describe('TheaterAvatarMenu — Theater sub-options (theaterTabs)', () => {
     await openWith('live')
 
     const live = screen.getByText('Live').closest('button')!
-    const collection = screen.getByText('My Collection').closest('button')!
+    const collection = screen.getByText('Saved').closest('button')!
     expect(live).toHaveAttribute('aria-current', 'page')
     expect(live.querySelector('[data-testid="menu-current-dot"]')).toBeInTheDocument()
     expect(collection).not.toHaveAttribute('aria-current')
@@ -490,10 +490,7 @@ describe('TheaterAvatarMenu — Theater sub-options (theaterTabs)', () => {
   it('moves the highlight with the selection', async () => {
     await openWith('collection')
 
-    expect(screen.getByText('My Collection').closest('button')).toHaveAttribute(
-      'aria-current',
-      'page',
-    )
+    expect(screen.getByText('Saved').closest('button')).toHaveAttribute('aria-current', 'page')
     expect(screen.getByText('Live').closest('button')).not.toHaveAttribute('aria-current')
   })
 
@@ -502,24 +499,22 @@ describe('TheaterAvatarMenu — Theater sub-options (theaterTabs)', () => {
 
     // A real <a href> would reload the stage the viewer is watching; the
     // chrome flips the tab locally first, then navigates.
-    const collection = screen.getByText('My Collection').closest('button')!
+    const collection = screen.getByText('Saved').closest('button')!
     expect(collection.tagName).toBe('BUTTON')
 
     fireEvent.click(collection)
     expect(onTabChange).toHaveBeenCalledWith('collection')
-    await waitFor(() => expect(screen.queryByText('My Collection')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByText('Saved')).not.toBeInTheDocument())
   })
 
-  it('keeps Theater as a Radio menu row; Live and My Collection are indented children', async () => {
+  it('keeps Theater as a Radio menu row; Live and Saved are indented children', async () => {
     await openWith('live')
 
     expect(screen.getAllByText('Theater')).toHaveLength(1)
     const theater = screen.getByRole('menuitem', { name: 'Theater' })
     expect(theater.querySelector('svg')).toBeTruthy()
     expect(screen.getByRole('menuitem', { name: 'Live' }).querySelector('svg')).toBeTruthy()
-    expect(
-      screen.getByRole('menuitem', { name: 'My Collection' }).querySelector('svg'),
-    ).toBeTruthy()
+    expect(screen.getByRole('menuitem', { name: 'Saved' }).querySelector('svg')).toBeTruthy()
     // The selected child carries "you are here", not Theater itself.
     expect(theater).not.toHaveAttribute('aria-current')
     expect(theater.querySelector('[data-testid="menu-current-dot"]')).not.toBeInTheDocument()
@@ -533,14 +528,14 @@ describe('TheaterAvatarMenu — Theater sub-options (theaterTabs)', () => {
     await waitFor(() => expect(screen.queryByText('Theater')).not.toBeInTheDocument())
   })
 
-  it('arrows move Theater → Live → My Collection', async () => {
+  it('arrows move Theater → Live → Saved', async () => {
     await openWith('live')
 
     await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Theater' })).toHaveFocus())
     pressMenuKey('ArrowDown')
     expect(screen.getByRole('menuitem', { name: 'Live' })).toHaveFocus()
     pressMenuKey('ArrowDown')
-    expect(screen.getByRole('menuitem', { name: 'My Collection' })).toHaveFocus()
+    expect(screen.getByRole('menuitem', { name: 'Saved' })).toHaveFocus()
     pressMenuKey('ArrowDown')
     expect(screen.getByRole('menuitem', { name: 'Library' })).toHaveFocus()
   })
@@ -551,7 +546,7 @@ describe('TheaterAvatarMenu — Theater sub-options (theaterTabs)', () => {
     fireEvent.click(await screen.findByLabelText('Account menu'))
 
     expect(screen.getByText('Theater')).toBeInTheDocument()
-    expect(screen.queryByText('My Collection')).not.toBeInTheDocument()
+    expect(screen.queryByText('Saved')).not.toBeInTheDocument()
     expect(screen.queryByText('Live')).not.toBeInTheDocument()
   })
 })

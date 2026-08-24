@@ -211,6 +211,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     var p = location.pathname;
                     var isTheaterDark = p === '/'
                       || p === '/live'
+                      || p === '/saved'
                       || p === '/collection'
                       || p === '/trending'
                       || p.indexOf('/trending/') === 0

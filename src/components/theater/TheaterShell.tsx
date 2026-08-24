@@ -155,11 +155,11 @@ export interface TheaterShellProps {
   personalItems?: FeedItem[]
   /** Where to start in the collection queue — a gallery click jumps to the clicked item (same contract as the deleted `CollectionTheater`'s `startIndex`). */
   initialPersonalIndex?: number
-  /** Which collection sub-tab to open on (`/live` is Live, `/collection` is My Collection). */
+  /** Which collection sub-tab to open on (`/live` is Live, `/saved` is Saved). */
   initialPersonalTab?: PersonalTab
   /**
-   * Called when the viewer flips the Live ⇄ My Collection switch. The switch
-   * is a ROUTE on the signed-in theater (`/live` is Live, `/collection` is My
+   * Called when the viewer flips the Live ⇄ Saved switch. The switch
+   * is a ROUTE on the signed-in theater (`/live` is Live, `/saved` is My
    * Collection — owner: "a specific route that they select"), so the page
    * passes a `router.push` here. The tab still flips locally first, so the
    * switch responds instantly and doesn't wait on navigation.
@@ -201,7 +201,7 @@ export function TheaterShell({
   const authMe = useAuthMe()
   const isPersonal = mode === 'personal'
   // Playlist mode (`/t/{username}/{tag}`) is a fixed curated queue that loops.
-  // My Collection (`/collection`) is also a playlist, but its default is still
+  // Saved (`/saved`) is also a playlist, but its default is still
   // a finite backlog ("All caught up") — wrap only when the viewer turns
   // repeat on.
   const loop = mode === 'playlist'
@@ -624,8 +624,8 @@ export function TheaterShell({
           )
           return [saved, ...rest]
         })
-        // My Collection: jump to the new save. Live: stay on the current post;
-        // the dock just gains a fresh card. Never leave `/live` or `/collection`.
+        // Saved: jump to the new save. Live: stay on the current post;
+        // the dock just gains a fresh card. Never leave `/live` or `/saved`.
         if (personalTab === 'collection') setPersonalIndex(0)
         feedPrepend(theaterItem)
 
@@ -696,7 +696,7 @@ export function TheaterShell({
   // (`nextRepeatMode`'s wrapOnly); it skips the localStorage read/write so a
   // playlist toggle never bleeds into the home/collection preference.
   //
-  // My Collection (`/collection`) uses the same off → all → one control as
+  // Saved (`/saved`) uses the same off → all → one control as
   // Live. Default stays 'off' (All Clear at the end of the backlog). 'all'
   // and 'one' wrap or loop through `personalAdvanceOnEndedIndex`.
   const [repeatMode, setRepeatMode] = useState<RepeatMode>(loop ? 'all' : 'off')
@@ -893,7 +893,7 @@ export function TheaterShell({
   }, [isPersonal, personalTab, displayItems])
 
   // Shared preview: seed tags for the lead (and any pulse items we land on)
-  // so a reload of an already-tagged save shows chips / Tag · N. The
+  // so a reload of an already-tagged save shows Tag N. The
   // tags-changed listener above covers in-session adds.
   useEffect(() => {
     if (mode !== 'shared' || !authMe.me?.authenticated) return
@@ -967,7 +967,7 @@ export function TheaterShell({
     // never re-picks either: a curated tag collection always opens on its
     // first item, in curated order.
     //
-    // My Collection is the same theater with a different playlist. It must
+    // Saved is the same theater with a different playlist. It must
     // not inherit the live feed's caught-up / waiting machinery — that
     // paused the collection stage on load (and ate Space) whenever every
     // live post was already seen. Return before consuming `leadAppliedRef`
@@ -1383,7 +1383,7 @@ export function TheaterShell({
       // past the repeating post.
       if (repeatCurrentActiveRef.current) return
       if (isCollectionTab) {
-        // My Collection: same 10s dwell event as Live; videos still advance
+        // Saved: same 10s dwell event as Live; videos still advance
         // via Stage `onEnded` → `personalAdvanceOnEnded`. Check the
         // collection item (not the live `currentRef`) so we never step the
         // unread queue from a leftover live-feed timer.
@@ -1476,8 +1476,8 @@ export function TheaterShell({
   // your own") is nonsense — the chromes swap those CTAs for a Manage link.
   const isPlaylistOwner =
     !!playlist && !!authMe.me?.user?.username && authMe.me.user.username === playlist.curator
-  // Signed-in preview: same Live ⇄ My Collection cluster as `/`. Live is
-  // current (this page is the live pulse with a pinned lead); My Collection
+  // Signed-in preview: same Live ⇄ Saved cluster as `/`. Live is
+  // current (this page is the live pulse with a pinned lead); Saved
   // and Close are the personal-theater routes. Do not pass `personalChrome`
   // — that would swap the shared Save/Tag pill for the live-tab pair.
   const signedIn = authed || !!authMe.me?.authenticated
@@ -1487,7 +1487,7 @@ export function TheaterShell({
           tab: 'live',
           onTabChange: (tab) => {
             if (tab === 'live') return
-            router.push('/collection')
+            router.push('/saved')
           },
           onClose: () => router.push('/library'),
         }
@@ -1751,7 +1751,7 @@ export function TheaterShell({
       ref={shellRef}
       role={isPersonal ? 'dialog' : undefined}
       aria-modal={isPersonal ? true : undefined}
-      aria-label={isPersonal ? 'Your collection' : undefined}
+      aria-label={isPersonal ? 'Saved' : undefined}
       tabIndex={isPersonal ? -1 : undefined}
       className="fixed inset-0 z-[60] flex flex-col overflow-hidden bg-[#08070a] outline-none"
     >
@@ -1817,7 +1817,7 @@ export function TheaterShell({
             so without this gate — and the matching gate on the chrome's
             `current` prop below — two independent 'timed' timers would both
             be alive on desktop and double-dispatch `theater-advance`.
-            My Collection uses the same 'timed' dwell as Live; videos keep
+            Saved uses the same 'timed' dwell as Live; videos keep
             the real line and also auto-advance on end through Stage
             `onEnded`. */}
         <TheaterProgressLine
@@ -1967,13 +1967,13 @@ export function TheaterShell({
             ? 'Make your own playlist'
             : playlist
               ? 'Save this playlist'
-              : 'Save it to your collection'
+              : 'Save this post'
         }
         subtitle={
           signInIntent === 'make-your-own'
             ? 'Sign up and start saving — anything you save can be tagged into playlists like this one.'
             : playlist
-              ? `${playlist.count} ${playlist.count === 1 ? 'post' : 'posts'} from ${playlist.tag}, curated by @${playlist.curator} — save them to your collection.`
+              ? `${playlist.count} ${playlist.count === 1 ? 'post' : 'posts'} from ${playlist.tag}, curated by @${playlist.curator} — save them to Saved.`
               : 'Your saved posts stay yours — sync your X bookmarks anytime from Settings.'
         }
         returnTo={

@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { isSavedPath } from '@/lib/theater/collection-href'
 
 type Theme = 'light' | 'dark' | 'system'
 
@@ -26,7 +27,7 @@ function isTheaterDarkRoute(pathname: string): boolean {
   if (
     pathname === '/' ||
     pathname === '/live' ||
-    pathname === '/collection' ||
+    isSavedPath(pathname) ||
     pathname === '/trending' ||
     pathname.startsWith('/trending/')
   ) {

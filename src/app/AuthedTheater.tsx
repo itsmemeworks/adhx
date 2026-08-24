@@ -1,27 +1,27 @@
 'use client'
 
 /**
- * The signed-in theater. Default landing is My Collection (`/collection`) —
- * continue / next unread. Live is `/live`.
+ * The signed-in theater. Default landing is Saved (`/saved`) — continue /
+ * next unread. Live is `/live`.
  *
- * The Live ⇄ My Collection switch is a pair of ROUTES rather than local state:
+ * The Live ⇄ Saved switch is a pair of ROUTES rather than local state:
  *
- *   `/live`        Live — the community's last 24 hours
- *   `/collection`  My Collection — your own active queue (signed-in home)
- *   `/library`     the grid (filters, search, views) — `AuthedHome`
+ *   `/live`     Live — the community's last 24 hours
+ *   `/saved`    Saved — your own active queue (signed-in home)
+ *   `/library`  the grid (filters, search, views) — `AuthedHome`
  *
  * Making each side a real URL means it's linkable, back/forward works, and a
  * reload keeps you where you were. The switch still flips the shell's tab
  * locally first so it responds on tap, then navigates.
  *
- * `TheaterShell` snapshots `personalItems` at mount (a collection session is a
- * fixed queue), so the collection queue has to be in hand BEFORE the shell
- * mounts — hence the fetch-then-render on the `/collection` route only. Live
- * never waits on it: switching tabs is a navigation, so the collection queue
- * is always loaded by the route that needs it.
+ * `TheaterShell` snapshots `personalItems` at mount (a Saved session is a
+ * fixed queue), so the queue has to be in hand BEFORE the shell mounts —
+ * hence the fetch-then-render on the `/saved` route only. Live never waits
+ * on it: switching tabs is a navigation, so the queue is always loaded by
+ * the route that needs it.
  *
  * There is no second personal theater. The library navigates here
- * (`/collection?open=&platform=`) instead of overlaying TheaterShell.
+ * (`/saved?open=&platform=`) instead of overlaying TheaterShell.
  */
 
 import { useCallback, useEffect, useState } from 'react'
@@ -31,20 +31,20 @@ import { TheaterShell } from '@/components/theater/TheaterShell'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import type { FeedItem } from '@/components/feed/types'
 import type { TheaterFeedSeed, PersonalTab } from '@/components/theater/types'
-import { COLLECTION_QUEUE_LIMIT, sameBookmark } from '@/lib/theater/collection-href'
+import { COLLECTION_QUEUE_LIMIT, SAVED_PATH, sameBookmark } from '@/lib/theater/collection-href'
 import { theaterTabNavRestore } from '@/components/theater/theater-math'
 
 /** Which route each side of the switch lives on. */
-export const TAB_ROUTES: Record<PersonalTab, '/live' | '/collection'> = {
+export const TAB_ROUTES: Record<PersonalTab, '/live' | typeof SAVED_PATH> = {
   live: '/live',
-  collection: '/collection',
+  collection: SAVED_PATH,
 }
 
 export interface AuthedTheaterProps {
   /** Server-rendered live seed — present on BOTH routes so flipping to Live has something to show before the navigation lands. */
   seed: TheaterFeedSeed
   tab: PersonalTab
-  /** Deep-link: start (or prepend) this saved post. From `/collection?open=`. */
+  /** Deep-link: start (or prepend) this saved post. From `/saved?open=`. */
   openId?: string
   /** Paired with `openId` — the same numeric id exists on X and TikTok. */
   openPlatform?: string
@@ -122,8 +122,10 @@ export default function AuthedTheater({ seed, tab, openId, openPlatform }: Authe
 
   const onPersonalTabChange = useCallback(
     (next: PersonalTab) => {
-      if (next === tab) return
       const dest = TAB_ROUTES[next]
+      // Live replaceState can leave `/{user}/status/{id}` in the bar while
+      // this page is still `/saved`. Restore dest even when the route tab
+      // did not change — otherwise Saved keeps the last Live post URL.
       if (typeof window !== 'undefined') {
         const restore = theaterTabNavRestore(window.location.pathname, dest)
         if (restore) {
@@ -134,6 +136,7 @@ export default function AuthedTheater({ seed, tab, openId, openPlatform }: Authe
           }
         }
       }
+      if (next === tab) return
       router.push(dest)
     },
     [router, tab],
@@ -147,7 +150,7 @@ export default function AuthedTheater({ seed, tab, openId, openPlatform }: Authe
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#08070a] px-6">
         <p className="text-center text-white/70">
-          <span>Couldn&apos;t load your collection.</span>
+          <span>Couldn&apos;t load Saved.</span>
         </p>
         <button
           type="button"

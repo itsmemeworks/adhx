@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * `/collection` used to hide the repeat control (`repeatEnabled = !isCollectionTab`)
+ * `/saved` used to hide the repeat control (`repeatEnabled = !isCollectionTab`)
  * and video-end always walked off the end of the queue. The control is the
  * same off → all → one switch as Live; playback wrapping is
  * `personalAdvanceOnEndedIndex`.
@@ -86,7 +86,7 @@ describe('TheaterShell: collection tab has the repeat control', () => {
     window.localStorage.clear()
   })
 
-  it('offers the repeat button on /collection', async () => {
+  it('offers the repeat button on /saved', async () => {
     await act(async () => {
       render(
         <TheaterShell

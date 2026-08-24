@@ -1,8 +1,8 @@
 /**
  * @vitest-environment jsdom
  *
- * Signed-in shared preview: Live ⇄ My Collection must hit the same
- * routes as `/` (`/collection`, Close → `/library`). Live is already
+ * Signed-in shared preview: Live ⇄ Saved must hit the same
+ * routes as `/` (`/saved`, Close → `/library`). Live is already
  * current on a preview, so that click is a no-op.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -35,7 +35,7 @@ function AccountTabButtons({ accountTabs }: { accountTabs?: TheaterAccountTabs }
         Live
       </button>
       <button type="button" onClick={() => accountTabs.onTabChange('collection')}>
-        My Collection
+        Saved
       </button>
       <button type="button" onClick={accountTabs.onClose}>
         Close
@@ -117,7 +117,7 @@ describe('TheaterShell shared-preview account tabs', () => {
     resetSharedAutoSaveAttempts()
   })
 
-  it('My Collection and Close push the personal-theater routes; Live is a no-op', async () => {
+  it('Saved and Close push the personal-theater routes; Live is a no-op', async () => {
     const item = textItem('123')
     await act(async () => {
       render(
@@ -133,8 +133,8 @@ describe('TheaterShell shared-preview account tabs', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Live' }))
     expect(pushSpy).not.toHaveBeenCalled()
 
-    fireEvent.click(screen.getByRole('button', { name: 'My Collection' }))
-    expect(pushSpy).toHaveBeenCalledWith('/collection')
+    fireEvent.click(screen.getByRole('button', { name: 'Saved' }))
+    expect(pushSpy).toHaveBeenCalledWith('/saved')
 
     fireEvent.click(screen.getByRole('button', { name: 'Close' }))
     expect(pushSpy).toHaveBeenCalledWith('/library')
@@ -152,7 +152,7 @@ describe('TheaterShell shared-preview account tabs', () => {
         />,
       )
     })
-    expect(screen.queryByRole('button', { name: 'My Collection' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Saved' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument()
     expect(pushSpy).not.toHaveBeenCalled()
   })

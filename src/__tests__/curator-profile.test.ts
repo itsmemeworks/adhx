@@ -260,7 +260,7 @@ describe('Curator profile route: /t/[username]', () => {
       const html = renderToStaticMarkup(result as React.ReactElement)
 
       expect(html).toContain('Make your own')
-      expect(html).toContain('Start your collection')
+      expect(html).toContain('Start saving')
       expect(html).not.toContain('Manage playlists')
     })
 
@@ -279,7 +279,7 @@ describe('Curator profile route: /t/[username]', () => {
       expect(html).toContain('Manage playlists')
       expect(html).toContain('href="/tags"')
       expect(html).not.toContain('Make your own')
-      expect(html).not.toContain('Start your collection')
+      expect(html).not.toContain('Start saving')
       expect(html).not.toContain('Save now. Read never.')
     })
 
@@ -297,7 +297,7 @@ describe('Curator profile route: /t/[username]', () => {
 
       expect(html).not.toContain('Make your own')
       expect(html).not.toContain('Manage playlists')
-      expect(html).not.toContain('Start your collection')
+      expect(html).not.toContain('Start saving')
       expect(html).not.toContain('Save now. Read never.')
     })
   })

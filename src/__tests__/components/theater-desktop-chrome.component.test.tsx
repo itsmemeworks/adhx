@@ -753,7 +753,7 @@ describe('DesktopStageChrome', () => {
     expect(screen.getByRole('button', { name: 'Paste a link' })).toBeInTheDocument()
   })
 
-  it('shows the paste control on My Collection', () => {
+  it('shows the paste control on Saved', () => {
     render(
       <DesktopStageChrome
         {...stageBase}
@@ -967,7 +967,7 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
     expect(saveBtn.closest('button')!.className).toContain('border-clay')
   })
 
-  it('shows tag chips next to the actions, including on articles', () => {
+  it('does not show tag name chips in the action row', () => {
     render(
       <DesktopStageChrome
         {...stageBase}
@@ -975,11 +975,11 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
         itemTags={['ai']}
       />,
     )
-    expect(screen.getByText('#ai')).toBeInTheDocument()
+    expect(screen.queryByText('#ai')).not.toBeInTheDocument()
     expect(screen.getByText('Copy')).toBeInTheDocument()
   })
 
-  it('shared+authed shows action-row chips and Tag · N when the lead has tags', async () => {
+  it('shared+authed shows Tag N when the lead has tags, not action-row chips', async () => {
     resetSavePostOwnershipCache()
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -995,9 +995,9 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
         onSharedTag={vi.fn()}
       />,
     )
-    expect(screen.getByText('#social')).toBeInTheDocument()
-    expect(await screen.findByText('Tag · 1')).toBeInTheDocument()
-    const tag = screen.getByRole('button', { name: 'Tag · 1' })
+    expect(screen.queryByText('#social')).not.toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Tag 1' })).toBeInTheDocument()
+    const tag = screen.getByRole('button', { name: 'Tag 1' })
     expect(tag.className).toContain('border-white/25')
     expect(tag.className).not.toContain('text-clay')
     expect(tag.querySelector('.lucide-tag')?.classList.contains('text-clay')).toBe(true)
@@ -1016,13 +1016,31 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
       tags: ['cats'],
     }
     render(<DesktopStageChrome {...stageBase} current={videoItem()} collection={collection} />)
-    const tag = screen.getByRole('button', { name: 'Tag · 1' })
+    const tag = screen.getByRole('button', { name: 'Tag 1' })
     expect(tag.className).toContain('border-white/25')
     expect(tag.className).not.toContain('text-clay')
     expect(tag.querySelector('.lucide-tag')?.classList.contains('text-clay')).toBe(true)
+    expect(tag).toHaveTextContent('1')
   })
 
-  it('signed-in shared preview shows Live ⇄ My Collection, not the visitor LIVE badge', () => {
+  it('caps the Tag button count at 5', () => {
+    const collection = {
+      tab: 'collection' as const,
+      onTabChange: vi.fn(),
+      onDone: vi.fn(),
+      onTag: vi.fn(),
+      onSave: vi.fn(),
+      savedKeys: new Set<string>(),
+      remaining: 1,
+      onClose: vi.fn(),
+      tags: ['a', 'b', 'c', 'd', 'e', 'f'],
+    }
+    render(<DesktopStageChrome {...stageBase} current={videoItem()} collection={collection} />)
+    expect(screen.getByRole('button', { name: 'Tag 5' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Tag 6' })).not.toBeInTheDocument()
+  })
+
+  it('signed-in shared preview shows Live ⇄ Saved, not the visitor LIVE badge', () => {
     const onTabChange = vi.fn()
     const onClose = vi.fn()
     render(
@@ -1035,7 +1053,7 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
       />,
     )
     expect(screen.getByRole('button', { name: 'Live' })).toHaveAttribute('aria-current', 'true')
-    fireEvent.click(screen.getByRole('button', { name: 'My Collection' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Saved' }))
     expect(onTabChange).toHaveBeenCalledWith('collection')
     fireEvent.click(screen.getByRole('button', { name: 'Close' }))
     expect(onClose).toHaveBeenCalled()
@@ -1128,7 +1146,7 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
     expect(screen.queryByText('Download')).not.toBeInTheDocument()
   })
 
-  it('renders Live before My Collection, not the bare "Collection" label', () => {
+  it('renders Live before Saved, not the bare "Collection" label', () => {
     const collection = {
       tab: 'live' as const,
       onTabChange: vi.fn(),
@@ -1144,7 +1162,7 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
 
     expect(screen.queryByText('Collection')).not.toBeInTheDocument()
     const liveTab = screen.getByText('Live', { selector: 'button' })
-    const collectionTab = screen.getByText('My Collection')
+    const collectionTab = screen.getByText('Saved')
     expect(
       liveTab.compareDocumentPosition(collectionTab) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
@@ -1560,7 +1578,7 @@ describe('DesktopStageChrome: theaterTabs prop wiring', () => {
     onClose: vi.fn(),
   }
 
-  it('passes Live / My Collection into the avatar menu from the collection chrome', () => {
+  it('passes Live / Saved into the avatar menu from the collection chrome', () => {
     render(
       <DesktopStageChrome
         {...stageBase}
@@ -1574,10 +1592,10 @@ describe('DesktopStageChrome: theaterTabs prop wiring', () => {
         theaterTabs: { tab: 'live', onTabChange: collection.onTabChange },
       }),
     )
-    expect(screen.getByRole('button', { name: 'My Collection' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Saved' })).toBeInTheDocument()
   })
 
-  it('passes Live / My Collection into the avatar menu from signed-in shared tabs', () => {
+  it('passes Live / Saved into the avatar menu from signed-in shared tabs', () => {
     const onTabChange = vi.fn()
     render(
       <DesktopStageChrome

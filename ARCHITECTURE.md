@@ -12,14 +12,15 @@ routes _are_ the backend, and they talk to SQLite via Drizzle ORM.
 
 | Route                                                                       | What it is                                                              |
 | --------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `/`                                                                         | Signed-out public live theater. Signed-in: redirects to `/collection`.  |
+| `/`                                                                         | Signed-out public live theater. Signed-in: redirects to `/saved`.       |
 | `/live`                                                                     | Signed-in **Live** tab — community pulse. Signed-out: redirects to `/`. |
-| `/collection`                                                               | **My Collection** — unread queue. Signed-in default landing.            |
+| `/saved`                                                                    | **Saved** — unread queue. Signed-in default landing.                    |
+| `/collection`                                                               | 308 → `/saved` (legacy URL).                                            |
 | `/library`                                                                  | The **library** grid over your saves (search, tags, filters).           |
 | `/t/{user}/{tag}`                                                           | A **playlist** — one public tag, looping theater.                       |
 | `/{user}/status/{id}`, `/reels/{id}`, `/@{user}/video/{id}`, `/shorts/{id}` | Preview pages. They **are** the theater (shared mode), plus SEO.        |
 
-A **playlist** is one shared tag. A user's pile of saves is their **collection**.
+A **playlist** is one shared tag. A user's pile of saves is **Saved**.
 The grid that browses it is the **library**. Archive is private — it does not
 write a public pulse.
 
@@ -30,7 +31,7 @@ Saves arrive three ways, then everything plays in one theater:
 ```
 URL prefix / paste / share sheet / desktop extension  ──►  preview page  ──►  Save  ──►  SQLite
 X bookmark sync (SSE)             ──►  /api/sync     ──►  SQLite
-SQLite  ──►  /api/feed (library)  ·  theater seed (Live / collection / playlist)
+SQLite  ──►  /api/feed (library)  ·  theater seed (Live / Saved / playlist)
       └──►  /api/media/* proxies (Twitter / TikTok MP4; IG probe; YouTube iframe)
 ```
 
@@ -46,7 +47,7 @@ SQLite  ──►  /api/feed (library)  ·  theater seed (Live / collection / pl
    resolvers). Writes a `save` pulse.
 3. **Sync** — `/api/sync` pages X bookmarks over SSE, enriches, writes SQLite.
    Newly synced rows can pulse (capped).
-4. **Watch** — Live reads `getTrendingItems()`; My Collection reads `/api/feed`
+4. **Watch** — Live reads `getTrendingItems()`; Saved reads `/api/feed`
    (`hideArchived`, `limit=100`); a playlist reads `getPublicTagCollection()`.
 5. **Media** — Twitter and TikTok MP4s go through `/api/media/*` proxies
    (SSRF allowlists, timeouts). Instagram probes a mirror before attaching

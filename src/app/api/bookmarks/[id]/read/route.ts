@@ -68,7 +68,7 @@ export const POST = withAuth(
 
       // Archive is private — do not write a public `read` pulse. Preview /
       // save / share still feed the community feed; marking something done
-      // in My Collection does not.
+      // in Saved does not.
 
       return NextResponse.json({ success: true, isArchived: true, archivedAt })
     } catch (error) {

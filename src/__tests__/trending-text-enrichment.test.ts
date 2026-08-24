@@ -56,7 +56,7 @@ describe('getTrendingItems text enrichment', () => {
     expect(item?.text?.endsWith('…')).toBe(false)
   })
 
-  it('still prefers the article title over the full bookmark text for article posts', async () => {
+  it('still prefers the article title over the full bookmark text for X Articles', async () => {
     testInstance.db
       .insert(bookmarks)
       .values(
@@ -74,7 +74,7 @@ describe('getTrendingItems text enrichment', () => {
         platform: 'twitter',
         bookmarkId: 'article1',
         originalUrl: 'https://t.co/abc',
-        expandedUrl: 'https://example.com/article',
+        expandedUrl: 'https://x.com/i/article/123',
         linkType: 'article',
         previewTitle: 'The Real Article Headline',
       })
@@ -86,6 +86,42 @@ describe('getTrendingItems text enrichment', () => {
     const item = items.find((i) => i.bookmarkId === 'article1')
     expect(item?.contentType).toBe('article')
     expect(item?.text).toBe('The Real Article Headline')
+    expect(item?.linkPreview).toBeUndefined()
+  })
+
+  it('keeps the tweet body for off-site link cards and puts the headline on linkPreview', async () => {
+    const wrapper = 'this is just the wrapper tweet with a t.co link'
+    testInstance.db
+      .insert(bookmarks)
+      .values(
+        createTestBookmark('owner-1', 'substack1', {
+          platform: 'twitter',
+          category: 'article',
+          text: wrapper,
+        }),
+      )
+      .run()
+    testInstance.db
+      .insert(bookmarkLinks)
+      .values({
+        userId: 'owner-1',
+        platform: 'twitter',
+        bookmarkId: 'substack1',
+        originalUrl: 'https://t.co/abc',
+        expandedUrl: 'https://example.com/article',
+        linkType: 'article',
+        previewTitle: 'The Real Article Headline',
+        domain: 'example.com',
+      })
+      .run()
+    seedActivity({ bookmarkId: 'substack1', createdAt: '2026-06-06T10:00:00Z' })
+
+    const { items } = await getTrendingItems()
+
+    const item = items.find((i) => i.bookmarkId === 'substack1')
+    expect(item?.text).toBe(wrapper)
+    expect(item?.linkPreview?.title).toBe('The Real Article Headline')
+    expect(item?.linkPreview?.url).toBe('https://example.com/article')
   })
 
   it('falls back to the recorded (capped) text for preview-only posts with no saved bookmark', async () => {

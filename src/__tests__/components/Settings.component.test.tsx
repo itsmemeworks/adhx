@@ -251,7 +251,7 @@ describe('SettingsClient — Email, Username, and Sync X', () => {
     await waitFor(() => expect(screen.getByText('+7 new')).toBeInTheDocument())
     expect(screen.getByText(/40 synced from X/i)).toBeInTheDocument()
     expect(screen.getByText(/42 from X on ADHX/i)).toBeInTheDocument()
-    expect(screen.getByText(/50 in your collection/i)).toBeInTheDocument()
+    expect(screen.getByText(/50 in Saved/i)).toBeInTheDocument()
     expect(screen.getByText(/once per hour/i)).toBeInTheDocument()
     expect(screen.getByText('1 page')).toBeInTheDocument()
   })

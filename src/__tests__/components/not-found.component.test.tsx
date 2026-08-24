@@ -6,12 +6,9 @@ import { render, screen } from '@testing-library/react'
 import NotFound from '@/app/not-found'
 
 describe('NotFound (404 page)', () => {
-  it('links back to the collection and to trending', () => {
+  it('links back to Saved and to trending', () => {
     render(<NotFound />)
-    expect(screen.getByRole('link', { name: /back to your collection/i })).toHaveAttribute(
-      'href',
-      '/',
-    )
+    expect(screen.getByRole('link', { name: /back to Saved/i })).toHaveAttribute('href', '/')
     expect(screen.getByRole('link', { name: /see what.s trending/i })).toHaveAttribute(
       'href',
       '/trending',

@@ -16,7 +16,7 @@ authedTest.describe('archive', () => {
     async ({ page }) => {
       const readsBefore = countActivity('read')
 
-      await page.goto('/collection')
+      await page.goto('/saved')
       await expectTheaterReady(page)
       // Newest processedAt is ALPHA.
       await expect(caption(page, POST.alpha.text)).toBeVisible()

@@ -13,6 +13,7 @@
 import type { FeedItem, LinkItem } from '@/components/feed/types'
 import { feedItemType } from '@/components/feed/feedItemMeta'
 import { quoteRefFromSource, quoteRefFromStoredContext } from '@/lib/theater/quote-ref'
+import { linkPreviewFromArticlePreview } from '@/lib/theater/link-preview'
 import type { TextLinkRef, TheaterItem } from './types'
 import { theaterItemKey } from './types'
 
@@ -67,6 +68,7 @@ export function feedItemToTheaterItem(item: FeedItem): TheaterItem {
   const platform = item.platform ?? 'twitter'
   const contentType = inferCollectionContentType(item)
   const quote = quoteFromFeedItem(item)
+  const linkPreview = linkPreviewFromArticlePreview(item.articlePreview)
   return {
     action: 'save',
     platform,
@@ -74,10 +76,12 @@ export function feedItemToTheaterItem(item: FeedItem): TheaterItem {
     author: item.author,
     authorName: item.authorName ?? null,
     authorAvatarUrl: item.authorProfileImageUrl ?? null,
-    // Articles show the article's own headline — the stored tweet `text` is
-    // usually just the wrapper's t.co/x.com link (same override the trending
-    // pipeline does with the saved link's preview title).
-    text: (contentType === 'article' && item.articlePreview?.title) || item.text || null,
+    // X Articles show the article headline. Off-site link cards keep the
+    // tweet body (the headline lives on the card).
+    text:
+      (contentType === 'article' && !linkPreview && item.articlePreview?.title) ||
+      item.text ||
+      null,
     thumbnailUrl: heroThumbnail(item),
     url: item.tweetUrl,
     createdAt: item.createdAt || item.processedAt,
@@ -96,6 +100,7 @@ export function feedItemToTheaterItem(item: FeedItem): TheaterItem {
     contentType,
     textLinks: toTextLinks(item.links),
     ...(quote ? { quote } : {}),
+    ...(linkPreview ? { linkPreview } : {}),
   }
 }
 

@@ -360,7 +360,7 @@ describe('TheaterShell: Live caught-up does not pause Collection on the tab flip
     window.localStorage.clear()
   })
 
-  it('clears waiting and resumes when flipping Live → My Collection', async () => {
+  it('clears waiting and resumes when flipping Live → Saved', async () => {
     const items = [textItem('1'), textItem('2')]
     markWatched(items)
     const resumeHeard = vi.fn()

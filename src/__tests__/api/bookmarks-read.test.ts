@@ -99,7 +99,7 @@ describe('API: /api/bookmarks/[id]/read', () => {
 
       expect(status).toBeDefined()
 
-      // Archive is private — a Done in My Collection must not write a public pulse.
+      // Archive is private — a Done in Saved must not write a public pulse.
       const pulse = await testInstance.db.select().from(schema.activity)
       expect(pulse).toHaveLength(0)
     })

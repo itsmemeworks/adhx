@@ -2,8 +2,8 @@
  * @vitest-environment jsdom
  *
  * Address-bar rewrite (theater-first.md §7): signed-in Live must keep the
- * path in lockstep with the staged post, same as signed-out `/`. My Collection
- * must not — `/collection` is the stable address.
+ * path in lockstep with the staged post, same as signed-out `/`. Saved
+ * must not — `/saved` is the stable address.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useState } from 'react'
@@ -101,7 +101,7 @@ describe('TheaterShell URL sync', () => {
     expect(replaceSpy).toHaveBeenCalledWith(null, '', '/author99/status/99')
   })
 
-  it('does not rewrite on My Collection', async () => {
+  it('does not rewrite on Saved', async () => {
     await act(async () => {
       render(
         <TheaterShell
@@ -115,5 +115,22 @@ describe('TheaterShell URL sync', () => {
     })
     const paths = replaceSpy.mock.calls.map((c: unknown[]) => c[2])
     expect(paths).not.toContain('/author99/status/99')
+  })
+
+  it('puts /saved back when Saved is showing a leftover Live preview path', async () => {
+    window.history.replaceState(null, '', '/author99/status/99')
+    replaceSpy.mockClear()
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([])}
+          mode="personal"
+          initialPersonalTab="collection"
+          authed
+          personalItems={[feedItem('99')]}
+        />,
+      )
+    })
+    expect(replaceSpy).toHaveBeenCalledWith(null, '', '/saved')
   })
 })

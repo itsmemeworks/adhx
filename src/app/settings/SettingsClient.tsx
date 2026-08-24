@@ -591,7 +591,7 @@ function SyncBookmarksCard({
             <span>
               {lastSyncAt ? `Last sync ${getTimeSince(lastSyncAt)}` : 'No syncs yet'}
               {` · ${xSynced} synced from X · ${xOnAdhx} from X on ADHX`}
-              {totalBookmarks > xOnAdhx ? ` · ${totalBookmarks} in your collection` : ''}
+              {totalBookmarks > xOnAdhx ? ` · ${totalBookmarks} in Saved` : ''}
             </span>
           </p>
           <p className="mt-1.5 text-center text-xs text-ink-3">

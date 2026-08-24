@@ -36,7 +36,7 @@ export function CollectionAllClear({ total, onClose, onKeepPlaying }: Collection
           You cleared {total} {total === 1 ? 'post' : 'posts'}.
         </p>
       ) : (
-        <p className="text-sm text-white/60">Nothing waiting in your collection. Nice.</p>
+        <p className="text-sm text-white/60">Nothing waiting in Saved. Nice.</p>
       )}
       <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
         {onKeepPlaying && (

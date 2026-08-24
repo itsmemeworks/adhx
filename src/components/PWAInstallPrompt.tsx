@@ -9,6 +9,7 @@ import { SHORTCUT_DISMISS_KEY } from '@/components/IosShortcutInstall'
 import { ANDROID_A2HS_DISMISS_KEY, AndroidInstallBanner } from '@/components/AndroidInstall'
 import { IOS_SHORTCUT_URL } from '@/lib/share/ios'
 import { pingAnalytic } from '@/lib/analytics/client'
+import { isSavedPath } from '@/lib/theater/collection-href'
 
 /**
  * Mobile install nudge.
@@ -39,7 +40,7 @@ function isTheaterPath(pathname: string): boolean {
   return (
     pathname === '/' ||
     pathname === '/live' ||
-    pathname === '/collection' ||
+    isSavedPath(pathname) ||
     pathname.startsWith('/t/') ||
     /^\/\w+\/status\/\d+$/.test(pathname) ||
     /^\/reels?\/[A-Za-z0-9_-]+$/.test(pathname) ||

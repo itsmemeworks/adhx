@@ -4,8 +4,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Bookmark, Check, Loader2, Tag as TagIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { sourceUrl } from '@/lib/activity/preview-path'
+import { tagActionLabel } from '@/lib/utils/tag'
 import { theaterItemKey, type TheaterItem, type TheaterPersonalChrome } from './types'
 import { StageGlass } from './StageGlass'
+import { TheaterTagCount } from './TheaterTagCount'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'tag' | 'error'
 
@@ -38,7 +40,7 @@ export function SavePostButton({
    * this callback the button stays on Saved (the old dead-end).
    */
   onTag?: () => void
-  /** Current tags on this post — fills the Tag icon and shows Tag · N. */
+  /** Current tags on this post — fills the Tag icon and shows a count (max 5). */
   tags?: string[]
 }) {
   const [status, setStatus] = useState<SaveStatus>('idle')
@@ -138,14 +140,14 @@ export function SavePostButton({
   }
 
   const tagCount = tags?.length ?? 0
-  const tagLabel = tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'
+  const tagLabel = tagActionLabel(tagCount)
   const hotkeyAction =
     status === 'tag' ? 'tag' : status === 'idle' || status === 'error' ? 'save' : undefined
   const visibleLabel =
     status === 'saved'
       ? 'Saved'
       : status === 'tag'
-        ? tagLabel
+        ? 'Tag'
         : status === 'error'
           ? 'Try again'
           : 'Save'
@@ -184,6 +186,7 @@ export function SavePostButton({
         // tw-merge would steal the white glass border if we left it here.
         status === 'tag' && 'border-white/25',
         status === 'saved' && 'animate-save-pop',
+        status === 'tag' && iconOnly && 'relative',
       )}
       aria-label={
         iconOnly
@@ -206,10 +209,12 @@ export function SavePostButton({
       >
         {icon}
         {!iconOnly && <span>{visibleLabel}</span>}
+        {status === 'tag' && !iconOnly && <TheaterTagCount count={tagCount} />}
       </span>
+      {status === 'tag' && iconOnly && <TheaterTagCount count={tagCount} variant="badge" />}
       {status === 'saved' && (
         <span className="sr-only" aria-live="polite">
-          Saved to your collection
+          Added to Saved
         </span>
       )}
     </StageGlass>

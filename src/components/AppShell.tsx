@@ -4,6 +4,7 @@ import { Suspense } from 'react'
 import { usePathname } from 'next/navigation'
 import { Header } from './Header'
 import { PWAInstallPrompt } from './PWAInstallPrompt'
+import { isSavedPath } from '@/lib/theater/collection-href'
 
 // Header loading skeleton
 function HeaderSkeleton() {
@@ -32,7 +33,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isTheaterPage =
     pathname === '/' ||
     pathname === '/live' ||
-    pathname === '/collection' ||
+    isSavedPath(pathname) ||
     pathname.startsWith('/t/') ||
     isPreviewPage
   const isFullWidth =

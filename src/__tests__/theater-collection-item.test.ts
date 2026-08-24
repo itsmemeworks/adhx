@@ -207,6 +207,45 @@ describe('feedItemToTheaterItem textLinks (spec §6b)', () => {
   })
 })
 
+describe('feedItemToTheaterItem linkPreview', () => {
+  it('keeps the tweet body and attaches an off-site OG card', () => {
+    const t = feedItemToTheaterItem(
+      item({
+        text: '👀 https://example.com/post',
+        articlePreview: {
+          url: 'https://example.com/post',
+          title: 'A title',
+          description: 'A desc',
+          imageUrl: 'https://example.com/og.jpg',
+          domain: 'example.com',
+        },
+      }),
+    )
+    expect(t.contentType).toBe('article')
+    expect(t.text).toBe('👀 https://example.com/post')
+    expect(t.linkPreview).toMatchObject({
+      url: 'https://example.com/post',
+      title: 'A title',
+      domain: 'example.com',
+    })
+  })
+
+  it('does not card-ify an X Article URL', () => {
+    const t = feedItemToTheaterItem(
+      item({
+        isXArticle: true,
+        text: 'wrapper t.co',
+        articlePreview: {
+          url: 'https://x.com/foo/article/1',
+          title: 'Army of AI Influencers',
+        },
+      }),
+    )
+    expect(t.linkPreview).toBeUndefined()
+    expect(t.text).toBe('Army of AI Influencers')
+  })
+})
+
 describe('theaterItemsFromFeed', () => {
   it('converts a queue and keeps a reverse lookup back to the original FeedItems', () => {
     const items = [item({ id: '1' }), item({ id: '2', platform: 'tiktok' })]

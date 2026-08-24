@@ -46,6 +46,19 @@ export interface TextLinkRef {
 }
 
 /**
+ * OG card for a tweet that wraps an external URL (Substack, Medium, …).
+ * Public publisher metadata already fetched server-side — never client-supplied.
+ * Distinct from an X Article (those stay on StageArticle).
+ */
+export interface TheaterLinkPreview {
+  url: string
+  title?: string | null
+  description?: string | null
+  imageUrl?: string | null
+  domain?: string | null
+}
+
+/**
  * The quoted post a tweet references, when the source can supply it (the
  * FxTwitter tweet on preview pages carries the full quote). Public content
  * only — the quoted tweet is public by construction; never anything
@@ -128,6 +141,8 @@ export interface TrendingItem {
   textLinks?: TextLinkRef[]
   /** The quoted post, when the source supplies it (preview pages). See TheaterQuoteRef. */
   quote?: TheaterQuoteRef
+  /** External-link OG card (not an X Article). See TheaterLinkPreview. */
+  linkPreview?: TheaterLinkPreview
 }
 
 const FETCH = 80
@@ -332,6 +347,7 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
   const articleTitles = new Map<string, string>()
   const fullTexts = new Map<string, string>()
   const textLinksByPost = new Map<string, TextLinkRef[]>()
+  const linkPreviewByPost = new Map<string, TheaterLinkPreview>()
   const quoteContexts = new Map<string, string>()
   const avatars = new Map<string, string>()
   const earliestSaves = new Map<string, string>()
@@ -451,6 +467,8 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
         expandedUrl: bookmarkLinks.expandedUrl,
         imageUrl: bookmarkLinks.previewImageUrl,
         title: bookmarkLinks.previewTitle,
+        description: bookmarkLinks.previewDescription,
+        domain: bookmarkLinks.domain,
       })
       .from(bookmarkLinks)
       .where(inArray(bookmarkLinks.bookmarkId, ids))
@@ -471,6 +489,29 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
         if (!alreadyHave && refs.length < MAX_TEXT_LINKS) {
           refs.push({ shortUrl: l.originalUrl, expandedUrl: l.expandedUrl, linkType: l.linkType })
           textLinksByPost.set(k, refs)
+        }
+        // Off-site OG card (Substack/Medium/…) — skip x.com article URLs.
+        let host = (l.domain || '').replace(/^www\./i, '')
+        if (!host) {
+          try {
+            host = new URL(l.expandedUrl).hostname.replace(/^www\./i, '')
+          } catch {
+            host = ''
+          }
+        }
+        const offsite =
+          l.linkType !== 'tweet' &&
+          (l.title || l.imageUrl || l.description) &&
+          host &&
+          !/(?:^|\.)(?:x|twitter)\.com$/i.test(host)
+        if (offsite && !linkPreviewByPost.has(k)) {
+          linkPreviewByPost.set(k, {
+            url: l.expandedUrl,
+            title: l.title ?? null,
+            description: l.description ?? null,
+            imageUrl: l.imageUrl ?? null,
+            domain: l.domain ?? null,
+          })
         }
       }
     }
@@ -517,12 +558,13 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
     // to the type recorded at preview time so preview-only items (esp. articles)
     // still render the right card instead of a bare text "Saved post".
     const contentType = typeOf(i.platform, key, i.contentType) ?? asContentType(i.contentType)
-    // Text precedence: article title (unchanged) beats the full saved bookmark
-    // text (uncapped at write time, unlike the recorded `activity.text`) beats
-    // the recorded text (the only option for preview-only posts). Capped here
-    // so the payload stays bounded.
+    const linkPreview = linkPreviewByPost.get(key)
+    // Text precedence: X Article headline beats the full saved bookmark text
+    // (uncapped at write time, unlike the recorded `activity.text`) beats the
+    // recorded text. Off-site link cards keep the tweet body — the headline
+    // lives on the card. Capped here so the payload stays bounded.
     const text =
-      contentType === 'article'
+      contentType === 'article' && !linkPreview
         ? (articleTitles.get(key) ?? i.text)
         : (fullTexts.get(key) ?? i.text)
     // Drop the raw stored JSON columns from the spread below — they're
@@ -559,6 +601,7 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
       quote:
         safeParse<TheaterQuoteRef>(i.quoteJson) ??
         (i.platform === 'twitter' ? quoteFromBookmarkContext(quoteContexts.get(key)) : undefined),
+      ...(linkPreview ? { linkPreview } : {}),
     }
   })
 

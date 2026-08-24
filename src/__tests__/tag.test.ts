@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { sanitizeTag, isValidTag } from '@/lib/utils/tag'
+import {
+  sanitizeTag,
+  isValidTag,
+  displayTagCount,
+  tagActionLabel,
+  sortTagsActiveFirst,
+  MAX_TAGS_PER_POST,
+} from '@/lib/utils/tag'
 
 describe('sanitizeTag', () => {
   it('lowercases and hyphenates invalid characters', () => {
@@ -52,5 +59,28 @@ describe('kebabTagInput (live keystroke variant)', () => {
     expect(kebabTagInput('-lead')).toBe('lead')
     expect(kebabTagInput('a_b c')).toBe('a-b-c')
     expect(kebabTagInput('averyverylongtagname')).toBe('averyverylongta')
+  })
+})
+
+describe('displayTagCount / tagActionLabel', () => {
+  it('caps the theater Tag button at MAX_TAGS_PER_POST', () => {
+    expect(MAX_TAGS_PER_POST).toBe(5)
+    expect(displayTagCount(['a', 'b', 'c', 'd', 'e', 'f'])).toBe(5)
+    expect(displayTagCount(0)).toBe(0)
+    expect(tagActionLabel([])).toBe('Tag')
+    expect(tagActionLabel(['ai'])).toBe('Tag 1')
+    expect(tagActionLabel(['a', 'b', 'c', 'd', 'e', 'f'])).toBe('Tag 5')
+    expect(tagActionLabel([], { thisPost: true })).toBe('Tag this post')
+  })
+})
+
+describe('sortTagsActiveFirst', () => {
+  it('keeps assigned tags at the top without shuffling the rest', () => {
+    const tags = [{ tag: 'reading' }, { tag: 'work' }, { tag: 'later' }]
+    expect(sortTagsActiveFirst(tags, new Set(['work'])).map((t) => t.tag)).toEqual([
+      'work',
+      'reading',
+      'later',
+    ])
   })
 })
