@@ -36,6 +36,9 @@ test.describe('theater shortcuts (signed out)', () => {
     await expect(help.getByText('Expand')).toBeVisible()
     await expect(help.getByText('Repeat')).toBeVisible()
     await expect(help.getByText('Visual only')).toBeVisible()
+    await expect(help.getByText('Theater')).toBeVisible()
+    await expect(help.getByText('Live', { exact: true })).toBeVisible()
+    await expect(help.getByText('Saved', { exact: true })).toBeVisible()
     await expect(help.getByText('Scroll text')).toBeVisible()
 
     await page.keyboard.press('ArrowRight')
@@ -118,6 +121,22 @@ test.describe('theater shortcuts (signed out)', () => {
     await expect(repeat).toHaveAttribute('aria-label', 'Repeat this post')
     await page.keyboard.press('r')
     await expect(repeat).toHaveAttribute('aria-label', 'Stop when caught up')
+  })
+
+  test('I toggles Visual only', async ({ page }) => {
+    await page.goto('/')
+    await expectTheaterReady(page)
+    await page.evaluate(() => localStorage.removeItem('adhx-theater-visual'))
+    await page.reload()
+    await expectTheaterReady(page)
+
+    const visual = page.locator('[data-theater-action="visual"]:visible')
+    await expect(visual).toBeVisible()
+    await expect(visual).toHaveAttribute('aria-pressed', 'false')
+    await page.keyboard.press('i')
+    await expect(visual).toHaveAttribute('aria-pressed', 'true')
+    await page.keyboard.press('i')
+    await expect(visual).toHaveAttribute('aria-pressed', 'false')
   })
 })
 
@@ -219,6 +238,19 @@ authedTest.describe('theater shortcuts (signed in)', () => {
     await expect(page.getByRole('menuitem', { name: 'Leaderboard' })).toBeFocused()
     await page.keyboard.press('Enter')
     await expect(page).toHaveURL(/\/leaderboard/)
+  })
+
+  authedTest('1 and 2 switch Live ⇄ Saved', async ({ page }) => {
+    await page.goto('/live')
+    await expectTheaterReady(page)
+    await expect(page).toHaveURL(/\/live/)
+
+    await page.keyboard.press('2')
+    await expect(page).toHaveURL(/\/saved/)
+    await expectTheaterReady(page)
+
+    await page.keyboard.press('1')
+    await expect(page).toHaveURL(/\/live/)
   })
 })
 

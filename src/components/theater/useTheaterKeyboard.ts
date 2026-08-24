@@ -3,10 +3,10 @@
 /**
  * Global keydown handling for TheaterShell. One keymap for every theater
  * surface (Live, collection, playlist, shared): →/←/j/k next-prev, ↑/↓
- * scroll text, Space play/pause, M mute, E expand, R repeat, S/T/L/C/D/O/A/F/W/P
- * action buttons, . menu, Shift+? help. Collection still has U (undo Archive)
- * and Escape (close). `personalKeyAction` is re-exported from TheaterShell
- * for tests.
+ * scroll text, 1/2 Live⇄Saved (signed-in), I visual, Space play/pause, M mute,
+ * E expand, R repeat, S/T/L/C/D/O/A/F/W/P action buttons, . menu, Shift+? help.
+ * Collection still has U (undo Archive) and Escape (close). `personalKeyAction`
+ * is re-exported from TheaterShell for tests.
  */
 
 import { useEffect } from 'react'
@@ -43,6 +43,11 @@ export interface UseTheaterKeyboardArgs {
   setMuted: Dispatch<SetStateAction<boolean>>
   undoLastAction: () => void
   onClose?: () => void
+  /**
+   * Signed-in Live ⇄ Saved. Omitted signed-out / playlist — 1 and 2 no-op.
+   * Shared+authed uses the same callback the tab pill does (`2` → `/saved`).
+   */
+  onTabChange?: (tab: PersonalTab) => void
   helpOpen?: boolean
   onToggleHelp?: () => void
   /**
@@ -74,6 +79,7 @@ export function useTheaterKeyboard({
   setMuted,
   undoLastAction,
   onClose,
+  onTabChange,
   helpOpen,
   onToggleHelp,
   isPlaybackHidden,
@@ -110,6 +116,13 @@ export function useTheaterKeyboard({
       if (isPersonal && personalTab === 'collection' && action === 'undo') {
         e.preventDefault()
         undoLastAction()
+        return
+      }
+
+      if (action === 'tabLive' || action === 'tabSaved') {
+        if (!onTabChange) return
+        e.preventDefault()
+        onTabChange(action === 'tabLive' ? 'live' : 'collection')
         return
       }
 
@@ -170,6 +183,7 @@ export function useTheaterKeyboard({
     personalTab,
     undoLastAction,
     onClose,
+    onTabChange,
     helpOpen,
     onToggleHelp,
     isPlaybackHidden,

@@ -65,6 +65,7 @@ function HelpSection({ title, rows, area }: TheaterHelpSection & { area: string 
 
 const HELP_AREAS: Record<string, string> = {
   Navigate: 'nav',
+  Theater: 'theater',
   Playback: 'play',
   Actions: 'actions',
   Also: 'also',
@@ -125,7 +126,7 @@ export function TheaterShortcutsHelp({ open, onClose }: { open: boolean; onClose
             <X size={16} />
           </button>
         </div>
-        <div className="grid max-h-[70vh] grid-cols-1 gap-4 overflow-y-auto px-4 py-3 [grid-template-areas:'nav'_'play'_'actions'_'also'] lg:grid-cols-2 lg:gap-x-10 lg:[grid-template-areas:'nav_actions'_'play_actions'_'also_actions']">
+        <div className="grid max-h-[70vh] grid-cols-1 gap-4 overflow-y-auto px-4 py-3 [grid-template-areas:'nav'_'theater'_'play'_'actions'_'also'] lg:grid-cols-2 lg:gap-x-10 lg:[grid-template-areas:'nav_actions'_'theater_actions'_'play_actions'_'also_actions']">
           {THEATER_SHORTCUT_HELP.map((section) => (
             <HelpSection
               key={section.title}

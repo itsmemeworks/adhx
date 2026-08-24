@@ -161,6 +161,7 @@ describe('useTheaterKeyboard: isPlaybackHidden space guard', () => {
       'theater-keep-playing',
       'theater-toggle-expand',
       'theater-cycle-repeat',
+      'theater-toggle-visual',
     ] as const
     const listeners = names.map((name) => {
       const fn = () => heard.push(name)
@@ -181,6 +182,7 @@ describe('useTheaterKeyboard: isPlaybackHidden space guard', () => {
       act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p' })))
       act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'e' })))
       act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'r' })))
+      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'i' })))
       expect(onToggleHelp).toHaveBeenCalledTimes(1)
       expect(args.setMuted).toHaveBeenCalledTimes(1)
       expect(heard).toEqual([...names])
@@ -201,6 +203,20 @@ describe('useTheaterKeyboard: isPlaybackHidden space guard', () => {
     renderHook(() => useTheaterKeyboard(live))
     act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })))
     expect(live.onClose).not.toHaveBeenCalled()
+  })
+
+  it('1 and 2 call onTabChange when provided, and no-op when omitted', () => {
+    const onTabChange = vi.fn()
+    renderHook(() => useTheaterKeyboard(baseArgs({ onTabChange })))
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: '1' })))
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: '2' })))
+    expect(onTabChange).toHaveBeenNthCalledWith(1, 'live')
+    expect(onTabChange).toHaveBeenNthCalledWith(2, 'collection')
+
+    const silent = baseArgs()
+    renderHook(() => useTheaterKeyboard(silent))
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: '2' })))
+    expect(silent.goNext).not.toHaveBeenCalled()
   })
 
   it('ignores keys while typing and ⌘S / Ctrl+S', () => {

@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-24 — Theater keys: Visual + Live/Saved
+
+`I` already toggled Visual. `1` / `2` now switch Live ⇄ Saved when signed in (personal theater + shared preview `2` → `/saved`). Signed-out and playlists no-op. Help overlay has a Theater section. In-flight until the PR merges.
+
 ## 2026-08-24 — Live theater Visual lens
 
 Live (signed-out `/`, `/live`, Live tab, shared "more being sent") can show videos and photos only. Images frost toggle next to LIVE (desktop) / left of flame (mobile); `I` in the keymap; persists as `adhx-theater-visual`. Saved and playlists omit it. A shared lead stays even if it's text. Empty pulse: "No videos or photos in Live right now" + Show every post. In-flight until the PR merges.

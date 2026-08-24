@@ -35,6 +35,8 @@ describe('resolveTheaterShortcut', () => {
     expect(resolveTheaterShortcut({ key: 'R' })).toBe('cycleRepeat')
     expect(resolveTheaterShortcut({ key: 'i' })).toBe('toggleVisual')
     expect(resolveTheaterShortcut({ key: 'I' })).toBe('toggleVisual')
+    expect(resolveTheaterShortcut({ key: '1' })).toBe('tabLive')
+    expect(resolveTheaterShortcut({ key: '2' })).toBe('tabSaved')
     expect(resolveTheaterShortcut({ key: 'u' })).toBe('undo')
     expect(resolveTheaterShortcut({ key: 'w' })).toBe('replay')
     expect(resolveTheaterShortcut({ key: 'p' })).toBe('keepPlaying')
@@ -70,6 +72,8 @@ describe('resolveTheaterShortcut', () => {
       'a',
       'r',
       'i',
+      '1',
+      '2',
       'w',
       'p',
       '.',
@@ -116,14 +120,22 @@ describe('resolveTheaterShortcut', () => {
     expect(actions?.rows.find((r) => r.label === 'Read / Watch')?.keys).toEqual(['F'])
   })
 
-  it('lists Expand, Repeat, and Visual on the playback help', () => {
+  it('lists Live, Saved, and Visual on the theater help', () => {
+    const theater = THEATER_SHORTCUT_HELP.find((s) => s.title === 'Theater')
+    expect(theater?.rows).toEqual([
+      { keys: ['1'], label: 'Live' },
+      { keys: ['2'], label: 'Saved' },
+      { keys: ['I'], label: 'Visual only' },
+    ])
+  })
+
+  it('lists Expand and Repeat on the playback help', () => {
     const play = THEATER_SHORTCUT_HELP.find((s) => s.title === 'Playback')
     expect(play?.rows).toEqual([
       { keys: ['Space'], label: 'Play / pause' },
       { keys: ['M'], label: 'Mute / unmute' },
       { keys: ['E'], label: 'Expand' },
       { keys: ['R'], label: 'Repeat' },
-      { keys: ['I'], label: 'Visual only' },
     ])
   })
 })

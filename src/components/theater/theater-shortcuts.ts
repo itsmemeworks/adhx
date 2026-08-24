@@ -29,6 +29,8 @@ export type TheaterShortcut =
   | 'toggleExpand'
   | 'cycleRepeat'
   | 'toggleVisual'
+  | 'tabLive'
+  | 'tabSaved'
   | 'scrollDown'
   | 'scrollUp'
 
@@ -123,6 +125,8 @@ export const THEATER_SHORTCUT_KEYS = new Set([
   'R',
   'i',
   'I',
+  '1',
+  '2',
   'u',
   'U',
   'w',
@@ -190,6 +194,10 @@ export function resolveTheaterShortcut(e: TheaterKeyLike): TheaterShortcut | nul
     case 'i':
     case 'I':
       return 'toggleVisual'
+    case '1':
+      return 'tabLive'
+    case '2':
+      return 'tabSaved'
     case 'u':
     case 'U':
       return 'undo'
@@ -250,13 +258,20 @@ export const THEATER_SHORTCUT_HELP: TheaterHelpSection[] = [
     ],
   },
   {
+    title: 'Theater',
+    rows: [
+      { keys: ['1'], label: 'Live' },
+      { keys: ['2'], label: 'Saved' },
+      { keys: ['I'], label: 'Visual only' },
+    ],
+  },
+  {
     title: 'Playback',
     rows: [
       { keys: ['Space'], label: 'Play / pause' },
       { keys: ['M'], label: 'Mute / unmute' },
       { keys: ['E'], label: 'Expand' },
       { keys: ['R'], label: 'Repeat' },
-      { keys: ['I'], label: 'Visual only' },
     ],
   },
   {

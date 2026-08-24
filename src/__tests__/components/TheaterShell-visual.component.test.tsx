@@ -165,6 +165,44 @@ describe('TheaterShell: live visual lens', () => {
     expect(chromeProps().onToggleVisual).toBeUndefined()
   })
 
+  it('1 and 2 flip Live ⇄ Saved on the personal theater', async () => {
+    const onPersonalTabChange = vi.fn()
+    render(
+      <TheaterShell
+        mode="personal"
+        initialPersonalTab="live"
+        personalItems={[]}
+        seed={seed([item('1', { contentType: 'video' })])}
+        onPersonalTabChange={onPersonalTabChange}
+      />,
+    )
+    expect(chromeProps().onToggleVisual).toBeDefined()
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '2' }))
+    })
+    expect(onPersonalTabChange).toHaveBeenCalledWith('collection')
+    expect(chromeProps().onToggleVisual).toBeUndefined()
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '1' }))
+    })
+    expect(onPersonalTabChange).toHaveBeenCalledWith('live')
+    expect(chromeProps().onToggleVisual).toBeDefined()
+  })
+
+  it('1 and 2 no-op on a playlist', async () => {
+    render(
+      <TheaterShell
+        mode="playlist"
+        seed={seed([item('1', { contentType: 'video' })])}
+        playlist={{ tag: 'cats', curator: 'alice', count: 1 }}
+      />,
+    )
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '2' }))
+    })
+    expect(chromeProps().onToggleVisual).toBeUndefined()
+  })
+
   it('shows the empty overlay when Live has no visuals', async () => {
     render(<TheaterShell seed={seed([item('1', { contentType: 'text' })])} />)
     await toggleVisual()

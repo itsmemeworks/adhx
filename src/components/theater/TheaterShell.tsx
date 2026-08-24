@@ -222,6 +222,19 @@ export function TheaterShell({
     [onPersonalTabChange],
   )
   const isCollectionTab = isPersonal && personalTab === 'collection'
+  const signedIn = authed || !!authMe.me?.authenticated
+  const goTheaterTab = useCallback(
+    (tab: PersonalTab) => {
+      if (isPersonal) {
+        changePersonalTab(tab)
+        return
+      }
+      if (mode !== 'shared' || !signedIn) return
+      if (tab === 'live') return
+      router.push('/saved')
+    },
+    [isPersonal, changePersonalTab, mode, signedIn, router],
+  )
   const visualLensAvailable = !loop && !isCollectionTab
   const feed = useTheaterFeed(seed, { live: !loop && !isCollectionTab })
   const feedPrepend = feed.prependItem
@@ -1406,6 +1419,7 @@ export function TheaterShell({
     setMuted,
     undoLastAction,
     onClose,
+    onTabChange: isPersonal || (mode === 'shared' && signedIn) ? goTheaterTab : undefined,
     helpOpen,
     onToggleHelp,
     isPlaybackHidden,
@@ -1535,7 +1549,6 @@ export function TheaterShell({
   // current (this page is the live pulse with a pinned lead); Saved
   // and Close are the personal-theater routes. Do not pass `personalChrome`
   // — that would swap the shared Save/Tag pill for the live-tab pair.
-  const signedIn = authed || !!authMe.me?.authenticated
   const sharedAccountTabs: TheaterAccountTabs | undefined =
     mode === 'shared' && signedIn
       ? {
