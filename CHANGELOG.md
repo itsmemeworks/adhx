@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.61.0](https://github.com/itsmemeworks/adhx/compare/v1.60.0...v1.61.0) (2026-08-24)
+
+
+### Features
+
+* read/watch theater article mode for long captions and quotes ([#406](https://github.com/itsmemeworks/adhx/issues/406)) ([94b118e](https://github.com/itsmemeworks/adhx/commit/94b118e44ca11cc91a36b67be9688419decea2d9))
+* tap video or photo to declutter, not pause ([#408](https://github.com/itsmemeworks/adhx/issues/408)) ([29604fb](https://github.com/itsmemeworks/adhx/commit/29604fbe2cad36501abd903d7d6535d1555ce472))
+
 ## [1.60.0](https://github.com/itsmemeworks/adhx/compare/v1.59.0...v1.60.0) (2026-08-23)
 
 
