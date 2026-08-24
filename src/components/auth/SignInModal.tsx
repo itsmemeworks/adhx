@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import Image from 'next/image'
 import { isValidEmail } from '@/lib/utils/email'
 import { Mail } from 'lucide-react'
-import { PlatformGlyph } from '@/components/matter'
 import { THEATER_SHORTCUT_KEYS } from '@/components/theater/theater-shortcuts'
 
 export interface SignInModalProps {
@@ -82,7 +81,6 @@ export function SignInModal({
 
   const effectiveReturnTo =
     returnTo || (typeof window !== 'undefined' ? window.location.pathname : '/')
-  const xHref = `/api/auth/twitter?returnUrl=${encodeURIComponent(effectiveReturnTo)}`
 
   async function handleEmailSubmit(e: FormEvent) {
     e.preventDefault()
@@ -162,24 +160,7 @@ export function SignInModal({
               </p>
             )}
 
-            <a
-              href={xHref}
-              className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-full text-[14.5px] font-semibold text-white transition-transform hover:scale-[1.01]"
-              style={{ background: ACCENT_GRADIENT }}
-            >
-              Continue with
-              <PlatformGlyph platform="twitter" size={15} className="text-white" />
-            </a>
-
-            <div className="my-5 flex items-center gap-3">
-              <div className="h-px flex-1" style={{ backgroundColor: BORDER }} />
-              <span className="text-xs uppercase tracking-wide" style={{ color: MUTED }}>
-                or
-              </span>
-              <div className="h-px flex-1" style={{ backgroundColor: BORDER }} />
-            </div>
-
-            <form onSubmit={handleEmailSubmit} noValidate>
+            <form onSubmit={handleEmailSubmit} noValidate className="mt-6">
               <div className="relative flex items-center">
                 <Mail
                   className="pointer-events-none absolute left-4"
@@ -208,8 +189,8 @@ export function SignInModal({
               <button
                 type="submit"
                 disabled={submitting}
-                className="mt-3 h-12 w-full rounded-full border text-[14.5px] font-semibold transition-colors disabled:opacity-60"
-                style={{ borderColor: BORDER, color: INK }}
+                className="mt-3 h-12 w-full rounded-full text-[14.5px] font-semibold text-white transition-transform hover:scale-[1.01] disabled:opacity-60"
+                style={{ background: ACCENT_GRADIENT }}
               >
                 {submitting ? 'Sending…' : 'Email me a magic link'}
               </button>
@@ -222,7 +203,8 @@ export function SignInModal({
             </form>
 
             <p className="mt-5 text-[12px] leading-snug" style={{ color: SUBTLE }}>
-              One-tap sign-in link, no password. New here? Either option creates your account.
+              One-tap sign-in link, no password. New here? This creates your account. Link X later
+              in Settings if you want to sync bookmarks.
             </p>
           </>
         ) : (

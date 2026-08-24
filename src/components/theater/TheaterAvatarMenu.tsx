@@ -8,7 +8,20 @@ import {
   type ReactNode,
 } from 'react'
 import { usePathname } from 'next/navigation'
-import { Bookmark, LogIn, LogOut, Menu, Radio, Settings, Shield, Tag, Trophy } from 'lucide-react'
+import {
+  Activity,
+  Bookmark,
+  Inbox,
+  LogIn,
+  LogOut,
+  Menu,
+  Radio,
+  Settings,
+  Shield,
+  Tag,
+  Trophy,
+  type LucideIcon,
+} from 'lucide-react'
 import { useAuthMe } from '@/components/auth'
 import { cn } from '@/lib/utils'
 import { PERSONAL_TAB_ORDER, PERSONAL_TAB_LABEL, type PersonalTab } from './types'
@@ -84,20 +97,32 @@ function MenuLink({
  * `theaterActive` explicitly (see that prop), OR'd into `isHome` by the
  * caller below.
  */
-function TheaterMenuEntry({ isHome, onClose }: { isHome: boolean; onClose: () => void }) {
+function TheaterMenuEntry({
+  isHome,
+  onClose,
+  markCurrent = true,
+}: {
+  isHome: boolean
+  onClose: () => void
+  /** When Live / My Collection sit under Theater, the selected child carries
+   * the current-screen marker — Theater stays the same Radio + 13px row as
+   * Library, not a second "you are here". */
+  markCurrent?: boolean
+}) {
+  const current = isHome && markCurrent
   if (isHome) {
     return (
       <button
         type="button"
         role="menuitem"
-        aria-current="page"
+        aria-current={current ? 'page' : undefined}
         onClick={onClose}
         className={`${MENU_ROW} w-full text-left`}
-        style={{ color: INK }}
+        style={{ color: current ? INK : SUBTLE }}
       >
         <Radio size={15} />
         <span>Theater</span>
-        <CurrentDot />
+        {current && <CurrentDot />}
       </button>
     )
   }
@@ -110,52 +135,57 @@ function TheaterMenuEntry({ isHome, onClose }: { isHome: boolean; onClose: () =>
 }
 
 /**
- * The Theater entry expanded into its two playlists (owner: "Theater just has
- * two sub options: live and collection and we can just highlight which one is
- * selected"). Mobile has no room for a tab pill in the top scrim, so this is
- * the only switcher there. Desktop keeps its top-bar pill for the mouse and
- * still mounts these rows so `.` + arrows can pick a tab.
+ * The Theater Radio row plus Live / My Collection indented under it (owner:
+ * keep the same icon and 13px font as Library; the tabs are sub-rows with
+ * their own icons). Mobile has no room for a tab pill in the top scrim, so
+ * this is the only switcher there. Desktop keeps its top-bar pill for the
+ * mouse and still mounts these rows so `.` + arrows can pick a tab.
  *
  * Selecting a tab goes through `onTabChange` rather than an `<a href>`: the
  * pair is routes (`/live` and `/collection`) but the chrome flips the tab locally
  * first so the switch is instant, then navigates — a plain link would reload
  * the stage the viewer is watching.
  */
+const PERSONAL_TAB_ICON: Record<PersonalTab, LucideIcon> = {
+  live: Activity,
+  collection: Inbox,
+}
+
 function TheaterTabsGroup({
   tab,
   onTabChange,
   onClose,
+  isHome,
 }: {
   tab: PersonalTab
   onTabChange: (tab: PersonalTab) => void
   onClose: () => void
+  isHome: boolean
 }) {
   return (
     <>
-      <p
-        className="flex items-center gap-2.5 px-4 pt-2.5 pb-1 text-[11px] font-semibold tracking-wide uppercase"
-        style={{ color: MUTED }}
-      >
-        <Radio size={13} />
-        <span>Theater</span>
-      </p>
-      {PERSONAL_TAB_ORDER.map((t) => (
-        <button
-          key={t}
-          type="button"
-          role="menuitem"
-          aria-current={tab === t ? 'page' : undefined}
-          onClick={() => {
-            onTabChange(t)
-            onClose()
-          }}
-          className={`${MENU_ROW} w-full py-2.5 pr-4 pl-[2.4rem] text-left`}
-          style={{ color: tab === t ? INK : SUBTLE }}
-        >
-          <span>{PERSONAL_TAB_LABEL[t]}</span>
-          {tab === t && <CurrentDot />}
-        </button>
-      ))}
+      <TheaterMenuEntry isHome={isHome} onClose={onClose} markCurrent={false} />
+      {PERSONAL_TAB_ORDER.map((t) => {
+        const Icon = PERSONAL_TAB_ICON[t]
+        return (
+          <button
+            key={t}
+            type="button"
+            role="menuitem"
+            aria-current={tab === t ? 'page' : undefined}
+            onClick={() => {
+              onTabChange(t)
+              onClose()
+            }}
+            className={`${MENU_ROW} w-full py-2.5 pr-4 pl-[2.4rem] text-left`}
+            style={{ color: tab === t ? INK : SUBTLE }}
+          >
+            <Icon size={15} />
+            <span>{PERSONAL_TAB_LABEL[t]}</span>
+            {tab === t && <CurrentDot />}
+          </button>
+        )
+      })}
     </>
   )
 }
@@ -470,29 +500,28 @@ export function TheaterAvatarMenu({
             </div>
           </div>
 
-          {/* Nav group — matches the authed Header's avatar-menu nav set
-              (Collection/Theater/Tags/Leaderboard/Settings) so signed-in
-              visitors aren't stranded on a preview page with no way to
-              reach the rest of the app. "Your collection" keeps this
-              menu's own naming convention rather than Header's plain
-              "Collection". */}
-          <MenuLink href="/library" onClick={close}>
-            <Bookmark size={15} />
-            {/* "Library" (the grid over your saves — repo terminology) rather
-                than "Your collection", which became ambiguous the moment the
-                Theater group below gained a "My Collection" tab: two rows
-                reading as the same destination, going to different screens. */}
-            <span>Library</span>
-          </MenuLink>
+          {/* Nav group — Theater first (the two tabs, or the single Theater
+              entry), then Library, then Tags / Leaderboard / Settings. Matches
+              the authed Header avatar menu so signed-in visitors aren't
+              stranded on a preview page. */}
           {theaterTabs ? (
             <TheaterTabsGroup
               tab={theaterTabs.tab}
               onTabChange={theaterTabs.onTabChange}
               onClose={close}
+              isHome={isHome}
             />
           ) : (
             <TheaterMenuEntry isHome={isHome} onClose={close} />
           )}
+          <MenuLink href="/library" onClick={close}>
+            <Bookmark size={15} />
+            {/* "Library" (the grid over your saves — repo terminology) rather
+                than "Your collection", which became ambiguous the moment the
+                Theater group gained a "My Collection" tab: two rows reading
+                as the same destination, going to different screens. */}
+            <span>Library</span>
+          </MenuLink>
           <MenuLink href="/tags" onClick={close} current={isTags}>
             <Tag size={15} />
             <span>Tags</span>

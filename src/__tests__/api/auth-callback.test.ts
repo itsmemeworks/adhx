@@ -60,11 +60,20 @@ function createCallbackRequest(params: Record<string, string>): NextRequest {
   return new NextRequest(url)
 }
 
+async function seedSignedIn(userId = 'u_email', username = 'emailer') {
+  await testInstance.db.insert(schema.users).values({ id: userId, username })
+  const { getSession } = await import('@/lib/auth/session')
+  vi.mocked(getSession).mockResolvedValue({ userId, username }) // overrides the default null session
+  return { userId, username }
+}
+
 describe('API: /api/auth/twitter/callback', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     testInstance = createTestDb()
     vi.clearAllMocks()
     vi.resetModules()
+    const { getSession } = await import('@/lib/auth/session')
+    vi.mocked(getSession).mockResolvedValue(null)
   })
 
   afterEach(() => {
@@ -147,7 +156,40 @@ describe('API: /api/auth/twitter/callback', () => {
       })
     })
 
+    it('bounces unsigned callbacks without creating an account or session', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            access_token: 'new-access-token',
+            refresh_token: 'new-refresh-token',
+            expires_in: 7200,
+            scope: 'tweet.read',
+          }),
+      })
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ data: { id: 'user-123', username: 'testuser' } }),
+      })
+
+      const { GET } = await import('@/app/api/auth/twitter/callback/route')
+      const response = await GET(
+        createCallbackRequest({
+          code: 'valid-code',
+          state: 'valid-state',
+        }),
+      )
+
+      expect(response.status).toBe(307)
+      expect(response.headers.get('location')).toBe('http://localhost:3000/?auth_error=x_link_only')
+      const cookies = response.headers.getSetCookie()
+      expect(cookies.some((c) => c.includes('adhx_session'))).toBe(false)
+      expect(await testInstance.db.select().from(schema.users)).toHaveLength(0)
+      expect(await testInstance.db.select().from(schema.oauthTokens)).toHaveLength(0)
+    })
+
     it('exchanges code for tokens and creates session', async () => {
+      await seedSignedIn()
       // Mock token exchange
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -184,7 +226,8 @@ describe('API: /api/auth/twitter/callback', () => {
 
       expect(response.status).toBe(307)
       const location = response.headers.get('location')
-      expect(location).toContain('firstLogin=true')
+      expect(location).toContain('/settings')
+      expect(location).not.toContain('firstLogin')
 
       // Verify session cookie was set
       const cookies = response.headers.getSetCookie()
@@ -192,6 +235,7 @@ describe('API: /api/auth/twitter/callback', () => {
     })
 
     it('handles return URL cookie for URL prefix feature', async () => {
+      await seedSignedIn()
       // Mock token exchange
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -239,6 +283,7 @@ describe('API: /api/auth/twitter/callback', () => {
     })
 
     it('ignores an open-redirect return URL cookie (protocol-relative //evil.com)', async () => {
+      await seedSignedIn()
       // `//evil.com` is protocol-relative: `new URL('//evil.com', BASE_URL)`
       // resolves to `https://evil.com/` when honored unvalidated — an open
       // redirect straight out of a successful login.
@@ -272,8 +317,9 @@ describe('API: /api/auth/twitter/callback', () => {
       expect(response.status).toBe(307)
       const location = response.headers.get('location')
       expect(location).not.toContain('evil.com')
-      // Falls back to the normal post-login destination instead.
-      expect(location).toContain('firstLogin=true')
+      // Falls back to Settings (X is a link, not a sign-in) instead.
+      expect(location).toContain('/settings')
+      expect(location).not.toContain('firstLogin')
 
       // The malicious cookie is still cleared like any other return-url cookie.
       const cookies = response.headers.getSetCookie()
@@ -283,6 +329,7 @@ describe('API: /api/auth/twitter/callback', () => {
     })
 
     it('honors a legit same-origin return URL cookie (e.g. /feed)', async () => {
+      await seedSignedIn()
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () =>
@@ -316,6 +363,7 @@ describe('API: /api/auth/twitter/callback', () => {
     })
 
     it('tracks new user in metrics', async () => {
+      await seedSignedIn()
       const { metrics } = await import('@/lib/sentry')
 
       // Mock token exchange
@@ -348,10 +396,11 @@ describe('API: /api/auth/twitter/callback', () => {
       )
 
       expect(metrics.authCompleted).toHaveBeenCalledWith(true)
-      expect(metrics.trackUser).toHaveBeenCalledWith('new-user')
+      expect(metrics.trackUser).toHaveBeenCalledWith('u_email')
     })
 
     it('identifies returning user in metrics', async () => {
+      await seedSignedIn('existing-user', 'existinguser')
       // Insert existing tokens for user
       await testInstance.db.insert(schema.oauthTokens).values({
         userId: 'existing-user',
@@ -467,13 +516,7 @@ describe('API: /api/auth/twitter/callback', () => {
       expect(tokenRows).toHaveLength(0)
     })
 
-    it('does not 500 and signs in cleanly when the X id belongs to an account whose X identity was previously unlinked', async () => {
-      // Reproduces the exact Sentry crash: an X-first account ('detached-id')
-      // later added an email and called unlinkX() — the `users` row survives
-      // with that id, but its `user_identities` row for provider 'x' is
-      // gone. Logging in again with X (no session — the reported scenario
-      // had no cookies at all) must relink, not crash on a `users.id`
-      // collision.
+    it('does not silently sign in when the X id belongs to a detached account and there is no session', async () => {
       await testInstance.db.insert(schema.users).values({
         id: 'detached-id',
         username: 'detacheduser',
@@ -505,12 +548,57 @@ describe('API: /api/auth/twitter/callback', () => {
       )
 
       expect(response.status).toBe(307)
-      const location = response.headers.get('location')
-      expect(location).toContain('firstLogin=true')
-      expect(location).not.toContain('error')
-
+      expect(response.headers.get('location')).toBe('http://localhost:3000/?auth_error=x_link_only')
       const cookies = response.headers.getSetCookie()
-      expect(cookies.some((c) => c.includes('adhx_session'))).toBe(true)
+      expect(cookies.some((c) => c.includes('adhx_session'))).toBe(false)
+      const xIdentities = await testInstance.db
+        .select()
+        .from(schema.userIdentities)
+        .where(eq(schema.userIdentities.provider, 'x'))
+      expect(xIdentities).toHaveLength(0)
+    })
+
+    it('relinks X when the signed-in session already is the detached account', async () => {
+      await testInstance.db.insert(schema.users).values({
+        id: 'detached-id',
+        username: 'detacheduser',
+        email: 'detached@example.com',
+        usernameChosen: true,
+      })
+      await testInstance.db
+        .insert(schema.userIdentities)
+        .values({ provider: 'email', providerId: 'detached@example.com', userId: 'detached-id' })
+      const { getSession } = await import('@/lib/auth/session')
+      vi.mocked(getSession).mockResolvedValue({
+        userId: 'detached-id',
+        username: 'detacheduser',
+      })
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            access_token: 'new-access-token',
+            refresh_token: 'new-refresh-token',
+            expires_in: 7200,
+            scope: 'tweet.read',
+          }),
+      })
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ data: { id: 'detached-id', username: 'detacheduser' } }),
+      })
+
+      const { GET } = await import('@/app/api/auth/twitter/callback/route')
+      const response = await GET(
+        createCallbackRequest({ code: 'valid-code', state: 'valid-state' }),
+      )
+
+      expect(response.status).toBe(307)
+      const location = response.headers.get('location')
+      expect(location).toContain('/settings')
+      expect(location).not.toContain('error')
+      expect(location).not.toContain('firstLogin')
 
       const identities = await testInstance.db
         .select()
@@ -523,7 +611,6 @@ describe('API: /api/auth/twitter/callback', () => {
           userId: 'detached-id',
         }),
       ])
-      // Only the one original users row — never duplicated.
       const userRows = await testInstance.db
         .select()
         .from(schema.users)

@@ -8,18 +8,25 @@ import {
   saveOAuthState,
   deleteTokens,
 } from '@/lib/auth/oauth'
-import { getSession, clearSessionCookie } from '@/lib/auth/session'
+import { getSession, getCurrentUserId, clearSessionCookie } from '@/lib/auth/session'
 import { isSafeReturnUrl } from '@/lib/auth/return-url'
 import { metrics } from '@/lib/sentry'
 import { recordAnalytic } from '@/lib/analytics/record'
 
 const CLIENT_ID = process.env.TWITTER_CLIENT_ID!
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
-// GET /api/auth/twitter - Initiate OAuth flow
-// Supports ?returnUrl=/path to redirect after login
+// GET /api/auth/twitter - Initiate OAuth to *link* X to an existing account
+// (bookmark sync). X is not a sign-in method — unsigned visitors are bounced.
+// Supports ?returnUrl=/path to redirect after linking.
 export async function GET(request: NextRequest) {
   if (!CLIENT_ID) {
     return NextResponse.json({ error: 'Twitter client ID not configured' }, { status: 500 })
+  }
+
+  const userId = await getCurrentUserId()
+  if (!userId) {
+    return NextResponse.redirect(new URL('/?auth_error=x_link_only', BASE_URL))
   }
 
   // Generate PKCE values

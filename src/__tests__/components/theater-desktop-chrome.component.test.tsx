@@ -8,6 +8,7 @@ import {
   DesktopDock,
   navigateToAppPath,
 } from '@/components/theater/TheaterDesktopChrome'
+import { TheaterProgressLine } from '@/components/theater/TheaterProgressLine'
 import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterItem } from '@/components/theater/types'
 import { peekPreviewOpenIntent } from '@/lib/theater/autosave-shared'
@@ -152,6 +153,29 @@ describe('DesktopDock', () => {
     expect(hide.querySelector('.lucide-maximize-2')).toBeInTheDocument()
     fireEvent.click(hide)
     expect(onToggleDeclutter).toHaveBeenCalled()
+  })
+
+  it('Space pauses the 10s dwell on a text post (dock icon flips to Play)', () => {
+    const items = [textItem()]
+    const key = theaterItemKey(items[0])
+    render(
+      <>
+        <TheaterProgressLine itemKey={key} kind="timed" />
+        <DesktopDock
+          {...dockBase}
+          items={items}
+          current={items[0]}
+          currentKey={key}
+          repeatMode="off"
+          onCycleRepeat={vi.fn()}
+        />
+      </>,
+    )
+    expect(screen.getByLabelText('Pause')).toBeInTheDocument()
+    fireEvent(window, new CustomEvent('theater-toggle-play'))
+    expect(screen.getByLabelText('Play')).toBeInTheDocument()
+    fireEvent(window, new CustomEvent('theater-toggle-play'))
+    expect(screen.getByLabelText('Pause')).toBeInTheDocument()
   })
 
   it('renders a card per item, marks the current card and the next card', () => {

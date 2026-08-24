@@ -15,15 +15,16 @@
  * - kind 'timed': a 10s countdown fill; when it completes, dispatches a
  *   `theater-advance` window CustomEvent (the shell listens and goes next).
  *   Pauses while a `theater-pause` event is active and resumes (from the same
- *   progress) on `theater-resume` — dispatched by the mobile chrome's
- *   explicit pause/play button (TheaterMobileChrome). There is no longer a
- *   hold-to-pause gesture — it interfered with text selection on long posts.
- * - kind 'none': no item, or a 'timed' item (photo/text/quote/article) in
- *   the personal theater's Collection tab — those still wait on a deliberate Done/Later/
- *   Delete, never a 10s dwell auto-advance (see `collectionTabProgressKind`
- *   and TheaterShell's `handleAdvance`). Videos in the Collection tab keep
- *   their real 'video' kind and auto-advance on end like every other
- *   playlist — see `CollectionStage`'s `onEnded` wiring.
+ *   progress) on `theater-resume` — dock / peek-bar play-pause, or Space
+ *   (`theater-toggle-play`, which this line also honors so static posts
+ *   pause the 10s dwell the same way video pauses playback). There is no
+ *   longer a hold-to-pause gesture — it interfered with text selection on
+ *   long posts.
+ * - kind 'none': no item, or a 'timed' item while Repeat-one / the shared
+ *   post is pinned (`progressKindForPin`) — the line must not tick toward
+ *   an advance that will never happen. My Collection uses the same 'timed'
+ *   dwell as Live; videos keep their real 'video' kind and auto-advance on
+ *   end via Stage `onEnded`.
  *
  * Progress state lives entirely inside this component (rAF/event driven) so
  * ticks never re-render the shell/stage tree — the fill's width is mutated
@@ -70,24 +71,6 @@ export function progressKindFor(item: TheaterItem | null, _articleMode = false):
  */
 export function progressKindForPin(kind: ProgressKind, pinned: boolean): ProgressKind {
   return pinned && kind === 'timed' ? 'none' : kind
-}
-
-/**
- * Pure: the progress-line kind for the personal theater's Collection tab (unified-theater-
- * collection.md §2 — "My Collection is just a different playlist in that same
- * theater," the owner's standing directive). Videos now flow through the
- * Collection tab exactly like every other playlist — auto-advance on end —
- * so they keep whatever `progressKindFor` already gave them (typically
- * 'video'). Only 'timed' items (photo/text/quote/article) still wait on a
- * deliberate Done/Later/Delete, with no 10s dwell auto-advance, so 'timed'
- * alone is demoted to 'none' there. Composes with `progressKindForPin`
- * (apply this first, then that) for the shared-post-pin case.
- */
-export function collectionTabProgressKind(
-  baseKind: ProgressKind,
-  isCollectionTab: boolean,
-): ProgressKind {
-  return isCollectionTab && baseKind === 'timed' ? 'none' : baseKind
 }
 
 export interface TheaterProgressLineProps {
@@ -168,15 +151,29 @@ export function TheaterProgressLine({ itemKey, kind }: TheaterProgressLineProps)
     const handleResume = () => {
       paused = false
     }
+    // Space / `theater-toggle-play` is what video stages listen for. Static
+    // posts have no player — flip the dwell and broadcast pause/resume so
+    // the dock and peek-bar icons stay in sync.
+    const handleTogglePlay = () => {
+      if (paused) {
+        handleResume()
+        window.dispatchEvent(new CustomEvent('theater-resume'))
+      } else {
+        handlePause()
+        window.dispatchEvent(new CustomEvent('theater-pause'))
+      }
+    }
 
     window.addEventListener('theater-pause', handlePause)
     window.addEventListener('theater-resume', handleResume)
+    window.addEventListener('theater-toggle-play', handleTogglePlay)
     rafId = requestAnimationFrame(tick)
 
     return () => {
       cancelAnimationFrame(rafId)
       window.removeEventListener('theater-pause', handlePause)
       window.removeEventListener('theater-resume', handleResume)
+      window.removeEventListener('theater-toggle-play', handleTogglePlay)
     }
   }, [kind, itemKey])
 

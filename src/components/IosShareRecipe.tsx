@@ -1,7 +1,8 @@
 /**
  * How to add a 4-platform iOS Share Sheet shortcut that opens
- * `https://adhx.com/share?url=…`. The published iCloud shortcut is X-only
- * and isn't in this repo — this is the in-app recipe until that's rebuilt.
+ * `https://adhx.com/share?url=…`. The published iCloud shortcut already does
+ * this for X, Instagram, TikTok, and YouTube — this is the DIY rebuild recipe
+ * if that link is ever lost.
  */
 export function IosShareRecipe() {
   return (

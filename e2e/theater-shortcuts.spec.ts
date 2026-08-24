@@ -228,7 +228,8 @@ authedTest.describe('library has no shortcut overlay', () => {
     await expect(page).toHaveURL(/\/library/)
 
     await page.keyboard.press('/')
-    await expect(page.getByLabel('Search bookmarks')).not.toBeFocused()
+    await expect(page.getByRole('button', { name: 'Search' })).not.toBeFocused()
+    await expect(page.getByPlaceholder('Search')).toHaveCount(0)
 
     await page.keyboard.press('f')
     await expect(page).toHaveURL(/\/library/)

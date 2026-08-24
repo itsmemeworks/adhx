@@ -19,10 +19,10 @@ import {
   Moon,
   Sun,
   Check,
-  Mail,
-  Lock,
-  AtSign,
   Shield,
+  User,
+  Mail,
+  AtSign,
 } from 'lucide-react'
 import { SyncProgress } from '@/components/sync/SyncProgress'
 import { usePreferences, FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
@@ -35,6 +35,8 @@ import { MAX_USERNAME_CHANGES } from '@/lib/auth/username-rules'
 import { cn } from '@/lib/utils'
 
 const CONNECT_X_URL = '/api/auth/twitter?returnUrl=%2Fsettings'
+const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || '0.0.0'
+const GITHUB_RELEASE_URL = `https://github.com/itsmemeworks/adhx/releases/tag/v${APP_VERSION}`
 
 interface AuthMe {
   authenticated: boolean
@@ -74,6 +76,8 @@ interface SyncHistoryData {
   syncs: SyncHistoryEntry[]
   lastSyncAt: string | null
   totalBookmarks: number
+  xOnAdhx: number
+  xSynced: number
 }
 
 /* ── Matter card shell ─────────────────────────────────────────── */
@@ -134,6 +138,14 @@ function SCard({
   )
 }
 
+function FieldIcon({ icon: Icon }: { icon: React.ComponentType<{ className?: string }> }) {
+  return (
+    <div className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-[11px] bg-clay/10">
+      <Icon className="h-[19px] w-[19px] text-clay" />
+    </div>
+  )
+}
+
 export function SettingsClient() {
   return (
     <Suspense fallback={<SettingsLoadingSkeleton />}>
@@ -189,66 +201,51 @@ function UsernameRow({ me, refresh }: { me: AuthMe; refresh: () => void }) {
     refresh()
   }
 
-  const hint = !usernameChosen
-    ? `This becomes your public handle. You'll get ${MAX_USERNAME_CHANGES} more changes after this one, and old handles keep redirecting so shared links never break.`
+  const idleHint = !usernameChosen
+    ? 'Your public handle on shared playlists'
     : changesRemaining > 0
-      ? `${changesRemaining} change${changesRemaining === 1 ? '' : 's'} left. @${username} will keep redirecting here once you change it, so shared links never break.`
-      : 'Username changes used up — this handle is permanent.'
+      ? `${changesRemaining} change${changesRemaining === 1 ? '' : 's'} left`
+      : 'No changes left'
 
   return (
-    <div className="px-5 py-4">
-      <div className="flex items-center gap-[13px]">
-        <div className="w-10 h-10 rounded-full bg-inset flex items-center justify-center flex-shrink-0">
-          <AtSign className="h-[18px] w-[18px] text-ink-2" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-mono font-bold text-[14.5px] text-ink truncate">@{username}</p>
-          <p className="text-[12px] text-ink-3 mt-0.5">
-            {usernameChosen
-              ? changesRemaining > 0
-                ? `${changesRemaining} change${changesRemaining === 1 ? '' : 's'} left`
-                : 'Usernames are permanent once changes run out'
-              : 'Your public handle on shared playlists'}
-          </p>
-        </div>
-        {canChange && !editing && (
-          <button
-            onClick={() => setEditing(true)}
-            className="inline-flex items-center px-3.5 py-2 min-h-[44px] rounded-[10px] border border-hairline text-ink-2 font-semibold text-[13px] whitespace-nowrap hover:bg-inset transition-colors"
-          >
-            {usernameChosen ? 'Change' : 'Choose'}
-          </button>
+    <div className="px-5 py-3 first:pt-4 last:pb-5">
+      <div className="flex items-center gap-3">
+        <FieldIcon icon={AtSign} />
+        {editing ? (
+          <div className="min-w-0 flex-1">
+            <UsernameChooser
+              suggestedUsername={username}
+              theme="matter"
+              showKeepSuggestion={false}
+              submitLabel="save"
+              autoFocus
+              onSuccess={handleSuccess}
+              onCancel={() => setEditing(false)}
+            />
+          </div>
+        ) : (
+          <>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-mono text-[14.5px] font-bold text-ink">@{username}</p>
+              <p className="mt-0.5 text-[12px] text-ink-3">{idleHint}</p>
+            </div>
+            {canChange && (
+              <button
+                onClick={() => setEditing(true)}
+                className="inline-flex min-h-[44px] items-center whitespace-nowrap rounded-[10px] border border-hairline px-3.5 py-2 text-[13px] font-semibold text-ink-2 transition-colors hover:bg-inset"
+              >
+                {usernameChosen ? 'Change' : 'Choose'}
+              </button>
+            )}
+          </>
         )}
       </div>
-
-      {editing && (
-        <div className="mt-3">
-          <p className="text-[12.5px] text-ink-3">{hint}</p>
-          <UsernameChooser
-            suggestedUsername={username}
-            theme="matter"
-            showKeepSuggestion={false}
-            autoFocus
-            onSuccess={handleSuccess}
-          />
-          <button
-            type="button"
-            onClick={() => setEditing(false)}
-            className="mt-2 text-[13px] text-ink-3 hover:text-ink transition-colors"
-          >
-            Cancel
-          </button>
-        </div>
-      )}
     </div>
   )
 }
 
-/* ── Sign-in & connection ──────────────────────────────────────── */
-function SignInConnectionCard({ me, refresh }: { me: AuthMe; refresh: () => void }) {
-  const [xActionLoading, setXActionLoading] = useState(false)
-  const [xError, setXError] = useState<string | null>(null)
-
+/* ── Email ─────────────────────────────────────────────────────── */
+function EmailRow({ me }: { me: AuthMe }) {
   const [emailEditing, setEmailEditing] = useState(false)
   const [emailValue, setEmailValue] = useState('')
   const [emailSubmitting, setEmailSubmitting] = useState(false)
@@ -259,25 +256,6 @@ function SignInConnectionCard({ me, refresh }: { me: AuthMe; refresh: () => void
   const [addEmailSubmitting, setAddEmailSubmitting] = useState(false)
   const [addEmailError, setAddEmailError] = useState<string | null>(null)
   const [addEmailSuccess, setAddEmailSuccess] = useState<string | null>(null)
-
-  async function handleDisconnectX() {
-    if (!window.confirm('Disconnect your X account? You can reconnect any time.')) return
-    setXActionLoading(true)
-    setXError(null)
-    try {
-      const res = await fetch('/api/auth/twitter/disconnect', { method: 'POST' })
-      if (res.ok) {
-        refresh()
-      } else {
-        const data = await res.json().catch(() => ({}))
-        setXError(data.error || 'Failed to disconnect.')
-      }
-    } catch {
-      setXError('Failed to disconnect. Please try again.')
-    } finally {
-      setXActionLoading(false)
-    }
-  }
 
   async function handleChangeEmail(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -327,157 +305,96 @@ function SignInConnectionCard({ me, refresh }: { me: AuthMe; refresh: () => void
   }
 
   return (
-    <SCard
-      icon={Lock}
-      title="Sign-in & connection"
-      sub="Two ways in — one collection"
-      bodyPadded={false}
-    >
-      <div className="divide-y divide-hairline">
-        {/* X row */}
-        <div className="px-5 py-4">
-          <div className="flex items-center gap-[13px]">
-            <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center flex-shrink-0">
-              <PlatformGlyph platform="twitter" size={18} className="text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              {me.identities.x ? (
-                <>
-                  <p className="font-mono font-bold text-[14.5px] text-ink truncate">
-                    @{me.identities.x.username}
-                  </p>
-                  <span className="inline-flex items-center text-[10px] font-bold tracking-[0.06em] uppercase text-green-700 bg-green-500/10 px-2 py-0.5 rounded-full mt-1">
-                    Connected
-                  </span>
-                </>
-              ) : (
-                <p className="text-[13.5px] text-ink-3">Not connected</p>
-              )}
-            </div>
-            {me.identities.x ? (
-              <button
-                onClick={handleDisconnectX}
-                disabled={xActionLoading}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] rounded-[10px] border border-hairline text-ink-2 font-semibold text-[13px] whitespace-nowrap hover:bg-inset transition-colors disabled:opacity-60"
-              >
-                {xActionLoading ? (
-                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <LogOut className="h-3.5 w-3.5" />
-                )}
-                <span>Disconnect</span>
-              </button>
-            ) : (
-              <a
-                href={CONNECT_X_URL}
-                className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-[10px] bg-clay-grad text-white shadow-glow font-semibold text-[13.5px] whitespace-nowrap hover:opacity-90 transition-all"
-              >
-                <ConnectWithX size={14} />
-              </a>
-            )}
-          </div>
-          {xError && <p className="text-xs text-red-600 mt-2">{xError}</p>}
-        </div>
-
-        {/* Email row */}
-        <div className="px-5 py-4">
-          <div className="flex items-center gap-[13px]">
-            <div className="w-10 h-10 rounded-full bg-inset flex items-center justify-center flex-shrink-0">
-              <Mail className="h-[18px] w-[18px] text-ink-2" />
-            </div>
-            <div className="flex-1 min-w-0">
-              {me.identities.email ? (
-                <>
-                  <p className="font-mono font-bold text-[14.5px] text-ink truncate">
-                    {me.identities.email.email}
-                  </p>
-                  <span className="inline-flex items-center text-[10px] font-bold tracking-[0.06em] uppercase text-clay bg-clay/[0.12] px-2 py-0.5 rounded-full mt-1">
-                    Magic link
-                  </span>
-                </>
-              ) : (
-                <p className="text-[13.5px] text-ink-2">
-                  Add an email so you can sign in without X.
-                </p>
-              )}
-            </div>
-            {me.identities.email && !emailEditing && (
-              <button
-                onClick={() => {
-                  setEmailValue('')
-                  setEmailError(null)
-                  setEmailSuccess(null)
-                  setEmailEditing(true)
-                }}
-                className="inline-flex items-center px-3.5 py-2 min-h-[44px] rounded-[10px] border border-hairline text-ink-2 font-semibold text-[13px] whitespace-nowrap hover:bg-inset transition-colors"
-              >
-                Change
-              </button>
-            )}
-          </div>
-
-          {me.identities.email && emailEditing && (
-            <form onSubmit={handleChangeEmail} className="mt-3 flex flex-col sm:flex-row gap-2">
-              <input
-                type="email"
-                required
-                autoFocus
-                value={emailValue}
-                onChange={(e) => setEmailValue(e.target.value)}
-                placeholder="new@email.com"
-                className="flex-1 px-3.5 py-2.5 text-base sm:text-sm rounded-[10px] border border-hairline bg-inset text-ink focus:outline-none focus:ring-2 focus:ring-clay"
-              />
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  disabled={emailSubmitting}
-                  className="flex-1 sm:flex-none px-4 py-2.5 min-h-[44px] rounded-[10px] bg-clay-grad text-white font-semibold text-sm whitespace-nowrap hover:opacity-90 transition-all disabled:opacity-60"
-                >
-                  {emailSubmitting ? 'Sending…' : 'Send confirmation link'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEmailEditing(false)}
-                  className="px-3.5 py-2.5 min-h-[44px] rounded-[10px] text-ink-3 font-semibold text-sm hover:bg-inset transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
+    <div className="px-5 py-3 first:pt-4 last:pb-5">
+      <div className="flex items-center gap-3">
+        <FieldIcon icon={Mail} />
+        <div className="min-w-0 flex-1">
+          {me.identities.email ? (
+            <p className="truncate font-mono text-[14.5px] font-bold text-ink">
+              {me.identities.email.email}
+            </p>
+          ) : (
+            <p className="text-[13.5px] text-ink-2">Add an email — that&apos;s how you sign in.</p>
           )}
-
-          {!me.identities.email && (
-            <form onSubmit={handleAddEmail} className="mt-3 flex flex-col sm:flex-row gap-2">
-              <input
-                type="email"
-                required
-                value={addEmailValue}
-                onChange={(e) => setAddEmailValue(e.target.value)}
-                placeholder="you@email.com"
-                className="flex-1 px-3.5 py-2.5 text-base sm:text-sm rounded-[10px] border border-hairline bg-inset text-ink focus:outline-none focus:ring-2 focus:ring-clay"
-              />
-              <button
-                type="submit"
-                disabled={addEmailSubmitting}
-                className="px-4 py-2.5 min-h-[44px] rounded-[10px] bg-clay-grad text-white font-semibold text-sm whitespace-nowrap hover:opacity-90 transition-all disabled:opacity-60"
-              >
-                {addEmailSubmitting ? 'Sending…' : 'Add email'}
-              </button>
-            </form>
-          )}
-
-          {emailError && <p className="text-xs text-red-600 mt-2">{emailError}</p>}
-          {emailSuccess && <p className="text-xs text-green-700 mt-2">{emailSuccess}</p>}
-          {addEmailError && <p className="text-xs text-red-600 mt-2">{addEmailError}</p>}
-          {addEmailSuccess && <p className="text-xs text-green-700 mt-2">{addEmailSuccess}</p>}
         </div>
-
-        {/* Username row */}
-        <UsernameRow me={me} refresh={refresh} />
+        {me.identities.email && !emailEditing && (
+          <button
+            onClick={() => {
+              setEmailValue('')
+              setEmailError(null)
+              setEmailSuccess(null)
+              setEmailEditing(true)
+            }}
+            className="inline-flex min-h-[44px] items-center whitespace-nowrap rounded-[10px] border border-hairline px-3.5 py-2 text-[13px] font-semibold text-ink-2 transition-colors hover:bg-inset"
+          >
+            Change
+          </button>
+        )}
       </div>
-      <p className="px-5 py-3 text-[12px] text-ink-3 border-t border-hairline">
-        Either method signs you into the same collection.
-      </p>
+
+      {me.identities.email && emailEditing && (
+        <form onSubmit={handleChangeEmail} className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <input
+            type="email"
+            required
+            autoFocus
+            value={emailValue}
+            onChange={(e) => setEmailValue(e.target.value)}
+            placeholder="new@email.com"
+            className="flex-1 rounded-[10px] border border-hairline bg-inset px-3.5 py-2.5 text-base text-ink focus:outline-none focus:ring-2 focus:ring-clay sm:text-sm"
+          />
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={emailSubmitting}
+              className="min-h-[44px] flex-1 whitespace-nowrap rounded-[10px] bg-clay-grad px-4 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-60 sm:flex-none"
+            >
+              {emailSubmitting ? 'Sending…' : 'Send confirmation link'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setEmailEditing(false)}
+              className="min-h-[44px] rounded-[10px] px-3.5 py-2.5 text-sm font-semibold text-ink-3 transition-colors hover:bg-inset"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+
+      {!me.identities.email && (
+        <form onSubmit={handleAddEmail} className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <input
+            type="email"
+            required
+            value={addEmailValue}
+            onChange={(e) => setAddEmailValue(e.target.value)}
+            placeholder="you@email.com"
+            className="flex-1 rounded-[10px] border border-hairline bg-inset px-3.5 py-2.5 text-base text-ink focus:outline-none focus:ring-2 focus:ring-clay sm:text-sm"
+          />
+          <button
+            type="submit"
+            disabled={addEmailSubmitting}
+            className="min-h-[44px] whitespace-nowrap rounded-[10px] bg-clay-grad px-4 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-60"
+          >
+            {addEmailSubmitting ? 'Sending…' : 'Add email'}
+          </button>
+        </form>
+      )}
+
+      {emailError && <p className="mt-2 text-xs text-red-600">{emailError}</p>}
+      {emailSuccess && <p className="mt-2 text-xs text-green-700">{emailSuccess}</p>}
+      {addEmailError && <p className="mt-2 text-xs text-red-600">{addEmailError}</p>}
+      {addEmailSuccess && <p className="mt-2 text-xs text-green-700">{addEmailSuccess}</p>}
+    </div>
+  )
+}
+
+function AccountIdentityCard({ me, refresh }: { me: AuthMe; refresh: () => void }) {
+  return (
+    <SCard icon={User} title="Account" sub="Your email and public username" bodyPadded={false}>
+      <EmailRow me={me} />
+      <UsernameRow me={me} refresh={refresh} />
     </SCard>
   )
 }
@@ -485,26 +402,115 @@ function SignInConnectionCard({ me, refresh }: { me: AuthMe; refresh: () => void
 /* ── Sync X bookmarks ──────────────────────────────────────────── */
 function SyncBookmarksCard({
   xConnected,
+  xIdentity,
+  refresh,
   cooldown,
   displayedCooldown,
   formatCooldown,
   onSyncClick,
   lastSyncAt,
+  xSynced,
+  xOnAdhx,
   totalBookmarks,
   getTimeSince,
 }: {
   xConnected: boolean
+  xIdentity: { username: string } | null
+  refresh: () => void
   cooldown: CooldownStatus
   displayedCooldown: number
   formatCooldown: (ms: number) => string
   onSyncClick: () => void
   lastSyncAt: string | null
+  xSynced: number
+  xOnAdhx: number
   totalBookmarks: number
   getTimeSince: (dateStr: string) => string
 }) {
-  if (!xConnected) {
-    return (
-      <SCard icon={RefreshCw} title="Sync X bookmarks" sub="Pull your latest posts on demand">
+  const [xActionLoading, setXActionLoading] = useState(false)
+  const [xError, setXError] = useState<string | null>(null)
+
+  async function handleDisconnectX() {
+    if (!window.confirm('Disconnect your X account? You can reconnect any time.')) return
+    setXActionLoading(true)
+    setXError(null)
+    try {
+      const res = await fetch('/api/auth/twitter/disconnect', { method: 'POST' })
+      if (res.ok) {
+        refresh()
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setXError(data.error || 'Failed to disconnect.')
+      }
+    } catch {
+      setXError('Failed to disconnect. Please try again.')
+    } finally {
+      setXActionLoading(false)
+    }
+  }
+
+  return (
+    <SCard icon={RefreshCw} title="Sync X bookmarks" sub="Pull your latest posts on demand">
+      {xIdentity && (
+        <div className="mb-4">
+          <div className="flex items-center gap-[13px]">
+            <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center flex-shrink-0">
+              <PlatformGlyph platform="twitter" size={18} className="text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-mono font-bold text-[14.5px] text-ink truncate">
+                @{xIdentity.username}
+              </p>
+              <span className="inline-flex items-center text-[10px] font-bold tracking-[0.06em] uppercase text-green-700 bg-green-500/10 px-2 py-0.5 rounded-full mt-1">
+                Connected
+              </span>
+            </div>
+            <button
+              onClick={handleDisconnectX}
+              disabled={xActionLoading}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] rounded-[10px] border border-hairline text-ink-2 font-semibold text-[13px] whitespace-nowrap hover:bg-inset transition-colors disabled:opacity-60"
+            >
+              {xActionLoading ? (
+                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <LogOut className="h-3.5 w-3.5" />
+              )}
+              <span>Disconnect</span>
+            </button>
+          </div>
+          {xError && <p className="text-xs text-red-600 mt-2">{xError}</p>}
+        </div>
+      )}
+
+      {xConnected ? (
+        <>
+          <button
+            onClick={() => cooldown.canSync && onSyncClick()}
+            disabled={!cooldown.canSync}
+            className={cn(
+              'w-full flex items-center justify-center gap-2.5 py-[15px] min-h-[44px] rounded-[12px] font-bold text-[15.5px] transition-all',
+              cooldown.canSync
+                ? 'bg-clay-grad text-white shadow-glow hover:opacity-90'
+                : 'bg-clay-grad text-white/70 opacity-60 cursor-not-allowed',
+            )}
+          >
+            <RefreshCw className="h-[18px] w-[18px]" />
+            <span>
+              {cooldown.canSync ? 'Sync now' : `Available in ${formatCooldown(displayedCooldown)}`}
+            </span>
+          </button>
+          <p className="mt-3 text-center text-[13px] text-ink-3">
+            <span>
+              {lastSyncAt ? `Last sync ${getTimeSince(lastSyncAt)}` : 'No syncs yet'}
+              {` · ${xSynced} synced from X · ${xOnAdhx} from X on ADHX`}
+              {totalBookmarks > xOnAdhx ? ` · ${totalBookmarks} in your collection` : ''}
+            </span>
+          </p>
+          <p className="mt-1.5 text-center text-xs text-ink-3">
+            <span>Syncs are rate-limited to once per hour.</span>
+          </p>
+        </>
+      ) : (
         <div className="text-center py-2">
           <p className="text-[13.5px] text-ink-2 mb-4">
             Connect your X account to sync your bookmarks.
@@ -516,35 +522,7 @@ function SyncBookmarksCard({
             <ConnectWithX size={14} />
           </a>
         </div>
-      </SCard>
-    )
-  }
-
-  return (
-    <SCard icon={RefreshCw} title="Sync X bookmarks" sub="Pull your latest posts on demand">
-      <button
-        onClick={() => cooldown.canSync && onSyncClick()}
-        disabled={!cooldown.canSync}
-        className={cn(
-          'w-full flex items-center justify-center gap-2.5 py-[15px] min-h-[44px] rounded-[12px] font-bold text-[15.5px] transition-all',
-          cooldown.canSync
-            ? 'bg-clay-grad text-white shadow-glow hover:opacity-90'
-            : 'bg-clay-grad text-white/70 opacity-60 cursor-not-allowed',
-        )}
-      >
-        <RefreshCw className="h-[18px] w-[18px]" />
-        <span>
-          {cooldown.canSync ? 'Sync now' : `Available in ${formatCooldown(displayedCooldown)}`}
-        </span>
-      </button>
-      <p className="text-[13px] text-ink-3 text-center mt-3">
-        {lastSyncAt ? `Last sync ${getTimeSince(lastSyncAt)}` : 'No syncs yet'}
-        {' · '}
-        {totalBookmarks} {totalBookmarks === 1 ? 'bookmark' : 'bookmarks'} in your collection
-      </p>
-      <p className="text-xs text-ink-3 text-center mt-1.5">
-        Syncs are rate-limited to once per 15 minutes.
-      </p>
+      )}
     </SCard>
   )
 }
@@ -623,6 +601,8 @@ function SettingsPage() {
     syncs: [],
     lastSyncAt: null,
     totalBookmarks: 0,
+    xOnAdhx: 0,
+    xSynced: 0,
   })
   const [syncHistoryLoading, setSyncHistoryLoading] = useState(true)
 
@@ -658,6 +638,11 @@ function SettingsPage() {
       setMessage({ type: 'error', text: 'That email is already linked to another account.' })
     } else if (authError === 'x_already_linked') {
       setMessage({ type: 'error', text: 'That X account is already linked to another account.' })
+    } else if (authError === 'x_link_only') {
+      setMessage({
+        type: 'error',
+        text: 'Sign in with email first, then link X here to sync bookmarks.',
+      })
     } else if (authError) {
       setMessage({ type: 'error', text: 'Something went wrong signing you in.' })
     } else if (success) {
@@ -695,6 +680,8 @@ function SettingsPage() {
         syncs: data.syncs || [],
         lastSyncAt: data.lastSyncAt ?? null,
         totalBookmarks: data.totalBookmarks ?? 0,
+        xOnAdhx: data.xOnAdhx ?? 0,
+        xSynced: data.xSynced ?? 0,
       })
     } catch (error) {
       console.error('Failed to fetch sync history:', error)
@@ -801,7 +788,7 @@ function SettingsPage() {
         })
         setShowClearDataModal(false)
         setConfirmText('')
-        setSyncHistory({ syncs: [], lastSyncAt: null, totalBookmarks: 0 })
+        setSyncHistory({ syncs: [], lastSyncAt: null, totalBookmarks: 0, xOnAdhx: 0, xSynced: 0 })
         // Notify Header to refresh stats
         window.dispatchEvent(new CustomEvent('stats-updated'))
       } else {
@@ -892,16 +879,16 @@ function SettingsPage() {
           />
         )}
 
-        {/* Sign-in & connection */}
+        {/* Email + username */}
         {meLoading ? (
           <SCard>
-            <div className="flex items-center gap-3 text-ink-3 px-5 py-[18px]">
+            <div className="flex items-center gap-3 px-5 py-[18px] text-ink-3">
               <RefreshCw className="h-5 w-5 animate-spin" />
               <span>Checking your account…</span>
             </div>
           </SCard>
         ) : (
-          me && <SignInConnectionCard me={me} refresh={fetchMe} />
+          me && <AccountIdentityCard me={me} refresh={fetchMe} />
         )}
 
         <IosShortcutSettingsCard />
@@ -911,11 +898,15 @@ function SettingsPage() {
         {!meLoading && me && (
           <SyncBookmarksCard
             xConnected={me.xConnected}
+            xIdentity={me.identities.x}
+            refresh={fetchMe}
             cooldown={cooldown}
             displayedCooldown={displayedCooldown}
             formatCooldown={formatCooldown}
             onSyncClick={() => setShowSyncModal(true)}
             lastSyncAt={syncHistory.lastSyncAt}
+            xSynced={syncHistory.xSynced}
+            xOnAdhx={syncHistory.xOnAdhx}
             totalBookmarks={syncHistory.totalBookmarks}
             getTimeSince={getTimeSince}
           />
@@ -1086,7 +1077,9 @@ function SettingsPage() {
         {/* Version Footer */}
         <div className="text-center pt-4">
           <p className="text-xs text-ink-3 font-mono">
-            ADHX v{process.env.NEXT_PUBLIC_APP_VERSION || '0.0.0'}
+            <a href={GITHUB_RELEASE_URL} className="underline-offset-2 hover:underline">
+              <span>ADHX v{APP_VERSION}</span>
+            </a>
           </p>
           <p className="mt-2 text-xs text-ink-3">
             <a href="/privacy" className="underline-offset-2 hover:underline">

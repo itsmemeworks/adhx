@@ -20,11 +20,12 @@ describe('SignInModal', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('renders the default title and both sign-in options', () => {
+  it('renders the default title and email sign-in only', () => {
     render(<SignInModal open onClose={vi.fn()} />)
     expect(screen.getByText('Sign in to ADHX')).toBeInTheDocument()
-    expect(screen.getByText('Continue with')).toBeInTheDocument()
     expect(screen.getByText('Email me a magic link')).toBeInTheDocument()
+    expect(screen.queryByText('Continue with')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /continue with/i })).not.toBeInTheDocument()
   })
 
   it('renders a custom title and subtitle', () => {
@@ -40,11 +41,9 @@ describe('SignInModal', () => {
     expect(screen.getByText(/curated by @weedauwl/)).toBeInTheDocument()
   })
 
-  it('the "Continue with X" control links to the OAuth start route with returnTo', () => {
+  it('does not offer X as a sign-in method', () => {
     render(<SignInModal open onClose={vi.fn()} returnTo="/trending" />)
-    const link = screen.getByText('Continue with').closest('a')
-    expect(link).not.toBeNull()
-    expect(link?.getAttribute('href')).toBe('/api/auth/twitter?returnUrl=%2Ftrending')
+    expect(document.querySelector('a[href^="/api/auth/twitter"]')).toBeNull()
   })
 
   it('submits the email and shows the success state', async () => {

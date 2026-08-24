@@ -45,10 +45,6 @@ function AccountTabButtons({ accountTabs }: { accountTabs?: TheaterAccountTabs }
 }
 
 vi.mock('@/components/theater/Stage', () => ({ Stage: () => <div data-testid="stage" /> }))
-vi.mock('@/components/theater/CollectionStage', () => ({
-  CollectionStage: () => <div data-testid="collection-stage" />,
-  useInstagramStage: () => ({ status: 'idle', slow: false, src: null, poster: null }),
-}))
 vi.mock('@/components/theater/TheaterDesktopChrome', () => ({
   DesktopStageChrome: AccountTabButtons,
   DesktopDock: () => null,

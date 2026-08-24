@@ -54,12 +54,7 @@ import {
 } from './types'
 import { QuoteArticleToggle } from './QuoteArticleToggle'
 import { TheaterCaption } from './TheaterCaption'
-import {
-  TheaterProgressLine,
-  progressKindFor,
-  progressKindForPin,
-  collectionTabProgressKind,
-} from './TheaterProgressLine'
+import { TheaterProgressLine, progressKindFor, progressKindForPin } from './TheaterProgressLine'
 import { UpNextList } from './UpNextList'
 import { SavePlaylistButton } from './SavePlaylistButton'
 import { SavePostButton, PersonalLiveSaveButton } from './SavePostButton'
@@ -234,19 +229,12 @@ export function TheaterMobileChrome({
 
   // `mediaKind` is the REAL content kind — drives the audio/pause buttons,
   // `paused`/`soundPulse` state, and the pause/resume handler in every tab.
-  // `progressKind` additionally demotes 'timed' to 'none' in the collection theater's
-  // Collection tab (photo/text/quote/article still wait on a deliberate
-  // Done/Later/Delete there — no 10s dwell auto-advance) and feeds ONLY
-  // <TheaterProgressLine/> — the two must not be conflated, or forcing off
-  // the dwell line for those items also silently hides/breaks the audio and
-  // pause controls for collection-tab videos (which still play via
-  // StageVideo/StageInstagram/StageYouTube and DO keep the 'video' kind —
-  // "My Collection is just a different playlist in that same theater").
+  // `progressKind` additionally demotes 'timed' to 'none' while Repeat-one
+  // (or the shared-post pin) is active, so the dwell line does not tick
+  // toward an advance that will never happen. My Collection uses the same
+  // 10s dwell as Live for photo/text/quote/article.
   const mediaKind = progressKindFor(current, articleMode)
-  const progressKind = progressKindForPin(
-    collectionTabProgressKind(mediaKind, collection?.tab === 'collection'),
-    repeatCurrent,
-  )
+  const progressKind = progressKindForPin(mediaKind, repeatCurrent)
 
   // Pause/play button state. `'video'`-kind items mirror StageVideo's real
   // playing state (so the peek-bar button, or an autoplay retry, keeps the
@@ -919,11 +907,8 @@ export function TheaterMobileChrome({
               >
                 <ChevronUp size={18} />
               </button>
-              {/* Video always gets a pause button (even in the collection tab,
-                where `progressKind` is forced 'none'); a 'timed' item only
-                gets one where there's an actual auto-advance to pause — never
-                in the collection tab, where pausing a static post is
-                meaningless. */}
+              {/* Pause whenever there's something to pause: video playback,
+                or the 10s dwell on a photo/text/article. */}
               {(mediaKind === 'video' || progressKind !== 'none') && (
                 <button
                   type="button"

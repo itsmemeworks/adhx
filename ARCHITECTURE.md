@@ -54,16 +54,18 @@ SQLite  ──►  /api/feed (library)  ·  theater seed (Live / collection / pl
 
 ## Auth flow
 
-Accounts are first-class (`users` + `user_identities`). **Magic-link email**
-and **X OAuth 2.0 PKCE** land in one account. Viewing never requires an
-account; saving does.
+Accounts are first-class (`users` + `user_identities`). **Sign-in is
+magic-link email only.** X OAuth is an optional Settings link on that
+account so you can sync X bookmarks. Viewing never requires an account;
+saving does.
 
 ```
 Email:  POST /api/auth/email/request  ──►  link (Resend, or console in dev)
         GET  /api/auth/email/callback?token=  ──►  session cookie
 
-X:      /api/auth/twitter  ──►  X consent  ──►  /api/auth/twitter/callback
-        findOrCreateUserForX  ──►  encrypt tokens  ──►  signed JWT session
+X (authed):  /api/auth/twitter  ──►  X consent  ──►  /api/auth/twitter/callback
+             findOrCreateUserForX(session)  ──►  encrypt tokens
+             (unsigned start/callback → /?auth_error=x_link_only)
 ```
 
 - Session cookie `adhx_session` is a JWT (`jose`, 30-day, httpOnly). Signing

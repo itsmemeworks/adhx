@@ -10,16 +10,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useState } from 'react'
 import { render, act, screen, fireEvent } from '@testing-library/react'
 import { TheaterShell } from '@/components/theater/TheaterShell'
-import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
+import { theaterItemKey, type TheaterFeedSeed, type TheaterItem } from '@/components/theater/types'
 import type { FeedItem } from '@/components/feed/types'
 
-vi.mock('@/components/theater/Stage', () => ({ Stage: () => <div data-testid="stage" /> }))
-
-let collectionOnEnded: (() => void) | undefined
-vi.mock('@/components/theater/CollectionStage', () => ({
-  CollectionStage: (props: { onEnded?: () => void }) => {
-    collectionOnEnded = props.onEnded
-    return <div data-testid="collection-stage" />
+let stageOnEnded: (() => void) | undefined
+vi.mock('@/components/theater/Stage', () => ({
+  Stage: (props: { onEnded?: () => void }) => {
+    stageOnEnded = props.onEnded
+    return <div data-testid="stage" />
   },
 }))
 
@@ -84,7 +82,7 @@ async function cycleRepeat() {
 describe('TheaterShell: collection tab has the repeat control', () => {
   beforeEach(() => {
     mockMobileChrome.mockClear()
-    collectionOnEnded = undefined
+    stageOnEnded = undefined
     window.localStorage.clear()
   })
 
@@ -120,10 +118,10 @@ describe('TheaterShell: collection tab has the repeat control', () => {
     expect(chromeProps().repeatMode).toBe('all')
     expect(chromeProps().currentKey).toBe('twitter:1')
 
-    await act(async () => collectionOnEnded?.())
+    await act(async () => stageOnEnded?.())
     expect(chromeProps().currentKey).toBe('twitter:2')
 
-    await act(async () => collectionOnEnded?.())
+    await act(async () => stageOnEnded?.())
     expect(chromeProps().currentKey).toBe('twitter:1')
     expect(screen.queryByText('All caught up')).not.toBeInTheDocument()
   })
@@ -148,5 +146,88 @@ describe('TheaterShell: collection tab has the repeat control', () => {
     expect(screen.queryByText('All caught up')).not.toBeInTheDocument()
     expect(chromeProps().currentKey).toBe('twitter:1')
     expect(chromeProps().repeatMode).toBe('all')
+  })
+
+  it('advances a timed post via theater-advance and wraps in repeat-all', async () => {
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={emptySeed}
+          mode="personal"
+          initialPersonalTab="collection"
+          personalItems={[feedItem('1'), feedItem('2')]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    await cycleRepeat() // off -> all
+    expect(chromeProps().currentKey).toBe('twitter:1')
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent('theater-advance'))
+    })
+    expect(chromeProps().currentKey).toBe('twitter:2')
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent('theater-advance'))
+    })
+    expect(chromeProps().currentKey).toBe('twitter:1')
+    expect(screen.queryByText('All caught up')).not.toBeInTheDocument()
+  })
+})
+
+function liveText(bookmarkId: string): TheaterItem {
+  return {
+    action: 'save',
+    platform: 'twitter',
+    bookmarkId,
+    author: `author${bookmarkId}`,
+    url: `/author${bookmarkId}/status/${bookmarkId}`,
+    createdAt: '2026-08-18T00:00:00Z',
+    contentType: 'text',
+    text: `live ${bookmarkId}`,
+    trendCount: 0,
+  } as TheaterItem
+}
+
+describe('TheaterShell: collection is not the live waiting stage', () => {
+  beforeEach(() => {
+    mockMobileChrome.mockClear()
+    stageOnEnded = undefined
+    window.localStorage.clear()
+  })
+
+  it('does not pause or swallow Space when every live seed post is already seen', async () => {
+    const live = [liveText('seen1'), liveText('seen2')]
+    window.localStorage.setItem('adhx-seen-v1', JSON.stringify(live.map(theaterItemKey)))
+    const pauseHeard = vi.fn()
+    const toggleHeard = vi.fn()
+    window.addEventListener('theater-pause', pauseHeard)
+    window.addEventListener('theater-toggle-play', toggleHeard)
+    try {
+      await act(async () => {
+        render(
+          <TheaterShell
+            seed={{ items: live, savedToday: 0, recentActivity: 0 }}
+            mode="personal"
+            initialPersonalTab="collection"
+            personalItems={[feedItem('c1')]}
+            onClose={vi.fn()}
+          />,
+        )
+      })
+
+      expect(screen.getByTestId('stage')).toBeInTheDocument()
+      expect(screen.queryByText('You’re all caught up')).not.toBeInTheDocument()
+      expect(pauseHeard).not.toHaveBeenCalled()
+
+      await act(async () => {
+        fireEvent.keyDown(window, { key: ' ' })
+      })
+      expect(toggleHeard).toHaveBeenCalled()
+    } finally {
+      window.removeEventListener('theater-pause', pauseHeard)
+      window.removeEventListener('theater-toggle-play', toggleHeard)
+    }
   })
 })

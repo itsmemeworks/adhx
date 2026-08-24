@@ -131,6 +131,8 @@ describe('/leaderboard pages', () => {
       const html = renderToStaticMarkup(await LeaderboardPage())
 
       expect(html).toContain('No public playlists charting yet')
+      expect(html).toContain('People tag posts into playlists')
+      expect(html).toContain('A playlist is a public tag')
     })
 
     it('never renders a private tag even with events', async () => {

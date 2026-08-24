@@ -73,7 +73,7 @@ const replaceSpy = vi.fn((url: string) => {
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushSpy, replace: replaceSpy, prefetch: vi.fn() }),
-  usePathname: () => '/',
+  usePathname: () => '/library',
   useSearchParams: () => {
     // Force a re-render on every URL change, mirroring how Next.js
     // re-renders every subscriber of useSearchParams() on navigation.
@@ -182,7 +182,8 @@ describe('Header search -> feed filtering (regression)', () => {
     await waitFor(() => expect(feedRequests.length).toBeGreaterThan(0))
     feedRequests = []
 
-    const input = await screen.findByLabelText('Search bookmarks')
+    fireEvent.click(await screen.findByRole('button', { name: 'Search' }))
+    const input = await screen.findByLabelText('Search')
     fireEvent.change(input, { target: { value: 'rust' } })
 
     // Real 300ms debounce in Header — wait past it, then let the URL update

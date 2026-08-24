@@ -4,13 +4,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import {
-  IosShortcutHow,
+  IosHow,
   IosShortcutInstallButton,
   IosShortcutNudge,
   IosShortcutSettingsCard,
   SHORTCUT_DISMISS_KEY,
 } from '@/components/IosShortcutInstall'
-import { X_ONLY_SHORTCUT_URL } from '@/lib/share/ios'
+import { IOS_SHORTCUT_URL } from '@/lib/share/ios'
 
 let mockIos = true
 vi.mock('@/lib/platform', () => ({
@@ -27,7 +27,7 @@ describe('IosShortcutInstallButton', () => {
   it('opens the iCloud shortcut as a one-tap install', () => {
     render(<IosShortcutInstallButton />)
     const link = screen.getByRole('link', { name: /add to share sheet/i })
-    expect(link).toHaveAttribute('href', X_ONLY_SHORTCUT_URL)
+    expect(link).toHaveAttribute('href', IOS_SHORTCUT_URL)
     expect(link).toHaveAttribute('target', '_blank')
   })
 
@@ -42,11 +42,16 @@ describe('IosShortcutInstallButton', () => {
 describe('IosShortcutSettingsCard', () => {
   it('shows the iCloud shortcut on iOS', () => {
     render(<IosShortcutSettingsCard />)
-    expect(screen.getByText('iOS shortcut')).toBeInTheDocument()
+    expect(screen.getByText('Add to the iOS share menu')).toBeInTheDocument()
+    expect(
+      screen.getByText('Then from X, Instagram, TikTok, or YouTube: Share → ADHX.'),
+    ).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /add to share sheet/i })).toHaveAttribute(
       'href',
-      X_ONLY_SHORTCUT_URL,
+      IOS_SHORTCUT_URL,
     )
+    expect(screen.getByText('Add shortcut')).toBeInTheDocument()
+    expect(screen.getByText('Share → ADHX')).toBeInTheDocument()
   })
 
   it('stays hidden on non-iOS', () => {
@@ -56,15 +61,15 @@ describe('IosShortcutSettingsCard', () => {
   })
 })
 
-describe('IosShortcutHow', () => {
-  it('keeps the 4-platform recipe behind a disclosure', () => {
-    render(<IosShortcutHow />)
-    const summary = screen.getByText(/instagram, tiktok, youtube too/i)
-    expect(summary.tagName).toBe('SUMMARY')
-    expect(summary.className).toMatch(/text-ink-3/)
-    expect(summary.className).toMatch(/inline-flex/)
-    expect(summary.className).not.toMatch(/text-clay/)
-    expect(screen.getByText(/https:\/\/adhx.com\/share\?url=/)).toBeInTheDocument()
+describe('IosHow', () => {
+  it('shows three visual steps', () => {
+    render(<IosHow />)
+    expect(screen.getByText('Add shortcut')).toBeInTheDocument()
+    expect(screen.getByText('Open a post')).toBeInTheDocument()
+    expect(screen.getByText('Share → ADHX')).toBeInTheDocument()
+    expect(screen.queryByText(/Adds ADHX to your iOS share menu/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/X today/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/instagram, tiktok, youtube too/i)).not.toBeInTheDocument()
   })
 })
 
@@ -74,7 +79,7 @@ describe('IosShortcutNudge', () => {
     expect(screen.getByText('Next time, skip this page')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /add to share sheet/i })).toHaveAttribute(
       'href',
-      X_ONLY_SHORTCUT_URL,
+      IOS_SHORTCUT_URL,
     )
 
     fireEvent.click(screen.getByLabelText('Dismiss'))

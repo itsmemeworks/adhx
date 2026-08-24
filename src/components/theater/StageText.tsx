@@ -6,8 +6,9 @@
  * bottom-scrim caption (same treatment as `DiscoverCard`'s media cards).
  *
  * Both variants render body text through `TheaterLinkedText` (linkifies URLs,
- * strips media t.co tails, decodes entities) so long-form X posts — which can
- * run to thousands of characters — never dead-end in unreadable overflow:
+ * strips media t.co tails, decodes entities, applies Bionic Reading when the
+ * preference is on) so long-form X posts — which can run to thousands of
+ * characters — never dead-end in unreadable overflow:
  * a short typeset tweet floats in the middle of the stage; a long one
  * (or one with photos/video/a quote) starts below the chrome and scrolls.
  * Overflowing photo captions use Read (article mode), not tap-to-expand.

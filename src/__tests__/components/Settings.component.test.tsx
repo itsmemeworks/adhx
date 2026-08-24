@@ -1,14 +1,14 @@
 /**
  * @vitest-environment jsdom
  *
- * Component tests for the rebuilt Settings page's "Sign-in & connection" and
+ * Component tests for the Settings Email, Username, and
  * "Sync X bookmarks" cards — the identity + sync-gating logic added on top of
  * the new `/api/auth/me` contract (accounts + magic-link work).
  *
  * Note: `getAllByText('@tester')[0]` (not `getByText`) is used throughout —
- * the card's Username row (see `UsernameRow.component.test.tsx`) renders
+ * the username row (see `Settings.username.component.test.tsx`) renders
  * `@{username}` too, so an X-derived account with a matching handle shows
- * "@tester" twice on screen (the X row and the Username row).
+ * "@tester" twice on screen (the X row in Sync and the username row).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
@@ -65,7 +65,7 @@ function mockFetch(me: object, overrides: Partial<Record<string, FetchImpl>> = {
   return fetchMock
 }
 
-describe('SettingsClient — Sign-in & connection', () => {
+describe('SettingsClient — Email, Username, and Sync X', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -75,9 +75,13 @@ describe('SettingsClient — Sign-in & connection', () => {
     render(<SettingsClient />)
 
     await waitFor(() => expect(screen.getAllByText('@tester')[0]).toBeInTheDocument())
+    expect(screen.getByText('Account')).toBeInTheDocument()
+    expect(screen.getByText('Your email and public username')).toBeInTheDocument()
+    expect(screen.queryByText('Email')).not.toBeInTheDocument()
+    expect(screen.queryByText('Username')).not.toBeInTheDocument()
+    expect(screen.queryByText('Magic link')).not.toBeInTheDocument()
     expect(screen.getByText('Connected')).toBeInTheDocument()
     expect(screen.getByText('tester@example.com')).toBeInTheDocument()
-    expect(screen.getByText('Magic link')).toBeInTheDocument()
     // Sync card should show the full sync UI (xConnected)
     expect(screen.getByRole('button', { name: /sync now/i })).toBeInTheDocument()
   })
@@ -86,9 +90,9 @@ describe('SettingsClient — Sign-in & connection', () => {
     mockFetch(ME_EMAIL_ONLY)
     render(<SettingsClient />)
 
-    await waitFor(() => expect(screen.getByText('Not connected')).toBeInTheDocument())
-    expect(screen.getByText('tester@example.com')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText('tester@example.com')).toBeInTheDocument())
     expect(screen.getByText(/connect your x account to sync your bookmarks/i)).toBeInTheDocument()
+    expect(screen.queryByText('Link X to sync bookmarks')).not.toBeInTheDocument()
     // No sync trigger button should be present
     expect(screen.queryByRole('button', { name: /sync now/i })).not.toBeInTheDocument()
   })
@@ -171,7 +175,7 @@ describe('SettingsClient — Sign-in & connection', () => {
     render(<SettingsClient />)
 
     await waitFor(() =>
-      expect(screen.getByText(/add an email so you can sign in without x/i)).toBeInTheDocument(),
+      expect(screen.getByText(/add an email — that.?s how you sign in/i)).toBeInTheDocument(),
     )
     expect(screen.getByPlaceholderText('you@email.com')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /add email/i })).toBeInTheDocument()
@@ -192,14 +196,37 @@ describe('SettingsClient — Sign-in & connection', () => {
             },
           ],
           lastSyncAt: '2026-08-19T18:40:05.000Z',
-          totalBookmarks: 42,
+          totalBookmarks: 50,
+          xOnAdhx: 42,
+          xSynced: 40,
         }),
     })
 
     render(<SettingsClient />)
 
     await waitFor(() => expect(screen.getByText('+7 new')).toBeInTheDocument())
-    expect(screen.getByText(/42 bookmarks in your collection/i)).toBeInTheDocument()
+    expect(screen.getByText(/40 synced from X/i)).toBeInTheDocument()
+    expect(screen.getByText(/42 from X on ADHX/i)).toBeInTheDocument()
+    expect(screen.getByText(/50 in your collection/i)).toBeInTheDocument()
+    expect(screen.getByText(/once per hour/i)).toBeInTheDocument()
     expect(screen.getByText('1 page')).toBeInTheDocument()
+  })
+})
+
+describe('SettingsClient — version footer', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('links the ADHX version to that GitHub release', async () => {
+    mockFetch(ME_BOTH)
+    render(<SettingsClient />)
+
+    const version = process.env.NEXT_PUBLIC_APP_VERSION || '0.0.0'
+    const link = await screen.findByRole('link', { name: `ADHX v${version}` })
+    expect(link).toHaveAttribute(
+      'href',
+      `https://github.com/itsmemeworks/adhx/releases/tag/v${version}`,
+    )
   })
 })

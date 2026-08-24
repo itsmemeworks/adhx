@@ -26,6 +26,24 @@ authedTest.describe('collection repeat', () => {
     await expect(page.getByRole('button', { name: 'Keep playing' })).toBeVisible()
   })
 
+  authedTest('collection is not the live waiting stage — Space still pauses', async ({ page }) => {
+    await page.goto('/collection')
+    await expectTheaterReady(page)
+    await expect(page.getByText('waiting for new sends')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
+
+    const pause = page.getByRole('button', { name: 'Pause' })
+    const play = page.getByRole('button', { name: 'Play' })
+    await expect(pause.or(play)).toBeVisible()
+    const wasPaused = await play.isVisible()
+    await page.keyboard.press(' ')
+    if (wasPaused) {
+      await expect(pause).toBeVisible()
+    } else {
+      await expect(play).toBeVisible()
+    }
+  })
+
   authedTest('Next past the last post shows All Clear; Keep playing restarts', async ({ page }) => {
     await page.goto(`/collection?open=${TIKTOK_TWIN.id}&platform=tiktok`)
     await expectTheaterReady(page)

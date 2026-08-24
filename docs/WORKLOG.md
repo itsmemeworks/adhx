@@ -6,6 +6,98 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-24 — X-link lands on Settings, not a dropped firstLogin
+
+After linking X, the callback used to send `/?firstLogin=true`. Signed-in `/` now redirects to `/collection` and drops the query, so the library sync modal never ran. Default landing is `/settings` (returnUrl still wins). Follow-up: none.
+
+## 2026-08-24 — Sync is once an hour; X stats are ours, not X's
+
+Default sync cooldown is 60 minutes (still overridable via `SYNC_COOLDOWN_MINUTES`). Settings shows synced-from-X vs from-X-on-ADHX (paste/prefix included); collection total only if other platforms exist. X's bookmarks API has no user total (~800 recent cap), so we never invent one. Follow-up: none.
+
+## 2026-08-24 — Account: no hairlines, Save sits on the field
+
+Account dropped the row dividers and got a subtitle ("Your email and public username"). Changing a handle is one row: the field, Save, Cancel — the 15-char cap leaves room. Follow-up: none.
+
+## 2026-08-24 — Username change is just the field
+
+Changing a handle no longer stacks "@name", "N changes left", and a paragraph about redirects on top of the same form. Change swaps the row for the input, Available, Save, Cancel. Idle still shows the short "N changes left". Follow-up: none.
+
+## 2026-08-24 — Settings Account card: mail and @ icons
+
+Email and username sit in one Account card. Each row has a clay mail / @ icon beside the value — no extra titles, no MAGIC LINK pill. Connect X stays on Sync X bookmarks. Follow-up: none.
+
+## 2026-08-24 — /collection uses the same Stage as Live
+
+Loading My Collection paused playback (and ate Space) whenever every live pulse post was already seen — the live caught-up/`theater-pause` machinery ran on a tab that isn't that playlist. Collection now plays through the same `Stage` as Live/shared/tags; waiting/pause/Space-guard stay off that tab. 10s dwell and video `onEnded` were already the same events. Follow-up: none.
+
+## 2026-08-24 — Settings identity is value + Change
+
+Email and Username dropped the titled headers and the second matching icon. One untitled card, two rows: the address / `@handle`, a short hint, Change. Magic-link pill is gone (that's the only sign-in). Connect X stays on Sync X bookmarks. Follow-up: none.
+
+## 2026-08-24 — /tags delete has no confirm
+
+Trash on a tag card DELETEs immediately — no `window.confirm`. Follow-up: none.
+
+## 2026-08-24 — My Collection: 10s dwell for photos and text
+
+Non-video posts in `/collection` had no timer while Repeat was still on the dock, so Repeat-all/one had nothing to time against. The clay 10s line is back; dwell completion uses the same `personalAdvanceOnEnded` path as video-ended (off → All Clear, all wraps, one stays). Follow-up: none.
+
+## 2026-08-24 — Settings: Email and Username are their own cards
+
+Account had email, username, and Connect X in one card. Email and Username are now separate sections; Connect / Disconnect X lives on Sync X bookmarks. Follow-up: none.
+
+## 2026-08-24 — /tags posters: name + stats on the image, actions below
+
+Tag management cards stacked Public/copy/open/delete on the mosaic with the title. The mosaic now only overlays `#tag` + count/views/saves; visibility, copy, open, and delete sit in a horizontal row under the image (`CollectionPosterCard` action bar). Starter-collection clone CTAs use the same row. Follow-up: none.
+
+## 2026-08-24 — Library FilterBar sticks under the header
+
+FilterBar was `sticky top-0`, same as the Header, so on scroll it slid underneath and "Done adding" vanished. It now sticks at `top-16`. Follow-up: none.
+
+## 2026-08-24 — iOS shortcut is the share menu for every network
+
+The published shortcut now covers X, Instagram, TikTok, and YouTube. Settings (and the shared `IosHow` strip) say it adds ADHX to the iOS share menu, then you Share → ADHX from the social apps. Copy no longer calls it X-only. Follow-up: none.
+
+## 2026-08-24 — Header search is icon-expand, library + tags only
+
+The centered search field threw the authed bar off-center and showed on pages that cannot use it. Search is now a magnifying-glass left of the avatar; click expands. Visible only on `/library` (placeholder Search, writes `/library?search=`) and `/tags` (placeholder Tags, `tags-search` event, no URL). Follow-up: none.
+
+## 2026-08-24 — /tags cards click through; tags can be deleted
+
+The poster footer's title/count sat above the view link and ate clicks — only the mosaic (not the #tag) opened the playlist. Footer is now `pointer-events-none` except Public/Private + copy/open/delete. Each card has a delete control (`DELETE /api/tags`, confirm first) so tags created in the theater picker can be removed here. Follow-up: none.
+
+## 2026-08-24 — Theater menu keeps Radio row, tabs indent under it
+
+On the theater page the avatar menu had replaced Theater with an uppercase heading + Live / My Collection. Theater is the Radio + 13px row again (same as Library / the Header menu); Live and My Collection sit indented under it with their own icons. Follow-up: none.
+
+## 2026-08-24 — Settings version links to GitHub release
+
+The footer `ADHX v…` on `/settings` is now a link to `github.com/itsmemeworks/adhx/releases/tag/v{version}`. Follow-up: none.
+
+## 2026-08-24 — iOS shortcut how-to is a 3-step icon strip
+
+Settings (and landing) now show Add shortcut / Open X / Share → ADHX as clay tiles, same as Android. The collapsed “Instagram, TikTok, YouTube too” recipe is gone; a one-line footer covers those apps. Follow-up: none.
+
+## 2026-08-24 — Space pauses the 10s dwell on static posts
+
+`theater-toggle-play` (Space) only reached video stages. Timed items (photo/text/article) now pause/resume the progress line the same way, and the dock/peek-bar icon follows via `theater-pause`/`theater-resume`. Follow-up: none.
+
+## 2026-08-24 — Leaderboard subtitle names tag → playlist
+
+Replaced "saving into and sending around" with "People tag posts into playlists. A playlist is a public tag…" on `/leaderboard` (plus matching meta descriptions and empty-state). Follow-up: none.
+
+## 2026-08-24 — X is a Settings link, not a sign-in method
+
+Sign-in is email magic link only (`SignInModal`, PublicNav, landing hero). `GET /api/auth/twitter` and the callback require a session; unsigned visitors bounce `/?auth_error=x_link_only`. `findOrCreateUserForX` no longer creates accounts. Link X in Settings to sync bookmarks; SyncProgress reconnect stays for already-signed-in users. Follow-up: existing X-only accounts cannot sign in until they have email.
+
+## 2026-08-24 — Bionic Reading in theater articles and Read mode
+
+The Settings toggle now applies on `StageArticle` (headline + body) and the typeset `StageText` / quote-card reader. Two-line media captions stay plain. Follow-up: none.
+
+## 2026-08-24 — Library sits below Theater in account menus
+
+Theater group (Live / My Collection, or the single Theater entry) is now first in `TheaterAvatarMenu` and the Header avatar dropdown; Library follows, then Tags. Desktop top-bar order is unchanged. Follow-up: none.
+
 ## 2026-08-24 — Android install how-to is a 3-step icon strip
 
 The numbered paragraph list is gone. Add to Home / Open the app / Share → ADHX are clay tiles with a one-line hint. Settings shows the strip open; the theater nudge still hides it behind How. Follow-up: none.

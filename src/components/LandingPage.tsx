@@ -18,11 +18,12 @@ import {
 } from 'lucide-react'
 import { parseShareUrl, navigateToPastedLink } from '@/lib/utils/parse-share-url'
 import { getPlatformType, type PlatformType } from '@/lib/platform'
-import { LiveDot, ConnectWithX } from '@/components/matter'
+import { LiveDot } from '@/components/matter'
 import { PublicNav } from '@/components/PublicNav'
+import { SignInModal } from '@/components/auth'
 import { DiscoverCard } from '@/components/discover/DiscoverCard'
 import type { ActivityItem } from '@/components/discover/types'
-import { IosShortcutHow, IosShortcutInstallButton } from '@/components/IosShortcutInstall'
+import { IosHow, IosShortcutInstallButton } from '@/components/IosShortcutInstall'
 import { AndroidLandingPromo } from '@/components/AndroidInstall'
 import { BOOKMARKLET_CODE } from '@/lib/share/ios'
 
@@ -67,16 +68,11 @@ function useLiveActivity(): LiveState {
 }
 
 export function LandingPage() {
-  const [isLoading, setIsLoading] = useState(false)
+  const [showSignIn, setShowSignIn] = useState(false)
   const [tweetUrl, setTweetUrl] = useState('')
   const [urlError, setUrlError] = useState('')
   const live = useLiveActivity()
   const router = useRouter()
-
-  const handleLogin = () => {
-    setIsLoading(true)
-    window.location.href = '/api/auth/twitter'
-  }
 
   // URL detection + the on-ADHX preview path, and the navigation itself, are
   // owned by the shared detectPlatformPost/parseShareUrl/navigateToPastedLink
@@ -119,7 +115,7 @@ export function LandingPage() {
 
       <div className="relative">
         {/* ───────── Nav ───────── */}
-        <PublicNav onConnect={handleLogin} connecting={isLoading} />
+        <PublicNav onSignIn={() => setShowSignIn(true)} />
 
         {/* ───────── Hero ───────── */}
         <section
@@ -161,7 +157,7 @@ export function LandingPage() {
                 Preview a link
                 <ArrowRight className="w-[17px] h-[17px]" />
               </a>
-              <HeroSecondary onConnect={handleLogin} connecting={isLoading} />
+              <HeroSecondary onSignIn={() => setShowSignIn(true)} />
             </div>
           </div>
 
@@ -319,13 +315,14 @@ export function LandingPage() {
           </p>
         </footer>
       </div>
+      <SignInModal open={showSignIn} onClose={() => setShowSignIn(false)} />
     </div>
   )
 }
 
-/* ───────── Hero secondary: Share Sheet on iOS, Connect with X otherwise ───────── */
+/* ───────── Hero secondary: Share Sheet on iOS, Sign in otherwise ───────── */
 
-function HeroSecondary({ onConnect, connecting }: { onConnect: () => void; connecting: boolean }) {
+function HeroSecondary({ onSignIn }: { onSignIn: () => void }) {
   const [platform, setPlatform] = useState<PlatformType>('desktop')
   useEffect(() => {
     setPlatform(getPlatformType())
@@ -342,18 +339,11 @@ function HeroSecondary({ onConnect, connecting }: { onConnect: () => void; conne
 
   return (
     <button
-      onClick={onConnect}
-      disabled={connecting}
-      className="inline-flex items-center gap-2.5 px-5 py-3.5 rounded-card bg-ink text-surface font-semibold text-sm transition-opacity hover:opacity-90 disabled:opacity-50"
+      type="button"
+      onClick={onSignIn}
+      className="inline-flex items-center gap-2.5 px-5 py-3.5 rounded-card bg-ink text-surface font-semibold text-sm transition-opacity hover:opacity-90"
     >
-      {connecting ? (
-        <>
-          <span className="w-4 h-4 border-2 border-surface border-t-transparent rounded-full animate-spin" />
-          Connecting…
-        </>
-      ) : (
-        <ConnectWithX size={15} />
-      )}
+      Sign in
     </button>
   )
 }
@@ -371,7 +361,7 @@ function HowItWorks() {
       ? {
           icon: <Share className="w-[17px] h-[17px]" />,
           h: 'Share → ADHX',
-          b: "Add the shortcut once. Next time you're in X, tap Share → ADHX. No rewriting URLs like an animal.",
+          b: "Add the shortcut once — it lands in your iOS share menu. Next time you're in X, Instagram, TikTok, or YouTube, tap Share → ADHX.",
         }
       : {
           icon: <Link2 className="w-[17px] h-[17px]" />,
@@ -469,12 +459,12 @@ function ShortcutPromo() {
             {platform === 'ios' ? (
               <>
                 <p className="text-[14px] text-ink-2 leading-[1.5] mb-4">
-                  Add ADHX to the iPhone share sheet once. Next time you&apos;re in X, tap Share →
-                  ADHX — the preview opens so you can watch and send the file. No login, no
-                  rewriting the URL.
+                  Add ADHX to the iPhone share menu once. Next time you&apos;re in X, Instagram,
+                  TikTok, or YouTube, tap Share → ADHX — the preview opens so you can watch and send
+                  the file. No login, no rewriting the URL.
                 </p>
+                <IosHow className="mb-4 mt-0" />
                 <IosShortcutInstallButton />
-                <IosShortcutHow />
               </>
             ) : platform === 'android' ? (
               <AndroidLandingPromo />

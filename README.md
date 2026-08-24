@@ -34,7 +34,7 @@ flowchart LR
     E --> F["Curator profile · Leaderboard<br/>· Live pulse"]
 ```
 
-Next.js 16 + React 19, SQLite (Drizzle) on a single volume, X OAuth 2.0 PKCE and/or magic-link email accounts. Media plays via platform-official embeds or lightweight proxy mirrors — full details in [ARCHITECTURE.md](ARCHITECTURE.md).
+Next.js 16 + React 19, SQLite (Drizzle) on a single volume, magic-link email accounts, and optional X OAuth 2.0 PKCE to sync bookmarks. Media plays via platform-official embeds or lightweight proxy mirrors — full details in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Run it locally
 

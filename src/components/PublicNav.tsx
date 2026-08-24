@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { TrendingUp } from 'lucide-react'
-import { MatterLogo, ConnectWithX } from '@/components/matter'
+import { MatterLogo } from '@/components/matter'
 import { ThemeToggle } from '@/components/ThemeToggle'
 
 /**
@@ -15,14 +15,12 @@ import { ThemeToggle } from '@/components/ThemeToggle'
  */
 export function PublicNav({
   active,
-  onConnect,
-  connecting = false,
+  onSignIn,
 }: {
   /** Marks the current public surface so its nav item reads as active. */
   active?: 'trending'
-  /** Connect-with-X handler (kicks off the OAuth flow). */
-  onConnect: () => void
-  connecting?: boolean
+  /** Opens the email magic-link sign-in modal. */
+  onSignIn: () => void
 }) {
   return (
     <nav className="flex items-center border-b border-hairline px-5 py-4 sm:px-11">
@@ -65,11 +63,11 @@ export function PublicNav({
         </a>
         <ThemeToggle className="-mr-1 sm:mr-0" />
         <button
-          onClick={onConnect}
-          disabled={connecting}
-          className="inline-flex items-center gap-2 rounded-[10px] bg-ink px-4 py-2.5 text-sm font-semibold text-surface transition-opacity hover:opacity-90 disabled:opacity-50"
+          type="button"
+          onClick={onSignIn}
+          className="inline-flex items-center gap-2 rounded-[10px] bg-ink px-4 py-2.5 text-sm font-semibold text-surface transition-opacity hover:opacity-90"
         >
-          <ConnectWithX size={14} />
+          Sign in
         </button>
       </div>
     </nav>

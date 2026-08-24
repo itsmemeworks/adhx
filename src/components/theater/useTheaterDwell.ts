@@ -10,8 +10,8 @@
  * page's behavior.
  *
  * Only the collection theater's COLLECTION tab opts out: read state there is explicit (Archive
- * / Later / Delete), and it isn't even displaying `currentKey`'s item (see
- * `CollectionStage`). Its LIVE tab is the same community feed the signed-out home
+ * / Later / Delete), and it isn't even displaying `currentKey`'s item.
+ * Its LIVE tab is the same community feed the signed-out home
  * theater shows, so it dwells exactly like home — this used to say `isPersonal`,
  * which silently disabled seen-marking for every signed-in viewer the moment
  * authed `/` became a collection mount. The queue then never learned that anything

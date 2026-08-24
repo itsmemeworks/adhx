@@ -43,4 +43,10 @@ test.describe('signed out', () => {
     await page.getByRole('button', { name: 'Save' }).click()
     await expectSignInModal(page)
   })
+
+  test('X OAuth is a Settings link, not a sign-in', async ({ page }) => {
+    await page.goto('/api/auth/twitter')
+    await expect(page).toHaveURL(/auth_error=x_link_only/)
+    await expectTheaterReady(page)
+  })
 })

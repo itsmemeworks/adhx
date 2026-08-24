@@ -20,6 +20,8 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
 import { decodeHtmlEntities, stripMediaUrls } from '@/components/feed/utils'
+import { toBionicText } from '@/components/feed/text-rendering'
+import { usePreferences } from '@/lib/preferences-context'
 import type { TextLinkRef } from './types'
 
 const URL_PATTERN = /(https?:\/\/[^\s]+)/g
@@ -347,6 +349,12 @@ export interface TheaterLinkedTextProps {
    * posts should pass `platform={item.platform}`.
    */
   platform?: string
+  /**
+   * Bold the first part of each word (Bionic Reading). Defaults to the
+   * signed-in user's preference. Pass `false` for clamped captions — those
+   * are a two-line overlay, not a reading surface.
+   */
+  bionic?: boolean
 }
 
 /**
@@ -375,12 +383,15 @@ export function TheaterLinkedText({
   links,
   hideTweetLinks,
   platform = 'twitter',
+  bionic,
 }: TheaterLinkedTextProps) {
+  const { preferences } = usePreferences()
+  const applyBionic = bionic ?? preferences.bionicReading
   const cleaned = stripMediaUrls(decodeHtmlEntities(text), hasMedia)
   const segments = buildRenderSegments(cleaned, links, hideTweetLinks, platform)
 
   return (
-    <span className={className}>
+    <span className={className} aria-label={applyBionic ? cleaned : undefined}>
       {segments.map((segment, segIndex) => {
         if (segment.type === 'anchor' || (segment.type === 'mention' && segment.href)) {
           const href = segment.type === 'anchor' ? segment.href : (segment.href as string)
@@ -412,7 +423,7 @@ export function TheaterLinkedText({
             {lines.map((line, lineIndex) => (
               <React.Fragment key={lineIndex}>
                 {lineIndex > 0 && <br />}
-                <span>{line}</span>
+                <span>{applyBionic ? toBionicText(line) : line}</span>
               </React.Fragment>
             ))}
           </React.Fragment>

@@ -7,7 +7,7 @@
  * No HTML parsing and no `dangerouslySetInnerHTML` anywhere downstream —
  * everything that isn't one of the constructs above (including something
  * that looks like a tag, e.g. `<script>`) is carried as an opaque text
- * string and rendered as a React text node by the stage, so it can never
+ * string and rendered as a React `<span>` by the stage, so it can never
  * execute. Deliberately dependency-free so it's unit-testable in plain node.
  */
 
@@ -17,6 +17,13 @@ export type InlineNode =
   | { type: 'italic'; children: InlineNode[] }
   | { type: 'boldItalic'; children: InlineNode[] }
   | { type: 'link'; href: string; children: InlineNode[] }
+
+/** Flatten inline nodes to the readable string (for aria-label when Bionic splits words). */
+export function inlinePlainText(nodes: InlineNode[]): string {
+  return nodes
+    .map((node) => (node.type === 'text' ? node.text : inlinePlainText(node.children)))
+    .join('')
+}
 
 export type ArticleMdBlock =
   | { type: 'heading'; level: 1 | 2 | 3; inline: InlineNode[] }

@@ -27,19 +27,19 @@ export interface CollectionPosterCardProps {
   /** Card link target — the whole mosaic area clicks through to this
    * (or, with `wholeCardLink`, the entire card). */
   href: string
-  /** Top-right overlay — a single interactive visibility toggle (Public/
-   * Private) for `/tags`. Rendered outside the card's Link so its own
-   * interactive children never trigger card navigation. INTERACTIVE — must
-   * not be combined with `wholeCardLink` (nesting a button/anchor inside an
-   * `<a>` is invalid HTML). `rank` below is the non-interactive alternative
-   * that IS safe with `wholeCardLink`. When both `badge` and `curator` are
-   * passed, `badge` wins and `curator` is dropped — in practice `/tags`
-   * passes `badge` and the leaderboard passes `curator`; no caller passes
-   * both. */
+  /** Interactive control for the action row under the mosaic (Public/
+   * Private on `/tags`). Must not be combined with `wholeCardLink`
+   * (nesting a button/anchor inside an `<a>` is invalid HTML). `rank`
+   * below is the non-interactive alternative that IS safe with
+   * `wholeCardLink`. On the `wholeCardLink` layout this still paints in
+   * the mosaic's top-right (leaderboard curator uses `curator` instead).
+   * When both `badge` and `curator` are passed, `badge` wins and
+   * `curator` is dropped. */
   badge?: React.ReactNode
-  /** Bottom-right actions (make-public pill, copy/open glass buttons, …).
-   * INTERACTIVE — must not be combined with `wholeCardLink`, same reason as
-   * `badge` above. */
+  /** Action controls (copy/open/delete, clone, …). INTERACTIVE — must not
+   * be combined with `wholeCardLink`. On the default layout these sit in a
+   * horizontal row under the mosaic so the image only carries the title and
+   * stats. */
   children?: React.ReactNode
   heightClass?: string
   /** Shows a pulsing placeholder mosaic instead of `tiles` — for the window
@@ -50,7 +50,8 @@ export interface CollectionPosterCardProps {
    * instead of just the mosaic. Use only when the card carries no `badge`/
    * `children` interactive controls — nesting a button/anchor inside a
    * `<Link>` is invalid HTML. This is the public profile page's variant;
-   * `/tags` keeps the default (mosaic-only link + interactive footer).
+   * `/tags` keeps the default (mosaic links out; Public/Private + actions
+   * sit in a row under the image so they don't nest inside the `<a>`).
    * `rank`'s medallion is non-interactive and safe to combine with this. */
   wholeCardLink?: boolean
   /** Showcase scale for a single-playlist profile: bigger tag title,
@@ -100,11 +101,11 @@ const CLAY_BADGE_STYLE: React.CSSProperties = {
  * on-dark by nature, like `TagQuickPicker`/`SignInModal` — regardless of the
  * site's light/dark theme; the page around it stays on Matter tokens.
  *
- * Consumed by `/tags` (`TagsClient.tsx`, mosaic-only link + interactive
- * footer controls), the public profile page `/t/{username}` (`wholeCardLink`,
- * no interactive controls — the whole card is one clickable unit), and the
- * `/collections` leaderboard (`CollectionsBoard.tsx`, `wholeCardLink` +
- * `rank` medallion).
+ * Consumed by `/tags` (`TagsClient.tsx`, mosaic link + title/stats overlay,
+ * Public/Private and copy/open/delete in a row under the image), the public
+ * profile page `/t/{username}` (`wholeCardLink`, no interactive controls —
+ * the whole card is one clickable unit), and the `/leaderboard`
+ * (`CollectionsBoard.tsx`, `wholeCardLink` + `rank` medallion).
  */
 export function CollectionPosterCard({
   tag,
@@ -137,14 +138,14 @@ export function CollectionPosterCard({
     />
   )
 
-  const footer = (
+  const overlayFooter = (
     <div
       className={cn(
-        'absolute inset-x-0 bottom-0 z-10 flex items-end justify-between gap-3',
+        'pointer-events-none absolute inset-x-0 bottom-0 z-10',
         featured ? 'p-5' : 'p-4',
       )}
     >
-      <div className="pointer-events-none min-w-0 flex-1">
+      <div className="min-w-0 flex-1">
         {/* Row 1: the tag title — ALWAYS in this exact spot, never shifted by
             whether row 2 below has one badge or three. */}
         <div
@@ -200,13 +201,16 @@ export function CollectionPosterCard({
           ) : null}
         </div>
       </div>
-      {children && (
-        <div className="flex flex-none items-center gap-2" onClick={(e) => e.stopPropagation()}>
-          {children}
-        </div>
-      )}
     </div>
   )
+
+  const actionBar =
+    !wholeCardLink && (badge || children) ? (
+      <div className="flex items-center gap-2 border-t border-hairline bg-surface px-3 py-2">
+        {badge && <div className="min-w-0">{badge}</div>}
+        {children && <div className="ml-auto flex flex-none items-center gap-1.5">{children}</div>}
+      </div>
+    ) : null
 
   if (wholeCardLink) {
     return (
@@ -224,25 +228,32 @@ export function CollectionPosterCard({
         {scrim}
         {typeof rank === 'number' && <RankMedallion rank={rank} />}
         {topRightOverlay && <div className="absolute right-3 top-3 z-10">{topRightOverlay}</div>}
-        {footer}
+        {overlayFooter}
       </Link>
     )
   }
 
   return (
     <div
-      className={cn('relative overflow-hidden rounded-[14px] border', heightClass, className)}
+      className={cn('overflow-hidden rounded-[14px] border bg-surface', className)}
       style={{ borderColor: BORDER }}
     >
-      <Link href={href} aria-label={`View #${tag}`} className="absolute inset-0 z-0 block">
-        {mosaic}
-        {scrim}
-      </Link>
+      <div className={cn('relative', heightClass)}>
+        <Link href={href} aria-label={`View #${tag}`} className="absolute inset-0 z-0 block">
+          {mosaic}
+          {scrim}
+        </Link>
 
-      {typeof rank === 'number' && <RankMedallion rank={rank} />}
-      {topRightOverlay && <div className="absolute right-3 top-3 z-10">{topRightOverlay}</div>}
+        {typeof rank === 'number' && <RankMedallion rank={rank} />}
+        {curator && !badge && (
+          <div className="pointer-events-none absolute right-3 top-3 z-10">
+            <CuratorBadge username={curator} />
+          </div>
+        )}
 
-      {footer}
+        {overlayFooter}
+      </div>
+      {actionBar}
     </div>
   )
 }
@@ -365,7 +376,7 @@ function PosterTileView({ tile, className }: { tile: PosterTile | null; classNam
 function RankMedallion({ rank }: { rank: number }) {
   if (rank === 1) {
     return (
-      <div className="absolute left-3 top-3 z-10 flex items-center gap-1 rounded-full bg-clay-grad px-2.5 py-1 shadow-glow">
+      <div className="pointer-events-none absolute left-3 top-3 z-10 flex items-center gap-1 rounded-full bg-clay-grad px-2.5 py-1 shadow-glow">
         <Flame size={13} className="text-white" fill="currentColor" />
         <span className="font-mono text-[12px] font-bold text-white">1</span>
       </div>
@@ -373,13 +384,13 @@ function RankMedallion({ rank }: { rank: number }) {
   }
   if (rank === 2 || rank === 3) {
     return (
-      <div className="absolute left-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-clay-grad font-mono text-[13px] font-bold text-white">
+      <div className="pointer-events-none absolute left-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-clay-grad font-mono text-[13px] font-bold text-white">
         {rank}
       </div>
     )
   }
   return (
-    <div className="absolute left-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-white/15 bg-black/55 font-mono text-[12px] text-white/70">
+    <div className="pointer-events-none absolute left-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-white/15 bg-black/55 font-mono text-[12px] text-white/70">
       {rank}
     </div>
   )

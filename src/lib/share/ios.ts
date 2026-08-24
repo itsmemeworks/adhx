@@ -1,12 +1,11 @@
 /**
- * iOS save/send entry points. The published iCloud shortcut is X-only (it
- * rewrites `x.com` → `adhx.com` and lives outside this repo). All four
- * platforms go through `/share?url=` — URL-prefix, a hand-built Share Sheet
- * shortcut, or the landing paste field.
+ * iOS save/send entry points. The published iCloud shortcut lives outside
+ * this repo and opens `/share?url=` for X, Instagram, TikTok, and YouTube —
+ * installing it adds ADHX to the iOS share menu. URL-prefix and paste still
+ * work as fallbacks.
  */
 
-export const X_ONLY_SHORTCUT_URL =
-  'https://www.icloud.com/shortcuts/0d187480099b4d34a745ec8750a4587b'
+export const IOS_SHORTCUT_URL = 'https://www.icloud.com/shortcuts/0d187480099b4d34a745ec8750a4587b'
 
 /** Canonical share-target prefix. Append a percent-encoded source URL. */
 export const SHARE_TARGET_PREFIX = 'https://adhx.com/share?url='

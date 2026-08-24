@@ -6,7 +6,7 @@ import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { PWAInstallPrompt } from '@/components/PWAInstallPrompt'
 import { SHORTCUT_DISMISS_KEY } from '@/components/IosShortcutInstall'
 import { ANDROID_A2HS_DISMISS_KEY } from '@/components/AndroidInstall'
-import { X_ONLY_SHORTCUT_URL } from '@/lib/share/ios'
+import { IOS_SHORTCUT_URL } from '@/lib/share/ios'
 
 let mockPlatform: 'ios' | 'android' | 'desktop' = 'desktop'
 let mockPathname = '/'
@@ -68,7 +68,7 @@ describe('PWAInstallPrompt', () => {
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /add shortcut/i })).not.toBeInTheDocument()
     const install = screen.getByRole('link', { name: /install the iOS shortcut/i })
-    expect(install).toHaveAttribute('href', X_ONLY_SHORTCUT_URL)
+    expect(install).toHaveAttribute('href', IOS_SHORTCUT_URL)
     expect(install).toHaveAttribute('target', '_blank')
     expect(
       screen.getByText(/Share posts to ADHX from X, Instagram, TikTok, and YouTube in one tap\./),

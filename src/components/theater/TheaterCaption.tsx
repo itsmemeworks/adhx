@@ -40,6 +40,7 @@ export function TheaterCaption({
         hasMedia={hasMedia}
         links={links}
         hideTweetLinks={hideTweetLinks}
+        bionic={false}
       />
     </p>
   )

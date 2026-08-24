@@ -5,16 +5,14 @@ import { createTestDb, type TestDbInstance } from './api/setup'
 
 /**
  * Unit tests for `findOrCreateUserForX()` in `src/lib/auth/account.ts` —
- * the X-login → app-account resolver used by
- * `GET /api/auth/twitter/callback`.
+ * the signed-in X-link resolver used by `GET /api/auth/twitter/callback`.
+ * X is not a sign-in method: no session → `sign_in_required`.
  *
  * Regression coverage for Sentry WHITE-SUN-6317-17: `SqliteError: UNIQUE
  * constraint failed: users.id`. The bug: an X-first account (`users.id ==
  * xUserId`) that later linked an email and called `unlinkX()` keeps its
- * `users` row but loses its `user_identities` row. A subsequent X login with
- * no session (or a race between two concurrent callbacks) treated the id as
- * free and blind-inserted into `users`, crashing on the id collision instead
- * of taking the documented `x_already_linked` / relink path.
+ * `users` row but loses its `user_identities` row. A subsequent unsigned X
+ * callback must not create or silently sign in; a signed-in owner can relink.
  */
 
 let testInstance: TestDbInstance
@@ -54,22 +52,23 @@ describe('findOrCreateUserForX', () => {
     testInstance.close()
   })
 
-  it('creates a brand new user keyed by the X id when nothing exists yet', async () => {
+  it('refuses to create an account from X when there is no session', async () => {
     const result = await findOrCreateUserForX(X_USER)
-    expect(result).toEqual({ userId: '111', username: 'exuser', created: true })
-
-    const user = await userRow('111')
-    expect(user).toMatchObject({ id: '111', username: 'exuser', usernameChosen: true })
-    const identities = await xIdentityRows()
-    expect(identities).toEqual([
-      expect.objectContaining({ provider: 'x', providerId: '111', userId: '111' }),
-    ])
+    expect(result).toEqual({
+      userId: '',
+      username: '',
+      created: false,
+      conflict: 'sign_in_required',
+    })
+    expect(await userRow('111')).toBeUndefined()
+    expect(await xIdentityRows()).toHaveLength(0)
   })
 
-  it('is idempotent for a normal returning X login (identity already exists)', async () => {
-    await findOrCreateUserForX(X_USER)
+  it('is idempotent for a returning X link (identity already exists)', async () => {
+    await testInstance.db.insert(schema.users).values({ id: 'u_email1', username: 'emailer' })
+    await findOrCreateUserForX(X_USER, 'u_email1')
     const result = await findOrCreateUserForX(X_USER)
-    expect(result).toEqual({ userId: '111', username: 'exuser', created: false })
+    expect(result).toEqual({ userId: 'u_email1', username: 'emailer', created: false })
     expect(await xIdentityRows()).toHaveLength(1)
   })
 
@@ -86,18 +85,19 @@ describe('findOrCreateUserForX', () => {
   })
 
   it('reports linked_elsewhere and leaves the session untouched when the X identity belongs to someone else', async () => {
-    await findOrCreateUserForX(X_USER) // creates account '111' owning the X identity
+    await testInstance.db.insert(schema.users).values({ id: 'u_owner', username: 'exuser' })
+    await findOrCreateUserForX(X_USER, 'u_owner')
     await testInstance.db.insert(schema.users).values({ id: 'u_other', username: 'other' })
 
     const result = await findOrCreateUserForX(X_USER, 'u_other')
     expect(result.conflict).toBe('linked_elsewhere')
-    expect(result.userId).toBe('111')
+    expect(result.userId).toBe('u_owner')
 
     // Nothing about the signed-in user or the identity ownership changed.
     expect(await userRow('u_other')).toMatchObject({ id: 'u_other', username: 'other' })
     const identities = await xIdentityRows()
     expect(identities).toHaveLength(1)
-    expect(identities[0].userId).toBe('111')
+    expect(identities[0].userId).toBe('u_owner')
   })
 
   describe('the users-row-without-identity gap (Sentry WHITE-SUN-6317-17)', () => {
@@ -117,17 +117,12 @@ describe('findOrCreateUserForX', () => {
         .values({ provider: 'email', providerId: 'ex@example.com', userId: '111' })
     }
 
-    it('relinks X to the existing account instead of crashing when reconnecting with no session', async () => {
+    it('does not silently sign in when reconnecting a detached X id with no session', async () => {
       await seedDetachedXAccount()
 
       const result = await findOrCreateUserForX(X_USER)
-      expect(result).toEqual({ userId: '111', username: 'exuser', created: false })
-
-      const identities = await xIdentityRows()
-      expect(identities).toEqual([
-        expect.objectContaining({ provider: 'x', providerId: '111', userId: '111' }),
-      ])
-      // The original users row was reused, not duplicated or replaced.
+      expect(result.conflict).toBe('sign_in_required')
+      expect(await xIdentityRows()).toHaveLength(0)
       expect(await userRow('111')).toMatchObject({ id: '111', email: 'ex@example.com' })
     })
 
@@ -178,7 +173,7 @@ describe('findOrCreateUserForX', () => {
           return testInstance.sqlite.transaction(fn)()
         })
 
-      const result = await findOrCreateUserForX(X_USER)
+      const result = await findOrCreateUserForX(X_USER, '111')
       expect(result.conflict).toBeUndefined()
       expect(result.userId).toBe('111')
       expect(await xIdentityRows()).toHaveLength(1)
@@ -190,7 +185,8 @@ describe('findOrCreateUserForX', () => {
   describe('cross-platform id collision safety', () => {
     it('never mutates an unrelated existing user with a different id', async () => {
       await testInstance.db.insert(schema.users).values({ id: 'unrelated', username: 'someone' })
-      await findOrCreateUserForX(X_USER)
+      const result = await findOrCreateUserForX(X_USER)
+      expect(result.conflict).toBe('sign_in_required')
 
       const unrelated = await userRow('unrelated')
       expect(unrelated).toMatchObject({ id: 'unrelated', username: 'someone' })
@@ -198,15 +194,16 @@ describe('findOrCreateUserForX', () => {
   })
 
   it('refreshes display name/avatar for a normal returning login without duplicating rows', async () => {
-    await findOrCreateUserForX(X_USER)
+    await testInstance.db.insert(schema.users).values({ id: 'u_email1', username: 'exuser' })
+    await findOrCreateUserForX(X_USER, 'u_email1')
     const updated = await findOrCreateUserForX({
       ...X_USER,
       name: 'New Name',
       profileImageUrl: 'https://example.com/a.jpg',
     })
-    expect(updated).toEqual({ userId: '111', username: 'exuser', created: false })
+    expect(updated).toEqual({ userId: 'u_email1', username: 'exuser', created: false })
 
-    const user = await userRow('111')
+    const user = await userRow('u_email1')
     expect(user.displayName).toBe('New Name')
     expect(user.avatarUrl).toBe('https://example.com/a.jpg')
 

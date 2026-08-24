@@ -914,11 +914,8 @@ describe('TheaterMobileChrome: theaterActive prop wiring', () => {
 
 /**
  * "My Collection is just a different playlist in that same theater" (owner
- * directive): the Collection tab used to force the top progress line to
- * 'none' for every item. Now only 'timed' items (photo/text/quote/article)
- * — which still wait on Done/Later/Delete, never a 10s dwell auto-advance —
- * get suppressed there; 'video' items keep the real line, since they now
- * auto-advance on end just like every other playlist. The line's fill node
+ * directive): videos auto-advance on end, and photo/text/quote/article use
+ * the same 10s dwell as Live (Repeat still applies). The line's fill node
  * (`.bg-clay`) only renders when `<TheaterProgressLine/>`'s `kind` isn't
  * 'none'.
  */
@@ -939,7 +936,7 @@ function collectionCollection(
   }
 }
 
-describe('TheaterMobileChrome: Collection-tab progress line (video flows, timed still waits)', () => {
+describe('TheaterMobileChrome: Collection-tab progress line', () => {
   it('keeps the progress line for a video item in the Collection tab', () => {
     const { container } = render(
       <TheaterMobileChrome {...base} current={videoItem()} collection={collectionCollection()} />,
@@ -947,14 +944,14 @@ describe('TheaterMobileChrome: Collection-tab progress line (video flows, timed 
     expect(container.querySelector('.bg-clay')).not.toBeNull()
   })
 
-  it('suppresses the progress line for a timed (text) item in the Collection tab', () => {
+  it('keeps the 10s dwell line for a timed (text) item in the Collection tab', () => {
     const { container } = render(
       <TheaterMobileChrome {...base} current={textItem()} collection={collectionCollection()} />,
     )
-    expect(container.querySelector('.bg-clay')).toBeNull()
+    expect(container.querySelector('.bg-clay')).not.toBeNull()
   })
 
-  it('a timed item still shows the progress line in the Live tab (unaffected by the Collection-tab demotion)', () => {
+  it('a timed item still shows the progress line in the Live tab', () => {
     const { container } = render(
       <TheaterMobileChrome
         {...base}
