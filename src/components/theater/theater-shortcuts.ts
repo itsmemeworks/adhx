@@ -172,7 +172,7 @@ export function resolveTheaterShortcut(e: TheaterKeyLike): TheaterShortcut | nul
       return 'toggleExpand'
     case 'f':
     case 'F':
-      return 'cycleRepeat'
+      return 'toggleArticle'
     case 'o':
     case 'O':
       return 'open'
@@ -181,7 +181,7 @@ export function resolveTheaterShortcut(e: TheaterKeyLike): TheaterShortcut | nul
       return 'archive'
     case 'r':
     case 'R':
-      return 'toggleArticle'
+      return 'cycleRepeat'
     case 'u':
     case 'U':
       return 'undo'
@@ -247,7 +247,7 @@ export const THEATER_SHORTCUT_HELP: TheaterHelpSection[] = [
       { keys: ['Space'], label: 'Play / pause' },
       { keys: ['M'], label: 'Mute / unmute' },
       { keys: ['E'], label: 'Expand' },
-      { keys: ['F'], label: 'Repeat' },
+      { keys: ['R'], label: 'Repeat' },
     ],
   },
   {
@@ -259,7 +259,7 @@ export const THEATER_SHORTCUT_HELP: TheaterHelpSection[] = [
       { keys: ['C'], label: 'Copy text' },
       { keys: ['D'], label: 'Download' },
       { keys: ['O'], label: 'Open original' },
-      { keys: ['R'], label: 'Read / Watch' },
+      { keys: ['F'], label: 'Read / Watch' },
       { keys: ['A'], label: 'Archive' },
       { keys: ['U'], label: 'Undo archive' },
     ],

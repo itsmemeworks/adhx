@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-24 — Repeat is R; Read / Watch is F
+
+Repeat moved from `F` to `R`. Read / Watch took `F`. Follow-up: none.
+
 ## 2026-08-24 — E expand, F repeat, arrows scroll text
 
 Theater keyboard: `E` toggles expand (hide/show chrome), `F` cycles repeat. `↓`/`↑` no longer change posts — they scroll the article/text stage so reading does not need the mouse. Next/previous are `→` `J` / `←` `K`. Follow-up: none.

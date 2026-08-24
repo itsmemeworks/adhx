@@ -22,8 +22,8 @@ describe('resolveTheaterShortcut', () => {
     expect(resolveTheaterShortcut({ key: 'm' })).toBe('toggleMute')
     expect(resolveTheaterShortcut({ key: 'e' })).toBe('toggleExpand')
     expect(resolveTheaterShortcut({ key: 'E' })).toBe('toggleExpand')
-    expect(resolveTheaterShortcut({ key: 'f' })).toBe('cycleRepeat')
-    expect(resolveTheaterShortcut({ key: 'F' })).toBe('cycleRepeat')
+    expect(resolveTheaterShortcut({ key: 'f' })).toBe('toggleArticle')
+    expect(resolveTheaterShortcut({ key: 'F' })).toBe('toggleArticle')
     expect(resolveTheaterShortcut({ key: 's' })).toBe('save')
     expect(resolveTheaterShortcut({ key: 't' })).toBe('tag')
     expect(resolveTheaterShortcut({ key: 'l' })).toBe('copyLink')
@@ -31,8 +31,8 @@ describe('resolveTheaterShortcut', () => {
     expect(resolveTheaterShortcut({ key: 'd' })).toBe('sendFile')
     expect(resolveTheaterShortcut({ key: 'o' })).toBe('open')
     expect(resolveTheaterShortcut({ key: 'a' })).toBe('archive')
-    expect(resolveTheaterShortcut({ key: 'r' })).toBe('toggleArticle')
-    expect(resolveTheaterShortcut({ key: 'R' })).toBe('toggleArticle')
+    expect(resolveTheaterShortcut({ key: 'r' })).toBe('cycleRepeat')
+    expect(resolveTheaterShortcut({ key: 'R' })).toBe('cycleRepeat')
     expect(resolveTheaterShortcut({ key: 'u' })).toBe('undo')
     expect(resolveTheaterShortcut({ key: 'w' })).toBe('replay')
     expect(resolveTheaterShortcut({ key: 'p' })).toBe('keepPlaying')
@@ -109,15 +109,16 @@ describe('resolveTheaterShortcut', () => {
       'Archive',
       'Undo archive',
     ])
+    expect(actions?.rows.find((r) => r.label === 'Read / Watch')?.keys).toEqual(['F'])
   })
 
   it('lists Expand and Repeat on the playback help', () => {
     const play = THEATER_SHORTCUT_HELP.find((s) => s.title === 'Playback')
-    expect(play?.rows.map((r) => r.label)).toEqual([
-      'Play / pause',
-      'Mute / unmute',
-      'Expand',
-      'Repeat',
+    expect(play?.rows).toEqual([
+      { keys: ['Space'], label: 'Play / pause' },
+      { keys: ['M'], label: 'Mute / unmute' },
+      { keys: ['E'], label: 'Expand' },
+      { keys: ['R'], label: 'Repeat' },
     ])
   })
 })

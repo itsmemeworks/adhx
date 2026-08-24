@@ -75,20 +75,20 @@ test.describe('theater shortcuts (signed out)', () => {
     await expect(page).toHaveURL(/\/leaderboard/)
   })
 
-  test('R toggles Read / Watch on a quoted video', async ({ page }) => {
+  test('F toggles Read / Watch on a quoted video', async ({ page }) => {
     test.setTimeout(90_000)
     await page.goto(`/${POST.quoted.author}/status/${POST.quoted.id}`)
     await expectTheaterReady(page)
     await expect(page.getByRole('button', { name: 'Read' })).toBeVisible()
 
-    await page.keyboard.press('r')
+    await page.keyboard.press('f')
     await expect(page.getByRole('button', { name: 'Watch' })).toBeVisible()
 
-    await page.keyboard.press('r')
+    await page.keyboard.press('f')
     await expect(page.getByRole('button', { name: 'Read' })).toBeVisible()
   })
 
-  test('ArrowDown does not advance; ArrowRight does; E expands; F cycles repeat', async ({
+  test('ArrowDown does not advance; ArrowRight does; E expands; R cycles repeat', async ({
     page,
   }) => {
     await page.goto('/')
@@ -111,11 +111,11 @@ test.describe('theater shortcuts (signed out)', () => {
 
     const repeat = page.locator('[data-theater-action="repeat"]:visible')
     await expect(repeat).toHaveAttribute('aria-label', 'Stop when caught up')
-    await page.keyboard.press('f')
+    await page.keyboard.press('r')
     await expect(repeat).toHaveAttribute('aria-label', 'Keep playing')
-    await page.keyboard.press('f')
+    await page.keyboard.press('r')
     await expect(repeat).toHaveAttribute('aria-label', 'Repeat this post')
-    await page.keyboard.press('f')
+    await page.keyboard.press('r')
     await expect(repeat).toHaveAttribute('aria-label', 'Stop when caught up')
   })
 })
