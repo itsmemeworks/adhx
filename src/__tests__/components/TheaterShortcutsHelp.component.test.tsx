@@ -14,7 +14,9 @@ describe('TheaterShortcutsHelp', () => {
   it('lists the theater keymap and closes on Escape or backdrop click', () => {
     const onClose = vi.fn()
     render(<TheaterShortcutsHelp open onClose={onClose} />)
-    expect(screen.getByRole('dialog', { name: 'Keyboard shortcuts' })).toBeInTheDocument()
+    const dialog = screen.getByRole('dialog', { name: 'Keyboard shortcuts' })
+    expect(dialog).toBeInTheDocument()
+    expect(dialog.className).toMatch(/lg:max-w-2xl/)
     expect(screen.getByText('Play / pause')).toBeInTheDocument()
     expect(screen.getByText('Read / Watch')).toBeInTheDocument()
     expect(screen.getByText('Paste a link')).toBeInTheDocument()

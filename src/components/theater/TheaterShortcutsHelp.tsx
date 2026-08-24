@@ -12,6 +12,7 @@ import {
   THEATER_SHORTCUT_HELP,
   THEATER_SHORTCUT_KEYS,
   type TheaterHelpRow,
+  type TheaterHelpSection,
 } from './theater-shortcuts'
 
 const PANEL = '#201b16'
@@ -46,6 +47,29 @@ function Row({ keys, label }: TheaterHelpRow) {
   )
 }
 
+function HelpSection({ title, rows, area }: TheaterHelpSection & { area: string }) {
+  return (
+    <section style={{ gridArea: area }}>
+      <p
+        className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em]"
+        style={{ color: MUTED }}
+      >
+        <span>{title}</span>
+      </p>
+      {rows.map((row) => (
+        <Row key={`${title}-${row.label}-${row.keys.join('')}`} {...row} />
+      ))}
+    </section>
+  )
+}
+
+const HELP_AREAS: Record<string, string> = {
+  Navigate: 'nav',
+  Playback: 'play',
+  Actions: 'actions',
+  Also: 'also',
+}
+
 export function TheaterShortcutsHelp({ open, onClose }: { open: boolean; onClose: () => void }) {
   useEffect(() => {
     if (!open) return
@@ -77,7 +101,7 @@ export function TheaterShortcutsHelp({ open, onClose }: { open: boolean; onClose
         role="dialog"
         aria-modal="true"
         aria-labelledby="theater-shortcuts-title"
-        className="relative w-full max-w-sm overflow-hidden rounded-2xl border shadow-2xl"
+        className="relative w-full max-w-sm overflow-hidden rounded-2xl border shadow-2xl lg:max-w-2xl"
         style={{ backgroundColor: PANEL, borderColor: BORDER }}
       >
         <div
@@ -101,19 +125,13 @@ export function TheaterShortcutsHelp({ open, onClose }: { open: boolean; onClose
             <X size={16} />
           </button>
         </div>
-        <div className="max-h-[70vh] space-y-4 overflow-y-auto px-4 py-3">
+        <div className="grid max-h-[70vh] grid-cols-1 gap-4 overflow-y-auto px-4 py-3 [grid-template-areas:'nav'_'play'_'actions'_'also'] lg:grid-cols-2 lg:gap-x-10 lg:[grid-template-areas:'nav_actions'_'play_actions'_'also_actions']">
           {THEATER_SHORTCUT_HELP.map((section) => (
-            <div key={section.title}>
-              <p
-                className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em]"
-                style={{ color: MUTED }}
-              >
-                <span>{section.title}</span>
-              </p>
-              {section.rows.map((row) => (
-                <Row key={`${section.title}-${row.label}-${row.keys.join('')}`} {...row} />
-              ))}
-            </div>
+            <HelpSection
+              key={section.title}
+              area={HELP_AREAS[section.title] ?? section.title.toLowerCase()}
+              {...section}
+            />
           ))}
         </div>
       </div>

@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-24 — Shortcut help is two columns on desktop
+
+`TheaterShortcutsHelp` is `max-w-2xl` on `lg+` with Navigate/Playback/Also left and Actions right, so the overlay is wider and shorter. Phone stays a single column. Follow-up: none.
+
 ## 2026-08-24 — R toggles Read / Watch
 
 Theater keyboard now has `R` for the Read/Watch switch (same control as the chrome button). No-op when the post has no overflow or quote. Follow-up: none.
