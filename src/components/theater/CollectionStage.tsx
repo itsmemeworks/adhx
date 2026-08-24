@@ -18,7 +18,11 @@ import { StageArticle } from './StageArticle'
 import { StageInstagram, useInstagramStage } from './StageInstagram'
 import { StageYouTube } from './StageYouTube'
 import { StageVideo } from './StageVideo'
-import { STAGE_ARTICLE_TEXT_PANE, STAGE_ARTICLE_VIDEO_BAND } from './stage-primitives'
+import {
+  STAGE_ARTICLE_TEXT_PANE,
+  STAGE_ARTICLE_VIDEO_BAND,
+  StageArticleVideoFade,
+} from './stage-primitives'
 import { isQuoteReader, type TheaterItem } from './types'
 import { feedItemToTheaterItem } from './collection-item'
 
@@ -112,8 +116,9 @@ export function CollectionStage({
               repeat={repeat}
             />
           </div>
+          <StageArticleVideoFade />
           <div className={STAGE_ARTICLE_TEXT_PANE}>
-            <StageText item={theaterItem} hideTweetLinks omitParentVideo flushTop />
+            <StageText item={theaterItem} hideTweetLinks omitParentVideo flushTop underBand />
           </div>
         </div>
       )
@@ -146,8 +151,9 @@ export function CollectionStage({
             repeat={repeat}
           />
         </div>
+        <StageArticleVideoFade />
         <div className={STAGE_ARTICLE_TEXT_PANE}>
-          <StageText item={theaterItem} hideTweetLinks omitParentVideo flushTop />
+          <StageText item={theaterItem} hideTweetLinks omitParentVideo flushTop underBand />
         </div>
       </div>
     )
@@ -256,8 +262,9 @@ function CollectionInstagramStage({
       return (
         <div className="relative h-full w-full">
           <div className={STAGE_ARTICLE_VIDEO_BAND}>{player}</div>
+          <StageArticleVideoFade />
           <div className={STAGE_ARTICLE_TEXT_PANE}>
-            <StageText item={item} hideTweetLinks omitParentVideo flushTop />
+            <StageText item={item} hideTweetLinks omitParentVideo flushTop underBand />
           </div>
         </div>
       )

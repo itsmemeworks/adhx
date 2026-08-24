@@ -34,12 +34,28 @@ export const STAGE_TEXT_TOP_PAD = 'pt-24 lg:pt-28'
 
 /**
  * When Read keeps the parent video playing, the player sits in this top
- * band and the article scroller fills the rest — same <video> element,
- * same unmute grant, so you can read while it continues.
+ * band. Never mask, fade, or blur the clip — the fade lives *under* it.
  */
-export const STAGE_ARTICLE_VIDEO_BAND = 'absolute inset-x-0 top-0 h-[38dvh] lg:h-[42vh]'
-export const STAGE_ARTICLE_TEXT_PANE =
-  'absolute inset-x-0 bottom-0 top-[38dvh] z-10 bg-[#08070a] lg:top-[42vh]'
+export const STAGE_ARTICLE_VIDEO_BAND =
+  'absolute inset-x-0 top-0 z-20 h-[38dvh] overflow-hidden lg:h-[42vh]'
+export const STAGE_ARTICLE_TEXT_PANE = 'absolute inset-0 z-10'
+/** First line sits below the fade so Read opens at full contrast. */
+export const STAGE_ARTICLE_UNDER_BAND_PAD = 'pt-[calc(38dvh+3.25rem)] lg:pt-[calc(42vh+3.25rem)]'
+
+/**
+ * Stage-black gradient in the strip *below* the video (never overlapping
+ * it). Text scrolling through this zone fades out before it tucks under
+ * the clip. Sibling of the band — the band's overflow would clip it.
+ */
+export function StageArticleVideoFade() {
+  return (
+    <div
+      aria-hidden
+      data-testid="article-video-fade"
+      className="pointer-events-none absolute inset-x-0 top-[38dvh] z-[25] h-12 bg-gradient-to-b from-[#08070a] to-transparent lg:top-[42vh]"
+    />
+  )
+}
 
 /**
  * 44px icon-button chrome (dark scrim actions) — was repeated identically 4×

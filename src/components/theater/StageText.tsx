@@ -21,7 +21,12 @@ import { fallbackToOriginal } from '@/components/feed/media-actions'
 import { proxiedPhotoSrc } from '@/lib/media/fxembed'
 import { TheaterCaption } from './TheaterCaption'
 import { TheaterLinkedText } from './TheaterText'
-import { STAGE_TEXT_SCROLL_PAD, STAGE_TEXT_TOP_PAD, StageAuthorRow } from './stage-primitives'
+import {
+  STAGE_ARTICLE_UNDER_BAND_PAD,
+  STAGE_TEXT_SCROLL_PAD,
+  STAGE_TEXT_TOP_PAD,
+  StageAuthorRow,
+} from './stage-primitives'
 import { StageInlineVideo } from './StageInlineVideo'
 import { StageQuoteCard } from './StageQuoteCard'
 import { useHydratedQuote } from './useHydratedQuote'
@@ -72,6 +77,12 @@ export interface StageTextProps {
    * don't vertically center a short tweet.
    */
   flushTop?: boolean
+  /**
+   * Full-bleed scroller under the keep-playing video. Transparent so the
+   * essay can tuck under the band, with extra top pad so the first line
+   * starts below the fade.
+   */
+  underBand?: boolean
 }
 
 /**
@@ -96,6 +107,7 @@ export function StageText({
   scrollPad = true,
   omitParentVideo = false,
   flushTop = false,
+  underBand = false,
 }: StageTextProps) {
   const text = (item.text || '').trim()
   const authorName = item.authorName || (item.author ? `@${item.author}` : 'Saved post')
@@ -171,7 +183,8 @@ export function StageText({
   return (
     <div
       className={cn(
-        'h-full w-full overflow-y-auto overscroll-contain bg-[#08070a]',
+        'h-full w-full overflow-y-auto overscroll-contain',
+        underBand ? 'bg-transparent' : 'bg-[#08070a]',
         scrollPad && STAGE_TEXT_SCROLL_PAD,
       )}
     >
@@ -179,11 +192,11 @@ export function StageText({
           of the stage; once the column is taller than the viewport the
           flex box grows with it and this becomes a no-op (top-aligned
           scroll, with STAGE_TEXT_TOP_PAD clearing the chrome). */}
-      <div className={cn('flex min-h-full flex-col', !flushTop && 'justify-center')}>
+      <div className={cn('flex min-h-full flex-col', !flushTop && !underBand && 'justify-center')}>
         <div
           className={cn(
             'mx-auto w-full max-w-2xl px-6 sm:px-10',
-            flushTop ? 'pt-5' : STAGE_TEXT_TOP_PAD,
+            underBand ? STAGE_ARTICLE_UNDER_BAND_PAD : flushTop ? 'pt-5' : STAGE_TEXT_TOP_PAD,
           )}
         >
           <StageAuthorRow item={item} />

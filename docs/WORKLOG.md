@@ -6,6 +6,42 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-24 — Filmstrip NOW/NEXT no longer stretch cards
+
+The status labels inherited body line-height and NEXT could wrap, so those two cards sat taller than the rest of the strip. Meta row is a fixed `h-4`; labels are `leading-none` + nowrap. Follow-up: none.
+
+## 2026-08-24 — Tagged Tag button keeps the glass border
+
+`border-clay/50` on a tagged Tag action is a no-op (hex Matter tokens drop Tailwind `/NN`) and tw-merge stole the white glass edge, so the button looked like a dark hole. Same frost as Share/Download now; clay is only on the filled icon. Follow-up: none.
+
+## 2026-08-24 — Flame chip always shows, same slot
+
+Owner correction: hiding it on text/articles was wrong. The chip stays left of paste on every post type (video, photo, text, article, Read). It still never sits next to the author. Follow-up: none.
+
+## 2026-08-24 — Flame chip lives left of paste
+
+The community trend count sat next to the author on media and in the top bar on text, so the same post looked different by type. It now has one slot — left of the desktop paste button (and the mobile paste) — and only on full-bleed video/photo. Text, articles, quotes, and Read mode hide it so it never sits on a description. Follow-up: none.
+
+## 2026-08-24 — Shared preview lead was missing pulse stats
+
+Opening a preview URL built the lead from FxTwitter only, so `saveCount`/`trendCount` were unset and the flame chip hid (`< 2`). The same post one card later in the dock had the counts. `buildSharedSeed` now copies those pulse fields onto the lead, same as `addedAt`. Follow-up: none.
+
+## 2026-08-24 — Desktop de-clutter lives in the dock
+
+The top-right expand shoved the avatar around. It's gone: transport is a 3-col grid in the dock (prev / play-pause / next over expand / repeat / mute), and the restore Minimize2 floats bottom-left when chrome is hidden. The account menu stays top-right. Follow-up: none.
+
+## 2026-08-24 — Read fade never touches the video
+
+The clip is left alone (no mask, no overlay). A 3rem stage-black gradient (`#08070a` → transparent) sits immediately _below_ the band so copy fades as it scrolls through that strip, then tucks under. Opening lines sit below the fade. Follow-up: none.
+
+## 2026-08-24 — Read fade is a hairline, not a wash
+
+First pass of the video-to-text fade was a 7rem 65% blur slab: opening copy was already dark, and scrolling painted it on the clip. Now the video only dissolves the last 8px, the gradient is 1.5rem × 30% and starts _below_ the band, and the first line sits clear of it. Follow-up: none.
+
+## 2026-08-24 — Read mode: video-to-text fade
+
+Hard cut under the keep-playing video in Read felt like a razor. The essay now scrolls full-bleed under the band: the clip dissolves at the bottom (`mask-image`) and a sibling blur + stage-black gradient (`StageArticleVideoFade`) sits on the junction so copy softens as it tucks under. Fade is a sibling — the band's `overflow-hidden` would clip it. Follow-up: none.
+
 ## 2026-08-23 — Theater Read/Watch review pass
 
 Self-review of the caption/Read PR: Collection now uses the same reader split as Live (photo + Instagram + YouTube), YouTube keeps one iframe across Read, and `useClampExpand` only measures overflow (dead expand state hid Read). E2E covers signed-out/signed-in desktop and mobile icon-only on a video+quote preview. Follow-up: none.

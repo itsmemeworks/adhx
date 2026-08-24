@@ -204,6 +204,7 @@ describe('Stage: the granted <video> element survives a non-video item', () => {
     expect(container.querySelector('video')).toBeTruthy()
     expect(container.querySelector('[data-testid="parent-inline-video"]')).toBeNull()
     expect(container.querySelector('[data-testid="quote-inline-video"]')).toBeNull()
+    expect(container.querySelector('[data-testid="article-video-fade"]')).toBeNull()
   })
 
   it('keeps the parent video playing in article mode and shows the quote below', () => {
@@ -222,6 +223,7 @@ describe('Stage: the granted <video> element survives a non-video item', () => {
     expect(container.querySelector('video')).toBeTruthy()
     expect(container.querySelector('[data-testid="parent-inline-video"]')).toBeNull()
     expect(container.querySelector('[data-testid="quote-inline-video"]')).toBeTruthy()
+    expect(container.querySelector('[data-testid="article-video-fade"]')).toBeTruthy()
     expect(container.textContent).toContain('parent essay')
     expect(container.textContent).toContain('quoted clip')
   })
@@ -235,6 +237,7 @@ describe('Stage: the granted <video> element survives a non-video item', () => {
     expect(first).toBeTruthy()
     rerender(<Stage item={item} muted onRequestUnmute={vi.fn()} articleMode />)
     expect(container.querySelector('iframe')).toBe(first)
+    expect(container.querySelector('[data-testid="article-video-fade"]')).toBeTruthy()
     expect(container.textContent).toContain('a long short caption')
   })
 

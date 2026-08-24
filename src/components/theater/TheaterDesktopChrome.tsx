@@ -9,11 +9,11 @@
  *
  * Two components, one file:
  *  - `DesktopStageChrome` — absolutely-positioned overlays INSIDE the stage
- *    wrapper (brand + LIVE, paste-a-link input, de-clutter, flame chip,
- *    the media post's author/caption overlay (tap the text to expand),
+ *    wrapper (brand + LIVE, paste-a-link input, flame chip,
+ *    the media post's author/caption overlay (Read opens the stacked article),
  *    and the action buttons — Open is the source platform glyph).
  *  - `DesktopDock` — the in-flow bottom dock AFTER the stage wrapper
- *    (transport cluster + horizontal filmstrip + end cap), plus the
+ *    (two-row transport + de-clutter + horizontal filmstrip + end cap), plus the
  *    "Show all" overlay panel reusing `UpNextList`.
  *
  * Both are CSS-hidden below `lg` (the mobile chrome owns those viewports)
@@ -28,7 +28,6 @@ import {
   Check,
   Loader2,
   Clipboard,
-  Maximize2,
   Link as LinkIcon,
   Repeat,
   Repeat1,
@@ -37,6 +36,7 @@ import {
   ChevronRight,
   ChevronUp,
   ChevronDown,
+  Maximize2,
   Pause,
   Play,
   Volume2,
@@ -161,6 +161,8 @@ export interface DesktopDockProps {
   onNext: () => void
   /** De-clutter slides the dock away entirely (the shell's floating restore button brings it back). */
   declutter: boolean
+  /** Hide chrome — lives in the dock so the top-right avatar never moves. */
+  onToggleDeclutter?: () => void
   /** Collection mode: appends a "loops" divider + a ghosted copy of the first card after the filmstrip, and hides the live-pulse-only savedToday/newCount lines in the end cap. */
   playlist?: TheaterPlaylistMeta
   /** Collection mode: end cap shows "{remaining} left" instead of savedToday/newCount. */
@@ -208,7 +210,7 @@ export function DesktopStageChrome({
   current,
   authed,
   declutter,
-  onToggleDeclutter,
+  onToggleDeclutter: _onToggleDeclutter,
   playlist,
   saveStatus = 'idle',
   onSavePlaylist,
@@ -359,8 +361,8 @@ export function DesktopStageChrome({
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10 hidden lg:block">
-      {/* Top bar: brand + LIVE left, meta chips (text-like
-          posts only) + paste-a-link + de-clutter right. */}
+      {/* Top bar: brand + LIVE left, paste-a-link + avatar right.
+          De-clutter lives in the dock — the menu stays put. */}
       <div
         className={cn(
           'pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between gap-4 px-7 pb-10 pt-4 transition-[opacity,transform] duration-200 ease-out',
@@ -408,7 +410,7 @@ export function DesktopStageChrome({
               {/* The close button lives INSIDE this same pill container, right
                   of the tab buttons — owner review: it should read as part of
                   one contained cluster with the tab selector, not stranded
-                  among the far-right avatar/de-clutter controls. */}
+                  among the far-right avatar controls. */}
               <div className="inline-flex flex-none items-center gap-0.5 rounded-full bg-white/10 p-1 text-[12.5px] font-semibold">
                 {PERSONAL_TAB_ORDER.map((t) => (
                   <button
@@ -469,6 +471,9 @@ export function DesktopStageChrome({
         </div>
 
         <div className="pointer-events-auto flex flex-none items-center gap-2.5">
+          {/* One slot: left of paste (or the playlist CTA). Never next to
+              the author/caption — every post type uses this same corner. */}
+          {current ? <FlameChip trendCount={trendCount} /> : null}
           {playlist && !collection ? (
             !isPlaylistOwner && (
               <StageGlass
@@ -481,67 +486,59 @@ export function DesktopStageChrome({
               </StageGlass>
             )
           ) : (
-            <>
-              {(!collection || collection.tab === 'live') && current && textLike ? (
-                <FlameChip trendCount={trendCount} />
-              ) : null}
-
-              <div ref={pasteWrapRef}>
-                {pasteOpen ? (
-                  <form
-                    onSubmit={(e) => {
+            <div ref={pasteWrapRef}>
+              {pasteOpen ? (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    void tryResolve(pasteValue)
+                  }}
+                  className={cn(
+                    'flex h-10 w-[420px] items-center gap-2.5 rounded-full border bg-white/[.08] px-4 pr-2 backdrop-blur-md transition-colors',
+                    pasteError ? 'border-red-400/60' : 'border-white/[.18]',
+                  )}
+                >
+                  <Clipboard size={15} className="flex-none text-white/55" />
+                  <input
+                    ref={pasteInputRef}
+                    type="text"
+                    aria-label="Paste a link to preview"
+                    placeholder={
+                      onPastePost
+                        ? 'Paste a link to save — X, Instagram, TikTok, YouTube'
+                        : 'Paste a link to preview — X, Instagram, TikTok, YouTube'
+                    }
+                    spellCheck={false}
+                    value={pasteValue}
+                    onChange={(e) => setPasteValue(e.target.value)}
+                    onPaste={(e) => {
+                      const text = e.clipboardData.getData('text')
+                      if (!text) return
                       e.preventDefault()
-                      void tryResolve(pasteValue)
+                      void tryResolve(text)
                     }}
-                    className={cn(
-                      'flex h-10 w-[420px] items-center gap-2.5 rounded-full border bg-white/[.08] px-4 pr-2 backdrop-blur-md transition-colors',
-                      pasteError ? 'border-red-400/60' : 'border-white/[.18]',
-                    )}
-                  >
-                    <Clipboard size={15} className="flex-none text-white/55" />
-                    <input
-                      ref={pasteInputRef}
-                      type="text"
-                      aria-label="Paste a link to preview"
-                      placeholder={
-                        onPastePost
-                          ? 'Paste a link to save — X, Instagram, TikTok, YouTube'
-                          : 'Paste a link to preview — X, Instagram, TikTok, YouTube'
-                      }
-                      spellCheck={false}
-                      value={pasteValue}
-                      onChange={(e) => setPasteValue(e.target.value)}
-                      onPaste={(e) => {
-                        const text = e.clipboardData.getData('text')
-                        if (!text) return
-                        e.preventDefault()
-                        void tryResolve(text)
-                      }}
-                      className="min-w-0 flex-1 bg-transparent text-[13px] text-white outline-none placeholder:text-white/45"
-                    />
-                    {pasteError ? (
-                      <span className="flex-none text-[11px] text-red-300">
-                        Not a supported link
-                      </span>
-                    ) : (
-                      <span className="flex-none rounded-md border border-white/[.22] px-1.5 py-0.5 font-mono text-[10.5px] text-white/50">
-                        ⌘V
-                      </span>
-                    )}
-                  </form>
-                ) : (
-                  <button
-                    type="button"
-                    aria-label="Paste a link"
-                    aria-expanded={false}
-                    onClick={() => setPasteOpen(true)}
-                    className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md transition-colors hover:bg-white/20"
-                  >
-                    <Clipboard size={16} />
-                  </button>
-                )}
-              </div>
-            </>
+                    className="min-w-0 flex-1 bg-transparent text-[13px] text-white outline-none placeholder:text-white/45"
+                  />
+                  {pasteError ? (
+                    <span className="flex-none text-[11px] text-red-300">Not a supported link</span>
+                  ) : (
+                    <span className="flex-none rounded-md border border-white/[.22] px-1.5 py-0.5 font-mono text-[10.5px] text-white/50">
+                      ⌘V
+                    </span>
+                  )}
+                </form>
+              ) : (
+                <button
+                  type="button"
+                  aria-label="Paste a link"
+                  aria-expanded={false}
+                  onClick={() => setPasteOpen(true)}
+                  className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md transition-colors hover:bg-white/20"
+                >
+                  <Clipboard size={16} />
+                </button>
+              )}
+            </div>
           )}
 
           {/* Signed-out visitors on desktop only get the burger fallback in
@@ -552,18 +549,6 @@ export function DesktopStageChrome({
             allowSignedOut={!collection && !playlist}
             theaterActive={mode === 'home' || !!collection || !!accountTabs}
           />
-
-          {/* De-cluttering EXPANDS the stage, so the enter action reads
-              outward (Maximize2); the floating restore button rendered by
-              TheaterShell when decluttered uses Minimize2 for the reverse. */}
-          <button
-            type="button"
-            onClick={onToggleDeclutter}
-            aria-label="Hide controls"
-            className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-full border border-white/[.18] bg-white/[.08] text-white backdrop-blur-md"
-          >
-            <Maximize2 size={16} />
-          </button>
         </div>
       </div>
 
@@ -628,7 +613,6 @@ export function DesktopStageChrome({
                   <div className="flex min-w-0 items-center gap-2">{inner}</div>
                 )
               })()}
-              <FlameChip trendCount={trendCount} />
             </div>
           )}
 
@@ -734,13 +718,12 @@ export function DesktopStageChrome({
                 />
               )
             ) : collection?.tab === 'collection' ? (
-              <StageGlass
-                as="button"
-                type="button"
-                onClick={collection.onTag}
-                className={cn(GLASS, tagCount > 0 && 'border-clay/50 text-clay')}
-              >
-                <TagIcon size={14} fill={tagCount > 0 ? 'currentColor' : 'none'} />
+              <StageGlass as="button" type="button" onClick={collection.onTag} className={GLASS}>
+                <TagIcon
+                  size={14}
+                  className={tagCount > 0 ? 'text-clay' : undefined}
+                  fill={tagCount > 0 ? 'currentColor' : 'none'}
+                />
                 <span>{tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}</span>
               </StageGlass>
             ) : (mode === 'shared' && authed) || collection?.tab === 'live' ? (
@@ -751,9 +734,13 @@ export function DesktopStageChrome({
                     type="button"
                     onClick={() => collection.onLiveTag?.(current)}
                     title="Tag this post (saves it to your collection first)"
-                    className={cn(GLASS, tagCount > 0 && 'border-clay/50 text-clay')}
+                    className={GLASS}
                   >
-                    <TagIcon size={14} fill={tagCount > 0 ? 'currentColor' : 'none'} />
+                    <TagIcon
+                      size={14}
+                      className={tagCount > 0 ? 'text-clay' : undefined}
+                      fill={tagCount > 0 ? 'currentColor' : 'none'}
+                    />
                     <span>{tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}</span>
                   </StageGlass>
                   <PersonalLiveSaveButton
@@ -810,8 +797,11 @@ export function DesktopStageChrome({
   )
 }
 
+// hover:bg-white/15 — the circular disc. Matter hex tokens (`ink/10`,
+// `inset` on `bg-surface`) either drop /NN or sit too close to the dock
+// to read as a button.
 const TRANSPORT_BTN =
-  'inline-flex h-10 w-10 flex-none items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-inset hover:text-ink disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-ink-3'
+  'inline-flex h-10 w-10 flex-none items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-white/15 hover:text-ink disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-ink-3'
 
 export function DesktopDock({
   mode: _mode,
@@ -835,6 +825,7 @@ export function DesktopDock({
   onPrev,
   onNext,
   declutter,
+  onToggleDeclutter,
   playlist,
   collection,
   repeatCurrent = false,
@@ -917,70 +908,88 @@ export function DesktopDock({
         declutter ? 'h-0 overflow-hidden border-t-0 opacity-0' : 'h-[124px]',
       )}
     >
-      {/* Transport cluster */}
-      <div className="flex flex-none items-center gap-0.5">
-        <button
-          type="button"
-          aria-label="Previous post"
-          disabled={!canPrev}
-          onClick={onPrev}
-          className={TRANSPORT_BTN}
-        >
-          <ChevronLeft size={18} />
-        </button>
-        {/* Pause and audio always render — disabled when the current post
-            can't use them (e.g. audio on a photo) — so the cluster never
-            shifts horizontally as the theater advances across content types. */}
-        <button
-          type="button"
-          aria-label={paused ? 'Play' : 'Pause'}
-          disabled={kind === 'none'}
-          aria-disabled={kind === 'none'}
-          onClick={handleTogglePause}
-          className={TRANSPORT_BTN}
-        >
-          {paused ? (
-            <Play size={16} fill="currentColor" />
-          ) : (
-            <Pause size={16} fill="currentColor" />
-          )}
-        </button>
-        <button
-          type="button"
-          aria-label="Next post"
-          disabled={!canNext}
-          onClick={onNext}
-          className={cn(
-            TRANSPORT_BTN,
-            // shared-post-repeat: accent the deliberate way past the loop.
-            repeatCurrent && canNext && 'text-clay hover:bg-clay/10 hover:text-clay',
-          )}
-        >
-          <ChevronRight size={18} />
-        </button>
-        <button
-          type="button"
-          aria-label={displayMuted ? 'Unmute' : 'Mute'}
-          disabled={kind !== 'video'}
-          aria-disabled={kind !== 'video'}
-          onClick={handleAudioTap}
-          className={cn(TRANSPORT_BTN, soundPulse && 'animate-sound-pulse text-ink')}
-        >
-          {displayMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-        </button>
-        {/* Spotify-style repeat (round 8): off → all → one. Clay = active. */}
-        {onCycleRepeat && repeatMode && (
+      {/* Transport: 3-col grid. Repeat sits under play/pause (how this
+          plays); expand is bottom-left; mute under next. */}
+      <div className="flex flex-none items-center gap-2">
+        <div className="grid grid-cols-3 justify-items-center gap-0.5">
           <button
             type="button"
-            onClick={onCycleRepeat}
-            aria-label={REPEAT_MODE_LABEL[repeatMode].action}
-            title={REPEAT_MODE_LABEL[repeatMode].state}
-            className={cn(TRANSPORT_BTN, repeatMode !== 'off' && 'text-clay hover:text-clay')}
+            aria-label="Previous post"
+            disabled={!canPrev}
+            onClick={onPrev}
+            className={TRANSPORT_BTN}
           >
-            {repeatMode === 'one' ? <Repeat1 size={16} /> : <Repeat size={16} />}
+            <ChevronLeft size={18} />
           </button>
-        )}
-        <span className="mx-1.5 h-6 w-px flex-none bg-hairline" />
+          <button
+            type="button"
+            aria-label={paused ? 'Play' : 'Pause'}
+            disabled={kind === 'none'}
+            aria-disabled={kind === 'none'}
+            onClick={handleTogglePause}
+            className={TRANSPORT_BTN}
+          >
+            {paused ? (
+              <Play size={16} fill="currentColor" />
+            ) : (
+              <Pause size={16} fill="currentColor" />
+            )}
+          </button>
+          <button
+            type="button"
+            aria-label="Next post"
+            disabled={!canNext}
+            onClick={onNext}
+            className={cn(
+              TRANSPORT_BTN,
+              // shared-post-repeat: accent the deliberate way past the loop.
+              repeatCurrent && canNext && 'text-clay hover:bg-white/15 hover:text-clay',
+            )}
+          >
+            <ChevronRight size={18} />
+          </button>
+          {onToggleDeclutter ? (
+            <button
+              type="button"
+              onClick={onToggleDeclutter}
+              aria-label="Hide controls"
+              title="Hide controls"
+              className={TRANSPORT_BTN}
+            >
+              <Maximize2 size={16} />
+            </button>
+          ) : (
+            <span className="h-10 w-10" aria-hidden />
+          )}
+          {/* Spotify-style repeat (round 8): off → all → one. Clay = active.
+              Under play/pause — it's how this item plays. */}
+          {onCycleRepeat && repeatMode ? (
+            <button
+              type="button"
+              onClick={onCycleRepeat}
+              aria-label={REPEAT_MODE_LABEL[repeatMode].action}
+              title={REPEAT_MODE_LABEL[repeatMode].state}
+              className={cn(TRANSPORT_BTN, repeatMode !== 'off' && 'text-clay hover:text-clay')}
+            >
+              {repeatMode === 'one' ? <Repeat1 size={16} /> : <Repeat size={16} />}
+            </button>
+          ) : (
+            <span className="h-10 w-10" aria-hidden />
+          )}
+          {/* Audio always renders — disabled on non-video — so the
+              cell under next never collapses as the theater advances. */}
+          <button
+            type="button"
+            aria-label={displayMuted ? 'Unmute' : 'Mute'}
+            disabled={kind !== 'video'}
+            aria-disabled={kind !== 'video'}
+            onClick={handleAudioTap}
+            className={cn(TRANSPORT_BTN, soundPulse && 'animate-sound-pulse text-ink')}
+          >
+            {displayMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+          </button>
+        </div>
+        <span className="mx-1 h-16 w-px flex-none bg-hairline" />
       </div>
 
       {/* Filmstrip */}
@@ -1038,7 +1047,10 @@ export function DesktopDock({
                   <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-clay ring-2 ring-surface" />
                 )}
               </div>
-              <div className="flex items-center gap-1.5">
+              {/* Fixed-height meta row: NOW / NEXT → / Repeat used to
+                  inherit body line-height (and NEXT could wrap), so those
+                  cards grew taller than the rest of the strip. */}
+              <div className="flex h-4 min-w-0 items-center gap-1.5">
                 <PlatformGlyph
                   platform={item.platform}
                   size={10}
@@ -1046,7 +1058,7 @@ export function DesktopDock({
                 />
                 {hasKnownTimestamp(item.addedAt) && (
                   <span
-                    className="font-mono text-[10px] text-ink-3"
+                    className="font-mono text-[10px] leading-none text-ink-3"
                     title={addedToAdhxLabel(item.addedAt as string)}
                     aria-label={addedToAdhxLabel(item.addedAt as string)}
                     suppressHydrationWarning
@@ -1054,23 +1066,23 @@ export function DesktopDock({
                     {formatCompactRelativeTime(item.addedAt as string)}
                   </span>
                 )}
-                <span className="ml-auto flex-none">
+                <span className="ml-auto flex h-4 flex-none items-center leading-none">
                   {/* shared-post-repeat (owner: the desktop filmstrip's NOW
                       tag sitting near a separate repeat glyph elsewhere read
                       as garbled "MOWN") — while pinned, the current card's
                       tag IS the repeat state: one cohesive icon+label tag,
                       never NOW alongside a second indicator. */}
                   {isCurrent && repeatCurrent ? (
-                    <span className="inline-flex items-center gap-1 whitespace-nowrap text-[9.5px] font-bold uppercase tracking-wide text-clay">
+                    <span className="inline-flex items-center gap-1 whitespace-nowrap text-[9.5px] font-bold uppercase leading-none tracking-wide text-clay">
                       <Repeat size={10} aria-hidden />
                       <span>Repeat</span>
                     </span>
                   ) : isCurrent ? (
-                    <span className="text-[9.5px] font-bold uppercase tracking-wide text-clay">
+                    <span className="whitespace-nowrap text-[9.5px] font-bold uppercase leading-none tracking-wide text-clay">
                       NOW
                     </span>
                   ) : isNext ? (
-                    <span className="text-[9.5px] font-bold uppercase tracking-wide text-clay">
+                    <span className="whitespace-nowrap text-[9.5px] font-bold uppercase leading-none tracking-wide text-clay">
                       NEXT →
                     </span>
                   ) : seen ? (
@@ -1131,7 +1143,7 @@ export function DesktopDock({
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex h-4 min-w-0 items-center gap-1.5">
                     <PlatformGlyph
                       platform={first.platform}
                       size={10}

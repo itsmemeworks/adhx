@@ -35,18 +35,19 @@ export async function buildSharedSeed(
   try {
     const feed = await getTheaterFeed()
     const rest = feed.items.filter((item) => theaterItemKey(item) !== sharedKey)
-    // Backfill the lead's display time from the pulse's enriched copy of the
-    // SAME post — the mappers below can't know when a post was first linked
-    // to ADHX (owner decision: that IS the displayed time, never the source
-    // platform's own date). The page's `recordActivity('preview')` runs
-    // before this, so the post is in the pulse and `getTrendingItems`'s
-    // first-added time (min of earliest save / earliest activity) applies.
+    // Backfill pulse-only display fields from the pulse's enriched copy of
+    // the SAME post: addedAt (when it first hit ADHX — never the source
+    // date) plus saveCount/trendCount (the flame chip). Preview-page
+    // mappers don't have these; without them the lead looks statless
+    // while the next dock card of the same post shows them. The page's
+    // `recordActivity('preview')` runs before this, so the post is in
+    // the pulse.
     const pulseCopy = feed.items.find((item) => theaterItemKey(item) === sharedKey)
-    const sharedWithTime = pulseCopy?.addedAt ? { ...shared, addedAt: pulseCopy.addedAt } : shared
+    const sharedWithPulse = withPulseDisplay(shared, pulseCopy)
     return {
-      sharedItem: sharedWithTime,
+      sharedItem: sharedWithPulse,
       seed: {
-        items: [sharedWithTime, ...rest],
+        items: [sharedWithPulse, ...rest],
         savedToday: feed.savedToday,
         recentActivity: feed.recentActivity,
       },
@@ -57,6 +58,22 @@ export async function buildSharedSeed(
       sharedItem: shared,
       seed: { items: [shared], savedToday: 0, recentActivity: 0 },
     }
+  }
+}
+
+/**
+ * Pulse-only display fields the preview-page mappers never have: when the
+ * post first hit ADHX, and the anonymous save/trend counts that power the
+ * flame chip. Preview pages would otherwise land with no stats even when
+ * the same post shows them one card later in the dock.
+ */
+function withPulseDisplay(shared: TheaterItem, pulseCopy?: TheaterItem): TheaterItem {
+  if (!pulseCopy) return shared
+  return {
+    ...shared,
+    ...(pulseCopy.addedAt ? { addedAt: pulseCopy.addedAt } : {}),
+    ...(pulseCopy.saveCount != null ? { saveCount: pulseCopy.saveCount } : {}),
+    ...(pulseCopy.trendCount != null ? { trendCount: pulseCopy.trendCount } : {}),
   }
 }
 

@@ -296,6 +296,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Share link' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Tag' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Tag' }).className).toContain('border-white/25')
     expect(screen.getByRole('link', { name: 'Open on X' })).toBeInTheDocument()
     const archive = screen.getByRole('button', { name: 'Archive' })
     expect(archive).toBeInTheDocument()
@@ -306,6 +307,25 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Paste a link' })).toBeInTheDocument()
+  })
+
+  it('tagged collection Tag keeps the glass border — clay is on the icon only', () => {
+    const collection: TheaterPersonalChrome = {
+      tab: 'collection',
+      onTabChange: vi.fn(),
+      onDone: vi.fn(),
+      onTag: vi.fn(),
+      onSave: vi.fn(),
+      savedKeys: new Set<string>(),
+      remaining: 3,
+      onClose: vi.fn(),
+      tags: ['cats'],
+    }
+    render(<TheaterMobileChrome {...base} current={videoItem()} collection={collection} />)
+    const tag = screen.getByRole('button', { name: 'Tag · 1' })
+    expect(tag.className).toContain('border-white/25')
+    expect(tag.className).not.toContain('text-clay')
+    expect(tag.querySelector('.lucide-tag')?.classList.contains('text-clay')).toBe(true)
   })
 
   it('shows paste on the personal Live tab too', () => {
@@ -322,6 +342,22 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     }
     render(<TheaterMobileChrome {...base} current={videoItem()} collection={collection} />)
     expect(screen.getByRole('button', { name: 'Paste a link' })).toBeInTheDocument()
+  })
+
+  it('pins the flame left of paste on media and text', () => {
+    const { rerender } = render(
+      <TheaterMobileChrome {...base} current={videoItem({ trendCount: 12 })} />,
+    )
+    let flame = screen.getByLabelText('12 trending')
+    const paste = screen.getByRole('button', { name: 'Paste a link' })
+    expect(flame.compareDocumentPosition(paste) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    rerender(<TheaterMobileChrome {...base} current={textItem({ trendCount: 12 })} />)
+    flame = screen.getByLabelText('12 trending')
+    expect(
+      flame.compareDocumentPosition(screen.getByRole('button', { name: 'Paste a link' })) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
   })
 
   /**

@@ -731,7 +731,7 @@ export function TheaterShell({
   }, [loop, repeatMode])
 
   const isDesktop = useIsDesktopViewport()
-  // Desktop de-clutter: collapses the rail column for a full-bleed stage.
+  // Desktop de-clutter: collapses the dock for a full-bleed stage.
   // Desktop-only concept — mobile has its own independent de-clutter state
   // local to TheaterMobileChrome. Persists across item navigation (not reset
   // on `currentKey`), same as the mobile one.
@@ -1824,7 +1824,7 @@ export function TheaterShell({
             type="button"
             onClick={onToggleDesktopDeclutter}
             aria-label="Show controls"
-            className="absolute right-4 top-4 z-20 hidden h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md transition-colors hover:bg-black/70 lg:flex"
+            className="absolute bottom-6 left-5 z-20 hidden h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md transition-colors hover:bg-black/70 lg:flex"
           >
             <Minimize2 size={18} />
           </button>
@@ -1925,6 +1925,7 @@ export function TheaterShell({
         onPrev={chromeOnPrev}
         onNext={chromeOnNext}
         declutter={desktopDeclutter}
+        onToggleDeclutter={onToggleDesktopDeclutter}
         playlist={playlist}
         collection={personalChrome}
         repeatCurrent={repeatCurrentActive}

@@ -400,6 +400,7 @@ export function TheaterMobileChrome({
             <MatterLogo size={16} className="[&>span]:text-white" />
           </a>
           <div className="flex flex-none items-center gap-1.5">
+            {current ? <FlameChip trendCount={trendCount} /> : null}
             {/* Same add-in-place paste as desktop — stay on Live / My
                 Collection; do not bounce to a preview page. */}
             <PasteLinkButton iconOnly onPastePost={onPastePost} />
@@ -456,7 +457,7 @@ export function TheaterMobileChrome({
             <MatterLogo size={16} className="[&>span]:text-white" />
           </a>
           <div className="flex flex-none items-center gap-1.5">
-            {current && <FlameChip trendCount={trendCount} />}
+            {current ? <FlameChip trendCount={trendCount} /> : null}
             {/* Mobile equivalent of the desktop top bar's paste button (⌘V still works there)
                 input (spec §8/DesktopStageChrome) — touch Safari has no
                 paste gesture, so this covers the signed-out home theater and
@@ -630,7 +631,11 @@ export function TheaterMobileChrome({
                   onTouchEnd={(e) => e.stopPropagation()}
                   aria-label={tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}
                 >
-                  <TagIcon size={16} fill={tagCount > 0 ? 'currentColor' : 'none'} />
+                  <TagIcon
+                    size={16}
+                    className={tagCount > 0 ? 'text-clay' : undefined}
+                    fill={tagCount > 0 ? 'currentColor' : 'none'}
+                  />
                 </StageIconButton>
               ) : collection?.tab === 'live' ? (
                 <>
@@ -642,7 +647,11 @@ export function TheaterMobileChrome({
                     onTouchEnd={(e) => e.stopPropagation()}
                     aria-label={tagCount > 0 ? `Tag · ${tagCount}` : 'Tag this post'}
                   >
-                    <TagIcon size={16} fill={tagCount > 0 ? 'currentColor' : 'none'} />
+                    <TagIcon
+                      size={16}
+                      className={tagCount > 0 ? 'text-clay' : undefined}
+                      fill={tagCount > 0 ? 'currentColor' : 'none'}
+                    />
                   </StageIconButton>
                   <PersonalLiveSaveButton
                     current={current}

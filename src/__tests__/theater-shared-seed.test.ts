@@ -127,6 +127,24 @@ describe('buildSharedSeed', () => {
     expect(sharedItem.addedAt).toBe(null)
   })
 
+  it('backfills saveCount and trendCount from the pulse so the lead shows the flame chip', async () => {
+    const shared = item({ platform: 'twitter', bookmarkId: 'stats-1' })
+    const pulseCopy = item({
+      platform: 'twitter',
+      bookmarkId: 'stats-1',
+      addedAt: '2026-07-01T00:00:00Z',
+      saveCount: 2,
+      trendCount: 49,
+    })
+    getTheaterFeedMock.mockResolvedValue({ items: [pulseCopy], savedToday: 0, recentActivity: 0 })
+
+    const { sharedItem } = await buildSharedSeed(shared)
+
+    expect(sharedItem.saveCount).toBe(2)
+    expect(sharedItem.trendCount).toBe(49)
+    expect(sharedItem.addedAt).toBe('2026-07-01T00:00:00Z')
+  })
+
   it("takes the pulse copy's addedAt unconditionally when present — none of the per-platform mappers set their own", async () => {
     const shared = item({ platform: 'twitter', bookmarkId: 'has-time-1' })
     const pulseCopy = item({

@@ -48,15 +48,19 @@ StageText.tsx            — tweet typeset large (Newsreader) on the stage; phot
                            over two lines) defaults to full-bleed parent media + a
                            2-line caption; **Read** opens this as a stacked article.
                            A playing parent video stays in a top band so it continues
-                           while you read. Typeset scroller uses the same action-row
+                           while you read. Never fade the clip — a stage-black
+                           gradient sits in the strip below it so the essay can
+                           tuck under. Typeset scroller uses the same action-row
                            clearance pad
 TheaterDesktopChrome.tsx — `DesktopStageChrome` (overlays inside stage: top bar with brand + LIVE +
                            paste button (expands into the preview field; ⌘V still
                            works globally — signed-in Live / My Collection add in
-                           place and stay on the tab; playlist has no paste) + de-clutter; flame chip; bottom-left meta overlay
+                           place and stay on the tab; playlist has no paste); flame chip left of paste
+                           on every post type); bottom-left meta overlay
                            for video/photo; bottom-right actions — Open is the source platform glyph)
-                           + `DesktopDock` (in-flow bottom dock: transport controls + horizontal
-                           filmstrip queue auto-scrolled to keep current visible + "Show all" panel)
+                           + `DesktopDock` (in-flow bottom dock: two-row 3-col transport —
+                           prev / play-pause / next over expand / repeat / mute — +
+                           horizontal filmstrip queue auto-scrolled to keep current visible + "Show all" panel)
 TheaterMobileChrome.tsx  — mobile reel chrome: top/bottom scrims, peek bar with transport + audio +
                            de-clutter, swipe up/down navigation, 70dvh Up-next bottom sheet.
                            Read/Watch is icon-only on the left of the action row (book / TV)

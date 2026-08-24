@@ -232,6 +232,7 @@ describe('CollectionStage: onEnded wiring to the video-capable stages', () => {
     )
     expect(getByTestId('stage-youtube')).toBeInTheDocument()
     expect(getByTestId('stage-text')).toBeInTheDocument()
+    expect(getByTestId('article-video-fade')).toBeInTheDocument()
   })
 
   it('keeps a ready Instagram reel playing in article mode', () => {
@@ -255,6 +256,7 @@ describe('CollectionStage: onEnded wiring to the video-capable stages', () => {
     )
     expect(getByTestId('stage-video')).toBeInTheDocument()
     expect(getByTestId('stage-text')).toBeInTheDocument()
+    expect(getByTestId('article-video-fade')).toBeInTheDocument()
   })
 
   it('keeps StageVideo playing in article mode and stacks the reader under it', () => {
@@ -276,6 +278,7 @@ describe('CollectionStage: onEnded wiring to the video-capable stages', () => {
     )
     expect(getByTestId('stage-video')).toBeInTheDocument()
     expect(getByTestId('stage-text')).toBeInTheDocument()
+    expect(getByTestId('article-video-fade')).toBeInTheDocument()
   })
 
   it('a text-only item ignores onEnded (StageText has no such affordance) and still renders', () => {

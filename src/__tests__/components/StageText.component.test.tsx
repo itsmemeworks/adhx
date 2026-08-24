@@ -8,7 +8,11 @@ vi.mock('@/lib/theater/share-tweet', () => ({
 }))
 import { render, screen } from '@testing-library/react'
 import { StageText } from '@/components/theater/StageText'
-import { STAGE_TEXT_SCROLL_PAD, STAGE_TEXT_TOP_PAD } from '@/components/theater/stage-primitives'
+import {
+  STAGE_ARTICLE_UNDER_BAND_PAD,
+  STAGE_TEXT_SCROLL_PAD,
+  STAGE_TEXT_TOP_PAD,
+} from '@/components/theater/stage-primitives'
 import type { TheaterItem } from '@/components/theater/types'
 
 function textItem(overrides: Partial<TheaterItem> = {}): TheaterItem {
@@ -75,6 +79,18 @@ describe('StageText author row', () => {
     const frame = scroller?.firstElementChild
     const column = frame?.firstElementChild
     expect(frame?.className).not.toContain('justify-center')
+    expect(column?.className).not.toContain(STAGE_TEXT_TOP_PAD)
+  })
+
+  it('pads the essay into the video fade and stays transparent so copy can scroll under', () => {
+    render(<StageText item={textItem()} flushTop underBand />)
+    const scroller = document.querySelector('.overflow-y-auto')
+    const frame = scroller?.firstElementChild
+    const column = frame?.firstElementChild
+    expect(scroller?.className).toContain('bg-transparent')
+    expect(scroller?.className).not.toContain('bg-[#08070a]')
+    expect(frame?.className).not.toContain('justify-center')
+    expect(column?.className).toContain(STAGE_ARTICLE_UNDER_BAND_PAD)
     expect(column?.className).not.toContain(STAGE_TEXT_TOP_PAD)
   })
 

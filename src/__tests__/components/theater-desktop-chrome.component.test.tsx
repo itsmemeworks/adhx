@@ -95,6 +95,7 @@ const dockBase = {
   onPrev: vi.fn(),
   onNext: vi.fn(),
   declutter: false,
+  onToggleDeclutter: vi.fn(),
 }
 
 beforeEach(() => {
@@ -122,6 +123,37 @@ beforeEach(() => {
 })
 
 describe('DesktopDock', () => {
+  it('puts de-clutter under prev and repeat under play, not in the top bar', () => {
+    const onToggleDeclutter = vi.fn()
+    const items = [videoItem({ bookmarkId: '1' })]
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+        onToggleDeclutter={onToggleDeclutter}
+        repeatMode="off"
+        onCycleRepeat={vi.fn()}
+      />,
+    )
+    const prev = screen.getByLabelText('Previous post')
+    const next = screen.getByLabelText('Next post')
+    expect(prev.className).toContain('hover:bg-white/15')
+    expect(next.className).toContain('hover:bg-white/15')
+    // One play/pause toggle — video starts playing, so it reads Pause.
+    expect(screen.getByLabelText('Pause')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Play')).not.toBeInTheDocument()
+    const hide = screen.getByLabelText('Hide controls')
+    const repeat = screen.getByLabelText('Stop when caught up')
+    const mute = screen.getByLabelText('Unmute')
+    expect(hide.compareDocumentPosition(repeat) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(repeat.compareDocumentPosition(mute) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(hide.querySelector('.lucide-maximize-2')).toBeInTheDocument()
+    fireEvent.click(hide)
+    expect(onToggleDeclutter).toHaveBeenCalled()
+  })
+
   it('renders a card per item, marks the current card and the next card', () => {
     const items = [
       videoItem({ bookmarkId: '1' }),
@@ -139,6 +171,13 @@ describe('DesktopDock', () => {
     const currentCard = screen.getByText('NOW').closest('button')
     expect(currentCard).toHaveAttribute('aria-current', 'true')
     expect(screen.getByText('NEXT →')).toBeInTheDocument()
+    // NOW / NEXT must not grow the card: same fixed-height meta row as
+    // cards with no status label (body line-height used to stretch them).
+    const nowRow = screen.getByText('NOW').parentElement
+    const nextRow = screen.getByText('NEXT →').parentElement
+    expect(nowRow?.className).toContain('h-4')
+    expect(nextRow?.className).toContain('h-4')
+    expect(screen.getByText('NEXT →').className).toContain('whitespace-nowrap')
   })
 
   it('clicking a card calls onSelect with its key', () => {
@@ -481,6 +520,39 @@ describe('DesktopStageChrome', () => {
     expect(screen.queryByText('Open')).not.toBeInTheDocument()
   })
 
+  it('pins the flame left of paste on media, never next to the author', () => {
+    const item = videoItem({ trendCount: 12 })
+    render(<DesktopStageChrome {...stageBase} current={item} />)
+
+    const flame = screen.getByLabelText('12 trending')
+    const paste = screen.getByRole('button', { name: 'Paste a link' })
+    expect(flame.compareDocumentPosition(paste) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getByText('Alice').closest('a')?.contains(flame)).toBe(false)
+    expect(screen.getByText('Alice').parentElement?.contains(flame)).toBe(false)
+  })
+
+  it('keeps the flame left of paste on text, articles, and Read mode', () => {
+    const { rerender } = render(
+      <DesktopStageChrome {...stageBase} current={textItem({ trendCount: 12 })} />,
+    )
+    expect(screen.getByLabelText('12 trending')).toBeInTheDocument()
+
+    rerender(
+      <DesktopStageChrome
+        {...stageBase}
+        current={textItem({ trendCount: 12, contentType: 'article' })}
+      />,
+    )
+    expect(screen.getByLabelText('12 trending')).toBeInTheDocument()
+
+    rerender(
+      <DesktopStageChrome {...stageBase} current={videoItem({ trendCount: 12 })} articleMode />,
+    )
+    const flame = screen.getByLabelText('12 trending')
+    const paste = screen.getByRole('button', { name: 'Paste a link' })
+    expect(flame.compareDocumentPosition(paste) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('has no more/less caption control — overflow uses Read, not tap-to-expand', () => {
     render(<DesktopStageChrome {...stageBase} current={videoItem()} />)
     expect(screen.getByText('a caption for the video')).toBeInTheDocument()
@@ -609,7 +681,7 @@ describe('DesktopStageChrome', () => {
     expect(screen.getByLabelText('Paste a link to preview').closest('form')?.className).toContain(
       'h-10',
     )
-    expect(screen.getByLabelText('Hide controls').className).toContain('h-10')
+    expect(screen.queryByLabelText('Hide controls')).not.toBeInTheDocument()
     rerender(<DesktopStageChrome {...stageBase} current={null} />)
   })
 
@@ -735,14 +807,9 @@ describe('DesktopStageChrome', () => {
     expect(screen.getByRole('button', { name: 'Make your own' })).toBeInTheDocument()
   })
 
-  // De-cluttering EXPANDS the stage (owner review: the previous icon was
-  // backwards) — entering it reads outward (Maximize2); the reverse
-  // (Minimize2) lives on TheaterShell's floating restore button, not here.
-  it('the de-clutter toggle shows the outward (Maximize2) icon, never Minimize2', () => {
+  it('keeps de-clutter out of the top bar so the avatar stays put', () => {
     render(<DesktopStageChrome {...stageBase} current={videoItem()} />)
-    const toggle = screen.getByLabelText('Hide controls')
-    expect(toggle.querySelector('.lucide-maximize-2')).toBeInTheDocument()
-    expect(toggle.querySelector('.lucide-minimize-2')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Hide controls')).not.toBeInTheDocument()
   })
 
   it('collection mode: the close button sits inside the tab-selector pill, not in the far-right cluster', () => {
@@ -766,11 +833,12 @@ describe('DesktopStageChrome', () => {
     fireEvent.click(closeBtn)
     expect(collection.onClose).toHaveBeenCalled()
 
-    // The far-right cluster (outside the tab pill) holds paste + avatar
-    // + de-clutter — no stray close button there.
-    const declutterBtn = screen.getByLabelText('Hide controls')
-    const rightCluster = declutterBtn.parentElement!
+    // The far-right cluster (outside the tab pill) holds paste + avatar —
+    // no stray close button, and de-clutter lives in the dock.
+    const paste = screen.getByRole('button', { name: 'Paste a link' })
+    const rightCluster = paste.parentElement!.parentElement!
     expect(rightCluster.querySelector('[aria-label="Close"]')).toBeNull()
+    expect(screen.queryByLabelText('Hide controls')).not.toBeInTheDocument()
   })
 
   it('collection mode: "Make your own" opens the sign-in modal in place instead of navigating', () => {
@@ -905,6 +973,29 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
     )
     expect(screen.getByText('#social')).toBeInTheDocument()
     expect(await screen.findByText('Tag · 1')).toBeInTheDocument()
+    const tag = screen.getByRole('button', { name: 'Tag · 1' })
+    expect(tag.className).toContain('border-white/25')
+    expect(tag.className).not.toContain('text-clay')
+    expect(tag.querySelector('.lucide-tag')?.classList.contains('text-clay')).toBe(true)
+  })
+
+  it('collection Tag keeps the glass border when tagged — clay is on the icon only', () => {
+    const collection = {
+      tab: 'collection' as const,
+      onTabChange: vi.fn(),
+      onDone: vi.fn(),
+      onTag: vi.fn(),
+      onSave: vi.fn(),
+      savedKeys: new Set<string>(),
+      remaining: 1,
+      onClose: vi.fn(),
+      tags: ['cats'],
+    }
+    render(<DesktopStageChrome {...stageBase} current={videoItem()} collection={collection} />)
+    const tag = screen.getByRole('button', { name: 'Tag · 1' })
+    expect(tag.className).toContain('border-white/25')
+    expect(tag.className).not.toContain('text-clay')
+    expect(tag.querySelector('.lucide-tag')?.classList.contains('text-clay')).toBe(true)
   })
 
   it('signed-in shared preview shows Live ⇄ My Collection, not the visitor LIVE badge', () => {
@@ -1037,8 +1128,8 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
 })
 
 /**
- * Round 8: the Spotify-style repeat control in the transport cluster, after
- * the audio button and before the divider. Only renders when BOTH
+ * Round 8: the Spotify-style repeat control in the transport cluster, under
+ * play/pause. Only renders when BOTH
  * `repeatMode` and `onCycleRepeat` are provided (home/shared mode) —
  * collection mode always loops on its own and the collection theater is a finite backlog,
  * so neither passes these props.

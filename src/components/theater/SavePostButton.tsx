@@ -154,7 +154,11 @@ export function SavePostButton({
     ) : status === 'saved' ? (
       <Check size={iconSize} className="text-done" />
     ) : status === 'tag' ? (
-      <TagIcon size={iconSize} fill={tagCount > 0 ? 'currentColor' : 'none'} />
+      <TagIcon
+        size={iconSize}
+        className={tagCount > 0 ? 'text-clay' : undefined}
+        fill={tagCount > 0 ? 'currentColor' : 'none'}
+      />
     ) : (
       <Bookmark size={iconSize} />
     )
@@ -173,7 +177,10 @@ export function SavePostButton({
       disabled={status === 'saving' || status === 'saved'}
       className={cn(
         className,
-        status === 'tag' && (tagCount > 0 ? 'border-clay/50 text-clay' : 'border-white/25'),
+        // Tag is a glass action like Share — clay lives on the icon only.
+        // `border-clay/50` is a no-op (hex CSS vars drop Tailwind /NN) and
+        // tw-merge would steal the white glass border if we left it here.
+        status === 'tag' && 'border-white/25',
         status === 'saved' && 'animate-save-pop',
       )}
       aria-label={

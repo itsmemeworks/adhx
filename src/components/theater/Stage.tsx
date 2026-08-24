@@ -14,6 +14,7 @@ import { usePlaybackSource } from './usePlaybackSource'
 import {
   STAGE_ARTICLE_TEXT_PANE,
   STAGE_ARTICLE_VIDEO_BAND,
+  StageArticleVideoFade,
   StageFrame,
   StageHeadline,
   StageCTA,
@@ -122,7 +123,7 @@ export function Stage({
   // not remount the iframe. Overlay is only the article pane.
   let overlay: React.ReactNode = null
   if (keepPlayingInArticle) {
-    overlay = <StageText item={item} omitParentVideo flushTop />
+    overlay = <StageText item={item} omitParentVideo flushTop underBand />
   } else if (!isStageVideoItem && !isYouTube) {
     const type = inferType(item)
     if (isInstagram) {
@@ -184,6 +185,7 @@ export function Stage({
           />
         </div>
       ) : null}
+      {keepPlayingInArticle ? <StageArticleVideoFade /> : null}
       {overlay && (
         // Opaque over a covered (paused) video. In article mode with a live
         // player the pane sits *below* the band so the same video stays visible.
