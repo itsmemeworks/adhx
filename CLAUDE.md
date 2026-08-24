@@ -560,7 +560,7 @@ The app offers multiple ways to save tweets, shown contextually based on the use
 
 **Android install** (`src/components/AndroidInstall.tsx`):
 
-- Settings (`AndroidSettingsCard`) mounts the same `AndroidInstallBanner` as the nudge — always on Android so the path is never lost. Standalone: “Installed. Share → ADHX.” `beforeinstallprompt`: one-tap Add. Else: How expands the steps. Anchor `#android-install`. No dismiss (it is not a nudge).
+- Settings (`AndroidSettingsCard`) mounts the same `AndroidInstallBanner` as the nudge — always on Android so the path is never lost. Standalone: “Installed. Share → ADHX.” `beforeinstallprompt`: one-tap Add. Else: a 3-step icon strip (Add to Home / Open the app / Share → ADHX). Anchor `#android-install`. No dismiss (it is not a nudge).
 - Banner (`PWAInstallPrompt`) shows on Android even **without** `beforeinstallprompt` (Samsung/Firefox often never fire it). Same `AndroidInstallBanner`; skipped on `/settings` so the card is not doubled. Tap away or X dismisses it. On theater paths it hangs under the logo at `z-[70]` so it does not cover the peek bar. Hidden in standalone. Dismiss key `adhx-a2hs-dismissed`.
 - Landing `ShortcutPromo` is Android-first (install + share), not bookmarklet-first.
 

@@ -29,23 +29,23 @@ beforeEach(() => {
 })
 
 describe('AndroidHow', () => {
-  it('lists home-screen then Share → ADHX', () => {
+  it('shows three visual steps then Share → ADHX', () => {
     render(<AndroidHow />)
-    expect(screen.getByText(/Add to Home screen/)).toBeInTheDocument()
-    expect(screen.getAllByText(/Share → ADHX/).length).toBeGreaterThan(0)
+    expect(screen.getByText('Add to Home')).toBeInTheDocument()
+    expect(screen.getByText('Open the app')).toBeInTheDocument()
+    expect(screen.getByText('Share → ADHX')).toBeInTheDocument()
     expect(screen.getByText(/Paste link still works/)).toBeInTheDocument()
   })
 })
 
 describe('AndroidSettingsCard', () => {
-  it('uses the same install chrome as the nudge', () => {
+  it('uses the same install chrome as the nudge, with steps already open', () => {
     render(<AndroidSettingsCard />)
     expect(screen.getByText('Share a post directly to ADHX')).toBeInTheDocument()
     expect(document.getElementById('android-install')).not.toBeNull()
-    expect(
-      screen.getByText(/Add to your home screen once\. Then in X, Instagram, TikTok, or YouTube/),
-    ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'How' })).toBeInTheDocument()
+    expect(screen.getByText('Add to Home')).toBeInTheDocument()
+    expect(screen.getByText('Share → ADHX')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'How' })).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Dismiss')).not.toBeInTheDocument()
     expect(screen.queryByText('Android install')).not.toBeInTheDocument()
   })
@@ -92,7 +92,9 @@ describe('AndroidSettingsCard', () => {
 describe('AndroidLandingPromo', () => {
   it('leads with Share → ADHX after install', () => {
     render(<AndroidLandingPromo />)
-    expect(screen.getByText(/Add ADHX to your home screen once/)).toBeInTheDocument()
-    expect(screen.getByText(/Share Target needs the installed app/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Share a post from X, Instagram, TikTok, or YouTube/),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Add to Home')).toBeInTheDocument()
   })
 })

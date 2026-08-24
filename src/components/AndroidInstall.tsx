@@ -1,15 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Plus, Share, X } from 'lucide-react'
+import { MoreVertical, Plus, Share, Smartphone, X, type LucideIcon } from 'lucide-react'
 import { getPlatformType } from '@/lib/platform'
 import { cn } from '@/lib/utils'
 
 export const ANDROID_A2HS_DISMISS_KEY = 'adhx-a2hs-dismissed'
 
 export const ANDROID_INSTALL_TITLE = 'Share a post directly to ADHX'
-export const ANDROID_INSTALL_BODY =
-  'Add to your home screen once. Then in X, Instagram, TikTok, or YouTube: Share → ADHX.'
+export const ANDROID_INSTALL_BODY = 'From X, Instagram, TikTok, or YouTube: Share → ADHX.'
 export const ANDROID_INSTALL_STANDALONE =
   'Installed. From X, Instagram, TikTok, or YouTube: Share → ADHX.'
 
@@ -26,23 +25,39 @@ export function isStandaloneDisplay(): boolean {
   )
 }
 
+const HOW_STEPS: { icon: LucideIcon; label: string; hint: string }[] = [
+  { icon: MoreVertical, label: 'Add to Home', hint: 'Browser ⋮ menu' },
+  { icon: Smartphone, label: 'Open the app', hint: 'From the home screen' },
+  { icon: Share, label: 'Share → ADHX', hint: 'Any app, one tap' },
+]
+
 /** Chrome / Samsung / Firefox steps — share sheet only works after install. */
 export function AndroidHow({ className }: { className?: string }) {
   return (
-    <ol className={cn('mt-3 space-y-2 text-[13px] leading-relaxed text-ink-2', className)}>
-      <li>
-        <span>1. Browser menu (⋮) → Add to Home screen.</span>
-      </li>
-      <li>
-        <span>2. Open ADHX from the home screen once, like an app.</span>
-      </li>
-      <li>
-        <span>3. In X, Instagram, TikTok, or YouTube: Share → ADHX.</span>
-      </li>
-      <li>
+    <div className={cn('mt-3', className)}>
+      <ol className="grid grid-cols-3 gap-2">
+        {HOW_STEPS.map((step, i) => {
+          const Icon = step.icon
+          return (
+            <li key={step.label} className="flex flex-col items-center px-0.5 text-center">
+              <span className="relative flex h-11 w-11 items-center justify-center rounded-[14px] bg-clay text-white">
+                <Icon className="h-5 w-5" aria-hidden />
+                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-ink text-[9px] font-semibold text-surface">
+                  {i + 1}
+                </span>
+              </span>
+              <span className="mt-2 text-[12px] font-semibold leading-tight text-ink">
+                {step.label}
+              </span>
+              <span className="mt-0.5 text-[11px] leading-snug text-ink-3">{step.hint}</span>
+            </li>
+          )
+        })}
+      </ol>
+      <p className="mt-3 text-center text-[11px] leading-snug text-ink-3">
         <span>Paste link still works if Share → ADHX is missing.</span>
-      </li>
-    </ol>
+      </p>
+    </div>
   )
 }
 
@@ -78,15 +93,17 @@ export function AndroidInstallBanner({
   className,
   cardClassName,
   dismissible = false,
+  alwaysHow = false,
   onDismiss,
 }: {
   id?: string
   className?: string
   cardClassName?: string
   dismissible?: boolean
+  alwaysHow?: boolean
   onDismiss?: () => void
 }) {
-  const [howOpen, setHowOpen] = useState(false)
+  const [howOpen, setHowOpen] = useState(alwaysHow)
   const [standalone, setStandalone] = useState(false)
   const { deferred, install } = useAndroidInstallPrompt()
 
@@ -99,14 +116,19 @@ export function AndroidInstallBanner({
     onDismiss?.()
   }
 
+  const showHow = !standalone && !deferred && (alwaysHow || howOpen)
+
   return (
-    <div id={id} className={className}>
-      <div
-        className={cn(
-          'flex items-center gap-3 rounded-2xl border border-hairline bg-surface px-4 py-3 shadow-2xl',
-          cardClassName,
-        )}
-      >
+    <div
+      id={id}
+      className={cn(
+        'rounded-2xl border border-hairline bg-surface px-4 py-3 shadow-2xl',
+        alwaysHow && 'px-5 py-4',
+        cardClassName,
+        className,
+      )}
+    >
+      <div className="flex items-center gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-ink">{ANDROID_INSTALL_TITLE}</p>
           <p className="text-xs leading-snug text-ink-3">
@@ -123,14 +145,16 @@ export function AndroidInstallBanner({
               <Plus className="w-4 h-4" /> Add
             </button>
           ) : (
-            <button
-              type="button"
-              onClick={() => setHowOpen((open) => !open)}
-              aria-expanded={howOpen}
-              className="flex-shrink-0 inline-flex items-center px-3 py-1.5 min-h-[36px] rounded-full text-sm font-semibold text-ink border border-hairline"
-            >
-              How
-            </button>
+            !alwaysHow && (
+              <button
+                type="button"
+                onClick={() => setHowOpen((open) => !open)}
+                aria-expanded={howOpen}
+                className="flex-shrink-0 inline-flex items-center px-3 py-1.5 min-h-[36px] rounded-full text-sm font-semibold text-ink border border-hairline"
+              >
+                How
+              </button>
+            )
           ))}
         {dismissible && (
           <button
@@ -143,16 +167,7 @@ export function AndroidInstallBanner({
           </button>
         )}
       </div>
-      {howOpen && !deferred && !standalone && (
-        <div
-          className={cn(
-            'mt-2 rounded-2xl border border-hairline bg-surface px-4 py-3 shadow-2xl',
-            cardClassName,
-          )}
-        >
-          <AndroidHow className="mt-0" />
-        </div>
-      )}
+      {showHow && <AndroidHow className="mt-4" />}
     </div>
   )
 }
@@ -173,7 +188,7 @@ export function AndroidSettingsCard() {
 
   if (!show) return null
 
-  return <AndroidInstallBanner id="android-install" />
+  return <AndroidInstallBanner id="android-install" alwaysHow />
 }
 
 /** Landing-card copy — Android first, bookmarklet is desktop. */
@@ -181,16 +196,9 @@ export function AndroidLandingPromo() {
   return (
     <>
       <p className="mb-4 text-[14px] leading-[1.5] text-ink-2">
-        <span>
-          Add ADHX to your home screen once. Next time you&apos;re in X, Instagram, TikTok, or
-          YouTube, tap Share → ADHX — the preview opens so you can watch and send the file.
-        </span>
+        <span>Share a post from X, Instagram, TikTok, or YouTube and it opens here.</span>
       </p>
-      <AndroidHow className="mb-1 text-left" />
-      <p className="mt-3 inline-flex items-center gap-1.5 text-[13px] text-ink-3">
-        <Share className="h-3.5 w-3.5" aria-hidden />
-        <span>Share Target needs the installed app, not a browser tab.</span>
-      </p>
+      <AndroidHow className="mb-1" />
     </>
   )
 }

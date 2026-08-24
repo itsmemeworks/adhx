@@ -87,7 +87,7 @@ describe('PWAInstallPrompt', () => {
     render(<PWAInstallPrompt />)
     expect(await screen.findByText('Share a post directly to ADHX')).toBeInTheDocument()
     expect(
-      screen.getByText(/Add to your home screen once\. Then in X, Instagram, TikTok, or YouTube/),
+      screen.getByText(/From X, Instagram, TikTok, or YouTube: Share → ADHX\./),
     ).toBeInTheDocument()
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'How' })).toBeInTheDocument()
@@ -99,7 +99,7 @@ describe('PWAInstallPrompt', () => {
     mockPlatform = 'android'
     render(<PWAInstallPrompt />)
     fireEvent.click(await screen.findByRole('button', { name: 'How' }))
-    expect(screen.getByText(/Add to Home screen/)).toBeInTheDocument()
+    expect(screen.getByText('Add to Home')).toBeInTheDocument()
     expect(screen.getByText(/Paste link still works/)).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'How' })).not.toBeInTheDocument()
   })

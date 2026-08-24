@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-24 — Android install how-to is a 3-step icon strip
+
+The numbered paragraph list is gone. Add to Home / Open the app / Share → ADHX are clay tiles with a one-line hint. Settings shows the strip open; the theater nudge still hides it behind How. Follow-up: none.
+
 ## 2026-08-24 — Settings uses the same Android install banner
 
 `AndroidInstallBanner` is the single chrome for the theater/library nudge and Settings. Settings stays always-on (no tap-away / X); the nudge skips `/settings` so the card is not doubled. Follow-up: none.
