@@ -1,52 +1,76 @@
 /**
  * @vitest-environment jsdom
  *
- * `useClampExpand`'s show more/less state is a *sticky* preference: an
- * explicit expand or collapse survives the theater advancing to a new item
- * (the resetKey changing), and is shared across independent hook instances
- * (desktop chrome + mobile chrome are both mounted at once).
- *
- * Moved from theater-rail.component.test.tsx when the hook moved out of the
- * deleted Rail.tsx into its own module.
+ * `useClampExpand` only measures whether a 2-line caption overflows. Read
+ * appears from that flag — there is no sticky expand preference anymore.
  */
 
-import { describe, it, expect } from 'vitest'
-import { act, renderHook } from '@testing-library/react'
-import { useClampExpand } from '@/components/theater/useClampExpand'
+import { describe, it, expect, afterEach, vi } from 'vitest'
+import { act, render, screen } from '@testing-library/react'
+import { resetClampExpandPreference, useClampExpand } from '@/components/theater/useClampExpand'
 
-describe('useClampExpand — sticky expand preference', () => {
-  it('an explicit expand survives a resetKey change (theater advancing to a new item)', () => {
-    const { result, rerender } = renderHook(({ key }) => useClampExpand(key), {
-      initialProps: { key: 'item-a' },
-    })
+afterEach(() => {
+  resetClampExpandPreference()
+  vi.unstubAllGlobals()
+})
 
-    act(() => result.current.setExpanded(true))
-    expect(result.current.expanded).toBe(true)
+describe('useClampExpand — overflow measurement', () => {
+  it('re-measures overflow when the caption resizes after first paint', () => {
+    let notify: ResizeObserverCallback = () => undefined
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(cb: ResizeObserverCallback) {
+          notify = cb
+        }
+        observe() {}
+        disconnect() {}
+        unobserve() {}
+      },
+    )
 
-    rerender({ key: 'item-b' })
-    expect(result.current.expanded).toBe(true)
+    function Probe() {
+      const { ref, overflowing } = useClampExpand('late-layout')
+      return <p ref={ref} data-testid="cap" data-overflow={String(overflowing)} />
+    }
+
+    render(<Probe />)
+    const el = screen.getByTestId('cap')
+    expect(el.dataset.overflow).toBe('false')
+
+    Object.defineProperty(el, 'scrollHeight', { configurable: true, get: () => 200 })
+    Object.defineProperty(el, 'clientHeight', { configurable: true, get: () => 40 })
+    act(() => notify([] as unknown as ResizeObserverEntry[], {} as ResizeObserver))
+    expect(el.dataset.overflow).toBe('true')
   })
 
-  it('an explicit collapse also survives a resetKey change', () => {
-    const { result, rerender } = renderHook(({ key }) => useClampExpand(key), {
-      initialProps: { key: 'item-a' },
-    })
+  it('re-measures when resetKey changes (theater advancing)', () => {
+    let notify: ResizeObserverCallback = () => undefined
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(cb: ResizeObserverCallback) {
+          notify = cb
+        }
+        observe() {}
+        disconnect() {}
+        unobserve() {}
+      },
+    )
 
-    act(() => result.current.setExpanded(true))
-    act(() => result.current.setExpanded(false))
-    expect(result.current.expanded).toBe(false)
+    function Probe({ itemKey }: { itemKey: string }) {
+      const { ref, overflowing } = useClampExpand(itemKey)
+      return <p ref={ref} data-testid="cap" data-overflow={String(overflowing)} />
+    }
 
-    rerender({ key: 'item-b' })
-    expect(result.current.expanded).toBe(false)
-  })
+    const { rerender } = render(<Probe itemKey="item-a" />)
+    const el = screen.getByTestId('cap')
+    Object.defineProperty(el, 'scrollHeight', { configurable: true, get: () => 200 })
+    Object.defineProperty(el, 'clientHeight', { configurable: true, get: () => 40 })
+    act(() => notify([] as unknown as ResizeObserverEntry[], {} as ResizeObserver))
+    expect(el.dataset.overflow).toBe('true')
 
-  it('is shared across independent hook instances (desktop + mobile chrome)', () => {
-    const { result: desktop } = renderHook(() => useClampExpand('shared-a'))
-    act(() => desktop.current.setExpanded(true))
-
-    // A second instance mounted afterwards (e.g. the mobile chrome) picks up
-    // the same preference as its initial state.
-    const { result: mobile } = renderHook(() => useClampExpand('shared-a'))
-    expect(mobile.current.expanded).toBe(true)
+    rerender(<Probe itemKey="item-b" />)
+    expect(screen.getByTestId('cap').dataset.overflow).toBe('true')
   })
 })

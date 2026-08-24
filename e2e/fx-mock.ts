@@ -1,30 +1,62 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
-import { POST, PREVIEW_IG, PREVIEW_TT, PREVIEW_YT } from './constants'
+import { POST, PREVIEW_IG, PREVIEW_TT, PREVIEW_YT, QUOTED_INNER } from './constants'
 
 function tweetPayload(author: string, id: string) {
   const known = Object.values(POST).find((p) => p.id === id)
   const text = known?.text ?? `E2E tweet ${id}`
   const name = known?.authorName ?? author
-  return {
-    code: 200,
-    message: 'OK',
-    tweet: {
-      id,
-      url: `https://x.com/${author}/status/${id}`,
-      text,
+  const tweet: Record<string, unknown> = {
+    id,
+    url: `https://x.com/${author}/status/${id}`,
+    text,
+    author: {
+      id: '1',
+      name,
+      screen_name: author,
+      avatar_url: 'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png',
+    },
+    created_at: '2026-08-22T12:00:00.000Z',
+    replies: 0,
+    retweets: 0,
+    likes: 0,
+  }
+  if (id === POST.quoted.id) {
+    tweet.media = {
+      videos: [
+        {
+          url: 'https://video.twimg.com/e2e.mp4',
+          thumbnail_url:
+            'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png',
+          width: 720,
+          height: 1280,
+        },
+      ],
+      all: [
+        {
+          url: 'https://video.twimg.com/e2e.mp4',
+          thumbnail_url:
+            'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png',
+        },
+      ],
+    }
+    tweet.quote = {
+      id: QUOTED_INNER.id,
+      url: `https://x.com/${QUOTED_INNER.author}/status/${QUOTED_INNER.id}`,
+      text: QUOTED_INNER.text,
       author: {
-        id: '1',
-        name,
-        screen_name: author,
+        id: '2',
+        name: QUOTED_INNER.authorName,
+        screen_name: QUOTED_INNER.author,
         avatar_url:
           'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png',
       },
-      created_at: '2026-08-22T12:00:00.000Z',
+      created_at: '2026-08-22T11:00:00.000Z',
       replies: 0,
       retweets: 0,
       likes: 0,
-    },
+    }
   }
+  return { code: 200, message: 'OK', tweet }
 }
 
 function json(res: ServerResponse, status: number, body: unknown) {

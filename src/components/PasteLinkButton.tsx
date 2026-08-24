@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { PlatformGlyph } from '@/components/matter'
 import { isIOSDevice } from '@/lib/platform'
 import { navigateToPastedLink } from '@/lib/utils/parse-share-url'
+import { resolvePastedPost } from '@/lib/theater/paste-preview'
 
 // Copied from `TheaterAvatarMenu`'s dismissal machinery: while the overlay is
 // open, keep the theater's window-level keydown handler from acting on these
@@ -39,6 +40,12 @@ export interface PasteLinkButtonProps {
    * most Matter controls — see the "icons over text" rule).
    */
   iconOnly?: boolean
+  /**
+   * Handle the pasted post HERE instead of navigating to its preview page.
+   * Personal Live / My Collection pass this so a paste saves in place and
+   * the viewer stays on `/` or `/collection`.
+   */
+  onPastePost?: (url: string) => boolean | Promise<boolean>
 }
 
 /**
@@ -105,7 +112,11 @@ function useVisibleViewport(active: boolean): { top: number; height: number } | 
   return box
 }
 
-export function PasteLinkButton({ className, iconOnly = false }: PasteLinkButtonProps) {
+export function PasteLinkButton({
+  className,
+  iconOnly = false,
+  onPastePost,
+}: PasteLinkButtonProps) {
   const [ios, setIos] = useState(false)
   const [resolving, setResolving] = useState(false)
   const [overlayOpen, setOverlayOpen] = useState(false)
@@ -165,6 +176,15 @@ export function PasteLinkButton({ className, iconOnly = false }: PasteLinkButton
   // distinctly to the caller: the first two mean "we got no answer" (never
   // an error, see below), the third means "we got an answer and it wasn't
   // a link."
+  const applyPasted = async (raw: string): Promise<boolean> => {
+    if (onPastePost) {
+      const pasted = resolvePastedPost(raw)
+      if (!pasted) return false
+      return !!(await onPastePost(pasted.url))
+    }
+    return navigateToPastedLink(router, raw)
+  }
+
   const attemptRead = async (): Promise<ReadResult> => {
     if (!navigator.clipboard?.readText) return 'no-text'
     let text: string
@@ -174,7 +194,7 @@ export function PasteLinkButton({ className, iconOnly = false }: PasteLinkButton
       return 'no-text'
     }
     if (!text) return 'no-text'
-    return navigateToPastedLink(router, text) ? 'navigated' : 'unsupported'
+    return (await applyPasted(text)) ? 'navigated' : 'unsupported'
   }
 
   const handleTap = () => {
@@ -213,6 +233,7 @@ export function PasteLinkButton({ className, iconOnly = false }: PasteLinkButton
     setManualValue(value)
     setManualError('')
     if (
+      !onPastePost &&
       /(?:x\.com|twitter\.com|instagram\.com|tiktok\.com|youtube\.com|youtu\.be)\//i.test(value)
     ) {
       navigateToPastedLink(router, value)
@@ -228,6 +249,15 @@ export function PasteLinkButton({ className, iconOnly = false }: PasteLinkButton
   const handleManualPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     const text = e.clipboardData.getData('text')
     if (!text) return
+    if (onPastePost) {
+      const pasted = resolvePastedPost(text)
+      if (!pasted) return
+      e.preventDefault()
+      void Promise.resolve(onPastePost(pasted.url)).then((ok) => {
+        if (ok) setOverlayOpen(false)
+      })
+      return
+    }
     if (navigateToPastedLink(router, text)) {
       e.preventDefault()
     }
@@ -235,9 +265,13 @@ export function PasteLinkButton({ className, iconOnly = false }: PasteLinkButton
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!navigateToPastedLink(router, manualValue)) {
+    void (async () => {
+      if (await applyPasted(manualValue)) {
+        setOverlayOpen(false)
+        return
+      }
       setManualError("That's not a link we recognize.")
-    }
+    })()
   }
 
   return (

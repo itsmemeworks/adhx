@@ -42,7 +42,7 @@ authedTest.describe('collection actions', () => {
     async ({ page }) => {
       await page.goto(`/collection?open=${POST.hotel.id}&platform=twitter`)
       await expectTheaterReady(page)
-      await expect(page.getByRole('button', { name: 'Link' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Link', exact: true })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Tag', exact: true })).toBeVisible()
       await expect(page.getByRole('link', { name: 'Open' })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()

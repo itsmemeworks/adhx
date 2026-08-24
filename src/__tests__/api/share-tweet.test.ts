@@ -269,6 +269,9 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
             replies: 1,
             retweets: 2,
             likes: 3,
+            media: {
+              photos: [{ url: 'https://pbs.twimg.com/media/q.jpg', width: 800, height: 600 }],
+            },
           },
         }),
       )
@@ -280,6 +283,9 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
       expect(data.quoteTweet).toBeDefined()
       expect(data.quoteTweet.id).toBe('999')
       expect(data.quoteTweet.author.username).toBe('quoteduser')
+      expect(data.quoteTweet.media.photos).toEqual([
+        { url: 'https://pbs.twimg.com/media/q.jpg', width: 800, height: 600 },
+      ])
     })
 
     it('includes external link data', async () => {

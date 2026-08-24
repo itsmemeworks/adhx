@@ -61,6 +61,31 @@ describe('progressKindFor', () => {
   it('returns timed for a twitter item with no contentType set', () => {
     expect(progressKindFor(make({ platform: 'twitter' }))).toBe('timed')
   })
+
+  it('returns video for a video tweet that quotes another post (media-first)', () => {
+    expect(
+      progressKindFor(
+        make({
+          platform: 'twitter',
+          contentType: 'video',
+          quote: { author: 'other', text: 'quoted' },
+        }),
+      ),
+    ).toBe('video')
+  })
+
+  it('keeps video progress for a video+quote item in article mode', () => {
+    expect(
+      progressKindFor(
+        make({
+          platform: 'twitter',
+          contentType: 'video',
+          quote: { author: 'other', text: 'quoted' },
+        }),
+        true,
+      ),
+    ).toBe('video')
+  })
 })
 
 /**
