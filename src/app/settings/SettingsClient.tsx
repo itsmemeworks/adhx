@@ -434,7 +434,9 @@ function AvatarRow({ me }: { me: AuthMe }) {
         />
         <div className="min-w-0 flex-1">
           <p className="mt-0.5 text-[12px] text-ink-3">
-            {xPhoto ? 'ADHX generate or X avatar' : 'Generated from your username'}
+            {xPhoto
+              ? 'Choose between ADHX generated or your X avatar'
+              : 'Generated from your username'}
           </p>
         </div>
         {xPhoto && (
