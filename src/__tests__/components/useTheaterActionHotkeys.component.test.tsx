@@ -45,6 +45,30 @@ describe('useTheaterActionHotkeys', () => {
     expect(mobileSave).not.toHaveBeenCalled()
   })
 
+  it('clicks Expand and Repeat when those events fire', () => {
+    const onExpand = vi.fn()
+    const onRepeat = vi.fn()
+    function Dock() {
+      const rootRef = useRef<HTMLDivElement>(null)
+      useTheaterActionHotkeys('desktop', rootRef)
+      return (
+        <div ref={rootRef}>
+          <button type="button" data-theater-action="expand" onClick={onExpand}>
+            Expand
+          </button>
+          <button type="button" data-theater-action="repeat" onClick={onRepeat}>
+            Repeat
+          </button>
+        </div>
+      )
+    }
+    render(<Dock />)
+    act(() => window.dispatchEvent(new Event('theater-toggle-expand')))
+    act(() => window.dispatchEvent(new Event('theater-cycle-repeat')))
+    expect(onExpand).toHaveBeenCalledTimes(1)
+    expect(onRepeat).toHaveBeenCalledTimes(1)
+  })
+
   it('clicks Read / Watch when theater-toggle-article fires', () => {
     const onRead = vi.fn()
     function ReadToggle() {

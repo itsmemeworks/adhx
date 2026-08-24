@@ -2,10 +2,11 @@
 
 /**
  * Global keydown handling for TheaterShell. One keymap for every theater
- * surface (Live, collection, playlist, shared): arrows / j k next-prev,
- * Space play/pause, M mute, S/T/L/C/D/O/A/R/W/P action buttons, . menu,
- * Shift+? help. Collection still has U (undo Archive) and Escape (close).
- * `personalKeyAction` is re-exported from TheaterShell for tests.
+ * surface (Live, collection, playlist, shared): →/←/j/k next-prev, ↑/↓
+ * scroll text, Space play/pause, M mute, E expand, F repeat, S/T/L/C/D/O/A/R/W/P
+ * action buttons, . menu, Shift+? help. Collection still has U (undo Archive)
+ * and Escape (close). `personalKeyAction` is re-exported from TheaterShell
+ * for tests.
  */
 
 import { useEffect } from 'react'
@@ -15,6 +16,7 @@ import {
   THEATER_ACTION_EVENTS,
   isTheaterTypingTarget,
   resolveTheaterShortcut,
+  scrollTheaterStage,
   type TheaterKeyLike,
 } from './theater-shortcuts'
 
@@ -55,14 +57,13 @@ export interface UseTheaterKeyboardArgs {
 }
 
 /**
- * Keyboard nav: ↓/→/j next, ↑/←/k prev — the arrows double up because the
- * desktop dock's filmstrip queue reads horizontally while mobile still
- * scrolls vertically. Space toggles play/pause (delegated to Stage via a
- * custom event), m toggles mute. Letter keys fire the matching action
- * button through `theater-*` window events so only the visible chrome
- * (desktop vs mobile) handles them. Ignored while typing in an
- * input/textarea/contentEditable element. ⌘V / Ctrl+V is the OS paste
- * event, not a keydown binding.
+ * Keyboard nav: →/j next, ←/k prev. ↑/↓ scroll a text/article stage so
+ * reading never needs the mouse (they do not change posts). Space toggles
+ * play/pause (delegated to Stage via a custom event), m toggles mute.
+ * Letter keys fire the matching action button through `theater-*` window
+ * events so only the visible chrome (desktop vs mobile) handles them.
+ * Ignored while typing in an input/textarea/contentEditable element.
+ * ⌘V / Ctrl+V is the OS paste event, not a keydown binding.
  */
 export function useTheaterKeyboard({
   isPersonal,
@@ -120,6 +121,14 @@ export function useTheaterKeyboard({
           e.preventDefault()
           goPrev()
           break
+        case 'scrollDown':
+          e.preventDefault()
+          scrollTheaterStage(1)
+          break
+        case 'scrollUp':
+          e.preventDefault()
+          scrollTheaterStage(-1)
+          break
         case 'togglePlay':
           e.preventDefault()
           if (!isPlaybackHidden?.()) {
@@ -141,6 +150,8 @@ export function useTheaterKeyboard({
         case 'toggleArticle':
         case 'replay':
         case 'keepPlaying':
+        case 'toggleExpand':
+        case 'cycleRepeat':
           e.preventDefault()
           window.dispatchEvent(new CustomEvent(THEATER_ACTION_EVENTS[action]))
           break

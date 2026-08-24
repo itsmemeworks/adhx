@@ -33,6 +33,9 @@ test.describe('theater shortcuts (signed out)', () => {
     await expect(help.getByText('Re-watch all')).toBeVisible()
     await expect(help.getByText('Keep playing')).toBeVisible()
     await expect(help.getByText('Paste a link')).toBeVisible()
+    await expect(help.getByText('Expand')).toBeVisible()
+    await expect(help.getByText('Repeat')).toBeVisible()
+    await expect(help.getByText('Scroll text')).toBeVisible()
 
     await page.keyboard.press('ArrowRight')
     await expect(help).toBeVisible()
@@ -83,6 +86,37 @@ test.describe('theater shortcuts (signed out)', () => {
 
     await page.keyboard.press('r')
     await expect(page.getByRole('button', { name: 'Read' })).toBeVisible()
+  })
+
+  test('ArrowDown does not advance; ArrowRight does; E expands; F cycles repeat', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    await expectTheaterReady(page)
+    await expect(page.getByRole('button', { name: 'Previous post' })).toBeDisabled()
+
+    await page.keyboard.press('ArrowDown')
+    await expect(page.getByRole('button', { name: 'Previous post' })).toBeDisabled()
+
+    await page.keyboard.press('ArrowRight')
+    await expect(page.getByRole('button', { name: 'Previous post' })).toBeEnabled()
+    await page.keyboard.press('ArrowLeft')
+    await expect(page.getByRole('button', { name: 'Previous post' })).toBeDisabled()
+
+    await expect(page.getByRole('button', { name: 'Hide controls' })).toBeVisible()
+    await page.keyboard.press('e')
+    await expect(page.getByRole('button', { name: 'Show controls' })).toBeVisible()
+    await page.keyboard.press('e')
+    await expect(page.getByRole('button', { name: 'Hide controls' })).toBeVisible()
+
+    const repeat = page.locator('[data-theater-action="repeat"]:visible')
+    await expect(repeat).toHaveAttribute('aria-label', 'Stop when caught up')
+    await page.keyboard.press('f')
+    await expect(repeat).toHaveAttribute('aria-label', 'Keep playing')
+    await page.keyboard.press('f')
+    await expect(repeat).toHaveAttribute('aria-label', 'Repeat this post')
+    await page.keyboard.press('f')
+    await expect(repeat).toHaveAttribute('aria-label', 'Stop when caught up')
   })
 })
 

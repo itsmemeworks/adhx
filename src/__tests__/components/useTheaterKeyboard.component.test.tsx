@@ -100,10 +100,19 @@ describe('useTheaterKeyboard: isPlaybackHidden space guard', () => {
     expect(args.onClose).not.toHaveBeenCalled()
   })
 
+  it('does not advance on ArrowDown / ArrowUp — those scroll text', () => {
+    const args = baseArgs()
+    renderHook(() => useTheaterKeyboard(args))
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' })))
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' })))
+    expect(args.goNext).not.toHaveBeenCalled()
+    expect(args.goPrev).not.toHaveBeenCalled()
+  })
+
   it('other keys (goNext/goPrev/mute) are unaffected by isPlaybackHidden', () => {
     const args = baseArgs({ isPlaybackHidden: () => true })
     renderHook(() => useTheaterKeyboard(args))
-    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' })))
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' })))
     expect(args.goNext).toHaveBeenCalledTimes(1)
   })
 
@@ -150,6 +159,8 @@ describe('useTheaterKeyboard: isPlaybackHidden space guard', () => {
       'theater-toggle-article',
       'theater-replay',
       'theater-keep-playing',
+      'theater-toggle-expand',
+      'theater-cycle-repeat',
     ] as const
     const listeners = names.map((name) => {
       const fn = () => heard.push(name)
@@ -168,6 +179,8 @@ describe('useTheaterKeyboard: isPlaybackHidden space guard', () => {
       act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'r' })))
       act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'w' })))
       act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p' })))
+      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'e' })))
+      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'f' })))
       expect(onToggleHelp).toHaveBeenCalledTimes(1)
       expect(args.setMuted).toHaveBeenCalledTimes(1)
       expect(heard).toEqual([...names])

@@ -804,6 +804,7 @@ export function TheaterMobileChrome({
                 onTouchEnd={(e) => e.stopPropagation()}
                 aria-label={declutter ? 'Show controls' : 'Hide controls'}
                 className={PEEK_ICON_BTN}
+                data-theater-action="expand"
               >
                 {/* De-cluttering EXPANDS the stage — the enter action (declutter
                   false → true) reads outward (Maximize2); exiting reads
@@ -841,6 +842,7 @@ export function TheaterMobileChrome({
                   // inline style outranks whatever won the cascade against the
                   // bare `text-clay` class on the in-place-updated node.
                   style={repeatMode !== 'off' ? { color: 'var(--m-accent)' } : undefined}
+                  data-theater-action="repeat"
                 >
                   {repeatMode === 'one' ? <Repeat1 size={16} /> : <Repeat size={16} />}
                 </button>

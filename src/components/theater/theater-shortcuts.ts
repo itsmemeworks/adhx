@@ -26,6 +26,10 @@ export type TheaterShortcut =
   | 'toggleArticle'
   | 'replay'
   | 'keepPlaying'
+  | 'toggleExpand'
+  | 'cycleRepeat'
+  | 'scrollDown'
+  | 'scrollUp'
 
 export const THEATER_ACTION_EVENTS = {
   save: 'theater-save',
@@ -39,6 +43,8 @@ export const THEATER_ACTION_EVENTS = {
   toggleArticle: 'theater-toggle-article',
   replay: 'theater-replay',
   keepPlaying: 'theater-keep-playing',
+  toggleExpand: 'theater-toggle-expand',
+  cycleRepeat: 'theater-cycle-repeat',
 } as const
 
 export type TheaterActionName = keyof typeof THEATER_ACTION_EVENTS
@@ -56,6 +62,8 @@ export const THEATER_ACTION_ATTR: Record<TheaterActionName, string> = {
   toggleArticle: 'read',
   replay: 'replay',
   keepPlaying: 'keep-playing',
+  toggleExpand: 'expand',
+  cycleRepeat: 'repeat',
 }
 
 export interface TheaterKeyLike {
@@ -100,6 +108,10 @@ export const THEATER_SHORTCUT_KEYS = new Set([
   'C',
   'd',
   'D',
+  'e',
+  'E',
+  'f',
+  'F',
   'o',
   'O',
   'a',
@@ -123,16 +135,18 @@ export function resolveTheaterShortcut(e: TheaterKeyLike): TheaterShortcut | nul
   if (isTheaterTypingTarget(e.target)) return null
 
   switch (e.key) {
-    case 'ArrowDown':
     case 'ArrowRight':
     case 'j':
     case 'J':
       return 'next'
-    case 'ArrowUp':
     case 'ArrowLeft':
     case 'k':
     case 'K':
       return 'prev'
+    case 'ArrowDown':
+      return 'scrollDown'
+    case 'ArrowUp':
+      return 'scrollUp'
     case ' ':
       return 'togglePlay'
     case 'm':
@@ -153,6 +167,12 @@ export function resolveTheaterShortcut(e: TheaterKeyLike): TheaterShortcut | nul
     case 'd':
     case 'D':
       return 'sendFile'
+    case 'e':
+    case 'E':
+      return 'toggleExpand'
+    case 'f':
+    case 'F':
+      return 'cycleRepeat'
     case 'o':
     case 'O':
       return 'open'
@@ -192,6 +212,22 @@ export function isTheaterHotkeySurface(surface: TheaterHotkeySurface): boolean {
   return surface === 'desktop' ? desktop : !desktop
 }
 
+/**
+ * ↑/↓ scroll the on-stage article/text reader instead of changing posts.
+ * Returns whether the scroller actually moved.
+ */
+export function scrollTheaterStage(direction: 1 | -1, root: ParentNode = document): boolean {
+  const el = root.querySelector<HTMLElement>('[data-theater-scroll]')
+  if (!el) return false
+  const max = el.scrollHeight - el.clientHeight
+  if (max <= 1) return false
+  const step = Math.max(64, Math.round(el.clientHeight * 0.35))
+  const next = Math.max(0, Math.min(max, el.scrollTop + direction * step))
+  if (next === el.scrollTop) return false
+  el.scrollTop = next
+  return true
+}
+
 export type TheaterHelpRow = { keys: string[]; label: string }
 
 export type TheaterHelpSection = { title: string; rows: TheaterHelpRow[] }
@@ -200,8 +236,9 @@ export const THEATER_SHORTCUT_HELP: TheaterHelpSection[] = [
   {
     title: 'Navigate',
     rows: [
-      { keys: ['→', '↓', 'J'], label: 'Next post' },
-      { keys: ['←', '↑', 'K'], label: 'Previous post' },
+      { keys: ['→', 'J'], label: 'Next post' },
+      { keys: ['←', 'K'], label: 'Previous post' },
+      { keys: ['↓', '↑'], label: 'Scroll text' },
     ],
   },
   {
@@ -209,6 +246,8 @@ export const THEATER_SHORTCUT_HELP: TheaterHelpSection[] = [
     rows: [
       { keys: ['Space'], label: 'Play / pause' },
       { keys: ['M'], label: 'Mute / unmute' },
+      { keys: ['E'], label: 'Expand' },
+      { keys: ['F'], label: 'Repeat' },
     ],
   },
   {

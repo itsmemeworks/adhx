@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-24 — E expand, F repeat, arrows scroll text
+
+Theater keyboard: `E` toggles expand (hide/show chrome), `F` cycles repeat. `↓`/`↑` no longer change posts — they scroll the article/text stage so reading does not need the mouse. Next/previous are `→` `J` / `←` `K`. Follow-up: none.
+
 ## 2026-08-24 — Archive sits below Read / Watch in shortcut help
 
 Actions cheatsheet order is now Read / Watch then Archive then Undo. Follow-up: none.

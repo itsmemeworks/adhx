@@ -856,6 +856,8 @@ export function DesktopDock({
 }: DesktopDockProps) {
   const [showAll, setShowAll] = useState(false)
   const cardRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
+  const rootRef = useRef<HTMLDivElement>(null)
+  useTheaterActionHotkeys('desktop', rootRef)
 
   const kind = progressKindFor(current, articleMode)
   const { videoPlaying, timedPaused, setTimedPaused, liveMuted, setLiveMuted } =
@@ -924,6 +926,7 @@ export function DesktopDock({
 
   return (
     <div
+      ref={rootRef}
       className={cn(
         'relative hidden flex-none items-center gap-4 border-t border-hairline bg-surface px-5 text-ink transition-all duration-200 lg:flex',
         declutter ? 'h-0 overflow-hidden border-t-0 opacity-0' : 'h-[124px]',
@@ -976,6 +979,7 @@ export function DesktopDock({
               aria-label="Hide controls"
               title="Hide controls"
               className={TRANSPORT_BTN}
+              data-theater-action="expand"
             >
               <Maximize2 size={16} />
             </button>
@@ -991,6 +995,7 @@ export function DesktopDock({
               aria-label={REPEAT_MODE_LABEL[repeatMode].action}
               title={REPEAT_MODE_LABEL[repeatMode].state}
               className={cn(TRANSPORT_BTN, repeatMode !== 'off' && 'text-clay hover:text-clay')}
+              data-theater-action="repeat"
             >
               {repeatMode === 'one' ? <Repeat1 size={16} /> : <Repeat size={16} />}
             </button>
