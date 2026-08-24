@@ -551,6 +551,7 @@ export function DesktopStageChrome({
             onRequestSignIn={onRequestSignIn}
             allowSignedOut={!collection && !playlist}
             theaterActive={mode === 'home' || !!collection || !!accountTabs}
+            theaterTabs={tabs ? { tab: tabs.tab, onTabChange: tabs.onTabChange } : undefined}
           />
         </div>
       </div>

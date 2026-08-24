@@ -413,7 +413,7 @@ export function TheaterMobileChrome({
                 going to definitely cause overlap with the logo, the play
                 stats, and the paste and burger menu… why not just put it in
                 the burger menu for mobile?"). Desktop keeps its top-bar pill
-                and does NOT pass this — one control per surface, never both.
+                and also passes these rows so `.` + arrows can switch tabs.
                 It's what freed the peek bar's centre slot for the queue
                 position. */}
             <TheaterAvatarMenu

@@ -112,11 +112,9 @@ function TheaterMenuEntry({ isHome, onClose }: { isHome: boolean; onClose: () =>
 /**
  * The Theater entry expanded into its two playlists (owner: "Theater just has
  * two sub options: live and collection and we can just highlight which one is
- * selected"). This is the MOBILE home for the tab switcher — the top scrim has
- * the logo, trend/time chips, paste and this burger competing for ~360px, so a
- * tab pill up there overlaps; desktop has room in its top bar and keeps the
- * pill instead. Only one of the two ever renders, so the control is never
- * duplicated.
+ * selected"). Mobile has no room for a tab pill in the top scrim, so this is
+ * the only switcher there. Desktop keeps its top-bar pill for the mouse and
+ * still mounts these rows so `.` + arrows can pick a tab.
  *
  * Selecting a tab goes through `onTabChange` rather than an `<a href>`: the
  * pair is routes (`/` and `/collection`) but the chrome flips the tab locally
@@ -192,10 +190,10 @@ export interface TheaterAvatarMenuProps {
    */
   theaterActive?: boolean
   /**
-   * Mobile collection only: expands the Theater entry into its Live / My
-   * Collection sub-options with the selected one marked. Desktop omits it —
-   * its top bar carries the tab pill, and rendering both would be two
-   * controls for one piece of state.
+   * Expands the Theater entry into Live / My Collection with the selected one
+   * marked. Passed whenever the Live ⇄ My Collection switch exists (personal
+   * theater + signed-in shared preview). Playlist / signed-out home omit it
+   * and keep the single Theater row.
    */
   theaterTabs?: { tab: PersonalTab; onTabChange: (tab: PersonalTab) => void }
 }

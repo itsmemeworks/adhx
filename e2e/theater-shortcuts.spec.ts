@@ -112,7 +112,23 @@ authedTest.describe('theater shortcuts (signed in)', () => {
     await page.keyboard.press('.')
     await expect(page.getByRole('menu')).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Library' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Live' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'My Collection' })).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Settings' })).toBeVisible()
+  })
+
+  authedTest('. then arrows then Enter switches to My Collection', async ({ page }) => {
+    await page.goto('/')
+    await expectTheaterReady(page)
+    await expect(page.getByRole('button', { name: 'Account menu' })).toBeVisible()
+    await page.keyboard.press('.')
+    await expect(page.getByRole('menuitem', { name: 'Library' })).toBeFocused()
+    await page.keyboard.press('ArrowDown')
+    await expect(page.getByRole('menuitem', { name: 'Live' })).toBeFocused()
+    await page.keyboard.press('ArrowDown')
+    await expect(page.getByRole('menuitem', { name: 'My Collection' })).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(page).toHaveURL(/\/collection/)
   })
 
   authedTest('. then arrows then Enter follows a menu link', async ({ page }) => {
@@ -121,6 +137,7 @@ authedTest.describe('theater shortcuts (signed in)', () => {
     await expect(page.getByRole('button', { name: 'Account menu' })).toBeVisible()
     await page.keyboard.press('.')
     await expect(page.getByRole('menuitem', { name: 'Library' })).toBeFocused()
+    await page.keyboard.press('ArrowDown')
     await page.keyboard.press('ArrowDown')
     await page.keyboard.press('ArrowDown')
     await page.keyboard.press('ArrowDown')

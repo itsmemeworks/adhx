@@ -435,12 +435,11 @@ describe('TheaterAvatarMenu — signed-out burger (allowSignedOut)', () => {
 })
 
 /**
- * Mobile's home for the Live ⇄ My Collection switch (owner: a tab pill in the
- * top scrim "is going to definitely cause overlap with the logo, the play
- * stats, and the paste and burger menu… why not just put it in the burger menu
- * for mobile? Theater just has two sub options: live and collection and we can
- * just highlight which one is selected"). Desktop passes no `theaterTabs` and
- * keeps its top-bar pill, so the control never renders twice.
+ * Live ⇄ My Collection under Theater (owner: "Theater just has two sub
+ * options: live and collection and we can just highlight which one is
+ * selected"). Mobile has no room for a tab pill, so this is the only
+ * switcher there. Desktop keeps the top-bar pill and still passes
+ * `theaterTabs` so `.` + arrows can pick a tab.
  */
 describe('TheaterAvatarMenu — Theater sub-options (theaterTabs)', () => {
   beforeEach(() => {
@@ -513,7 +512,7 @@ describe('TheaterAvatarMenu — Theater sub-options (theaterTabs)', () => {
     expect(screen.getByText('Theater').closest('[role="menuitem"]')).toBeNull()
   })
 
-  it('falls back to the plain Theater entry when no tabs are passed (desktop)', async () => {
+  it('falls back to the plain Theater entry when no tabs are passed', async () => {
     mockAuthMe(AUTHED_ME)
     render(<TheaterAvatarMenu theaterActive />)
     fireEvent.click(await screen.findByLabelText('Account menu'))

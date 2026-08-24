@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-24 — Desktop menu has Live / My Collection
+
+Desktop's avatar menu now gets the same Theater sub-rows as mobile (`theaterTabs`), so `.` + arrows can switch Live ⇄ My Collection. The top-bar pill stays for the mouse. Follow-up: none.
+
 ## 2026-08-24 — Arrow through the theater menu
 
 `.` still opens the avatar/burger menu; arrows / J K / Home / End now move between `menuitem`s and Enter / Space activate the focused row (was swallowing those keys so the stage did not advance, without moving focus). Follow-up: none.
