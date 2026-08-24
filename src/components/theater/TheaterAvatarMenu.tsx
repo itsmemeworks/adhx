@@ -24,6 +24,9 @@ const INK = '#f3ece0'
 const MUTED = '#857a69'
 const SUBTLE = '#b8ac99'
 
+const MENU_ROW =
+  'flex items-center gap-2.5 px-4 py-2.5 text-[13px] transition-colors hover:bg-white/[.06] focus:bg-white/10 focus:outline-none'
+
 /** The "you are here" marker for the current screen's menu row (round 8,
  * owner: it wasn't obvious from the burger which screen was loaded). */
 function CurrentDot() {
@@ -56,7 +59,7 @@ function MenuLink({
       role="menuitem"
       aria-current={current ? 'page' : undefined}
       onClick={onClick}
-      className="flex items-center gap-2.5 px-4 py-2.5 text-[13px] transition-colors hover:bg-white/[.06]"
+      className={MENU_ROW}
       style={{ color: current ? INK : SUBTLE }}
     >
       {children}
@@ -89,7 +92,7 @@ function TheaterMenuEntry({ isHome, onClose }: { isHome: boolean; onClose: () =>
         role="menuitem"
         aria-current="page"
         onClick={onClose}
-        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13px] transition-colors hover:bg-white/[.06]"
+        className={`${MENU_ROW} w-full text-left`}
         style={{ color: INK }}
       >
         <Radio size={15} />
@@ -148,7 +151,7 @@ function TheaterTabsGroup({
             onTabChange(t)
             onClose()
           }}
-          className="flex w-full items-center gap-2.5 py-2.5 pr-4 pl-[2.4rem] text-left text-[13px] transition-colors hover:bg-white/[.06]"
+          className={`${MENU_ROW} w-full py-2.5 pr-4 pl-[2.4rem] text-left`}
           style={{ color: tab === t ? INK : SUBTLE }}
         >
           <span>{PERSONAL_TAB_LABEL[t]}</span>
@@ -225,10 +228,24 @@ export function TheaterAvatarMenu({
   useEffect(() => {
     if (!open) return
 
+    function menuItems(): HTMLElement[] {
+      if (!containerRef.current) return []
+      return [...containerRef.current.querySelectorAll<HTMLElement>('[role="menuitem"]')]
+    }
+
+    // `.` clicks the trigger, so focus is still on the avatar/burger.
+    // Put it on the first row so arrows and Enter drive the menu, not the stage.
+    menuItems()[0]?.focus()
+
     function handlePointerDown(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false)
       }
+    }
+
+    function focusAt(index: number, items: HTMLElement[]) {
+      if (items.length === 0) return
+      items[(index + items.length) % items.length]?.focus()
     }
 
     function handleKeyDownCapture(e: KeyboardEvent) {
@@ -241,6 +258,44 @@ export function TheaterAvatarMenu({
       const target = e.target as HTMLElement | null
       const tag = target?.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return
+
+      const items = menuItems()
+      const current = items.findIndex((el) => el === document.activeElement)
+
+      if (e.key === 'ArrowDown' || e.key === 'j' || e.key === 'J' || e.key === 'ArrowRight') {
+        e.preventDefault()
+        e.stopPropagation()
+        focusAt(current >= 0 ? current + 1 : 0, items)
+        return
+      }
+      if (e.key === 'ArrowUp' || e.key === 'k' || e.key === 'K' || e.key === 'ArrowLeft') {
+        e.preventDefault()
+        e.stopPropagation()
+        focusAt(current >= 0 ? current - 1 : items.length - 1, items)
+        return
+      }
+      if (e.key === 'Home') {
+        e.preventDefault()
+        e.stopPropagation()
+        focusAt(0, items)
+        return
+      }
+      if (e.key === 'End') {
+        e.preventDefault()
+        e.stopPropagation()
+        focusAt(items.length - 1, items)
+        return
+      }
+      if (e.key === 'Enter' || e.key === ' ') {
+        const item = current >= 0 ? items[current] : items[0]
+        if (item) {
+          e.preventDefault()
+          e.stopPropagation()
+          item.click()
+        }
+        return
+      }
+
       // `.` toggles this menu via the theater handler clicking the trigger.
       // `?` opens help — close the menu so the overlay is not stacked under it.
       if (e.key === '.' || e.key === '?' || (e.key === '/' && e.shiftKey)) {
@@ -323,7 +378,7 @@ export function TheaterAvatarMenu({
                 setOpen(false)
                 onRequestSignIn?.()
               }}
-              className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13px] transition-colors hover:bg-white/[.06]"
+              className={`${MENU_ROW} w-full text-left`}
               style={{ color: SUBTLE }}
             >
               <LogIn size={15} />
@@ -456,7 +511,7 @@ export function TheaterAvatarMenu({
             type="button"
             role="menuitem"
             onClick={handleSignOut}
-            className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13px] transition-colors hover:bg-white/[.06]"
+            className={`${MENU_ROW} w-full text-left`}
             style={{ color: SUBTLE }}
           >
             <LogOut size={15} />

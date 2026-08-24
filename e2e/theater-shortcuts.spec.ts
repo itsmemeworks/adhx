@@ -51,6 +51,19 @@ test.describe('theater shortcuts (signed out)', () => {
     await expectSignInModal(page)
   })
 
+  test('. then arrows then Enter follows a menu link', async ({ page }) => {
+    await page.goto('/')
+    await expectTheaterReady(page)
+    await expect(page.getByRole('button', { name: 'Menu' })).toBeVisible()
+    await page.keyboard.press('.')
+    await expect(page.getByRole('menu')).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Theater' })).toBeFocused()
+    await page.keyboard.press('ArrowDown')
+    await expect(page.getByRole('menuitem', { name: 'Leaderboard' })).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(page).toHaveURL(/\/leaderboard/)
+  })
+
   test('R toggles Read / Watch on a quoted video', async ({ page }) => {
     test.setTimeout(90_000)
     await page.goto(`/${POST.quoted.author}/status/${POST.quoted.id}`)
@@ -100,6 +113,20 @@ authedTest.describe('theater shortcuts (signed in)', () => {
     await expect(page.getByRole('menu')).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Library' })).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Settings' })).toBeVisible()
+  })
+
+  authedTest('. then arrows then Enter follows a menu link', async ({ page }) => {
+    await page.goto('/')
+    await expectTheaterReady(page)
+    await expect(page.getByRole('button', { name: 'Account menu' })).toBeVisible()
+    await page.keyboard.press('.')
+    await expect(page.getByRole('menuitem', { name: 'Library' })).toBeFocused()
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('ArrowDown')
+    await expect(page.getByRole('menuitem', { name: 'Leaderboard' })).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(page).toHaveURL(/\/leaderboard/)
   })
 })
 

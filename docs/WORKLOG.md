@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-24 — Arrow through the theater menu
+
+`.` still opens the avatar/burger menu; arrows / J K / Home / End now move between `menuitem`s and Enter / Space activate the focused row (was swallowing those keys so the stage did not advance, without moving focus). Follow-up: none.
+
 ## 2026-08-24 — W / P on the caught-up stage
 
 Waiting-stage **Re-watch all** is `W`, **Keep playing** is `P` (same click-the-chrome-button pattern; no-op when those buttons are not mounted). Collection All Clear also takes `P`. Follow-up: none.
