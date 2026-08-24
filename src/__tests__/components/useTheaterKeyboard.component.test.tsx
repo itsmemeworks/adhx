@@ -148,6 +148,8 @@ describe('useTheaterKeyboard: isPlaybackHidden space guard', () => {
       'theater-open',
       'theater-archive',
       'theater-toggle-article',
+      'theater-replay',
+      'theater-keep-playing',
     ] as const
     const listeners = names.map((name) => {
       const fn = () => heard.push(name)
@@ -164,6 +166,8 @@ describe('useTheaterKeyboard: isPlaybackHidden space guard', () => {
       act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'o' })))
       act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' })))
       act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'r' })))
+      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'w' })))
+      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p' })))
       expect(onToggleHelp).toHaveBeenCalledTimes(1)
       expect(args.setMuted).toHaveBeenCalledTimes(1)
       expect(heard).toEqual([...names])

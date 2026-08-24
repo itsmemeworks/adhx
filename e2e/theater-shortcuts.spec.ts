@@ -22,6 +22,8 @@ test.describe('theater shortcuts (signed out)', () => {
     await expect(help.getByText('Next post')).toBeVisible()
     await expect(help.getByText('Previous post')).toBeVisible()
     await expect(help.getByText('Read / Watch')).toBeVisible()
+    await expect(help.getByText('Re-watch all')).toBeVisible()
+    await expect(help.getByText('Keep playing')).toBeVisible()
     await expect(help.getByText('Paste a link')).toBeVisible()
 
     await page.keyboard.press('ArrowRight')

@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-24 — W / P on the caught-up stage
+
+Waiting-stage **Re-watch all** is `W`, **Keep playing** is `P` (same click-the-chrome-button pattern; no-op when those buttons are not mounted). Collection All Clear also takes `P`. Follow-up: none.
+
 ## 2026-08-24 — Shortcut help groups next vs previous
 
 Navigate help is two lines: next (`→` `↓` `J`) then previous (`←` `↑` `K`). J/K were listed as a pair the wrong way around. Follow-up: none.

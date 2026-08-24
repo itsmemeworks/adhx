@@ -27,6 +27,8 @@ describe('resolveTheaterShortcut', () => {
     expect(resolveTheaterShortcut({ key: 'r' })).toBe('toggleArticle')
     expect(resolveTheaterShortcut({ key: 'R' })).toBe('toggleArticle')
     expect(resolveTheaterShortcut({ key: 'u' })).toBe('undo')
+    expect(resolveTheaterShortcut({ key: 'w' })).toBe('replay')
+    expect(resolveTheaterShortcut({ key: 'p' })).toBe('keepPlaying')
     expect(resolveTheaterShortcut({ key: '.' })).toBe('toggleMenu')
     expect(resolveTheaterShortcut({ key: '?' })).toBe('toggleHelp')
     expect(resolveTheaterShortcut({ key: '/', shiftKey: true })).toBe('toggleHelp')
@@ -47,12 +49,14 @@ describe('resolveTheaterShortcut', () => {
   })
 
   it('keeps overlay block-list in sync with the mapped keys', () => {
-    for (const key of ['s', 't', 'l', 'c', 'd', 'o', 'a', 'r', '.', '?', 'Escape', ' ']) {
+    for (const key of ['s', 't', 'l', 'c', 'd', 'o', 'a', 'r', 'w', 'p', '.', '?', 'Escape', ' ']) {
       expect(THEATER_SHORTCUT_KEYS.has(key)).toBe(true)
     }
     expect(THEATER_ACTION_EVENTS.save).toBe('theater-save')
     expect(THEATER_ACTION_EVENTS.toggleMenu).toBe('theater-toggle-menu')
     expect(THEATER_ACTION_EVENTS.toggleArticle).toBe('theater-toggle-article')
+    expect(THEATER_ACTION_EVENTS.replay).toBe('theater-replay')
+    expect(THEATER_ACTION_EVENTS.keepPlaying).toBe('theater-keep-playing')
   })
 
   it('groups next vs previous keys on the help overlay', () => {

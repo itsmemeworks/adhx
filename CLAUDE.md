@@ -658,7 +658,7 @@ The library grid and Settings bind **no** keys. The theater keymap lives in `src
 - Navigate: `→` `↓` `J` next, `←` `↑` `K` previous
 - Playback: `Space` play/pause (`theater-toggle-play`), `M` mute
 - Actions: `S` Save, `T` Tag, `L` copy link, `C` copy text, `D` download/send, `O` open original, `A` Archive (collection), `R` Read / Watch, `U` undo Archive
-- Also: `.` menu, `?` (Shift+/) help overlay (`TheaterShortcutsHelp`), `Esc` close help / collection
+- Also: `.` menu, `W` Re-watch all, `P` Keep playing (caught-up stage), `?` (Shift+/) help overlay (`TheaterShortcutsHelp`), `Esc` close help / collection
 - Paste a link is the OS shortcut (`⌘V` / `Ctrl+V`) — the chrome listens for the `paste` event, not a keydown
 
 Action keys dispatch `theater-*` window events; each chrome clicks the matching `[data-theater-action]` control and no-ops when that surface is CSS-hidden (`lg` split). Overlays (sign-in, tag picker, avatar menu, help) stop `THEATER_SHORTCUT_KEYS` so they don't drive the stage.

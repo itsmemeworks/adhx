@@ -13,8 +13,10 @@
  */
 
 import { Repeat, RotateCcw } from 'lucide-react'
+import { useRef } from 'react'
 import { LiveDot } from '@/components/matter'
 import { StageHeadline } from './stage-primitives'
+import { useTheaterActionHotkeys } from './useTheaterActionHotkeys'
 
 export interface StageWaitingProps {
   /** Ambient stat shown in quiet mono — omitted entirely when zero/absent. */
@@ -48,8 +50,14 @@ export function StageWaiting({
   replayCount,
   onKeepPlaying,
 }: StageWaitingProps) {
+  const rootRef = useRef<HTMLDivElement>(null)
+  useTheaterActionHotkeys('any', rootRef)
+
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-[#08070a] px-6 text-center">
+    <div
+      ref={rootRef}
+      className="flex h-full w-full flex-col items-center justify-center gap-4 bg-[#08070a] px-6 text-center"
+    >
       <LiveDot />
       <StageHeadline>You&rsquo;re all caught up</StageHeadline>
       <p className="text-sm text-white/50">waiting for new sends&hellip;</p>
@@ -58,6 +66,7 @@ export function StageWaiting({
           <button
             type="button"
             onClick={onReplay}
+            data-theater-action="replay"
             className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/[0.14] px-4 text-[13px] font-semibold text-white transition-colors hover:bg-white/20"
           >
             <RotateCcw size={15} />
@@ -68,6 +77,7 @@ export function StageWaiting({
           <button
             type="button"
             onClick={onKeepPlaying}
+            data-theater-action="keep-playing"
             className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/[0.14] px-4 text-[13px] font-semibold text-white transition-colors hover:bg-white/20"
           >
             <Repeat size={15} />

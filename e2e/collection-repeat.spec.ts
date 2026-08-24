@@ -34,7 +34,7 @@ authedTest.describe('collection repeat', () => {
     await expect(page.getByRole('heading', { name: 'All caught up' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Keep playing' })).toBeVisible()
 
-    await page.getByRole('button', { name: 'Keep playing' }).click()
+    await page.keyboard.press('p')
     await expect(page.getByRole('heading', { name: 'All caught up' })).toHaveCount(0)
     await expect(caption(page, POST.alpha.text)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Keep playing' })).toBeVisible()

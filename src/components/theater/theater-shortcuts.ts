@@ -24,6 +24,8 @@ export type TheaterShortcut =
   | 'toggleMenu'
   | 'toggleHelp'
   | 'toggleArticle'
+  | 'replay'
+  | 'keepPlaying'
 
 export const THEATER_ACTION_EVENTS = {
   save: 'theater-save',
@@ -35,6 +37,8 @@ export const THEATER_ACTION_EVENTS = {
   archive: 'theater-archive',
   toggleMenu: 'theater-toggle-menu',
   toggleArticle: 'theater-toggle-article',
+  replay: 'theater-replay',
+  keepPlaying: 'theater-keep-playing',
 } as const
 
 export type TheaterActionName = keyof typeof THEATER_ACTION_EVENTS
@@ -50,6 +54,8 @@ export const THEATER_ACTION_ATTR: Record<TheaterActionName, string> = {
   archive: 'archive',
   toggleMenu: 'menu',
   toggleArticle: 'read',
+  replay: 'replay',
+  keepPlaying: 'keep-playing',
 }
 
 export interface TheaterKeyLike {
@@ -102,6 +108,10 @@ export const THEATER_SHORTCUT_KEYS = new Set([
   'R',
   'u',
   'U',
+  'w',
+  'W',
+  'p',
+  'P',
   '.',
   '?',
   '/',
@@ -155,6 +165,12 @@ export function resolveTheaterShortcut(e: TheaterKeyLike): TheaterShortcut | nul
     case 'u':
     case 'U':
       return 'undo'
+    case 'w':
+    case 'W':
+      return 'replay'
+    case 'p':
+    case 'P':
+      return 'keepPlaying'
     case '.':
       return 'toggleMenu'
     case '?':
@@ -213,6 +229,8 @@ export const THEATER_SHORTCUT_HELP: TheaterHelpSection[] = [
     title: 'Also',
     rows: [
       { keys: ['.'], label: 'Menu' },
+      { keys: ['W'], label: 'Re-watch all' },
+      { keys: ['P'], label: 'Keep playing' },
       { keys: ['⌘V', 'Ctrl+V'], label: 'Paste a link' },
       { keys: ['?'], label: 'This help' },
       { keys: ['Esc'], label: 'Close' },

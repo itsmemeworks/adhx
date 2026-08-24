@@ -277,6 +277,38 @@ describe('TheaterShell: resuming from a caught-up arrival starts on item 1', () 
 
     expect(queuePosition()).toEqual({ index: 0, length: 3 })
   })
+
+  it('P keep-plays from the caught-up stage via the theater keymap', async () => {
+    const items = [textItem('1'), textItem('2'), textItem('3')]
+    markWatched(items)
+    await act(async () => {
+      render(<TheaterShell seed={seed(items)} />)
+    })
+    expect(screen.getByText('You’re all caught up')).toBeInTheDocument()
+
+    await act(async () => {
+      fireEvent.keyDown(window, { key: 'p' })
+    })
+
+    expect(screen.queryByText('You’re all caught up')).not.toBeInTheDocument()
+    expect(queuePosition()).toEqual({ index: 0, length: 3 })
+  })
+
+  it('W re-watches from the caught-up stage via the theater keymap', async () => {
+    const items = [textItem('1'), textItem('2'), textItem('3')]
+    markWatched(items)
+    await act(async () => {
+      render(<TheaterShell seed={seed(items)} />)
+    })
+    expect(screen.getByText('You’re all caught up')).toBeInTheDocument()
+
+    await act(async () => {
+      fireEvent.keyDown(window, { key: 'w' })
+    })
+
+    expect(screen.queryByText('You’re all caught up')).not.toBeInTheDocument()
+    expect(queuePosition()).toEqual({ index: 0, length: 3 })
+  })
 })
 
 /**

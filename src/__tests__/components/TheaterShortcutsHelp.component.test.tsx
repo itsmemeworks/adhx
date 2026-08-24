@@ -21,6 +21,8 @@ describe('TheaterShortcutsHelp', () => {
     expect(screen.getByText('Previous post')).toBeInTheDocument()
     expect(screen.getByText('Play / pause')).toBeInTheDocument()
     expect(screen.getByText('Read / Watch')).toBeInTheDocument()
+    expect(screen.getByText('Re-watch all')).toBeInTheDocument()
+    expect(screen.getByText('Keep playing')).toBeInTheDocument()
     expect(screen.getByText('Paste a link')).toBeInTheDocument()
     expect(screen.getByText('Menu')).toBeInTheDocument()
     act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })))
