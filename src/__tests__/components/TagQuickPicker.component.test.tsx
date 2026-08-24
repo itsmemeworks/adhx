@@ -213,6 +213,76 @@ describe('TagQuickPicker Component', () => {
     )
   })
 
+  it("lists the post's active tags first", async () => {
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/tags') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            tags: [
+              { tag: 'reading', count: 2 },
+              { tag: 'work', count: 5 },
+              { tag: 'later', count: 1 },
+            ],
+          }),
+        })
+      }
+      if (url.startsWith('/api/feed')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ items: [{ id: 'tw1', tags: ['work'] }] }),
+        })
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ success: true }) })
+    }) as unknown as typeof fetch
+
+    render(<TagQuickPicker platform="twitter" bookmarkId="tw1" open={true} onClose={vi.fn()} />)
+    await waitFor(() => expect(screen.getByText('#work')).toBeTruthy())
+    const rows = screen.getAllByRole('button').filter((el) => el.hasAttribute('data-tag-option'))
+    expect(rows[0]).toHaveTextContent('#work')
+    expect(rows[1]).toHaveTextContent('#reading')
+    expect(rows[2]).toHaveTextContent('#later')
+  })
+
+  it('does not add a sixth tag', async () => {
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/tags') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            tags: [
+              { tag: 'one', count: 1 },
+              { tag: 'two', count: 1 },
+              { tag: 'three', count: 1 },
+              { tag: 'four', count: 1 },
+              { tag: 'five', count: 1 },
+              { tag: 'six', count: 1 },
+            ],
+          }),
+        })
+      }
+      if (url.startsWith('/api/feed')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            items: [{ id: 'tw1', tags: ['one', 'two', 'three', 'four', 'five'] }],
+          }),
+        })
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ success: true }) })
+    }) as unknown as typeof fetch
+
+    render(<TagQuickPicker platform="twitter" bookmarkId="tw1" open={true} onClose={vi.fn()} />)
+    await waitFor(() => expect(screen.getByText('#six')).toBeTruthy())
+    expect(screen.getByText('#six').closest('button')).toBeDisabled()
+    expect(screen.getByText('Maximum 5 tags')).toBeTruthy()
+    fireEvent.click(screen.getByText('#six'))
+    expect(global.fetch).not.toHaveBeenCalledWith(
+      '/api/bookmarks/tw1/tags?platform=twitter',
+      expect.objectContaining({ method: 'POST' }),
+    )
+  })
+
   it('ArrowUp from the first tag returns focus to the input', async () => {
     render(<TagQuickPicker platform="twitter" bookmarkId="tw1" open={true} onClose={vi.fn()} />)
     await waitFor(() => expect(screen.getByText('#work')).toBeTruthy())

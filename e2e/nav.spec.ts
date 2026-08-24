@@ -32,49 +32,47 @@ authedTest.describe('signed-in navigation', () => {
 
   authedTest('signed-in / continues the unread queue', async ({ page }) => {
     await page.goto('/')
-    await expect(page).toHaveURL(/\/collection/)
+    await expect(page).toHaveURL(/\/saved/)
     await expectTheaterReady(page)
     await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
   })
 
-  authedTest('My Collection ↔ Live is a pair of routes', async ({ page }) => {
-    await page.goto('/collection')
+  authedTest('Saved ↔ Live is a pair of routes', async ({ page }) => {
+    await page.goto('/saved')
     await expectTheaterReady(page)
     await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
 
     await page.goto('/live')
     await expectTheaterReady(page)
-    await expect(page.getByRole('button', { name: 'My Collection' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Archive' })).toHaveCount(0)
 
-    await page.getByRole('button', { name: 'My Collection' }).click()
+    await page.getByRole('button', { name: 'Saved', exact: true }).click()
+    await expect(page).toHaveURL(/\/saved/)
     await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
   })
 
-  authedTest(
-    'signed-in preview shows Live ⇄ My Collection; Close goes to library',
-    async ({ page }) => {
-      const previewPath = `/${POST.preview.author}/status/${POST.preview.id}`
-      await page.goto(previewPath)
-      await expectTheaterReady(page)
-      await expect(page.getByRole('button', { name: 'Live' })).toBeVisible()
-      await expect(page.getByRole('button', { name: 'My Collection' })).toBeVisible()
-      await expect(page.getByRole('button', { name: 'Archive' })).toHaveCount(0)
+  authedTest('signed-in preview shows Live ⇄ Saved; Close goes to library', async ({ page }) => {
+    const previewPath = `/${POST.preview.author}/status/${POST.preview.id}`
+    await page.goto(previewPath)
+    await expectTheaterReady(page)
+    await expect(page.getByRole('button', { name: 'Live' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Archive' })).toHaveCount(0)
 
-      await page.getByRole('button', { name: 'My Collection' }).click()
-      await expect(page).toHaveURL(/\/collection/)
-      await expectTheaterReady(page)
-      await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
+    await page.getByRole('button', { name: 'Saved', exact: true }).click()
+    await expect(page).toHaveURL(/\/saved/)
+    await expectTheaterReady(page)
+    await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
 
-      await page.goto(previewPath)
-      await expectTheaterReady(page)
-      await page.getByRole('button', { name: 'Close' }).click()
-      await expect(page).toHaveURL(/\/library/)
-    },
-  )
+    await page.goto(previewPath)
+    await expectTheaterReady(page)
+    await page.getByRole('button', { name: 'Close' }).click()
+    await expect(page).toHaveURL(/\/library/)
+  })
 
   authedTest('collection Close lands on the library grid', async ({ page }) => {
-    await page.goto('/collection')
+    await page.goto('/saved')
     await expectTheaterReady(page)
     await page.getByRole('button', { name: 'Close' }).click()
     await expect(page).toHaveURL(/\/library/)

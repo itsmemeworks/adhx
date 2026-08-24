@@ -28,6 +28,7 @@ import { PERSONAL_TAB_ORDER, PERSONAL_TAB_LABEL, type PersonalTab } from './type
 import { resolveAccountAvatarSrc } from '@/lib/avatar/generated-avatar'
 import { usePreferences } from '@/lib/preferences-context'
 import { THEATER_SHORTCUT_KEYS } from './theater-shortcuts'
+import { isSavedPath } from '@/lib/theater/collection-href'
 
 // The theater is ALWAYS dark regardless of the site's light/dark theme, so
 // the dropdown panel uses a hardcoded palette rather than the Matter theme
@@ -105,7 +106,7 @@ function TheaterMenuEntry({
 }: {
   isHome: boolean
   onClose: () => void
-  /** When Live / My Collection sit under Theater, the selected child carries
+  /** When Live / Saved sit under Theater, the selected child carries
    * the current-screen marker — Theater stays the same Radio + 13px row as
    * Library, not a second "you are here". */
   markCurrent?: boolean
@@ -136,14 +137,14 @@ function TheaterMenuEntry({
 }
 
 /**
- * The Theater Radio row plus Live / My Collection indented under it (owner:
+ * The Theater Radio row plus Live / Saved indented under it (owner:
  * keep the same icon and 13px font as Library; the tabs are sub-rows with
  * their own icons). Mobile has no room for a tab pill in the top scrim, so
  * this is the only switcher there. Desktop keeps its top-bar pill for the
  * mouse and still mounts these rows so `.` + arrows can pick a tab.
  *
  * Selecting a tab goes through `onTabChange` rather than an `<a href>`: the
- * pair is routes (`/live` and `/collection`) but the chrome flips the tab locally
+ * pair is routes (`/live` and `/saved`) but the chrome flips the tab locally
  * first so the switch is instant, then navigates — a plain link would reload
  * the stage the viewer is watching.
  */
@@ -221,8 +222,8 @@ export interface TheaterAvatarMenuProps {
    */
   theaterActive?: boolean
   /**
-   * Expands the Theater entry into Live / My Collection with the selected one
-   * marked. Passed whenever the Live ⇄ My Collection switch exists (personal
+   * Expands the Theater entry into Live / Saved with the selected one
+   * marked. Passed whenever the Live ⇄ Saved switch exists (personal
    * theater + signed-in shared preview). Playlist / signed-out home omit it
    * and keep the single Theater row.
    */
@@ -355,8 +356,7 @@ export function TheaterAvatarMenu({
   // `theaterActive` folds in because the home theater's URL-sync rewrites
   // the pathname to per-post preview paths mid-session — see
   // TheaterMenuEntry's doc comment.
-  const isHome =
-    pathname === '/' || pathname === '/live' || pathname === '/collection' || theaterActive
+  const isHome = pathname === '/' || pathname === '/live' || isSavedPath(pathname) || theaterActive
   // Current-screen markers for the other nav entries (round 8). Prefix match
   // so /leaderboard/[window] etc. still count.
   const isLeaderboard = pathname === '/leaderboard' || pathname?.startsWith('/leaderboard/')
@@ -521,7 +521,7 @@ export function TheaterAvatarMenu({
             <Bookmark size={15} />
             {/* "Library" (the grid over your saves — repo terminology) rather
                 than "Your collection", which became ambiguous the moment the
-                Theater group gained a "My Collection" tab: two rows reading
+                Theater group gained a "Saved" tab: two rows reading
                 as the same destination, going to different screens. */}
             <span>Library</span>
           </MenuLink>

@@ -240,9 +240,28 @@ describe('per-platform mappers', () => {
       contentType: 'text',
       createdAt: '2026-01-01T00:00:00.000Z',
     })
-
     expect(out.quote).toBeUndefined()
     expect(out).not.toHaveProperty('quote')
+    expect(out).not.toHaveProperty('linkPreview')
+  })
+
+  it('tweetToTheaterItem passes a linkPreview through when provided', () => {
+    const out = tweetToTheaterItem({
+      id: '123',
+      author: 'testauthor',
+      contentType: 'article',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      linkPreview: {
+        url: 'https://example.com/post',
+        title: 'A title',
+        domain: 'example.com',
+      },
+    })
+    expect(out.linkPreview).toEqual({
+      url: 'https://example.com/post',
+      title: 'A title',
+      domain: 'example.com',
+    })
   })
 
   it('tweetToTheaterItem passes a quote through with only text (no author)', () => {

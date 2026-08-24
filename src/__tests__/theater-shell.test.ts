@@ -100,14 +100,16 @@ describe('theaterUrlSyncPath', () => {
 
 describe('theaterTabNavRestore', () => {
   it('is a no-op when the bar is already a theater tab', () => {
-    expect(theaterTabNavRestore('/live', '/collection')).toBe(null)
+    expect(theaterTabNavRestore('/live', '/saved')).toBe(null)
+    expect(theaterTabNavRestore('/saved', '/live')).toBe(null)
+    expect(theaterTabNavRestore('/saved', '/saved')).toBe(null)
+    expect(theaterTabNavRestore('/collection', '/saved')).toBe(null)
     expect(theaterTabNavRestore('/collection', '/live')).toBe(null)
-    expect(theaterTabNavRestore('/collection', '/collection')).toBe(null)
   })
 
-  it('resyncs a Live replaceState preview path to the tab Next is rendering', () => {
-    expect(theaterTabNavRestore('/author99/status/99', '/collection')).toBe('/live')
-    expect(theaterTabNavRestore('/@bob/video/1', '/live')).toBe('/collection')
+  it('resyncs a Live replaceState preview path to the tab the viewer asked for', () => {
+    expect(theaterTabNavRestore('/author99/status/99', '/saved')).toBe('/saved')
+    expect(theaterTabNavRestore('/@bob/video/1', '/live')).toBe('/live')
   })
 })
 

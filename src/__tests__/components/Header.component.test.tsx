@@ -146,7 +146,7 @@ describe('Header', () => {
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
     // Desktop primary nav — every entry is a real route now that the theater
-    // has its own (`/` = Live, `/collection` = My Collection, `/library` = the
+    // has its own (`/` = Live, `/saved` = Saved, `/library` = the
     // grid). Theater used to be a button dispatching `open-theater`.
     expect(screen.getByRole('link', { name: 'Library' })).toHaveAttribute('href', '/library')
     expect(screen.getByRole('link', { name: 'Theater' })).toHaveAttribute('href', '/')
@@ -260,12 +260,12 @@ describe('Header', () => {
   })
 
   it('marks Theater as current on both of its routes', async () => {
-    mockPathname = '/collection'
+    mockPathname = '/saved'
     mockFetch(true)
     const { rerender } = render(<Header />)
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
-    // `/collection` is the theater's My Collection tab, so the Theater entry —
+    // `/saved` is the theater's Saved tab, so the Theater entry —
     // not Library — is the active one there.
     expect(screen.getByRole('link', { name: 'Theater' }).className).toContain('text-clay')
     expect(screen.getByRole('link', { name: 'Library' }).className).not.toContain('bg-clay')

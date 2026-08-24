@@ -6,7 +6,7 @@ import { describe, it, expect, vi } from 'vitest'
 vi.mock('@/lib/theater/share-tweet', () => ({
   fetchShareTweet: vi.fn().mockResolvedValue(null),
 }))
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { StageText } from '@/components/theater/StageText'
 import {
   STAGE_ARTICLE_UNDER_BAND_PAD,
@@ -170,5 +170,83 @@ describe('StageText author row', () => {
       '/api/media/video?author=XRoboHub&tweetId=2091018327875518851&quality=hd',
     )
     expect(screen.queryByTestId('quote-photo')).not.toBeInTheDocument()
+  })
+
+  it('renders an off-site link card and strips the URL from the typeset body', () => {
+    render(
+      <StageText
+        item={textItem({
+          contentType: 'article',
+          text: '👀\n\nhttps://deanpiper.substack.com/p/hayden-panettiere-and-james-blunt',
+          thumbnailUrl: 'https://substackcdn.com/image.jpg',
+          linkPreview: {
+            url: 'https://deanpiper.substack.com/p/hayden-panettiere-and-james-blunt',
+            title: 'Hayden Panettiere and James Blunt – An Internet Lynching',
+            description: 'In a remarkable turn of events this week.',
+            imageUrl: 'https://substackcdn.com/image.jpg',
+            domain: 'deanpiper.substack.com',
+          },
+        })}
+      />,
+    )
+    expect(screen.getByText('👀')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', {
+        name: /https:\/\/deanpiper\.substack\.com/,
+      }),
+    ).not.toBeInTheDocument()
+    const card = screen.getByRole('link', {
+      name: /Hayden Panettiere and James Blunt/,
+    })
+    expect(card).toHaveAttribute(
+      'href',
+      'https://deanpiper.substack.com/p/hayden-panettiere-and-james-blunt',
+    )
+    expect(screen.getByText('deanpiper.substack.com')).toBeInTheDocument()
+    expect(document.querySelectorAll('img[src="https://substackcdn.com/image.jpg"]')).toHaveLength(
+      1,
+    )
+  })
+})
+
+describe('StageText photo album', () => {
+  it('shows every photo on a multi-image tweet, not just the first', async () => {
+    const { fetchShareTweet } = await import('@/lib/theater/share-tweet')
+    vi.mocked(fetchShareTweet).mockResolvedValueOnce({
+      media: {
+        photos: [
+          { url: 'https://pbs.twimg.com/one.jpg' },
+          { url: 'https://pbs.twimg.com/two.jpg' },
+        ],
+      },
+    } as never)
+
+    render(
+      <StageText
+        item={textItem({
+          author: 'StreetFashion01',
+          bookmarkId: '2091475617438957808',
+          contentType: 'photo',
+          thumbnailUrl: 'https://pbs.twimg.com/one.jpg',
+        })}
+        photo
+        photoCaption={false}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Photos, 2')).toBeInTheDocument()
+    })
+    const srcs = [...document.querySelectorAll('img')].map((el) => el.getAttribute('src') ?? '')
+    expect(srcs.some((s) => s.includes('index=1'))).toBe(true)
+    expect(srcs.some((s) => s.includes('index=2'))).toBe(true)
+    const slides = document.querySelectorAll('[aria-label="Photos, 2"] > div')
+    expect(slides).toHaveLength(2)
+    expect(slides[0]?.className).toContain('min-w-full')
+    const pager = screen.getByRole('button', { name: 'Next photo, 1 of 2' })
+    expect(pager.className).toContain('bg-black/40')
+    expect(pager.className).toContain('lg:bg-black/80')
+    fireEvent.click(pager)
+    expect(screen.getByRole('button', { name: 'Next photo, 2 of 2' })).toBeInTheDocument()
   })
 })

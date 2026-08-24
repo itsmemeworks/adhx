@@ -34,7 +34,7 @@ export function TheaterCollectionActions({
     <button
       type="button"
       onClick={collection.onDone}
-      title="Archive — take it out of your collection queue"
+      title="Archive — take it out of Saved"
       className={DESKTOP_PRIMARY}
       data-theater-action="archive"
     >

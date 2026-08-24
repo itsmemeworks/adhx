@@ -59,7 +59,8 @@ import { UpNextList } from './UpNextList'
 import { SavePlaylistButton } from './SavePlaylistButton'
 import { SavePostButton, PersonalLiveSaveButton } from './SavePostButton'
 import { FlameChip } from './TheaterMetaChips'
-import { TheaterTagChips } from './TheaterTagChips'
+import { TheaterTagCount } from './TheaterTagCount'
+import { tagActionLabel } from '@/lib/utils/tag'
 import { TheaterCollectionActions } from './TheaterCollectionActions'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
 import { StageIconButton } from './stage-primitives'
@@ -144,12 +145,12 @@ export interface TheaterMobileChromeProps {
   collection?: TheaterPersonalChrome
   /** Shared+authed: open the tag picker after the Save pill morphs to Tag. */
   onSharedTag?: (item: TheaterItem) => void
-  /** Shared-lead tags (chips + Tag · N). Collection/live use `collection.tags`. */
+  /** Shared-lead tags (count on the Tag button). Collection/live use `collection.tags`. */
   itemTags?: string[]
-  /** Signed-in shared preview: Live ⇄ My Collection in the avatar menu + close. */
+  /** Signed-in shared preview: Live ⇄ Saved in the avatar menu + close. */
   accountTabs?: TheaterAccountTabs
   /**
-   * Personal Live / My Collection: add the pasted post in place instead of
+   * Personal Live / Saved: add the pasted post in place instead of
    * navigating to its preview page. Same contract as DesktopStageChrome.
    */
   onPastePost?: (url: string) => boolean | Promise<boolean>
@@ -231,7 +232,7 @@ export function TheaterMobileChrome({
   // `paused`/`soundPulse` state, and the pause/resume handler in every tab.
   // `progressKind` additionally demotes 'timed' to 'none' while Repeat-one
   // (or the shared-post pin) is active, so the dwell line does not tick
-  // toward an advance that will never happen. My Collection uses the same
+  // toward an advance that will never happen. Saved uses the same
   // 10s dwell as Live for photo/text/quote/article.
   const mediaKind = progressKindFor(current, articleMode)
   const progressKind = progressKindForPin(mediaKind, repeatCurrent)
@@ -289,6 +290,7 @@ export function TheaterMobileChrome({
   // StageVideo/StageYouTube) alongside the shell setter (persistence, one
   // render later). See `onSetMuted`'s doc comment above.
   const handleAudioTap = () => {
+    if (mediaKind !== 'video') return
     const next = !displayMuted
     logAV(
       `audio tap: displayed=${displayMuted ? 'muted' : 'unmuted'} -> requesting ${next ? 'muted' : 'unmuted'}`,
@@ -359,6 +361,8 @@ export function TheaterMobileChrome({
   const trendCount = current ? (current.trendCount ?? current.saveCount ?? 0) : 0
   const displayTags = collection?.tags ?? itemTags
   const tagCount = displayTags?.length ?? 0
+  const tagLabel = tagActionLabel(tagCount)
+  const tagThisPostLabel = tagActionLabel(tagCount, { thisPost: true })
   const handle = current?.author ? current.author.replace(/^@+/, '') : ''
   // The stage IS the text for text/quote/article posts — repeating the body
   // (and the author header) in the bottom scrim doubles it up and buries the
@@ -396,7 +400,7 @@ export function TheaterMobileChrome({
             {/* Same add-in-place paste as desktop — stay on Live / My
                 Collection; do not bounce to a preview page. */}
             <PasteLinkButton iconOnly onPastePost={onPastePost} />
-            {/* Live ⇄ My Collection lives in this menu on mobile, as two
+            {/* Live ⇄ Saved lives in this menu on mobile, as two
                 sub-options under Theater (owner: a tab pill up here "is
                 going to definitely cause overlap with the logo, the play
                 stats, and the paste and burger menu… why not just put it in
@@ -554,10 +558,6 @@ export function TheaterMobileChrome({
               />
             ) : null}
             <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-              <TheaterTagChips
-                tags={displayTags}
-                className="flex min-w-0 flex-nowrap items-center justify-end gap-1.5 overflow-x-auto"
-              />
               {sendFile.supported ? (
                 <StageIconButton
                   onClick={() => {
@@ -623,7 +623,8 @@ export function TheaterMobileChrome({
                     collection.onTag()
                   }}
                   onTouchEnd={(e) => e.stopPropagation()}
-                  aria-label={tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}
+                  aria-label={tagLabel}
+                  className="relative"
                   data-theater-action="tag"
                 >
                   <TagIcon
@@ -631,6 +632,7 @@ export function TheaterMobileChrome({
                     className={tagCount > 0 ? 'text-clay' : undefined}
                     fill={tagCount > 0 ? 'currentColor' : 'none'}
                   />
+                  <TheaterTagCount count={tagCount} variant="badge" />
                 </StageIconButton>
               ) : collection?.tab === 'live' ? (
                 <>
@@ -640,7 +642,8 @@ export function TheaterMobileChrome({
                       collection.onLiveTag?.(current)
                     }}
                     onTouchEnd={(e) => e.stopPropagation()}
-                    aria-label={tagCount > 0 ? `Tag · ${tagCount}` : 'Tag this post'}
+                    aria-label={tagThisPostLabel}
+                    className="relative"
                     data-theater-action="tag"
                   >
                     <TagIcon
@@ -648,6 +651,7 @@ export function TheaterMobileChrome({
                       className={tagCount > 0 ? 'text-clay' : undefined}
                       fill={tagCount > 0 ? 'currentColor' : 'none'}
                     />
+                    <TheaterTagCount count={tagCount} variant="badge" />
                   </StageIconButton>
                   <PersonalLiveSaveButton
                     current={current}
@@ -754,8 +758,8 @@ export function TheaterMobileChrome({
             follows the finger 1:1 via useSheetDrag, snapping open/closed on
             release by distance or flick velocity — see the hook), then a
             control row — de-clutter fixed at the far left (never moves), the
-            audio button to its right (video posts only, so its presence
-            never shifts de-clutter), the up-next label screen-centered
+            audio button to its right (always present — disabled on
+            non-video, matching the desktop dock), the up-next label screen-centered
             (absolutely positioned over the bar so it lands at the true
             midpoint regardless of the side groups' unequal widths), and
             prev/pause/next on the right. All non-drag-handle buttons stop
@@ -780,8 +784,8 @@ export function TheaterMobileChrome({
 
           <div className="relative flex items-center px-2 pb-2">
             {/* De-clutter is always first (far left, fixed position); the audio
-              button sits to its right and only exists for video posts — it
-              hides, but de-clutter never moves. */}
+              button sits to its right on every post so the row never reflows.
+              Non-video disables it (same as the desktop dock). */}
             <div className="flex items-center gap-0.5">
               <button
                 type="button"
@@ -800,8 +804,8 @@ export function TheaterMobileChrome({
                 {declutter ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
               </button>
               {/* Spotify-style repeat (round 8): off → all → one. Sits
-                  between the fixed de-clutter button and the (video-only)
-                  audio button so neither ever shifts. Clay = active. */}
+                  between de-clutter and audio so neither ever shifts.
+                  Clay = active. */}
               {onCycleRepeat && repeatMode && (
                 <button
                   type="button"
@@ -835,23 +839,24 @@ export function TheaterMobileChrome({
                   {repeatMode === 'one' ? <Repeat1 size={16} /> : <Repeat size={16} />}
                 </button>
               )}
-              {mediaKind === 'video' && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleAudioTap()
-                  }}
-                  onTouchEnd={(e) => e.stopPropagation()}
-                  aria-label={displayMuted ? 'Unmute' : 'Mute'}
-                  className={cn(
-                    'inline-flex h-10 w-10 flex-none items-center justify-center rounded-full transition-colors hover:bg-inset hover:text-ink active:bg-inset active:text-ink',
-                    soundPulse ? 'animate-sound-pulse text-ink' : 'text-ink-3',
-                  )}
-                >
-                  {displayMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-                </button>
-              )}
+              <button
+                type="button"
+                disabled={mediaKind !== 'video'}
+                aria-disabled={mediaKind !== 'video'}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleAudioTap()
+                }}
+                onTouchEnd={(e) => e.stopPropagation()}
+                aria-label={displayMuted ? 'Unmute' : 'Mute'}
+                className={cn(
+                  PEEK_ICON_BTN,
+                  soundPulse && 'animate-sound-pulse text-ink',
+                  mediaKind !== 'video' && PEEK_ICON_BTN_DISABLED,
+                )}
+              >
+                {displayMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+              </button>
             </div>
 
             {/* Centre slot: where you are in the queue. Collection used to spend

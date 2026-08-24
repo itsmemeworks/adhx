@@ -212,7 +212,7 @@ describe('PWAInstallPrompt', () => {
 
   it('pins the Android banner under the theater logo instead of over the peek bar', async () => {
     mockPlatform = 'android'
-    mockPathname = '/collection'
+    mockPathname = '/saved'
     const { rerender } = render(<PWAInstallPrompt />)
     const theaterWrap = (await screen.findByText('Share a post directly to ADHX')).closest(
       '.sm\\:hidden',

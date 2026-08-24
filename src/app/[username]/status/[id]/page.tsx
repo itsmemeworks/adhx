@@ -15,6 +15,7 @@ import { SharedPostStatic } from '@/components/theater/SharedPostStatic'
 import { TheaterShell } from '@/components/theater/TheaterShell'
 import { buildSharedSeed, tweetToTheaterItem } from '@/lib/theater/shared-seed'
 import { quoteRefFromSource } from '@/lib/theater/quote-ref'
+import { linkPreviewFromExternal } from '@/lib/theater/link-preview'
 import type { TextLinkRef } from '@/components/theater/types'
 import { metrics } from '@/lib/sentry'
 import { recordAnalytic } from '@/lib/analytics/record'
@@ -153,6 +154,7 @@ export default async function QuickAddPage({ params }: Props) {
     // preview-only article would land in the pulse as a bare "Saved post".
     const articleCover = tweet.article?.cover_media?.media_info?.original_img_url || null
     const quote = quoteRefFromSource(tweet.quote)
+    const linkPreview = linkPreviewFromExternal(tweet.external)
     const previewType = tweet.article?.title
       ? 'article'
       : tweet.media?.videos?.length
@@ -161,12 +163,18 @@ export default async function QuickAddPage({ params }: Props) {
           ? 'quote'
           : tweet.media?.photos?.length
             ? 'photo'
-            : 'text'
+            : linkPreview
+              ? 'article'
+              : 'text'
 
-    // Real media (or the article cover) only — no avatar fallback, so text
-    // tweets stay "text" rather than being mistaken for photos.
+    // Real media / X Article cover / off-site OG image — no avatar fallback,
+    // so a text tweet isn't mistaken for a photo.
     const previewThumbnailUrl =
-      articleCover || tweet.media?.all?.[0]?.thumbnail_url || tweet.media?.all?.[0]?.url || null
+      articleCover ||
+      tweet.media?.all?.[0]?.thumbnail_url ||
+      tweet.media?.all?.[0]?.url ||
+      linkPreview?.imageUrl ||
+      null
 
     // Short-link expansions for the theater's t.co policy (spec §6b) — reuse
     // whatever's already fetched, never a new request. `tweet.urls` when
@@ -225,6 +233,7 @@ export default async function QuickAddPage({ params }: Props) {
       createdAt: tweet.created_at,
       textLinks: textLinks.length > 0 ? textLinks : undefined,
       quote,
+      linkPreview,
     })
     const { seed } = await buildSharedSeed(sharedItem)
 

@@ -17,12 +17,12 @@ export function useHydratedQuote(item: TheaterItem): {
   parentVideo: { author: string; bookmarkId: string; poster: string | null } | null
 } {
   const [quote, setQuote] = useState<TheaterQuoteRef | undefined>(item.quote)
-  const [parentPhotos, setParentPhotos] = useState<string[]>(photoList(item))
+  const [parentPhotos, setParentPhotos] = useState<string[]>(seedParentPhotos(item))
   const [parentVideo, setParentVideo] = useState(parentVideoOf(item))
 
   useEffect(() => {
     setQuote(item.quote)
-    setParentPhotos(photoList(item))
+    setParentPhotos(seedParentPhotos(item))
     setParentVideo(parentVideoOf(item))
     if (item.platform !== 'twitter' || !item.author || !item.bookmarkId) return
 
@@ -71,8 +71,16 @@ export function useHydratedQuote(item: TheaterItem): {
   return { quote, parentPhotos, parentVideo }
 }
 
-function photoList(item: TheaterItem): string[] {
+/**
+ * Seed photos from the item itself (before `/api/share/tweet` hydrates).
+ * Off-site OG images live on `linkPreview`, not as tweet photos — treating
+ * them as photos duplicated the card cover on the stage.
+ */
+export function seedParentPhotos(item: TheaterItem): string[] {
   if (item.contentType === 'video') return []
+  // OG cover lives on the link card. Don't also render it as a tweet photo
+  // (the proxy 404s, then fallbackToOriginal paints the same Substack image).
+  if (item.linkPreview && item.contentType !== 'photo') return []
   if (item.platform === 'twitter' && item.author && item.bookmarkId && item.thumbnailUrl) {
     return [proxiedPhotoSrc(item.author, item.bookmarkId)]
   }

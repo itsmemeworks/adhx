@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  *
  * Personal theater paste: add the post in place and stay on Live /
- * My Collection. Never `location.assign` to a preview page.
+ * Saved. Never `location.assign` to a preview page.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useState } from 'react'
@@ -138,7 +138,7 @@ describe('TheaterShell: personal paste adds in place', () => {
     expect(assignSpy).not.toHaveBeenCalled()
   })
 
-  it('POSTs add and does not navigate away from My Collection', async () => {
+  it('POSTs add and does not navigate away from Saved', async () => {
     const assignSpy = vi.fn()
     Object.defineProperty(window, 'location', {
       value: { ...window.location, assign: assignSpy },

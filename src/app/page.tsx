@@ -10,8 +10,8 @@ import { collectionPath } from '@/lib/theater/collection-href'
 /**
  * `/` — signed-out public live theater + crawlable static list.
  *
- * Signed IN this redirects to `/collection` (next unread). Live is `/live`.
- * The pair stays two routes so Live ⇄ My Collection is linkable; `/` cannot
+ * Signed IN this redirects to `/saved` (next unread). Live is `/live`.
+ * The pair stays two routes so Live ⇄ Saved is linkable; `/` cannot
  * be both "home = unread" and the Live tab.
  *
  * force-dynamic: session cookie + runtime SQLite (migrated at container start).
@@ -35,7 +35,7 @@ export default async function HomePage({
     if ((params.added === 'success' || params.added === 'duplicate') && addedId) {
       redirect(collectionPath({ open: addedId, platform: params.platform }))
     }
-    redirect('/collection')
+    redirect(collectionPath())
   }
 
   const seed = await getTheaterFeed()

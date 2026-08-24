@@ -75,7 +75,7 @@ Viewing a preview does not require an account. Saving does.
 
 ## How long we keep it
 
-Until you clear your collection or delete your account (Settings). Pulse and leaderboard events that already happened stay in the anonymous logs; they still do not expose your account id.
+Until you clear Saved or delete your account (Settings). Pulse and leaderboard events that already happened stay in the anonymous logs; they still do not expose your account id.
 
 ## Your choices
 
@@ -84,7 +84,7 @@ Until you clear your collection or delete your account (Settings). Pulse and lea
 - **Archive** — removes a post from your active queue without a public pulse.
 - **Disconnect X** — Settings; blocked if it is your last sign-in method.
 - **Clear data** — deletes your bookmarks and related rows; keeps the account.
-- **Delete account** — removes the account, identities, tokens, and your collection.
+- **Delete account** — removes the account, identities, tokens, and Saved.
 
 To ask a question about this policy, email [security@adhx.com](mailto:security@adhx.com).
 

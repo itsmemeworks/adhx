@@ -63,7 +63,7 @@ describe('SavePostButton — save to tag', () => {
       )
     })
     expect(screen.getByText('Saved')).toBeInTheDocument()
-    expect(screen.getByText('Saved to your collection')).toBeInTheDocument()
+    expect(screen.getByText('Added to Saved')).toBeInTheDocument()
 
     await act(async () => {
       vi.advanceTimersByTime(SAVE_TO_TAG_MS)
@@ -94,7 +94,7 @@ describe('SavePostButton — save to tag', () => {
     expect(screen.queryByText('Save')).not.toBeInTheDocument()
   })
 
-  it('shows Tag · N and a filled icon once the post has tags', async () => {
+  it('shows Tag 1 and a filled icon once the post has tags', async () => {
     const current = item('owned')
     global.fetch = vi.fn(async (url: string | URL | Request) => {
       const href = String(url)
@@ -108,8 +108,8 @@ describe('SavePostButton — save to tag', () => {
     }) as never
 
     render(<SavePostButton current={current} className={CLASS} onTag={vi.fn()} tags={['social']} />)
-    await waitFor(() => expect(screen.getByText('Tag · 1')).toBeInTheDocument())
-    const btn = screen.getByRole('button', { name: 'Tag · 1' })
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Tag 1' })).toBeInTheDocument())
+    const btn = screen.getByRole('button', { name: 'Tag 1' })
     expect(btn.className).toContain('border-white/25')
     expect(btn.className).not.toContain('text-clay')
     expect(btn.querySelector('.lucide-tag')?.classList.contains('text-clay')).toBe(true)

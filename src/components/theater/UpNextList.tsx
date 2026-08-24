@@ -15,7 +15,7 @@ import { addedToAdhxLabel, formatCompactRelativeTime, hasKnownTimestamp } from '
 import { PlatformGlyph, type ContentType } from '@/components/matter'
 import { inferType } from '@/lib/trending/filter'
 import { instagramWarmSrc, prefetchPlayback } from './usePlaybackSource'
-import { stripShortLinksForPreview } from './TheaterText'
+import { theaterRowCaption } from './TheaterText'
 import type { TheaterItem } from './types'
 import { theaterItemKey } from './types'
 // Grouping comes from the shell so the headings below can never disagree with
@@ -158,7 +158,7 @@ function Row({
   repeatCurrent?: boolean
 }) {
   const key = theaterItemKey(item)
-  const caption = stripShortLinksForPreview((item.text || '').trim())
+  const caption = theaterRowCaption(item)
   const handle = item.author ? item.author.replace(/^@+/, '') : ''
 
   return (

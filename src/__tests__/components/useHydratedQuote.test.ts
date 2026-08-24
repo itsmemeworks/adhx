@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
-import { useHydratedQuote } from '@/components/theater/useHydratedQuote'
+import { seedParentPhotos, useHydratedQuote } from '@/components/theater/useHydratedQuote'
 import { fetchShareTweet, resetShareTweetCache } from '@/lib/theater/share-tweet'
 import type { TheaterItem } from '@/components/theater/types'
 
@@ -85,5 +85,71 @@ describe('useHydratedQuote', () => {
     })
     await Promise.resolve()
     expect(result.current.quote).toBeUndefined()
+  })
+
+  it('does not treat an off-site OG thumbnail as a tweet photo', () => {
+    fetchShareTweetMock.mockResolvedValue({ text: '👀' })
+    const { result } = renderHook(() =>
+      useHydratedQuote(
+        videoItem({
+          contentType: 'article',
+          text: '👀\n\nhttps://deanpiper.substack.com/p/hayden',
+          thumbnailUrl: 'https://substackcdn.com/image.jpg',
+          linkPreview: {
+            url: 'https://deanpiper.substack.com/p/hayden',
+            title: 'Hayden Panettiere and James Blunt – An Internet Lynching',
+            imageUrl: 'https://substackcdn.com/image.jpg',
+            domain: 'deanpiper.substack.com',
+          },
+        }),
+      ),
+    )
+    expect(result.current.parentPhotos).toEqual([])
+    expect(result.current.parentVideo).toBeNull()
+  })
+
+  it('still seeds native tweet photos when the post is a photo', () => {
+    fetchShareTweetMock.mockResolvedValue({ text: 'snap' })
+    const { result } = renderHook(() =>
+      useHydratedQuote(
+        videoItem({
+          contentType: 'photo',
+          thumbnailUrl: 'https://pbs.twimg.com/media/one.jpg',
+        }),
+      ),
+    )
+    expect(result.current.parentPhotos).toEqual(['/api/media/image?author=alice&tweetId=1&index=1'])
+  })
+})
+
+describe('seedParentPhotos', () => {
+  it('skips the OG image on a link-card tweet', () => {
+    expect(
+      seedParentPhotos(
+        videoItem({
+          contentType: 'article',
+          thumbnailUrl: 'https://substackcdn.com/image.jpg',
+          linkPreview: {
+            url: 'https://deanpiper.substack.com/p/hayden',
+            imageUrl: 'https://substackcdn.com/image.jpg',
+          },
+        }),
+      ),
+    ).toEqual([])
+  })
+
+  it('keeps native photos when the tweet is a photo that also has a card', () => {
+    expect(
+      seedParentPhotos(
+        videoItem({
+          contentType: 'photo',
+          thumbnailUrl: 'https://pbs.twimg.com/media/one.jpg',
+          linkPreview: {
+            url: 'https://example.com/story',
+            title: 'Story',
+          },
+        }),
+      ),
+    ).toEqual(['/api/media/image?author=alice&tweetId=1&index=1'])
   })
 })

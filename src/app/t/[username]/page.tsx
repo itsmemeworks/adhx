@@ -15,7 +15,7 @@ import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
  * playlists" CTA, whichever of the two renders. */
 const TOP_PILL_CLASS =
   'inline-flex items-center rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur transition-colors hover:bg-white/20'
-/** Clay CTA styling for the footer "Start your collection" pitch block. */
+/** Clay CTA styling for the footer "Start saving" pitch block. */
 const FOOTER_CTA_CLASS =
   'inline-flex items-center rounded-full bg-clay-grad px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-opacity hover:opacity-90'
 
@@ -273,7 +273,7 @@ export default async function CuratorProfilePage({ params }: Props) {
         <footer className="mx-auto flex max-w-5xl flex-col items-center gap-4 border-t border-white/10 px-5 pb-14 pt-10 text-center sm:px-11">
           <p className="text-sm text-white/40">Save now. Read never. Find always.</p>
           <MakeYourOwnButton className={FOOTER_CTA_CLASS} returnTo="/">
-            Start your collection
+            Start saving
           </MakeYourOwnButton>
         </footer>
       )}

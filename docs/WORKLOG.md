@@ -6,6 +6,46 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-24 — Album pager is one next-photo pill
+
+Dots are no longer individually tappable. The whole frost chip is one button that advances (wraps). Mobile uses a lighter `bg-black/40` plate; desktop keeps `lg:bg-black/80`. Follow-up: none.
+
+## 2026-08-24 — Album dots sit on a dark frost plate
+
+Multi-image pagination dots were bare white/45 on the photo, so they vanished on dark shots (desktop dock gap). They now sit in a `bg-black/80` rounded pill with a white/30 border + blur. Follow-up: none.
+
+## 2026-08-24 — Saved tab restores /saved after Live
+
+Live replaceStates the address bar onto the staged post. Flipping back to Saved left that preview path in the bar (`onPersonalTabChange` no-op'd when the route was still `/saved`). Saved now writes `/saved` on tab change and from `useTheaterLiveUrl` when that tab is showing. Follow-up: none.
+
+## 2026-08-24 — Mobile album: second photo was unreachable
+
+Multi-image posts already loaded every photo, but on a phone the dots sat under the top scrim (untappable, easy to miss) and the slides used `w-full` flex children that iOS often won't pan. Dots sit below the header (safe-area), each slide is `min-w-full`, swipe is `touch-pan-x`, and a tap on the right/left third changes photo. Follow-up: none.
+
+## 2026-08-24 — Mobile peek-bar audio always present
+
+The mute control hid on non-video posts, which shifted the peek-bar row. It now always renders and disables (same as the desktop dock). Photo posts with more than one image snap sideways (dots) instead of showing only the first. Follow-up: none.
+
+## 2026-08-24 — Theater Tag: count, not chips
+
+Dropped action-row `#tag` chips. The Tag button shows a count (max 5) — desktop next to the label, mobile as a badge. `TagQuickPicker` lists assigned tags first. POST `/api/bookmarks/[id]/tags` returns 400 past 5. Follow-up: none.
+
+## 2026-08-24 — Magic-link email matches the sign-in modal
+
+Sign-in / confirm-email mail is now a react-email template (`src/emails/magic-link.tsx`): stage black, SignInModal card, cloud + Indie Flower wordmark, clay pill. Resend still gets HTML + a plaintext sibling. Preview with `pnpm email:dev` (:3003). Follow-up: none.
+
+## 2026-08-24 — Saved: My Collection → Saved, /collection → /saved
+
+User-facing "My Collection" is now **Saved**; the route is `/saved`. `/collection` 308s there (keeps `open`/`platform`). APIs/DB still say collection (`/api/collections/*`, `collection_events`, internal `PersonalTab = 'collection'`). Follow-up: none.
+
+## 2026-08-24 — Off-site link tweets: card, not 6xl URL
+
+A tweet that wraps a Substack (or similar) URL was typeset at slogan size and sent through `StageArticle`, which has no X Article body. Stage now keeps the tweet prose, strips that URL, and renders a `StageLinkCard` (cover + title + domain). OG thumbs are not tweet photos (that duplicated the cover). CSP `img-src` allows `https:` so publisher images load. Follow-up: filmstrip still uses `thumbnailUrl` for the tile image (the card cover) — that's intentional.
+
+## 2026-08-24 — Staging + prod: drop every X connection
+
+X is a Settings link now, so leftover `user_identities` (provider `x`) + `oauth_tokens` would have blocked Connect X with `linked_elsewhere` (old X-first rows used the Twitter id as `users.id`). Deleted those identities and tokens on both volumes; remapped X-first `users.id` (and matching `user_id` columns) to `detached_<old id>` so migrate's bookmark backfill cannot recreate the collision. Email identities untouched. Backups at `/data/adhx-pre-x-unlink.db`. Follow-up: users sign in with magic link, then Connect X in Settings (sync pulls a fresh X collection onto that account).
+
 ## 2026-08-24 — Link-only X: bind email, don't sign in on X
 
 Settings Add-email now uses `/api/auth/email/change` so it cannot spawn a second account. Unsigned X callbacks bounce before spending the OAuth code; `findOrCreateUserForX` without a session is `sign_in_required` even if the identity exists. Flipping Live (caught-up) → Collection resumes the shared stage. Follow-up: `/?auth_error=x_link_only` is still silent on the public theater; existing X-only accounts still need email to sign in.

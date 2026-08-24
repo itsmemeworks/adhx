@@ -4,7 +4,7 @@ import { bookmarkTags, bookmarks } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { metrics } from '@/lib/sentry'
 import { recordPostAnalytic } from '@/lib/analytics/record'
-import { sanitizeTag } from '@/lib/utils/tag'
+import { sanitizeTag, MAX_TAGS_PER_POST } from '@/lib/utils/tag'
 import { withAuth } from '@/lib/api/with-auth'
 
 function getPlatform(request: NextRequest): string {
@@ -70,6 +70,24 @@ export const POST = withAuth(
 
     if (!bookmark) {
       return NextResponse.json({ error: 'Bookmark not found' }, { status: 404 })
+    }
+
+    const existing = await db
+      .select({ tag: bookmarkTags.tag })
+      .from(bookmarkTags)
+      .where(
+        and(
+          eq(bookmarkTags.userId, userId),
+          eq(bookmarkTags.platform, platform),
+          eq(bookmarkTags.bookmarkId, id),
+        ),
+      )
+
+    if (existing.some((row) => row.tag === cleanTag)) {
+      return NextResponse.json({ success: true, tag: cleanTag })
+    }
+    if (existing.length >= MAX_TAGS_PER_POST) {
+      return NextResponse.json({ error: `Maximum ${MAX_TAGS_PER_POST} tags` }, { status: 400 })
     }
 
     try {

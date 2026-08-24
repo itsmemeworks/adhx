@@ -128,7 +128,7 @@ authedTest.describe('theater shortcuts (signed in)', () => {
 
   authedTest('T opens the tag picker; A archives and U undoes', async ({ page }) => {
     await apiUnarchive(page, POST.alpha.id)
-    await page.goto(`/collection?open=${POST.alpha.id}&platform=twitter`)
+    await page.goto(`/saved?open=${POST.alpha.id}&platform=twitter`)
     await expectTheaterReady(page)
     await expect(caption(page, POST.alpha.text)).toBeVisible()
 
@@ -138,7 +138,7 @@ authedTest.describe('theater shortcuts (signed in)', () => {
     await expect(picker.getByLabel('New tag name')).toBeFocused()
     await page.keyboard.press('Escape')
     await expect(picker).toHaveCount(0)
-    await expect(page).toHaveURL(/\/collection/)
+    await expect(page).toHaveURL(/\/saved/)
 
     await page.keyboard.press('a')
     await expect(page.getByRole('button', { name: 'Undo', exact: true })).toBeVisible()
@@ -150,7 +150,7 @@ authedTest.describe('theater shortcuts (signed in)', () => {
 
   authedTest('T then type then Enter creates a tag and closes; arrows toggle', async ({ page }) => {
     await apiUnarchive(page, POST.alpha.id)
-    await page.goto(`/collection?open=${POST.alpha.id}&platform=twitter`)
+    await page.goto(`/saved?open=${POST.alpha.id}&platform=twitter`)
     await expectTheaterReady(page)
 
     await page.keyboard.press('t')
@@ -184,11 +184,11 @@ authedTest.describe('theater shortcuts (signed in)', () => {
     await expect(page.getByRole('menu')).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Library' })).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Live' })).toBeVisible()
-    await expect(page.getByRole('menuitem', { name: 'My Collection' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Saved' })).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Settings' })).toBeVisible()
   })
 
-  authedTest('. then arrows then Enter switches to My Collection', async ({ page }) => {
+  authedTest('. then arrows then Enter switches to Saved', async ({ page }) => {
     await page.goto('/')
     await expectTheaterReady(page)
     await expect(page.getByRole('button', { name: 'Account menu' })).toBeVisible()
@@ -198,9 +198,9 @@ authedTest.describe('theater shortcuts (signed in)', () => {
     await page.keyboard.press('ArrowDown')
     await expect(page.getByRole('menuitem', { name: 'Live' })).toBeFocused()
     await page.keyboard.press('ArrowDown')
-    await expect(page.getByRole('menuitem', { name: 'My Collection' })).toBeFocused()
+    await expect(page.getByRole('menuitem', { name: 'Saved' })).toBeFocused()
     await page.keyboard.press('Enter')
-    await expect(page).toHaveURL(/\/collection/)
+    await expect(page).toHaveURL(/\/saved/)
   })
 
   authedTest('. then arrows then Enter follows a menu link', async ({ page }) => {

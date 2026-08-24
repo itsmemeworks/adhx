@@ -14,7 +14,7 @@
  * Overflowing photo captions use Read (article mode), not tap-to-expand.
  */
 
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { PlatformChip } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
@@ -31,7 +31,9 @@ import {
 } from './stage-primitives'
 import { StageInlineVideo } from './StageInlineVideo'
 import { StageQuoteCard } from './StageQuoteCard'
+import { StageLinkCard } from './StageLinkCard'
 import { useHydratedQuote } from './useHydratedQuote'
+import { stripPreviewUrls, visibleTextForSizing } from '@/lib/theater/link-preview'
 import type { TheaterItem } from './types'
 
 /** Twitter photos go through `/api/media/image` — pbs.twimg.com often 403s off twitter.com. */
@@ -94,7 +96,10 @@ export interface StageTextProps {
  * type. Exported for unit testing.
  */
 export function textSizeClass(text: string): string {
-  const len = text.length
+  const visible = visibleTextForSizing(text)
+  // A URL-only tweet is not a short slogan — don't typeset the link at 6xl.
+  if (!visible && /https?:\/\//i.test(text)) return 'text-lg sm:text-xl leading-relaxed'
+  const len = visible.length
   if (len <= 80) return 'text-4xl sm:text-5xl lg:text-6xl'
   if (len <= 180) return 'text-3xl sm:text-4xl lg:text-5xl'
   if (len <= 600) return 'text-xl sm:text-2xl lg:text-3xl'
@@ -117,20 +122,15 @@ export function StageText({
   const captionRef = useRef<HTMLParagraphElement>(null)
 
   if (photo) {
-    const src = stagePhotoSrc(item)
+    const fallback = stagePhotoSrc(item)
+    const photos = parentPhotos.length > 0 ? parentPhotos : fallback ? [fallback] : []
     return (
       <div
         className="relative flex h-full w-full items-center justify-center bg-[#08070a]"
         onClick={() => dispatchTheaterStageTap()}
       >
-        {src ? (
-          <img
-            src={src}
-            alt=""
-            referrerPolicy="no-referrer"
-            onError={fallbackToOriginal(item.thumbnailUrl)}
-            className="h-full w-full object-contain"
-          />
+        {photos.length > 0 ? (
+          <StagePhotoBleed photos={photos} fallbackThumb={item.thumbnailUrl ?? null} />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
             {photoCaption ? (
@@ -184,6 +184,8 @@ export function StageText({
   // link in `item.text` is stripped too — OR'd with any caller-supplied
   // `hideTweetLinks` rather than replacing it.
   const hideLinks = hideTweetLinks || !!quote
+  const linkPreview = item.linkPreview
+  const bodyText = stripPreviewUrls(text, linkPreview, item.textLinks)
 
   return (
     <div
@@ -206,19 +208,27 @@ export function StageText({
           )}
         >
           <StageAuthorRow item={item} />
-          <p className={cn('font-serif leading-tight text-white', textSizeClass(text || ''))}>
-            {text ? (
+          {bodyText ? (
+            <p
+              className={cn(
+                'break-words font-serif leading-tight text-white',
+                textSizeClass(bodyText),
+              )}
+            >
               <TheaterLinkedText
                 platform={item.platform}
-                text={text}
+                text={bodyText}
                 hasMedia={parentPhotos.length > 0 || !!parentVideo}
                 links={item.textLinks}
                 hideTweetLinks={hideLinks}
               />
-            ) : (
-              'Saved post'
-            )}
-          </p>
+            </p>
+          ) : !linkPreview ? (
+            <p className={cn('font-serif leading-tight text-white', textSizeClass(''))}>
+              <span>Saved post</span>
+            </p>
+          ) : null}
+          {linkPreview ? <StageLinkCard preview={linkPreview} /> : null}
           {parentVideo && !omitParentVideo ? (
             <StageInlineVideo
               author={parentVideo.author}
@@ -250,5 +260,114 @@ export function StageText({
         </div>
       </div>
     </div>
+  )
+}
+
+/** Full-bleed album: one photo fills the stage; extra photos snap sideways. */
+function StagePhotoBleed({
+  photos,
+  fallbackThumb,
+}: {
+  photos: string[]
+  fallbackThumb: string | null
+}) {
+  const [index, setIndex] = useState(0)
+  const scrollerRef = useRef<HTMLDivElement>(null)
+  const scrolledRef = useRef(false)
+
+  if (photos.length === 1) {
+    return (
+      <img
+        src={photos[0]}
+        alt=""
+        referrerPolicy="no-referrer"
+        onError={fallbackToOriginal(fallbackThumb)}
+        className="h-full w-full object-contain"
+      />
+    )
+  }
+
+  function goTo(i: number) {
+    const el = scrollerRef.current
+    const next = Math.max(0, Math.min(photos.length - 1, i))
+    // Instant: a smooth scroll fires `onScroll` at 0 first and snaps back.
+    if (el?.scrollTo) el.scrollTo({ left: next * el.clientWidth, behavior: 'auto' })
+    setIndex(next)
+  }
+
+  function goNextPhoto() {
+    goTo(index >= photos.length - 1 ? 0 : index + 1)
+  }
+
+  return (
+    <>
+      <div
+        ref={scrollerRef}
+        role="region"
+        aria-roledescription="carousel"
+        aria-label={`Photos, ${photos.length}`}
+        onPointerDown={() => {
+          scrolledRef.current = false
+        }}
+        onScroll={(e) => {
+          const el = e.currentTarget
+          scrolledRef.current = true
+          if (!el.clientWidth) return
+          const next = Math.round(el.scrollLeft / el.clientWidth)
+          setIndex(Math.max(0, Math.min(photos.length - 1, next)))
+        }}
+        onClick={(e) => {
+          // Don't also toggle chrome (parent onClick). A swipe's leftover
+          // click is ignored so it doesn't jump a photo or hide overlays.
+          e.stopPropagation()
+          if (scrolledRef.current) return
+          const rect = e.currentTarget.getBoundingClientRect()
+          const x = (e.clientX - rect.left) / rect.width
+          if (x > 0.66) goTo(index + 1)
+          else if (x < 0.33) goTo(index - 1)
+          else dispatchTheaterStageTap()
+        }}
+        className="flex h-full w-full snap-x snap-mandatory touch-pan-x overflow-x-auto overflow-y-hidden overscroll-x-contain [&::-webkit-scrollbar]:hidden"
+        style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
+      >
+        {photos.map((src) => (
+          <div key={src} className="h-full w-full min-w-full shrink-0 snap-center">
+            <img
+              src={src}
+              alt=""
+              draggable={false}
+              referrerPolicy="no-referrer"
+              onError={fallbackToOriginal(fallbackThumb)}
+              className="pointer-events-none h-full w-full object-contain"
+            />
+          </div>
+        ))}
+      </div>
+      {/* Below the mobile top scrim so the control isn't under the header.
+          One button — tap advances — with a subtle plate on mobile and a
+          stronger frost on desktop (dots vanish on a dark photo otherwise). */}
+      <div className="pointer-events-none absolute inset-x-0 top-[max(6.75rem,calc(env(safe-area-inset-top)+5.75rem))] z-10 flex justify-center lg:top-auto lg:bottom-8">
+        <button
+          type="button"
+          aria-label={`Next photo, ${index + 1} of ${photos.length}`}
+          onClick={(e) => {
+            e.stopPropagation()
+            goNextPhoto()
+          }}
+          className="pointer-events-auto flex items-center gap-1 rounded-full border border-white/20 bg-black/40 px-2.5 py-1.5 backdrop-blur-md lg:border-white/30 lg:bg-black/80"
+        >
+          {photos.map((_, i) => (
+            <span
+              key={i}
+              aria-hidden
+              className={cn(
+                'rounded-full',
+                i === index ? 'h-1.5 w-1.5 bg-white' : 'h-1.5 w-1.5 bg-white/40',
+              )}
+            />
+          ))}
+        </button>
+      </div>
+    </>
   )
 }

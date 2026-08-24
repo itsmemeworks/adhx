@@ -26,6 +26,7 @@ import { StageInstagram, useInstagramStage } from './StageInstagram'
 import { StageYouTube } from './StageYouTube'
 import { StageArticle } from './StageArticle'
 import { isArticleReader, isQuoteReader, type TheaterItem } from './types'
+import { isExternalLinkPreview } from '@/lib/theater/link-preview'
 
 export interface StageProps {
   item: TheaterItem | null
@@ -131,11 +132,16 @@ export function Stage({
       // Not ready yet (or the mirror never answered): poster + spinner, or the
       // official-embed fallback. No player here — see `useInstagramStage`.
       overlay = <StageInstagram item={item} status={instagram.status} slow={instagram.slow} />
-    } else if (type === 'article') {
+    } else if (type === 'article' && !isExternalLinkPreview(item)) {
       overlay = <StageArticle item={item} />
     } else if (type === 'photo' && !isArticleReader(item, articleMode)) {
       overlay = <StageText item={item} photo photoCaption={photoCaption} />
-    } else if (type === 'text' || type === 'quote' || isArticleReader(item, articleMode)) {
+    } else if (
+      type === 'text' ||
+      type === 'quote' ||
+      type === 'article' ||
+      isArticleReader(item, articleMode)
+    ) {
       overlay = <StageText item={item} />
     } else {
       // Anything unresolvable: a graceful poster fallback — never a dead stage.

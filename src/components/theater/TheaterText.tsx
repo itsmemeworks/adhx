@@ -22,7 +22,8 @@ import { cn } from '@/lib/utils'
 import { decodeHtmlEntities, stripMediaUrls } from '@/components/feed/utils'
 import { toBionicText } from '@/components/feed/text-rendering'
 import { usePreferences } from '@/lib/preferences-context'
-import type { TextLinkRef } from './types'
+import { stripPreviewUrls } from '@/lib/theater/link-preview'
+import type { TextLinkRef, TheaterLinkPreview } from './types'
 
 const URL_PATTERN = /(https?:\/\/[^\s]+)/g
 const DISPLAY_URL_MAX = 40
@@ -111,6 +112,19 @@ export function stripShortLinksForPreview(text: string): string {
     .replace(/[ \t]{2,}/g, ' ')
     .replace(/ ([.,!?)])/g, '$1')
     .trim()
+}
+
+/** Filmstrip / up-next row: drop t.co tails and the off-site URL the card already shows. */
+export function theaterRowCaption(item: {
+  text?: string | null
+  linkPreview?: TheaterLinkPreview
+  textLinks?: TextLinkRef[]
+}): string {
+  return stripPreviewUrls(
+    stripShortLinksForPreview((item.text || '').trim()),
+    item.linkPreview,
+    item.textLinks,
+  )
 }
 
 /**

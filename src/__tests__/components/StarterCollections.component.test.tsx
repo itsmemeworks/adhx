@@ -100,7 +100,7 @@ describe('StarterCollections', () => {
 
     render(<StarterCollections />)
 
-    const addButton = await screen.findByRole('button', { name: 'Add to my collection' })
+    const addButton = await screen.findByRole('button', { name: 'Add to Saved' })
     fireEvent.click(addButton)
 
     await waitFor(() => expect(screen.getByText('Added · 5 posts')).toBeInTheDocument())
@@ -120,11 +120,11 @@ describe('StarterCollections', () => {
 
     render(<StarterCollections />)
 
-    const addButton = await screen.findByRole('button', { name: 'Add to my collection' })
+    const addButton = await screen.findByRole('button', { name: 'Add to Saved' })
     fireEvent.click(addButton)
 
     await waitFor(() => expect(screen.getByText("Couldn't add — try again")).toBeInTheDocument())
-    const retryButton = screen.getByRole('button', { name: 'Add to my collection' })
+    const retryButton = screen.getByRole('button', { name: 'Add to Saved' })
     expect(retryButton).not.toBeDisabled()
   })
 

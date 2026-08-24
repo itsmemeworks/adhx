@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * Signed-in shared preview: tagging the lead must update chips / Tag · N
+ * Signed-in shared preview: tagging the lead must update the Tag count
  * in place. The picker already saved (collection shows the tag); the
  * shared chrome used to ignore `bookmark-tags-changed`.
  */
@@ -102,7 +102,7 @@ describe('TheaterShell shared-lead tags', () => {
     resetSharedAutoSaveAttempts()
   })
 
-  it('seeds chips from /api/feed when the shared lead is already tagged', async () => {
+  it('seeds tags from /api/feed when the shared lead is already tagged', async () => {
     const item = textItem('123')
     await act(async () => {
       render(
@@ -120,7 +120,7 @@ describe('TheaterShell shared-lead tags', () => {
     expect(screen.getByTestId('mobile-tags')).toHaveAttribute('data-account-tab', 'live')
   })
 
-  it('patches chips when TagQuickPicker broadcasts bookmark-tags-changed', async () => {
+  it('patches the Tag count when TagQuickPicker broadcasts bookmark-tags-changed', async () => {
     global.fetch = vi.fn(async () => ({
       ok: true,
       json: async () => ({ items: [{ id: '123', platform: 'twitter', tags: [] }] }),

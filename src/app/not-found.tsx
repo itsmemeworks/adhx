@@ -22,7 +22,7 @@ export default function NotFound() {
             href="/"
             className="inline-flex min-h-[44px] w-full sm:w-auto items-center justify-center gap-1.5 rounded-full bg-clay-grad px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-opacity hover:opacity-90"
           >
-            Back to your collection
+            Back to Saved
           </Link>
           <Link
             href="/trending"

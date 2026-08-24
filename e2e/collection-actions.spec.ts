@@ -19,7 +19,7 @@ authedTest.describe('collection actions', () => {
   })
 
   authedTest('Tag adds a playlist membership the /tags page can see', async ({ page }) => {
-    await page.goto(`/collection?open=${POST.hotel.id}&platform=twitter`)
+    await page.goto(`/saved?open=${POST.hotel.id}&platform=twitter`)
     await expectTheaterReady(page)
     await expect(caption(page, POST.hotel.text)).toBeVisible()
 
@@ -40,7 +40,7 @@ authedTest.describe('collection actions', () => {
   authedTest(
     'collection actions match Live plus Archive — no Later or Delete',
     async ({ page }) => {
-      await page.goto(`/collection?open=${POST.hotel.id}&platform=twitter`)
+      await page.goto(`/saved?open=${POST.hotel.id}&platform=twitter`)
       await expectTheaterReady(page)
       await expect(page.getByRole('button', { name: 'Link', exact: true })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Tag', exact: true })).toBeVisible()
@@ -60,7 +60,7 @@ authedTest.describe('collection actions', () => {
   authedTest(
     'Next and arrows skip without a Later toast; Delete key is inert',
     async ({ page }) => {
-      await page.goto(`/collection?open=${POST.alpha.id}&platform=twitter`)
+      await page.goto(`/saved?open=${POST.alpha.id}&platform=twitter`)
       await expectTheaterReady(page)
       await expect(caption(page, POST.alpha.text)).toBeVisible()
 
@@ -86,7 +86,7 @@ authedTest.describe('collection actions (mobile)', () => {
   authedTest(
     'mobile row is Share / Tag / Open / Archive — no Later or Delete',
     async ({ page }) => {
-      await page.goto(`/collection?open=${POST.hotel.id}&platform=twitter`)
+      await page.goto(`/saved?open=${POST.hotel.id}&platform=twitter`)
       await expectTheaterReady(page)
       await expect(page.getByRole('button', { name: 'Share link' })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Tag' })).toBeVisible()

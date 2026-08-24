@@ -214,7 +214,7 @@ async function addInstagramReel(userId: string, reelId: string, source: string) 
     isDuplicate: false,
     platform: 'instagram',
     bookmark: newBookmark,
-    message: 'Reel added to your collection.',
+    message: 'Reel added to Saved.',
   })
 }
 
@@ -326,7 +326,7 @@ async function addTikTokVideo(userId: string, handle: string, videoId: string, s
     isDuplicate: false,
     platform: 'tiktok',
     bookmark: newBookmark,
-    message: 'TikTok added to your collection.',
+    message: 'TikTok added to Saved.',
   })
 }
 
@@ -433,6 +433,6 @@ async function addYouTubeShort(userId: string, videoId: string, source: string) 
     isDuplicate: false,
     platform: 'youtube',
     bookmark: newBookmark,
-    message: 'YouTube Short added to your collection.',
+    message: 'YouTube Short added to Saved.',
   })
 }

@@ -59,7 +59,8 @@ import { useTheaterCopy } from './useTheaterCopy'
 import { useTheaterStageEvents } from './useTheaterStageEvents'
 import { SavePostButton, PersonalLiveSaveButton } from './SavePostButton'
 import { FlameChip } from './TheaterMetaChips'
-import { TheaterTagChips } from './TheaterTagChips'
+import { TheaterTagCount } from './TheaterTagCount'
+import { tagActionLabel } from '@/lib/utils/tag'
 import { StageGlass } from './StageGlass'
 import { QuoteArticleToggle } from './QuoteArticleToggle'
 import { TheaterCollectionActions } from './TheaterCollectionActions'
@@ -74,7 +75,7 @@ import {
   REPEAT_MODE_LABEL,
 } from './types'
 import { TheaterCaption } from './TheaterCaption'
-import { stripShortLinksForPreview } from './TheaterText'
+import { theaterRowCaption } from './TheaterText'
 import { progressKindFor } from './TheaterProgressLine'
 import { UpNextList, TYPE_TILE, warmOnHover } from './UpNextList'
 import { SavePlaylistButton } from './SavePlaylistButton'
@@ -112,12 +113,12 @@ export interface DesktopStageChromeProps {
   collection?: TheaterPersonalChrome
   /** Shared+authed: open the tag picker after the Save pill morphs to Tag. */
   onSharedTag?: (item: TheaterItem) => void
-  /** Shared-lead tags (chips + Tag · N). Collection/live use `collection.tags`. */
+  /** Shared-lead tags (count on the Tag button). Collection/live use `collection.tags`. */
   itemTags?: string[]
-  /** Signed-in shared preview: same Live ⇄ My Collection cluster as `/`. */
+  /** Signed-in shared preview: same Live ⇄ Saved cluster as `/`. */
   accountTabs?: TheaterAccountTabs
   /**
-   * Personal Live / My Collection: add the pasted post in place instead of
+   * Personal Live / Saved: add the pasted post in place instead of
    * navigating to its preview page. Receives the url as pasted (already a
    * supported post link). Signed-out home and shared previews omit this and
    * still `location.assign` to the preview.
@@ -286,7 +287,7 @@ export function DesktopStageChrome({
         flashPasteError()
         return
       }
-      // Personal Live / My Collection: add in place and stay on this tab.
+      // Personal Live / Saved: add in place and stay on this tab.
       // Never bounce to a preview page — PasteToPreview on /library is a
       // different surface; AuthedTheater does not mount it.
       const handle = onPastePostRef.current
@@ -345,6 +346,7 @@ export function DesktopStageChrome({
   const trendCount = current ? (current.trendCount ?? current.saveCount ?? 0) : 0
   const displayTags = collection?.tags ?? itemTags
   const tagCount = displayTags?.length ?? 0
+  const tagLabel = tagActionLabel(tagCount)
   const tabs = collection
     ? {
         tab: collection.tab,
@@ -636,9 +638,7 @@ export function DesktopStageChrome({
         </div>
       )}
 
-      {/* Bottom-right: chips sit in the action row so author+caption stay
-          at a fixed height whether the post is tagged or not. Articles
-          (no left overlay) still show their tags here. */}
+      {/* Bottom-right actions. Tag count lives on the Tag button (max 5). */}
       {current ? (
         <div
           className={cn(
@@ -646,10 +646,6 @@ export function DesktopStageChrome({
             declutter && 'translate-y-3 opacity-0 pointer-events-none',
           )}
         >
-          <TheaterTagChips
-            tags={displayTags}
-            className="flex max-w-[min(28vw,16rem)] flex-nowrap items-center justify-end gap-1.5 overflow-x-auto"
-          />
           <div className="flex items-center gap-2">
             {sendFile.supported ? (
               <StageGlass
@@ -735,6 +731,7 @@ export function DesktopStageChrome({
                 type="button"
                 onClick={collection.onTag}
                 className={GLASS}
+                aria-label={tagLabel}
                 data-theater-action="tag"
               >
                 <TagIcon
@@ -742,7 +739,8 @@ export function DesktopStageChrome({
                   className={tagCount > 0 ? 'text-clay' : undefined}
                   fill={tagCount > 0 ? 'currentColor' : 'none'}
                 />
-                <span>{tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}</span>
+                <span>Tag</span>
+                <TheaterTagCount count={tagCount} />
               </StageGlass>
             ) : (mode === 'shared' && authed) || collection?.tab === 'live' ? (
               collection?.tab === 'live' ? (
@@ -751,8 +749,9 @@ export function DesktopStageChrome({
                     as="button"
                     type="button"
                     onClick={() => collection.onLiveTag?.(current)}
-                    title="Tag this post (saves it to your collection first)"
+                    title="Tag this post (saves it first)"
                     className={GLASS}
+                    aria-label={tagLabel}
                     data-theater-action="tag"
                   >
                     <TagIcon
@@ -760,7 +759,8 @@ export function DesktopStageChrome({
                       className={tagCount > 0 ? 'text-clay' : undefined}
                       fill={tagCount > 0 ? 'currentColor' : 'none'}
                     />
-                    <span>{tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}</span>
+                    <span>Tag</span>
+                    <TheaterTagCount count={tagCount} />
                   </StageGlass>
                   <PersonalLiveSaveButton
                     current={current}
@@ -1033,7 +1033,7 @@ export function DesktopDock({
           const tile = TYPE_TILE[type]
           const Icon = tile.icon
           const handle = item.author ? item.author.replace(/^@+/, '') : ''
-          const caption = stripShortLinksForPreview((item.text || '').trim())
+          const caption = theaterRowCaption(item)
 
           return (
             <button
@@ -1144,7 +1144,7 @@ export function DesktopDock({
               const tile = TYPE_TILE[type]
               const Icon = tile.icon
               const handle = first.author ? first.author.replace(/^@+/, '') : ''
-              const caption = stripShortLinksForPreview((first.text || '').trim())
+              const caption = theaterRowCaption(first)
               return (
                 <button
                   type="button"

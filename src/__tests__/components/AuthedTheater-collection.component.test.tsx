@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * `/collection` is the only personal theater. AuthedTheater fetches the
+ * `/saved` is the only personal theater. AuthedTheater fetches the
  * active queue at the API cap (100) before mounting the shell; a failed
  * fetch is an error (Retry), not a fake all-clear.
  */
@@ -17,14 +17,22 @@ vi.mock('next/navigation', () => ({
 
 const shellSpy = vi.fn()
 vi.mock('@/components/theater/TheaterShell', () => ({
-  TheaterShell: (props: { personalItems?: unknown[]; initialPersonalIndex?: number }) => {
+  TheaterShell: (props: {
+    personalItems?: unknown[]
+    initialPersonalIndex?: number
+    onPersonalTabChange?: (tab: 'live' | 'collection') => void
+  }) => {
     shellSpy(props)
     return (
       <div
         data-testid="theater-shell"
         data-index={props.initialPersonalIndex}
         data-count={(props.personalItems ?? []).length}
-      />
+      >
+        <button type="button" onClick={() => props.onPersonalTabChange?.('collection')}>
+          Saved
+        </button>
+      </div>
     )
   },
 }))
@@ -76,9 +84,7 @@ describe('AuthedTheater collection load', () => {
   it('shows an error — not all-clear — when the feed request fails', async () => {
     feedImpl = () => jsonResponse({ error: 'nope' }, false)
     render(<AuthedTheater seed={emptySeed} tab="collection" />)
-    await waitFor(() =>
-      expect(screen.getByText(/couldn.t load your collection/i)).toBeInTheDocument(),
-    )
+    await waitFor(() => expect(screen.getByText(/couldn.t load Saved/i)).toBeInTheDocument())
     expect(screen.queryByTestId('theater-shell')).not.toBeInTheDocument()
   })
 
@@ -121,5 +127,17 @@ describe('AuthedTheater collection load', () => {
     render(<AuthedTheater seed={emptySeed} tab="live" />)
     expect(screen.getByTestId('theater-shell')).toBeInTheDocument()
     expect(feedRequests).toHaveLength(0)
+  })
+
+  it('puts /saved back when Saved is clicked on a leftover Live preview path', async () => {
+    const replaceSpy = vi.spyOn(window.history, 'replaceState')
+    window.history.replaceState(null, '', '/author99/status/99')
+    replaceSpy.mockClear()
+    render(<AuthedTheater seed={emptySeed} tab="collection" />)
+    await waitFor(() => expect(screen.getByTestId('theater-shell')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Saved' }))
+    expect(replaceSpy).toHaveBeenCalledWith(null, '', '/saved')
+    expect(pushSpy).not.toHaveBeenCalled()
+    replaceSpy.mockRestore()
   })
 })

@@ -205,7 +205,7 @@ function FeedPageContent(): React.ReactElement {
     [placeAddedItem],
   )
 
-  // One personal theater: a card tap leaves the grid for `/collection`.
+  // One personal theater: a card tap leaves the grid for `/saved`.
   // AuthedTheater fetches the full active queue (API cap 100) and starts on
   // this post — prepends it when it's archived or outside the first page.
   const goToCollectionFromItem = useCallback(
@@ -608,7 +608,7 @@ function FeedPageContent(): React.ReactElement {
     router.replace(queryString ? `?${queryString}` : pathname, { scroll: false })
   }, [filter, platformFilter, sort, sortDirection, hideArchived, router, searchParams, pathname])
 
-  // Leftover overlay deep links — there is one personal theater, at `/collection`.
+  // Leftover overlay deep links — there is one personal theater, at `/saved`.
   useEffect(() => {
     const openId = searchParams.get('open')
     if (openId) {
@@ -628,7 +628,7 @@ function FeedPageContent(): React.ReactElement {
       return
     }
     if (searchParams.get('collection') === '1') {
-      router.replace('/collection')
+      router.replace('/saved')
       return
     }
     if (searchParams.get('live') === '1') {
@@ -655,7 +655,7 @@ function FeedPageContent(): React.ReactElement {
   useEffect(() => {
     function handler(e: Event) {
       const tab = (e as CustomEvent<{ tab?: string }>).detail?.tab
-      router.push(tab === 'live' ? '/live' : '/collection')
+      router.push(tab === 'live' ? '/live' : '/saved')
     }
     window.addEventListener('open-theater', handler)
     return () => window.removeEventListener('open-theater', handler)

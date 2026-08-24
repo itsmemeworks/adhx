@@ -28,6 +28,7 @@ import {
   stampLastVisibleAt,
   claimResumeSync,
 } from '@/lib/sync/resume'
+import { isSavedPath } from '@/lib/theater/collection-href'
 
 interface AuthStatus {
   authenticated: boolean
@@ -414,7 +415,7 @@ export function Header() {
 
             {/* Primary nav — every entry is a real route now that the theater
                 has its own: signed-in `/` (and this Theater link) lands on
-                `/collection` (next unread); `/live` is Live; the grid is
+                `/saved` (next unread); `/live` is Live; the grid is
                 `/library`. "Theater" names the surface rather than one tab.
                 Only when authenticated, hidden on mobile (mobile uses the menu). */}
             {authStatus?.authenticated && (
@@ -434,7 +435,7 @@ export function Header() {
                   href="/"
                   className={cn(
                     'rounded-full px-3 py-1.5 font-semibold transition-colors',
-                    pathname === '/' || pathname === '/live' || pathname === '/collection'
+                    pathname === '/' || pathname === '/live' || isSavedPath(pathname)
                       ? 'bg-clay/[0.12] text-clay'
                       : 'text-ink-2 hover:text-ink',
                   )}
@@ -585,7 +586,7 @@ export function Header() {
                           onClick={() => setShowUserMenu(false)}
                           className={cn(
                             'flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset transition-colors',
-                            pathname === '/' || pathname === '/live' || pathname === '/collection'
+                            pathname === '/' || pathname === '/live' || isSavedPath(pathname)
                               ? 'font-semibold text-clay'
                               : 'text-ink-2 hover:text-ink',
                           )}

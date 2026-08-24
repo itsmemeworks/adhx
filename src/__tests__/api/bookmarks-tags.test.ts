@@ -183,6 +183,25 @@ describe('API: /api/bookmarks/[id]/tags', () => {
       expect(data.tag).toBe('uppercase')
     })
 
+    it('returns 400 when the post already has 5 tags', async () => {
+      await testInstance.db.insert(schema.bookmarkTags).values(
+        ['one', 'two', 'three', 'four', 'five'].map((tag) => ({
+          userId: USER_A,
+          bookmarkId: 'tweet-1',
+          tag,
+        })),
+      )
+
+      const { POST } = await import('@/app/api/bookmarks/[id]/tags/route')
+      const response = await POST(createRequest('POST', { tag: 'six' }), {
+        params: Promise.resolve({ id: 'tweet-1' }),
+      })
+
+      expect(response.status).toBe(400)
+      const data = await response.json()
+      expect(data.error).toContain('Maximum 5')
+    })
+
     it('handles duplicate tag gracefully', async () => {
       await testInstance.db.insert(schema.bookmarkTags).values({
         userId: USER_A,

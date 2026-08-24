@@ -7,6 +7,7 @@ import {
   isTrailingLink,
   buildRenderSegments,
   stripShortLinksForPreview,
+  theaterRowCaption,
   splitMentionParts,
   mentionHref,
 } from '@/components/theater/TheaterText'
@@ -43,6 +44,19 @@ describe('stripShortLinksForPreview', () => {
 
   it('leaves plain text with no links unchanged', () => {
     expect(stripShortLinksForPreview('just some words')).toBe('just some words')
+  })
+})
+
+describe('theaterRowCaption', () => {
+  it('drops the off-site URL that the link card already shows', () => {
+    expect(
+      theaterRowCaption({
+        text: '👀\n\nhttps://deanpiper.substack.com/p/hayden-panettiere-and-james-blunt',
+        linkPreview: {
+          url: 'https://deanpiper.substack.com/p/hayden-panettiere-and-james-blunt',
+        },
+      }),
+    ).toBe('👀')
   })
 })
 

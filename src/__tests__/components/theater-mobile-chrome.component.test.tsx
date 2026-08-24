@@ -163,7 +163,7 @@ describe('TheaterMobileChrome: caption', () => {
     expect(watch).not.toHaveTextContent('Watch')
   })
 
-  it('shows tag chips in the action row, including on articles', () => {
+  it('does not show tag name chips in the action row', () => {
     render(
       <TheaterMobileChrome
         {...base}
@@ -171,7 +171,7 @@ describe('TheaterMobileChrome: caption', () => {
         itemTags={['ai']}
       />,
     )
-    expect(screen.getByText('#ai')).toBeInTheDocument()
+    expect(screen.queryByText('#ai')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument()
   })
 
@@ -191,9 +191,6 @@ describe('TheaterMobileChrome: caption', () => {
     expect(actionRow?.parentElement?.className).toContain('pointer-events-none')
     expect(copy.className).toContain('bg-white/10')
     expect(copy.className).toContain('backdrop-blur-md')
-    const tag = screen.getByText('#ai')
-    expect(tag.className).toContain('bg-white/10')
-    expect(tag.className).toContain('backdrop-blur-md')
   })
 })
 
@@ -322,7 +319,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
       tags: ['cats'],
     }
     render(<TheaterMobileChrome {...base} current={videoItem()} collection={collection} />)
-    const tag = screen.getByRole('button', { name: 'Tag · 1' })
+    const tag = screen.getByRole('button', { name: 'Tag 1' })
     expect(tag.className).toContain('border-white/25')
     expect(tag.className).not.toContain('text-clay')
     expect(tag.querySelector('.lucide-tag')?.classList.contains('text-clay')).toBe(true)
@@ -361,7 +358,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
   })
 
   /**
-   * The Live ⇄ My Collection switch is NOT a control this chrome draws. A tab
+   * The Live ⇄ Saved switch is NOT a control this chrome draws. A tab
    * pill in the top scrim overlapped the logo, trend/time chips and paste
    * button at phone widths (owner), so mobile hands the pair to the burger as
    * Theater sub-options. Desktop keeps its top-bar pill and now also passes
@@ -388,7 +385,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     )
     expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument()
     // No tab buttons of its own — in the scrim or the peek bar.
-    expect(screen.queryByText('My Collection')).not.toBeInTheDocument()
+    expect(screen.queryByText('Saved')).not.toBeInTheDocument()
     expect(screen.queryByText('Collection')).not.toBeInTheDocument()
     expect(screen.queryByText('Live', { selector: 'button' })).not.toBeInTheDocument()
   })
@@ -891,7 +888,7 @@ describe('TheaterMobileChrome: theaterActive prop wiring', () => {
     )
   })
 
-  it('signed-in shared preview wires Live ⇄ My Collection into the avatar menu and omits Close', () => {
+  it('signed-in shared preview wires Live ⇄ Saved into the avatar menu and omits Close', () => {
     const onTabChange = vi.fn()
     const onClose = vi.fn()
     render(
@@ -913,7 +910,7 @@ describe('TheaterMobileChrome: theaterActive prop wiring', () => {
 })
 
 /**
- * "My Collection is just a different playlist in that same theater" (owner
+ * "Saved is just a different playlist in that same theater" (owner
  * directive): videos auto-advance on end, and photo/text/quote/article use
  * the same 10s dwell as Live (Repeat still applies). The line's fill node
  * (`.bg-clay`) only renders when `<TheaterProgressLine/>`'s `kind` isn't
@@ -1048,11 +1045,29 @@ describe('TheaterMobileChrome: audio button gesture-context unmute', () => {
       window.removeEventListener('theater-set-muted', listener)
     }
   })
+
+  it('keeps the audio button on non-video posts, disabled like the desktop dock', () => {
+    const onSetMuted = vi.fn()
+    render(
+      <TheaterMobileChrome
+        {...base}
+        muted
+        current={textItem({ contentType: 'photo', thumbnailUrl: 'https://example.com/p.jpg' })}
+        onSetMuted={onSetMuted}
+      />,
+    )
+    const audioBtn = screen.getByLabelText('Unmute')
+    expect(audioBtn).toBeDisabled()
+    expect(audioBtn).toHaveAttribute('aria-disabled', 'true')
+    expect(audioBtn.className).toContain('opacity-35')
+    fireEvent.click(audioBtn)
+    expect(onSetMuted).not.toHaveBeenCalled()
+  })
 })
 
 /**
  * Round 8 (owner request): a Spotify-style repeat control in the peek bar,
- * between de-clutter and the (video-only) audio button so neither ever
+ * between de-clutter and the audio button so neither ever
  * shifts. Only renders when BOTH `repeatMode` and `onCycleRepeat` are
  * provided — home/shared mode; collection mode always loops on its own and
  * the collection theater is a finite backlog, so neither passes these props.

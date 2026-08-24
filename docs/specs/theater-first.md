@@ -54,7 +54,7 @@ StageText.tsx            — tweet typeset large (Newsreader) on the stage; phot
                            clearance pad
 TheaterDesktopChrome.tsx — `DesktopStageChrome` (overlays inside stage: top bar with brand + LIVE +
                            paste button (expands into the preview field; ⌘V still
-                           works globally — signed-in Live / My Collection add in
+                           works globally — signed-in Live / Saved add in
                            place and stay on the tab; playlist has no paste); flame chip left of paste
                            on every post type); bottom-left meta overlay
                            for video/photo; bottom-right actions — Open is the source platform glyph)

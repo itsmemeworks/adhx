@@ -28,6 +28,18 @@ describe('textSizeClass', () => {
   it('handles empty text', () => {
     expect(textSizeClass('')).toBe('text-4xl sm:text-5xl lg:text-6xl')
   })
+
+  it('does not typeset a URL-only tweet at the short-slogan size', () => {
+    expect(
+      textSizeClass('https://deanpiper.substack.com/p/hayden-panettiere-and-james-blunt'),
+    ).toBe('text-lg sm:text-xl leading-relaxed')
+  })
+
+  it('sizes an emoji-plus-URL tweet from the visible prose, not the URL', () => {
+    expect(
+      textSizeClass('👀\n\nhttps://deanpiper.substack.com/p/hayden-panettiere-and-james-blunt'),
+    ).toBe('text-4xl sm:text-5xl lg:text-6xl')
+  })
 })
 
 describe('stagePhotoSrc', () => {

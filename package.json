@@ -22,6 +22,7 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "email:dev": "email dev --dir src/emails --port 3003",
     "prepare": "husky"
   },
   "lint-staged": {
@@ -59,6 +60,7 @@
     "next": "^16.3.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "react-email": "^6.9.2",
     "tailwind-merge": "^3.6.0",
     "twitter-api-v2": "^1.29.1"
   },

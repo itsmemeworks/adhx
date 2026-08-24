@@ -9,6 +9,7 @@ import { theaterItemKey } from './types'
 import { previewPath } from '@/lib/activity/preview-path'
 import { hasKnownTimestamp } from '@/lib/utils/format'
 import type { RepeatMode, TheaterItem, TheaterMode } from './types'
+import { SAVED_PATH, isSavedPath } from '@/lib/theater/collection-href'
 
 export interface PersonalUndoAction {
   type: 'archive' | 'keep' | 'delete'
@@ -317,20 +318,21 @@ export function theaterUrlSyncPath(
 }
 
 /**
- * After Live `replaceState` onto `/{user}/status/{id}`, Next's router still
- * thinks the page is `/live` or `/collection`. Pushing the other tab then lags
- * or no-ops — chrome flips, the address bar stays on the preview path.
+ * After Live `replaceState` onto `/{user}/status/{id}`, Next's router may
+ * still think the page is `/live` or `/saved`, so `router.push` lags or
+ * no-ops and the chrome flips while the bar stays on the preview path.
  *
- * Restore the browser URL to the theater route Next is actually rendering
- * before `router.push`. Returns null when the bar already matches a tab.
+ * Put `dest` in the bar first (the tab the viewer asked for), then push.
+ * Returns null when the bar already matches a theater tab — Next can
+ * navigate from there without a history write.
  */
 export function theaterTabNavRestore(
   browserPath: string,
-  dest: '/live' | '/collection',
-): '/live' | '/collection' | null {
+  dest: '/live' | typeof SAVED_PATH,
+): '/live' | typeof SAVED_PATH | null {
   if (browserPath === dest) return null
-  if (browserPath === '/live' || browserPath === '/collection') return null
-  return dest === '/collection' ? '/live' : '/collection'
+  if (browserPath === '/live' || isSavedPath(browserPath)) return null
+  return dest
 }
 
 /**

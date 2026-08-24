@@ -19,12 +19,10 @@ export function EmptyAccountOnboarding(): React.ReactElement {
 
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-      <h3 className="font-serif text-2xl font-semibold text-ink mb-2">
-        Let&apos;s fill your collection
-      </h3>
+      <h3 className="font-serif text-2xl font-semibold text-ink mb-2">Nothing saved yet</h3>
       <p className="text-ink-2 max-w-md mb-8">
-        Your collection is empty for now — connect X, paste a link, or see what everyone else is
-        saving right now.
+        Saved is empty for now — connect X, paste a link, or see what everyone else is saving right
+        now.
       </p>
 
       <div className="grid gap-3 w-full max-w-md">

@@ -3,7 +3,7 @@
  *
  * The library grid no longer mounts a personal TheaterShell overlay. Leftover
  * deep links (`?collection=1`, `open-theater`) navigate to the
- * one personal theater at `/collection`.
+ * one personal theater at `/saved`.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useState, useEffect } from 'react'
@@ -104,14 +104,14 @@ beforeEach(() => {
   }) as unknown as typeof fetch
 })
 
-describe('AuthedHome leaves the personal theater to /collection', () => {
-  it('navigates to /collection on leftover open-theater, and never mounts an overlay', async () => {
+describe('AuthedHome leaves the personal theater to /saved', () => {
+  it('navigates to /saved on leftover open-theater, and never mounts an overlay', async () => {
     const { queryByTestId } = render(<FeedPage />)
 
     await waitFor(() => expect(feedRequests.length).toBeGreaterThan(0))
     window.dispatchEvent(new CustomEvent('open-theater', { detail: { tab: 'personal' } }))
 
-    await waitFor(() => expect(pushSpy).toHaveBeenCalledWith('/collection'))
+    await waitFor(() => expect(pushSpy).toHaveBeenCalledWith('/saved'))
     expect(queryByTestId('theater-shell')).not.toBeInTheDocument()
   })
 })
@@ -125,7 +125,7 @@ describe('AuthedHome collection deep link', () => {
     const { unmount, queryByTestId } = render(<FeedPage />)
     try {
       await waitFor(() => expect(feedRequests.length).toBeGreaterThan(0))
-      const hit = replaceSpy.mock.calls.some(([url]) => String(url).startsWith('/collection'))
+      const hit = replaceSpy.mock.calls.some(([url]) => String(url).startsWith('/saved'))
       expect(queryByTestId('theater-shell')).not.toBeInTheDocument()
       return hit
     } finally {
@@ -133,7 +133,7 @@ describe('AuthedHome collection deep link', () => {
     }
   }
 
-  it('sends ?collection=1 to /collection', async () => {
+  it('sends ?collection=1 to /saved', async () => {
     expect(await navigatesToCollection('collection=1')).toBe(true)
   })
 

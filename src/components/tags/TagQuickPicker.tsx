@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { notifyTagsChanged } from '@/lib/client-events'
 import { Check, Loader2, Plus, Tag as TagIcon, X } from 'lucide-react'
-import { kebabTagInput, sanitizeTag } from '@/lib/utils/tag'
+import { kebabTagInput, sanitizeTag, MAX_TAGS_PER_POST, sortTagsActiveFirst } from '@/lib/utils/tag'
 import type { TagItem } from '@/components/feed/types'
 import { THEATER_SHORTCUT_KEYS } from '@/components/theater/theater-shortcuts'
 
@@ -160,6 +160,10 @@ export function TagQuickPicker({
 
   async function toggleTag(tag: string): Promise<boolean> {
     const wasChecked = checked.has(tag)
+    if (!wasChecked && checked.size >= MAX_TAGS_PER_POST) {
+      setError(`Maximum ${MAX_TAGS_PER_POST} tags`)
+      return false
+    }
     const nextChecked = new Set(checked)
     if (wasChecked) nextChecked.delete(tag)
     else nextChecked.add(tag)
@@ -220,6 +224,8 @@ export function TagQuickPicker({
   const sanitizedPreview = sanitizeTag(newTagValue)
   const showPreview =
     newTagValue.trim() !== '' && sanitizedPreview !== newTagValue.trim().toLowerCase()
+  const atLimit = checked.size >= MAX_TAGS_PER_POST
+  const listedTags = sortTagsActiveFirst(tags, checked)
 
   return (
     <div
@@ -269,7 +275,7 @@ export function TagQuickPicker({
                 No tags yet — create one below.
               </p>
             )}
-            {tags.map((t) => {
+            {listedTags.map((t) => {
               const isChecked = checked.has(t.tag)
               return (
                 <button
@@ -277,8 +283,9 @@ export function TagQuickPicker({
                   type="button"
                   data-tag-option
                   aria-checked={isChecked}
+                  disabled={!isChecked && atLimit}
                   onClick={() => void toggleTag(t.tag)}
-                  className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-white/5 focus:bg-white/10 focus:outline-none"
+                  className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-white/5 focus:bg-white/10 focus:outline-none disabled:opacity-40"
                 >
                   <span
                     className="flex h-[18px] w-[18px] flex-none items-center justify-center rounded-[5px] border-2"
@@ -326,7 +333,8 @@ export function TagQuickPicker({
           {newTagValue.trim() && (
             <button
               type="submit"
-              className="flex-none min-h-[44px] px-1 text-[12.5px] font-semibold"
+              disabled={atLimit && !checked.has(sanitizedPreview)}
+              className="flex-none min-h-[44px] px-1 text-[12.5px] font-semibold disabled:opacity-40"
               style={{ color: ACCENT }}
             >
               Add
@@ -336,6 +344,11 @@ export function TagQuickPicker({
         {showPreview && sanitizedPreview && (
           <p className="mt-1 text-[11.5px]" style={{ color: MUTED }}>
             → #{sanitizedPreview}
+          </p>
+        )}
+        {atLimit && !error && (
+          <p className="mt-1 text-[11.5px]" style={{ color: MUTED }}>
+            Maximum {MAX_TAGS_PER_POST} tags
           </p>
         )}
         {error && (

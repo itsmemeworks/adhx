@@ -28,7 +28,7 @@ export default function Error({
           Something slipped
         </h1>
         <p className="text-[15px] text-ink-2 mb-8">
-          An unexpected error occurred. Give it another try, or head back to your collection.
+          An unexpected error occurred. Give it another try, or head back to Saved.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -43,7 +43,7 @@ export default function Error({
             href="/"
             className="inline-flex min-h-[44px] w-full sm:w-auto items-center justify-center gap-1.5 rounded-full border border-hairline bg-surface px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-inset"
           >
-            Back to your collection
+            Back to Saved
           </Link>
         </div>
 

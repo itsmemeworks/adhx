@@ -49,7 +49,7 @@ describe('isPreviewPath', () => {
     expect(isPreviewPath('/')).toBe(false)
     expect(isPreviewPath('/trending')).toBe(false)
     expect(isPreviewPath('/library')).toBe(false)
-    expect(isPreviewPath('/collection')).toBe(false)
+    expect(isPreviewPath('/saved')).toBe(false)
     expect(isPreviewPath('/share')).toBe(false)
     expect(isPreviewPath('/t/naval/best-of')).toBe(false)
     expect(isPreviewPath('/settings')).toBe(false)

@@ -68,7 +68,7 @@ describe('FeedGrid empty states', () => {
     mockAuthMe(EMAIL_ONLY_ME)
     render(<FeedGrid {...baseProps} items={[]} hideArchived stats={{ total: 0, active: 0 }} />)
 
-    expect(await screen.findByText(/let.?s fill your collection/i)).toBeInTheDocument()
+    expect(await screen.findByText(/nothing saved yet/i)).toBeInTheDocument()
     await waitFor(() =>
       expect(screen.getByRole('link', { name: /connect with/i })).toHaveAttribute(
         'href',
@@ -83,7 +83,7 @@ describe('FeedGrid empty states', () => {
     mockAuthMe(X_CONNECTED_ME)
     render(<FeedGrid {...baseProps} items={[]} hideArchived stats={{ total: 0, active: 0 }} />)
 
-    expect(await screen.findByText(/let.?s fill your collection/i)).toBeInTheDocument()
+    expect(await screen.findByText(/nothing saved yet/i)).toBeInTheDocument()
     expect(await screen.findByText(/sync your x bookmarks/i)).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /connect with/i })).not.toBeInTheDocument()
   })
@@ -106,7 +106,7 @@ describe('FeedGrid empty states', () => {
     render(<FeedGrid {...baseProps} items={[]} hideArchived stats={{ total: 12, active: 0 }} />)
 
     expect(await screen.findByText(/all caught up/i)).toBeInTheDocument()
-    expect(screen.queryByText(/let.?s fill your collection/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/nothing saved yet/i)).not.toBeInTheDocument()
   })
 
   it('renders items normally when the account has content (sanity check)', () => {
@@ -121,7 +121,7 @@ describe('FeedGrid empty states', () => {
       />,
     )
 
-    expect(screen.queryByText(/let.?s fill your collection/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/nothing saved yet/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/all caught up/i)).not.toBeInTheDocument()
   })
 })

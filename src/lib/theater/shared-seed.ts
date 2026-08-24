@@ -5,6 +5,7 @@ import type {
   TheaterFeedSeed,
   TheaterItem,
   TheaterQuoteRef,
+  TheaterLinkPreview,
 } from '@/components/theater/types'
 import { sourceUrl } from '@/lib/activity/preview-path'
 import { tiktokCreatedAtFromId } from '@/lib/media/tiktok-id'
@@ -95,6 +96,8 @@ export interface TweetSharedInput {
   textLinks?: TextLinkRef[]
   /** The quoted post, when the FxTwitter tweet carries one. See TheaterQuoteRef. */
   quote?: TheaterQuoteRef
+  /** Off-site OG card (Substack, Medium, …). Not an X Article. */
+  linkPreview?: TheaterLinkPreview
 }
 
 /** Map the already-fetched FxTwitter tweet fields (as computed by the status page) into a TheaterItem. */
@@ -114,6 +117,7 @@ export function tweetToTheaterItem(input: TweetSharedInput): TheaterItem {
     contentType: input.contentType,
     textLinks: input.textLinks,
     ...(input.quote ? { quote: input.quote } : {}),
+    ...(input.linkPreview ? { linkPreview: input.linkPreview } : {}),
   }
 }
 

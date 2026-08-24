@@ -4,14 +4,14 @@ import { authedTest, caption, expectTheaterReady } from './helpers'
 
 authedTest.describe('signed-in library', () => {
   authedTest(
-    'card tap leaves the grid for /collection and does not overlay theater on /library',
+    'card tap leaves the grid for /saved and does not overlay theater on /library',
     async ({ page }) => {
       await page.goto('/library')
       await expect(caption(page, POST.echo.text)).toBeVisible({ timeout: 20_000 })
       await expect(page.getByRole('button', { name: 'Next post' })).toHaveCount(0)
 
       await caption(page, POST.echo.text).click()
-      await expect(page).toHaveURL(new RegExp(`/collection\\?open=${POST.echo.id}`))
+      await expect(page).toHaveURL(new RegExp(`/saved\\?open=${POST.echo.id}`))
       await expect(page).toHaveURL(/platform=twitter/)
       await expectTheaterReady(page)
       await expect(caption(page, POST.echo.text)).toBeVisible()

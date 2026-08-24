@@ -43,7 +43,7 @@ const nextConfig = {
   // copy of the SDK into both the server and SSR chunk graphs, producing two
   // independent instances that each wrap http.Server.emit (httpServerIntegration)
   // and recurse into each other — a stack-overflow crash in production.
-  serverExternalPackages: ['better-sqlite3', '@sentry/node'],
+  serverExternalPackages: ['better-sqlite3', '@sentry/node', 'react-email'],
 
   // Image optimization for Twitter media
   images: {
@@ -94,7 +94,7 @@ const nextConfig = {
             "default-src 'self'",
             `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
             "style-src 'self' 'unsafe-inline'",
-            "img-src 'self' https://pbs.twimg.com https://d.fxtwitter.com https://d.fixupx.com https://abs.twimg.com https://i.ytimg.com data: blob:",
+            "img-src 'self' https: data: blob:",
             "media-src 'self' https://video.twimg.com https://*.twimg.com blob:",
             "font-src 'self' data:",
             "connect-src 'self' https://api.fxtwitter.com https://*.sentry.io",
