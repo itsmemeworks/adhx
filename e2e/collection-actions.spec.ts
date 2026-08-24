@@ -26,10 +26,10 @@ authedTest.describe('collection actions', () => {
     await page.getByRole('button', { name: 'Tag', exact: true }).click()
     const dialog = page.getByRole('dialog', { name: 'Tag this post' })
     await expect(dialog).toBeVisible()
+    await expect(dialog.getByLabel('New tag name')).toBeFocused()
     await dialog.getByLabel('New tag name').fill(TMP_TAG)
     await dialog.getByRole('button', { name: 'Add' }).click()
-    await expect(dialog.getByText(`#${TMP_TAG}`)).toBeVisible()
-    await dialog.getByRole('button', { name: 'Close' }).click()
+    await expect(dialog).toHaveCount(0)
     await expect(page.getByText(`#${TMP_TAG}`).first()).toBeVisible()
     expect(await tagsNamed(page)).toContain(TMP_TAG)
 

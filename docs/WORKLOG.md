@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-24 — Tag picker is fully keyboardable
+
+`T` focuses the new-tag input. Enter there creates, assigns, and closes. Arrows (and J/K off the input) move the existing tag rows; Space/Enter toggles the focused row. Follow-up: none.
+
 ## 2026-08-24 — Desktop menu has Live / My Collection
 
 Desktop's avatar menu now gets the same Theater sub-rows as mobile (`theaterTabs`), so `.` + arrows can switch Live ⇄ My Collection. The top-bar pill stays for the mouse. Follow-up: none.

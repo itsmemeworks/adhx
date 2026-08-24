@@ -657,7 +657,7 @@ The library grid and Settings bind **no** keys. The theater keymap lives in `src
 
 - Navigate: `→` `↓` `J` next, `←` `↑` `K` previous
 - Playback: `Space` play/pause (`theater-toggle-play`), `M` mute
-- Actions: `S` Save, `T` Tag, `L` copy link, `C` copy text, `D` download/send, `O` open original, `A` Archive (collection), `R` Read / Watch, `U` undo Archive
+- Actions: `S` Save, `T` Tag (picker autofocuses the new-tag field; arrows move the list, Space/Enter toggle a row; Enter in the field creates, assigns, and closes), `L` copy link, `C` copy text, `D` download/send, `O` open original, `A` Archive (collection), `R` Read / Watch, `U` undo Archive
 - Also: `.` menu (arrows / J K move, Enter opens the focused item), `W` Re-watch all, `P` Keep playing (caught-up stage), `?` (Shift+/) help overlay (`TheaterShortcutsHelp`), `Esc` close help / collection
 - Paste a link is the OS shortcut (`⌘V` / `Ctrl+V`) — the chrome listens for the `paste` event, not a keydown
 

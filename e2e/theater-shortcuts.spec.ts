@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { POST } from './constants'
 import {
+  apiDeleteTag,
   apiUnarchive,
   authedTest,
   caption,
@@ -93,6 +94,7 @@ authedTest.describe('theater shortcuts (signed in)', () => {
     await page.keyboard.press('t')
     const picker = page.getByRole('dialog', { name: 'Tag this post' })
     await expect(picker).toBeVisible()
+    await expect(picker.getByLabel('New tag name')).toBeFocused()
     await page.keyboard.press('Escape')
     await expect(picker).toHaveCount(0)
     await expect(page).toHaveURL(/\/collection/)
@@ -103,6 +105,34 @@ authedTest.describe('theater shortcuts (signed in)', () => {
 
     await page.keyboard.press('u')
     await expect(caption(page, POST.alpha.text)).toBeVisible()
+  })
+
+  authedTest('T then type then Enter creates a tag and closes; arrows toggle', async ({ page }) => {
+    await apiUnarchive(page, POST.alpha.id)
+    await page.goto(`/collection?open=${POST.alpha.id}&platform=twitter`)
+    await expectTheaterReady(page)
+
+    await page.keyboard.press('t')
+    const picker = page.getByRole('dialog', { name: 'Tag this post' })
+    await expect(picker.getByLabel('New tag name')).toBeFocused()
+    const firstTag = picker.locator('[data-tag-option]').first()
+    await expect(firstTag).toBeVisible()
+
+    await page.keyboard.press('ArrowDown')
+    await expect(firstTag).toBeFocused()
+    const wasChecked = await firstTag.getAttribute('aria-checked')
+    await page.keyboard.press('Space')
+    await expect(firstTag).toHaveAttribute('aria-checked', wasChecked === 'true' ? 'false' : 'true')
+    await page.keyboard.press('Space')
+    await expect(firstTag).toHaveAttribute('aria-checked', wasChecked ?? 'false')
+
+    await page.keyboard.press('ArrowUp')
+    await expect(picker.getByLabel('New tag name')).toBeFocused()
+    await page.keyboard.type('kb-new')
+    await page.keyboard.press('Enter')
+    await expect(picker).toHaveCount(0)
+
+    await apiDeleteTag(page, 'kb-new')
   })
 
   authedTest('. opens the account menu', async ({ page }) => {
