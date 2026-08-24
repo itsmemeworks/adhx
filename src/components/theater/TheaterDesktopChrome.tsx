@@ -21,7 +21,7 @@
  * viewport gating beyond CSS.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTheaterActionHotkeys } from './useTheaterActionHotkeys'
 import { useTheaterQueueOverlay } from './useTheaterQueueOverlay'
 import Link from 'next/link'
@@ -38,6 +38,7 @@ import {
   ChevronRight,
   ChevronUp,
   ChevronDown,
+  ListFilter,
   Maximize2,
   Pause,
   Play,
@@ -834,6 +835,29 @@ export function DesktopStageChrome({
 const TRANSPORT_BTN =
   'inline-flex h-10 w-10 flex-none items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-white/15 hover:text-ink disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-ink-3'
 
+function DockStat({
+  label,
+  accent,
+  children,
+}: {
+  label: string
+  accent?: boolean
+  children: ReactNode
+}) {
+  return (
+    <span
+      title={label}
+      aria-label={label}
+      className={cn(
+        'inline-flex h-[18px] items-center rounded-full px-1.5 text-[10px] font-medium tabular-nums',
+        accent ? 'bg-clay/15 text-clay' : 'bg-white/[0.08] text-ink-3',
+      )}
+    >
+      {children}
+    </span>
+  )
+}
+
 export function DesktopDock({
   mode: _mode,
   items,
@@ -1027,300 +1051,292 @@ export function DesktopDock({
         <span className="mx-1 h-16 w-px flex-none bg-hairline" />
       </div>
 
-      {/* Filmstrip */}
-      <div
-        className="flex flex-1 items-stretch gap-2.5 overflow-x-auto py-3 [&::-webkit-scrollbar]:hidden"
-        style={{ scrollbarWidth: 'none' }}
-      >
-        {items.map((item, i) => {
-          const key = theaterItemKey(item)
-          const isCurrent = key === currentKey
-          const isNext = currentIndex >= 0 && i === currentIndex + 1
-          const seen = seenReady && isSeen(key)
-          const fresh = freshKeys.has(key)
-          const type = inferType(item)
-          const tile = TYPE_TILE[type]
-          const Icon = tile.icon
-          const handle = item.author ? item.author.replace(/^@+/, '') : ''
-          const caption = theaterRowCaption(item)
+      {/* Filmstrip + end cap. The cap overlays the strip's right edge so
+          cards fade under it instead of hitting a hard seam. */}
+      <div className="relative min-w-0 flex-1 self-stretch">
+        <div
+          className="flex h-full items-stretch gap-2.5 overflow-x-auto py-3 pr-28 [&::-webkit-scrollbar]:hidden"
+          style={{ scrollbarWidth: 'none' }}
+        >
+          {items.map((item, i) => {
+            const key = theaterItemKey(item)
+            const isCurrent = key === currentKey
+            const isNext = currentIndex >= 0 && i === currentIndex + 1
+            const seen = seenReady && isSeen(key)
+            const fresh = freshKeys.has(key)
+            const type = inferType(item)
+            const tile = TYPE_TILE[type]
+            const Icon = tile.icon
+            const handle = item.author ? item.author.replace(/^@+/, '') : ''
+            const caption = theaterRowCaption(item)
 
-          return (
-            <button
-              key={key}
-              type="button"
-              ref={(el) => {
-                if (el) cardRefs.current.set(key, el)
-                else cardRefs.current.delete(key)
-              }}
-              onClick={() => onSelect(key)}
-              onMouseEnter={() => warmOnHover(item)}
-              aria-current={isCurrent ? 'true' : undefined}
-              className={cn(
-                'flex w-[168px] flex-none flex-col gap-1.5 rounded-[10px] border-2 p-2 text-left transition-colors',
-                isCurrent
-                  ? 'border-clay bg-inset'
-                  : 'border-transparent bg-black/15 hover:bg-inset/60',
-                !isCurrent && seen && 'opacity-55',
-                !isCurrent && fresh && 'bg-clay/[0.07]',
-              )}
-            >
-              <div className="relative h-14 w-full flex-none overflow-hidden rounded-md bg-inset">
-                {item.thumbnailUrl ? (
-                  <img
-                    src={item.thumbnailUrl}
-                    alt=""
-                    referrerPolicy="no-referrer"
-                    loading="lazy"
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className={cn('flex h-full w-full items-center justify-center', tile.bg)}>
-                    <Icon size={14} />
-                  </div>
+            return (
+              <button
+                key={key}
+                type="button"
+                ref={(el) => {
+                  if (el) cardRefs.current.set(key, el)
+                  else cardRefs.current.delete(key)
+                }}
+                onClick={() => onSelect(key)}
+                onMouseEnter={() => warmOnHover(item)}
+                aria-current={isCurrent ? 'true' : undefined}
+                className={cn(
+                  'flex w-[168px] flex-none flex-col gap-1.5 rounded-[10px] border-2 p-2 text-left transition-colors',
+                  isCurrent
+                    ? 'border-clay bg-inset'
+                    : 'border-transparent bg-black/15 hover:bg-inset/60',
+                  !isCurrent && seen && 'opacity-55',
+                  !isCurrent && fresh && 'bg-clay/[0.07]',
                 )}
-                {fresh && !isCurrent && (
-                  <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-clay ring-2 ring-surface" />
-                )}
-              </div>
-              {/* Fixed-height meta row: NOW / NEXT → / Repeat used to
+              >
+                <div className="relative h-14 w-full flex-none overflow-hidden rounded-md bg-inset">
+                  {item.thumbnailUrl ? (
+                    <img
+                      src={item.thumbnailUrl}
+                      alt=""
+                      referrerPolicy="no-referrer"
+                      loading="lazy"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className={cn('flex h-full w-full items-center justify-center', tile.bg)}>
+                      <Icon size={14} />
+                    </div>
+                  )}
+                  {fresh && !isCurrent && (
+                    <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-clay ring-2 ring-surface" />
+                  )}
+                </div>
+                {/* Fixed-height meta row: NOW / NEXT → / Repeat used to
                   inherit body line-height (and NEXT could wrap), so those
                   cards grew taller than the rest of the strip. */}
-              <div className="flex h-4 min-w-0 items-center gap-1.5">
-                <PlatformGlyph
-                  platform={item.platform}
-                  size={10}
-                  className="flex-none text-ink-3"
-                />
-                {hasKnownTimestamp(item.addedAt) && (
-                  <span
-                    className="font-mono text-[10px] leading-none text-ink-3"
-                    title={addedToAdhxLabel(item.addedAt as string)}
-                    aria-label={addedToAdhxLabel(item.addedAt as string)}
-                    suppressHydrationWarning
-                  >
-                    {formatCompactRelativeTime(item.addedAt as string)}
-                  </span>
-                )}
-                <span className="ml-auto flex h-4 flex-none items-center leading-none">
-                  {/* shared-post-repeat (owner: the desktop filmstrip's NOW
+                <div className="flex h-4 min-w-0 items-center gap-1.5">
+                  <PlatformGlyph
+                    platform={item.platform}
+                    size={10}
+                    className="flex-none text-ink-3"
+                  />
+                  {hasKnownTimestamp(item.addedAt) && (
+                    <span
+                      className="font-mono text-[10px] leading-none text-ink-3"
+                      title={addedToAdhxLabel(item.addedAt as string)}
+                      aria-label={addedToAdhxLabel(item.addedAt as string)}
+                      suppressHydrationWarning
+                    >
+                      {formatCompactRelativeTime(item.addedAt as string)}
+                    </span>
+                  )}
+                  <span className="ml-auto flex h-4 flex-none items-center leading-none">
+                    {/* shared-post-repeat (owner: the desktop filmstrip's NOW
                       tag sitting near a separate repeat glyph elsewhere read
                       as garbled "MOWN") — while pinned, the current card's
                       tag IS the repeat state: one cohesive icon+label tag,
                       never NOW alongside a second indicator. */}
-                  {isCurrent && repeatCurrent ? (
-                    <span className="inline-flex items-center gap-1 whitespace-nowrap text-[9.5px] font-bold uppercase leading-none tracking-wide text-clay">
-                      <Repeat size={10} aria-hidden />
-                      <span>Repeat</span>
-                    </span>
-                  ) : isCurrent ? (
-                    <span className="whitespace-nowrap text-[9.5px] font-bold uppercase leading-none tracking-wide text-clay">
-                      NOW
-                    </span>
-                  ) : isNext ? (
-                    <span className="whitespace-nowrap text-[9.5px] font-bold uppercase leading-none tracking-wide text-clay">
-                      NEXT →
-                    </span>
-                  ) : seen ? (
-                    <Check size={10} className="text-done" />
-                  ) : null}
-                </span>
-              </div>
-              <p className="truncate text-[11.5px] leading-tight text-ink">
-                {caption || (handle ? `@${handle}` : 'Saved post')}
-              </p>
-            </button>
-          )
-        })}
+                    {isCurrent && repeatCurrent ? (
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-[9.5px] font-bold uppercase leading-none tracking-wide text-clay">
+                        <Repeat size={10} aria-hidden />
+                        <span>Repeat</span>
+                      </span>
+                    ) : isCurrent ? (
+                      <span className="whitespace-nowrap text-[9.5px] font-bold uppercase leading-none tracking-wide text-clay">
+                        NOW
+                      </span>
+                    ) : isNext ? (
+                      <span className="whitespace-nowrap text-[9.5px] font-bold uppercase leading-none tracking-wide text-clay">
+                        NEXT →
+                      </span>
+                    ) : seen ? (
+                      <Check size={10} className="text-done" />
+                    ) : null}
+                  </span>
+                </div>
+                <p className="truncate text-[11.5px] leading-tight text-ink">
+                  {caption || (handle ? `@${handle}` : 'Saved post')}
+                </p>
+              </button>
+            )
+          })}
 
-        {/* Collection mode loops: a dashed divider announces the wrap, then a
+          {/* Collection mode loops: a dashed divider announces the wrap, then a
             ghosted (opacity-45) copy of the first card previews where "next"
             after the last item goes — matching goNext's actual wrap target.
             Hidden while the repeat button is on 'one' — the queue isn't
             wrapping then, the current post is looping. */}
-        {playlist && items.length > 0 && repeatMode !== 'one' && (
-          <>
-            <div
-              aria-hidden
-              className="flex w-[72px] flex-none flex-col items-center justify-center gap-1 rounded-[10px] border-2 border-dashed border-hairline text-ink-3"
-            >
-              <Repeat size={16} />
-              <span className="text-[9px] font-bold uppercase tracking-wide">Loops</span>
-            </div>
-            {(() => {
-              const first = items[0]
-              const key = theaterItemKey(first)
-              const type = inferType(first)
-              const tile = TYPE_TILE[type]
-              const Icon = tile.icon
-              const handle = first.author ? first.author.replace(/^@+/, '') : ''
-              const caption = theaterRowCaption(first)
-              return (
-                <button
-                  type="button"
-                  onClick={() => onSelect(key)}
-                  aria-label="Back to the first post"
-                  className="flex w-[168px] flex-none flex-col gap-1.5 rounded-[10px] border-2 border-transparent bg-black/15 p-2 text-left opacity-45 transition-opacity hover:opacity-70"
-                >
-                  <div className="relative h-14 w-full flex-none overflow-hidden rounded-md bg-inset">
-                    {first.thumbnailUrl ? (
-                      <img
-                        src={first.thumbnailUrl}
-                        alt=""
-                        referrerPolicy="no-referrer"
-                        loading="lazy"
-                        className="h-full w-full object-cover"
+          {playlist && items.length > 0 && repeatMode !== 'one' && (
+            <>
+              <div
+                aria-hidden
+                className="flex w-[72px] flex-none flex-col items-center justify-center gap-1 rounded-[10px] border-2 border-dashed border-hairline text-ink-3"
+              >
+                <Repeat size={16} />
+                <span className="text-[9px] font-bold uppercase tracking-wide">Loops</span>
+              </div>
+              {(() => {
+                const first = items[0]
+                const key = theaterItemKey(first)
+                const type = inferType(first)
+                const tile = TYPE_TILE[type]
+                const Icon = tile.icon
+                const handle = first.author ? first.author.replace(/^@+/, '') : ''
+                const caption = theaterRowCaption(first)
+                return (
+                  <button
+                    type="button"
+                    onClick={() => onSelect(key)}
+                    aria-label="Back to the first post"
+                    className="flex w-[168px] flex-none flex-col gap-1.5 rounded-[10px] border-2 border-transparent bg-black/15 p-2 text-left opacity-45 transition-opacity hover:opacity-70"
+                  >
+                    <div className="relative h-14 w-full flex-none overflow-hidden rounded-md bg-inset">
+                      {first.thumbnailUrl ? (
+                        <img
+                          src={first.thumbnailUrl}
+                          alt=""
+                          referrerPolicy="no-referrer"
+                          loading="lazy"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div
+                          className={cn('flex h-full w-full items-center justify-center', tile.bg)}
+                        >
+                          <Icon size={14} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex h-4 min-w-0 items-center gap-1.5">
+                      <PlatformGlyph
+                        platform={first.platform}
+                        size={10}
+                        className="flex-none text-ink-3"
                       />
-                    ) : (
-                      <div
-                        className={cn('flex h-full w-full items-center justify-center', tile.bg)}
-                      >
-                        <Icon size={14} />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex h-4 min-w-0 items-center gap-1.5">
-                    <PlatformGlyph
-                      platform={first.platform}
-                      size={10}
-                      className="flex-none text-ink-3"
-                    />
-                    {hasKnownTimestamp(first.addedAt) && (
-                      <span
-                        className="font-mono text-[10px] text-ink-3"
-                        title={addedToAdhxLabel(first.addedAt as string)}
-                        aria-label={addedToAdhxLabel(first.addedAt as string)}
-                        suppressHydrationWarning
-                      >
-                        {formatCompactRelativeTime(first.addedAt as string)}
-                      </span>
-                    )}
-                  </div>
-                  <p className="truncate text-[11.5px] leading-tight text-ink">
-                    {caption || (handle ? `@${handle}` : 'Saved post')}
-                  </p>
-                </button>
-              )
-            })()}
-          </>
-        )}
-      </div>
-
-      {/* End cap */}
-      <div
-        ref={queueRootRef}
-        className="relative flex flex-none flex-col items-end justify-center gap-0.5 pl-1"
-      >
-        {/* One sans family for the whole stack: the toggle is the only
-            semibold line; counts share size/weight, and clay is reserved for
-            an active type filter + the new-count. Filter-on swaps "Show all"
-            for the selected types and wraps the toggle in a clay chip. */}
-        <button
-          type="button"
-          aria-label="Show all"
-          aria-expanded={showAll}
-          data-theater-action="show-all"
-          onClick={() => setShowAll((v) => !v)}
-          className={cn(
-            'inline-flex max-w-[9.5rem] items-center gap-1 truncate text-[12.5px] font-semibold transition-colors',
-            filterOn
-              ? 'rounded-full bg-clay/15 px-2 py-0.5 text-clay hover:bg-clay/25'
-              : 'text-ink-2 hover:text-ink',
-          )}
-        >
-          {showAll ? (
-            <ChevronDown size={13} className="flex-none" />
-          ) : (
-            <ChevronUp size={13} className="flex-none" />
-          )}
-          <span className="truncate">
-            {filterOn ? theaterQueueFilterLabel(queueTypes) : 'Show all'}
-          </span>
-        </button>
-        {/* "N posts" counts what will actually PLAY from here — the unwatched
-            run while repeat is off, the whole queue once it isn't (see
-            `computeQueueTotal`). Saying 26 when auto-advance will only play the
-            5 pending ones is the desktop version of the misleading "3 / 26"
-            the mobile peek bar used to show. */}
-        <span className="text-[11px] leading-snug text-ink-3">
-          {queueTotal ?? items.length} posts
-        </span>
-        {!playlist && newCount > 0 && (
-          <span className="text-[11px] leading-snug text-clay">{newCount} new</span>
-        )}
-        {/* savedToday/newCount are live-pulse concepts — collection mode is a
-            static curated queue, and the personal theater's Collection tab is the user's
-            own backlog, so neither line is meaningful for either. Collection
-            shows "{remaining} left" instead. */}
-        {collection && collection.tab === 'collection' ? (
-          <span className="text-[11px] leading-snug text-ink-3">{collection.remaining} left</span>
-        ) : (
-          <>
-            {/* shared-post-repeat: NO end-cap chip here (removed after owner
-                feedback — a third indicator alongside the filmstrip's own
-                Repeat tag and the accented next chevron was one too many;
-                "facts shown once"). The current card IS the state cue on
-                desktop, same as the mobile peek bar's relabeled center
-                button; the chevron accent is the "way out" cue. */}
-            {!playlist &&
-              (waiting ? (
-                <span className="text-[11px] leading-snug text-ink-3">Waiting for new sends…</span>
-              ) : (
-                savedToday > 0 && (
-                  <span className="text-[11px] leading-snug text-ink-3">
-                    {savedToday} saved today
-                  </span>
+                      {hasKnownTimestamp(first.addedAt) && (
+                        <span
+                          className="font-mono text-[10px] text-ink-3"
+                          title={addedToAdhxLabel(first.addedAt as string)}
+                          aria-label={addedToAdhxLabel(first.addedAt as string)}
+                          suppressHydrationWarning
+                        >
+                          {formatCompactRelativeTime(first.addedAt as string)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="truncate text-[11.5px] leading-tight text-ink">
+                      {caption || (handle ? `@${handle}` : 'Saved post')}
+                    </p>
+                  </button>
                 )
-              ))}
-          </>
-        )}
+              })()}
+            </>
+          )}
+        </div>
 
-        {showAll && (
-          <div
-            data-theater-queue-panel
-            role="dialog"
-            aria-label="Playlist"
-            className="absolute bottom-full right-4 z-20 mb-2 flex max-h-[62vh] w-[380px] flex-col overflow-hidden rounded-xl border border-hairline bg-surface shadow-m-lg"
-          >
-            <div className="flex items-center justify-between px-4 pb-1 pt-3">
-              {/* The panel's title states what happens when the queue runs out
+        {/* End cap — fades in over the strip. "Show all" stays "Show all"; a
+          filter-on ListFilter is the only closed-panel cue (types live in
+          the overlay). Counts are pills, not stacked grey lines. */}
+        <div
+          ref={queueRootRef}
+          data-theater-dock-cap
+          className="pointer-events-none absolute inset-y-0 right-0 z-10 flex flex-col items-end justify-center pl-14"
+          style={{
+            background:
+              'linear-gradient(to right, transparent 0%, var(--m-card) 3.25rem, var(--m-card) 100%)',
+          }}
+        >
+          <div className="pointer-events-auto flex flex-col items-end gap-1.5">
+            <button
+              type="button"
+              aria-label="Show all"
+              aria-expanded={showAll}
+              title={filterOn ? theaterQueueFilterLabel(queueTypes) : undefined}
+              data-theater-action="show-all"
+              data-theater-queue-filter={filterOn ? '' : undefined}
+              onClick={() => setShowAll((v) => !v)}
+              className={cn(
+                'inline-flex items-center gap-1 text-[12.5px] font-semibold transition-colors',
+                filterOn ? 'text-clay hover:text-clay' : 'text-ink-2 hover:text-ink',
+              )}
+            >
+              {showAll ? (
+                <ChevronDown size={13} className="flex-none" />
+              ) : (
+                <ChevronUp size={13} className="flex-none" />
+              )}
+              <span>Show all</span>
+              {filterOn ? <ListFilter size={12} className="flex-none" aria-hidden /> : null}
+            </button>
+            <div className="flex flex-wrap items-center justify-end gap-1">
+              {/* What will actually PLAY from here (`computeQueueTotal`). */}
+              <DockStat label={`${queueTotal ?? items.length} posts`}>
+                {queueTotal ?? items.length}
+              </DockStat>
+              {!playlist && newCount > 0 ? (
+                <DockStat accent label={`${newCount} new`}>
+                  {newCount} new
+                </DockStat>
+              ) : null}
+              {collection && collection.tab === 'collection' ? (
+                <DockStat label={`${collection.remaining} left`}>
+                  {collection.remaining} left
+                </DockStat>
+              ) : !playlist ? (
+                waiting ? (
+                  <DockStat label="Waiting for new sends">waiting</DockStat>
+                ) : savedToday > 0 ? (
+                  <DockStat label={`${savedToday} saved today`}>{savedToday} today</DockStat>
+                ) : null
+              ) : null}
+            </div>
+          </div>
+
+          {showAll && (
+            <div
+              data-theater-queue-panel
+              role="dialog"
+              aria-label="Playlist"
+              className="pointer-events-auto absolute bottom-full right-0 z-20 mb-2 flex max-h-[62vh] w-[380px] flex-col overflow-hidden rounded-xl border border-hairline bg-surface shadow-m-lg"
+            >
+              <div className="flex items-center justify-between px-4 pb-1 pt-3">
+                {/* The panel's title states what happens when the queue runs out
                   — the one thing the list itself can't show (owner: "shouldn't
                   the title of Show all be relevant to the selection?"). It also
                   stops the header repeating the "Up next" group heading
                   directly below it. Falls back to "Up next" where repeat isn't
                   offered (the personal theater's Collection tab). */}
-              <span className="text-[11px] font-bold uppercase tracking-wide text-ink-3">
-                {repeatMode ? REPEAT_MODE_LABEL[repeatMode].queue : 'Up next'}
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowAll(false)}
-                aria-label="Close"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-3 hover:bg-inset"
-              >
-                <X size={14} />
-              </button>
-            </div>
-            {onToggleQueueType && onClearQueueTypes ? (
-              <TheaterQueueFilter
-                selected={queueTypes}
-                onToggle={onToggleQueueType}
-                onClear={onClearQueueTypes}
+                <span className="text-[11px] font-bold uppercase tracking-wide text-ink-3">
+                  {repeatMode ? REPEAT_MODE_LABEL[repeatMode].queue : 'Up next'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowAll(false)}
+                  aria-label="Close"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-3 hover:bg-inset"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+              {onToggleQueueType && onClearQueueTypes ? (
+                <TheaterQueueFilter
+                  selected={queueTypes}
+                  onToggle={onToggleQueueType}
+                  onClear={onClearQueueTypes}
+                />
+              ) : null}
+              <UpNextList
+                items={items}
+                currentKey={currentKey}
+                isSeen={isSeen}
+                seenReady={seenReady}
+                freshKeys={freshKeys}
+                wasSeenOnEntry={wasSeenOnEntry}
+                pinnedKey={pinnedKey}
+                onSelect={handlePanelSelect}
+                repeatCurrent={repeatCurrent}
+                className="min-h-0 flex-1 pb-2"
               />
-            ) : null}
-            <UpNextList
-              items={items}
-              currentKey={currentKey}
-              isSeen={isSeen}
-              seenReady={seenReady}
-              freshKeys={freshKeys}
-              wasSeenOnEntry={wasSeenOnEntry}
-              pinnedKey={pinnedKey}
-              onSelect={handlePanelSelect}
-              repeatCurrent={repeatCurrent}
-              className="min-h-0 flex-1 pb-2"
-            />
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

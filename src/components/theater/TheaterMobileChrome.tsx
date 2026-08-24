@@ -33,6 +33,7 @@ import {
   VolumeX,
   Minimize2,
   Maximize2,
+  ListFilter,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MatterLogo, PlatformGlyph, type ContentType } from '@/components/matter'
@@ -370,7 +371,6 @@ export function TheaterMobileChrome({
   // empty list) falls back to the old label.
   const queueIndex = currentKey ? items.findIndex((it) => theaterItemKey(it) === currentKey) : -1
   const filterOn = Boolean(onToggleQueueType) && isTheaterQueueFilterActive(queueTypes)
-  const filterLabel = filterOn ? theaterQueueFilterLabel(queueTypes) : null
   const peekNew = newCount > 0 && collection?.tab !== 'collection' ? ` · ${newCount} new` : ''
   const peekPosition =
     queueIndex !== -1
@@ -378,7 +378,7 @@ export function TheaterMobileChrome({
       : newCount > 0 && collection?.tab !== 'collection'
         ? `${newCount} new`
         : 'Up next'
-  const peekLabel = filterLabel ? `${filterLabel} · ${peekPosition}` : peekPosition
+  const peekLabel = peekPosition
 
   const trendCount = current ? (current.trendCount ?? current.saveCount ?? 0) : 0
   const displayTags = collection?.tags ?? itemTags
@@ -891,11 +891,12 @@ export function TheaterMobileChrome({
                 onClick={() => setSheetOpen((v) => !v)}
                 aria-expanded={sheetOpen}
                 aria-label={sheetOpen ? 'Collapse up next' : 'Expand up next'}
+                title={filterOn ? theaterQueueFilterLabel(queueTypes) : undefined}
                 data-theater-action="show-all"
+                data-theater-queue-filter={filterOn ? '' : undefined}
                 className={cn(
                   'pointer-events-auto flex max-w-[45%] items-center justify-center gap-1 truncate px-1 text-center text-[12px] font-semibold',
                   repeatCurrent || filterOn ? 'text-clay' : 'text-ink-2',
-                  filterOn && !repeatCurrent && 'rounded-full bg-clay/15 px-2 py-0.5',
                 )}
               >
                 {repeatCurrent ? (
@@ -904,7 +905,10 @@ export function TheaterMobileChrome({
                     <span className="truncate">On repeat</span>
                   </>
                 ) : (
-                  <span className="truncate">{peekLabel}</span>
+                  <>
+                    {filterOn ? <ListFilter size={11} className="flex-none" aria-hidden /> : null}
+                    <span className="truncate">{peekLabel}</span>
+                  </>
                 )}
               </button>
             </div>

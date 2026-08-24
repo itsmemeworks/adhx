@@ -363,10 +363,9 @@ describe('DesktopDock', () => {
 })
 
 /**
- * Owner follow-up: the end cap's button text is now just "Show all" (the
- * item count + new-count moved to a line below it, so the button doesn't
- * eat filmstrip width). The old standalone "{newCount} new" span is gone —
- * the new-count now rides the count line instead.
+ * Owner follow-up: the end cap's button text stays "Show all" (counts are
+ * pills, an active Live type filter is a clay ListFilter cue). The cap
+ * overlays the filmstrip with a left fade so cards pass behind it.
  */
 describe('DesktopDock: end cap restructure', () => {
   it('the toggle button reads "Show all" alone, without the item count', () => {
@@ -376,15 +375,16 @@ describe('DesktopDock: end cap restructure', () => {
     expect(toggle.textContent).toBe('Show all')
   })
 
-  it('shows the item count on its own line below "Show all", in the same sans as the rest of the cap', () => {
+  it('shows the item count as a quiet badge next to Show all', () => {
     const items = [videoItem({ bookmarkId: '1' }), videoItem({ bookmarkId: '2' })]
     render(<DesktopDock {...dockBase} items={items} current={items[0]} currentKey={null} />)
-    const posts = screen.getByText('2 posts')
+    const posts = screen.getByLabelText('2 posts')
     expect(posts).toBeInTheDocument()
-    expect(posts.className).not.toContain('font-mono')
+    expect(posts).toHaveTextContent('2')
+    expect(posts.className).toContain('rounded-full')
   })
 
-  it('names an active type filter on the toggle and wraps it in a clay chip', () => {
+  it('keeps Show all labelled Show all when a type filter is on, with a clay filter cue', () => {
     const items = [videoItem({ bookmarkId: '1' })]
     render(
       <DesktopDock
@@ -398,10 +398,12 @@ describe('DesktopDock: end cap restructure', () => {
       />,
     )
     const toggle = screen.getByRole('button', { name: 'Show all' })
-    expect(toggle).toHaveTextContent('Videos')
+    expect(toggle).toHaveTextContent('Show all')
+    expect(toggle).toHaveAttribute('data-theater-queue-filter')
+    expect(toggle).toHaveAttribute('title', 'Videos')
     expect(toggle.className).toContain('text-clay')
-    expect(toggle.className).toContain('bg-clay/15')
-    expect(screen.queryByText('Show all')).not.toBeInTheDocument()
+    expect(toggle.querySelector('.lucide-list-filter')).toBeInTheDocument()
+    expect(screen.queryByText('Videos')).not.toBeInTheDocument()
   })
 
   it('keeps "Show all" on Saved even if leftover Live types are still in state', () => {
@@ -419,19 +421,15 @@ describe('DesktopDock: end cap restructure', () => {
     expect(screen.queryByText('Videos')).not.toBeInTheDocument()
   })
 
-  it('stacks the clay new-count on its own line below the posts count when newCount > 0 and not collection mode', () => {
+  it('puts the clay new-count in a badge when newCount > 0 and not collection mode', () => {
     const items = [videoItem({ bookmarkId: '1' })]
     render(
       <DesktopDock {...dockBase} items={items} current={items[0]} currentKey={null} newCount={5} />,
     )
-    // Owner follow-up: "5 new" is its own stacked line (narrower end cap),
-    // never a suffix on the "N posts" line. Same size/weight as the posts
-    // count — clay is the only distinction.
-    const newLine = screen.getByText('5 new')
-    expect(newLine).toBeInTheDocument()
-    expect(newLine.className).toContain('text-clay')
-    expect(newLine.className).not.toContain('font-semibold')
-    expect(screen.getByText('1 posts').textContent).toBe('1 posts')
+    const newBadge = screen.getByLabelText('5 new')
+    expect(newBadge).toHaveTextContent('5 new')
+    expect(newBadge.className).toContain('text-clay')
+    expect(screen.getByLabelText('1 posts')).toHaveTextContent('1')
   })
 
   it('omits the new-count suffix when newCount is 0', () => {
@@ -455,18 +453,35 @@ describe('DesktopDock: end cap restructure', () => {
       />,
     )
     expect(screen.queryByText(/new/)).not.toBeInTheDocument()
-    // The item count line itself still renders.
-    expect(screen.getByText('1 posts')).toBeInTheDocument()
+    expect(screen.getByLabelText('1 posts')).toBeInTheDocument()
   })
 
-  it('does not render a standalone "{newCount} new" span outside the count line', () => {
+  it('shows saved-today as a badge, not a stacked grey line', () => {
     const items = [videoItem({ bookmarkId: '1' })]
     render(
-      <DesktopDock {...dockBase} items={items} current={items[0]} currentKey={null} newCount={5} />,
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={null}
+        savedToday={63}
+      />,
     )
-    // Exactly one "new"-bearing node — the suffix on the count line — not a
-    // second standalone one elsewhere in the end cap.
-    expect(screen.getAllByText(/new/)).toHaveLength(1)
+    const today = screen.getByLabelText('63 saved today')
+    expect(today).toHaveTextContent('63 today')
+    expect(today.className).toContain('rounded-full')
+    expect(screen.queryByText('63 saved today')).not.toBeInTheDocument()
+  })
+
+  it('fades the end cap over the filmstrip instead of a hard vertical seam', () => {
+    const items = [videoItem({ bookmarkId: '1' })]
+    const { container } = render(
+      <DesktopDock {...dockBase} items={items} current={items[0]} currentKey={null} />,
+    )
+    const cap = container.querySelector('[data-theater-dock-cap]')
+    expect(cap).toBeTruthy()
+    expect(cap!.className).toContain('absolute')
+    expect((cap as HTMLElement).style.background).toContain('linear-gradient')
   })
 })
 

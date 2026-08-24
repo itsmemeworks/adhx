@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-24 — Dock end cap fades; filter is a cue not a label
+
+Show all stays "Show all". An active Live type filter is a clay ListFilter glyph (hover still names the types). Queue length / new / saved-today are compact pills. The cap overlays the filmstrip with a left gradient so cards fade under it instead of hitting a hard vertical seam. In-flight until the PR merges.
+
 ## 2026-08-24 — Q toggles Show all
 
 `Q` expands/collapses the theater playlist (desktop Show all / mobile up-next). While open, ↑/↓ move through the rows, Enter plays the focused post, Esc or a click outside closes. Same overlay contract as the account menu so stage keys don't leak through. In-flight until the PR merges.

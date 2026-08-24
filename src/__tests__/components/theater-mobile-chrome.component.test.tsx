@@ -902,7 +902,7 @@ describe('TheaterMobileChrome: queue position label', () => {
     expect(screen.getByText('Up next')).toBeInTheDocument()
   })
 
-  it('prefixes the peek label with the active type filter and tints it clay', () => {
+  it('tints the peek clay and shows a filter icon when a type filter is on, without naming the types', () => {
     const items = buildItems(5)
     render(
       <TheaterMobileChrome
@@ -915,9 +915,12 @@ describe('TheaterMobileChrome: queue position label', () => {
         onClearQueueTypes={vi.fn()}
       />,
     )
-    const peek = screen.getByText('Videos · 2 / 5')
-    expect(peek.closest('button')!.className).toContain('text-clay')
-    expect(peek.closest('button')!.className).toContain('bg-clay/15')
+    const peek = screen.getByText('2 / 5').closest('button')!
+    expect(peek).toHaveAttribute('data-theater-queue-filter')
+    expect(peek).toHaveAttribute('title', 'Videos')
+    expect(peek.className).toContain('text-clay')
+    expect(peek.querySelector('.lucide-list-filter')).toBeInTheDocument()
+    expect(screen.queryByText('Videos · 2 / 5')).not.toBeInTheDocument()
   })
 
   it('playlist mode keeps the queue position in the peek bar; the tag lives in the expanded sheet', () => {

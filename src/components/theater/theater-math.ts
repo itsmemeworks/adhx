@@ -173,7 +173,7 @@ function selectedQueueTypeLabels(selected: readonly ContentType[]): string[] {
   return THEATER_QUEUE_TYPE_PILLS.filter((p) => allow.has(p.id)).map((p) => p.label)
 }
 
-/** Dock / peek-bar title: "Show all", "Videos", "Videos · Photos", or "3 types". */
+/** Tooltip / empty-state copy for an active Live type filter. */
 export function theaterQueueFilterLabel(selected: readonly ContentType[]): string {
   const labels = selectedQueueTypeLabels(selected)
   if (labels.length === 0) return 'Show all'

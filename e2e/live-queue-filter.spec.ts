@@ -28,7 +28,10 @@ test.describe('Live type filter vs preview pulses', () => {
       'aria-pressed',
       'true',
     )
-    await expect(page.getByRole('button', { name: 'Show all', exact: true })).toHaveText('Videos')
+    await expect(page.getByRole('button', { name: 'Show all', exact: true })).toHaveText('Show all')
+    await expect(page.getByRole('button', { name: 'Show all', exact: true })).toHaveAttribute(
+      'data-theater-queue-filter',
+    )
     await expect(page.getByText('No videos in Live right now')).toBeVisible()
 
     insertLivePulse({
