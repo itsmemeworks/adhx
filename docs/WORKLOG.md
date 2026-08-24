@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-24 — Link-only X: bind email, don't sign in on X
+
+Settings Add-email now uses `/api/auth/email/change` so it cannot spawn a second account. Unsigned X callbacks bounce before spending the OAuth code; `findOrCreateUserForX` without a session is `sign_in_required` even if the identity exists. Flipping Live (caught-up) → Collection resumes the shared stage. Follow-up: `/?auth_error=x_link_only` is still silent on the public theater; existing X-only accounts still need email to sign in.
+
 ## 2026-08-24 — Signed-in `.` menu e2e is Theater-first
 
 The account menu opens on Theater, then Live / My Collection / Library. E2E still treated Library as the first focused row, which failed CI. Follow-up: none.

@@ -291,19 +291,19 @@ function EmailRow({ me }: { me: AuthMe }) {
     setAddEmailSubmitting(true)
     setAddEmailError(null)
     try {
-      const res = await fetch('/api/auth/email/request', {
+      const res = await fetch('/api/auth/email/change', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: addEmailValue, returnTo: '/settings' }),
+        body: JSON.stringify({ email: addEmailValue }),
       })
       if (res.ok) {
-        setAddEmailSuccess(`Check ${addEmailValue} for a sign-in link.`)
+        setAddEmailSuccess(`Check ${addEmailValue} — confirmation link sent.`)
       } else {
         const data = await res.json().catch(() => ({}))
-        setAddEmailError(data.error || 'Failed to send sign-in link.')
+        setAddEmailError(data.error || 'Failed to send confirmation link.')
       }
     } catch {
-      setAddEmailError('Failed to send sign-in link.')
+      setAddEmailError('Failed to send confirmation link.')
     } finally {
       setAddEmailSubmitting(false)
     }

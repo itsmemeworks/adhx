@@ -29,6 +29,7 @@ import { render, screen, act, fireEvent } from '@testing-library/react'
 import { TheaterShell } from '@/components/theater/TheaterShell'
 import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
+import type { FeedItem } from '@/components/feed/types'
 
 const mockStage = vi.fn((_props: Record<string, unknown>) => null)
 vi.mock('@/components/theater/Stage', () => ({
@@ -350,5 +351,58 @@ describe('TheaterShell: finishing a fresh arrival lands on the caught-up stage',
     await endCurrentItem()
 
     expect(screen.getByText('You’re all caught up')).toBeInTheDocument()
+  })
+})
+
+describe('TheaterShell: Live caught-up does not pause Collection on the tab flip', () => {
+  beforeEach(() => {
+    mockMobileChrome.mockClear()
+    window.localStorage.clear()
+  })
+
+  it('clears waiting and resumes when flipping Live → My Collection', async () => {
+    const items = [textItem('1'), textItem('2')]
+    markWatched(items)
+    const resumeHeard = vi.fn()
+    window.addEventListener('theater-resume', resumeHeard)
+    const collectionItem = {
+      id: 'c1',
+      platform: 'twitter',
+      author: 'alice',
+      authorName: 'Alice',
+      text: 'saved',
+      tweetUrl: 'https://x.com/alice/status/c1',
+      createdAt: '2026-08-18T00:00:00Z',
+      processedAt: '2026-08-18T00:00:00Z',
+      isArchived: false,
+      tags: [],
+      media: [],
+      links: [],
+    } as unknown as FeedItem
+
+    try {
+      await act(async () => {
+        render(
+          <TheaterShell
+            seed={seed(items)}
+            mode="personal"
+            initialPersonalTab="live"
+            personalItems={[collectionItem]}
+            onClose={vi.fn()}
+          />,
+        )
+      })
+      expect(screen.getByText('You’re all caught up')).toBeInTheDocument()
+
+      const props = mockMobileChrome.mock.calls.at(-1)![0] as {
+        collection: { onTabChange: (tab: 'live' | 'collection') => void }
+      }
+      await act(async () => props.collection.onTabChange('collection'))
+
+      expect(screen.queryByText('You’re all caught up')).not.toBeInTheDocument()
+      expect(resumeHeard).toHaveBeenCalled()
+    } finally {
+      window.removeEventListener('theater-resume', resumeHeard)
+    }
   })
 })

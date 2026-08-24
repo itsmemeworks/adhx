@@ -236,10 +236,10 @@ const MAX_RESOLVE_ATTEMPTS = 3
 /**
  * Resolve (or create) the app account for an X login.
  *
- * - Existing 'x' identity → return its owner (refreshing display name/avatar).
- *   If a different session is currently signed in and tries to link an X
- *   account already tied to someone else, that's a conflict — the caller
- *   should NOT change the session.
+ * - Existing 'x' identity → if there is no session, `sign_in_required` (X
+ *   is not a sign-in method). If a different session tries to link it,
+ *   `linked_elsewhere`. Matching session returns the owner (refreshing
+ *   display name/avatar).
  * - No existing identity, but a `users` row already has `id === xUserId` →
  *   that id was previously claimed by an X-first signup (the historical
  *   `userId == X id` convention) whose identity row was later detached, e.g.
@@ -272,7 +272,10 @@ export async function findOrCreateUserForX(
       .limit(1)
 
     if (existingIdentity) {
-      if (sessionUserId && existingIdentity.userId !== sessionUserId) {
+      if (!sessionUserId) {
+        return { userId: '', username: '', created: false, conflict: 'sign_in_required' }
+      }
+      if (existingIdentity.userId !== sessionUserId) {
         return {
           userId: existingIdentity.userId,
           username: '',

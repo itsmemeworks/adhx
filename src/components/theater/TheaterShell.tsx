@@ -1411,6 +1411,7 @@ export function TheaterShell({
   // don't interrupt" behavior for a viewer mid-scroll is untouched.
   useEffect(() => {
     if (!waiting) return
+    if (isCollectionTab) return
     const arrived = findFreshArrival(feed.freshKeys, waitingBaselineFreshKeysRef.current)
     if (!arrived) return
     // Fold the staged key into the baseline (never resnapshot — an item that
@@ -1432,7 +1433,7 @@ export function TheaterShell({
     if (mode !== 'shared') setPinnedKey(arrived)
     setCurrentKey(arrived)
     setWaiting(false)
-  }, [waiting, feed.freshKeys])
+  }, [waiting, feed.freshKeys, isCollectionTab, mode])
 
   // Entering the waiting stage pauses the (still-mounted, now-hidden) stage
   // — see the render comment above the <Stage/> below. Uses the same
@@ -1442,6 +1443,16 @@ export function TheaterShell({
   useEffect(() => {
     if (waiting && !isCollectionTab) window.dispatchEvent(new CustomEvent('theater-pause'))
   }, [waiting, isCollectionTab])
+
+  // Live ⇄ Collection flips local tab state before the route changes. A Live
+  // caught-up `theater-pause` would otherwise leave the shared <video>
+  // paused on Collection. Clear waiting and resume as soon as Collection is
+  // the on-stage tab.
+  useEffect(() => {
+    if (!isCollectionTab || !waiting) return
+    setWaiting(false)
+    window.dispatchEvent(new CustomEvent('theater-resume'))
+  }, [isCollectionTab, waiting])
 
   // Items newer than the last visit and not yet seen. Zero on a first-ever
   // visit (no `lastVisitAt` to compare against) — the caught-up state is the

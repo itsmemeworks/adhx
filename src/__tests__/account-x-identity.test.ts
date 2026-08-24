@@ -67,8 +67,21 @@ describe('findOrCreateUserForX', () => {
   it('is idempotent for a returning X link (identity already exists)', async () => {
     await testInstance.db.insert(schema.users).values({ id: 'u_email1', username: 'emailer' })
     await findOrCreateUserForX(X_USER, 'u_email1')
-    const result = await findOrCreateUserForX(X_USER)
+    const result = await findOrCreateUserForX(X_USER, 'u_email1')
     expect(result).toEqual({ userId: 'u_email1', username: 'emailer', created: false })
+    expect(await xIdentityRows()).toHaveLength(1)
+  })
+
+  it('refuses to sign in an existing X identity when there is no session', async () => {
+    await testInstance.db.insert(schema.users).values({ id: 'u_email1', username: 'emailer' })
+    await findOrCreateUserForX(X_USER, 'u_email1')
+    const result = await findOrCreateUserForX(X_USER)
+    expect(result).toEqual({
+      userId: '',
+      username: '',
+      created: false,
+      conflict: 'sign_in_required',
+    })
     expect(await xIdentityRows()).toHaveLength(1)
   })
 
@@ -196,11 +209,14 @@ describe('findOrCreateUserForX', () => {
   it('refreshes display name/avatar for a normal returning login without duplicating rows', async () => {
     await testInstance.db.insert(schema.users).values({ id: 'u_email1', username: 'exuser' })
     await findOrCreateUserForX(X_USER, 'u_email1')
-    const updated = await findOrCreateUserForX({
-      ...X_USER,
-      name: 'New Name',
-      profileImageUrl: 'https://example.com/a.jpg',
-    })
+    const updated = await findOrCreateUserForX(
+      {
+        ...X_USER,
+        name: 'New Name',
+        profileImageUrl: 'https://example.com/a.jpg',
+      },
+      'u_email1',
+    )
     expect(updated).toEqual({ userId: 'u_email1', username: 'exuser', created: false })
 
     const user = await userRow('u_email1')

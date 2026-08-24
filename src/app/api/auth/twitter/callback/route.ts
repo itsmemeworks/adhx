@@ -63,6 +63,14 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // X is a Settings link. Require a session BEFORE spending the one-time
+    // OAuth code / PKCE verifier, so an expired cookie during consent does
+    // not burn the grant.
+    const existingSession = await getSession()
+    if (!existingSession?.userId) {
+      return NextResponse.redirect(new URL('/?auth_error=x_link_only', BASE_URL))
+    }
+
     // Verify state and get code verifier
     const codeVerifier = await consumeOAuthState(state)
     if (!codeVerifier) {
@@ -80,13 +88,6 @@ export async function GET(request: NextRequest) {
 
     // Get user info
     const user = await getCurrentUser(tokens.accessToken)
-
-    // X is a Settings link for bookmark sync, not a sign-in method.
-    // Linking requires an existing session (magic-link account).
-    const existingSession = await getSession()
-    if (!existingSession?.userId) {
-      return NextResponse.redirect(new URL('/?auth_error=x_link_only', BASE_URL))
-    }
 
     const linkResult = await findOrCreateUserForX(
       {

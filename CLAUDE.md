@@ -985,8 +985,8 @@ export async function GET() {
 | `/api/share/tag/by-name/[username]/[tag]/clone` | POST        | Yes  | Clone shared tag to user's account                                                                                                     |
 | `/api/share/tag/[code]`                         | GET         | No   | View shared tag (legacy random code)                                                                                                   |
 | `/api/share/tweet/[username]/[id]`              | GET         | No   | Public tweet JSON API (LLM-friendly, 5-min cache)                                                                                      |
-| `/api/auth/twitter`                             | GET         | No   | Start OAuth flow                                                                                                                       |
-| `/api/auth/twitter/callback`                    | GET         | No   | OAuth callback                                                                                                                         |
+| `/api/auth/twitter`                             | GET         | Yes  | Start X OAuth to *link* bookmark sync (session required; unsigned → `/?auth_error=x_link_only`)                                       |
+| `/api/auth/twitter/callback`                    | GET         | Yes  | X OAuth callback (browser bounce; session required to link)                                                                            |
 | `/api/auth/twitter/status`                      | GET         | No   | Check auth status and refresh tokens                                                                                                   |
 | `/api/media/instagram/video`                    | GET         | No   | Stream Instagram Reel MP4 inline (Range supported)                                                                                     |
 | `/api/media/instagram/video/download`           | GET         | No   | Stream Reel MP4 with `Content-Disposition: attachment`                                                                                 |

@@ -116,7 +116,7 @@ describe('API: /api/auth/twitter/callback', () => {
   })
 
   describe('State verification', () => {
-    it('redirects with error for invalid state', async () => {
+    it('bounces unsigned visitors before consuming OAuth state', async () => {
       const { GET } = await import('@/app/api/auth/twitter/callback/route')
       const response = await GET(
         createCallbackRequest({
@@ -126,17 +126,17 @@ describe('API: /api/auth/twitter/callback', () => {
       )
 
       expect(response.status).toBe(307)
-      const location = response.headers.get('location')
-      expect(location).toContain('Invalid%20or%20expired%20state')
+      expect(response.headers.get('location')).toBe('http://localhost:3000/?auth_error=x_link_only')
+      expect(mockFetch).not.toHaveBeenCalled()
     })
 
-    it('redirects with error when state does not exist', async () => {
-      // Don't insert any state - test non-existent state
+    it('redirects a signed-in visitor with error for invalid state', async () => {
+      await seedSignedIn()
       const { GET } = await import('@/app/api/auth/twitter/callback/route')
       const response = await GET(
         createCallbackRequest({
           code: 'valid-code',
-          state: 'nonexistent-state',
+          state: 'invalid-state',
         }),
       )
 
@@ -157,21 +157,6 @@ describe('API: /api/auth/twitter/callback', () => {
     })
 
     it('bounces unsigned callbacks without creating an account or session', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            access_token: 'new-access-token',
-            refresh_token: 'new-refresh-token',
-            expires_in: 7200,
-            scope: 'tweet.read',
-          }),
-      })
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ data: { id: 'user-123', username: 'testuser' } }),
-      })
-
       const { GET } = await import('@/app/api/auth/twitter/callback/route')
       const response = await GET(
         createCallbackRequest({
@@ -186,6 +171,11 @@ describe('API: /api/auth/twitter/callback', () => {
       expect(cookies.some((c) => c.includes('adhx_session'))).toBe(false)
       expect(await testInstance.db.select().from(schema.users)).toHaveLength(0)
       expect(await testInstance.db.select().from(schema.oauthTokens)).toHaveLength(0)
+      expect(mockFetch).not.toHaveBeenCalled()
+      // PKCE verifier is not spent, so a later signed-in retry of Connect X
+      // can start a fresh grant.
+      const states = await testInstance.db.select().from(schema.oauthState)
+      expect(states).toHaveLength(1)
     })
 
     it('exchanges code for tokens and creates session', async () => {
@@ -527,21 +517,6 @@ describe('API: /api/auth/twitter/callback', () => {
         .insert(schema.userIdentities)
         .values({ provider: 'email', providerId: 'detached@example.com', userId: 'detached-id' })
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            access_token: 'new-access-token',
-            refresh_token: 'new-refresh-token',
-            expires_in: 7200,
-            scope: 'tweet.read',
-          }),
-      })
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ data: { id: 'detached-id', username: 'detacheduser' } }),
-      })
-
       const { GET } = await import('@/app/api/auth/twitter/callback/route')
       const response = await GET(
         createCallbackRequest({ code: 'valid-code', state: 'valid-state' }),
@@ -551,6 +526,7 @@ describe('API: /api/auth/twitter/callback', () => {
       expect(response.headers.get('location')).toBe('http://localhost:3000/?auth_error=x_link_only')
       const cookies = response.headers.getSetCookie()
       expect(cookies.some((c) => c.includes('adhx_session'))).toBe(false)
+      expect(mockFetch).not.toHaveBeenCalled()
       const xIdentities = await testInstance.db
         .select()
         .from(schema.userIdentities)

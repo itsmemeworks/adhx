@@ -202,6 +202,29 @@ describe('SettingsClient — Email, Username, and Sync X', () => {
     expect(screen.getByRole('button', { name: /add email/i })).toBeInTheDocument()
   })
 
+  it('adds email via the change endpoint so it stays on this account', async () => {
+    const me = {
+      authenticated: true,
+      user: { id: 'u1', username: 'tester', displayName: 'Tester', avatarUrl: '' },
+      identities: { x: { username: 'tester' }, email: null },
+      xConnected: true,
+    }
+    const changeSpy = vi.fn<FetchImpl>(() => jsonResponse({ ok: true }))
+    mockFetch(me, { 'POST /api/auth/email/change': changeSpy })
+    render(<SettingsClient />)
+
+    await waitFor(() => expect(screen.getByPlaceholderText('you@email.com')).toBeInTheDocument())
+    fireEvent.change(screen.getByPlaceholderText('you@email.com'), {
+      target: { value: 'me@example.com' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /add email/i }))
+
+    await waitFor(() => expect(changeSpy).toHaveBeenCalled())
+    const [, init] = changeSpy.mock.calls[0]
+    expect(JSON.parse((init as RequestInit).body as string)).toEqual({ email: 'me@example.com' })
+    await waitFor(() => expect(screen.getByText(/check me@example\.com/i)).toBeInTheDocument())
+  })
+
   it('renders sync history entries from the new /api/sync/history contract', async () => {
     mockFetch(ME_BOTH, {
       'GET /api/sync/history': () =>
