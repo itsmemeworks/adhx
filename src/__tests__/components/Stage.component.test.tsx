@@ -224,6 +224,7 @@ describe('Stage: the granted <video> element survives a non-video item', () => {
     expect(container.querySelector('[data-testid="parent-inline-video"]')).toBeNull()
     expect(container.querySelector('[data-testid="quote-inline-video"]')).toBeTruthy()
     expect(container.querySelector('[data-testid="article-video-fade"]')).toBeTruthy()
+    expect(container.firstElementChild?.className).toContain('isolate')
     expect(container.textContent).toContain('parent essay')
     expect(container.textContent).toContain('quoted clip')
   })

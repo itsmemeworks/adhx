@@ -105,4 +105,14 @@ describe('TheaterShell: articleMode reset', () => {
     })
     expect(captured.articleMode).toBe(false)
   })
+
+  it('isolates the stage so Read video stays under chrome', async () => {
+    let view: ReturnType<typeof render> | undefined
+    await act(async () => {
+      view = render(<TheaterShell seed={seed([videoItem('1')])} mode="home" />)
+    })
+    const stage = view!.getByTestId('theater-stage')
+    expect(stage.className).toMatch(/\bisolate\b/)
+    expect(stage.className).toMatch(/\bz-0\b/)
+  })
 })

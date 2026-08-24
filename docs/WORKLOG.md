@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-24 — Isolate Read video under theater chrome
+
+Read mode's video band is `z-20` (fade `z-25`) so the clip sits above the article pane. The stage wrapper had no stacking context, so that painted over sibling chrome (`z-10` paste / flame / avatar) and stole clicks. Stage + Collection article roots now `isolate`; TheaterShell's stage layer is `isolate z-0`. Current state: uncommitted on the Read/Watch branch. Follow-up: none.
+
 ## 2026-08-24 — Filmstrip NOW/NEXT no longer stretch cards
 
 The status labels inherited body line-height and NEXT could wrap, so those two cards sat taller than the rest of the strip. Meta row is a fixed `h-4`; labels are `leading-none` + nowrap. Follow-up: none.

@@ -19,6 +19,7 @@ import { StageInstagram, useInstagramStage } from './StageInstagram'
 import { StageYouTube } from './StageYouTube'
 import { StageVideo } from './StageVideo'
 import {
+  STAGE_ARTICLE_ROOT,
   STAGE_ARTICLE_TEXT_PANE,
   STAGE_ARTICLE_VIDEO_BAND,
   StageArticleVideoFade,
@@ -106,7 +107,7 @@ export function CollectionStage({
     // `personalAdvanceOnEnded` (pure navigation).
     if (articleMode) {
       return (
-        <div className="relative h-full w-full">
+        <div className={STAGE_ARTICLE_ROOT}>
           <div className={STAGE_ARTICLE_VIDEO_BAND}>
             <StageYouTube
               item={theaterItem}
@@ -139,7 +140,7 @@ export function CollectionStage({
   // branches so the player is not remounted.
   if (articleMode && isVideo && (platform === 'twitter' || platform === 'tiktok')) {
     return (
-      <div className="relative h-full w-full">
+      <div className={STAGE_ARTICLE_ROOT}>
         <div className={STAGE_ARTICLE_VIDEO_BAND}>
           <StageVideo
             item={theaterItem}
@@ -260,7 +261,7 @@ function CollectionInstagramStage({
     )
     if (articleMode) {
       return (
-        <div className="relative h-full w-full">
+        <div className={STAGE_ARTICLE_ROOT}>
           <div className={STAGE_ARTICLE_VIDEO_BAND}>{player}</div>
           <StageArticleVideoFade />
           <div className={STAGE_ARTICLE_TEXT_PANE}>

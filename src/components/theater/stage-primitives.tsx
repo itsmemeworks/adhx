@@ -33,6 +33,14 @@ export const STAGE_TEXT_SCROLL_PAD = 'pb-[calc(4.25rem+0.75rem+44px+1.25rem)] lg
 export const STAGE_TEXT_TOP_PAD = 'pt-24 lg:pt-28'
 
 /**
+ * Read-mode root. `isolate` keeps the band's z-20 (and the fade's z-25)
+ * inside this box so they cannot paint over the theater chrome (sibling
+ * `z-10` paste / flame / avatar). Do not drop those z-indexes — the
+ * clip has to sit above the article pane.
+ */
+export const STAGE_ARTICLE_ROOT = 'relative isolate h-full w-full'
+
+/**
  * When Read keeps the parent video playing, the player sits in this top
  * band. Never mask, fade, or blur the clip — the fade lives *under* it.
  */

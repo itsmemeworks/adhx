@@ -1738,7 +1738,10 @@ export function TheaterShell({
           overlay/actions, and <DesktopDock/> (a sibling, in-flow below) is
           the bottom filmstrip queue — no more side-by-side rail column. */}
       <div className="relative h-full w-full flex-1 overflow-hidden">
-        <div className="absolute inset-0">
+        {/* isolate + z-0: Read's video band is z-20 inside the stage. Without
+            a stacking context here that z-20 paints over sibling chrome (z-10
+            paste / flame / avatar) and steals those clicks. */}
+        <div className="absolute inset-0 isolate z-0" data-testid="theater-stage">
           {isCollectionTab ? (
             personalFinished ? (
               <CollectionAllClear

@@ -12,6 +12,7 @@ import { inferType } from '@/lib/trending/filter'
 import { previewPath } from '@/lib/activity/preview-path'
 import { usePlaybackSource } from './usePlaybackSource'
 import {
+  STAGE_ARTICLE_ROOT,
   STAGE_ARTICLE_TEXT_PANE,
   STAGE_ARTICLE_VIDEO_BAND,
   StageArticleVideoFade,
@@ -150,7 +151,7 @@ export function Stage({
   // is exactly the element (and grant) this is trying to preserve. So the video
   // layer is always this slot, and everything else is an overlay above it.
   return (
-    <div className="relative h-full w-full">
+    <div className={STAGE_ARTICLE_ROOT}>
       {isStageVideoItem && videoSrc ? (
         <div className={articleWithLiveVideo ? STAGE_ARTICLE_VIDEO_BAND : 'absolute inset-0'}>
           <StageVideo
