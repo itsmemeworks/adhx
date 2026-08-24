@@ -85,7 +85,11 @@ describe('PWAInstallPrompt', () => {
   it('shows the Android banner without waiting for beforeinstallprompt', async () => {
     mockPlatform = 'android'
     render(<PWAInstallPrompt />)
-    expect(await screen.findByText('Add ADHX to your home screen')).toBeInTheDocument()
+    expect(await screen.findByText('Share a post directly to ADHX')).toBeInTheDocument()
+    expect(
+      screen.getByText(/Add to your home screen once\. Then in X, Instagram, TikTok, or YouTube/),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'How' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Add' })).not.toBeInTheDocument()
     expect(screen.queryByText(/Paste link still works/)).not.toBeInTheDocument()
@@ -103,7 +107,7 @@ describe('PWAInstallPrompt', () => {
   it('offers a one-tap Add button on Android once beforeinstallprompt fires', async () => {
     mockPlatform = 'android'
     render(<PWAInstallPrompt />)
-    expect(await screen.findByText('Add ADHX to your home screen')).toBeInTheDocument()
+    expect(await screen.findByText('Share a post directly to ADHX')).toBeInTheDocument()
 
     const evt = fireBeforeInstallPrompt()
     const addBtn = await screen.findByRole('button', { name: 'Add' })
@@ -166,6 +170,30 @@ describe('PWAInstallPrompt', () => {
     expect(localStorage.getItem(SHORTCUT_DISMISS_KEY)).toBeNull()
   })
 
+  it('dismisses the Android banner when tapping away', async () => {
+    mockPlatform = 'android'
+    render(
+      <div>
+        <button type="button">elsewhere</button>
+        <PWAInstallPrompt />
+      </div>,
+    )
+    await screen.findByText('Share a post directly to ADHX')
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'elsewhere' }))
+    await waitFor(() =>
+      expect(screen.queryByText('Share a post directly to ADHX')).not.toBeInTheDocument(),
+    )
+    expect(localStorage.getItem(ANDROID_A2HS_DISMISS_KEY)).toBe('1')
+  })
+
+  it('does not dismiss the Android banner when tapping How', async () => {
+    mockPlatform = 'android'
+    render(<PWAInstallPrompt />)
+    fireEvent.pointerDown(await screen.findByRole('button', { name: 'How' }))
+    expect(screen.getByText('Share a post directly to ADHX')).toBeInTheDocument()
+    expect(localStorage.getItem(ANDROID_A2HS_DISMISS_KEY)).toBeNull()
+  })
+
   it('hangs fixed under the theater logo, and sits in-flow under the header elsewhere', () => {
     mockPlatform = 'ios'
     const { rerender } = render(<PWAInstallPrompt />)
@@ -186,7 +214,7 @@ describe('PWAInstallPrompt', () => {
     mockPlatform = 'android'
     mockPathname = '/collection'
     const { rerender } = render(<PWAInstallPrompt />)
-    const theaterWrap = (await screen.findByText('Add ADHX to your home screen')).closest(
+    const theaterWrap = (await screen.findByText('Share a post directly to ADHX')).closest(
       '.sm\\:hidden',
     )
     expect(theaterWrap).toHaveClass(
@@ -198,7 +226,7 @@ describe('PWAInstallPrompt', () => {
 
     mockPathname = '/library'
     rerender(<PWAInstallPrompt />)
-    const libraryWrap = screen.getByText('Add ADHX to your home screen').closest('.sm\\:hidden')
+    const libraryWrap = screen.getByText('Share a post directly to ADHX').closest('.sm\\:hidden')
     expect(libraryWrap).toHaveClass('relative', 'mx-3', 'mt-2')
     expect(libraryWrap).not.toHaveClass('fixed')
   })

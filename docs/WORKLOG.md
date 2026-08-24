@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-24 — Android install banner: why, no logo, tap away
+
+Android A2HS banner no longer repeats the ADHX icon. Copy leads with sharing a post directly into ADHX. Tap outside dismisses it, same as the iOS shortcut nudge. Follow-up: none.
+
 ## 2026-08-24 — PR 407: merge main + Android How stays in-banner
 
 Merged main (theater-only shortcuts, tap-declutter, Read/Watch). Android How expands the walkthrough in the banner instead of sending visitors to `/settings` (auth-gated). On theater paths the Android banner hangs under the logo at `z-[70]` so it does not cover the peek bar. Follow-up: none.

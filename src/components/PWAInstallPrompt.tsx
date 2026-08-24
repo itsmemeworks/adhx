@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import Image from 'next/image'
 import { Plus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getPlatformType, type PlatformType } from '@/lib/platform'
@@ -109,9 +108,9 @@ export function PWAInstallPrompt() {
     }
   }
 
-  // iOS banner is a soft nudge — any tap outside it dismisses (no need for X).
+  // Soft nudge — any tap outside the card dismisses (How / Add still need the X).
   useEffect(() => {
-    if (!visible || platform !== 'ios') return
+    if (!visible || platform === 'desktop') return
     function onPointerDown(e: PointerEvent) {
       const root = bannerRef.current
       if (!root || root.contains(e.target as Node)) return
@@ -174,6 +173,7 @@ export function PWAInstallPrompt() {
 
   return (
     <div
+      ref={bannerRef}
       className={cn(
         'z-[70] sm:hidden',
         pinUnderTheaterLogo ? `fixed left-3 ${THEATER_BANNER_TOP}` : 'relative mx-3 mt-2',
@@ -185,17 +185,10 @@ export function PWAInstallPrompt() {
           pinUnderTheaterLogo ? 'w-[min(22rem,calc(100vw-1.5rem))]' : 'mx-auto max-w-md',
         )}
       >
-        <Image
-          src="/icon-192.png"
-          alt=""
-          width={40}
-          height={40}
-          className="w-10 h-10 rounded-xl flex-shrink-0"
-        />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-ink">Add ADHX to your home screen</p>
-          <p className="text-xs text-ink-3">
-            Then Share → ADHX from X, Instagram, TikTok, or YouTube.
+          <p className="text-sm font-semibold text-ink">Share a post directly to ADHX</p>
+          <p className="text-xs leading-snug text-ink-3">
+            Add to your home screen once. Then in X, Instagram, TikTok, or YouTube: Share → ADHX.
           </p>
         </div>
         {deferred ? (
