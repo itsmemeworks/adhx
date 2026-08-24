@@ -6,6 +6,7 @@ import {
   resolveTheaterShortcut,
   THEATER_SHORTCUT_KEYS,
   THEATER_ACTION_EVENTS,
+  THEATER_SHORTCUT_HELP,
 } from '@/components/theater/theater-shortcuts'
 
 describe('resolveTheaterShortcut', () => {
@@ -52,5 +53,13 @@ describe('resolveTheaterShortcut', () => {
     expect(THEATER_ACTION_EVENTS.save).toBe('theater-save')
     expect(THEATER_ACTION_EVENTS.toggleMenu).toBe('theater-toggle-menu')
     expect(THEATER_ACTION_EVENTS.toggleArticle).toBe('theater-toggle-article')
+  })
+
+  it('groups next vs previous keys on the help overlay', () => {
+    const nav = THEATER_SHORTCUT_HELP.find((s) => s.title === 'Navigate')
+    expect(nav?.rows).toEqual([
+      { keys: ['→', '↓', 'J'], label: 'Next post' },
+      { keys: ['←', '↑', 'K'], label: 'Previous post' },
+    ])
   })
 })

@@ -184,9 +184,8 @@ export const THEATER_SHORTCUT_HELP: TheaterHelpSection[] = [
   {
     title: 'Navigate',
     rows: [
-      { keys: ['←', '→'], label: 'Previous / next post' },
-      { keys: ['↑', '↓'], label: 'Previous / next post' },
-      { keys: ['J', 'K'], label: 'Next / previous post' },
+      { keys: ['→', '↓', 'J'], label: 'Next post' },
+      { keys: ['←', '↑', 'K'], label: 'Previous post' },
     ],
   },
   {

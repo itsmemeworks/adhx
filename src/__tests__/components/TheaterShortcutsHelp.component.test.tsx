@@ -17,6 +17,8 @@ describe('TheaterShortcutsHelp', () => {
     const dialog = screen.getByRole('dialog', { name: 'Keyboard shortcuts' })
     expect(dialog).toBeInTheDocument()
     expect(dialog.className).toMatch(/lg:max-w-2xl/)
+    expect(screen.getByText('Next post')).toBeInTheDocument()
+    expect(screen.getByText('Previous post')).toBeInTheDocument()
     expect(screen.getByText('Play / pause')).toBeInTheDocument()
     expect(screen.getByText('Read / Watch')).toBeInTheDocument()
     expect(screen.getByText('Paste a link')).toBeInTheDocument()

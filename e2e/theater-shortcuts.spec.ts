@@ -19,6 +19,8 @@ test.describe('theater shortcuts (signed out)', () => {
     const help = page.getByRole('dialog', { name: 'Keyboard shortcuts' })
     await expect(help).toBeVisible()
     await expect(help.getByText('Play / pause')).toBeVisible()
+    await expect(help.getByText('Next post')).toBeVisible()
+    await expect(help.getByText('Previous post')).toBeVisible()
     await expect(help.getByText('Read / Watch')).toBeVisible()
     await expect(help.getByText('Paste a link')).toBeVisible()
 

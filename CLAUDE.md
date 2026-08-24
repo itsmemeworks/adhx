@@ -655,7 +655,7 @@ className = 'text-base sm:text-xs ...'
 **Theater keyboard (desktop power users):**
 The library grid and Settings bind **no** keys. The theater keymap lives in `src/components/theater/theater-shortcuts.ts` (`resolveTheaterShortcut`, `THEATER_SHORTCUT_KEYS`) and `useTheaterKeyboard`:
 
-- Navigate: `←` `→` `↑` `↓` / `J` `K`
+- Navigate: `→` `↓` `J` next, `←` `↑` `K` previous
 - Playback: `Space` play/pause (`theater-toggle-play`), `M` mute
 - Actions: `S` Save, `T` Tag, `L` copy link, `C` copy text, `D` download/send, `O` open original, `A` Archive (collection), `R` Read / Watch, `U` undo Archive
 - Also: `.` menu, `?` (Shift+/) help overlay (`TheaterShortcutsHelp`), `Esc` close help / collection
