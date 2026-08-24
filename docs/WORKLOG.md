@@ -6,9 +6,145 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-24 — R toggles Read / Watch
+
+Theater keyboard now has `R` for the Read/Watch switch (same control as the chrome button). No-op when the post has no overflow or quote. Follow-up: none.
+
 ## 2026-08-23 — Theater is the only keyboard surface
 
-Library and Settings no longer bind keys (the old gallery/focus cheatsheet is gone). Theater gets a full desktop map: arrows/jk, Space, M, S/T/L/C/D/O/A, U undo, `.` menu, ⌘V/Ctrl+V paste (OS event), Shift+? help overlay. Action keys click `[data-theater-action]` on the visible chrome only. Covered by unit tests plus `e2e/theater-shortcuts.spec.ts` (help, menu, S/T/A/U, library no-ops). Follow-up: none.
+Library and Settings no longer bind keys (the old gallery/focus cheatsheet is gone). Theater gets a full desktop map: arrows/jk, Space, M, S/T/L/C/D/O/A, R Read/Watch, U undo, `.` menu, ⌘V/Ctrl+V paste (OS event), Shift+? help overlay. Action keys click `[data-theater-action]` on the visible chrome only. Covered by unit tests plus `e2e/theater-shortcuts.spec.ts` (help, menu, S/T/A/U/R, library no-ops). Follow-up: none.
+
+## 2026-08-24 — Stage tap declutter onto Read/Watch
+
+Merged tap-to-declutter onto the Read/Watch theater: first tap hides chrome and starts playback, second tap restores overlays without pausing. Pause stays on the peek-bar / dock button and Space. E2E covers desktop + mobile video tap. Follow-up: none.
+
+## 2026-08-23 — Stage tap declutter + start (not play/pause)
+
+Tapping a video or photo hides chrome and starts playback; tapping again restores overlays without pausing. Pause stays on the peek-bar / dock button and Space. Sound stays on the audio button (tap no longer unmutes). YouTube iframe still eats its own taps. Follow-up: none.
+
+## 2026-08-24 — Isolate Read video under theater chrome
+
+Read mode's video band is `z-20` (fade `z-25`) so the clip sits above the article pane. The stage wrapper had no stacking context, so that painted over sibling chrome (`z-10` paste / flame / avatar) and stole clicks. Stage + Collection article roots now `isolate`; TheaterShell's stage layer is `isolate z-0`. Current state: uncommitted on the Read/Watch branch. Follow-up: none.
+
+## 2026-08-24 — Filmstrip NOW/NEXT no longer stretch cards
+
+The status labels inherited body line-height and NEXT could wrap, so those two cards sat taller than the rest of the strip. Meta row is a fixed `h-4`; labels are `leading-none` + nowrap. Follow-up: none.
+
+## 2026-08-24 — Tagged Tag button keeps the glass border
+
+`border-clay/50` on a tagged Tag action is a no-op (hex Matter tokens drop Tailwind `/NN`) and tw-merge stole the white glass edge, so the button looked like a dark hole. Same frost as Share/Download now; clay is only on the filled icon. Follow-up: none.
+
+## 2026-08-24 — Flame chip always shows, same slot
+
+Owner correction: hiding it on text/articles was wrong. The chip stays left of paste on every post type (video, photo, text, article, Read). It still never sits next to the author. Follow-up: none.
+
+## 2026-08-24 — Flame chip lives left of paste
+
+The community trend count sat next to the author on media and in the top bar on text, so the same post looked different by type. It now has one slot — left of the desktop paste button (and the mobile paste) — and only on full-bleed video/photo. Text, articles, quotes, and Read mode hide it so it never sits on a description. Follow-up: none.
+
+## 2026-08-24 — Shared preview lead was missing pulse stats
+
+Opening a preview URL built the lead from FxTwitter only, so `saveCount`/`trendCount` were unset and the flame chip hid (`< 2`). The same post one card later in the dock had the counts. `buildSharedSeed` now copies those pulse fields onto the lead, same as `addedAt`. Follow-up: none.
+
+## 2026-08-24 — Desktop de-clutter lives in the dock
+
+The top-right expand shoved the avatar around. It's gone: transport is a 3-col grid in the dock (prev / play-pause / next over expand / repeat / mute), and the restore Minimize2 floats bottom-left when chrome is hidden. The account menu stays top-right. Follow-up: none.
+
+## 2026-08-24 — Read fade never touches the video
+
+The clip is left alone (no mask, no overlay). A 3rem stage-black gradient (`#08070a` → transparent) sits immediately _below_ the band so copy fades as it scrolls through that strip, then tucks under. Opening lines sit below the fade. Follow-up: none.
+
+## 2026-08-24 — Read fade is a hairline, not a wash
+
+First pass of the video-to-text fade was a 7rem 65% blur slab: opening copy was already dark, and scrolling painted it on the clip. Now the video only dissolves the last 8px, the gradient is 1.5rem × 30% and starts _below_ the band, and the first line sits clear of it. Follow-up: none.
+
+## 2026-08-24 — Read mode: video-to-text fade
+
+Hard cut under the keep-playing video in Read felt like a razor. The essay now scrolls full-bleed under the band: the clip dissolves at the bottom (`mask-image`) and a sibling blur + stage-black gradient (`StageArticleVideoFade`) sits on the junction so copy softens as it tucks under. Fade is a sibling — the band's `overflow-hidden` would clip it. Follow-up: none.
+
+## 2026-08-23 — Theater Read/Watch review pass
+
+Self-review of the caption/Read PR: Collection now uses the same reader split as Live (photo + Instagram + YouTube), YouTube keeps one iframe across Read, and `useClampExpand` only measures overflow (dead expand state hid Read). E2E covers signed-out/signed-in desktop and mobile icon-only on a video+quote preview. Follow-up: none.
+
+## 2026-08-23 — Mobile Read/Watch is icon-only
+
+Mobile action buttons never carry a label, so Read/Watch is the same 44px glass circle as Download/Share (book / TV), aria-label only. Desktop still uses the labeled pill under the caption. Follow-up: none.
+
+## 2026-08-23 — Mobile caption stays two lines; Read is left of actions
+
+Mobile keeps the 2-line caption above the action row. **Read** sits on the left of that row (Watch too); Download/Tag/Share stay on the right. Follow-up: none.
+
+## 2026-08-23 — Read sits with the caption
+
+Read/Watch was first in the action row, so empty tag `flex-1` shoved it left on some posts. It's now under the caption on purpose (Watch stays in that left slot). Download/Save/Share stay on the right. Follow-up: none.
+
+## 2026-08-23 — Read replaces caption expand; video keeps playing
+
+Long media captions (and quotes) go through **Read** instead of tap-to-expand / dim. **Watch** uses `TvMinimalPlay`, not Film (that's Download). Article mode keeps the same parent `<video>` playing in a top band so you can read while it continues; quote clips stay inline below. Progress/dock stay on the video. Follow-up: none.
+
+## 2026-08-23 — Video+quote is media-first, with a Read switch
+
+A tweet with its own video (or photo) that also quotes another post plays full-bleed again — caption is the parent text. **Read** flips to the stacked article (parent essay + both media + full quote); **Watch** goes back. Text-only quotes still use the reader. My Collection was taking the video branch first and dropping the caption/quote; it now shares this rule. Follow-up: none.
+
+## 2026-08-23 — Personal theater paste stays on the tab
+
+Signed-in Live (`/`) and My Collection (`/collection`) hid desktop paste and skipped ⌘V (a stale comment claimed `PasteToPreview` on AuthedHome covered it — that's `/library` only). Paste is back on both tabs: it POSTs `/api/bookmarks/add` in place so the save lands in the collection and the live pulse, and does **not** navigate to a preview page. Playlist mode still has no paste. Follow-up: none.
+
+## 2026-08-23 — Typeset tweets clear the top chrome
+
+StageText's reader now pads below the brand/paste cluster (`STAGE_TEXT_TOP_PAD`) and vertically centers a short tweet. Long posts, quotes, and inline media stay top-aligned and scroll. Follow-up: none.
+
+## 2026-08-23 — Desktop paste starts as an icon
+
+The theater top bar no longer shows the 420px paste field by default. A clipboard button sits with the avatar / de-clutter cluster; click expands the existing "Paste a link to preview" pill (Escape / click-outside collapse). Global ⌘V is unchanged. Follow-up: none.
+
+## 2026-08-23 — Video+quote uses the stacked reader
+
+A tweet with its own video that also quotes another tweet no longer takes the full-bleed player (which hid the parent essay and reduced the quote to a poster). `isQuoteReader` routes those posts through StageText: full parent text, inline parent video, full quoted tweet, inline quote video. Chrome treats them as text-like (no media caption overlay; 10s timed progress). Follow-up: none.
+
+## 2026-08-23 — Full quoted tweets (and long text) on the stage
+
+Quotes are no longer a 4-line stub. The text/quote reader shows the full parent, parent photos, and the full quoted tweet (text + photos), hydrated from `/api/share/tweet` when the pulse row is thin. Photo+quote uses the reader; video+quote overlays the quote card on the player. Share API now includes quote media. Follow-up: quote videos still show a poster, not inline playback.
+
+## 2026-08-23 — Action pills match the paste-button frost
+
+Dropped kube.io liquid-glass refraction. `StageGlass` now uses the same flat frost as the mobile paste button and avatar trigger (`bg-white/10 backdrop-blur-md`). Follow-up: none.
+
+## 2026-08-23 — Text stages scroll above the action row
+
+Article, tweet, and collection-quote stages now pad their scrollers (`STAGE_TEXT_SCROLL_PAD`) so the last lines can sit above the overlay actions and the mobile peek bar. Media captions are unchanged. Follow-up: none.
+
+## 2026-08-23 — Theater glass via CSS/SVG refraction
+
+Dropped `react-glassy`. Tags and action pills (`StageGlass`) use kube.io's liquid-glass approach: a convex-squircle bezel displacement map + `backdrop-filter: url(#…)` on Chromium, blur+tint+specular inset everywhere else. Follow-up: tune scale on small icon pills if the bend reads too strong.
+
+## 2026-08-23 — Open is the source platform glyph
+
+Dropped the platform+added-to-ADHX chip from desktop and mobile stage chrome. The Open action is now the post's social glyph (X / TikTok / Instagram / YouTube) with `Open on {platform}` as the accessible name — no ExternalLink, no "Open" label. Filmstrip and Up-next still show added-to-ADHX time. Follow-up: none.
+
+## 2026-08-23 — Frosted theater actions; article scroll through the caption zone
+
+Action pills and tag chips use a shared frosted glass fill (blur + saturate) so stage text doesn't read through them. Mobile bottom scrim is pointer-events-none except caption + actions, so an article's empty caption zone scrolls the body. Follow-up: none.
+
+## 2026-08-23 — Text and article author rows link to the profile
+
+`StageAuthorRow` (shared by `StageText` and `StageArticle`) wraps avatar + name + `@handle` in the same `authorProfileUrl` link media chrome already uses. Follow-up: none.
+
+## 2026-08-23 — Mobile theater drops the Close X when signed in
+
+Avatar/burger already lives top-right and has Library. The extra Close next to it on collection + signed-in shared preview was redundant and shifted the menu. Desktop Close in the tab pill stays. Follow-up: none.
+
+## 2026-08-23 — Article splash uses author; tags move to the action row
+
+`StageArticle` splash now shows the tweet-style avatar + name + `@handle` instead of an ARTICLE chip. Theater tag chips sit in the action row (not under the caption) so author/caption stay at a fixed height when scrolling, and article tags are visible. Follow-up: none.
+
+## 2026-08-23 — Caption overflow re-measures after late layout
+
+`useClampExpand` only measured once on item change, so a 0-height first paint (hidden chrome / fonts) left overflowing false and tap-to-expand dead. ResizeObserver remasures. Follow-up: none.
+
+## 2026-08-23 — Theater captions expand on tap
+
+Replaced the small more/less link on media captions with X-style tap-to-expand: two clamped lines with an ellipsis, tap the text to expand, tap again to collapse. Expanded state slightly darkens the media so the white text reads. Copy still lives on the action pills. Follow-up: none.
 
 ## 2026-08-23 — Theater photos load via the image proxy
 

@@ -27,6 +27,7 @@ import { useTheaterKeyboard } from './useTheaterKeyboard'
 import { TheaterShortcutsHelp } from './TheaterShortcutsHelp'
 import { useTheaterPrefetch } from './useTheaterPrefetch'
 import { useTheaterDwell } from './useTheaterDwell'
+import { useTheaterStageTapDeclutter } from './useTheaterStageEvents'
 import {
   TheaterProgressLine,
   progressKindFor,
@@ -224,6 +225,7 @@ export function TheaterShell({
   )
   const isCollectionTab = isPersonal && personalTab === 'collection'
   const feed = useTheaterFeed(seed, { live: !loop && !isCollectionTab })
+  const feedPrepend = feed.prependItem
   const seenSet = useSeenSet()
   const { items } = feed
 
@@ -581,6 +583,70 @@ export function TheaterShell({
     return false
   }, [])
 
+  const handlePastePost = useCallback(
+    async (url: string): Promise<boolean> => {
+      try {
+        const res = await fetch('/api/bookmarks/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, source: 'manual' }),
+        })
+        const data = await res.json().catch(() => null)
+        if (!res.ok) return false
+
+        const platform: string = data?.platform ?? 'twitter'
+        const id: string | undefined = data?.bookmark?.id
+        if (!id) {
+          notifyCollectionChanged({ refetchFeed: true })
+          return true
+        }
+
+        const q = new URLSearchParams({ hideArchived: 'false', filter: 'all', limit: '5' })
+        q.append('id', id)
+        q.append('idPlatform', platform)
+        const fres = await fetch(`/api/feed?${q}`)
+        if (!fres.ok) {
+          notifyCollectionChanged({ refetchFeed: true })
+          return true
+        }
+        const feedJson = await fres.json()
+        const saved: FeedItem | undefined = (feedJson.items ?? []).find(
+          (f: FeedItem) => (f.platform ?? 'twitter') === platform && f.id === id,
+        )
+        if (!saved) {
+          notifyCollectionChanged({ refetchFeed: true })
+          return true
+        }
+
+        const theaterItem = feedItemToTheaterItem(saved)
+        const key = theaterItemKey(theaterItem)
+        setPersonalSavedKeys((prev) => new Set(prev).add(key))
+        setPersonalQueue((prev) => {
+          const rest = prev.filter(
+            (f) =>
+              !(f.id === saved.id && (f.platform ?? 'twitter') === (saved.platform ?? 'twitter')),
+          )
+          return [saved, ...rest]
+        })
+        // My Collection: jump to the new save. Live: stay on the current post;
+        // the dock just gains a fresh card. Never leave `/` or `/collection`.
+        if (personalTab === 'collection') setPersonalIndex(0)
+        feedPrepend(theaterItem)
+
+        let placedInGrid = false
+        if (onCollectionAddedRef.current) {
+          onCollectionAddedRef.current(saved)
+          placedInGrid = true
+        }
+        notifyCollectionChanged({ refetchFeed: !placedInGrid })
+        return true
+      } catch {
+        return false
+      }
+    },
+    [feedPrepend, personalTab],
+  )
+
   const handleSharedTag = useCallback((item: TheaterItem) => {
     if (!item.bookmarkId) return
     setLiveTagTarget({ platform: item.platform, bookmarkId: item.bookmarkId })
@@ -602,6 +668,8 @@ export function TheaterShell({
   )
 
   const [muted, setMuted] = useState(true)
+  const [articleMode, setArticleMode] = useState(false)
+  const toggleArticleMode = useCallback(() => setArticleMode((v) => !v), [])
 
   // Sound preference survives full-page navigations within the theater —
   // paste-to-preview navigates with `window.location.assign`, which used to
@@ -665,13 +733,17 @@ export function TheaterShell({
   }, [loop, repeatMode])
 
   const isDesktop = useIsDesktopViewport()
-  // Desktop de-clutter: collapses the rail column for a full-bleed stage.
+  // Desktop de-clutter: collapses the dock for a full-bleed stage.
   // Desktop-only concept — mobile has its own independent de-clutter state
   // local to TheaterMobileChrome. Persists across item navigation (not reset
   // on `currentKey`), same as the mobile one.
   const [desktopDeclutter, setDesktopDeclutter] = useState(false)
   const onToggleDesktopDeclutter = useCallback(() => setDesktopDeclutter((v) => !v), [])
+  useTheaterStageTapDeclutter(desktopDeclutter, setDesktopDeclutter)
   const [currentKey, setCurrentKey] = useState<string | null>(null)
+  useEffect(() => {
+    setArticleMode(false)
+  }, [currentKey, personalIndex, isCollectionTab])
   // Virtual "end of feed" stage entered by advancing past the last item (spec
   // addendum: end-of-feed waiting stage). `currentKey` is deliberately left
   // pointing at the last real item while waiting — that's what makes goPrev
@@ -1317,12 +1389,12 @@ export function TheaterShell({
       // since-superseded timer must still be a no-op rather than advancing
       // past the repeating post.
       if (repeatCurrentActiveRef.current) return
-      if (progressKindFor(currentRef.current) !== 'timed') return
+      if (progressKindFor(currentRef.current, articleMode) !== 'timed') return
       goNext()
     }
     window.addEventListener('theater-advance', handleAdvance)
     return () => window.removeEventListener('theater-advance', handleAdvance)
-  }, [goNext, isCollectionTab])
+  }, [goNext, isCollectionTab, articleMode])
 
   // Prefetch at most one item ahead (extracted to useTheaterPrefetch.ts).
   useTheaterPrefetch(currentIndex, displayItems)
@@ -1673,7 +1745,10 @@ export function TheaterShell({
           overlay/actions, and <DesktopDock/> (a sibling, in-flow below) is
           the bottom filmstrip queue — no more side-by-side rail column. */}
       <div className="relative h-full w-full flex-1 overflow-hidden">
-        <div className="absolute inset-0">
+        {/* isolate + z-0: Read's video band is z-20 inside the stage. Without
+            a stacking context here that z-20 paints over sibling chrome (z-10
+            paste / flame / avatar) and steals those clicks. */}
+        <div className="absolute inset-0 isolate z-0" data-testid="theater-stage">
           {isCollectionTab ? (
             personalFinished ? (
               <CollectionAllClear
@@ -1689,6 +1764,7 @@ export function TheaterShell({
                 onEnded={personalAdvanceOnEnded}
                 tags={personalCurrentFeedItem.tags}
                 repeat={repeatCurrentActive}
+                articleMode={articleMode}
               />
             ) : null
           ) : isSharedUnavailableOnCurrent && current ? (
@@ -1711,6 +1787,7 @@ export function TheaterShell({
                 }}
                 photoCaption={false}
                 repeat={repeatCurrentActive}
+                articleMode={articleMode}
               />
               {waiting && (
                 <div className="absolute inset-0 z-10">
@@ -1743,7 +1820,10 @@ export function TheaterShell({
           kind={
             isDesktop
               ? progressKindForPin(
-                  collectionTabProgressKind(progressKindFor(chromeCurrent), isCollectionTab),
+                  collectionTabProgressKind(
+                    progressKindFor(chromeCurrent, articleMode),
+                    isCollectionTab,
+                  ),
                   repeatCurrentActive,
                 )
               : 'none'
@@ -1754,7 +1834,7 @@ export function TheaterShell({
             type="button"
             onClick={onToggleDesktopDeclutter}
             aria-label="Show controls"
-            className="absolute right-4 top-4 z-20 hidden h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md transition-colors hover:bg-black/70 lg:flex"
+            className="absolute bottom-6 left-5 z-20 hidden h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md transition-colors hover:bg-black/70 lg:flex"
           >
             <Minimize2 size={18} />
           </button>
@@ -1791,6 +1871,9 @@ export function TheaterShell({
           onSharedTag={mode === 'shared' ? handleSharedTag : undefined}
           itemTags={mode === 'shared' ? liveTagsByKey[chromeCurrentKey ?? ''] : undefined}
           accountTabs={sharedAccountTabs}
+          onPastePost={isPersonal ? handlePastePost : undefined}
+          articleMode={articleMode}
+          onToggleArticleMode={toggleArticleMode}
         />
         <DesktopStageChrome
           mode={mode}
@@ -1808,6 +1891,9 @@ export function TheaterShell({
           onSharedTag={mode === 'shared' ? handleSharedTag : undefined}
           itemTags={mode === 'shared' ? liveTagsByKey[chromeCurrentKey ?? ''] : undefined}
           accountTabs={sharedAccountTabs}
+          onPastePost={isPersonal ? handlePastePost : undefined}
+          articleMode={articleMode}
+          onToggleArticleMode={toggleArticleMode}
         />
         {/* Collection Archive undo toast — auto-dismisses after 5s
             (`armUndoDismiss`). Same placement on both viewports. `bottom-36`
@@ -1849,11 +1935,13 @@ export function TheaterShell({
         onPrev={chromeOnPrev}
         onNext={chromeOnNext}
         declutter={desktopDeclutter}
+        onToggleDeclutter={onToggleDesktopDeclutter}
         playlist={playlist}
         collection={personalChrome}
         repeatCurrent={repeatCurrentActive}
         repeatMode={displayRepeatMode}
         onCycleRepeat={cycleRepeatMode}
+        articleMode={articleMode}
       />
       {/* `?ytdebug=1`/`?avdebug=1` diagnostics overlay (YtDebugOverlay.tsx) —
           mounted ONCE here so it serves every stage (StageVideo/StageYouTube/

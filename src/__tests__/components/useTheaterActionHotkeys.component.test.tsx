@@ -45,6 +45,24 @@ describe('useTheaterActionHotkeys', () => {
     expect(mobileSave).not.toHaveBeenCalled()
   })
 
+  it('clicks Read / Watch when theater-toggle-article fires', () => {
+    const onRead = vi.fn()
+    function ReadToggle() {
+      const rootRef = useRef<HTMLDivElement>(null)
+      useTheaterActionHotkeys('desktop', rootRef)
+      return (
+        <div ref={rootRef}>
+          <button type="button" data-theater-action="read" onClick={onRead}>
+            Read
+          </button>
+        </div>
+      )
+    }
+    render(<ReadToggle />)
+    act(() => window.dispatchEvent(new Event('theater-toggle-article')))
+    expect(onRead).toHaveBeenCalledTimes(1)
+  })
+
   it('skips a disabled control and a missing action', () => {
     const onSave = vi.fn()
     function DisabledSave() {

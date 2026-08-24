@@ -1,6 +1,39 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
+
+/** User tapped the video or photo — chrome toggles overlays, does not pause. */
+export const THEATER_STAGE_TAP = 'theater-stage-tap'
+
+export function dispatchTheaterStageTap() {
+  window.dispatchEvent(new CustomEvent(THEATER_STAGE_TAP))
+}
+
+/**
+ * Stage tap = Instagram-style chrome toggle: first tap hides overlays and
+ * starts playback; second tap only restores overlays. Pause stays on the
+ * peek-bar / dock button (and Space).
+ */
+export function useTheaterStageTapDeclutter(
+  declutter: boolean,
+  setDeclutter: Dispatch<SetStateAction<boolean>>,
+) {
+  const declutterRef = useRef(declutter)
+  declutterRef.current = declutter
+
+  useEffect(() => {
+    const onTap = () => {
+      if (declutterRef.current) {
+        setDeclutter(false)
+        return
+      }
+      setDeclutter(true)
+      window.dispatchEvent(new CustomEvent('theater-resume'))
+    }
+    window.addEventListener(THEATER_STAGE_TAP, onTap)
+    return () => window.removeEventListener(THEATER_STAGE_TAP, onTap)
+  }, [setDeclutter])
+}
 
 /**
  * StageVideo / StageYouTube broadcast playing + mute on window. Desktop dock
@@ -20,11 +53,14 @@ export function useTheaterStageEvents() {
       const detail = (e as CustomEvent<{ muted: boolean }>).detail
       if (detail) setLiveMuted(detail.muted)
     }
+    const handleResume = () => setTimedPaused(false)
     window.addEventListener('theater-playing-state', handlePlaying)
     window.addEventListener('theater-muted-state', handleMuted)
+    window.addEventListener('theater-resume', handleResume)
     return () => {
       window.removeEventListener('theater-playing-state', handlePlaying)
       window.removeEventListener('theater-muted-state', handleMuted)
+      window.removeEventListener('theater-resume', handleResume)
     }
   }, [])
 

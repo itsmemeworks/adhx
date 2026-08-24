@@ -27,12 +27,21 @@ vi.mock('@/components/theater/StageVideo', () => ({
 // The probe + auto-advance guards live in `useInstagramStage` now, so that's
 // where `onEnded` has to land for an Instagram item; StageInstagram itself is
 // presentational (probing poster / embed fallback) and never gets it.
-const useInstagramStageSpy = vi.fn((_args: unknown) => ({
-  status: 'probing' as const,
-  slow: false,
-  src: null as string | null,
-  poster: null as string | null,
-}))
+const useInstagramStageSpy = vi.fn(
+  (
+    _args: unknown,
+  ): {
+    status: 'probing' | 'ready' | 'embed'
+    slow: boolean
+    src: string | null
+    poster: string | null
+  } => ({
+    status: 'probing',
+    slow: false,
+    src: null,
+    poster: null,
+  }),
+)
 vi.mock('@/components/theater/StageInstagram', () => ({
   useInstagramStage: (args: unknown) => useInstagramStageSpy(args),
   StageInstagram: () => <div data-testid="stage-instagram" />,
@@ -168,6 +177,109 @@ describe('CollectionStage: onEnded wiring to the video-capable stages', () => {
     )
     expect(getByTestId('stage-text').dataset.photo).toBe('true')
     expect(getByTestId('stage-text').dataset.photoCaption).toBe('false')
+  })
+
+  it('plays a video+quote item full-bleed by default', () => {
+    const { getByTestId, queryByTestId } = render(
+      <CollectionStage
+        feedItem={feedItem({
+          media: [{ mediaType: 'video' }] as FeedItem['media'],
+          quotedTweet: {
+            id: 'q1',
+            author: 'bob',
+            text: 'quoted clip',
+            media: [{ mediaType: 'video', thumbnailUrl: 'https://example.com/q.jpg' }],
+          } as FeedItem,
+        })}
+        muted
+        onRequestUnmute={vi.fn()}
+        onEnded={vi.fn()}
+      />,
+    )
+    expect(getByTestId('stage-video')).toBeInTheDocument()
+    expect(queryByTestId('stage-text')).toBeNull()
+  })
+
+  it('opens a photo as the typeset reader in article mode, not the photo variant', () => {
+    const { getByTestId } = render(
+      <CollectionStage
+        feedItem={feedItem({
+          media: [
+            { mediaType: 'photo', thumbnailUrl: 'https://example.com/p.jpg' },
+          ] as FeedItem['media'],
+          text: 'a long photo caption',
+        })}
+        muted
+        onRequestUnmute={vi.fn()}
+        articleMode
+      />,
+    )
+    expect(getByTestId('stage-text').dataset.photo).toBe('false')
+  })
+
+  it('keeps the YouTube iframe slot and stacks the reader in article mode', () => {
+    const { getByTestId } = render(
+      <CollectionStage
+        feedItem={feedItem({
+          platform: 'youtube',
+          media: [{ mediaType: 'video' }] as FeedItem['media'],
+          text: 'a long short caption',
+        })}
+        muted
+        onRequestUnmute={vi.fn()}
+        articleMode
+      />,
+    )
+    expect(getByTestId('stage-youtube')).toBeInTheDocument()
+    expect(getByTestId('stage-text')).toBeInTheDocument()
+    expect(getByTestId('article-video-fade')).toBeInTheDocument()
+  })
+
+  it('keeps a ready Instagram reel playing in article mode', () => {
+    useInstagramStageSpy.mockReturnValueOnce({
+      status: 'ready' as const,
+      slow: false,
+      src: 'https://example.com/reel.mp4',
+      poster: 'https://example.com/reel.jpg',
+    })
+    const { getByTestId } = render(
+      <CollectionStage
+        feedItem={feedItem({
+          platform: 'instagram',
+          media: [{ mediaType: 'video' }] as FeedItem['media'],
+          text: 'a long reel caption',
+        })}
+        muted
+        onRequestUnmute={vi.fn()}
+        articleMode
+      />,
+    )
+    expect(getByTestId('stage-video')).toBeInTheDocument()
+    expect(getByTestId('stage-text')).toBeInTheDocument()
+    expect(getByTestId('article-video-fade')).toBeInTheDocument()
+  })
+
+  it('keeps StageVideo playing in article mode and stacks the reader under it', () => {
+    const { getByTestId } = render(
+      <CollectionStage
+        feedItem={feedItem({
+          media: [{ mediaType: 'video' }] as FeedItem['media'],
+          quotedTweet: {
+            id: 'q1',
+            author: 'bob',
+            text: 'quoted clip',
+            media: [{ mediaType: 'video', thumbnailUrl: 'https://example.com/q.jpg' }],
+          } as FeedItem,
+        })}
+        muted
+        onRequestUnmute={vi.fn()}
+        articleMode
+      />,
+    )
+    expect(getByTestId('stage-video')).toBeInTheDocument()
+    expect(getByTestId('stage-text')).toBeInTheDocument()
+    expect(getByTestId('article-video-fade')).toBeInTheDocument()
+    expect(getByTestId('article-video-fade').parentElement?.className).toContain('isolate')
   })
 
   it('a text-only item ignores onEnded (StageText has no such affordance) and still renders', () => {

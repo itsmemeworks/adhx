@@ -520,3 +520,45 @@ describe('StageVideo: a failed video does not stall the playlist', () => {
     })
   })
 })
+
+describe('StageVideo stage tap is declutter, not play/pause', () => {
+  afterEach(() => {
+    HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue(undefined)
+  })
+
+  function renderVideo() {
+    const onRequestUnmute = vi.fn()
+    const view = render(
+      <StageVideo
+        item={makeItem()}
+        src="/api/media/video?a=1"
+        poster={null}
+        muted
+        onRequestUnmute={onRequestUnmute}
+      />,
+    )
+    return { ...view, onRequestUnmute }
+  }
+
+  it('dispatches theater-stage-tap and does not pause a playing video', () => {
+    const heard = vi.fn()
+    window.addEventListener('theater-stage-tap', heard)
+    const pause = vi.spyOn(HTMLMediaElement.prototype, 'pause')
+    const { container, onRequestUnmute } = renderVideo()
+    const video = container.querySelector('video') as HTMLVideoElement
+    Object.defineProperty(video, 'paused', { configurable: true, get: () => false })
+
+    fireEvent.click(container.firstElementChild as Element)
+
+    expect(heard).toHaveBeenCalledTimes(1)
+    expect(pause).not.toHaveBeenCalled()
+    expect(onRequestUnmute).not.toHaveBeenCalled()
+    window.removeEventListener('theater-stage-tap', heard)
+  })
+
+  it('does not unmute on tap — sound stays on the chrome audio button', () => {
+    const { container, onRequestUnmute } = renderVideo()
+    fireEvent.click(container.firstElementChild as Element)
+    expect(onRequestUnmute).not.toHaveBeenCalled()
+  })
+})

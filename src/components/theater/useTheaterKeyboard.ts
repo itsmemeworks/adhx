@@ -3,7 +3,7 @@
 /**
  * Global keydown handling for TheaterShell. One keymap for every theater
  * surface (Live, collection, playlist, shared): arrows / j k next-prev,
- * Space play/pause, M mute, S/T/L/C/D/O/A action buttons, . menu,
+ * Space play/pause, M mute, S/T/L/C/D/O/A/R action buttons, . menu,
  * Shift+? help. Collection still has U (undo Archive) and Escape (close).
  * `personalKeyAction` is re-exported from TheaterShell for tests.
  */
@@ -138,6 +138,7 @@ export function useTheaterKeyboard({
         case 'open':
         case 'archive':
         case 'toggleMenu':
+        case 'toggleArticle':
           e.preventDefault()
           window.dispatchEvent(new CustomEvent(THEATER_ACTION_EVENTS[action]))
           break

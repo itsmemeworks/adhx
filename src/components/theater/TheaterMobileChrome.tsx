@@ -14,11 +14,11 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { useTheaterActionHotkeys } from './useTheaterActionHotkeys'
 import { useSheetDrag } from './useSheetDrag'
 import {
   Loader2,
   Share2,
-  ExternalLink,
   Bookmark,
   Check,
   Repeat,
@@ -32,10 +32,9 @@ import {
   VolumeX,
   Minimize2,
   Maximize2,
-  X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { MatterLogo } from '@/components/matter'
+import { MatterLogo, PlatformGlyph } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { PasteLinkButton } from '@/components/PasteLinkButton'
 import { authorProfileUrl, previewPath, sourceUrl } from '@/lib/activity/preview-path'
@@ -44,10 +43,17 @@ import { inferType } from '@/lib/trending/filter'
 import { useSendFile } from './useSendFile'
 import { fileSendCopy, textCopyAction } from './send-action'
 import { useTheaterCopy } from './useTheaterCopy'
-import { useTheaterStageEvents } from './useTheaterStageEvents'
+import { useTheaterStageEvents, useTheaterStageTapDeclutter } from './useTheaterStageEvents'
 import { useClampExpand } from './useClampExpand'
-import { theaterItemKey, PLATFORM_LABEL, REPEAT_MODE_LABEL } from './types'
-import { TheaterLinkedText } from './TheaterText'
+import {
+  theaterItemKey,
+  isQuoteReader,
+  offerArticleMode,
+  PLATFORM_LABEL,
+  REPEAT_MODE_LABEL,
+} from './types'
+import { QuoteArticleToggle } from './QuoteArticleToggle'
+import { TheaterCaption } from './TheaterCaption'
 import {
   TheaterProgressLine,
   progressKindFor,
@@ -57,12 +63,11 @@ import {
 import { UpNextList } from './UpNextList'
 import { SavePlaylistButton } from './SavePlaylistButton'
 import { SavePostButton, PersonalLiveSaveButton } from './SavePostButton'
-import { FlameChip, PlatformTimeChip } from './TheaterMetaChips'
+import { FlameChip } from './TheaterMetaChips'
 import { TheaterTagChips } from './TheaterTagChips'
 import { TheaterCollectionActions } from './TheaterCollectionActions'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
 import { StageIconButton } from './stage-primitives'
-import { useTheaterActionHotkeys } from './useTheaterActionHotkeys'
 import { logAV } from './YtDebugOverlay'
 import type {
   RepeatMode,
@@ -148,6 +153,14 @@ export interface TheaterMobileChromeProps {
   itemTags?: string[]
   /** Signed-in shared preview: Live ⇄ My Collection in the avatar menu + close. */
   accountTabs?: TheaterAccountTabs
+  /**
+   * Personal Live / My Collection: add the pasted post in place instead of
+   * navigating to its preview page. Same contract as DesktopStageChrome.
+   */
+  onPastePost?: (url: string) => boolean | Promise<boolean>
+  /** Video/photo + quote: stacked article reader instead of full-bleed media. */
+  articleMode?: boolean
+  onToggleArticleMode?: () => void
 }
 
 /** Height of the collapsed sheet's peek bar — kept in sync with the transform below. Two rows now (drag handle + the nav/pause/audio/de-clutter controls), taller than the old label-only bar. */
@@ -199,6 +212,9 @@ export function TheaterMobileChrome({
   onSharedTag,
   itemTags,
   accountTabs,
+  onPastePost,
+  articleMode = false,
+  onToggleArticleMode,
 }: TheaterMobileChromeProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -214,7 +230,7 @@ export function TheaterMobileChrome({
   const { textCopied, copyText } = useTheaterCopy(current, (current?.text || '').trim())
   const rootRef = useRef<HTMLDivElement>(null)
   useTheaterActionHotkeys('mobile', rootRef)
-  const { ref: captionRef, expanded, setExpanded, overflowing } = useClampExpand(currentKey)
+  const { ref: captionRef, overflowing } = useClampExpand(currentKey)
 
   // `mediaKind` is the REAL content kind — drives the audio/pause buttons,
   // `paused`/`soundPulse` state, and the pause/resume handler in every tab.
@@ -226,26 +242,27 @@ export function TheaterMobileChrome({
   // pause controls for collection-tab videos (which still play via
   // StageVideo/StageInstagram/StageYouTube and DO keep the 'video' kind —
   // "My Collection is just a different playlist in that same theater").
-  const mediaKind = progressKindFor(current)
+  const mediaKind = progressKindFor(current, articleMode)
   const progressKind = progressKindForPin(
     collectionTabProgressKind(mediaKind, collection?.tab === 'collection'),
     repeatCurrent,
   )
 
   // Pause/play button state. `'video'`-kind items mirror StageVideo's real
-  // playing state (so a tap on the video itself, or an autoplay retry, keeps
-  // the button honest); `'timed'`-kind items have no underlying element to
-  // ask, so the button owns that state itself, reset to playing whenever the
+  // playing state (so the peek-bar button, or an autoplay retry, keeps the
+  // button honest); `'timed'`-kind items have no underlying element to ask,
+  // so the button owns that state itself, reset to playing whenever the
   // current post changes (a paused state must never leak to the next post).
   const { videoPlaying, timedPaused, setTimedPaused, liveMuted, setLiveMuted } =
     useTheaterStageEvents()
   // De-clutter: hides the top and bottom scrims (brand + caption/actions) for
   // an unobstructed view of the stage. The peek bar (nav/pause/audio + the
   // up-next sheet) deliberately stays visible and functional — the point is
-  // an unobstructed view while still being able to skip quickly. Deliberately
-  // NOT reset on `currentKey` — a viewer who de-clutters wants it to stay
-  // that way while browsing, not fight it back open on every navigation.
+  // an unobstructed view while still being able to skip quickly. A tap on
+  // the video/photo also toggles this (and starts playback on enter).
+  // Deliberately NOT reset on `currentKey`.
   const [declutter, setDeclutter] = useState(false)
+  useTheaterStageTapDeclutter(declutter, setDeclutter)
 
   useEffect(
     () => () => {
@@ -359,8 +376,10 @@ export function TheaterMobileChrome({
   // (and the author header) in the bottom scrim doubles it up and buries the
   // stage. Those posts get a compact scrim: chip + actions only.
   const kind = current ? inferType(current) : null
-  const textLike = kind !== null && ['text', 'quote', 'article'].includes(kind)
-  const caption = textLike ? '' : (current?.text || '').trim()
+  const textLike =
+    (kind !== null && ['text', 'quote', 'article'].includes(kind)) || isQuoteReader(current, false)
+  const showArticleToggle = offerArticleMode(current, overflowing, articleMode)
+  const caption = textLike || articleMode ? '' : (current?.text || '').trim()
   const fileAction = fileSendCopy(kind)
   const copyAction = textCopyAction(kind)
 
@@ -368,12 +387,11 @@ export function TheaterMobileChrome({
     <div ref={rootRef} className="pointer-events-none absolute inset-0 z-10 lg:hidden">
       <TheaterProgressLine itemKey={currentKey} kind={progressKind} />
 
-      {/* Top scrim: brand (left) + post meta (right) — the flame/trend badge
-          and the platform+time link-out chip live HERE now, one fixed
-          location on every content type, instead of repeating per-row in the
-          bottom scrim. De-clutter hides this whole scrim (meta included) —
-          expected: immersion hides meta too. Collection mode replaces post
-          meta with the tag/curator identity chrome (two rows). */}
+      {/* Top scrim: brand (left) + flame/trend (right). De-clutter hides this
+          whole scrim (meta included) — expected: immersion hides meta too.
+          Collection mode replaces post meta with the tag/curator identity
+          chrome (two rows). Open-on-source is the platform glyph in the
+          action row, not a time chip. */}
       {collection ? (
         <div
           className={cn(
@@ -386,6 +404,10 @@ export function TheaterMobileChrome({
             <MatterLogo size={16} className="[&>span]:text-white" />
           </a>
           <div className="flex flex-none items-center gap-1.5">
+            {current ? <FlameChip trendCount={trendCount} /> : null}
+            {/* Same add-in-place paste as desktop — stay on Live / My
+                Collection; do not bounce to a preview page. */}
+            <PasteLinkButton iconOnly onPastePost={onPastePost} />
             {/* Live ⇄ My Collection lives in this menu on mobile, as two
                 sub-options under Theater (owner: a tab pill up here "is
                 going to definitely cause overlap with the logo, the play
@@ -398,14 +420,6 @@ export function TheaterMobileChrome({
               theaterActive
               theaterTabs={{ tab: collection.tab, onTabChange: collection.onTabChange }}
             />
-            <button
-              type="button"
-              onClick={collection.onClose}
-              aria-label="Close"
-              className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full border border-white/25 bg-white/[0.14] text-white"
-            >
-              <X size={16} />
-            </button>
           </div>
         </div>
       ) : playlist ? (
@@ -447,18 +461,13 @@ export function TheaterMobileChrome({
             <MatterLogo size={16} className="[&>span]:text-white" />
           </a>
           <div className="flex flex-none items-center gap-1.5">
-            {current && (
-              <div className="flex flex-none items-center gap-2">
-                <FlameChip trendCount={trendCount} />
-                <PlatformTimeChip item={current} />
-              </div>
-            )}
-            {/* Mobile equivalent of the desktop top bar's ⌘V paste-to-preview
+            {current ? <FlameChip trendCount={trendCount} /> : null}
+            {/* Mobile equivalent of the desktop top bar's paste button (⌘V still works there)
                 input (spec §8/DesktopStageChrome) — touch Safari has no
                 paste gesture, so this covers the signed-out home theater and
                 shared preview pages (collection/collection top scrims above
                 have their own chrome and skip this). */}
-            <PasteLinkButton iconOnly />
+            <PasteLinkButton iconOnly onPastePost={onPastePost} />
             {/* Signed-out visitors here (the home theater + shared preview
                 pages) get a burger fallback in this same slot — Theater /
                 Leaderboard / Privacy / Sign in — instead of no navigation at all.
@@ -477,28 +486,21 @@ export function TheaterMobileChrome({
                   : undefined
               }
             />
-            {accountTabs ? (
-              <button
-                type="button"
-                onClick={accountTabs.onClose}
-                aria-label="Close"
-                className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full border border-white/25 bg-white/[0.14] text-white"
-              >
-                <X size={16} />
-              </button>
-            ) : null}
           </div>
         </div>
       )}
 
       {/* Bottom scrim: author/caption + Send / Save / Share / Open. Padded
           above the sheet's peek bar (opaque, themed) so the gradient tucks
-          under it. */}
+          under it. The scrim itself is pointer-events-none so text-like
+          posts (article/tweet) stay scrollable in the empty caption zone —
+          that's where a thumb naturally drags. Only the caption (media) and
+          the action row capture taps. */}
       {current && (
         <div
           className={cn(
-            'pointer-events-auto absolute inset-x-0 bottom-0 flex flex-col gap-3 px-4 pb-3 pt-12 transition-[opacity,transform] duration-200 ease-out',
-            declutter && 'pointer-events-none translate-y-3 opacity-0',
+            'pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-3 px-4 pb-3 pt-12 transition-[opacity,transform] duration-200 ease-out',
+            declutter && 'translate-y-3 opacity-0',
           )}
           style={{
             paddingBottom: `calc(${PEEK_H} + 0.75rem)`,
@@ -506,12 +508,13 @@ export function TheaterMobileChrome({
               'linear-gradient(to top, rgba(11,11,17,.88) 0%, rgba(11,11,17,.55) 55%, transparent 100%)',
           }}
         >
-          <div>
+          <div className={cn((!textLike || caption) && 'pointer-events-auto')}>
             {/* The poster's avatar + name — only for media posts. Text-like
                 posts (text/quote/article) show the author on the stage
                 itself, so this row stays hidden for them to avoid doubling
-                up. */}
+                up. Caption stays two lines; Read is on the action row. */}
             {!textLike &&
+              !articleMode &&
               (() => {
                 const profileUrl = authorProfileUrl(current.platform, current.author)
                 const inner = (
@@ -542,199 +545,191 @@ export function TheaterMobileChrome({
                   <div className="flex items-center gap-2">{inner}</div>
                 )
               })()}
-            {caption && (
-              <div
-                className={cn(
-                  'mt-1.5',
-                  expanded && 'rounded-lg bg-black/70 px-2 py-1.5 backdrop-blur-sm',
-                )}
-              >
-                <p
-                  ref={captionRef}
-                  className={cn(
-                    'text-[13.5px] leading-snug text-white/90 [text-shadow:0_1px_3px_rgba(0,0,0,.6)]',
-                    expanded ? 'max-h-[38dvh] overflow-y-auto overscroll-contain' : 'line-clamp-2',
-                  )}
-                >
-                  <TheaterLinkedText
-                    platform={current.platform}
-                    text={caption}
-                    hasMedia
-                    links={current?.textLinks}
-                    hideTweetLinks={!!current?.quote}
-                  />
-                </p>
-                {overflowing && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setExpanded((v) => !v)
-                    }}
-                    onTouchEnd={(e) => e.stopPropagation()}
-                    className="mt-1 flex min-h-[44px] items-center text-[12.5px] font-semibold text-white/80 [text-shadow:0_1px_3px_rgba(0,0,0,.6)]"
-                  >
-                    {expanded ? 'less' : 'more'}
-                  </button>
-                )}
-              </div>
+            {caption && !articleMode && (
+              <TheaterCaption
+                captionRef={captionRef}
+                platform={current.platform}
+                text={caption}
+                links={current?.textLinks}
+                hideTweetLinks={!!current?.quote}
+                className="mt-1.5 text-[13.5px] leading-snug"
+              />
             )}
-
-            {/* Tag chips — collection / live / signed-in shared preview. */}
-            <TheaterTagChips
-              tags={displayTags}
-              className="mt-1.5 flex flex-wrap items-center gap-1.5"
-            />
           </div>
 
-          <div className="flex items-center justify-end gap-2">
-            {sendFile.supported ? (
-              <StageIconButton
-                onClick={() => {
-                  // No awaits before this call — the tap must stay a fresh
-                  // user gesture for iOS's share sheet (spec §2/§6).
-                  void sendFile.send()
-                }}
-                disabled={sendFile.sending}
-                title={
-                  sendFile.mode === 'share'
-                    ? `Opens your share sheet with the ${kind === 'photo' ? 'photo' : 'video'}`
-                    : fileAction.title
-                }
-                aria-label={
-                  sendFile.sending
-                    ? 'Getting file'
-                    : sendFile.primed
-                      ? 'Tap again'
-                      : fileAction.label
-                }
-                className={sendFile.primed ? ICON_SAVE : undefined}
-                data-theater-action="download"
-              >
-                {sendFile.sending ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <fileAction.Icon size={16} />
-                )}
-              </StageIconButton>
-            ) : textLike && (current.text || '').trim() ? (
-              <StageIconButton
-                onClick={() => void copyText()}
-                title={copyAction.title}
-                aria-label={textCopied ? copyAction.copiedLabel : copyAction.idleLabel}
-                data-theater-action="copy"
-              >
-                {textCopied ? (
-                  <Check size={16} className="text-done" />
-                ) : (
-                  <copyAction.Icon size={16} />
-                )}
-              </StageIconButton>
-            ) : null}
-            {playlist && isPlaylistOwner ? (
-              <StageIconButton
-                href={`/library?tag=${encodeURIComponent(playlist.tag)}`}
-                aria-label="Manage playlist"
-              >
-                <TagIcon size={16} />
-              </StageIconButton>
-            ) : playlist ? (
-              <SavePlaylistButton
-                count={playlist.count}
-                status={saveStatus}
-                onSave={() => onSavePlaylist?.()}
+          <div className="pointer-events-auto flex items-center gap-2">
+            {showArticleToggle && onToggleArticleMode ? (
+              <QuoteArticleToggle
+                articleMode={articleMode}
+                onToggle={onToggleArticleMode}
                 iconOnly
-                className={ICON_SAVE}
               />
-            ) : collection?.tab === 'collection' ? (
-              <StageIconButton
-                onClick={(e) => {
-                  e.stopPropagation()
-                  collection.onTag()
-                }}
-                onTouchEnd={(e) => e.stopPropagation()}
-                aria-label={tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}
-                data-theater-action="tag"
-              >
-                <TagIcon size={16} fill={tagCount > 0 ? 'currentColor' : 'none'} />
-              </StageIconButton>
-            ) : collection?.tab === 'live' ? (
-              <>
+            ) : null}
+            <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+              <TheaterTagChips
+                tags={displayTags}
+                className="flex min-w-0 flex-nowrap items-center justify-end gap-1.5 overflow-x-auto"
+              />
+              {sendFile.supported ? (
+                <StageIconButton
+                  onClick={() => {
+                    // No awaits before this call — the tap must stay a fresh
+                    // user gesture for iOS's share sheet (spec §2/§6).
+                    void sendFile.send()
+                  }}
+                  disabled={sendFile.sending}
+                  title={
+                    sendFile.mode === 'share'
+                      ? `Opens your share sheet with the ${kind === 'photo' ? 'photo' : 'video'}`
+                      : fileAction.title
+                  }
+                  aria-label={
+                    sendFile.sending
+                      ? 'Getting file'
+                      : sendFile.primed
+                        ? 'Tap again'
+                        : fileAction.label
+                  }
+                  className={sendFile.primed ? ICON_SAVE : undefined}
+                  data-theater-action="download"
+                >
+                  {sendFile.sending ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <fileAction.Icon size={16} />
+                  )}
+                </StageIconButton>
+              ) : textLike && (current.text || '').trim() ? (
+                <StageIconButton
+                  onClick={() => void copyText()}
+                  title={copyAction.title}
+                  aria-label={textCopied ? copyAction.copiedLabel : copyAction.idleLabel}
+                  data-theater-action="copy"
+                >
+                  {textCopied ? (
+                    <Check size={16} className="text-done" />
+                  ) : (
+                    <copyAction.Icon size={16} />
+                  )}
+                </StageIconButton>
+              ) : null}
+              {playlist && isPlaylistOwner ? (
+                <StageIconButton
+                  href={`/library?tag=${encodeURIComponent(playlist.tag)}`}
+                  aria-label="Manage playlist"
+                >
+                  <TagIcon size={16} />
+                </StageIconButton>
+              ) : playlist ? (
+                <SavePlaylistButton
+                  count={playlist.count}
+                  status={saveStatus}
+                  onSave={() => onSavePlaylist?.()}
+                  iconOnly
+                  className={ICON_SAVE}
+                />
+              ) : collection?.tab === 'collection' ? (
                 <StageIconButton
                   onClick={(e) => {
                     e.stopPropagation()
-                    collection.onLiveTag?.(current)
+                    collection.onTag()
                   }}
                   onTouchEnd={(e) => e.stopPropagation()}
-                  aria-label={tagCount > 0 ? `Tag · ${tagCount}` : 'Tag this post'}
+                  aria-label={tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}
                   data-theater-action="tag"
                 >
-                  <TagIcon size={16} fill={tagCount > 0 ? 'currentColor' : 'none'} />
+                  <TagIcon
+                    size={16}
+                    className={tagCount > 0 ? 'text-clay' : undefined}
+                    fill={tagCount > 0 ? 'currentColor' : 'none'}
+                  />
                 </StageIconButton>
-                <PersonalLiveSaveButton
+              ) : collection?.tab === 'live' ? (
+                <>
+                  <StageIconButton
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      collection.onLiveTag?.(current)
+                    }}
+                    onTouchEnd={(e) => e.stopPropagation()}
+                    aria-label={tagCount > 0 ? `Tag · ${tagCount}` : 'Tag this post'}
+                    data-theater-action="tag"
+                  >
+                    <TagIcon
+                      size={16}
+                      className={tagCount > 0 ? 'text-clay' : undefined}
+                      fill={tagCount > 0 ? 'currentColor' : 'none'}
+                    />
+                  </StageIconButton>
+                  <PersonalLiveSaveButton
+                    current={current}
+                    collection={collection}
+                    className={cn(
+                      'inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border text-white',
+                      ICON_SAVE,
+                    )}
+                    iconSize={16}
+                    iconOnly
+                  />
+                </>
+              ) : mode === 'shared' && authed ? (
+                <SavePostButton
                   current={current}
-                  collection={collection}
+                  iconOnly
                   className={cn(
-                    'inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border bg-white/[0.14] text-white',
+                    'inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border text-white disabled:opacity-70',
                     ICON_SAVE,
                   )}
-                  iconSize={16}
-                  iconOnly
+                  tags={displayTags}
+                  onTag={onSharedTag ? () => onSharedTag(current) : undefined}
                 />
-              </>
-            ) : mode === 'shared' && authed ? (
-              <SavePostButton
-                current={current}
-                iconOnly
-                className={cn(
-                  'inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border bg-white/[0.14] text-white disabled:opacity-70',
-                  ICON_SAVE,
-                )}
-                tags={displayTags}
-                onTag={onSharedTag ? () => onSharedTag(current) : undefined}
-              />
-            ) : (
-              <StageIconButton
-                onClick={() => onRequestSignIn?.()}
-                aria-label="Save"
-                className={ICON_SAVE}
-                data-theater-action="save"
-              >
-                <Bookmark size={16} />
-              </StageIconButton>
-            )}
-            <StageIconButton
-              onClick={() => void handleShare()}
-              aria-label="Share link"
-              data-theater-action="link"
-            >
-              {copied ? <Check size={16} className="text-done" /> : <Share2 size={16} />}
-            </StageIconButton>
-            {(() => {
-              const openUrl = sourceUrl(current.platform, current.author, current.bookmarkId ?? '')
-              if (!openUrl) return null
-              const platformLabel = PLATFORM_LABEL[current.platform] ?? current.platform
-              return (
+              ) : (
                 <StageIconButton
-                  href={openUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={`Open on ${platformLabel}`}
-                  data-theater-action="open"
-                  onClick={() =>
-                    pingAnalytic('post.open', {
-                      platform: current.platform,
-                      id: current.bookmarkId || undefined,
-                    })
-                  }
+                  onClick={() => onRequestSignIn?.()}
+                  aria-label="Save"
+                  className={ICON_SAVE}
+                  data-theater-action="save"
                 >
-                  <ExternalLink size={16} />
+                  <Bookmark size={16} />
                 </StageIconButton>
-              )
-            })()}
-            {collection?.tab === 'collection' && (
-              <TheaterCollectionActions collection={collection} variant="mobile" />
-            )}
+              )}
+              <StageIconButton
+                onClick={() => void handleShare()}
+                aria-label="Share link"
+                data-theater-action="link"
+              >
+                {copied ? <Check size={16} className="text-done" /> : <Share2 size={16} />}
+              </StageIconButton>
+              {(() => {
+                const openUrl = sourceUrl(
+                  current.platform,
+                  current.author,
+                  current.bookmarkId ?? '',
+                )
+                if (!openUrl) return null
+                const platformLabel = PLATFORM_LABEL[current.platform] ?? current.platform
+                return (
+                  <StageIconButton
+                    href={openUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Open on ${platformLabel}`}
+                    data-theater-action="open"
+                    onClick={() =>
+                      pingAnalytic('post.open', {
+                        platform: current.platform,
+                        id: current.bookmarkId || undefined,
+                      })
+                    }
+                  >
+                    <PlatformGlyph platform={current.platform} size={16} />
+                  </StageIconButton>
+                )
+              })()}
+              {collection?.tab === 'collection' && (
+                <TheaterCollectionActions collection={collection} variant="mobile" />
+              )}
+            </div>
           </div>
         </div>
       )}

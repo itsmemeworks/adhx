@@ -19,6 +19,7 @@ test.describe('theater shortcuts (signed out)', () => {
     const help = page.getByRole('dialog', { name: 'Keyboard shortcuts' })
     await expect(help).toBeVisible()
     await expect(help.getByText('Play / pause')).toBeVisible()
+    await expect(help.getByText('Read / Watch')).toBeVisible()
     await expect(help.getByText('Paste a link')).toBeVisible()
 
     await page.keyboard.press('ArrowRight')
@@ -34,6 +35,7 @@ test.describe('theater shortcuts (signed out)', () => {
   test('. opens the signed-out menu; S opens sign-in', async ({ page }) => {
     await page.goto('/')
     await expectTheaterReady(page)
+    await expect(page.getByRole('button', { name: 'Menu' })).toBeVisible()
 
     await page.keyboard.press('.')
     await expect(page.getByRole('menu')).toBeVisible()
@@ -43,6 +45,19 @@ test.describe('theater shortcuts (signed out)', () => {
 
     await page.keyboard.press('s')
     await expectSignInModal(page)
+  })
+
+  test('R toggles Read / Watch on a quoted video', async ({ page }) => {
+    test.setTimeout(90_000)
+    await page.goto(`/${POST.quoted.author}/status/${POST.quoted.id}`)
+    await expectTheaterReady(page)
+    await expect(page.getByRole('button', { name: 'Read' })).toBeVisible()
+
+    await page.keyboard.press('r')
+    await expect(page.getByRole('button', { name: 'Watch' })).toBeVisible()
+
+    await page.keyboard.press('r')
+    await expect(page.getByRole('button', { name: 'Read' })).toBeVisible()
   })
 })
 
@@ -76,6 +91,7 @@ authedTest.describe('theater shortcuts (signed in)', () => {
   authedTest('. opens the account menu', async ({ page }) => {
     await page.goto('/')
     await expectTheaterReady(page)
+    await expect(page.getByRole('button', { name: 'Account menu' })).toBeVisible()
     await page.keyboard.press('.')
     await expect(page.getByRole('menu')).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Library' })).toBeVisible()

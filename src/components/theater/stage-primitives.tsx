@@ -10,6 +10,60 @@
 import type { MouseEvent, ReactNode, TouchEvent } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
+import { PlatformChip } from '@/components/matter'
+import { authorProfileUrl } from '@/lib/activity/preview-path'
+import { PLATFORM_LABEL, type TheaterItem } from './types'
+import { StageGlass } from './StageGlass'
+
+/**
+ * Bottom padding on scrollable text/article stages so the last lines can
+ * sit above the overlay action row. Mobile also clears the peek bar
+ * (`PEEK_H` 4.25rem in TheaterMobileChrome) + the 0.75rem scrim gap +
+ * the 44px action pills + a little air. Desktop only needs the action
+ * pills (`absolute bottom-6`).
+ */
+export const STAGE_TEXT_SCROLL_PAD = 'pb-[calc(4.25rem+0.75rem+44px+1.25rem)] lg:pb-24'
+
+/**
+ * Top padding on the typeset tweet column so the author row clears the
+ * theater chrome (desktop brand + paste/avatar cluster; mobile top scrim).
+ * Short posts still vertically center — this pad is inside that block.
+ */
+export const STAGE_TEXT_TOP_PAD = 'pt-24 lg:pt-28'
+
+/**
+ * Read-mode root. `isolate` keeps the band's z-20 (and the fade's z-25)
+ * inside this box so they cannot paint over the theater chrome (sibling
+ * `z-10` paste / flame / avatar). Do not drop those z-indexes — the
+ * clip has to sit above the article pane.
+ */
+export const STAGE_ARTICLE_ROOT = 'relative isolate h-full w-full'
+
+/**
+ * When Read keeps the parent video playing, the player sits in this top
+ * band. Never mask, fade, or blur the clip — the fade lives *under* it.
+ */
+export const STAGE_ARTICLE_VIDEO_BAND =
+  'absolute inset-x-0 top-0 z-20 h-[38dvh] overflow-hidden lg:h-[42vh]'
+export const STAGE_ARTICLE_TEXT_PANE = 'absolute inset-0 z-10'
+/** First line sits below the fade so Read opens at full contrast. */
+export const STAGE_ARTICLE_UNDER_BAND_PAD = 'pt-[calc(38dvh+3.25rem)] lg:pt-[calc(42vh+3.25rem)]'
+
+/**
+ * Stage-black gradient in the strip *below* the video (never overlapping
+ * it). Text scrolling through this zone fades out before it tucks under
+ * the clip. Sibling of the band — the band's overflow would clip it.
+ */
+export function StageArticleVideoFade() {
+  return (
+    <div
+      aria-hidden
+      data-testid="article-video-fade"
+      className="pointer-events-none absolute inset-x-0 top-[38dvh] z-[25] h-12 bg-gradient-to-b from-[#08070a] to-transparent lg:top-[42vh]"
+    />
+  )
+}
 
 /**
  * 44px icon-button chrome (dark scrim actions) — was repeated identically 4×
@@ -21,7 +75,7 @@ import { cn } from '@/lib/utils'
  * only these are actually used across the 4 call sites.
  */
 const STAGE_ICON_BUTTON_CLASS =
-  'inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 bg-white/[0.14] text-white disabled:opacity-70'
+  'inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 text-white disabled:opacity-70'
 
 export interface StageIconButtonProps {
   href?: string
@@ -53,7 +107,8 @@ export function StageIconButton({
   const cls = cn(STAGE_ICON_BUTTON_CLASS, className)
   if (href) {
     return (
-      <a
+      <StageGlass
+        as="a"
         href={href}
         target={target}
         rel={rel}
@@ -63,11 +118,12 @@ export function StageIconButton({
         {...rest}
       >
         {children}
-      </a>
+      </StageGlass>
     )
   }
   return (
-    <button
+    <StageGlass
+      as="button"
       type="button"
       title={title}
       disabled={disabled}
@@ -77,7 +133,7 @@ export function StageIconButton({
       {...rest}
     >
       {children}
-    </button>
+    </StageGlass>
   )
 }
 
@@ -123,6 +179,45 @@ export function StageFrame({ children }: { children: ReactNode }) {
   return (
     <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-[#08070a]">
       {children}
+    </div>
+  )
+}
+
+/**
+ * Tweet-style author row on text/quote/article stages — avatar + name +
+ * `@handle` + platform chip. Links to the creator's profile on their own
+ * platform (same `authorProfileUrl` the media chrome uses). Plain row when
+ * there's no handle.
+ */
+export function StageAuthorRow({ item }: { item: TheaterItem }) {
+  const handle = (item.author || '').replace(/^@+/, '').trim()
+  const profileUrl = authorProfileUrl(item.platform, item.author ?? '')
+  const authorName = item.authorName || (handle ? `@${handle}` : 'Saved post')
+  const inner = (
+    <>
+      <AuthorAvatar src={item.authorAvatarUrl ?? undefined} author={item.author ?? ''} size="md" />
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-base font-bold text-white">{authorName}</div>
+        {handle ? <div className="truncate font-mono text-sm text-white/50">@{handle}</div> : null}
+      </div>
+    </>
+  )
+  return (
+    <div className="mb-6 flex items-center gap-3">
+      {profileUrl ? (
+        <a
+          href={profileUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex min-w-0 flex-1 items-center gap-3 transition-opacity hover:opacity-85"
+          title={`View @${handle} on ${PLATFORM_LABEL[item.platform] ?? item.platform}`}
+        >
+          {inner}
+        </a>
+      ) : (
+        <div className="flex min-w-0 flex-1 items-center gap-3">{inner}</div>
+      )}
+      <PlatformChip platform={item.platform} />
     </div>
   )
 }

@@ -16,6 +16,7 @@ describe('TheaterShortcutsHelp', () => {
     render(<TheaterShortcutsHelp open onClose={onClose} />)
     expect(screen.getByRole('dialog', { name: 'Keyboard shortcuts' })).toBeInTheDocument()
     expect(screen.getByText('Play / pause')).toBeInTheDocument()
+    expect(screen.getByText('Read / Watch')).toBeInTheDocument()
     expect(screen.getByText('Paste a link')).toBeInTheDocument()
     expect(screen.getByText('Menu')).toBeInTheDocument()
     act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })))

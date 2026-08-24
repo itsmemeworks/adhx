@@ -23,6 +23,7 @@ export type TheaterShortcut =
   | 'close'
   | 'toggleMenu'
   | 'toggleHelp'
+  | 'toggleArticle'
 
 export const THEATER_ACTION_EVENTS = {
   save: 'theater-save',
@@ -33,6 +34,7 @@ export const THEATER_ACTION_EVENTS = {
   open: 'theater-open',
   archive: 'theater-archive',
   toggleMenu: 'theater-toggle-menu',
+  toggleArticle: 'theater-toggle-article',
 } as const
 
 export type TheaterActionName = keyof typeof THEATER_ACTION_EVENTS
@@ -47,6 +49,7 @@ export const THEATER_ACTION_ATTR: Record<TheaterActionName, string> = {
   open: 'open',
   archive: 'archive',
   toggleMenu: 'menu',
+  toggleArticle: 'read',
 }
 
 export interface TheaterKeyLike {
@@ -95,6 +98,8 @@ export const THEATER_SHORTCUT_KEYS = new Set([
   'O',
   'a',
   'A',
+  'r',
+  'R',
   'u',
   'U',
   '.',
@@ -144,6 +149,9 @@ export function resolveTheaterShortcut(e: TheaterKeyLike): TheaterShortcut | nul
     case 'a':
     case 'A':
       return 'archive'
+    case 'r':
+    case 'R':
+      return 'toggleArticle'
     case 'u':
     case 'U':
       return 'undo'
@@ -198,6 +206,7 @@ export const THEATER_SHORTCUT_HELP: TheaterHelpSection[] = [
       { keys: ['D'], label: 'Download' },
       { keys: ['O'], label: 'Open original' },
       { keys: ['A'], label: 'Archive' },
+      { keys: ['R'], label: 'Read / Watch' },
       { keys: ['U'], label: 'Undo archive' },
     ],
   },

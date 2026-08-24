@@ -1,46 +1,33 @@
 'use client'
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 
 /**
- * Session-scoped expand preference shared by every `useClampExpand` call site
- * (desktop chrome + mobile chrome, both always mounted at once). Once the user
- * explicitly expands or collapses a caption, later items default to that
- * choice instead of always collapsing — in-memory only (no sessionStorage) is
- * fine since it only needs to survive item changes, not reloads.
- */
-let preferExpanded = false
-
-/**
- * Clamped text + expand toggle, shared by the desktop stage chrome's caption
- * overlay and the mobile chrome's bottom-scrim caption. Detects overflow via
- * `scrollHeight` vs `clientHeight` on the ref'd (clamped) element — never a
- * character-count guess — and resets to the shared `preferExpanded`
- * preference whenever `resetKey` changes (the theater advancing to a new
- * item), not unconditionally to collapsed.
+ * Overflow measurement for the theater's 2-line caption. Read appears when
+ * `overflowing` is true (or the post is a quote-on-media). There is no
+ * tap-to-expand — that path hid Read if a leftover expand preference was set.
  */
 export function useClampExpand(resetKey: string | null) {
   const ref = useRef<HTMLParagraphElement>(null)
-  const [expanded, setExpandedState] = useState(preferExpanded)
   const [overflowing, setOverflowing] = useState(false)
 
-  useEffect(() => {
-    setExpandedState(preferExpanded)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+
+    const measure = () => {
+      setOverflowing(el.scrollHeight > el.clientHeight + 1)
+    }
+
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
   }, [resetKey])
 
-  useLayoutEffect(() => {
-    if (expanded) return
-    const el = ref.current
-    setOverflowing(!!el && el.scrollHeight > el.clientHeight + 1)
-  }, [resetKey, expanded])
-
-  const setExpanded = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
-    setExpandedState((prev) => {
-      const next = typeof value === 'function' ? (value as (prev: boolean) => boolean)(prev) : value
-      preferExpanded = next
-      return next
-    })
-  }, [])
-
-  return { ref, expanded, setExpanded, overflowing }
+  return { ref, overflowing }
 }
+
+/** Test-only leftover name — expand preference is gone. */
+export function resetClampExpandPreference() {}
