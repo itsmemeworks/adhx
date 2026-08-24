@@ -17,6 +17,8 @@ describe('resolveInitialTheme', () => {
     expect(resolveInitialTheme(null, '/', false)).toBe('dark')
     expect(resolveInitialTheme(undefined, '/', false)).toBe('dark')
     expect(resolveInitialTheme(null, '/', true)).toBe('dark')
+    expect(resolveInitialTheme(null, '/live', false)).toBe('dark')
+    expect(resolveInitialTheme(null, '/collection', true)).toBe('dark')
   })
 
   it('defaults to dark on /trending and its filter hubs when unset', () => {

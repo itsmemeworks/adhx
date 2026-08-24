@@ -14,18 +14,22 @@ import type { RankWindow } from '@/lib/discovery/rank'
 export const WINDOW_COPY: Record<RankWindow, { title: string; description: string }> = {
   day: {
     title: 'Top playlists today',
-    description: 'The most-watched public playlists on ADHX today, ranked by views and saves.',
+    description:
+      'People tag posts into playlists — a playlist is a public tag. The most-watched ones on ADHX today, ranked by views and saves.',
   },
   week: {
     title: 'Top playlists this week',
-    description: 'The most-watched public playlists on ADHX this week, ranked by views and saves.',
+    description:
+      'People tag posts into playlists — a playlist is a public tag. The most-watched ones on ADHX this week, ranked by views and saves.',
   },
   month: {
     title: 'Top playlists this month',
-    description: 'The most-watched public playlists on ADHX this month, ranked by views and saves.',
+    description:
+      'People tag posts into playlists — a playlist is a public tag. The most-watched ones on ADHX this month, ranked by views and saves.',
   },
   all: {
     title: 'Top playlists, all-time',
-    description: 'The all-time most-watched public playlists on ADHX, ranked by views and saves.',
+    description:
+      'People tag posts into playlists — a playlist is a public tag. The all-time most-watched ones on ADHX, ranked by views and saves.',
   },
 }

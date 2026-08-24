@@ -123,7 +123,7 @@ export function CollectionsBoard({
             The most-watched playlists
           </h1>
           <p className="mt-4 text-[15px] text-white/55">
-            What the community is saving into and sending around, ranked by views and saves.
+            People tag posts into playlists. A playlist is a public tag.
           </p>
         </div>
 
@@ -154,7 +154,7 @@ export function CollectionsBoard({
           <div className="mt-20 flex flex-col items-center gap-2 text-center">
             <p className="text-[16px] text-white/40">No public playlists charting yet</p>
             <p className="max-w-sm text-[13px] text-white/30">
-              Make one of your tag playlists public from /tags to get it on the board.
+              Tag some posts, then make the tag public from /tags to get it on the board.
             </p>
           </div>
         ) : (

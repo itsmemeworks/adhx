@@ -13,10 +13,12 @@ import {
   Link as LinkIcon,
   Lock,
   Tag as TagIcon,
+  Trash2,
 } from 'lucide-react'
 import type { FeedItem, TagItem } from '@/components/feed/types'
-import { CLIENT_EVENTS } from '@/lib/client-events'
+import { CLIENT_EVENTS, notifyCollectionChanged } from '@/lib/client-events'
 import { CollectionPosterCard, type PosterTile } from '@/components/tags'
+import { cn } from '@/lib/utils'
 
 /** Owner-level Discovery totals for the "This week" summary card (docs/specs/discovery-leaderboards.md §6). */
 interface OwnerStats {
@@ -36,10 +38,10 @@ const PREVIEW_LIMIT = 4
  */
 export function TagsClient() {
   const [tags, setTags] = useState<TagItem[] | null>(null)
-  // The header search box has no collection to filter on /tags — it filters
-  // this tag list instead, via the cross-component custom-event pattern
-  // documented in CLAUDE.md ("Cross-Component Keyboard Feedback"). Header
-  // dispatches `tags-search` on every keystroke; we just listen.
+  // Header search on /tags (icon → expand, placeholder "Tags") has no
+  // collection to filter — it filters this tag list instead, via the
+  // cross-component custom-event pattern in CLAUDE.md. Header dispatches
+  // `tags-search` on every keystroke; we just listen.
   const [searchQuery, setSearchQuery] = useState('')
   const [ownerStats, setOwnerStats] = useState<OwnerStats | null>(null)
   const [busyTag, setBusyTag] = useState<string | null>(null)
@@ -237,6 +239,33 @@ export function TagsClient() {
     }
   }
 
+  async function handleDelete(tag: string) {
+    setBusyTag(tag)
+    clearError(tag)
+    try {
+      let res: Response
+      try {
+        res = await fetch('/api/tags', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tag }),
+        })
+      } catch {
+        setError(tag, "Couldn't reach the server — try again.")
+        return
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        setError(tag, data?.error || "Couldn't delete this tag — try again.")
+        return
+      }
+      setTags((prev) => (prev ?? []).filter((t) => t.tag !== tag))
+      notifyCollectionChanged({ tagsChanged: true, refetchFeed: false })
+    } finally {
+      setBusyTag(null)
+    }
+  }
+
   const trimmedQuery = searchQuery.trim().toLowerCase()
   const visibleTags = trimmedQuery
     ? (tags ?? []).filter((t) => t.tag.toLowerCase().includes(trimmedQuery))
@@ -298,7 +327,7 @@ export function TagsClient() {
           <div className="rounded-card border border-hairline bg-surface p-8 text-center">
             <TagIcon className="h-8 w-8 mx-auto mb-3 text-ink-3" />
             <p className="text-[14.5px] text-ink-2">
-              No tags yet — create one from the Collection filter bar.
+              No tags yet — tag a post in the theater, then manage it here.
             </p>
           </div>
         ) : visibleTags.length === 0 ? (
@@ -321,6 +350,7 @@ export function TagsClient() {
                 onMakePublic={() => handleMakePublic(t.tag)}
                 onCopyUrl={() => t.shareUrl && copyShareUrl(t.shareUrl, t.tag)}
                 onMakePrivate={() => handleMakePrivate(t.tag)}
+                onDelete={() => handleDelete(t.tag)}
               />
             ))}
           </div>
@@ -381,11 +411,10 @@ function toPosterTiles(items: FeedItem[] | undefined): PosterTile[] {
 }
 
 /**
- * The single top-right visibility control — both the state indicator AND the
- * toggle action (owner review: "what's the point in having Make Public in a
- * different place from Make Private?"). Public renders the green-tinted
- * badge recipe as a button that makes it private; private renders a neutral
- * glass badge as a button that makes it public.
+ * Visibility control in the action row under the mosaic — both the state
+ * indicator AND the toggle (owner review: "what's the point in having Make
+ * Public in a different place from Make Private?"). Public shows Globe + a
+ * live-dot; private shows Lock. Same surface-pill recipe as copy/open.
  */
 function VisibilityToggle({
   isPublic,
@@ -398,10 +427,6 @@ function VisibilityToggle({
   onMakePublic: () => void
   onMakePrivate: () => void
 }) {
-  // Both states share the card's standard glass-button recipe (the same one
-  // the copy/open buttons use) so the toggle reads as "a button like any
-  // other on the dash" — the STATE is carried by the icon plus the green
-  // live-dot on Public, never by a differently-styled pill.
   const toggle = isPublic
     ? { label: 'Public', aria: 'Make private', action: onMakePrivate, Icon: Globe }
     : { label: 'Private', aria: 'Make public', action: onMakePublic, Icon: Lock }
@@ -415,7 +440,7 @@ function VisibilityToggle({
       disabled={busy}
       aria-label={toggle.aria}
       title={toggle.aria}
-      className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.14] bg-white/10 px-2.5 py-1 text-[10.5px] font-semibold text-white/85 backdrop-blur-md transition-colors hover:bg-white/15 disabled:opacity-60"
+      className="inline-flex items-center gap-1.5 rounded-full border border-hairline bg-inset px-2.5 py-1 text-[10.5px] font-semibold text-ink-2 transition-colors hover:bg-paper hover:text-ink disabled:opacity-60"
     >
       {isPublic && <span className="h-1.5 w-1.5 flex-none rounded-full bg-live" aria-hidden />}
       <toggle.Icon size={11} />
@@ -423,6 +448,9 @@ function VisibilityToggle({
     </button>
   )
 }
+
+const ACTION_ICON =
+  'flex h-9 w-9 items-center justify-center rounded-full border border-hairline text-ink-2 transition-colors hover:bg-inset hover:text-ink'
 
 function TagPosterCard({
   tag,
@@ -435,6 +463,7 @@ function TagPosterCard({
   onMakePublic,
   onCopyUrl,
   onMakePrivate,
+  onDelete,
 }: {
   tag: TagItem
   busy: boolean
@@ -446,6 +475,7 @@ function TagPosterCard({
   onMakePublic: () => void
   onCopyUrl: () => void
   onMakePrivate: () => void
+  onDelete: () => void
 }) {
   const tiles = toPosterTiles(previewItems)
   const tilesLoading = previewLoading && previewItems === undefined
@@ -477,27 +507,45 @@ function TagPosterCard({
           <>
             <button
               type="button"
-              onClick={onCopyUrl}
+              onClick={(e) => {
+                e.stopPropagation()
+                onCopyUrl()
+              }}
               title="Copy link"
               aria-label="Copy link"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-white backdrop-blur-md transition-colors hover:bg-white/20"
-              style={{ backgroundColor: 'rgba(255,255,255,.1)' }}
+              className={ACTION_ICON}
             >
-              {copied ? <Check size={14} style={{ color: '#8fd9b0' }} /> : <LinkIcon size={14} />}
+              {copied ? <Check size={14} className="text-done" /> : <LinkIcon size={14} />}
             </button>
             {tag.shareUrl && (
               <a
                 href={tag.shareUrl}
                 title="Open"
                 aria-label="Open"
-                className="flex h-9 w-9 items-center justify-center rounded-full text-white backdrop-blur-md transition-colors hover:bg-white/20"
-                style={{ backgroundColor: 'rgba(255,255,255,.1)' }}
+                onClick={(e) => e.stopPropagation()}
+                className={ACTION_ICON}
               >
                 <ExternalLink size={14} />
               </a>
             )}
           </>
         )}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete()
+          }}
+          disabled={busy}
+          title="Delete tag"
+          aria-label={`Delete #${tag.tag}`}
+          className={cn(
+            ACTION_ICON,
+            'hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-600 disabled:opacity-60 dark:hover:text-red-400',
+          )}
+        >
+          <Trash2 size={14} />
+        </button>
       </CollectionPosterCard>
 
       {copyHint && (

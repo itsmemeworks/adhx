@@ -466,6 +466,20 @@ describe('FilterBar Component', () => {
       expect(onTagSelectChange).toHaveBeenCalledWith(null)
     })
 
+    it('sticks below the header so Done adding stays on screen while the grid scrolls', () => {
+      const { container } = render(
+        <FilterBar
+          {...defaultProps}
+          selectedTags={['work']}
+          tagSelect="work"
+          onTagSelectChange={vi.fn()}
+        />,
+      )
+      // Header is `h-16` / sticky top-0. FilterBar used to be `top-0` too, so
+      // it slid under the header and the add-posts chrome vanished on scroll.
+      expect(container.firstChild).toHaveClass('sticky', 'top-16')
+    })
+
     it('does not render the Add posts/Done adding button without onTagSelectChange', () => {
       render(<FilterBar {...defaultProps} selectedTags={['work']} />)
 

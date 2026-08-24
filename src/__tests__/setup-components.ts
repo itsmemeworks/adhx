@@ -75,6 +75,7 @@ vi.mock('@/lib/preferences-context', () => ({
     preferences: {
       bionicReading: false,
       bodyFont: 'ibm-plex',
+      avatarSource: 'x',
     },
     updatePreference: vi.fn(),
     loading: false,

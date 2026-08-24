@@ -14,7 +14,6 @@ import { useRouter } from 'next/navigation'
 import { Minimize2 } from 'lucide-react'
 import type { FeedItem } from '@/components/feed/types'
 import { Stage } from './Stage'
-import { CollectionStage } from './CollectionStage'
 import { StageWaiting } from './StageWaiting'
 import { StageUnavailable } from './StageUnavailable'
 import { CollectionAllClear } from './CollectionAllClear'
@@ -28,12 +27,7 @@ import { TheaterShortcutsHelp } from './TheaterShortcutsHelp'
 import { useTheaterPrefetch } from './useTheaterPrefetch'
 import { useTheaterDwell } from './useTheaterDwell'
 import { useTheaterStageTapDeclutter } from './useTheaterStageEvents'
-import {
-  TheaterProgressLine,
-  progressKindFor,
-  progressKindForPin,
-  collectionTabProgressKind,
-} from './TheaterProgressLine'
+import { TheaterProgressLine, progressKindFor, progressKindForPin } from './TheaterProgressLine'
 import { feedItemToTheaterItem } from './collection-item'
 import { notifyCollectionChanged } from '@/lib/client-events'
 import { theaterItemKey } from './types'
@@ -161,11 +155,11 @@ export interface TheaterShellProps {
   personalItems?: FeedItem[]
   /** Where to start in the collection queue — a gallery click jumps to the clicked item (same contract as the deleted `CollectionTheater`'s `startIndex`). */
   initialPersonalIndex?: number
-  /** Which collection sub-tab to open on (`/` is Live, `/collection` is My Collection). */
+  /** Which collection sub-tab to open on (`/live` is Live, `/collection` is My Collection). */
   initialPersonalTab?: PersonalTab
   /**
    * Called when the viewer flips the Live ⇄ My Collection switch. The switch
-   * is a ROUTE on the signed-in theater (`/` is Live, `/collection` is My
+   * is a ROUTE on the signed-in theater (`/live` is Live, `/collection` is My
    * Collection — owner: "a specific route that they select"), so the page
    * passes a `router.push` here. The tab still flips locally first, so the
    * switch responds instantly and doesn't wait on navigation.
@@ -267,6 +261,8 @@ export function TheaterShell({
   const personalRemaining = Math.max(0, personalTotal - personalIndex)
   const personalCurrentFeedItem: FeedItem | null =
     personalIndex < personalQueue.length ? personalQueue[personalIndex] : null
+  const personalCurrentRef = useRef(personalCurrentFeedItem)
+  personalCurrentRef.current = personalCurrentFeedItem
   const personalFinished = personalIndex >= personalQueue.length
   const personalDisplayItems = useMemo(
     () => personalQueue.map(feedItemToTheaterItem),
@@ -429,11 +425,11 @@ export function TheaterShell({
     setPersonalIndex(personalStepBackIndex)
   }, [])
 
-  // A video finished playing in the Collection tab. Pure navigation — same
-  // as skip/next — not Archive. Finishing playback just moves the queue.
+  // A video ended, or a photo/text/article's 10s dwell finished, in My
+  // Collection. Pure navigation — same as skip/next — not Archive.
   // Repeat 'off' walks past the last item (`personalFinished`) and shows
   // CollectionAllClear. Repeat 'all' wraps to 0; 'one' stays on the post
-  // (Stage `repeat` loops the player).
+  // (Stage `repeat` loops the player; timed items suppress the dwell line).
   const personalQueueLengthRef = useRef(personalQueue.length)
   personalQueueLengthRef.current = personalQueue.length
   const personalFinishedRef = useRef(personalFinished)
@@ -629,7 +625,7 @@ export function TheaterShell({
           return [saved, ...rest]
         })
         // My Collection: jump to the new save. Live: stay on the current post;
-        // the dock just gains a fresh card. Never leave `/` or `/collection`.
+        // the dock just gains a fresh card. Never leave `/live` or `/collection`.
         if (personalTab === 'collection') setPersonalIndex(0)
         feedPrepend(theaterItem)
 
@@ -967,10 +963,16 @@ export function TheaterShell({
 
   useEffect(() => {
     // Shared mode never re-picks — the shared post is ALWAYS the initial
-    // current item, whatever this viewer has seen elsewhere. Collection mode
+    // current item, whatever this viewer has seen elsewhere. Playlist mode
     // never re-picks either: a curated tag collection always opens on its
     // first item, in curated order.
-    if (sharedItem || loop) return
+    //
+    // My Collection is the same theater with a different playlist. It must
+    // not inherit the live feed's caught-up / waiting machinery — that
+    // paused the collection stage on load (and ate Space) whenever every
+    // live post was already seen. Return before consuming `leadAppliedRef`
+    // so a later flip to Live can still apply the live lead pick.
+    if (sharedItem || loop || isCollectionTab) return
     if (!seenSet.ready || leadAppliedRef.current || hasNavigatedRef.current) return
     leadAppliedRef.current = true
     if (items.length === 0) return
@@ -994,7 +996,7 @@ export function TheaterShell({
       setWaiting(true)
     }
     setCurrentKey(theaterItemKey(head))
-  }, [seenSet.ready, items, displayItems, unseenCount, sharedItem, loop])
+  }, [seenSet.ready, items, displayItems, unseenCount, sharedItem, loop, isCollectionTab])
 
   const currentIndex = useMemo(
     () => displayItems.findIndex((it) => theaterItemKey(it) === currentKey),
@@ -1332,7 +1334,10 @@ export function TheaterShell({
 
   // Space must never resume the paused stage hidden behind the waiting
   // overlay — ref-backed so the keyboard listener never re-registers.
-  const isPlaybackHidden = useCallback(() => waitingRef.current, [])
+  // Collection never enters waiting; keep the gate honest if it ever did.
+  const isCollectionTabRef = useRef(isCollectionTab)
+  isCollectionTabRef.current = isCollectionTab
+  const isPlaybackHidden = useCallback(() => waitingRef.current && !isCollectionTabRef.current, [])
 
   // Keyboard nav (extracted to useTheaterKeyboard.ts — see its doc comment
   // for the full ↓/→/j vs. collection-collection-tab keymap rationale).
@@ -1370,18 +1375,6 @@ export function TheaterShell({
   useEffect(() => {
     function handleAdvance() {
       if (showSignInRef.current) return
-      // This is the 'timed' 10s-dwell advance ONLY (see
-      // TheaterProgressLine's kind 'timed') — the personal theater's Collection tab's
-      // timed items (photo/text/quote/article) still never auto-advance
-      // this way, waiting instead on a deliberate Done/Later/Delete. Videos
-      // in the Collection tab DO now auto-advance on end ("My Collection is
-      // just a different playlist in that same theater"), but through
-      // StageVideo/StageInstagram/StageYouTube's own `onEnded` callback (see
-      // `personalAdvanceOnEnded` below) — never through this event. A
-      // leftover mobile progress-line timer from the same content type
-      // would otherwise fire this and silently step the (unrelated,
-      // unrendered) live-feed cursor underneath it.
-      if (isCollectionTab) return
       // shared-post-repeat / repeat 'one': belt-and-suspenders —
       // TheaterProgressLine's 'timed' kind is already suppressed to 'none'
       // while repeating (so this event is never actually dispatched for a
@@ -1389,12 +1382,24 @@ export function TheaterShell({
       // since-superseded timer must still be a no-op rather than advancing
       // past the repeating post.
       if (repeatCurrentActiveRef.current) return
+      if (isCollectionTab) {
+        // My Collection: same 10s dwell event as Live; videos still advance
+        // via Stage `onEnded` → `personalAdvanceOnEnded`. Check the
+        // collection item (not the live `currentRef`) so we never step the
+        // unread queue from a leftover live-feed timer.
+        const item = personalCurrentRef.current
+          ? feedItemToTheaterItem(personalCurrentRef.current)
+          : null
+        if (progressKindFor(item, articleMode) !== 'timed') return
+        personalAdvanceOnEnded()
+        return
+      }
       if (progressKindFor(currentRef.current, articleMode) !== 'timed') return
       goNext()
     }
     window.addEventListener('theater-advance', handleAdvance)
     return () => window.removeEventListener('theater-advance', handleAdvance)
-  }, [goNext, isCollectionTab, articleMode])
+  }, [goNext, isCollectionTab, articleMode, personalAdvanceOnEnded])
 
   // Prefetch at most one item ahead (extracted to useTheaterPrefetch.ts).
   useTheaterPrefetch(currentIndex, displayItems)
@@ -1406,6 +1411,7 @@ export function TheaterShell({
   // don't interrupt" behavior for a viewer mid-scroll is untouched.
   useEffect(() => {
     if (!waiting) return
+    if (isCollectionTab) return
     const arrived = findFreshArrival(feed.freshKeys, waitingBaselineFreshKeysRef.current)
     if (!arrived) return
     // Fold the staged key into the baseline (never resnapshot — an item that
@@ -1427,7 +1433,7 @@ export function TheaterShell({
     if (mode !== 'shared') setPinnedKey(arrived)
     setCurrentKey(arrived)
     setWaiting(false)
-  }, [waiting, feed.freshKeys])
+  }, [waiting, feed.freshKeys, isCollectionTab, mode])
 
   // Entering the waiting stage pauses the (still-mounted, now-hidden) stage
   // — see the render comment above the <Stage/> below. Uses the same
@@ -1435,8 +1441,18 @@ export function TheaterShell({
   // catch-up attribution is disarmed correctly. On the next arrival the
   // src-change effect calls play() itself; no resume event needed.
   useEffect(() => {
-    if (waiting) window.dispatchEvent(new CustomEvent('theater-pause'))
-  }, [waiting])
+    if (waiting && !isCollectionTab) window.dispatchEvent(new CustomEvent('theater-pause'))
+  }, [waiting, isCollectionTab])
+
+  // Live ⇄ Collection flips local tab state before the route changes. A Live
+  // caught-up `theater-pause` would otherwise leave the shared <video>
+  // paused on Collection. Clear waiting and resume as soon as Collection is
+  // the on-stage tab.
+  useEffect(() => {
+    if (!isCollectionTab || !waiting) return
+    setWaiting(false)
+    window.dispatchEvent(new CustomEvent('theater-resume'))
+  }, [isCollectionTab, waiting])
 
   // Items newer than the last visit and not yet seen. Zero on a first-ever
   // visit (no `lastVisitAt` to compare against) — the caught-up state is the
@@ -1749,47 +1765,38 @@ export function TheaterShell({
             a stacking context here that z-20 paints over sibling chrome (z-10
             paste / flame / avatar) and steals those clicks. */}
         <div className="absolute inset-0 isolate z-0" data-testid="theater-stage">
-          {isCollectionTab ? (
-            personalFinished ? (
-              <CollectionAllClear
-                total={personalTotal}
-                onClose={() => onClose?.()}
-                onKeepPlaying={personalTotal > 0 ? keepPlayingCollection : undefined}
-              />
-            ) : personalCurrentFeedItem ? (
-              <CollectionStage
-                feedItem={personalCurrentFeedItem}
-                muted={muted}
-                onRequestUnmute={onRequestUnmute}
-                onEnded={personalAdvanceOnEnded}
-                tags={personalCurrentFeedItem.tags}
-                repeat={repeatCurrentActive}
-                articleMode={articleMode}
-              />
-            ) : null
+          {isCollectionTab && personalFinished ? (
+            <CollectionAllClear
+              total={personalTotal}
+              onClose={() => onClose?.()}
+              onKeepPlaying={personalTotal > 0 ? keepPlayingCollection : undefined}
+            />
           ) : isSharedUnavailableOnCurrent && current ? (
             <StageUnavailable item={current} reason={sharedUnavailableReason} />
           ) : (
             <>
-              {/* The stage stays MOUNTED (paused — see the waiting-pause
-                  effect) underneath the waiting overlay, never swapped out:
-                  StageVideo's persistent <video> element carries the user's
-                  iOS unmuted-playback grant, and unmounting it across the
-                  waiting stage is exactly what made a fresh arrival start
-                  muted for a viewer whose sound was on (owner report). The
-                  overlay's opaque #08070a covers it completely. */}
+              {/* One Stage for every playlist — Live, shared, tags, and My
+                  Collection. Collection is just a different queue; swapping
+                  in a second dispatcher paused playback on load whenever the
+                  live seed was already caught-up. The stage stays MOUNTED
+                  (paused — see the waiting-pause effect) underneath the
+                  waiting overlay, never swapped out: StageVideo's persistent
+                  <video> element carries the user's iOS unmuted-playback
+                  grant. The overlay's opaque #08070a covers it completely. */}
               <Stage
-                item={current}
+                item={isCollectionTab ? collectionStageTheaterItem : current}
                 muted={muted}
                 onRequestUnmute={onRequestUnmute}
                 onEnded={() => {
-                  if (!showSignInRef.current) goNext()
+                  if (showSignInRef.current) return
+                  if (isCollectionTab) personalAdvanceOnEnded()
+                  else goNext()
                 }}
                 photoCaption={false}
                 repeat={repeatCurrentActive}
                 articleMode={articleMode}
               />
-              {waiting && (
+              {waiting && !isCollectionTab && (
                 <div className="absolute inset-0 z-10">
                   <StageWaiting
                     savedToday={feed.savedToday}
@@ -1810,22 +1817,14 @@ export function TheaterShell({
             so without this gate — and the matching gate on the chrome's
             `current` prop below — two independent 'timed' timers would both
             be alive on desktop and double-dispatch `theater-advance`.
-            The personal theater's Collection tab's 'timed' items (photo/text/quote/
-            article) still never auto-advance this way (see `handleAdvance`
-            above) — `collectionTabProgressKind` demotes only THAT kind to
-            'none' there; 'video' items keep the real line and auto-advance
-            on end through `CollectionStage`'s own `onEnded` wiring instead. */}
+            My Collection uses the same 'timed' dwell as Live; videos keep
+            the real line and also auto-advance on end through Stage
+            `onEnded`. */}
         <TheaterProgressLine
           itemKey={chromeCurrentKey}
           kind={
             isDesktop
-              ? progressKindForPin(
-                  collectionTabProgressKind(
-                    progressKindFor(chromeCurrent, articleMode),
-                    isCollectionTab,
-                  ),
-                  repeatCurrentActive,
-                )
+              ? progressKindForPin(progressKindFor(chromeCurrent, articleMode), repeatCurrentActive)
               : 'none'
           }
         />

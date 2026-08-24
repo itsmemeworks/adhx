@@ -12,10 +12,6 @@ import type { FeedItem } from '@/components/feed/types'
 import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
 
 vi.mock('@/components/theater/Stage', () => ({ Stage: () => <div data-testid="stage" /> }))
-vi.mock('@/components/theater/CollectionStage', () => ({
-  CollectionStage: () => <div data-testid="collection-stage" />,
-  useInstagramStage: () => ({ status: 'idle', slow: false, src: null, poster: null }),
-}))
 
 let capturedOnPastePost: ((url: string) => boolean | Promise<boolean>) | undefined
 vi.mock('@/components/theater/TheaterDesktopChrome', () => ({

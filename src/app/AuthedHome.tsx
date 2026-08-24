@@ -632,7 +632,7 @@ function FeedPageContent(): React.ReactElement {
       return
     }
     if (searchParams.get('live') === '1') {
-      router.replace('/')
+      router.replace('/live')
     }
   }, [searchParams, router, items])
 
@@ -655,7 +655,7 @@ function FeedPageContent(): React.ReactElement {
   useEffect(() => {
     function handler(e: Event) {
       const tab = (e as CustomEvent<{ tab?: string }>).detail?.tab
-      router.push(tab === 'live' ? '/' : '/collection')
+      router.push(tab === 'live' ? '/live' : '/collection')
     }
     window.addEventListener('open-theater', handler)
     return () => window.removeEventListener('open-theater', handler)

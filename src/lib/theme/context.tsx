@@ -23,7 +23,13 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
  * sites) when a new theater surface needs the dark default.
  */
 function isTheaterDarkRoute(pathname: string): boolean {
-  if (pathname === '/' || pathname === '/trending' || pathname.startsWith('/trending/')) {
+  if (
+    pathname === '/' ||
+    pathname === '/live' ||
+    pathname === '/collection' ||
+    pathname === '/trending' ||
+    pathname.startsWith('/trending/')
+  ) {
     return true
   }
   return (

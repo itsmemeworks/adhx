@@ -97,8 +97,8 @@ export function StarterCollections({
   )
 }
 
-const GLASS_BUTTON =
-  'inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-white/[0.14] bg-white/10 px-3 py-2 text-[12.5px] font-semibold text-white/85 backdrop-blur-md transition-colors hover:bg-white/15 disabled:opacity-60'
+const SURFACE_BUTTON =
+  'inline-flex min-h-[36px] items-center gap-1.5 rounded-full border border-hairline bg-inset px-3 py-1.5 text-[12.5px] font-semibold text-ink transition-colors hover:bg-paper disabled:opacity-60'
 
 function StarterCard({ entry }: { entry: StarterEntry }) {
   const [state, setState] = useState<CloneState>('idle')
@@ -138,23 +138,25 @@ function StarterCard({ entry }: { entry: StarterEntry }) {
       heightClass="h-[200px]"
     >
       {state === 'done' ? (
-        <a href={href} className={GLASS_BUTTON}>
+        <a href={href} className={SURFACE_BUTTON}>
           Added · {clonedTotal} post{clonedTotal === 1 ? '' : 's'}
         </a>
       ) : (
-        <div className="flex flex-col items-end gap-1">
+        <>
           <button
             type="button"
             onClick={handleClone}
             disabled={state === 'cloning'}
-            className={GLASS_BUTTON}
+            className={SURFACE_BUTTON}
           >
             {state === 'cloning' ? 'Adding…' : 'Add to my collection'}
           </button>
           {state === 'error' && (
-            <span className="text-[10.5px] text-red-400">Couldn&apos;t add — try again</span>
+            <span className="text-[10.5px] text-red-600 dark:text-red-400">
+              Couldn&apos;t add — try again
+            </span>
           )}
-        </div>
+        </>
       )}
     </CollectionPosterCard>
   )

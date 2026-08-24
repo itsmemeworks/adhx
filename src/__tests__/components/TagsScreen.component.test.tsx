@@ -6,11 +6,11 @@
  * toggle), toggling to public (PATCH make-public + copy the friendly URL),
  * toggling to private, the empty state, and the card's `?tag=` link target.
  *
- * The visibility toggle is a SINGLE top-right control that is both the state
- * indicator and the action (owner review: "what's the point in having Make
- * Public in a different place from Make Private?") — public tags show a
- * "Public" pill that makes the tag private on click, private tags show a
- * "Private" pill that makes it public on click.
+ * The visibility toggle is a SINGLE control in the action row under the
+ * mosaic that is both the state indicator and the action (owner review:
+ * "what's the point in having Make Public in a different place from Make
+ * Private?") — public tags show a "Public" pill that makes the tag private
+ * on click, private tags show a "Private" pill that makes it public.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, fireEvent, screen, waitFor } from '@testing-library/react'
@@ -330,6 +330,52 @@ describe('TagsClient', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Make private' }))
 
     await waitFor(() => expect(screen.queryByText('Public')).not.toBeInTheDocument())
+  })
+
+  it('shows a delete control on every card, including private tags', async () => {
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/tags') {
+        return jsonResponse({ tags: [{ tag: 'work', count: 2, isPublic: false, shareUrl: null }] })
+      }
+      return jsonResponse({})
+    }) as unknown as typeof fetch
+
+    render(<TagsClient />)
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Delete #work' })).toBeInTheDocument(),
+    )
+  })
+
+  it('DELETEs the tag and removes the card', async () => {
+    let deleted = false
+
+    global.fetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (url === '/api/tags' && init?.method === 'DELETE') {
+        expect(JSON.parse(init.body as string)).toEqual({ tag: 'work' })
+        deleted = true
+        return jsonResponse({ success: true })
+      }
+      if (url === '/api/tags' && !init) {
+        return jsonResponse({
+          tags: deleted
+            ? [{ tag: 'reading', count: 1, isPublic: false, shareUrl: null }]
+            : [
+                { tag: 'work', count: 2, isPublic: false, shareUrl: null },
+                { tag: 'reading', count: 1, isPublic: false, shareUrl: null },
+              ],
+        })
+      }
+      return jsonResponse({})
+    }) as unknown as typeof fetch
+
+    render(<TagsClient />)
+
+    await waitFor(() => expect(screen.getByText('#work')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Delete #work' }))
+
+    await waitFor(() => expect(screen.queryByText('#work')).not.toBeInTheDocument())
+    expect(screen.getByText('#reading')).toBeInTheDocument()
   })
 
   it('renders the rank medallion (top-left) instead of a footer rank chip for a charting public tag', async () => {

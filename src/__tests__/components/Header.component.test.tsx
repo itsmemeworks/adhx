@@ -262,23 +262,30 @@ describe('Header', () => {
   it('marks Theater as current on both of its routes', async () => {
     mockPathname = '/collection'
     mockFetch(true)
-    render(<Header />)
+    const { rerender } = render(<Header />)
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
     // `/collection` is the theater's My Collection tab, so the Theater entry —
     // not Library — is the active one there.
     expect(screen.getByRole('link', { name: 'Theater' }).className).toContain('text-clay')
     expect(screen.getByRole('link', { name: 'Library' }).className).not.toContain('bg-clay')
+
+    mockPathname = '/live'
+    rerender(<Header />)
+    expect(screen.getByRole('link', { name: 'Theater' }).className).toContain('text-clay')
   })
 
-  it('on /tags: search placeholder changes and typing dispatches "tags-search" instead of navigating', async () => {
+  it('on /tags: search is an icon that expands to "Tags"; typing dispatches "tags-search" instead of navigating', async () => {
     mockPathname = '/tags'
     mockFetch(true)
     render(<Header />)
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
-    const input = screen.getByPlaceholderText('Search your tags…')
-    expect(screen.queryByPlaceholderText('Search your collection…')).not.toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('Search')).not.toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: 'Tags' }))
+
+    const input = screen.getByPlaceholderText('Tags')
+    expect(screen.queryByPlaceholderText('Search')).not.toBeInTheDocument()
 
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
     fireEvent.change(input, { target: { value: 'work' } })
@@ -293,12 +300,34 @@ describe('Header', () => {
     expect(pushSpy).not.toHaveBeenCalled()
   })
 
-  it('on other pages: search placeholder stays "Search your collection…"', async () => {
+  it('on /library: search is an icon that expands to "Search" and writes /library?search=', async () => {
+    mockPathname = '/library'
     mockFetch(true)
     render(<Header />)
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
-    expect(screen.getByPlaceholderText('Search your collection…')).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: 'Search' }))
+    const input = screen.getByPlaceholderText('Search')
+    fireEvent.change(input, { target: { value: 'rust' } })
+
+    await waitFor(() => {
+      expect(pushSpy).toHaveBeenCalled()
+      const url = pushSpy.mock.calls[pushSpy.mock.calls.length - 1][0] as string
+      expect(url).toMatch(/^\/library\?/)
+      expect(url).toContain('search=rust')
+    })
+  })
+
+  it('hides search on pages that are not library or tags', async () => {
+    mockPathname = '/settings'
+    mockFetch(true)
+    render(<Header />)
+    await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
+
+    expect(screen.queryByRole('button', { name: 'Search' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Tags' })).not.toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('Search')).not.toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('Tags')).not.toBeInTheDocument()
   })
 
   it('hides "Sync bookmarks" in the avatar menu for an email-only account (no X connected)', async () => {

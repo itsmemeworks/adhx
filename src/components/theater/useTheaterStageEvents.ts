@@ -54,13 +54,16 @@ export function useTheaterStageEvents() {
       if (detail) setLiveMuted(detail.muted)
     }
     const handleResume = () => setTimedPaused(false)
+    const handlePause = () => setTimedPaused(true)
     window.addEventListener('theater-playing-state', handlePlaying)
     window.addEventListener('theater-muted-state', handleMuted)
     window.addEventListener('theater-resume', handleResume)
+    window.addEventListener('theater-pause', handlePause)
     return () => {
       window.removeEventListener('theater-playing-state', handlePlaying)
       window.removeEventListener('theater-muted-state', handleMuted)
       window.removeEventListener('theater-resume', handleResume)
+      window.removeEventListener('theater-pause', handlePause)
     }
   }, [])
 

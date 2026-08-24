@@ -210,6 +210,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     // three in lockstep.
                     var p = location.pathname;
                     var isTheaterDark = p === '/'
+                      || p === '/live'
+                      || p === '/collection'
                       || p === '/trending'
                       || p.indexOf('/trending/') === 0
                       || /^\\/\\w+\\/status\\/\\d+$/.test(p)

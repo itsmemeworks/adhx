@@ -1,8 +1,10 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react'
+import type { AvatarSource } from '@/lib/avatar/generated-avatar'
 
 export type BodyFont = 'ibm-plex' | 'inter' | 'lexend' | 'atkinson'
+export type { AvatarSource }
 
 export const FONT_OPTIONS: Record<BodyFont, { name: string; description: string }> = {
   'ibm-plex': {
@@ -26,6 +28,7 @@ export const FONT_OPTIONS: Record<BodyFont, { name: string; description: string 
 interface Preferences {
   bionicReading: boolean
   bodyFont: BodyFont
+  avatarSource: AvatarSource
 }
 
 interface PreferencesContextType {
@@ -37,6 +40,7 @@ interface PreferencesContextType {
 const defaultPreferences: Preferences = {
   bionicReading: false,
   bodyFont: 'ibm-plex',
+  avatarSource: 'x',
 }
 
 const PreferencesContext = createContext<PreferencesContextType | undefined>(undefined)
@@ -66,6 +70,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
           setPreferences({
             bionicReading: data.bionicReading === 'true',
             bodyFont: (data.bodyFont as BodyFont) || 'ibm-plex',
+            avatarSource: data.avatarSource === 'generated' ? 'generated' : 'x',
           })
         }
       } catch (error) {

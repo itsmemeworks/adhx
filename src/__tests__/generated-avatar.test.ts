@@ -5,6 +5,7 @@ import {
   generateAvatarDataUri,
   isPlaceholderAvatarUrl,
   usableAvatarUrl,
+  resolveAccountAvatarSrc,
 } from '@/lib/avatar/generated-avatar'
 
 describe('generated-avatar', () => {
@@ -115,5 +116,48 @@ describe('isPlaceholderAvatarUrl / usableAvatarUrl', () => {
     expect(isPlaceholderAvatarUrl(undefined)).toBe(false)
     expect(usableAvatarUrl(null)).toBeNull()
     expect(usableAvatarUrl('')).toBeNull()
+  })
+})
+
+describe('resolveAccountAvatarSrc', () => {
+  const xPhoto = 'https://pbs.twimg.com/profile_images/1/me.jpg'
+  const generated = generateAvatarDataUri('tester')
+
+  it('uses the X photo when source is x and the URL is usable', () => {
+    expect(
+      resolveAccountAvatarSrc({
+        avatarSource: 'x',
+        xAvatarUrl: xPhoto,
+        username: 'tester',
+      }),
+    ).toBe(xPhoto)
+  })
+
+  it('uses the generated icon when the user picked generated, even with an X photo', () => {
+    expect(
+      resolveAccountAvatarSrc({
+        avatarSource: 'generated',
+        xAvatarUrl: xPhoto,
+        username: 'tester',
+      }),
+    ).toBe(generated)
+  })
+
+  it('falls back to generated when X is disconnected or the photo is a placeholder', () => {
+    expect(
+      resolveAccountAvatarSrc({
+        avatarSource: 'x',
+        xAvatarUrl: null,
+        username: 'tester',
+      }),
+    ).toBe(generated)
+    expect(
+      resolveAccountAvatarSrc({
+        avatarSource: 'x',
+        xAvatarUrl:
+          'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png',
+        username: 'tester',
+      }),
+    ).toBe(generated)
   })
 })

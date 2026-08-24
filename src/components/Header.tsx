@@ -18,7 +18,8 @@ import {
 } from 'lucide-react'
 import { useTheme } from '@/lib/theme/context'
 import { cn } from '@/lib/utils'
-import { generateAvatarDataUri, usableAvatarUrl } from '@/lib/avatar/generated-avatar'
+import { resolveAccountAvatarSrc } from '@/lib/avatar/generated-avatar'
+import { usePreferences } from '@/lib/preferences-context'
 import { MatterLogo } from '@/components/matter'
 import { SyncProgress } from './sync/SyncProgress'
 import {
@@ -40,7 +41,7 @@ interface AuthStatus {
 // From /api/auth/me — lets the menu tell an X-connected identity apart from
 // an email-only one (which has no @handle to show).
 interface Identities {
-  x: { username: string } | null
+  x: { username: string; avatarUrl?: string | null } | null
   email: { email: string } | null
 }
 
@@ -62,19 +63,25 @@ export function Header() {
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const { resolvedTheme, setTheme } = useTheme()
-  // On /tags the header search has no collection to filter — it filters the
-  // tag list instead, via the same cross-component custom-event pattern
-  // documented in CLAUDE.md ("Cross-Component Keyboard Feedback"). TagsClient
-  // owns the actual filtering; Header just re-broadcasts every keystroke and
-  // skips writing `search` into the URL (there's nothing on /tags to read it).
+  const { preferences } = usePreferences()
+  // Search lives only on /library (collection) and /tags. On /tags it filters
+  // the tag list via the same cross-component custom-event pattern documented
+  // in CLAUDE.md ("Cross-Component Keyboard Feedback") — TagsClient owns the
+  // filtering; Header re-broadcasts every keystroke and never writes `search`
+  // into the URL. Everywhere else the control is hidden so the bar stays
+  // logo-left / avatar-right without a center field throwing it off.
+  const onLibraryPage = pathname === '/library'
   const onTagsPage = pathname === '/tags'
-  const searchPlaceholder = onTagsPage ? 'Search your tags…' : 'Search your collection…'
+  const showSearch = onLibraryPage || onTagsPage
+  const searchLabel = onTagsPage ? 'Tags' : 'Search'
   const [searchValue, setSearchValue] = useState(searchParams.get('search') || '')
+  const [searchOpen, setSearchOpen] = useState(
+    () => onLibraryPage && Boolean(searchParams.get('search')),
+  )
   const [showSync, setShowSync] = useState(false)
   const [silentSync, setSilentSync] = useState(false)
   const [cooldownReady, setCooldownReady] = useState(false)
   const resumeAttemptedRef = useRef(false)
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null)
   const [identities, setIdentities] = useState<Identities | null>(null)
@@ -196,25 +203,40 @@ export function Header() {
     return () => document.removeEventListener('visibilitychange', onVis)
   }, [authStatus?.authenticated, cooldown.canSync, searchParams, showSync, silentSync, xConnected])
 
-  // Update search from URL params
+  // Update search from the library URL. Depend on the `search` string, not the
+  // searchParams object: a new object identity on every render would reset
+  // in-progress typing back to the still-empty URL and cancel the debounce.
+  // On /tags the query never lives in the URL, so we must not clobber typing.
+  const urlSearch = onLibraryPage ? searchParams.get('search') || '' : ''
   useEffect(() => {
-    setSearchValue(searchParams.get('search') || '')
-  }, [searchParams])
+    if (!onLibraryPage) return
+    setSearchValue(urlSearch)
+    if (urlSearch) setSearchOpen(true)
+  }, [urlSearch, onLibraryPage])
+
+  // Collapse / reset when leaving a search surface (Header stays mounted).
+  useEffect(() => {
+    if (onTagsPage) {
+      setSearchValue('')
+      setSearchOpen(false)
+      return
+    }
+    if (!onLibraryPage) setSearchOpen(false)
+  }, [pathname, onTagsPage, onLibraryPage])
 
   // Real-time search with debounce. Deliberately does NOT depend on `searchParams`:
-  // this component is the sole owner of writing `search` into the URL, and page.tsx
-  // (src/app/page.tsx) issues its own router.replace calls for its own filters
+  // this component is the sole owner of writing `search` into the URL, and
+  // AuthedHome issues its own router.replace calls for its own filters
   // (filter/platform/sort/etc). If `searchParams` were a dependency here, every one
   // of those unrelated navigations would reset this debounce timer mid-keystroke,
   // delaying or dropping the search push. `window.location.search` is read fresh
   // inside the timeout callback, so the comparison still reflects the current URL.
   //
-  // On /tags, search doesn't touch the URL at all — it's routed to TagsClient
-  // via the `tags-search` event above — so this effect is skipped there,
-  // otherwise it would `router.push('/?search=...')` and navigate the user
-  // off /tags on every keystroke.
+  // Only /library writes the URL (stay on /library, never bounce to `/`). On
+  // /tags, search is routed to TagsClient via `tags-search` and this effect
+  // is skipped.
   useEffect(() => {
-    if (onTagsPage) return
+    if (!onLibraryPage) return
     const debounceTimer = setTimeout(() => {
       const currentParams = new URLSearchParams(window.location.search)
       const currentSearch = currentParams.get('search') || ''
@@ -228,12 +250,12 @@ export function Header() {
           currentParams.delete('search')
         }
         const queryString = currentParams.toString()
-        router.push(queryString ? `/?${queryString}` : '/', { scroll: false })
+        router.push(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false })
       }
     }, 300) // 300ms debounce
 
     return () => clearTimeout(debounceTimer)
-  }, [searchValue, router, onTagsPage])
+  }, [searchValue, router, onLibraryPage, pathname])
 
   async function fetchAuthStatus() {
     try {
@@ -352,16 +374,14 @@ export function Header() {
     return `${seconds}s`
   }
 
-  const profileImage = authStatus?.user?.profileImageUrl
-  // No avatar (or one that fails to load) gets a generated icon seeded off the
-  // username, so the same account always draws the same face — see
-  // `src/lib/avatar/generated-avatar.ts`. Replaces the old initial-letter tile.
+  // Settings "X photo vs generated" — same helper as the theater menu.
   const [avatarBroken, setAvatarBroken] = useState(false)
-  const remoteAvatar = usableAvatarUrl(profileImage)
-  const avatarSrc =
-    remoteAvatar && !avatarBroken
-      ? remoteAvatar
-      : generateAvatarDataUri(authStatus?.user?.username || 'adhx')
+  const avatarSrc = resolveAccountAvatarSrc({
+    avatarSource: preferences.avatarSource,
+    xAvatarUrl: identities?.x?.avatarUrl,
+    username: authStatus?.user?.username || 'adhx',
+    broken: avatarBroken,
+  })
 
   // Signed-out: the only signed-out page is the marketing landing, which has
   // its own nav — so the app top bar renders nothing (avoids a double header).
@@ -393,11 +413,9 @@ export function Header() {
             </Link>
 
             {/* Primary nav — every entry is a real route now that the theater
-                has its own: `/` is the theater on Live, `/collection` is the
-                theater on My Collection (the switch inside the theater moves
-                between those two), and the grid + filters + search moved to
-                `/library`. "Theater" names the surface rather than one tab,
-                since it holds both.
+                has its own: signed-in `/` (and this Theater link) lands on
+                `/collection` (next unread); `/live` is Live; the grid is
+                `/library`. "Theater" names the surface rather than one tab.
                 Only when authenticated, hidden on mobile (mobile uses the menu). */}
             {authStatus?.authenticated && (
               <nav className="hidden lg:flex items-center gap-1 text-[13.5px]">
@@ -416,7 +434,7 @@ export function Header() {
                   href="/"
                   className={cn(
                     'rounded-full px-3 py-1.5 font-semibold transition-colors',
-                    pathname === '/' || pathname === '/collection'
+                    pathname === '/' || pathname === '/live' || pathname === '/collection'
                       ? 'bg-clay/[0.12] text-clay'
                       : 'text-ink-2 hover:text-ink',
                   )}
@@ -447,45 +465,59 @@ export function Header() {
             )}
           </div>
 
-          {/* Center section - Search (desktop only, only show when authenticated) */}
+          {/* Right section - Search (library + tags) then avatar */}
           {authStatus?.authenticated && (
-            <div className="hidden md:block flex-1 max-w-[540px] mx-auto">
-              <div className="relative flex items-center">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-[17px] h-[17px] text-ink-3 pointer-events-none" />
-                <input
-                  type="text"
-                  value={searchValue}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  placeholder={searchPlaceholder}
-                  aria-label="Search bookmarks"
-                  className="w-full h-11 pl-11 pr-10 bg-inset rounded-full text-[13.5px] text-ink placeholder-ink-3 focus:outline-none focus:ring-2 focus:ring-clay/40"
-                />
-                {searchValue && (
+            <div
+              className={cn(
+                'flex items-center gap-1.5 sm:gap-2 min-w-0',
+                showSearch && searchOpen ? 'flex-1 justify-end' : 'flex-shrink-0',
+              )}
+            >
+              {showSearch &&
+                (searchOpen ? (
+                  <div className="relative min-w-0 flex-1 max-w-[20rem]">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-3 pointer-events-none" />
+                    <input
+                      type="text"
+                      autoFocus
+                      value={searchValue}
+                      onChange={(e) => handleSearchChange(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          e.currentTarget.blur()
+                          setSearchOpen(false)
+                        }
+                      }}
+                      placeholder={searchLabel}
+                      aria-label={searchLabel}
+                      className="w-full h-9 pl-9 pr-9 bg-inset rounded-full text-base sm:text-[13.5px] text-ink placeholder-ink-3 focus:outline-none focus:ring-2 focus:ring-clay/40"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        clearSearch()
+                        setSearchOpen(false)
+                      }}
+                      aria-label="Close search"
+                      className="absolute right-2 inset-y-0 my-auto h-6 w-6 flex items-center justify-center hover:bg-hairline rounded-full transition-colors"
+                    >
+                      <X className="w-4 h-4 text-ink-3" />
+                    </button>
+                  </div>
+                ) : (
                   <button
-                    onClick={clearSearch}
-                    className="absolute right-3 inset-y-0 my-auto h-6 w-6 flex items-center justify-center hover:bg-hairline rounded-full transition-colors"
+                    type="button"
+                    onClick={() => setSearchOpen(true)}
+                    aria-label={searchLabel}
+                    aria-expanded={false}
+                    className={cn(
+                      'w-9 h-9 flex items-center justify-center rounded-full hover:bg-inset transition-colors',
+                      searchValue ? 'text-clay' : 'text-ink-2',
+                    )}
                   >
-                    <X className="w-4 h-4 text-ink-3" />
+                    <Search className="w-[18px] h-[18px]" />
                   </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Spacer to maintain layout on mobile */}
-          <div className="flex-1 md:hidden" />
-
-          {/* Right section - Actions (only show when authenticated) */}
-          {authStatus?.authenticated && (
-            <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
-              {/* Mobile search — collapses to an icon (expands the row below) */}
-              <button
-                onClick={() => setMobileSearchOpen((v) => !v)}
-                aria-label="Search"
-                className="md:hidden w-9 h-9 flex items-center justify-center rounded-full text-ink-2 hover:bg-inset transition-colors"
-              >
-                <Search className="w-[18px] h-[18px]" />
-              </button>
+                ))}
               {/* Theme toggle + Sync are secondary actions — they live in the
                   avatar menu (all viewports), not the main nav bar. Adding by
                   URL is paste-first now (PasteToPreview) — no Add button. */}
@@ -499,6 +531,7 @@ export function Header() {
                   <img
                     src={avatarSrc}
                     alt={authStatus?.user?.username || 'User'}
+                    referrerPolicy="no-referrer"
                     className="w-full h-full object-cover"
                     onError={() => setAvatarBroken(true)}
                   />
@@ -516,6 +549,7 @@ export function Header() {
                             <img
                               src={avatarSrc}
                               alt={authStatus.user.username}
+                              referrerPolicy="no-referrer"
                               className="w-10 h-10 rounded-full object-cover flex-shrink-0"
                               onError={() => setAvatarBroken(true)}
                             />
@@ -543,8 +577,22 @@ export function Header() {
                         </div>
                       </div>
 
-                      {/* Nav + Settings links */}
+                      {/* Nav + Settings links — Theater then Library, matching
+                          the theater avatar menu. */}
                       <div className="py-1">
+                        <Link
+                          href="/"
+                          onClick={() => setShowUserMenu(false)}
+                          className={cn(
+                            'flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset transition-colors',
+                            pathname === '/' || pathname === '/live' || pathname === '/collection'
+                              ? 'font-semibold text-clay'
+                              : 'text-ink-2 hover:text-ink',
+                          )}
+                        >
+                          <Radio className="w-4 h-4" />
+                          Theater
+                        </Link>
                         <Link
                           href="/library"
                           onClick={() => setShowUserMenu(false)}
@@ -557,19 +605,6 @@ export function Header() {
                         >
                           <Bookmark className="w-4 h-4" />
                           Library
-                        </Link>
-                        <Link
-                          href="/"
-                          onClick={() => setShowUserMenu(false)}
-                          className={cn(
-                            'flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset transition-colors',
-                            pathname === '/' || pathname === '/collection'
-                              ? 'font-semibold text-clay'
-                              : 'text-ink-2 hover:text-ink',
-                          )}
-                        >
-                          <Radio className="w-4 h-4" />
-                          Theater
                         </Link>
                         <Link
                           href="/tags"
@@ -665,34 +700,6 @@ export function Header() {
             </div>
           )}
         </div>
-
-        {/* Mobile Search Row — collapses to a header icon; expands on tap. */}
-        {authStatus?.authenticated && mobileSearchOpen && (
-          <div className="md:hidden px-4 pb-3">
-            <div className="relative flex items-center">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-3 pointer-events-none" />
-              <input
-                type="text"
-                autoFocus
-                value={searchValue}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                placeholder={searchPlaceholder}
-                aria-label="Search bookmarks"
-                className="w-full h-10 pl-9 pr-9 bg-inset rounded-full text-base sm:text-sm text-ink placeholder-ink-3 focus:outline-none focus:ring-2 focus:ring-clay/40"
-              />
-              <button
-                onClick={() => {
-                  clearSearch()
-                  setMobileSearchOpen(false)
-                }}
-                aria-label="Close search"
-                className="absolute right-2 inset-y-0 my-auto h-6 w-6 flex items-center justify-center hover:bg-hairline rounded-full transition-colors"
-              >
-                <X className="w-4 h-4 text-ink-3" />
-              </button>
-            </div>
-          </div>
-        )}
       </header>
 
       {/* Sync Progress Modal */}

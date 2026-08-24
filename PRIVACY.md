@@ -2,7 +2,7 @@
 
 This policy describes the **hosted** ADHX service at [adhx.com](https://adhx.com) (and staging at adhx.fly.dev). If you **self-host**, you are the data controller — this file is still the honest description of what the software stores.
 
-Last updated: 22 August 2026.
+Last updated: 24 August 2026.
 
 ## Short version
 
@@ -15,7 +15,7 @@ Last updated: 22 August 2026.
 
 ### Account
 
-When you sign in (magic-link email and/or X):
+When you sign in (magic-link email; X is optional later in Settings, for bookmark sync):
 
 - a unique username, optional display name and avatar
 - email address (if you used a magic link), stored lowercased

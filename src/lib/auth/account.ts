@@ -14,7 +14,7 @@ const TOKEN_TTL_MS = 15 * 60 * 1000
 // ===========================================
 
 export interface AccountIdentities {
-  x: { providerId: string; username?: string } | null
+  x: { providerId: string; username?: string; avatarUrl?: string | null } | null
   email: { email: string } | null
 }
 
@@ -51,7 +51,7 @@ export async function getAccount(userId: string): Promise<Account | null> {
   const emailIdentity = identityRows.find((row) => row.provider === 'email') ?? null
 
   const [tokenRow] = await db
-    .select({ username: oauthTokens.username })
+    .select({ username: oauthTokens.username, profileImageUrl: oauthTokens.profileImageUrl })
     .from(oauthTokens)
     .where(eq(oauthTokens.userId, userId))
     .limit(1)
@@ -68,7 +68,11 @@ export async function getAccount(userId: string): Promise<Account | null> {
     },
     identities: {
       x: xIdentity
-        ? { providerId: xIdentity.providerId, username: tokenRow?.username ?? undefined }
+        ? {
+            providerId: xIdentity.providerId,
+            username: tokenRow?.username ?? undefined,
+            avatarUrl: tokenRow?.profileImageUrl ?? user.avatarUrl ?? null,
+          }
         : null,
       email: emailIdentity ? { email: emailIdentity.providerId } : null,
     },
@@ -214,7 +218,7 @@ export interface FindOrCreateXResult {
   userId: string
   username: string
   created: boolean
-  conflict?: 'linked_elsewhere'
+  conflict?: 'linked_elsewhere' | 'sign_in_required'
 }
 
 /**
@@ -232,10 +236,10 @@ const MAX_RESOLVE_ATTEMPTS = 3
 /**
  * Resolve (or create) the app account for an X login.
  *
- * - Existing 'x' identity → return its owner (refreshing display name/avatar).
- *   If a different session is currently signed in and tries to link an X
- *   account already tied to someone else, that's a conflict — the caller
- *   should NOT change the session.
+ * - Existing 'x' identity → if there is no session, `sign_in_required` (X
+ *   is not a sign-in method). If a different session tries to link it,
+ *   `linked_elsewhere`. Matching session returns the owner (refreshing
+ *   display name/avatar).
  * - No existing identity, but a `users` row already has `id === xUserId` →
  *   that id was previously claimed by an X-first signup (the historical
  *   `userId == X id` convention) whose identity row was later detached, e.g.
@@ -247,9 +251,10 @@ const MAX_RESOLVE_ATTEMPTS = 3
  *   previously unhandled — a blind insert crashed with `SqliteError: UNIQUE
  *   constraint failed: users.id` (Sentry WHITE-SUN-6317-17).
  * - No existing identity + an active session (`sessionUserId`) → link this X
- *   account to that session's user (e.g. an email user connecting X).
- * - No existing identity + no session → brand new user, id = the X user id
- *   (matches the historical `userId == X id` convention).
+ *   account to that session's user (an email user connecting X for bookmark
+ *   sync). X is not a sign-in method — it never creates an account.
+ * - No existing identity + no session → `sign_in_required`. The caller must
+ *   bounce to email sign-in; do not create a user.
  *
  * Every insert is wrapped so a lost race (two callbacks resolving the same X
  * id at once) re-checks from the top instead of crashing on the resulting
@@ -267,7 +272,10 @@ export async function findOrCreateUserForX(
       .limit(1)
 
     if (existingIdentity) {
-      if (sessionUserId && existingIdentity.userId !== sessionUserId) {
+      if (!sessionUserId) {
+        return { userId: '', username: '', created: false, conflict: 'sign_in_required' }
+      }
+      if (existingIdentity.userId !== sessionUserId) {
         return {
           userId: existingIdentity.userId,
           username: '',
@@ -299,7 +307,10 @@ export async function findOrCreateUserForX(
     const [ownerOfXId] = await db.select().from(users).where(eq(users.id, x.xUserId)).limit(1)
 
     if (ownerOfXId) {
-      if (sessionUserId && ownerOfXId.id !== sessionUserId) {
+      if (!sessionUserId) {
+        return { userId: '', username: '', created: false, conflict: 'sign_in_required' }
+      }
+      if (ownerOfXId.id !== sessionUserId) {
         return { userId: ownerOfXId.id, username: '', created: false, conflict: 'linked_elsewhere' }
       }
 
@@ -349,33 +360,8 @@ export async function findOrCreateUserForX(
       return { userId: sessionUserId, username: user?.username ?? x.username, created: false }
     }
 
-    // Brand new user, keyed by the X id.
-    let username = x.username
-    if (await isUsernameTaken(username)) {
-      username = `${x.username}-x${randomHex(2)}`
-    }
-
-    try {
-      runInTransaction(() => {
-        db.insert(users)
-          .values({
-            id: x.xUserId,
-            username,
-            displayName: x.name ?? null,
-            avatarUrl: x.profileImageUrl,
-            usernameChosen: true, // picked their handle on X — no /welcome prompt
-          })
-          .run()
-        db.insert(userIdentities)
-          .values({ provider: 'x', providerId: x.xUserId, userId: x.xUserId })
-          .run()
-      })
-    } catch (err) {
-      if (!isDuplicateRowError(err)) throw err
-      continue
-    }
-
-    return { userId: x.xUserId, username, created: true }
+    // X is not a sign-in method — never create an account from an X login.
+    return { userId: '', username: '', created: false, conflict: 'sign_in_required' }
   }
 
   throw new Error('findOrCreateUserForX: could not resolve X identity after repeated races')

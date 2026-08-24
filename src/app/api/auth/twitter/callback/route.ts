@@ -63,6 +63,14 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // X is a Settings link. Require a session BEFORE spending the one-time
+    // OAuth code / PKCE verifier, so an expired cookie during consent does
+    // not burn the grant.
+    const existingSession = await getSession()
+    if (!existingSession?.userId) {
+      return NextResponse.redirect(new URL('/?auth_error=x_link_only', BASE_URL))
+    }
+
     // Verify state and get code verifier
     const codeVerifier = await consumeOAuthState(state)
     if (!codeVerifier) {
@@ -81,10 +89,6 @@ export async function GET(request: NextRequest) {
     // Get user info
     const user = await getCurrentUser(tokens.accessToken)
 
-    // Resolve (or create) the app account for this X login. If there's an
-    // active session (e.g. an email user connecting X), link to it instead
-    // of creating a second account.
-    const existingSession = await getSession()
     const linkResult = await findOrCreateUserForX(
       {
         xUserId: user.id,
@@ -92,7 +96,7 @@ export async function GET(request: NextRequest) {
         name: user.name,
         profileImageUrl: user.profileImageUrl,
       },
-      existingSession?.userId,
+      existingSession.userId,
     )
 
     if (linkResult.conflict === 'linked_elsewhere') {
@@ -100,6 +104,10 @@ export async function GET(request: NextRequest) {
       // currently signed in — don't touch the session, bounce back to
       // Settings with an error instead.
       return NextResponse.redirect(new URL('/settings?auth_error=x_already_linked', BASE_URL))
+    }
+
+    if (linkResult.conflict === 'sign_in_required') {
+      return NextResponse.redirect(new URL('/?auth_error=x_link_only', BASE_URL))
     }
 
     const appUserId = linkResult.userId
@@ -139,11 +147,13 @@ export async function GET(request: NextRequest) {
     // Determine redirect URL
     let redirectUrl: URL
     if (isSafeReturnUrl(returnUrl)) {
-      // Return to the original URL (e.g., /user/status/123)
+      // Return to the original URL (e.g. Settings, or a preview the user was on)
       redirectUrl = new URL(returnUrl, BASE_URL)
     } else {
-      // Default: redirect to home with firstLogin flag to trigger auto-sync
-      redirectUrl = new URL('/?firstLogin=true', BASE_URL)
+      // X is a Settings link, not a sign-in. Signed-in `/` redirects to
+      // `/collection` and drops query strings, so `/?firstLogin=true` never
+      // reached the library sync modal. Land on Settings instead.
+      redirectUrl = new URL('/settings', BASE_URL)
     }
 
     const response = NextResponse.redirect(redirectUrl)

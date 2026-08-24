@@ -59,7 +59,8 @@ export interface UseTheaterKeyboardArgs {
 /**
  * Keyboard nav: →/j next, ←/k prev. ↑/↓ scroll a text/article stage so
  * reading never needs the mouse (they do not change posts). Space toggles
- * play/pause (delegated to Stage via a custom event), m toggles mute.
+ * play/pause (video stages and the 10s timed dwell, via `theater-toggle-play`),
+ * m toggles mute.
  * Letter keys fire the matching action button through `theater-*` window
  * events so only the visible chrome (desktop vs mobile) handles them.
  * Ignored while typing in an input/textarea/contentEditable element.

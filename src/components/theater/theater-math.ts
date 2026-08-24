@@ -318,7 +318,7 @@ export function theaterUrlSyncPath(
 
 /**
  * After Live `replaceState` onto `/{user}/status/{id}`, Next's router still
- * thinks the page is `/` or `/collection`. Pushing the other tab then lags
+ * thinks the page is `/live` or `/collection`. Pushing the other tab then lags
  * or no-ops — chrome flips, the address bar stays on the preview path.
  *
  * Restore the browser URL to the theater route Next is actually rendering
@@ -326,11 +326,11 @@ export function theaterUrlSyncPath(
  */
 export function theaterTabNavRestore(
   browserPath: string,
-  dest: '/' | '/collection',
-): '/' | '/collection' | null {
+  dest: '/live' | '/collection',
+): '/live' | '/collection' | null {
   if (browserPath === dest) return null
-  if (browserPath === '/' || browserPath === '/collection') return null
-  return dest === '/collection' ? '/' : '/collection'
+  if (browserPath === '/live' || browserPath === '/collection') return null
+  return dest === '/collection' ? '/live' : '/collection'
 }
 
 /**

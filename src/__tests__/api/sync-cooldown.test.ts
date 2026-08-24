@@ -5,7 +5,7 @@ import { createTestDb, type TestDbInstance } from './setup'
 /**
  * API Route Tests: /api/sync/cooldown
  *
- * Tests sync cooldown enforcement (default 15 minutes, configurable via env).
+ * Tests sync cooldown enforcement (default 1 hour, configurable via env).
  */
 
 let testInstance: TestDbInstance
@@ -21,8 +21,8 @@ vi.mock('@/lib/auth/session', () => ({
   getCurrentUserId: vi.fn(() => Promise.resolve(mockUserId)),
 }))
 
-// Default cooldown is 15 minutes (matches lib/sync/config.ts)
-const DEFAULT_COOLDOWN_MS = 15 * 60 * 1000
+// Default cooldown is 1 hour (matches lib/sync/config.ts)
+const DEFAULT_COOLDOWN_MS = 60 * 60 * 1000
 
 describe('API: /api/sync/cooldown', () => {
   beforeEach(() => {
@@ -61,7 +61,7 @@ describe('API: /api/sync/cooldown', () => {
 
   describe('Within cooldown period', () => {
     it('denies sync when last sync was within cooldown period', async () => {
-      // Insert a sync that completed 5 minutes ago (within 15 min default cooldown)
+      // Insert a sync that completed 5 minutes ago (within 1 hour default cooldown)
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
       await testInstance.db.insert(schema.syncLogs).values({
         id: 'sync-1',
@@ -85,35 +85,38 @@ describe('API: /api/sync/cooldown', () => {
     })
 
     it('calculates remaining cooldown correctly', async () => {
-      // Insert a sync that completed 10 minutes ago (within 15 min default cooldown)
-      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString()
+      // Insert a sync that completed 15 minutes ago (within 1 hour default cooldown)
+      const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString()
       await testInstance.db.insert(schema.syncLogs).values({
         id: 'sync-1',
         userId: 'user-123',
-        startedAt: tenMinutesAgo,
-        completedAt: tenMinutesAgo,
+        startedAt: fifteenMinutesAgo,
+        completedAt: fifteenMinutesAgo,
         status: 'completed',
+        totalFetched: 10,
+        newBookmarks: 5,
       })
 
       const { GET } = await import('@/app/api/sync/cooldown/route')
       const response = await GET()
 
       const data = await response.json()
-      // Should have ~5 minutes remaining (with some tolerance for test execution)
-      expect(data.cooldownRemaining).toBeGreaterThan(3 * 60 * 1000)
-      expect(data.cooldownRemaining).toBeLessThan(7 * 60 * 1000)
+      expect(data.canSync).toBe(false)
+      // ~45 minutes remaining
+      expect(data.cooldownRemaining).toBeGreaterThan(40 * 60 * 1000)
+      expect(data.cooldownRemaining).toBeLessThan(50 * 60 * 1000)
     })
   })
 
   describe('After cooldown period', () => {
     it('allows sync when last sync was after cooldown period', async () => {
-      // Insert a sync that completed 20 minutes ago (just over 15 min default cooldown)
-      const twentyMinutesAgo = new Date(Date.now() - 20 * 60 * 1000).toISOString()
+      // Insert a sync that completed 61 minutes ago (just over 1 hour default cooldown)
+      const sixtyOneMinutesAgo = new Date(Date.now() - 61 * 60 * 1000).toISOString()
       await testInstance.db.insert(schema.syncLogs).values({
         id: 'sync-1',
         userId: 'user-123',
-        startedAt: twentyMinutesAgo,
-        completedAt: twentyMinutesAgo,
+        startedAt: sixtyOneMinutesAgo,
+        completedAt: sixtyOneMinutesAgo,
         status: 'completed',
       })
 
@@ -240,19 +243,19 @@ describe('API: /api/sync/cooldown', () => {
 
   describe('Environment variable configuration', () => {
     it('respects SYNC_COOLDOWN_MINUTES env variable', async () => {
-      // Set env to 1 hour cooldown
-      vi.stubEnv('SYNC_COOLDOWN_MINUTES', '60')
+      // Override default 1 hour to 2 hours
+      vi.stubEnv('SYNC_COOLDOWN_MINUTES', '120')
 
       // Reset module cache to pick up new env
       vi.resetModules()
 
-      // Insert a sync that completed 30 minutes ago
-      const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+      // Insert a sync that completed 90 minutes ago
+      const ninetyMinutesAgo = new Date(Date.now() - 90 * 60 * 1000).toISOString()
       await testInstance.db.insert(schema.syncLogs).values({
         id: 'sync-1',
         userId: 'user-123',
-        startedAt: thirtyMinutesAgo,
-        completedAt: thirtyMinutesAgo,
+        startedAt: ninetyMinutesAgo,
+        completedAt: ninetyMinutesAgo,
         status: 'completed',
       })
 
@@ -260,7 +263,7 @@ describe('API: /api/sync/cooldown', () => {
       const response = await GET()
 
       const data = await response.json()
-      // With 60 minute cooldown, 30 minutes ago should still be in cooldown
+      // With 120 minute cooldown, 90 minutes ago should still be in cooldown
       expect(data.canSync).toBe(false)
       expect(data.cooldownRemaining).toBeGreaterThan(25 * 60 * 1000) // ~30 mins remaining
 

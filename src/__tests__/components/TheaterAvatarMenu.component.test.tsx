@@ -265,25 +265,25 @@ describe('TheaterAvatarMenu', () => {
     render(<TheaterAvatarMenu />)
     fireEvent.click(await screen.findByLabelText('Account menu'))
 
-    await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Library' })).toHaveFocus())
+    await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Theater' })).toHaveFocus())
 
     pressMenuKey('ArrowDown')
-    expect(screen.getByRole('menuitem', { name: 'Theater' })).toHaveFocus()
+    expect(screen.getByRole('menuitem', { name: 'Library' })).toHaveFocus()
 
     pressMenuKey('j')
     expect(screen.getByRole('menuitem', { name: 'Tags' })).toHaveFocus()
 
     pressMenuKey('k')
-    expect(screen.getByRole('menuitem', { name: 'Theater' })).toHaveFocus()
+    expect(screen.getByRole('menuitem', { name: 'Library' })).toHaveFocus()
 
     pressMenuKey('End')
     expect(screen.getByRole('menuitem', { name: 'Sign out' })).toHaveFocus()
 
     pressMenuKey('ArrowDown')
-    expect(screen.getByRole('menuitem', { name: 'Library' })).toHaveFocus()
+    expect(screen.getByRole('menuitem', { name: 'Theater' })).toHaveFocus()
 
     pressMenuKey('Home')
-    expect(screen.getByRole('menuitem', { name: 'Library' })).toHaveFocus()
+    expect(screen.getByRole('menuitem', { name: 'Theater' })).toHaveFocus()
 
     pressMenuKey('ArrowDown')
     pressMenuKey('ArrowDown')
@@ -458,14 +458,22 @@ describe('TheaterAvatarMenu — Theater sub-options (theaterTabs)', () => {
     return onTabChange
   }
 
-  it('lists Live then My Collection under a Theater heading', async () => {
+  it('lists Live then My Collection under Theater, same 13px row as Library', async () => {
     await openWith('live')
 
-    expect(screen.getByText('Theater')).toBeInTheDocument()
-    const live = screen.getByText('Live')
-    const collection = screen.getByText('My Collection')
-    // Live is the default, so it reads first.
+    const theater = screen.getByRole('menuitem', { name: 'Theater' })
+    const live = screen.getByRole('menuitem', { name: 'Live' })
+    const collection = screen.getByRole('menuitem', { name: 'My Collection' })
+    const library = screen.getByRole('menuitem', { name: 'Library' })
+    expect(theater.className).toContain('text-[13px]')
+    expect(live.className).toContain('text-[13px]')
+    expect(live.className).toContain('pl-[2.4rem]')
+    expect(collection.className).toContain('pl-[2.4rem]')
+    expect(theater.compareDocumentPosition(live) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(live.compareDocumentPosition(collection) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(
+      collection.compareDocumentPosition(library) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
   })
 
   it('highlights the selected tab and only that one', async () => {
@@ -502,14 +510,39 @@ describe('TheaterAvatarMenu — Theater sub-options (theaterTabs)', () => {
     await waitFor(() => expect(screen.queryByText('My Collection')).not.toBeInTheDocument())
   })
 
-  it('replaces the single Theater entry rather than adding to it', async () => {
+  it('keeps Theater as a Radio menu row; Live and My Collection are indented children', async () => {
     await openWith('live')
 
-    // One "Theater" (the group heading), and it is NOT itself a menu item —
-    // its two children are. Otherwise the menu offers three ways to say the
-    // same thing.
     expect(screen.getAllByText('Theater')).toHaveLength(1)
-    expect(screen.getByText('Theater').closest('[role="menuitem"]')).toBeNull()
+    const theater = screen.getByRole('menuitem', { name: 'Theater' })
+    expect(theater.querySelector('svg')).toBeTruthy()
+    expect(screen.getByRole('menuitem', { name: 'Live' }).querySelector('svg')).toBeTruthy()
+    expect(
+      screen.getByRole('menuitem', { name: 'My Collection' }).querySelector('svg'),
+    ).toBeTruthy()
+    // The selected child carries "you are here", not Theater itself.
+    expect(theater).not.toHaveAttribute('aria-current')
+    expect(theater.querySelector('[data-testid="menu-current-dot"]')).not.toBeInTheDocument()
+  })
+
+  it('clicking Theater on the home theater closes the menu without switching tabs', async () => {
+    const onTabChange = await openWith('live')
+
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Theater' }))
+    expect(onTabChange).not.toHaveBeenCalled()
+    await waitFor(() => expect(screen.queryByText('Theater')).not.toBeInTheDocument())
+  })
+
+  it('arrows move Theater → Live → My Collection', async () => {
+    await openWith('live')
+
+    await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Theater' })).toHaveFocus())
+    pressMenuKey('ArrowDown')
+    expect(screen.getByRole('menuitem', { name: 'Live' })).toHaveFocus()
+    pressMenuKey('ArrowDown')
+    expect(screen.getByRole('menuitem', { name: 'My Collection' })).toHaveFocus()
+    pressMenuKey('ArrowDown')
+    expect(screen.getByRole('menuitem', { name: 'Library' })).toHaveFocus()
   })
 
   it('falls back to the plain Theater entry when no tabs are passed', async () => {

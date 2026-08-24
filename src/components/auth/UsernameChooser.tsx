@@ -32,13 +32,16 @@ export interface UsernameChooserProps {
   autoFocus?: boolean
   /** Fired whenever the live-sanitized preview of the input changes, so a caller can mirror it in surrounding copy. */
   onSanitizedChange?: (sanitized: string) => void
+  /** Settings uses Save; /welcome uses Claim @handle. Default 'claim'. */
+  submitLabel?: 'claim' | 'save'
+  onCancel?: () => void
 }
 
 /**
  * Shared username claim/change form — input with a live availability check,
  * submit to `POST /api/auth/username`, and success/error handling. Used by
  * both `/welcome` (first-claim prompt, `theme="dark"`) and the Settings
- * "Sign-in & connection" card (subsequent changes, `theme="matter"`).
+ * Username card (subsequent changes, `theme="matter"`).
  */
 export function UsernameChooser({
   suggestedUsername,
@@ -47,6 +50,8 @@ export function UsernameChooser({
   showKeepSuggestion = true,
   autoFocus = false,
   onSanitizedChange,
+  submitLabel = 'claim',
+  onCancel,
 }: UsernameChooserProps) {
   const [value, setValue] = useState(suggestedUsername)
   const [availability, setAvailability] = useState<UsernameAvailability>('idle')
@@ -198,22 +203,54 @@ export function UsernameChooser({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-3 flex flex-col gap-2">
-      <div className="flex h-11 items-center rounded-[10px] border border-hairline bg-inset pl-3.5 pr-2">
-        <span className="whitespace-nowrap font-mono text-[13px] text-ink-3">adhx.com/t/</span>
-        <input
-          type="text"
-          autoFocus={autoFocus}
-          autoComplete="off"
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck={false}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          aria-label="Username"
-          maxLength={15}
-          className="h-full min-w-0 flex-1 bg-transparent text-base text-ink outline-none focus:ring-0 sm:text-sm"
-        />
+    <form onSubmit={handleSubmit} className="flex min-w-0 flex-col gap-1.5">
+      <div className="flex min-w-0 items-center gap-2">
+        <div className="flex h-11 min-w-0 flex-1 items-center rounded-[10px] border border-hairline bg-inset pl-3.5 pr-2">
+          <span className="whitespace-nowrap font-mono text-[13px] text-ink-3">adhx.com/t/</span>
+          <input
+            type="text"
+            autoFocus={autoFocus}
+            autoComplete="off"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            aria-label="Username"
+            maxLength={15}
+            className="h-full min-w-0 flex-1 bg-transparent text-base text-ink outline-none focus:ring-0 sm:text-sm"
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={disabled}
+          className="inline-flex min-h-[44px] flex-none items-center whitespace-nowrap rounded-[10px] bg-clay-grad px-3.5 py-2 text-[13px] font-semibold text-white transition-all hover:opacity-90 disabled:opacity-60"
+        >
+          {submitting
+            ? 'Saving…'
+            : submitLabel === 'save'
+              ? 'Save'
+              : `Claim @${sanitized || '...'}`}
+        </button>
+        {showKeepSuggestion && (
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => claim(suggestedUsername)}
+            className="flex-none text-[13px] text-ink-3 underline underline-offset-2 disabled:opacity-60"
+          >
+            Keep @{suggestedUsername}
+          </button>
+        )}
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-none text-[13px] text-ink-3 transition-colors hover:text-ink"
+          >
+            Cancel
+          </button>
+        )}
       </div>
 
       <div className="min-h-[18px] text-[12.5px]">
@@ -222,26 +259,6 @@ export function UsernameChooser({
         {availability === 'taken' && <span className="text-red-600">Taken — try another</span>}
         {availability === 'error' && (
           <span className="text-ink-3">Couldn&rsquo;t check availability</span>
-        )}
-      </div>
-
-      <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={disabled}
-          className="inline-flex items-center px-4 py-2.5 min-h-[44px] rounded-[10px] bg-clay-grad text-white font-semibold text-sm whitespace-nowrap hover:opacity-90 transition-all disabled:opacity-60"
-        >
-          {submitting ? 'Saving…' : `Claim @${sanitized || '...'}`}
-        </button>
-        {showKeepSuggestion && (
-          <button
-            type="button"
-            disabled={submitting}
-            onClick={() => claim(suggestedUsername)}
-            className="text-[13px] text-ink-3 underline underline-offset-2 disabled:opacity-60"
-          >
-            Keep @{suggestedUsername}
-          </button>
         )}
       </div>
 

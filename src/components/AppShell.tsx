@@ -9,15 +9,9 @@ import { PWAInstallPrompt } from './PWAInstallPrompt'
 function HeaderSkeleton() {
   return (
     <header className="sticky top-0 z-50 bg-surface border-b border-hairline">
-      <div className="max-w-7xl mx-auto px-4 py-3">
-        <div className="flex items-center gap-4">
-          <div className="w-32 h-8 bg-inset rounded-card animate-pulse" />
-          <div className="flex-1 max-w-xl h-10 bg-inset rounded-full animate-pulse" />
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-inset rounded-full animate-pulse" />
-            <div className="w-10 h-10 bg-inset rounded-full animate-pulse" />
-          </div>
-        </div>
+      <div className="px-4 sm:px-6 h-16 flex items-center justify-between">
+        <div className="w-24 h-8 bg-inset rounded-card animate-pulse" />
+        <div className="w-[33px] h-[33px] bg-inset rounded-full animate-pulse" />
       </div>
     </header>
   )
@@ -36,7 +30,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // TheaterShell is `fixed inset-0 z-[60]` and owns the chrome. Hide the
   // Header; the install banner still mounts (z-70, under the top-left logo).
   const isTheaterPage =
-    pathname === '/' || pathname === '/collection' || pathname.startsWith('/t/') || isPreviewPage
+    pathname === '/' ||
+    pathname === '/live' ||
+    pathname === '/collection' ||
+    pathname.startsWith('/t/') ||
+    isPreviewPage
   const isFullWidth =
     isTheaterPage ||
     pathname === '/trending/play' ||

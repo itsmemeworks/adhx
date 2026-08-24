@@ -5,7 +5,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { PWAInstallPrompt } from '@/components/PWAInstallPrompt'
 import { SHORTCUT_DISMISS_KEY } from '@/components/IosShortcutInstall'
-import { X_ONLY_SHORTCUT_URL } from '@/lib/share/ios'
+import { ANDROID_A2HS_DISMISS_KEY } from '@/components/AndroidInstall'
+import { IOS_SHORTCUT_URL } from '@/lib/share/ios'
 
 let mockPlatform: 'ios' | 'android' | 'desktop' = 'desktop'
 let mockPathname = '/'
@@ -67,7 +68,7 @@ describe('PWAInstallPrompt', () => {
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /add shortcut/i })).not.toBeInTheDocument()
     const install = screen.getByRole('link', { name: /install the iOS shortcut/i })
-    expect(install).toHaveAttribute('href', X_ONLY_SHORTCUT_URL)
+    expect(install).toHaveAttribute('href', IOS_SHORTCUT_URL)
     expect(install).toHaveAttribute('target', '_blank')
     expect(
       screen.getByText(/Share posts to ADHX from X, Instagram, TikTok, and YouTube in one tap\./),
@@ -81,17 +82,45 @@ describe('PWAInstallPrompt', () => {
     expect(screen.getByText('Install the iOS shortcut')).toBeInTheDocument()
   })
 
+  it('shows the Android banner without waiting for beforeinstallprompt', async () => {
+    mockPlatform = 'android'
+    render(<PWAInstallPrompt />)
+    expect(await screen.findByText('Share a post directly to ADHX')).toBeInTheDocument()
+    expect(
+      screen.getByText(/From X, Instagram, TikTok, or YouTube: Share → ADHX\./),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'How' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Add' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/Paste link still works/)).not.toBeInTheDocument()
+  })
+
+  it('expands the Android walkthrough in the banner instead of sending How to Settings', async () => {
+    mockPlatform = 'android'
+    render(<PWAInstallPrompt />)
+    fireEvent.click(await screen.findByRole('button', { name: 'How' }))
+    expect(screen.getByText('Add to Home')).toBeInTheDocument()
+    expect(screen.getByText(/Paste link still works/)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'How' })).not.toBeInTheDocument()
+  })
+
   it('offers a one-tap Add button on Android once beforeinstallprompt fires', async () => {
     mockPlatform = 'android'
     render(<PWAInstallPrompt />)
-    expect(screen.queryByText('Add ADHX to your home screen')).not.toBeInTheDocument()
+    expect(await screen.findByText('Share a post directly to ADHX')).toBeInTheDocument()
 
     const evt = fireBeforeInstallPrompt()
-    expect(await screen.findByText('Add ADHX to your home screen')).toBeInTheDocument()
-
-    const addBtn = screen.getByRole('button', { name: 'Add' })
+    const addBtn = await screen.findByRole('button', { name: 'Add' })
+    expect(screen.queryByRole('button', { name: 'How' })).not.toBeInTheDocument()
     fireEvent.click(addBtn)
     expect(evt.prompt).toHaveBeenCalled()
+  })
+
+  it('stays hidden on Android once the home-screen nudge is dismissed', () => {
+    mockPlatform = 'android'
+    localStorage.setItem(ANDROID_A2HS_DISMISS_KEY, '1')
+    const { container } = render(<PWAInstallPrompt />)
+    expect(container).toBeEmptyDOMElement()
   })
 
   it('stays hidden on Android when already installed (standalone)', () => {
@@ -141,6 +170,30 @@ describe('PWAInstallPrompt', () => {
     expect(localStorage.getItem(SHORTCUT_DISMISS_KEY)).toBeNull()
   })
 
+  it('dismisses the Android banner when tapping away', async () => {
+    mockPlatform = 'android'
+    render(
+      <div>
+        <button type="button">elsewhere</button>
+        <PWAInstallPrompt />
+      </div>,
+    )
+    await screen.findByText('Share a post directly to ADHX')
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'elsewhere' }))
+    await waitFor(() =>
+      expect(screen.queryByText('Share a post directly to ADHX')).not.toBeInTheDocument(),
+    )
+    expect(localStorage.getItem(ANDROID_A2HS_DISMISS_KEY)).toBe('1')
+  })
+
+  it('does not dismiss the Android banner when tapping How', async () => {
+    mockPlatform = 'android'
+    render(<PWAInstallPrompt />)
+    fireEvent.pointerDown(await screen.findByRole('button', { name: 'How' }))
+    expect(screen.getByText('Share a post directly to ADHX')).toBeInTheDocument()
+    expect(localStorage.getItem(ANDROID_A2HS_DISMISS_KEY)).toBeNull()
+  })
+
   it('hangs fixed under the theater logo, and sits in-flow under the header elsewhere', () => {
     mockPlatform = 'ios'
     const { rerender } = render(<PWAInstallPrompt />)
@@ -157,9 +210,39 @@ describe('PWAInstallPrompt', () => {
     expect(wrap).not.toHaveClass('fixed')
   })
 
+  it('pins the Android banner under the theater logo instead of over the peek bar', async () => {
+    mockPlatform = 'android'
+    mockPathname = '/collection'
+    const { rerender } = render(<PWAInstallPrompt />)
+    const theaterWrap = (await screen.findByText('Share a post directly to ADHX')).closest(
+      '.sm\\:hidden',
+    )
+    expect(theaterWrap).toHaveClass(
+      'fixed',
+      'left-3',
+      'top-[calc(env(safe-area-inset-top,0px)+3.15rem)]',
+    )
+    expect(theaterWrap).not.toHaveClass('right-3')
+
+    mockPathname = '/library'
+    rerender(<PWAInstallPrompt />)
+    const libraryWrap = screen.getByText('Share a post directly to ADHX').closest('.sm\\:hidden')
+    expect(libraryWrap).toHaveClass('relative', 'mx-3', 'mt-2')
+    expect(libraryWrap).not.toHaveClass('fixed')
+  })
+
   it('registers the service worker', () => {
     mockPlatform = 'ios'
     render(<PWAInstallPrompt />)
     expect(navigator.serviceWorker.register).toHaveBeenCalledWith('/sw.js')
+  })
+
+  it('skips the Android nudge on Settings so the always-on card is not doubled', async () => {
+    mockPlatform = 'android'
+    mockPathname = '/settings'
+    render(<PWAInstallPrompt />)
+    await waitFor(() => {
+      expect(screen.queryByText('Share a post directly to ADHX')).not.toBeInTheDocument()
+    })
   })
 })

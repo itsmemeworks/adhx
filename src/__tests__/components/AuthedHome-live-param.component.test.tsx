@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  *
  * Leftover `?live=1` (from when Live was an overlay on the grid) now
- * navigates to `/` — the signed-in Live theater — instead of mounting a
+ * navigates to `/live` — the signed-in Live theater — instead of mounting a
  * second TheaterShell over the library.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
@@ -111,10 +111,10 @@ beforeEach(() => {
 })
 
 describe('AuthedHome ?live=1 handling', () => {
-  it('navigates to `/` and does not mount a theater overlay', async () => {
+  it('navigates to `/live` and does not mount a theater overlay', async () => {
     const { queryByTestId } = render(<FeedPage />)
 
-    await waitFor(() => expect(replaceSpy).toHaveBeenCalledWith('/'))
+    await waitFor(() => expect(replaceSpy).toHaveBeenCalledWith('/live'))
     expect(queryByTestId('theater-shell')).not.toBeInTheDocument()
   })
 })

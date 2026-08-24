@@ -1,13 +1,12 @@
 /**
  * @vitest-environment jsdom
  *
- * Component tests for the Settings "Sign-in & connection" card's Username
- * row (`UsernameRow` in `SettingsClient.tsx`) and the shared
- * `UsernameChooser` it mounts inline. Covers: the free-first-claim
- * ("Choose") state, live availability feedback, a successful claim flipping
- * the row to read-only without a reload, the "N changes left" state once a
- * username has been chosen, and the fully read-only state once the change
- * cap is spent.
+ * Component tests for the Settings Username card (`UsernameRow` in
+ * `SettingsClient.tsx`) and the shared `UsernameChooser` it mounts inline.
+ * Covers: the free-first-claim ("Choose") state, live availability feedback,
+ * a successful claim flipping the row to read-only without a reload, the
+ * "N changes left" state once a username has been chosen, and the fully
+ * read-only state once the change cap is spent.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
@@ -133,7 +132,7 @@ describe('SettingsClient — Username row', () => {
       () => expect(screen.getByText('Taken — try another')).toBeInTheDocument(),
       DEBOUNCE_WAIT,
     )
-    expect(screen.getByRole('button', { name: /Claim @popular/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
   })
 
   it('a successful claim flips the row to read-only without a reload', async () => {
@@ -151,7 +150,7 @@ describe('SettingsClient — Username row', () => {
     fireEvent.change(input, { target: { value: 'chosen' } })
     await waitFor(() => expect(screen.getByText('Available')).toBeInTheDocument(), DEBOUNCE_WAIT)
 
-    fireEvent.click(screen.getByRole('button', { name: /Claim @chosen/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => expect(screen.getByText('@chosen')).toBeInTheDocument())
     // The chooser form is gone — the row collapsed back to read display.
@@ -168,6 +167,13 @@ describe('SettingsClient — Username row', () => {
     await waitFor(() => expect(screen.getByText('@current')).toBeInTheDocument())
     expect(screen.getByText('1 change left')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Change' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Change' }))
+    expect(screen.queryByText(/keep redirecting/i)).not.toBeInTheDocument()
+    expect(screen.queryByText('1 change left')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Username')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
   })
 
   it('is fully read-only with no affordance once both changes are spent', async () => {
@@ -176,7 +182,7 @@ describe('SettingsClient — Username row', () => {
 
     render(<SettingsClient />)
     await waitFor(() => expect(screen.getByText('@current')).toBeInTheDocument())
-    expect(screen.getByText('Usernames are permanent once changes run out')).toBeInTheDocument()
+    expect(screen.getByText('No changes left')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Change' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Choose' })).not.toBeInTheDocument()
   })

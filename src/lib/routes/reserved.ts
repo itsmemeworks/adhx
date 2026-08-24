@@ -7,11 +7,15 @@
  * Keep in sync with `src/app`'s top-level folders.
  */
 export const RESERVED_TOP_LEVEL_SEGMENTS = new Set<string>([
+  'admin',
   'api',
+  'collection',
   'collections',
   'dev',
   'discover',
   'leaderboard',
+  'library',
+  'live',
   'privacy',
   'reel',
   'reels',

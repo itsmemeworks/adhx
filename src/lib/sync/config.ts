@@ -6,19 +6,19 @@
  */
 
 /**
- * Default cooldown between syncs in milliseconds (15 minutes)
+ * Default cooldown between syncs in milliseconds (1 hour)
  */
-const DEFAULT_COOLDOWN_MS = 15 * 60 * 1000
+const DEFAULT_COOLDOWN_MS = 60 * 60 * 1000
 
 /**
  * Get the sync cooldown duration in milliseconds.
  *
  * Can be configured via SYNC_COOLDOWN_MINUTES environment variable.
- * Defaults to 15 minutes if not set.
+ * Defaults to 60 minutes if not set.
  *
  * @example
  * // In .env.local
- * SYNC_COOLDOWN_MINUTES=60  // 1 hour cooldown
+ * SYNC_COOLDOWN_MINUTES=15  // 15 minute cooldown
  */
 export function getSyncCooldownMs(): number {
   const envMinutes = process.env.SYNC_COOLDOWN_MINUTES

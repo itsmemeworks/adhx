@@ -6,8 +6,8 @@
  * fixed-position footer, and the rank medallion:
  *
  * - default (`/tags` usage): only the mosaic area is a `<Link>`; `badge`/
- *   `children` render as interactive controls OUTSIDE that link, since
- *   nesting a button/anchor inside an `<a>` is invalid HTML.
+ *   `children` render in an action row under the mosaic, OUTSIDE that
+ *   link, since nesting a button/anchor inside an `<a>` is invalid HTML.
  * - `wholeCardLink` (public profile + leaderboard usage): the entire
  *   card — mosaic + title/badge footer — is a single `<Link>`, with no
  *   nested interactive controls (the rank medallion is non-interactive, so
@@ -51,6 +51,13 @@ describe('CollectionPosterCard', () => {
     expect(screen.getByText('#cool-stuff')).toBeInTheDocument()
     expect(screen.getByTitle('2 posts')).toBeInTheDocument()
     expect(screen.getByTitle('2 posts')).toHaveTextContent('2')
+
+    // Title/stats sit on the mosaic and must not eat clicks.
+    const footer = screen.getByText('#cool-stuff').parentElement?.parentElement
+    expect(footer?.className).toContain('pointer-events-none')
+    // Actions live in the row under the mosaic, still outside the link.
+    expect(button.closest('.border-t')).not.toBeNull()
+    expect(badge.closest('.border-t')).not.toBeNull()
   })
 
   it('profile variant (wholeCardLink): the entire card is one link with no nested controls', () => {

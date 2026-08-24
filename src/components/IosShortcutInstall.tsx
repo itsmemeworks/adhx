@@ -1,16 +1,48 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ChevronDown, Share, X } from 'lucide-react'
-import { IosShareRecipe } from '@/components/IosShareRecipe'
+import { Plus, Share, Smartphone, X, type LucideIcon } from 'lucide-react'
 import { getPlatformType, isIOSDevice } from '@/lib/platform'
-import { X_ONLY_SHORTCUT_URL } from '@/lib/share/ios'
+import { IOS_SHORTCUT_URL } from '@/lib/share/ios'
 import { pingAnalytic } from '@/lib/analytics/client'
 import { cn } from '@/lib/utils'
 
 export const SHORTCUT_DISMISS_KEY = 'adhx-shortcut-dismissed'
 
-/** One-tap install: opens the iCloud shortcut (X-only today) in Shortcuts. */
+const HOW_STEPS: { icon: LucideIcon; label: string; hint: string }[] = [
+  { icon: Plus, label: 'Add shortcut', hint: 'Puts it in Share' },
+  { icon: Smartphone, label: 'Open a post', hint: 'X, IG, TikTok, YouTube' },
+  { icon: Share, label: 'Share → ADHX', hint: 'Saves it here' },
+]
+
+/** Chrome-style 3-step strip — same tiles as AndroidHow. */
+export function IosHow({ className }: { className?: string }) {
+  return (
+    <div className={cn('mt-3', className)}>
+      <ol className="grid grid-cols-3 gap-2">
+        {HOW_STEPS.map((step, i) => {
+          const Icon = step.icon
+          return (
+            <li key={step.label} className="flex flex-col items-center px-0.5 text-center">
+              <span className="relative flex h-11 w-11 items-center justify-center rounded-[14px] bg-clay text-white">
+                <Icon className="h-5 w-5" aria-hidden />
+                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-ink text-[9px] font-semibold text-surface">
+                  {i + 1}
+                </span>
+              </span>
+              <span className="mt-2 text-[12px] font-semibold leading-tight text-ink">
+                {step.label}
+              </span>
+              <span className="mt-0.5 text-[11px] leading-snug text-ink-3">{step.hint}</span>
+            </li>
+          )
+        })}
+      </ol>
+    </div>
+  )
+}
+
+/** One-tap install: opens the iCloud shortcut so ADHX appears in Share. */
 export function IosShortcutInstallButton({
   className,
   children = 'Add to Share Sheet',
@@ -22,7 +54,7 @@ export function IosShortcutInstallButton({
 }) {
   return (
     <a
-      href={X_ONLY_SHORTCUT_URL}
+      href={IOS_SHORTCUT_URL}
       target="_blank"
       rel="noopener noreferrer"
       onClick={() => pingAnalytic('shortcut.install', { source: 'shortcut' })}
@@ -44,29 +76,6 @@ export function IosShortcutInstallButton({
   )
 }
 
-/** Extra steps for Reels / TikToks / Shorts until the iCloud shortcut is rebuilt. */
-export function IosShortcutHow() {
-  return (
-    <details className="mt-3 group">
-      {/* inline-flex so parent text-center/text-left still places the control;
-          block flex ignored the landing card's centering. */}
-      <summary className="cursor-pointer list-none inline-flex items-center gap-1 min-h-[44px] font-sans text-[12.5px] text-ink-3 hover:text-ink-2 [&::-webkit-details-marker]:hidden">
-        Instagram, TikTok, YouTube too
-        <ChevronDown
-          className="w-3.5 h-3.5 opacity-70 transition-transform group-open:rotate-180"
-          aria-hidden
-        />
-      </summary>
-      <p className="text-[13px] text-ink-2 leading-relaxed mb-2">
-        The one-tap shortcut currently rewrites X links. For the other apps, swap the host to{' '}
-        <code className="font-mono text-ink">adhx.com</code>, or add a Share Sheet shortcut that
-        works on all four:
-      </p>
-      <IosShareRecipe />
-    </details>
-  )
-}
-
 /** Always-available install path in Settings — iOS only. */
 export function IosShortcutSettingsCard() {
   const [show, setShow] = useState(false)
@@ -81,15 +90,17 @@ export function IosShortcutSettingsCard() {
           <Share className="h-[19px] w-[19px] text-clay" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="font-serif text-base font-semibold text-ink">iOS shortcut</div>
+          <div className="font-serif text-base font-semibold text-ink">
+            Add to the iOS share menu
+          </div>
           <div className="mt-0.5 text-[13px] text-ink-3">
-            Share posts to ADHX from X, Instagram, TikTok, and YouTube in one tap.
+            Then from X, Instagram, TikTok, or YouTube: Share → ADHX.
           </div>
         </div>
       </div>
       <div className="px-5 pb-5 pt-4">
-        <IosShortcutInstallButton className="w-full rounded-xl" />
-        <IosShortcutHow />
+        <IosHow className="mt-0" />
+        <IosShortcutInstallButton className="mt-4 w-full rounded-xl" />
       </div>
     </div>
   )
@@ -126,7 +137,7 @@ export function IosShortcutNudge() {
         <div className="flex-1 min-w-0">
           <div className="font-bold text-sm text-ink mb-0.5">Next time, skip this page</div>
           <p className="text-[13px] text-ink-2 leading-snug mb-3">
-            Add ADHX to the share sheet. In X: Share → ADHX. Watch and send from here.
+            Add ADHX to the iOS share menu. From X, Instagram, TikTok, or YouTube: Share → ADHX.
           </p>
           <IosShortcutInstallButton className="w-full rounded-xl" />
         </div>

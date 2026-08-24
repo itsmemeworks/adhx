@@ -255,7 +255,10 @@ export function FilterBar({
   }
 
   return (
-    <div className="sticky top-0 z-30 bg-paper/95 backdrop-blur-sm border-b border-hairline">
+    // Header is sticky `top-0` / `h-16`. Stick just below it so #tag + Done
+    // adding stay on screen while the grid scrolls (a matching `top-0` hid
+    // this row under the header).
+    <div className="sticky top-16 z-30 bg-paper/95 backdrop-blur-sm border-b border-hairline">
       <div className="flex items-center gap-2 px-4 sm:px-[26px] py-3 overflow-x-auto scrollbar-hide">
         {/* Left side: type filter pills, OR — while a tag is selected — the
             tag's identity + actions (formerly a separate toolbar row below

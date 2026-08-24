@@ -30,12 +30,19 @@ authedTest.describe('signed-in navigation', () => {
     },
   )
 
+  authedTest('signed-in / continues the unread queue', async ({ page }) => {
+    await page.goto('/')
+    await expect(page).toHaveURL(/\/collection/)
+    await expectTheaterReady(page)
+    await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
+  })
+
   authedTest('My Collection ↔ Live is a pair of routes', async ({ page }) => {
     await page.goto('/collection')
     await expectTheaterReady(page)
     await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
 
-    await page.goto('/')
+    await page.goto('/live')
     await expectTheaterReady(page)
     await expect(page.getByRole('button', { name: 'My Collection' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Archive' })).toHaveCount(0)
@@ -85,7 +92,7 @@ authedTest.describe('signed-in navigation', () => {
   })
 
   authedTest('j advances Live the same way Next post does', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/live')
     await expectTheaterReady(page)
     const first = page.url()
     await page.keyboard.press('j')

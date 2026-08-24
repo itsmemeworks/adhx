@@ -10,13 +10,14 @@ routes _are_ the backend, and they talk to SQLite via Drizzle ORM.
 
 ## Product surfaces
 
-| Route                                                                       | What it is                                                       |
-| --------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `/`                                                                         | The **theater**, Live tab — community pulse. Signed out or in.   |
-| `/collection`                                                               | The same theater, **My Collection** tab — your active queue.     |
-| `/library`                                                                  | The **library** grid over your saves (search, tags, filters).    |
-| `/t/{user}/{tag}`                                                           | A **playlist** — one public tag, looping theater.                |
-| `/{user}/status/{id}`, `/reels/{id}`, `/@{user}/video/{id}`, `/shorts/{id}` | Preview pages. They **are** the theater (shared mode), plus SEO. |
+| Route                                                                       | What it is                                                              |
+| --------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `/`                                                                         | Signed-out public live theater. Signed-in: redirects to `/collection`.  |
+| `/live`                                                                     | Signed-in **Live** tab — community pulse. Signed-out: redirects to `/`. |
+| `/collection`                                                               | **My Collection** — unread queue. Signed-in default landing.            |
+| `/library`                                                                  | The **library** grid over your saves (search, tags, filters).           |
+| `/t/{user}/{tag}`                                                           | A **playlist** — one public tag, looping theater.                       |
+| `/{user}/status/{id}`, `/reels/{id}`, `/@{user}/video/{id}`, `/shorts/{id}` | Preview pages. They **are** the theater (shared mode), plus SEO.        |
 
 A **playlist** is one shared tag. A user's pile of saves is their **collection**.
 The grid that browses it is the **library**. Archive is private — it does not
@@ -53,16 +54,18 @@ SQLite  ──►  /api/feed (library)  ·  theater seed (Live / collection / pl
 
 ## Auth flow
 
-Accounts are first-class (`users` + `user_identities`). **Magic-link email**
-and **X OAuth 2.0 PKCE** land in one account. Viewing never requires an
-account; saving does.
+Accounts are first-class (`users` + `user_identities`). **Sign-in is
+magic-link email only.** X OAuth is an optional Settings link on that
+account so you can sync X bookmarks. Viewing never requires an account;
+saving does.
 
 ```
 Email:  POST /api/auth/email/request  ──►  link (Resend, or console in dev)
         GET  /api/auth/email/callback?token=  ──►  session cookie
 
-X:      /api/auth/twitter  ──►  X consent  ──►  /api/auth/twitter/callback
-        findOrCreateUserForX  ──►  encrypt tokens  ──►  signed JWT session
+X (authed):  /api/auth/twitter  ──►  X consent  ──►  /api/auth/twitter/callback
+             findOrCreateUserForX(session)  ──►  encrypt tokens
+             (unsigned start/callback → /?auth_error=x_link_only)
 ```
 
 - Session cookie `adhx_session` is a JWT (`jose`, 30-day, httpOnly). Signing

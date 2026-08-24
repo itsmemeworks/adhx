@@ -81,7 +81,11 @@ describe('API: /api/auth/me', () => {
       usernameChosen: true,
       usernameChangeCount: 0,
     })
-    expect(data.identities.x).toEqual({ providerId: 'x-user-1', username: 'xuser' })
+    expect(data.identities.x).toEqual({
+      providerId: 'x-user-1',
+      username: 'xuser',
+      avatarUrl: 'https://example.com/avatar.jpg',
+    })
     expect(data.identities.email).toBeNull()
     expect(data.xConnected).toBe(true)
     expect(data.isAdmin).toBe(false)
@@ -136,7 +140,7 @@ describe('API: /api/auth/me', () => {
     const data = await response.json()
 
     expect(data.authenticated).toBe(true)
-    expect(data.identities.x).toEqual({ providerId: 'x-999', username: 'xhandle' })
+    expect(data.identities.x).toEqual({ providerId: 'x-999', username: 'xhandle', avatarUrl: null })
     expect(data.identities.email).toEqual({ email: 'both@example.com' })
     expect(data.xConnected).toBe(true)
   })

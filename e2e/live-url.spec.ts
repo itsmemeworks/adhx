@@ -4,7 +4,7 @@ import { authedTest, expectTheaterReady, goNext } from './helpers'
 
 authedTest.describe('signed-in Live vs My Collection URLs', () => {
   authedTest('Live rewrites the address bar to the current post', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/live')
     await expectTheaterReady(page)
     await expect(page).toHaveURL(new RegExp(`/${POST.preview.author}/status/${POST.preview.id}`), {
       timeout: 15_000,
@@ -24,13 +24,13 @@ authedTest.describe('signed-in Live vs My Collection URLs', () => {
   })
 
   authedTest('Keep playing persists across reload on Live', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/live')
     await expectTheaterReady(page)
     await page.getByRole('button', { name: 'Stop when caught up' }).click()
     await expect(page.getByRole('button', { name: 'Keep playing' })).toBeVisible()
     // replaceState rewrites Live to a preview path — reload would open shared
-    // mode. Re-enter `/` so this asserts Live's persisted repeat, not the pin.
-    await page.goto('/')
+    // mode. Re-enter `/live` so this asserts Live's persisted repeat, not the pin.
+    await page.goto('/live')
     await expectTheaterReady(page)
     await expect(page.getByRole('button', { name: 'Keep playing' })).toBeVisible()
   })

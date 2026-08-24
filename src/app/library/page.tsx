@@ -7,7 +7,7 @@ import AuthedHome from '../AuthedHome'
  * (category + platform filters, tags, search) and the collection overlay it opens.
  *
  * This is where `AuthedHome` moved to when `/` became the theater. The theater
- * covers "play me what's new" (`/` = Live, `/collection` = My Collection);
+ * covers "play me what's new" (`/live` = Live, `/collection` = My Collection);
  * the library covers "find that one thing I saved", which is what the grid,
  * filters and search are for.
  */

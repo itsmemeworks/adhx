@@ -5,8 +5,8 @@ import { createTestDb, createTestBookmark, type TestDbInstance } from './setup'
 /**
  * API Route Tests: /api/sync/history
  *
- * Feeds the Settings "Sync history" card: last 5 completed syncs + a
- * running total of the user's bookmarks.
+ * Feeds the Settings "Sync history" card: last 5 completed syncs +
+ * collection / X-on-ADHX / synced-from-X counts.
  */
 
 let testInstance: TestDbInstance
@@ -51,6 +51,8 @@ describe('API: /api/sync/history', () => {
     expect(data.syncs).toEqual([])
     expect(data.lastSyncAt).toBeNull()
     expect(data.totalBookmarks).toBe(0)
+    expect(data.xOnAdhx).toBe(0)
+    expect(data.xSynced).toBe(0)
   })
 
   it('returns syncs newest-first with the expected shape, capped at 5, and the bookmark total', async () => {
@@ -94,6 +96,8 @@ describe('API: /api/sync/history', () => {
     expect(data.syncs[0]).toHaveProperty('completedAt')
     expect(data.lastSyncAt).toBe(data.syncs[0].completedAt)
     expect(data.totalBookmarks).toBe(3)
+    expect(data.xOnAdhx).toBe(3)
+    expect(data.xSynced).toBe(3)
   })
 
   it('excludes in-progress and failed syncs from history', async () => {
@@ -139,5 +143,26 @@ describe('API: /api/sync/history', () => {
     expect(data.syncs).toEqual([])
     expect(data.lastSyncAt).toBeNull()
     expect(data.totalBookmarks).toBe(0)
+    expect(data.xOnAdhx).toBe(0)
+    expect(data.xSynced).toBe(0)
+  })
+
+  it('splits X synced vs X-on-ADHX vs the rest of the collection', async () => {
+    await testInstance.db
+      .insert(schema.bookmarks)
+      .values([
+        createTestBookmark('user-123', 'sync-1', { source: 'sync', platform: 'twitter' }),
+        createTestBookmark('user-123', 'sync-2', { source: 'sync', platform: 'twitter' }),
+        createTestBookmark('user-123', 'pasted', { source: 'manual', platform: 'twitter' }),
+        createTestBookmark('user-123', 'reel-1', { source: 'url_prefix', platform: 'instagram' }),
+      ])
+
+    const { GET } = await import('@/app/api/sync/history/route')
+    const response = await GET()
+    const data = await response.json()
+
+    expect(data.xSynced).toBe(2)
+    expect(data.xOnAdhx).toBe(3)
+    expect(data.totalBookmarks).toBe(4)
   })
 })

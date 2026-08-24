@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseArticleMarkdown, parseInline } from '@/lib/theater/article-markdown'
+import { inlinePlainText, parseArticleMarkdown, parseInline } from '@/lib/theater/article-markdown'
 
 describe('parseInline', () => {
   it('returns a single text node for plain text', () => {
@@ -161,5 +161,13 @@ describe('parseArticleMarkdown', () => {
 
   it('returns an empty array for empty/undefined-like input', () => {
     expect(parseArticleMarkdown('')).toEqual([])
+  })
+})
+
+describe('inlinePlainText', () => {
+  it('joins text, bold, and link children into one readable string', () => {
+    expect(inlinePlainText(parseInline('see [this](https://example.com) **now**'))).toBe(
+      'see this now',
+    )
   })
 })

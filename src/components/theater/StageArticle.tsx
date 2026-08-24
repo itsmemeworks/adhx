@@ -18,9 +18,12 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
+import { toBionicText } from '@/components/feed/text-rendering'
+import { usePreferences } from '@/lib/preferences-context'
 import { previewPath } from '@/lib/activity/preview-path'
 import { fetchArticleMarkdown } from '@/lib/theater/article-body'
 import {
+  inlinePlainText,
   parseArticleMarkdown,
   type ArticleMdBlock,
   type InlineNode,
@@ -32,20 +35,28 @@ export interface StageArticleProps {
   item: TheaterItem
 }
 
-function renderInline(nodes: InlineNode[], keyPrefix: string): ReactNode[] {
+function renderInline(
+  nodes: InlineNode[],
+  keyPrefix: string,
+  bionic: boolean,
+  styled = false,
+): ReactNode[] {
   return nodes.map((node, i) => {
     const key = `${keyPrefix}-${i}`
     switch (node.type) {
       case 'text':
-        return node.text
+        // Always wrap — a bare text sibling of <strong>/<a> breaks page
+        // translation (docs/specs/translation-safety.md). Skip bionic on
+        // already-styled runs so we don't nest <strong> inside <strong>.
+        return <span key={key}>{bionic && !styled ? toBionicText(node.text) : node.text}</span>
       case 'bold':
-        return <strong key={key}>{renderInline(node.children, key)}</strong>
+        return <strong key={key}>{renderInline(node.children, key, bionic, true)}</strong>
       case 'italic':
-        return <em key={key}>{renderInline(node.children, key)}</em>
+        return <em key={key}>{renderInline(node.children, key, bionic, true)}</em>
       case 'boldItalic':
         return (
           <strong key={key}>
-            <em>{renderInline(node.children, key)}</em>
+            <em>{renderInline(node.children, key, bionic, true)}</em>
           </strong>
         )
       case 'link':
@@ -57,7 +68,7 @@ function renderInline(nodes: InlineNode[], keyPrefix: string): ReactNode[] {
             rel="noopener noreferrer"
             className="text-clay underline decoration-clay/40 underline-offset-2 hover:decoration-clay"
           >
-            {renderInline(node.children, key)}
+            {renderInline(node.children, key, bionic, true)}
           </a>
         )
       default:
@@ -66,7 +77,7 @@ function renderInline(nodes: InlineNode[], keyPrefix: string): ReactNode[] {
   })
 }
 
-function renderBlocks(blocks: ArticleMdBlock[]): ReactNode[] {
+function renderBlocks(blocks: ArticleMdBlock[], bionic: boolean): ReactNode[] {
   return blocks.map((block, i) => {
     const key = `b-${i}`
     switch (block.type) {
@@ -79,8 +90,12 @@ function renderBlocks(blocks: ArticleMdBlock[]): ReactNode[] {
               ? 'text-xl sm:text-2xl'
               : 'text-lg sm:text-xl'
         return (
-          <Tag key={key} className={cn('mb-3 mt-8 font-serif font-semibold text-white', sizeClass)}>
-            {renderInline(block.inline, key)}
+          <Tag
+            key={key}
+            className={cn('mb-3 mt-8 font-serif font-semibold text-white', sizeClass)}
+            aria-label={bionic ? inlinePlainText(block.inline) : undefined}
+          >
+            {renderInline(block.inline, key, bionic)}
           </Tag>
         )
       }
@@ -101,24 +116,33 @@ function renderBlocks(blocks: ArticleMdBlock[]): ReactNode[] {
           <blockquote
             key={key}
             className="my-6 border-l-2 border-clay/60 pl-4 italic text-white/75"
+            aria-label={bionic ? inlinePlainText(block.inline) : undefined}
           >
-            {renderInline(block.inline, key)}
+            {renderInline(block.inline, key, bionic)}
           </blockquote>
         )
       case 'list-item':
         return (
-          <p key={key} className="my-2 pl-5 text-white/85">
+          <p
+            key={key}
+            className="my-2 pl-5 text-white/85"
+            aria-label={bionic ? inlinePlainText(block.inline) : undefined}
+          >
             <span className="mr-2 text-white/40" aria-hidden>
               {block.ordered ? '•' : '—'}
             </span>
-            {renderInline(block.inline, key)}
+            {renderInline(block.inline, key, bionic)}
           </p>
         )
       case 'paragraph':
       default:
         return (
-          <p key={key} className="my-4 leading-relaxed text-white/85">
-            {renderInline(block.inline, key)}
+          <p
+            key={key}
+            className="my-4 leading-relaxed text-white/85"
+            aria-label={bionic ? inlinePlainText(block.inline) : undefined}
+          >
+            {renderInline(block.inline, key, bionic)}
           </p>
         )
     }
@@ -126,6 +150,8 @@ function renderBlocks(blocks: ArticleMdBlock[]): ReactNode[] {
 }
 
 export function StageArticle({ item }: StageArticleProps) {
+  const { preferences } = usePreferences()
+  const bionic = preferences.bionicReading
   const [blocks, setBlocks] = useState<ArticleMdBlock[] | null>(null)
   const [failed, setFailed] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -203,12 +229,19 @@ export function StageArticle({ item }: StageArticleProps) {
           />
           <div className="relative px-6 pb-8 pt-16 sm:px-10 sm:pb-10">
             <StageAuthorRow item={item} />
-            <h1 className="font-serif text-3xl leading-tight text-white sm:text-4xl">{headline}</h1>
+            <h1
+              className="font-serif text-3xl leading-tight text-white sm:text-4xl"
+              aria-label={bionic ? headline : undefined}
+            >
+              {bionic ? toBionicText(headline) : headline}
+            </h1>
           </div>
         </div>
 
         {hasReader && (
-          <div className="mx-auto max-w-prose px-6 pt-2 sm:px-10">{renderBlocks(blocks!)}</div>
+          <div className="mx-auto max-w-prose px-6 pt-2 sm:px-10">
+            {renderBlocks(blocks!, bionic)}
+          </div>
         )}
 
         {/* Fetch failure or no article content — stay on the splash, never a

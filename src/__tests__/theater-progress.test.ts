@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  progressKindFor,
-  progressKindForPin,
-  collectionTabProgressKind,
-} from '@/components/theater/TheaterProgressLine'
+import { progressKindFor, progressKindForPin } from '@/components/theater/TheaterProgressLine'
 import type { TrendingItem } from '@/lib/trending/query'
 
 /**
@@ -115,34 +111,5 @@ describe('progressKindForPin', () => {
   it('never touches none, pinned or not', () => {
     expect(progressKindForPin('none', true)).toBe('none')
     expect(progressKindForPin('none', false)).toBe('none')
-  })
-})
-
-/**
- * "My Collection is just a different playlist in that same theater" (owner
- * directive, 2026-08-21): the personal theater's Collection tab used to force every kind
- * to 'none'. Now only 'timed' items (photo/text/quote/article) — which still
- * wait on a deliberate Done/Later/Delete, never a 10s dwell auto-advance —
- * get demoted there. 'video' keeps its real kind: those items auto-advance
- * on end through the player's own `onEnded` (see CollectionStage/StageVideo),
- * exactly like every other playlist.
- */
-describe('collectionTabProgressKind', () => {
-  it('demotes timed to none inside the Collection tab', () => {
-    expect(collectionTabProgressKind('timed', true)).toBe('none')
-  })
-
-  it('leaves timed alone outside the Collection tab', () => {
-    expect(collectionTabProgressKind('timed', false)).toBe('timed')
-  })
-
-  it('never touches video, inside the Collection tab or not', () => {
-    expect(collectionTabProgressKind('video', true)).toBe('video')
-    expect(collectionTabProgressKind('video', false)).toBe('video')
-  })
-
-  it('never touches none, inside the Collection tab or not', () => {
-    expect(collectionTabProgressKind('none', true)).toBe('none')
-    expect(collectionTabProgressKind('none', false)).toBe('none')
   })
 })
