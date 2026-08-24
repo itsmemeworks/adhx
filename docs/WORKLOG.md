@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-24 — Archive sits below Read / Watch in shortcut help
+
+Actions cheatsheet order is now Read / Watch then Archive then Undo. Follow-up: none.
+
 ## 2026-08-24 — Tag picker is fully keyboardable
 
 `T` focuses the new-tag input. Enter there creates, assigns, and closes. Arrows (and J/K off the input) move the existing tag rows; Space/Enter toggles the focused row. Follow-up: none.

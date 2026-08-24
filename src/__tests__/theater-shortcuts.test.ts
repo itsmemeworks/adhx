@@ -66,4 +66,10 @@ describe('resolveTheaterShortcut', () => {
       { keys: ['←', '↑', 'K'], label: 'Previous post' },
     ])
   })
+
+  it('lists Archive below Read / Watch', () => {
+    const actions = THEATER_SHORTCUT_HELP.find((s) => s.title === 'Actions')
+    const labels = actions?.rows.map((r) => r.label) ?? []
+    expect(labels.indexOf('Read / Watch')).toBeLessThan(labels.indexOf('Archive'))
+  })
 })
