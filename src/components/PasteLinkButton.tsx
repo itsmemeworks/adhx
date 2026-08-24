@@ -26,7 +26,7 @@ export interface PasteLinkButtonProps {
   /**
    * Handle the pasted post HERE instead of navigating to its preview page.
    * Personal Live / My Collection pass this so a paste saves in place and
-   * the viewer stays on `/` or `/collection`.
+   * the viewer stays on `/live` or `/collection`.
    */
   onPastePost?: (url: string) => boolean | Promise<boolean>
 }

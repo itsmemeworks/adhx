@@ -86,11 +86,18 @@ describe('PWAInstallPrompt', () => {
     mockPlatform = 'android'
     render(<PWAInstallPrompt />)
     expect(await screen.findByText('Add ADHX to your home screen')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'How' })).toHaveAttribute(
-      'href',
-      '/settings#android-install',
-    )
+    expect(screen.getByRole('button', { name: 'How' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Add' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/Paste link still works/)).not.toBeInTheDocument()
+  })
+
+  it('expands the Android walkthrough in the banner instead of sending How to Settings', async () => {
+    mockPlatform = 'android'
+    render(<PWAInstallPrompt />)
+    fireEvent.click(await screen.findByRole('button', { name: 'How' }))
+    expect(screen.getByText(/Add to Home screen/)).toBeInTheDocument()
+    expect(screen.getByText(/Paste link still works/)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'How' })).not.toBeInTheDocument()
   })
 
   it('offers a one-tap Add button on Android once beforeinstallprompt fires', async () => {
@@ -100,7 +107,7 @@ describe('PWAInstallPrompt', () => {
 
     const evt = fireBeforeInstallPrompt()
     const addBtn = await screen.findByRole('button', { name: 'Add' })
-    expect(screen.queryByRole('link', { name: 'How' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'How' })).not.toBeInTheDocument()
     fireEvent.click(addBtn)
     expect(evt.prompt).toHaveBeenCalled()
   })
@@ -173,6 +180,27 @@ describe('PWAInstallPrompt', () => {
       .closest('.sm\\:hidden')
     expect(wrap).toHaveClass('relative', 'mx-3', 'mt-2')
     expect(wrap).not.toHaveClass('fixed')
+  })
+
+  it('pins the Android banner under the theater logo instead of over the peek bar', async () => {
+    mockPlatform = 'android'
+    mockPathname = '/collection'
+    const { rerender } = render(<PWAInstallPrompt />)
+    const theaterWrap = (await screen.findByText('Add ADHX to your home screen')).closest(
+      '.sm\\:hidden',
+    )
+    expect(theaterWrap).toHaveClass(
+      'fixed',
+      'left-3',
+      'top-[calc(env(safe-area-inset-top,0px)+3.15rem)]',
+    )
+    expect(theaterWrap).not.toHaveClass('right-3')
+
+    mockPathname = '/library'
+    rerender(<PWAInstallPrompt />)
+    const libraryWrap = screen.getByText('Add ADHX to your home screen').closest('.sm\\:hidden')
+    expect(libraryWrap).toHaveClass('relative', 'mx-3', 'mt-2')
+    expect(libraryWrap).not.toHaveClass('fixed')
   })
 
   it('registers the service worker', () => {

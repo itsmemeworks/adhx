@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-24 — PR 407: merge main + Android How stays in-banner
+
+Merged main (theater-only shortcuts, tap-declutter, Read/Watch). Android How expands the walkthrough in the banner instead of sending visitors to `/settings` (auth-gated). On theater paths the Android banner hangs under the logo at `z-[70]` so it does not cover the peek bar. Follow-up: none.
+
 ## 2026-08-24 — Repeat is R; Read / Watch is F
 
 Repeat moved from `F` to `R`. Read / Watch took `F`. Follow-up: none.

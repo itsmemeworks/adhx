@@ -73,6 +73,12 @@ export function AndroidSettingsCard() {
     setStandalone(isStandaloneDisplay())
   }, [])
 
+  useEffect(() => {
+    if (!show || typeof window === 'undefined') return
+    if (window.location.hash !== '#android-install') return
+    document.getElementById('android-install')?.scrollIntoView({ block: 'start' })
+  }, [show])
+
   if (!show) return null
 
   return (

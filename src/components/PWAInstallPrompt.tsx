@@ -7,7 +7,7 @@ import { Plus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getPlatformType, type PlatformType } from '@/lib/platform'
 import { SHORTCUT_DISMISS_KEY } from '@/components/IosShortcutInstall'
-import { ANDROID_A2HS_DISMISS_KEY } from '@/components/AndroidInstall'
+import { ANDROID_A2HS_DISMISS_KEY, AndroidHow } from '@/components/AndroidInstall'
 import { X_ONLY_SHORTCUT_URL } from '@/lib/share/ios'
 import { pingAnalytic } from '@/lib/analytics/client'
 
@@ -15,8 +15,9 @@ import { pingAnalytic } from '@/lib/analytics/client'
  * Mobile install nudge.
  *
  * - **Android**: show even without `beforeinstallprompt` (Samsung / Firefox
- *   often never fire it). Add when the prompt exists; otherwise How →
- *   `/settings#android-install` (signed-in) with the steps also in the banner.
+ *   often never fire it). Add when the prompt exists; otherwise How expands
+ *   the steps in the banner (Settings still has the always-on card). Do not
+ *   send How to `/settings` — that page requires a session.
  * - **iOS / Safari**: Share Sheet shortcut is the useful install (home screen
  *   is a 3-step dance and doesn't help send from Instagram/X). One tap opens
  *   the iCloud shortcut. Still shown in standalone — the shortcut is separate.
@@ -58,6 +59,7 @@ export function PWAInstallPrompt() {
   const [platform, setPlatform] = useState<PlatformType>('desktop')
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null)
   const [visible, setVisible] = useState(false)
+  const [howOpen, setHowOpen] = useState(false)
   const bannerRef = useRef<HTMLDivElement>(null)
   const pinUnderTheaterLogo = isTheaterPath(pathname)
 
@@ -171,8 +173,18 @@ export function PWAInstallPrompt() {
   }
 
   return (
-    <div className="fixed bottom-3 inset-x-3 z-[60] sm:hidden">
-      <div className="mx-auto max-w-md flex items-center gap-3 rounded-2xl bg-surface border border-hairline shadow-2xl px-4 py-3">
+    <div
+      className={cn(
+        'z-[70] sm:hidden',
+        pinUnderTheaterLogo ? `fixed left-3 ${THEATER_BANNER_TOP}` : 'relative mx-3 mt-2',
+      )}
+    >
+      <div
+        className={cn(
+          'flex items-center gap-3 rounded-2xl bg-surface border border-hairline shadow-2xl px-4 py-3',
+          pinUnderTheaterLogo ? 'w-[min(22rem,calc(100vw-1.5rem))]' : 'mx-auto max-w-md',
+        )}
+      >
         <Image
           src="/icon-192.png"
           alt=""
@@ -194,12 +206,14 @@ export function PWAInstallPrompt() {
             <Plus className="w-4 h-4" /> Add
           </button>
         ) : (
-          <a
-            href="/settings#android-install"
+          <button
+            type="button"
+            onClick={() => setHowOpen((open) => !open)}
+            aria-expanded={howOpen}
             className="flex-shrink-0 inline-flex items-center px-3 py-1.5 min-h-[36px] rounded-full text-sm font-semibold text-ink border border-hairline"
           >
             How
-          </a>
+          </button>
         )}
         <button
           onClick={dismiss}
@@ -209,6 +223,16 @@ export function PWAInstallPrompt() {
           <X className="w-4 h-4" />
         </button>
       </div>
+      {howOpen && !deferred && (
+        <div
+          className={cn(
+            'mt-2 rounded-2xl border border-hairline bg-surface px-4 py-3 shadow-2xl',
+            pinUnderTheaterLogo ? 'w-[min(22rem,calc(100vw-1.5rem))]' : 'mx-auto max-w-md',
+          )}
+        >
+          <AndroidHow className="mt-0" />
+        </div>
+      )}
     </div>
   )
 }

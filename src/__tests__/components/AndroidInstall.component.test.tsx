@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, act } from '@testing-library/react'
+import { render, screen, act, waitFor } from '@testing-library/react'
 import { AndroidHow, AndroidSettingsCard, AndroidLandingPromo } from '@/components/AndroidInstall'
 
 let mockPlatform: 'ios' | 'android' | 'desktop' = 'android'
@@ -58,6 +58,15 @@ describe('AndroidSettingsCard', () => {
       screen.getByText(/Installed. From X, Instagram, TikTok, or YouTube: Share → ADHX/),
     ).toBeInTheDocument()
     expect(screen.queryByText(/Browser menu/)).not.toBeInTheDocument()
+  })
+
+  it('scrolls the Settings card into view when the hash is #android-install', async () => {
+    window.location.hash = '#android-install'
+    const scroll = vi.fn()
+    Element.prototype.scrollIntoView = scroll
+    render(<AndroidSettingsCard />)
+    await waitFor(() => expect(scroll).toHaveBeenCalled())
+    window.location.hash = ''
   })
 
   it('offers Add to Home screen when beforeinstallprompt fires', async () => {

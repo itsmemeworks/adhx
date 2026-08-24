@@ -629,7 +629,7 @@ export function TheaterShell({
           return [saved, ...rest]
         })
         // My Collection: jump to the new save. Live: stay on the current post;
-        // the dock just gains a fresh card. Never leave `/` or `/collection`.
+        // the dock just gains a fresh card. Never leave `/live` or `/collection`.
         if (personalTab === 'collection') setPersonalIndex(0)
         feedPrepend(theaterItem)
 
