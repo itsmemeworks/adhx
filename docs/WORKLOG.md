@@ -1,10 +1,14 @@
 # WORKLOG
 
-Append-only context log for agents and contributors. **Newest entries first.** After any substantive piece of work, add a dated entry (≤10 lines): what was done, why, current state, follow-ups. Never rewrite or delete old entries — this file is how a fresh session inherits context that isn't in the code. See `AGENTS.md` for the full protocol.
+Append-only context log for agents and contributors. **Newest entries first.** After any substantive piece of work, add a dated entry (≤10 lines): what was done, why, current state (shipped/in-flight/reverted), and follow-ups. Never rewrite or delete old entries — this file is how a fresh session inherits context that isn't in the code. See `AGENTS.md` for the full protocol.
 
 **Voice:** new entries must not name operator GitHub logins, personal handles, or Fly bypasses. Put those in gitignored `CLAUDE.local.md`. Older entries below were written as an internal ops diary and may still contain them — they are historical, not a public contract.
 
 ---
+
+## 2026-08-24 — Live theater Visual lens
+
+Live (signed-out `/`, `/live`, Live tab, shared "more being sent") can show videos and photos only. Images frost toggle next to LIVE (desktop) / left of flame (mobile); `I` in the keymap; persists as `adhx-theater-visual`. Saved and playlists omit it. A shared lead stays even if it's text. Empty pulse: "No videos or photos in Live right now" + Show every post. In-flight until the PR merges.
 
 ## 2026-08-24 — CI: Saved tab is not Save; Tag count is not a chip
 

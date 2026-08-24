@@ -35,6 +35,7 @@ test.describe('theater shortcuts (signed out)', () => {
     await expect(help.getByText('Paste a link')).toBeVisible()
     await expect(help.getByText('Expand')).toBeVisible()
     await expect(help.getByText('Repeat')).toBeVisible()
+    await expect(help.getByText('Visual only')).toBeVisible()
     await expect(help.getByText('Scroll text')).toBeVisible()
 
     await page.keyboard.press('ArrowRight')

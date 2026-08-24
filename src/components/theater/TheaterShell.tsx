@@ -17,6 +17,7 @@ import { Stage } from './Stage'
 import { StageWaiting } from './StageWaiting'
 import { StageUnavailable } from './StageUnavailable'
 import { CollectionAllClear } from './CollectionAllClear'
+import { StageVisualEmpty } from './StageVisualEmpty'
 import { DesktopStageChrome, DesktopDock } from './TheaterDesktopChrome'
 import { TheaterMobileChrome } from './TheaterMobileChrome'
 import { YtDebugOverlay } from './YtDebugOverlay'
@@ -45,6 +46,7 @@ import {
   personalAdvanceOnEndedIndex,
   personalStepBackIndex,
   pinKeyFirst,
+  applyTheaterVisualLens,
   orderLiveQueue,
   unseenBlockLength,
   computeLiveNext,
@@ -92,6 +94,7 @@ export {
   personalAdvanceOnEndedIndex,
   personalStepBackIndex,
   pinKeyFirst,
+  applyTheaterVisualLens,
   liveQueueGroupOf,
   orderLiveQueue,
   unseenBlockLength,
@@ -113,6 +116,7 @@ export {
   LIVE_QUEUE_GROUP_LABEL,
 } from './theater-math'
 export type { PersonalUndoAction, LiveQueueGroup, RepeatMode } from './theater-math'
+export { isVisualStageItem } from './theater-math'
 
 export interface TheaterShellProps {
   seed: TheaterFeedSeed
@@ -218,6 +222,7 @@ export function TheaterShell({
     [onPersonalTabChange],
   )
   const isCollectionTab = isPersonal && personalTab === 'collection'
+  const visualLensAvailable = !loop && !isCollectionTab
   const feed = useTheaterFeed(seed, { live: !loop && !isCollectionTab })
   const feedPrepend = feed.prependItem
   const seenSet = useSeenSet()
@@ -728,6 +733,31 @@ export function TheaterShell({
     }
   }, [loop, repeatMode])
 
+  const [visualOnly, setVisualOnly] = useState(false)
+  const [visualPrefReady, setVisualPrefReady] = useState(false)
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('adhx-theater-visual') === '1') setVisualOnly(true)
+    } catch {
+      // Storage unavailable — keep off.
+    }
+    setVisualPrefReady(true)
+  }, [])
+  useEffect(() => {
+    if (!visualPrefReady || !visualLensAvailable) return
+    try {
+      if (visualOnly) localStorage.setItem('adhx-theater-visual', '1')
+      else localStorage.removeItem('adhx-theater-visual')
+    } catch {
+      // Never let a storage failure break playback.
+    }
+  }, [visualOnly, visualPrefReady, visualLensAvailable])
+  const visualActive = visualLensAvailable && visualOnly
+  const toggleVisual = useCallback(() => {
+    if (!visualLensAvailable) return
+    setVisualOnly((v) => !v)
+  }, [visualLensAvailable])
+
   const isDesktop = useIsDesktopViewport()
   // Desktop de-clutter: collapses the dock for a full-bleed stage.
   // Desktop-only concept — mobile has its own independent de-clutter state
@@ -810,10 +840,16 @@ export function TheaterShell({
   // read through a ref-free callback so the memo below re-runs when a poll
   // lands, which is exactly when the grouping changes.
   const isFreshKey = useCallback((key: string) => feed.freshKeys.has(key), [feed.freshKeys])
+  const lensItems = useMemo(
+    () => applyTheaterVisualLens(items, visualActive, sharedItem ? sharedItemKey : null),
+    [items, visualActive, sharedItem, sharedItemKey],
+  )
   const orderedItems = useMemo(
     () =>
-      liveOrdering && seenSet.ready ? orderLiveQueue(items, wasSeenOnEntry, isFreshKey) : items,
-    [items, liveOrdering, seenSet.ready, wasSeenOnEntry, isFreshKey],
+      liveOrdering && seenSet.ready
+        ? orderLiveQueue(lensItems, wasSeenOnEntry, isFreshKey)
+        : lensItems,
+    [lensItems, liveOrdering, seenSet.ready, wasSeenOnEntry, isFreshKey],
   )
   const displayItems = useMemo(
     () => pinKeyFirst(orderedItems, pinnedKey),
@@ -962,6 +998,24 @@ export function TheaterShell({
   }, [displayItems, currentKey])
 
   useEffect(() => {
+    if (!visualActive) return
+    if (displayItems.length === 0) {
+      if (currentKey !== null) setCurrentKey(null)
+      return
+    }
+    if (currentKey && displayItems.some((it) => theaterItemKey(it) === currentKey)) return
+    const from = currentKey ? items.findIndex((it) => theaterItemKey(it) === currentKey) : -1
+    const next =
+      from >= 0
+        ? displayItems.find((it) => {
+            const j = items.findIndex((x) => theaterItemKey(x) === theaterItemKey(it))
+            return j >= from
+          })
+        : undefined
+    setCurrentKey(theaterItemKey(next ?? displayItems[0]))
+  }, [visualActive, displayItems, currentKey, items])
+
+  useEffect(() => {
     // Shared mode never re-picks — the shared post is ALWAYS the initial
     // current item, whatever this viewer has seen elsewhere. Playlist mode
     // never re-picks either: a curated tag collection always opens on its
@@ -973,9 +1027,10 @@ export function TheaterShell({
     // live post was already seen. Return before consuming `leadAppliedRef`
     // so a later flip to Live can still apply the live lead pick.
     if (sharedItem || loop || isCollectionTab) return
-    if (!seenSet.ready || leadAppliedRef.current || hasNavigatedRef.current) return
+    if (!seenSet.ready || !visualPrefReady || leadAppliedRef.current || hasNavigatedRef.current)
+      return
     leadAppliedRef.current = true
-    if (items.length === 0) return
+    if (displayItems.length === 0) return
     // `displayItems` is already ordered unseen-first by the time seen-state is
     // ready, so its head IS "the next post you haven't watched" — which is
     // also what makes a refresh resume where the viewer left off (owner), with
@@ -996,7 +1051,7 @@ export function TheaterShell({
       setWaiting(true)
     }
     setCurrentKey(theaterItemKey(head))
-  }, [seenSet.ready, items, displayItems, unseenCount, sharedItem, loop, isCollectionTab])
+  }, [seenSet.ready, visualPrefReady, displayItems, unseenCount, sharedItem, loop, isCollectionTab])
 
   const currentIndex = useMemo(
     () => displayItems.findIndex((it) => theaterItemKey(it) === currentKey),
@@ -1796,7 +1851,11 @@ export function TheaterShell({
                 repeat={repeatCurrentActive}
                 articleMode={articleMode}
               />
-              {waiting && !isCollectionTab && (
+              {visualActive && displayItems.length === 0 ? (
+                <div className="absolute inset-0 z-10">
+                  <StageVisualEmpty onShowAll={toggleVisual} />
+                </div>
+              ) : waiting && !isCollectionTab ? (
                 <div className="absolute inset-0 z-10">
                   <StageWaiting
                     savedToday={feed.savedToday}
@@ -1805,7 +1864,7 @@ export function TheaterShell({
                     onKeepPlaying={displayItems.length > 0 ? keepPlaying : undefined}
                   />
                 </div>
-              )}
+              ) : null}
             </>
           )}
         </div>
@@ -1873,6 +1932,8 @@ export function TheaterShell({
           onPastePost={isPersonal ? handlePastePost : undefined}
           articleMode={articleMode}
           onToggleArticleMode={toggleArticleMode}
+          visualOnly={visualActive}
+          onToggleVisual={visualLensAvailable ? toggleVisual : undefined}
         />
         <DesktopStageChrome
           mode={mode}
@@ -1893,6 +1954,8 @@ export function TheaterShell({
           onPastePost={isPersonal ? handlePastePost : undefined}
           articleMode={articleMode}
           onToggleArticleMode={toggleArticleMode}
+          visualOnly={visualActive}
+          onToggleVisual={visualLensAvailable ? toggleVisual : undefined}
         />
         {/* Collection Archive undo toast — auto-dismisses after 5s
             (`armUndoDismiss`). Same placement on both viewports. `bottom-36`

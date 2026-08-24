@@ -80,6 +80,7 @@ import { progressKindFor } from './TheaterProgressLine'
 import { UpNextList, TYPE_TILE, warmOnHover } from './UpNextList'
 import { SavePlaylistButton } from './SavePlaylistButton'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
+import { TheaterVisualToggle } from './TheaterVisualToggle'
 import { logAV } from './YtDebugOverlay'
 import type {
   RepeatMode,
@@ -127,6 +128,12 @@ export interface DesktopStageChromeProps {
   /** Video/photo + quote: stacked article reader instead of full-bleed media. */
   articleMode?: boolean
   onToggleArticleMode?: () => void
+  /**
+   * Live queue only: videos and photos. Saved / playlists omit the handler
+   * so the control never mounts. Clay when on, same frost as paste.
+   */
+  visualOnly?: boolean
+  onToggleVisual?: () => void
 }
 
 export interface DesktopDockProps {
@@ -226,6 +233,8 @@ export function DesktopStageChrome({
   onPastePost,
   articleMode = false,
   onToggleArticleMode,
+  visualOnly = false,
+  onToggleVisual,
 }: DesktopStageChromeProps) {
   const [pasteOpen, setPasteOpen] = useState(false)
   const [pasteValue, setPasteValue] = useState('')
@@ -473,6 +482,9 @@ export function DesktopStageChrome({
               </span>
             </>
           )}
+          {onToggleVisual ? (
+            <TheaterVisualToggle visualOnly={visualOnly} onToggle={onToggleVisual} />
+          ) : null}
         </div>
 
         <div className="pointer-events-auto flex flex-none items-center gap-2.5">

@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
   pinKeyFirst,
+  applyTheaterVisualLens,
+  isVisualStageItem,
   theaterUrlSyncPath,
   theaterTabNavRestore,
   isFeedEnd,
@@ -13,6 +15,7 @@ import {
   shouldRewaitAfterArrival,
 } from '@/components/theater/TheaterShell'
 import { theaterItemKey } from '@/components/theater/types'
+import type { TheaterItem } from '@/components/theater/types'
 
 /**
  * Pure list-reorder helper backing TheaterShell's lead-pick/shared-item
@@ -50,6 +53,66 @@ describe('pinKeyFirst', () => {
   it('returns the list unchanged when pinnedKey is null', () => {
     const result = pinKeyFirst(items, null)
     expect(result).toBe(items)
+  })
+})
+
+function visualItem(bookmarkId: string, extra: Partial<TheaterItem> = {}): TheaterItem {
+  return {
+    action: 'save',
+    platform: 'twitter',
+    bookmarkId,
+    author: 'alice',
+    url: `/alice/status/${bookmarkId}`,
+    createdAt: '2026-08-18T00:00:00Z',
+    saveCount: 1,
+    trendCount: 1,
+    ...extra,
+  } as TheaterItem
+}
+
+describe('isVisualStageItem', () => {
+  it('treats video and photo as visual', () => {
+    expect(isVisualStageItem(visualItem('1', { contentType: 'video' }))).toBe(true)
+    expect(isVisualStageItem(visualItem('2', { contentType: 'photo' }))).toBe(true)
+  })
+
+  it('treats TikTok without contentType as video', () => {
+    expect(isVisualStageItem(visualItem('3', { platform: 'tiktok', contentType: undefined }))).toBe(
+      true,
+    )
+  })
+
+  it('drops text, articles, and text-only quotes', () => {
+    expect(isVisualStageItem(visualItem('4', { contentType: 'text' }))).toBe(false)
+    expect(isVisualStageItem(visualItem('5', { contentType: 'article' }))).toBe(false)
+    expect(isVisualStageItem(visualItem('6', { contentType: 'quote' }))).toBe(false)
+  })
+})
+
+describe('applyTheaterVisualLens', () => {
+  const video = visualItem('v', { contentType: 'video' })
+  const photo = visualItem('p', { contentType: 'photo' })
+  const text = visualItem('t', { contentType: 'text' })
+
+  it('returns the same reference when the lens is off', () => {
+    const items = [video, text]
+    expect(applyTheaterVisualLens(items, false)).toBe(items)
+  })
+
+  it('keeps only videos and photos', () => {
+    const items = [text, video, photo]
+    expect(applyTheaterVisualLens(items, true).map((it) => it.bookmarkId)).toEqual(['v', 'p'])
+  })
+
+  it('keeps a non-visual shared lead', () => {
+    const items = [text, video]
+    const kept = applyTheaterVisualLens(items, true, theaterItemKey(text))
+    expect(kept.map((it) => it.bookmarkId)).toEqual(['t', 'v'])
+  })
+
+  it('returns the same reference when every item is already visual', () => {
+    const items = [video, photo]
+    expect(applyTheaterVisualLens(items, true)).toBe(items)
   })
 })
 

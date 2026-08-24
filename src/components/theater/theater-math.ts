@@ -9,6 +9,7 @@ import { theaterItemKey } from './types'
 import { previewPath } from '@/lib/activity/preview-path'
 import { hasKnownTimestamp } from '@/lib/utils/format'
 import type { RepeatMode, TheaterItem, TheaterMode } from './types'
+import { inferType } from '@/lib/trending/filter'
 import { SAVED_PATH, isSavedPath } from '@/lib/theater/collection-href'
 
 export interface PersonalUndoAction {
@@ -84,6 +85,35 @@ export function pinKeyFirst<
   const [pinned] = copy.splice(idx, 1)
   copy.unshift(pinned)
   return copy
+}
+
+/**
+ * Live theater "visual" lens: the stage is a photo or video, not typeset
+ * text / an X Article / a link card. Quote tweets with parent media still
+ * count — `inferType` prefers photo/video over quote when the bookmark has
+ * first-class media. TikTok / Instagram / YouTube are always video.
+ */
+export function isVisualStageItem(item: TheaterItem): boolean {
+  const type = inferType(item)
+  return type === 'video' || type === 'photo'
+}
+
+/**
+ * Drop non-visual posts from the live queue. `keepKey` (the shared-preview
+ * lead) stays even when it's text, so a pasted tweet isn't yanked out from
+ * under the visitor. Home lead-picks are not kept — toggling Visual should
+ * skip a text post you happened to land on.
+ */
+export function applyTheaterVisualLens<T extends TheaterItem>(
+  items: T[],
+  visualOnly: boolean,
+  keepKey: string | null = null,
+): T[] {
+  if (!visualOnly) return items
+  const next = items.filter(
+    (it) => (keepKey !== null && theaterItemKey(it) === keepKey) || isVisualStageItem(it),
+  )
+  return next.length === items.length ? items : next
 }
 
 /**

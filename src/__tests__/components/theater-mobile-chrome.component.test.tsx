@@ -341,6 +341,48 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     expect(screen.getByRole('button', { name: 'Paste a link' })).toBeInTheDocument()
   })
 
+  it('shows Visual on Live and hides it on Saved', () => {
+    const onToggleVisual = vi.fn()
+    const { rerender } = render(
+      <TheaterMobileChrome
+        {...base}
+        current={videoItem()}
+        visualOnly={false}
+        onToggleVisual={onToggleVisual}
+      />,
+    )
+    const visual = screen.getByRole('button', { name: 'Show videos and photos only' })
+    expect(visual).toHaveAttribute('aria-pressed', 'false')
+    fireEvent.click(visual)
+    expect(onToggleVisual).toHaveBeenCalledTimes(1)
+
+    rerender(
+      <TheaterMobileChrome
+        {...base}
+        current={videoItem()}
+        visualOnly
+        onToggleVisual={onToggleVisual}
+      />,
+    )
+    expect(
+      screen.getByRole('button', { name: 'Showing videos and photos. Show every post' }),
+    ).toHaveAttribute('aria-pressed', 'true')
+
+    const saved: TheaterPersonalChrome = {
+      tab: 'collection',
+      onTabChange: vi.fn(),
+      onDone: vi.fn(),
+      onTag: vi.fn(),
+      onSave: vi.fn(),
+      onLiveTag: vi.fn(),
+      savedKeys: new Set<string>(),
+      remaining: 0,
+      onClose: vi.fn(),
+    }
+    rerender(<TheaterMobileChrome {...base} current={videoItem()} collection={saved} />)
+    expect(screen.queryByRole('button', { name: /videos and photos/ })).not.toBeInTheDocument()
+  })
+
   it('pins the flame left of paste on media and text', () => {
     const { rerender } = render(
       <TheaterMobileChrome {...base} current={videoItem({ trendCount: 12 })} />,

@@ -28,6 +28,7 @@ export type TheaterShortcut =
   | 'keepPlaying'
   | 'toggleExpand'
   | 'cycleRepeat'
+  | 'toggleVisual'
   | 'scrollDown'
   | 'scrollUp'
 
@@ -45,6 +46,7 @@ export const THEATER_ACTION_EVENTS = {
   keepPlaying: 'theater-keep-playing',
   toggleExpand: 'theater-toggle-expand',
   cycleRepeat: 'theater-cycle-repeat',
+  toggleVisual: 'theater-toggle-visual',
 } as const
 
 export type TheaterActionName = keyof typeof THEATER_ACTION_EVENTS
@@ -64,6 +66,7 @@ export const THEATER_ACTION_ATTR: Record<TheaterActionName, string> = {
   keepPlaying: 'keep-playing',
   toggleExpand: 'expand',
   cycleRepeat: 'repeat',
+  toggleVisual: 'visual',
 }
 
 export interface TheaterKeyLike {
@@ -118,6 +121,8 @@ export const THEATER_SHORTCUT_KEYS = new Set([
   'A',
   'r',
   'R',
+  'i',
+  'I',
   'u',
   'U',
   'w',
@@ -182,6 +187,9 @@ export function resolveTheaterShortcut(e: TheaterKeyLike): TheaterShortcut | nul
     case 'r':
     case 'R':
       return 'cycleRepeat'
+    case 'i':
+    case 'I':
+      return 'toggleVisual'
     case 'u':
     case 'U':
       return 'undo'
@@ -248,6 +256,7 @@ export const THEATER_SHORTCUT_HELP: TheaterHelpSection[] = [
       { keys: ['M'], label: 'Mute / unmute' },
       { keys: ['E'], label: 'Expand' },
       { keys: ['R'], label: 'Repeat' },
+      { keys: ['I'], label: 'Visual only' },
     ],
   },
   {

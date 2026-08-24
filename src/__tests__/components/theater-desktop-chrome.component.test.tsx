@@ -766,6 +766,44 @@ describe('DesktopStageChrome', () => {
     expect(screen.getByRole('button', { name: 'Paste a link' })).toBeInTheDocument()
   })
 
+  it('shows Visual on Live and hides it on Saved', () => {
+    const onToggleVisual = vi.fn()
+    const { rerender } = render(
+      <DesktopStageChrome
+        {...stageBase}
+        current={videoItem()}
+        visualOnly={false}
+        onToggleVisual={onToggleVisual}
+      />,
+    )
+    const visual = screen.getByRole('button', { name: 'Show videos and photos only' })
+    expect(visual).toHaveAttribute('aria-pressed', 'false')
+    fireEvent.click(visual)
+    expect(onToggleVisual).toHaveBeenCalledTimes(1)
+
+    rerender(
+      <DesktopStageChrome
+        {...stageBase}
+        current={videoItem()}
+        visualOnly
+        onToggleVisual={onToggleVisual}
+      />,
+    )
+    expect(
+      screen.getByRole('button', { name: 'Showing videos and photos. Show every post' }),
+    ).toHaveAttribute('aria-pressed', 'true')
+
+    rerender(
+      <DesktopStageChrome
+        {...stageBase}
+        mode="personal"
+        current={videoItem()}
+        collection={{ ...personalCollection, tab: 'collection' }}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: /videos and photos/ })).not.toBeInTheDocument()
+  })
+
   it('adds in place on the personal theater and does not navigate away', async () => {
     const assignSpy = vi.fn()
     Object.defineProperty(window, 'location', {

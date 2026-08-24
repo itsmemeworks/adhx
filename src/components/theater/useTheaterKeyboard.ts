@@ -153,6 +153,7 @@ export function useTheaterKeyboard({
         case 'keepPlaying':
         case 'toggleExpand':
         case 'cycleRepeat':
+        case 'toggleVisual':
           e.preventDefault()
           window.dispatchEvent(new CustomEvent(THEATER_ACTION_EVENTS[action]))
           break

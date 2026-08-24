@@ -63,6 +63,7 @@ import { TheaterTagCount } from './TheaterTagCount'
 import { tagActionLabel } from '@/lib/utils/tag'
 import { TheaterCollectionActions } from './TheaterCollectionActions'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
+import { TheaterVisualToggle } from './TheaterVisualToggle'
 import { StageIconButton } from './stage-primitives'
 import { logAV } from './YtDebugOverlay'
 import type {
@@ -157,6 +158,9 @@ export interface TheaterMobileChromeProps {
   /** Video/photo + quote: stacked article reader instead of full-bleed media. */
   articleMode?: boolean
   onToggleArticleMode?: () => void
+  /** Live queue only — omit on Saved / playlists. */
+  visualOnly?: boolean
+  onToggleVisual?: () => void
 }
 
 /** Height of the collapsed sheet's peek bar — kept in sync with the transform below. Two rows now (drag handle + the nav/pause/audio/de-clutter controls), taller than the old label-only bar. */
@@ -211,6 +215,8 @@ export function TheaterMobileChrome({
   onPastePost,
   articleMode = false,
   onToggleArticleMode,
+  visualOnly = false,
+  onToggleVisual,
 }: TheaterMobileChromeProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -396,6 +402,9 @@ export function TheaterMobileChrome({
             <MatterLogo size={16} className="[&>span]:text-white" />
           </a>
           <div className="flex flex-none items-center gap-1.5">
+            {onToggleVisual ? (
+              <TheaterVisualToggle visualOnly={visualOnly} onToggle={onToggleVisual} />
+            ) : null}
             {current ? <FlameChip trendCount={trendCount} /> : null}
             {/* Same add-in-place paste as desktop — stay on Live / My
                 Collection; do not bounce to a preview page. */}
@@ -453,6 +462,9 @@ export function TheaterMobileChrome({
             <MatterLogo size={16} className="[&>span]:text-white" />
           </a>
           <div className="flex flex-none items-center gap-1.5">
+            {onToggleVisual ? (
+              <TheaterVisualToggle visualOnly={visualOnly} onToggle={onToggleVisual} />
+            ) : null}
             {current ? <FlameChip trendCount={trendCount} /> : null}
             {/* Mobile equivalent of the desktop top bar's paste button (⌘V still works there)
                 input (spec §8/DesktopStageChrome) — touch Safari has no
