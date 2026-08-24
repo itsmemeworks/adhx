@@ -20,7 +20,12 @@ describe('TheaterShortcutsHelp', () => {
     expect(screen.getByText('Next post')).toBeInTheDocument()
     expect(screen.getByText('Previous post')).toBeInTheDocument()
     expect(screen.getByText('Play / pause')).toBeInTheDocument()
-    expect(screen.getByText('Read / Watch')).toBeInTheDocument()
+    const readWatch = screen.getByText('Read / Watch')
+    const archive = screen.getByText('Archive')
+    expect(
+      readWatch.compareDocumentPosition(archive) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(screen.getByText('Undo archive')).toBeInTheDocument()
     expect(screen.getByText('Re-watch all')).toBeInTheDocument()
     expect(screen.getByText('Keep playing')).toBeInTheDocument()
     expect(screen.getByText('Paste a link')).toBeInTheDocument()
