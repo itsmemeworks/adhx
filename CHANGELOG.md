@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.62.0](https://github.com/itsmemeworks/adhx/compare/v1.61.0...v1.62.0) (2026-08-24)
+
+
+### Features
+
+* make theater the only keyboard surface ([#405](https://github.com/itsmemeworks/adhx/issues/405)) ([83c4587](https://github.com/itsmemeworks/adhx/commit/83c4587199daf86c1bde22fcea1a030dd5d56a13))
+
 ## [1.61.0](https://github.com/itsmemeworks/adhx/compare/v1.60.0...v1.61.0) (2026-08-24)
 
 
