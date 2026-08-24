@@ -26,6 +26,7 @@ import { useSeenSet } from './useSeenSet'
 import { useTheaterKeyboard } from './useTheaterKeyboard'
 import { useTheaterPrefetch } from './useTheaterPrefetch'
 import { useTheaterDwell } from './useTheaterDwell'
+import { useTheaterStageTapDeclutter } from './useTheaterStageEvents'
 import {
   TheaterProgressLine,
   progressKindFor,
@@ -737,6 +738,7 @@ export function TheaterShell({
   // on `currentKey`), same as the mobile one.
   const [desktopDeclutter, setDesktopDeclutter] = useState(false)
   const onToggleDesktopDeclutter = useCallback(() => setDesktopDeclutter((v) => !v), [])
+  useTheaterStageTapDeclutter(desktopDeclutter, setDesktopDeclutter)
   const [currentKey, setCurrentKey] = useState<string | null>(null)
   useEffect(() => {
     setArticleMode(false)

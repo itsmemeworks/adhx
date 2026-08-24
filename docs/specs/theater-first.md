@@ -63,7 +63,9 @@ TheaterDesktopChrome.tsx — `DesktopStageChrome` (overlays inside stage: top ba
                            horizontal filmstrip queue auto-scrolled to keep current visible + "Show all" panel)
 TheaterMobileChrome.tsx  — mobile reel chrome: top/bottom scrims, peek bar with transport + audio +
                            de-clutter, swipe up/down navigation, 70dvh Up-next bottom sheet.
-                           Read/Watch is icon-only on the left of the action row (book / TV)
+                           Read/Watch is icon-only on the left of the action row (book / TV).
+                           Tap video/photo hides chrome and starts playback; tap again restores
+                           overlays without pausing (Space / peek-bar own pause).
 UpNextList.tsx           — feed rows, seen divider, "next ↓" highlight
 useTheaterFeed.ts        — items + polling (see §4)
 useSeenSet.ts            — localStorage seen model (see §5)

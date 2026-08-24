@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-24 — Stage tap declutter onto Read/Watch
+
+Merged tap-to-declutter onto the Read/Watch theater: first tap hides chrome and starts playback, second tap restores overlays without pausing. Pause stays on the peek-bar / dock button and Space. E2E covers desktop + mobile video tap. Follow-up: none.
+
+## 2026-08-23 — Stage tap declutter + start (not play/pause)
+
+Tapping a video or photo hides chrome and starts playback; tapping again restores overlays without pausing. Pause stays on the peek-bar / dock button and Space. Sound stays on the audio button (tap no longer unmutes). YouTube iframe still eats its own taps. Follow-up: none.
+
 ## 2026-08-24 — Isolate Read video under theater chrome
 
 Read mode's video band is `z-20` (fade `z-25`) so the clip sits above the article pane. The stage wrapper had no stacking context, so that painted over sibling chrome (`z-10` paste / flame / avatar) and stole clicks. Stage + Collection article roots now `isolate`; TheaterShell's stage layer is `isolate z-0`. Current state: uncommitted on the Read/Watch branch. Follow-up: none.

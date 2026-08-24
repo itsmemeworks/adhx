@@ -21,6 +21,7 @@ import { fallbackToOriginal } from '@/components/feed/media-actions'
 import { proxiedPhotoSrc } from '@/lib/media/fxembed'
 import { TheaterCaption } from './TheaterCaption'
 import { TheaterLinkedText } from './TheaterText'
+import { dispatchTheaterStageTap } from './useTheaterStageEvents'
 import {
   STAGE_ARTICLE_UNDER_BAND_PAD,
   STAGE_TEXT_SCROLL_PAD,
@@ -117,7 +118,10 @@ export function StageText({
   if (photo) {
     const src = stagePhotoSrc(item)
     return (
-      <div className="relative flex h-full w-full items-center justify-center bg-[#08070a]">
+      <div
+        className="relative flex h-full w-full items-center justify-center bg-[#08070a]"
+        onClick={() => dispatchTheaterStageTap()}
+      >
         {src ? (
           <img
             src={src}
