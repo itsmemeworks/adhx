@@ -21,9 +21,10 @@ import { StageGlass } from './StageGlass'
  * sit above the overlay action row. Mobile also clears the peek bar
  * (`PEEK_H` 4.25rem in TheaterMobileChrome) + the 0.75rem scrim gap +
  * the 44px action pills + a little air. Desktop only needs the action
- * pills (`absolute bottom-6`).
+ * pills (`absolute bottom-6`). Compact notes need a bit more so the last
+ * lines clear the action row.
  */
-export const STAGE_TEXT_SCROLL_PAD = 'pb-[calc(4.25rem+0.75rem+44px+1.25rem)] lg:pb-24'
+export const STAGE_TEXT_SCROLL_PAD = 'pb-[calc(4.25rem+0.75rem+44px+1.25rem)] lg:pb-32'
 
 /**
  * Top padding on the typeset tweet column so the author row clears the

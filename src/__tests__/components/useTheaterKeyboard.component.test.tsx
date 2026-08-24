@@ -122,18 +122,21 @@ describe('useTheaterKeyboard: isPlaybackHidden space guard', () => {
     window.addEventListener('theater-tag', heard)
     window.addEventListener('theater-copy-link', heard)
     window.addEventListener('theater-toggle-menu', heard)
+    window.addEventListener('theater-toggle-show-all', heard)
     try {
       renderHook(() => useTheaterKeyboard(baseArgs()))
       act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 's' })))
       act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 't' })))
       act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'l' })))
       act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: '.' })))
-      expect(heard).toHaveBeenCalledTimes(4)
+      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'q' })))
+      expect(heard).toHaveBeenCalledTimes(5)
     } finally {
       window.removeEventListener('theater-save', heard)
       window.removeEventListener('theater-tag', heard)
       window.removeEventListener('theater-copy-link', heard)
       window.removeEventListener('theater-toggle-menu', heard)
+      window.removeEventListener('theater-toggle-show-all', heard)
     }
   })
 
@@ -161,7 +164,6 @@ describe('useTheaterKeyboard: isPlaybackHidden space guard', () => {
       'theater-keep-playing',
       'theater-toggle-expand',
       'theater-cycle-repeat',
-      'theater-toggle-visual',
     ] as const
     const listeners = names.map((name) => {
       const fn = () => heard.push(name)
@@ -182,7 +184,6 @@ describe('useTheaterKeyboard: isPlaybackHidden space guard', () => {
       act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p' })))
       act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'e' })))
       act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'r' })))
-      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'i' })))
       expect(onToggleHelp).toHaveBeenCalledTimes(1)
       expect(args.setMuted).toHaveBeenCalledTimes(1)
       expect(heard).toEqual([...names])

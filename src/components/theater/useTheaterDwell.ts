@@ -37,6 +37,8 @@ export interface UseTheaterDwellArgs {
   /** Fresh-item lookup — a ref so this effect only resets on `currentKey` changes, not on every unrelated re-render. */
   itemsRef: MutableRefObject<TheaterItem[]>
   seenSet: SeenSet
+  /** Shared-preview stub still waiting on FxTwitter — don't mark seen or pulse yet. */
+  paused?: boolean
 }
 
 export function useTheaterDwell({
@@ -45,12 +47,13 @@ export function useTheaterDwell({
   loop,
   itemsRef,
   seenSet,
+  paused = false,
 }: UseTheaterDwellArgs): void {
   const seenSetRef = useRef(seenSet)
   seenSetRef.current = seenSet
 
   useEffect(() => {
-    if (!currentKey || isCollectionTab) return
+    if (!currentKey || isCollectionTab || paused) return
     const timer = window.setTimeout(() => {
       const item = itemsRef.current.find((it) => theaterItemKey(it) === currentKey)
       if (!item) return
@@ -64,5 +67,5 @@ export function useTheaterDwell({
       }
     }, SEEN_DWELL_MS)
     return () => window.clearTimeout(timer)
-  }, [currentKey, loop, isCollectionTab])
+  }, [currentKey, loop, isCollectionTab, paused])
 }

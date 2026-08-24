@@ -9,7 +9,7 @@
  *
  * Two components, one file:
  *  - `DesktopStageChrome` — absolutely-positioned overlays INSIDE the stage
- *    wrapper (brand + LIVE, flame chip, Visual on Live, paste-a-link input,
+ *    wrapper (brand + LIVE, flame chip, paste-a-link input,
  *    the media post's author/caption overlay (Read opens the stacked article),
  *    and the action buttons — Open is the source platform glyph).
  *  - `DesktopDock` — the in-flow bottom dock AFTER the stage wrapper
@@ -23,6 +23,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTheaterActionHotkeys } from './useTheaterActionHotkeys'
+import { useTheaterQueueOverlay } from './useTheaterQueueOverlay'
 import Link from 'next/link'
 import {
   Bookmark,
@@ -46,7 +47,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { addedToAdhxLabel, formatCompactRelativeTime, hasKnownTimestamp } from '@/lib/utils/format'
-import { MatterLogo, PlatformGlyph } from '@/components/matter'
+import { MatterLogo, PlatformGlyph, type ContentType } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { authorProfileUrl, sourceUrl } from '@/lib/activity/preview-path'
 import { pingAnalytic } from '@/lib/analytics/client'
@@ -80,7 +81,8 @@ import { progressKindFor } from './TheaterProgressLine'
 import { UpNextList, TYPE_TILE, warmOnHover } from './UpNextList'
 import { SavePlaylistButton } from './SavePlaylistButton'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
-import { TheaterVisualToggle } from './TheaterVisualToggle'
+import { TheaterQueueFilter } from './TheaterQueueFilter'
+import { isTheaterQueueFilterActive, theaterQueueFilterLabel } from './theater-math'
 import { logAV } from './YtDebugOverlay'
 import type {
   RepeatMode,
@@ -128,12 +130,6 @@ export interface DesktopStageChromeProps {
   /** Video/photo + quote: stacked article reader instead of full-bleed media. */
   articleMode?: boolean
   onToggleArticleMode?: () => void
-  /**
-   * Live queue only: videos and photos. Saved / playlists omit the handler
-   * so the control never mounts. Clay when on, same frost as paste.
-   */
-  visualOnly?: boolean
-  onToggleVisual?: () => void
 }
 
 export interface DesktopDockProps {
@@ -198,6 +194,14 @@ export interface DesktopDockProps {
   onCycleRepeat?: () => void
   /** Video/photo + quote in article mode — dock pause/audio follow the reader. */
   articleMode?: boolean
+  /**
+   * Live queue only: multi-select of post types. Saved / playlists omit
+   * the handlers so the pills never mount. Shown in the Show all playlist
+   * panel. Empty `queueTypes` is All.
+   */
+  queueTypes?: ContentType[]
+  onToggleQueueType?: (type: ContentType) => void
+  onClearQueueTypes?: () => void
 }
 
 export { navigateToAppPath } from '@/lib/theater/navigate-app-path'
@@ -233,8 +237,6 @@ export function DesktopStageChrome({
   onPastePost,
   articleMode = false,
   onToggleArticleMode,
-  visualOnly = false,
-  onToggleVisual,
 }: DesktopStageChromeProps) {
   const [pasteOpen, setPasteOpen] = useState(false)
   const [pasteValue, setPasteValue] = useState('')
@@ -485,12 +487,8 @@ export function DesktopStageChrome({
         </div>
 
         <div className="pointer-events-auto flex flex-none items-center gap-2.5">
-          {/* Stats, then Visual (Live only), then paste. Never next to
-              the author/caption — every post type uses this same corner. */}
+          {/* Stats left of paste. Never next to the author/caption. */}
           {current ? <FlameChip trendCount={trendCount} /> : null}
-          {onToggleVisual ? (
-            <TheaterVisualToggle visualOnly={visualOnly} onToggle={onToggleVisual} />
-          ) : null}
           {playlist && !collection ? (
             !isPlaylistOwner && (
               <StageGlass
@@ -865,11 +863,17 @@ export function DesktopDock({
   repeatMode,
   onCycleRepeat,
   articleMode = false,
+  queueTypes = [],
+  onToggleQueueType,
+  onClearQueueTypes,
 }: DesktopDockProps) {
   const [showAll, setShowAll] = useState(false)
   const cardRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
   const rootRef = useRef<HTMLDivElement>(null)
+  const queueRootRef = useRef<HTMLDivElement>(null)
+  const closeShowAll = useCallback(() => setShowAll(false), [])
   useTheaterActionHotkeys('desktop', rootRef)
+  useTheaterQueueOverlay({ open: showAll, onClose: closeShowAll, containerRef: queueRootRef })
 
   const kind = progressKindFor(current, articleMode)
   const { videoPlaying, timedPaused, setTimedPaused, liveMuted, setLiveMuted } =
@@ -889,17 +893,10 @@ export function DesktopDock({
     el?.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' })
   }, [currentKey])
 
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setShowAll(false)
-    }
-    if (showAll) window.addEventListener('keydown', handleEscape)
-    return () => window.removeEventListener('keydown', handleEscape)
-  }, [showAll])
-
   const paused = kind === 'video' ? !videoPlaying : timedPaused
   const displayMuted = liveMuted ?? muted
   const soundPulse = kind === 'video' && displayMuted && videoPlaying
+  const filterOn = Boolean(onToggleQueueType) && isTheaterQueueFilterActive(queueTypes)
 
   // Computed from the DISPLAYED state (not the shell's possibly-stale
   // `muted` prop) so the button always moves the direction the icon shows —
@@ -1209,36 +1206,53 @@ export function DesktopDock({
       </div>
 
       {/* End cap */}
-      <div className="relative flex flex-none flex-col items-end justify-center gap-1 pl-1">
-        {/* Vertical stack (owner: the count and new-count sit BELOW the
-            "Show all" text so the end cap doesn't eat filmstrip width). */}
+      <div
+        ref={queueRootRef}
+        className="relative flex flex-none flex-col items-end justify-center gap-0.5 pl-1"
+      >
+        {/* One sans family for the whole stack: the toggle is the only
+            semibold line; counts share size/weight, and clay is reserved for
+            an active type filter + the new-count. Filter-on swaps "Show all"
+            for the selected types and wraps the toggle in a clay chip. */}
         <button
           type="button"
+          aria-label="Show all"
+          aria-expanded={showAll}
+          data-theater-action="show-all"
           onClick={() => setShowAll((v) => !v)}
-          className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-ink-2 hover:text-ink"
+          className={cn(
+            'inline-flex max-w-[9.5rem] items-center gap-1 truncate text-[12.5px] font-semibold transition-colors',
+            filterOn
+              ? 'rounded-full bg-clay/15 px-2 py-0.5 text-clay hover:bg-clay/25'
+              : 'text-ink-2 hover:text-ink',
+          )}
         >
-          {showAll ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
-          <span>Show all</span>
+          {showAll ? (
+            <ChevronDown size={13} className="flex-none" />
+          ) : (
+            <ChevronUp size={13} className="flex-none" />
+          )}
+          <span className="truncate">
+            {filterOn ? theaterQueueFilterLabel(queueTypes) : 'Show all'}
+          </span>
         </button>
         {/* "N posts" counts what will actually PLAY from here — the unwatched
             run while repeat is off, the whole queue once it isn't (see
             `computeQueueTotal`). Saying 26 when auto-advance will only play the
             5 pending ones is the desktop version of the misleading "3 / 26"
             the mobile peek bar used to show. */}
-        <span className="font-mono text-[10.5px] text-ink-3">
+        <span className="text-[11px] leading-snug text-ink-3">
           {queueTotal ?? items.length} posts
         </span>
         {!playlist && newCount > 0 && (
-          <span className="text-[10.5px] font-semibold text-clay">{newCount} new</span>
+          <span className="text-[11px] leading-snug text-clay">{newCount} new</span>
         )}
         {/* savedToday/newCount are live-pulse concepts — collection mode is a
             static curated queue, and the personal theater's Collection tab is the user's
             own backlog, so neither line is meaningful for either. Collection
             shows "{remaining} left" instead. */}
         {collection && collection.tab === 'collection' ? (
-          <span className="flex items-center gap-1.5 text-[10.5px] text-ink-3">
-            <span className="font-mono">{collection.remaining} left</span>
-          </span>
+          <span className="text-[11px] leading-snug text-ink-3">{collection.remaining} left</span>
         ) : (
           <>
             {/* shared-post-repeat: NO end-cap chip here (removed after owner
@@ -1247,21 +1261,26 @@ export function DesktopDock({
                 "facts shown once"). The current card IS the state cue on
                 desktop, same as the mobile peek bar's relabeled center
                 button; the chevron accent is the "way out" cue. */}
-            {/* newCount now rides the count line under "Show all" above —
-                only the ambient savedToday/waiting line remains here. */}
             {!playlist &&
               (waiting ? (
-                <span className="text-[10.5px] text-ink-3">Waiting for new sends…</span>
+                <span className="text-[11px] leading-snug text-ink-3">Waiting for new sends…</span>
               ) : (
                 savedToday > 0 && (
-                  <span className="text-[10.5px] text-ink-3">{savedToday} saved today</span>
+                  <span className="text-[11px] leading-snug text-ink-3">
+                    {savedToday} saved today
+                  </span>
                 )
               ))}
           </>
         )}
 
         {showAll && (
-          <div className="absolute bottom-full right-4 z-20 mb-2 flex max-h-[62vh] w-[380px] flex-col overflow-hidden rounded-xl border border-hairline bg-surface shadow-m-lg">
+          <div
+            data-theater-queue-panel
+            role="dialog"
+            aria-label="Playlist"
+            className="absolute bottom-full right-4 z-20 mb-2 flex max-h-[62vh] w-[380px] flex-col overflow-hidden rounded-xl border border-hairline bg-surface shadow-m-lg"
+          >
             <div className="flex items-center justify-between px-4 pb-1 pt-3">
               {/* The panel's title states what happens when the queue runs out
                   — the one thing the list itself can't show (owner: "shouldn't
@@ -1281,6 +1300,13 @@ export function DesktopDock({
                 <X size={14} />
               </button>
             </div>
+            {onToggleQueueType && onClearQueueTypes ? (
+              <TheaterQueueFilter
+                selected={queueTypes}
+                onToggle={onToggleQueueType}
+                onClear={onClearQueueTypes}
+              />
+            ) : null}
             <UpNextList
               items={items}
               currentKey={currentKey}

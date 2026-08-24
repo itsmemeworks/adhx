@@ -9,13 +9,15 @@
  * pulse, and next-item prefetch. See docs/specs/theater-first.md.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { Minimize2 } from 'lucide-react'
 import type { FeedItem } from '@/components/feed/types'
+import type { ContentType } from '@/components/matter'
 import { Stage } from './Stage'
 import { StageWaiting } from './StageWaiting'
 import { StageUnavailable } from './StageUnavailable'
+import { StageResolving } from './StageResolving'
 import { CollectionAllClear } from './CollectionAllClear'
 import { StageVisualEmpty } from './StageVisualEmpty'
 import { DesktopStageChrome, DesktopDock } from './TheaterDesktopChrome'
@@ -46,7 +48,12 @@ import {
   personalAdvanceOnEndedIndex,
   personalStepBackIndex,
   pinKeyFirst,
-  applyTheaterVisualLens,
+  applyTheaterTypeLens,
+  isTheaterQueueFilterActive,
+  parseTheaterQueueTypes,
+  serializeTheaterQueueTypes,
+  theaterQueueEmptyHeadline,
+  toggleTheaterQueueType,
   orderLiveQueue,
   unseenBlockLength,
   computeLiveNext,
@@ -63,8 +70,10 @@ import {
 } from './theater-math'
 import { useIsDesktopViewport } from './useIsDesktopViewport'
 import { useSharedPin } from './useSharedPin'
+import { SharedResolveBridge } from './SharedResolveBridge'
 import { useTheaterLiveUrl } from './useTheaterLiveUrl'
 import { resolveTheaterChrome } from './theater-chrome'
+import type { SharedResolveResult } from '@/lib/theater/shared-resolve'
 // SignInModal + useAuthMe are built by a parallel agent under the same
 // accounts/magic-link PR — imported per the shared contract even though the
 // module may not exist yet at review time; see the "Save playlist" CTA
@@ -87,6 +96,7 @@ import type {
 
 export { personalKeyAction } from './useTheaterKeyboard'
 export type { PersonalKeyAction } from './useTheaterKeyboard'
+export { theaterQueueFilterLabel } from './theater-math'
 export {
   shouldCommitDelete,
   shouldDismissUndo,
@@ -94,7 +104,11 @@ export {
   personalAdvanceOnEndedIndex,
   personalStepBackIndex,
   pinKeyFirst,
-  applyTheaterVisualLens,
+  applyTheaterTypeLens,
+  parseTheaterQueueTypes,
+  serializeTheaterQueueTypes,
+  toggleTheaterQueueType,
+  theaterQueueEmptyHeadline,
   liveQueueGroupOf,
   orderLiveQueue,
   unseenBlockLength,
@@ -116,7 +130,6 @@ export {
   LIVE_QUEUE_GROUP_LABEL,
 } from './theater-math'
 export type { PersonalUndoAction, LiveQueueGroup, RepeatMode } from './theater-math'
-export { isVisualStageItem } from './theater-math'
 
 export interface TheaterShellProps {
   seed: TheaterFeedSeed
@@ -141,6 +154,12 @@ export interface TheaterShellProps {
    */
   sharedUnavailable?: boolean
   sharedUnavailableReason?: 'source' | 'hidden'
+  /**
+   * Shared preview: the page started FxTwitter / a scrape / oEmbed without
+   * awaiting it so ADHX chrome can paint first. Settling replaces the URL
+   * stub in place; a tweet that 404s flips `sharedUnavailable`.
+   */
+  sharedResolve?: Promise<SharedResolveResult>
   /**
    * Whether the visiting user is signed in. Shared mode: swaps Connect for a
    * direct Save. Playlist mode: initial SSR hint for the Save-playlist
@@ -190,6 +209,7 @@ export function TheaterShell({
   sharedItem,
   sharedUnavailable = false,
   sharedUnavailableReason = 'source',
+  sharedResolve,
   authed = false,
   playlist,
   personalItems,
@@ -235,11 +255,27 @@ export function TheaterShell({
     },
     [isPersonal, changePersonalTab, mode, signedIn, router],
   )
-  const visualLensAvailable = !loop && !isCollectionTab
+  const queueFilterAvailable = !loop && !isCollectionTab
   const feed = useTheaterFeed(seed, { live: !loop && !isCollectionTab })
   const feedPrepend = feed.prependItem
   const seenSet = useSeenSet()
   const { items } = feed
+
+  const [resolvedUnavailable, setResolvedUnavailable] = useState(false)
+  const [sharedResolved, setSharedResolved] = useState(() => !sharedResolve)
+  const leadUnavailable = sharedUnavailable || resolvedUnavailable
+  const awaitingSharedResolve = Boolean(sharedResolve) && !sharedResolved
+  const applySharedResolve = useCallback(
+    (result: SharedResolveResult) => {
+      setSharedResolved(true)
+      if (!result.ok) {
+        setResolvedUnavailable(true)
+        return
+      }
+      feed.replaceItem(result.item)
+    },
+    [feed.replaceItem],
+  )
 
   // --- Collection mode (unified-theater-collection.md §2): a separate, small state
   // machine ported from the deleted CollectionTheater/CollectionRail. It
@@ -746,30 +782,44 @@ export function TheaterShell({
     }
   }, [loop, repeatMode])
 
-  const [visualOnly, setVisualOnly] = useState(false)
-  const [visualPrefReady, setVisualPrefReady] = useState(false)
+  const [queueTypes, setQueueTypes] = useState<ContentType[]>([])
+  const [queuePrefReady, setQueuePrefReady] = useState(false)
   useEffect(() => {
     try {
-      if (localStorage.getItem('adhx-theater-visual') === '1') setVisualOnly(true)
+      const stored = localStorage.getItem('adhx-theater-types')
+      if (stored != null) {
+        setQueueTypes(parseTheaterQueueTypes(stored))
+      } else if (localStorage.getItem('adhx-theater-visual') === '1') {
+        setQueueTypes(['video', 'photo'])
+      }
     } catch {
-      // Storage unavailable — keep off.
+      // Storage unavailable — keep All.
     }
-    setVisualPrefReady(true)
+    setQueuePrefReady(true)
   }, [])
   useEffect(() => {
-    if (!visualPrefReady || !visualLensAvailable) return
+    if (!queuePrefReady || !queueFilterAvailable) return
     try {
-      if (visualOnly) localStorage.setItem('adhx-theater-visual', '1')
-      else localStorage.removeItem('adhx-theater-visual')
+      const serialized = serializeTheaterQueueTypes(queueTypes)
+      if (serialized) localStorage.setItem('adhx-theater-types', serialized)
+      else localStorage.removeItem('adhx-theater-types')
+      localStorage.removeItem('adhx-theater-visual')
     } catch {
       // Never let a storage failure break playback.
     }
-  }, [visualOnly, visualPrefReady, visualLensAvailable])
-  const visualActive = visualLensAvailable && visualOnly
-  const toggleVisual = useCallback(() => {
-    if (!visualLensAvailable) return
-    setVisualOnly((v) => !v)
-  }, [visualLensAvailable])
+  }, [queueTypes, queuePrefReady, queueFilterAvailable])
+  const typeFilterActive = queueFilterAvailable && isTheaterQueueFilterActive(queueTypes)
+  const toggleQueueType = useCallback(
+    (type: ContentType) => {
+      if (!queueFilterAvailable) return
+      setQueueTypes((cur) => toggleTheaterQueueType(cur, type))
+    },
+    [queueFilterAvailable],
+  )
+  const clearQueueTypes = useCallback(() => {
+    if (!queueFilterAvailable) return
+    setQueueTypes([])
+  }, [queueFilterAvailable])
 
   const isDesktop = useIsDesktopViewport()
   // Desktop de-clutter: collapses the dock for a full-bleed stage.
@@ -816,7 +866,7 @@ export function TheaterShell({
   const { sharedPinned, clearSharedPin, sharedItemKey } = useSharedPin(
     mode,
     sharedItem,
-    sharedUnavailable,
+    leadUnavailable,
   )
 
   // Set once a user has navigated (keyboard/rail click) — after that, the
@@ -854,8 +904,13 @@ export function TheaterShell({
   // lands, which is exactly when the grouping changes.
   const isFreshKey = useCallback((key: string) => feed.freshKeys.has(key), [feed.freshKeys])
   const lensItems = useMemo(
-    () => applyTheaterVisualLens(items, visualActive, sharedItem ? sharedItemKey : null),
-    [items, visualActive, sharedItem, sharedItemKey],
+    () =>
+      applyTheaterTypeLens(
+        items,
+        typeFilterActive ? queueTypes : [],
+        sharedItem ? sharedItemKey : null,
+      ),
+    [items, typeFilterActive, queueTypes, sharedItem, sharedItemKey],
   )
   const orderedItems = useMemo(
     () =>
@@ -1011,7 +1066,7 @@ export function TheaterShell({
   }, [displayItems, currentKey])
 
   useEffect(() => {
-    if (!visualActive) return
+    if (!typeFilterActive) return
     if (displayItems.length === 0) {
       if (currentKey !== null) setCurrentKey(null)
       return
@@ -1026,7 +1081,7 @@ export function TheaterShell({
           })
         : undefined
     setCurrentKey(theaterItemKey(next ?? displayItems[0]))
-  }, [visualActive, displayItems, currentKey, items])
+  }, [typeFilterActive, displayItems, currentKey, items])
 
   useEffect(() => {
     // Shared mode never re-picks — the shared post is ALWAYS the initial
@@ -1040,7 +1095,7 @@ export function TheaterShell({
     // live post was already seen. Return before consuming `leadAppliedRef`
     // so a later flip to Live can still apply the live lead pick.
     if (sharedItem || loop || isCollectionTab) return
-    if (!seenSet.ready || !visualPrefReady || leadAppliedRef.current || hasNavigatedRef.current)
+    if (!seenSet.ready || !queuePrefReady || leadAppliedRef.current || hasNavigatedRef.current)
       return
     leadAppliedRef.current = true
     if (displayItems.length === 0) return
@@ -1064,7 +1119,7 @@ export function TheaterShell({
       setWaiting(true)
     }
     setCurrentKey(theaterItemKey(head))
-  }, [seenSet.ready, visualPrefReady, displayItems, unseenCount, sharedItem, loop, isCollectionTab])
+  }, [seenSet.ready, queuePrefReady, displayItems, unseenCount, sharedItem, loop, isCollectionTab])
 
   const currentIndex = useMemo(
     () => displayItems.findIndex((it) => theaterItemKey(it) === currentKey),
@@ -1116,10 +1171,15 @@ export function TheaterShell({
   // `StageUnavailable` below instead of the normal `<Stage/>` dispatch.
   const isSharedUnavailableOnCurrent = isSharedItemUnavailable(
     mode,
-    sharedUnavailable,
+    leadUnavailable,
     sharedItemKey,
     currentKey,
   )
+  const resolvingSharedLead =
+    awaitingSharedResolve &&
+    mode === 'shared' &&
+    currentKey === sharedItemKey &&
+    sharedItem?.platform === 'twitter'
   // End-states for the peek bar's prev/next chevrons (tester feedback: at the
   // first post, pressing "back" silently did nothing). `currentIndex === -1`
   // (nothing current, e.g. an empty list) always reads as "can't navigate".
@@ -1428,7 +1488,14 @@ export function TheaterShell({
   // Mark seen + fire the preview pulse once the current post has been staged
   // (extracted to useTheaterDwell.ts — see its doc comment for the full
   // collection/collection exemption rationale).
-  useTheaterDwell({ currentKey, isCollectionTab, loop, itemsRef, seenSet })
+  useTheaterDwell({
+    currentKey,
+    isCollectionTab,
+    loop,
+    itemsRef,
+    seenSet,
+    paused: resolvingSharedLead,
+  })
 
   useTheaterLiveUrl({ mode, isCollectionTab, currentKey, itemsRef })
 
@@ -1481,7 +1548,11 @@ export function TheaterShell({
   useEffect(() => {
     if (!waiting) return
     if (isCollectionTab) return
-    const arrived = findFreshArrival(feed.freshKeys, waitingBaselineFreshKeysRef.current)
+    const arrived = findFreshArrival(
+      feed.freshKeys,
+      waitingBaselineFreshKeysRef.current,
+      typeFilterActive ? (key) => displayItems.some((it) => theaterItemKey(it) === key) : undefined,
+    )
     if (!arrived) return
     // Fold the staged key into the baseline (never resnapshot — an item that
     // arrived while this one plays must still read as new when waiting
@@ -1502,7 +1573,7 @@ export function TheaterShell({
     if (mode !== 'shared') setPinnedKey(arrived)
     setCurrentKey(arrived)
     setWaiting(false)
-  }, [waiting, feed.freshKeys, isCollectionTab, mode])
+  }, [waiting, feed.freshKeys, isCollectionTab, mode, typeFilterActive, displayItems])
 
   // Entering the waiting stage pauses the (still-mounted, now-hidden) stage
   // — see the render comment above the <Stage/> below. Uses the same
@@ -1612,6 +1683,7 @@ export function TheaterShell({
   // opens the modal). Announces success so SavePostButton flips to "Saved".
   useEffect(() => {
     if (mode !== 'shared' || !sharedItem) return
+    if (awaitingSharedResolve) return
     if (authMe.loading) return
     if (sharedAutoSaveRef.current) return
     const authenticated = !!authMe.me?.authenticated
@@ -1619,7 +1691,7 @@ export function TheaterShell({
     const reason = sharedAutoSaveReason({
       mode,
       hasSharedItem: true,
-      sharedUnavailable,
+      sharedUnavailable: leadUnavailable,
       authenticated,
       saveIntentOnLoad,
       navigationType: ctx.navigationType,
@@ -1656,7 +1728,15 @@ export function TheaterShell({
         notifyCollectionChanged()
       })
       .catch(() => {})
-  }, [saveIntentOnLoad, mode, sharedItem, sharedUnavailable, authMe.loading, authMe.me])
+  }, [
+    saveIntentOnLoad,
+    mode,
+    sharedItem,
+    leadUnavailable,
+    awaitingSharedResolve,
+    authMe.loading,
+    authMe.me,
+  ])
 
   const performClone = useCallback(async () => {
     if (!playlist) return
@@ -1823,6 +1903,11 @@ export function TheaterShell({
       tabIndex={isPersonal ? -1 : undefined}
       className="fixed inset-0 z-[60] flex flex-col overflow-hidden bg-[#08070a] outline-none"
     >
+      {sharedResolve ? (
+        <Suspense fallback={null}>
+          <SharedResolveBridge promise={sharedResolve} onResult={applySharedResolve} />
+        </Suspense>
+      ) : null}
       {/* Full-width stage on every viewport (spec §8, "Filmstrip dock"):
           below lg the mobile chrome overlays it full-viewport as before;
           at lg+ <DesktopStageChrome/> overlays it with the top bar/post
@@ -1839,6 +1924,8 @@ export function TheaterShell({
               onClose={() => onClose?.()}
               onKeepPlaying={personalTotal > 0 ? keepPlayingCollection : undefined}
             />
+          ) : resolvingSharedLead ? (
+            <StageResolving handle={sharedItem?.author} />
           ) : isSharedUnavailableOnCurrent && current ? (
             <StageUnavailable item={current} reason={sharedUnavailableReason} />
           ) : (
@@ -1864,9 +1951,12 @@ export function TheaterShell({
                 repeat={repeatCurrentActive}
                 articleMode={articleMode}
               />
-              {visualActive && displayItems.length === 0 ? (
+              {typeFilterActive && displayItems.length === 0 ? (
                 <div className="absolute inset-0 z-10">
-                  <StageVisualEmpty onShowAll={toggleVisual} />
+                  <StageVisualEmpty
+                    headline={theaterQueueEmptyHeadline(queueTypes)}
+                    onShowAll={clearQueueTypes}
+                  />
                 </div>
               ) : waiting && !isCollectionTab ? (
                 <div className="absolute inset-0 z-10">
@@ -1895,9 +1985,14 @@ export function TheaterShell({
         <TheaterProgressLine
           itemKey={chromeCurrentKey}
           kind={
-            isDesktop
-              ? progressKindForPin(progressKindFor(chromeCurrent, articleMode), repeatCurrentActive)
-              : 'none'
+            resolvingSharedLead
+              ? 'none'
+              : isDesktop
+                ? progressKindForPin(
+                    progressKindFor(chromeCurrent, articleMode),
+                    repeatCurrentActive,
+                  )
+                : 'none'
           }
         />
         {desktopDeclutter && (
@@ -1945,8 +2040,9 @@ export function TheaterShell({
           onPastePost={isPersonal ? handlePastePost : undefined}
           articleMode={articleMode}
           onToggleArticleMode={toggleArticleMode}
-          visualOnly={visualActive}
-          onToggleVisual={visualLensAvailable ? toggleVisual : undefined}
+          queueTypes={queueTypes}
+          onToggleQueueType={queueFilterAvailable ? toggleQueueType : undefined}
+          onClearQueueTypes={queueFilterAvailable ? clearQueueTypes : undefined}
         />
         <DesktopStageChrome
           mode={mode}
@@ -1967,8 +2063,6 @@ export function TheaterShell({
           onPastePost={isPersonal ? handlePastePost : undefined}
           articleMode={articleMode}
           onToggleArticleMode={toggleArticleMode}
-          visualOnly={visualActive}
-          onToggleVisual={visualLensAvailable ? toggleVisual : undefined}
         />
         {/* Collection Archive undo toast — auto-dismisses after 5s
             (`armUndoDismiss`). Same placement on both viewports. `bottom-36`
@@ -2017,6 +2111,9 @@ export function TheaterShell({
         repeatMode={displayRepeatMode}
         onCycleRepeat={cycleRepeatMode}
         articleMode={articleMode}
+        queueTypes={queueTypes}
+        onToggleQueueType={queueFilterAvailable ? toggleQueueType : undefined}
+        onClearQueueTypes={queueFilterAvailable ? clearQueueTypes : undefined}
       />
       {/* `?ytdebug=1`/`?avdebug=1` diagnostics overlay (YtDebugOverlay.tsx) —
           mounted ONCE here so it serves every stage (StageVideo/StageYouTube/

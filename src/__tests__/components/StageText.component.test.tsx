@@ -73,6 +73,19 @@ describe('StageText author row', () => {
     expect(column?.className).toContain(STAGE_TEXT_TOP_PAD)
   })
 
+  it('typesets a numbered list as a compact top-aligned document', () => {
+    const text = Array.from({ length: 20 }, (_, i) => `${i + 1}. Place (DR ${90 - i})`).join('\n')
+    render(<StageText item={textItem({ text })} />)
+    const scroller = document.querySelector('.overflow-y-auto')
+    const frame = scroller?.firstElementChild
+    expect(frame?.className).not.toContain('justify-center')
+    const body = scroller?.querySelector('p')
+    expect(body?.className).toContain('text-[15px]')
+    expect(body?.className).toContain('sm:text-base')
+    expect(body?.className).toContain('leading-[1.45]')
+    expect(body?.querySelectorAll('br').length).toBe(19)
+  })
+
   it('sits flush under a live video band without the chrome pad or vertical center', () => {
     render(<StageText item={textItem()} flushTop />)
     const scroller = document.querySelector('.overflow-y-auto')

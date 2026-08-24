@@ -1,8 +1,8 @@
 /**
  * @vitest-environment jsdom
  *
- * Live visual lens: videos and photos only. Saved / playlists never offer
- * the control. The shared-preview lead stays even when it's text.
+ * Live queue type multi-select. Saved / playlists never offer the control.
+ * The shared-preview lead stays even when its type is filtered out.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useState } from 'react'
@@ -10,6 +10,7 @@ import { render, act, screen } from '@testing-library/react'
 import { TheaterShell } from '@/components/theater/TheaterShell'
 import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
+import type { ContentType } from '@/components/matter'
 
 vi.mock('@/components/theater/Stage', () => ({
   Stage: () => <div data-testid="stage" />,
@@ -74,21 +75,21 @@ function chromeProps() {
   return call[0]
 }
 
-async function toggleVisual() {
-  const toggle = chromeProps().onToggleVisual as (() => void) | undefined
-  if (!toggle) throw new Error('visual control not offered')
-  await act(async () => toggle())
+async function tapType(type: ContentType) {
+  const toggle = chromeProps().onToggleQueueType as ((t: ContentType) => void) | undefined
+  if (!toggle) throw new Error('queue filter not offered')
+  await act(async () => toggle(type))
 }
 
-const STORAGE_KEY = 'adhx-theater-visual'
+const STORAGE_KEY = 'adhx-theater-types'
 
-describe('TheaterShell: live visual lens', () => {
+describe('TheaterShell: live queue type filter', () => {
   beforeEach(() => {
     mockMobileChrome.mockClear()
     window.localStorage.clear()
   })
 
-  it('drops text and articles from the live queue when Visual is on', async () => {
+  it('lets the viewer pick videos and photos independently', async () => {
     render(
       <TheaterShell
         seed={seed([
@@ -99,20 +100,35 @@ describe('TheaterShell: live visual lens', () => {
         ])}
       />,
     )
-    await toggleVisual()
-    const items = chromeProps().items as TheaterItem[]
-    expect(items.map((it) => it.bookmarkId)).toEqual(['2', '4'])
-    expect(chromeProps().visualOnly).toBe(true)
+    await tapType('video')
+    expect((chromeProps().items as TheaterItem[]).map((it) => it.bookmarkId)).toEqual(['2'])
+    await tapType('photo')
+    expect((chromeProps().items as TheaterItem[]).map((it) => it.bookmarkId)).toEqual(['2', '4'])
+    expect(chromeProps().queueTypes).toEqual(['video', 'photo'])
   })
 
-  it('remembers Visual across visits', async () => {
+  it('filters to articles only', async () => {
+    render(
+      <TheaterShell
+        seed={seed([
+          item('1', { contentType: 'text' }),
+          item('2', { contentType: 'video' }),
+          item('3', { contentType: 'article' }),
+        ])}
+      />,
+    )
+    await tapType('article')
+    expect((chromeProps().items as TheaterItem[]).map((it) => it.bookmarkId)).toEqual(['3'])
+  })
+
+  it('remembers the selection across visits', async () => {
     const { unmount } = render(
       <TheaterShell
         seed={seed([item('1', { contentType: 'text' }), item('2', { contentType: 'video' })])}
       />,
     )
-    await toggleVisual()
-    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('1')
+    await tapType('video')
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('["video"]')
 
     unmount()
     mockMobileChrome.mockClear()
@@ -123,9 +139,27 @@ describe('TheaterShell: live visual lens', () => {
         />,
       )
     })
-    const items = chromeProps().items as TheaterItem[]
-    expect(items.map((it) => it.bookmarkId)).toEqual(['2'])
-    expect(chromeProps().visualOnly).toBe(true)
+    expect((chromeProps().items as TheaterItem[]).map((it) => it.bookmarkId)).toEqual(['2'])
+    expect(chromeProps().queueTypes).toEqual(['video'])
+  })
+
+  it('migrates the old visual-only flag to videos and photos', async () => {
+    window.localStorage.setItem('adhx-theater-visual', '1')
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([
+            item('1', { contentType: 'text' }),
+            item('2', { contentType: 'video' }),
+            item('3', { contentType: 'photo' }),
+          ])}
+        />,
+      )
+    })
+    expect((chromeProps().items as TheaterItem[]).map((it) => it.bookmarkId)).toEqual(['2', '3'])
+    expect(chromeProps().queueTypes).toEqual(['video', 'photo'])
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('["video","photo"]')
+    expect(window.localStorage.getItem('adhx-theater-visual')).toBeNull()
   })
 
   it('keeps a text shared lead and filters the rest', async () => {
@@ -137,12 +171,11 @@ describe('TheaterShell: live visual lens', () => {
         seed={seed([lead, item('2', { contentType: 'video' }), item('3', { contentType: 'text' })])}
       />,
     )
-    await toggleVisual()
-    const items = chromeProps().items as TheaterItem[]
-    expect(items.map((it) => it.bookmarkId)).toEqual(['lead', '2'])
+    await tapType('video')
+    expect((chromeProps().items as TheaterItem[]).map((it) => it.bookmarkId)).toEqual(['lead', '2'])
   })
 
-  it('does not offer Visual on a playlist', () => {
+  it('does not offer the type filter on a playlist', () => {
     render(
       <TheaterShell
         mode="playlist"
@@ -150,10 +183,10 @@ describe('TheaterShell: live visual lens', () => {
         playlist={{ tag: 'cats', curator: 'alice', count: 1 }}
       />,
     )
-    expect(chromeProps().onToggleVisual).toBeUndefined()
+    expect(chromeProps().onToggleQueueType).toBeUndefined()
   })
 
-  it('does not offer Visual on Saved', () => {
+  it('does not offer the type filter on Saved', () => {
     render(
       <TheaterShell
         mode="personal"
@@ -162,7 +195,7 @@ describe('TheaterShell: live visual lens', () => {
         seed={seed([item('1', { contentType: 'video' })])}
       />,
     )
-    expect(chromeProps().onToggleVisual).toBeUndefined()
+    expect(chromeProps().onToggleQueueType).toBeUndefined()
   })
 
   it('1 and 2 flip Live ⇄ Saved on the personal theater', async () => {
@@ -176,17 +209,17 @@ describe('TheaterShell: live visual lens', () => {
         onPersonalTabChange={onPersonalTabChange}
       />,
     )
-    expect(chromeProps().onToggleVisual).toBeDefined()
+    expect(chromeProps().onToggleQueueType).toBeDefined()
     await act(async () => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: '2' }))
     })
     expect(onPersonalTabChange).toHaveBeenCalledWith('collection')
-    expect(chromeProps().onToggleVisual).toBeUndefined()
+    expect(chromeProps().onToggleQueueType).toBeUndefined()
     await act(async () => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: '1' }))
     })
     expect(onPersonalTabChange).toHaveBeenCalledWith('live')
-    expect(chromeProps().onToggleVisual).toBeDefined()
+    expect(chromeProps().onToggleQueueType).toBeDefined()
   })
 
   it('1 and 2 no-op on a playlist', async () => {
@@ -200,22 +233,22 @@ describe('TheaterShell: live visual lens', () => {
     await act(async () => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: '2' }))
     })
-    expect(chromeProps().onToggleVisual).toBeUndefined()
+    expect(chromeProps().onToggleQueueType).toBeUndefined()
   })
 
-  it('shows the empty overlay when Live has no visuals', async () => {
+  it('shows the empty overlay when Live has none of the selected types', async () => {
     render(<TheaterShell seed={seed([item('1', { contentType: 'text' })])} />)
-    await toggleVisual()
-    expect(screen.getByText('No videos or photos in Live right now')).toBeInTheDocument()
+    await tapType('video')
+    expect(screen.getByText('No videos in Live right now')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Show every post' })).toBeInTheDocument()
     await act(async () => {
       screen.getByRole('button', { name: 'Show every post' }).click()
     })
-    expect(chromeProps().visualOnly).toBe(false)
-    expect(screen.queryByText('No videos or photos in Live right now')).not.toBeInTheDocument()
+    expect(chromeProps().queueTypes).toEqual([])
+    expect(screen.queryByText('No videos in Live right now')).not.toBeInTheDocument()
   })
 
-  it('jumps off a text post onto the next visual when the lens turns on', async () => {
+  it('jumps off a text post onto the next matching type', async () => {
     render(
       <TheaterShell
         seed={seed([
@@ -226,7 +259,7 @@ describe('TheaterShell: live visual lens', () => {
       />,
     )
     expect(chromeProps().currentKey).toBe(theaterItemKey(item('1', { contentType: 'text' })))
-    await toggleVisual()
+    await tapType('video')
     expect(chromeProps().currentKey).toBe(theaterItemKey(item('2', { contentType: 'video' })))
   })
 })

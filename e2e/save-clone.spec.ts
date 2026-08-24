@@ -30,7 +30,7 @@ authedTest.describe('save and clone', () => {
     // we click. `name: 'Save'` also matches "Saved" — use exact.
     const save = page.getByRole('button', { name: 'Save', exact: true })
     if (await save.isVisible()) await save.click()
-    await expect(page.getByRole('button', { name: /^(Saved|Tag)/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Tag this post' })).toBeVisible()
     await expect.poll(() => feedHasId(page, POST.preview.id)).toBe(true)
   })
 

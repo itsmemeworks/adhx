@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { stagePhotoSrc, textSizeClass } from '@/components/theater/StageText'
+import { stagePhotoSrc, textSizeClass, TYPESET_COMPACT } from '@/components/theater/StageText'
 
 describe('textSizeClass', () => {
   it('renders the largest tier for short posts', () => {
@@ -22,7 +22,14 @@ describe('textSizeClass', () => {
 
   it('uses a prose-like relaxed tier for very long (>600 char) posts', () => {
     expect(textSizeClass('a'.repeat(601))).toBe('text-lg sm:text-xl leading-relaxed')
-    expect(textSizeClass('a'.repeat(3000))).toBe('text-lg sm:text-xl leading-relaxed')
+  })
+
+  it('uses compact document type for long notes and multi-line lists', () => {
+    expect(textSizeClass('a'.repeat(1501))).toBe(TYPESET_COMPACT)
+    expect(textSizeClass('a'.repeat(3000))).toBe(TYPESET_COMPACT)
+    expect(textSizeClass(Array.from({ length: 13 }, (_, i) => `item ${i}`).join('\n'))).toBe(
+      TYPESET_COMPACT,
+    )
   })
 
   it('handles empty text', () => {

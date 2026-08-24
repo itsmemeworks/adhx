@@ -6,6 +6,34 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-24 — Q toggles Show all
+
+`Q` expands/collapses the theater playlist (desktop Show all / mobile up-next). While open, ↑/↓ move through the rows, Enter plays the focused post, Esc or a click outside closes. Same overlay contract as the account menu so stage keys don't leak through. In-flight until the PR merges.
+
+## 2026-08-24 — Preview pages paint ADHX before the proxy
+
+External preview links used to wait on FxTwitter / a scrape / oEmbed (and sometimes a 10s OG fetch) before any HTML. Pages now return a URL-stub theater immediately; `sharedResolve` fills the post (or `StageUnavailable`) without blocking chrome. Tweets show `StageResolving` until the kind is known; Reels/TikTok/Shorts play as video stubs. `generateMetadata` still awaits for crawlers. In-flight until the PR merges.
+
+## 2026-08-24 — Dock filter chip + one typeface
+
+Show all / peek-bar meta dropped mono + mixed weights; counts share 11px sans. An active Live type filter turns the toggle into a clay chip named for the selection (Videos, Videos · Photos, 3 types) so it is visible with the panel closed. Same clay tint on the mobile peek label. In-flight until the PR merges.
+
+## 2026-08-24 — Live filter ignores non-matching preview pulses
+
+Videos (etc.) stays on while `/api/activity` prepends new previews: matching types join the queue, others don't, and a filtered-out arrival does not auto-play the caught-up stage. Unit + e2e cover it. In-flight until the PR merges.
+
+## 2026-08-24 — Long notes typeset as a compact document
+
+X notes / numbered lists were sized like a long slogan (`text-xl` + relaxed leading), so a 127-line tweet looked truncated and wrapped mid-item. Compact type kicks in past 12 lines or 1500 chars; the stage starts at the top with a bottom fade so scroll is obvious. Line breaks were already in the data. In-flight until the PR merges.
+
+## 2026-08-24 — Live queue is a type multi-select
+
+Live Show all / the up-next sheet now has All plus Videos, Photos, Text, Articles, Quotes — tap any mix. Empty selection is All. Persists as `adhx-theater-types`; the old `adhx-theater-visual` flag migrates to videos+photos once. `I` is no longer a shortcut (one key can't drive five pills). Saved and playlists omit it. In-flight until the PR merges.
+
+## 2026-08-24 — Visual is a playlist filter
+
+All / Videos & photos pills live in Show all (desktop) and the up-next sheet (mobile), not as a top-bar icon. `I` still toggles; `adhx-theater-visual` still persists. Saved and playlists omit it. In-flight until the PR merges.
+
 ## 2026-08-24 — Visual sits left of paste
 
 Moved the Live Visual (media-only) toggle from next to LIVE / left of the flame to immediately left of paste. Flame stats stay to its left. In-flight until the PR merges.

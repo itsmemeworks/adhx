@@ -13,8 +13,9 @@
  * instead of, the desktop `<Rail/>`).
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTheaterActionHotkeys } from './useTheaterActionHotkeys'
+import { useTheaterQueueOverlay } from './useTheaterQueueOverlay'
 import { useSheetDrag } from './useSheetDrag'
 import {
   Loader2,
@@ -34,7 +35,7 @@ import {
   Maximize2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { MatterLogo, PlatformGlyph } from '@/components/matter'
+import { MatterLogo, PlatformGlyph, type ContentType } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { PasteLinkButton } from '@/components/PasteLinkButton'
 import { authorProfileUrl, previewPath, sourceUrl } from '@/lib/activity/preview-path'
@@ -63,7 +64,8 @@ import { TheaterTagCount } from './TheaterTagCount'
 import { tagActionLabel } from '@/lib/utils/tag'
 import { TheaterCollectionActions } from './TheaterCollectionActions'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
-import { TheaterVisualToggle } from './TheaterVisualToggle'
+import { TheaterQueueFilter } from './TheaterQueueFilter'
+import { isTheaterQueueFilterActive, theaterQueueFilterLabel } from './theater-math'
 import { StageIconButton } from './stage-primitives'
 import { logAV } from './YtDebugOverlay'
 import type {
@@ -158,9 +160,10 @@ export interface TheaterMobileChromeProps {
   /** Video/photo + quote: stacked article reader instead of full-bleed media. */
   articleMode?: boolean
   onToggleArticleMode?: () => void
-  /** Live queue only — omit on Saved / playlists. */
-  visualOnly?: boolean
-  onToggleVisual?: () => void
+  /** Live queue only — omit on Saved / playlists. Empty `queueTypes` is All. */
+  queueTypes?: ContentType[]
+  onToggleQueueType?: (type: ContentType) => void
+  onClearQueueTypes?: () => void
 }
 
 /** Height of the collapsed sheet's peek bar — kept in sync with the transform below. Two rows now (drag handle + the nav/pause/audio/de-clutter controls), taller than the old label-only bar. */
@@ -215,10 +218,12 @@ export function TheaterMobileChrome({
   onPastePost,
   articleMode = false,
   onToggleArticleMode,
-  visualOnly = false,
-  onToggleVisual,
+  queueTypes = [],
+  onToggleQueueType,
+  onClearQueueTypes,
 }: TheaterMobileChromeProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
+  const closeSheet = useCallback(() => setSheetOpen(false), [])
   const [copied, setCopied] = useState(false)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
@@ -228,6 +233,7 @@ export function TheaterMobileChrome({
   // link FOR (pinned + repeating, not skimmed past), so the file should be
   // ready before they reach for Send — the only way the share sheet opens
   // inside the tap's own user activation. Elsewhere the 2s skim guard stands.
+  useTheaterQueueOverlay({ open: sheetOpen, onClose: closeSheet, containerRef: sheetRef })
   const sendFile = useSendFile(current, { eager: mode === 'shared' })
   const { textCopied, copyText } = useTheaterCopy(current, (current?.text || '').trim())
   const rootRef = useRef<HTMLDivElement>(null)
@@ -363,6 +369,16 @@ export function TheaterMobileChrome({
   // useful — show where you are in the queue instead). -1 (no current item /
   // empty list) falls back to the old label.
   const queueIndex = currentKey ? items.findIndex((it) => theaterItemKey(it) === currentKey) : -1
+  const filterOn = Boolean(onToggleQueueType) && isTheaterQueueFilterActive(queueTypes)
+  const filterLabel = filterOn ? theaterQueueFilterLabel(queueTypes) : null
+  const peekNew = newCount > 0 && collection?.tab !== 'collection' ? ` · ${newCount} new` : ''
+  const peekPosition =
+    queueIndex !== -1
+      ? `${queueIndex + 1} / ${queueTotal ?? items.length}${peekNew}`
+      : newCount > 0 && collection?.tab !== 'collection'
+        ? `${newCount} new`
+        : 'Up next'
+  const peekLabel = filterLabel ? `${filterLabel} · ${peekPosition}` : peekPosition
 
   const trendCount = current ? (current.trendCount ?? current.saveCount ?? 0) : 0
   const displayTags = collection?.tags ?? itemTags
@@ -403,9 +419,6 @@ export function TheaterMobileChrome({
           </a>
           <div className="flex flex-none items-center gap-1.5">
             {current ? <FlameChip trendCount={trendCount} /> : null}
-            {onToggleVisual ? (
-              <TheaterVisualToggle visualOnly={visualOnly} onToggle={onToggleVisual} />
-            ) : null}
             {/* Same add-in-place paste as desktop — stay on Live / My
                 Collection; do not bounce to a preview page. */}
             <PasteLinkButton iconOnly onPastePost={onPastePost} />
@@ -463,9 +476,6 @@ export function TheaterMobileChrome({
           </a>
           <div className="flex flex-none items-center gap-1.5">
             {current ? <FlameChip trendCount={trendCount} /> : null}
-            {onToggleVisual ? (
-              <TheaterVisualToggle visualOnly={visualOnly} onToggle={onToggleVisual} />
-            ) : null}
             {/* Mobile equivalent of the desktop top bar's paste button (⌘V still works there)
                 input (spec §8/DesktopStageChrome) — touch Safari has no
                 paste gesture, so this covers the signed-out home theater and
@@ -881,9 +891,11 @@ export function TheaterMobileChrome({
                 onClick={() => setSheetOpen((v) => !v)}
                 aria-expanded={sheetOpen}
                 aria-label={sheetOpen ? 'Collapse up next' : 'Expand up next'}
+                data-theater-action="show-all"
                 className={cn(
                   'pointer-events-auto flex max-w-[45%] items-center justify-center gap-1 truncate px-1 text-center text-[12px] font-semibold',
-                  repeatCurrent ? 'text-clay' : 'text-ink-2',
+                  repeatCurrent || filterOn ? 'text-clay' : 'text-ink-2',
+                  filterOn && !repeatCurrent && 'rounded-full bg-clay/15 px-2 py-0.5',
                 )}
               >
                 {repeatCurrent ? (
@@ -891,20 +903,8 @@ export function TheaterMobileChrome({
                     <Repeat size={11} className="flex-none" aria-hidden />
                     <span className="truncate">On repeat</span>
                   </>
-                ) : queueIndex !== -1 ? (
-                  // Queue position ("3 / 7"), out of what will actually PLAY
-                  // from here — the unwatched run while repeat is off, the
-                  // whole queue once it isn't (see `computeQueueTotal`). The
-                  // fresh-arrival count folds in when there is one, but only
-                  // where "new" means anything: the Collection tab is a finite
-                  // backlog, not the live pulse.
-                  `${queueIndex + 1} / ${queueTotal ?? items.length}${
-                    newCount > 0 && collection?.tab !== 'collection' ? ` · ${newCount} new` : ''
-                  }`
-                ) : newCount > 0 && collection?.tab !== 'collection' ? (
-                  `${newCount} new`
                 ) : (
-                  'Up next'
+                  <span className="truncate">{peekLabel}</span>
                 )}
               </button>
             </div>
@@ -981,6 +981,13 @@ export function TheaterMobileChrome({
             </p>
           </div>
         )}
+        {onToggleQueueType && onClearQueueTypes ? (
+          <TheaterQueueFilter
+            selected={queueTypes}
+            onToggle={onToggleQueueType}
+            onClear={onClearQueueTypes}
+          />
+        ) : null}
         <UpNextList
           items={items}
           currentKey={currentKey}

@@ -164,6 +164,7 @@ function Row({
   return (
     <button
       type="button"
+      data-theater-queue-item=""
       onClick={() => onSelect(key)}
       onMouseEnter={() => warmOnHover(item)}
       aria-current={isCurrent ? 'true' : undefined}

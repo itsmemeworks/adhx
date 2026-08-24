@@ -5,6 +5,7 @@
  * keep working.
  */
 import type { FeedItem } from '@/components/feed/types'
+import type { ContentType } from '@/components/matter'
 import { theaterItemKey } from './types'
 import { previewPath } from '@/lib/activity/preview-path'
 import { hasKnownTimestamp } from '@/lib/utils/format'
@@ -87,33 +88,106 @@ export function pinKeyFirst<
   return copy
 }
 
-/**
- * Live theater "visual" lens: the stage is a photo or video, not typeset
- * text / an X Article / a link card. Quote tweets with parent media still
- * count — `inferType` prefers photo/video over quote when the bookmark has
- * first-class media. TikTok / Instagram / YouTube are always video.
- */
-export function isVisualStageItem(item: TheaterItem): boolean {
-  const type = inferType(item)
-  return type === 'video' || type === 'photo'
+/** Live-queue type pills, in the order they render. Empty selection = all types. */
+export const THEATER_QUEUE_TYPES: ContentType[] = ['video', 'photo', 'text', 'article', 'quote']
+
+export const THEATER_QUEUE_TYPE_PILLS: { id: ContentType; label: string }[] = [
+  { id: 'video', label: 'Videos' },
+  { id: 'photo', label: 'Photos' },
+  { id: 'text', label: 'Text' },
+  { id: 'article', label: 'Articles' },
+  { id: 'quote', label: 'Quotes' },
+]
+
+const QUEUE_TYPE_SET = new Set<string>(THEATER_QUEUE_TYPES)
+
+function orderedQueueTypes(selected: Iterable<string>): ContentType[] {
+  const allow = new Set<ContentType>()
+  for (const raw of selected) {
+    if (QUEUE_TYPE_SET.has(raw)) allow.add(raw as ContentType)
+  }
+  const next = THEATER_QUEUE_TYPES.filter((t) => allow.has(t))
+  if (next.length === 0 || next.length === THEATER_QUEUE_TYPES.length) return []
+  return next
+}
+
+/** `adhx-theater-types` JSON. Invalid / all / none → `[]` (unfiltered). */
+export function parseTheaterQueueTypes(raw: string | null | undefined): ContentType[] {
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) return []
+    return orderedQueueTypes(parsed.filter((t): t is string => typeof t === 'string'))
+  } catch {
+    return []
+  }
+}
+
+export function serializeTheaterQueueTypes(selected: readonly ContentType[]): string | null {
+  const next = orderedQueueTypes(selected)
+  return next.length === 0 ? null : JSON.stringify(next)
+}
+
+export function isTheaterQueueFilterActive(selected: readonly ContentType[]): boolean {
+  return orderedQueueTypes(selected).length > 0
 }
 
 /**
- * Drop non-visual posts from the live queue. `keepKey` (the shared-preview
- * lead) stays even when it's text, so a pasted tweet isn't yanked out from
- * under the visitor. Home lead-picks are not kept — toggling Visual should
- * skip a text post you happened to land on.
+ * Tap a type pill: empty (All) + Videos → `[video]`; last type off → All.
+ * Selecting every type collapses back to All.
  */
-export function applyTheaterVisualLens<T extends TheaterItem>(
+export function toggleTheaterQueueType(
+  selected: readonly ContentType[],
+  type: ContentType,
+): ContentType[] {
+  if (!QUEUE_TYPE_SET.has(type)) return orderedQueueTypes(selected)
+  if (selected.length === 0) return [type]
+  const next = new Set(orderedQueueTypes(selected))
+  if (next.has(type)) next.delete(type)
+  else next.add(type)
+  return orderedQueueTypes(next)
+}
+
+/**
+ * Keep only the selected Live types. `keepKey` (the shared-preview lead)
+ * stays even when its type is filtered out, so a pasted tweet isn't yanked
+ * from under the visitor. Home lead-picks are not kept — changing the
+ * filter should skip a post you happened to land on.
+ */
+export function applyTheaterTypeLens<T extends TheaterItem>(
   items: T[],
-  visualOnly: boolean,
+  selected: readonly ContentType[],
   keepKey: string | null = null,
 ): T[] {
-  if (!visualOnly) return items
+  const allow = orderedQueueTypes(selected)
+  if (allow.length === 0) return items
+  const allowSet = new Set(allow)
   const next = items.filter(
-    (it) => (keepKey !== null && theaterItemKey(it) === keepKey) || isVisualStageItem(it),
+    (it) => (keepKey !== null && theaterItemKey(it) === keepKey) || allowSet.has(inferType(it)),
   )
   return next.length === items.length ? items : next
+}
+
+function selectedQueueTypeLabels(selected: readonly ContentType[]): string[] {
+  const allow = new Set(orderedQueueTypes(selected))
+  return THEATER_QUEUE_TYPE_PILLS.filter((p) => allow.has(p.id)).map((p) => p.label)
+}
+
+/** Dock / peek-bar title: "Show all", "Videos", "Videos · Photos", or "3 types". */
+export function theaterQueueFilterLabel(selected: readonly ContentType[]): string {
+  const labels = selectedQueueTypeLabels(selected)
+  if (labels.length === 0) return 'Show all'
+  if (labels.length <= 2) return labels.join(' · ')
+  return `${labels.length} types`
+}
+
+export function theaterQueueEmptyHeadline(selected: readonly ContentType[]): string {
+  const labels = selectedQueueTypeLabels(selected).map((label) => label.toLowerCase())
+  if (labels.length === 0) return 'Nothing in Live right now'
+  if (labels.length === 1) return `No ${labels[0]} in Live right now`
+  if (labels.length === 2) return `No ${labels[0]} or ${labels[1]} in Live right now`
+  const head = labels.slice(0, -1).join(', ')
+  return `No ${head}, or ${labels[labels.length - 1]} in Live right now`
 }
 
 /**
@@ -398,13 +472,19 @@ export function computeCanNext(currentIndex: number, waiting: boolean): boolean 
  * auto-plays into. Iteration follows `freshKeys`' insertion order, so if
  * several arrive between polls the earliest arrival stages first. `null`
  * when nothing genuinely new has shown up yet.
+ *
+ * `allowKey` (Live type filter) skips arrivals that are not in the playable
+ * queue — a text preview must not yank a Videos-filtered waiting stage.
  */
 export function findFreshArrival(
   freshKeys: ReadonlySet<string>,
   baseline: ReadonlySet<string>,
+  allowKey?: (key: string) => boolean,
 ): string | null {
   for (const key of freshKeys) {
-    if (!baseline.has(key)) return key
+    if (baseline.has(key)) continue
+    if (allowKey && !allowKey(key)) continue
+    return key
   }
   return null
 }

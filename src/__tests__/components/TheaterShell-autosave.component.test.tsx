@@ -12,6 +12,7 @@ import { TheaterShell } from '@/components/theater/TheaterShell'
 import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
 import { markPreviewOpenIntent, resetSharedAutoSaveAttempts } from '@/lib/theater/autosave-shared'
+import type { SharedResolveResult } from '@/lib/theater/shared-resolve'
 
 vi.mock('@/components/theater/Stage', () => ({ Stage: () => <div data-testid="stage" /> }))
 vi.mock('@/components/theater/TheaterDesktopChrome', () => ({
@@ -25,7 +26,14 @@ vi.mock('@/components/tags', () => ({ TagQuickPicker: () => null }))
 vi.mock('@/components/theater/useTheaterFeed', () => ({
   useTheaterFeed: (seed: TheaterFeedSeed) => {
     const [items] = useState(seed.items)
-    return { items, savedToday: 0, recentActivity: 0, freshKeys: new Set<string>() }
+    return {
+      items,
+      savedToday: 0,
+      recentActivity: 0,
+      freshKeys: new Set<string>(),
+      prependItem: () => undefined,
+      replaceItem: () => undefined,
+    }
   },
 }))
 
@@ -248,5 +256,43 @@ describe('TheaterShell shared-lead autosave', () => {
     })
     expect(bookmarkAddBodies()).toHaveLength(1)
     expect(theaterItemKey(item)).toBe('twitter:123')
+  })
+
+  it('does not POST until the shared lead finishes resolving', async () => {
+    const item = textItem('123', 'naval')
+    let settle!: (result: SharedResolveResult) => void
+    const sharedResolve = new Promise<SharedResolveResult>((resolve) => {
+      settle = resolve
+    })
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([item])}
+          mode="shared"
+          sharedItem={item}
+          sharedResolve={sharedResolve}
+          authed
+        />,
+      )
+    })
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(bookmarkAddBodies()).toEqual([])
+    await act(async () => {
+      settle({
+        ok: true,
+        item,
+        jsonLd: {},
+        staticPost: {
+          kind: 'tweet',
+          username: 'naval',
+          tweetId: '123',
+          sourceUrl: 'https://x.com/naval/status/123',
+        },
+        related: null,
+      })
+    })
+    await waitFor(() => expect(bookmarkAddBodies()).toHaveLength(1))
   })
 })

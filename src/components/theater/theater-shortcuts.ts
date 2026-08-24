@@ -22,13 +22,13 @@ export type TheaterShortcut =
   | 'undo'
   | 'close'
   | 'toggleMenu'
+  | 'toggleShowAll'
   | 'toggleHelp'
   | 'toggleArticle'
   | 'replay'
   | 'keepPlaying'
   | 'toggleExpand'
   | 'cycleRepeat'
-  | 'toggleVisual'
   | 'tabLive'
   | 'tabSaved'
   | 'scrollDown'
@@ -43,12 +43,12 @@ export const THEATER_ACTION_EVENTS = {
   open: 'theater-open',
   archive: 'theater-archive',
   toggleMenu: 'theater-toggle-menu',
+  toggleShowAll: 'theater-toggle-show-all',
   toggleArticle: 'theater-toggle-article',
   replay: 'theater-replay',
   keepPlaying: 'theater-keep-playing',
   toggleExpand: 'theater-toggle-expand',
   cycleRepeat: 'theater-cycle-repeat',
-  toggleVisual: 'theater-toggle-visual',
 } as const
 
 export type TheaterActionName = keyof typeof THEATER_ACTION_EVENTS
@@ -63,12 +63,12 @@ export const THEATER_ACTION_ATTR: Record<TheaterActionName, string> = {
   open: 'open',
   archive: 'archive',
   toggleMenu: 'menu',
+  toggleShowAll: 'show-all',
   toggleArticle: 'read',
   replay: 'replay',
   keepPlaying: 'keep-playing',
   toggleExpand: 'expand',
   cycleRepeat: 'repeat',
-  toggleVisual: 'visual',
 }
 
 export interface TheaterKeyLike {
@@ -89,7 +89,7 @@ export function isTheaterTypingTarget(target: EventTarget | null | undefined): b
 
 /**
  * Keys the window-level theater handler acts on. Overlays (sign-in, tag
- * picker, avatar menu, help) stop these from reaching the stage.
+ * picker, avatar menu, Show all, help) stop these from reaching the stage.
  */
 export const THEATER_SHORTCUT_KEYS = new Set([
   ' ',
@@ -123,8 +123,6 @@ export const THEATER_SHORTCUT_KEYS = new Set([
   'A',
   'r',
   'R',
-  'i',
-  'I',
   '1',
   '2',
   'u',
@@ -133,6 +131,8 @@ export const THEATER_SHORTCUT_KEYS = new Set([
   'W',
   'p',
   'P',
+  'q',
+  'Q',
   '.',
   '?',
   '/',
@@ -191,9 +191,6 @@ export function resolveTheaterShortcut(e: TheaterKeyLike): TheaterShortcut | nul
     case 'r':
     case 'R':
       return 'cycleRepeat'
-    case 'i':
-    case 'I':
-      return 'toggleVisual'
     case '1':
       return 'tabLive'
     case '2':
@@ -207,6 +204,9 @@ export function resolveTheaterShortcut(e: TheaterKeyLike): TheaterShortcut | nul
     case 'p':
     case 'P':
       return 'keepPlaying'
+    case 'q':
+    case 'Q':
+      return 'toggleShowAll'
     case '.':
       return 'toggleMenu'
     case '?':
@@ -262,7 +262,7 @@ export const THEATER_SHORTCUT_HELP: TheaterHelpSection[] = [
     rows: [
       { keys: ['1'], label: 'Live' },
       { keys: ['2'], label: 'Saved' },
-      { keys: ['I'], label: 'Visual only' },
+      { keys: ['Q'], label: 'Show all' },
     ],
   },
   {

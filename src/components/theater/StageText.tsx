@@ -89,17 +89,24 @@ export interface StageTextProps {
   underBand?: boolean
 }
 
+/** Compact document type — long notes / numbered lists. Exported for tests. */
+export const TYPESET_COMPACT = 'text-[15px] sm:text-base leading-[1.45]'
+
 /**
  * Pure: type size for the typeset variant, scaling down as the text gets
  * longer — a 4th tier for very long (>600 char) posts reads like an article
  * body (smaller, relaxed leading) rather than a shouty wall of large serif
- * type. Exported for unit testing.
+ * type. A 5th compact tier kicks in for X notes and lists (many line breaks
+ * or >1500 visible chars) so each line stays a line and the column reads as
+ * a scrollable document instead of a truncated shout. Exported for unit testing.
  */
 export function textSizeClass(text: string): string {
   const visible = visibleTextForSizing(text)
   // A URL-only tweet is not a short slogan — don't typeset the link at 6xl.
   if (!visible && /https?:\/\//i.test(text)) return 'text-lg sm:text-xl leading-relaxed'
   const len = visible.length
+  const lines = text.split(/\r?\n/).length
+  if (len > 1500 || lines > 12) return TYPESET_COMPACT
   if (len <= 80) return 'text-4xl sm:text-5xl lg:text-6xl'
   if (len <= 180) return 'text-3xl sm:text-4xl lg:text-5xl'
   if (len <= 600) return 'text-xl sm:text-2xl lg:text-3xl'
@@ -186,79 +193,90 @@ export function StageText({
   const hideLinks = hideTweetLinks || !!quote
   const linkPreview = item.linkPreview
   const bodyText = stripPreviewUrls(text, linkPreview, item.textLinks)
+  const typesetClass = textSizeClass(bodyText)
+  const compact = typesetClass === TYPESET_COMPACT
 
   return (
-    <div
-      className={cn(
-        'h-full w-full overflow-y-auto overscroll-contain',
-        underBand ? 'bg-transparent' : 'bg-[#08070a]',
-        scrollPad && STAGE_TEXT_SCROLL_PAD,
-      )}
-      data-theater-scroll
-    >
-      {/* min-h-full + justify-center: a couple of lines sit in the middle
-          of the stage; once the column is taller than the viewport the
-          flex box grows with it and this becomes a no-op (top-aligned
-          scroll, with STAGE_TEXT_TOP_PAD clearing the chrome). */}
-      <div className={cn('flex min-h-full flex-col', !flushTop && !underBand && 'justify-center')}>
+    <div className="relative h-full w-full">
+      <div
+        className={cn(
+          'h-full w-full overflow-y-auto overscroll-contain',
+          underBand ? 'bg-transparent' : 'bg-[#08070a]',
+          scrollPad && STAGE_TEXT_SCROLL_PAD,
+        )}
+        data-theater-scroll
+      >
+        {/* min-h-full + justify-center: a couple of lines sit in the middle
+            of the stage; once the column is taller than the viewport the
+            flex box grows with it and this becomes a no-op (top-aligned
+            scroll, with STAGE_TEXT_TOP_PAD clearing the chrome). Compact
+            notes skip the center so a list starts as a document. */}
         <div
           className={cn(
-            'mx-auto w-full max-w-2xl px-6 sm:px-10',
-            underBand ? STAGE_ARTICLE_UNDER_BAND_PAD : flushTop ? 'pt-5' : STAGE_TEXT_TOP_PAD,
+            'flex min-h-full flex-col',
+            !compact && !flushTop && !underBand && 'justify-center',
           )}
         >
-          <StageAuthorRow item={item} />
-          {bodyText ? (
-            <p
-              className={cn(
-                'break-words font-serif leading-tight text-white',
-                textSizeClass(bodyText),
-              )}
-            >
-              <TheaterLinkedText
-                platform={item.platform}
-                text={bodyText}
-                hasMedia={parentPhotos.length > 0 || !!parentVideo}
-                links={item.textLinks}
-                hideTweetLinks={hideLinks}
-              />
-            </p>
-          ) : !linkPreview ? (
-            <p className={cn('font-serif leading-tight text-white', textSizeClass(''))}>
-              <span>Saved post</span>
-            </p>
-          ) : null}
-          {linkPreview ? <StageLinkCard preview={linkPreview} /> : null}
-          {parentVideo && !omitParentVideo ? (
-            <StageInlineVideo
-              author={parentVideo.author}
-              bookmarkId={parentVideo.bookmarkId}
-              poster={parentVideo.poster}
-              testId="parent-inline-video"
-            />
-          ) : null}
-          {parentPhotos.length > 0 ? (
-            <div
-              className={cn(
-                'mt-5 grid gap-2',
-                parentPhotos.length > 1 ? 'grid-cols-2' : 'grid-cols-1',
-              )}
-            >
-              {parentPhotos.map((src) => (
-                <img
-                  key={src}
-                  src={src}
-                  alt=""
-                  referrerPolicy="no-referrer"
-                  onError={fallbackToOriginal(item.thumbnailUrl)}
-                  className="max-h-[60vh] w-full rounded-xl object-contain"
+          <div
+            className={cn(
+              'mx-auto w-full max-w-2xl px-6 sm:px-10',
+              underBand ? STAGE_ARTICLE_UNDER_BAND_PAD : flushTop ? 'pt-5' : STAGE_TEXT_TOP_PAD,
+            )}
+          >
+            <StageAuthorRow item={item} />
+            {bodyText ? (
+              <p className={cn('break-words font-serif leading-tight text-white', typesetClass)}>
+                <TheaterLinkedText
+                  platform={item.platform}
+                  text={bodyText}
+                  hasMedia={parentPhotos.length > 0 || !!parentVideo}
+                  links={item.textLinks}
+                  hideTweetLinks={hideLinks}
                 />
-              ))}
-            </div>
-          ) : null}
-          {quote ? <StageQuoteCard quote={quote} /> : null}
+              </p>
+            ) : !linkPreview ? (
+              <p className={cn('font-serif leading-tight text-white', textSizeClass(''))}>
+                <span>Saved post</span>
+              </p>
+            ) : null}
+            {linkPreview ? <StageLinkCard preview={linkPreview} /> : null}
+            {parentVideo && !omitParentVideo ? (
+              <StageInlineVideo
+                author={parentVideo.author}
+                bookmarkId={parentVideo.bookmarkId}
+                poster={parentVideo.poster}
+                testId="parent-inline-video"
+              />
+            ) : null}
+            {parentPhotos.length > 0 ? (
+              <div
+                className={cn(
+                  'mt-5 grid gap-2',
+                  parentPhotos.length > 1 ? 'grid-cols-2' : 'grid-cols-1',
+                )}
+              >
+                {parentPhotos.map((src) => (
+                  <img
+                    key={src}
+                    src={src}
+                    alt=""
+                    referrerPolicy="no-referrer"
+                    onError={fallbackToOriginal(item.thumbnailUrl)}
+                    className="max-h-[60vh] w-full rounded-xl object-contain"
+                  />
+                ))}
+              </div>
+            ) : null}
+            {quote ? <StageQuoteCard quote={quote} /> : null}
+          </div>
         </div>
       </div>
+      {compact && !underBand ? (
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#08070a] to-transparent"
+          aria-hidden
+        />
+      ) : null}
     </div>
   )
 }

@@ -33,14 +33,16 @@ describe('resolveTheaterShortcut', () => {
     expect(resolveTheaterShortcut({ key: 'a' })).toBe('archive')
     expect(resolveTheaterShortcut({ key: 'r' })).toBe('cycleRepeat')
     expect(resolveTheaterShortcut({ key: 'R' })).toBe('cycleRepeat')
-    expect(resolveTheaterShortcut({ key: 'i' })).toBe('toggleVisual')
-    expect(resolveTheaterShortcut({ key: 'I' })).toBe('toggleVisual')
+    expect(resolveTheaterShortcut({ key: 'i' })).toBe(null)
+    expect(resolveTheaterShortcut({ key: 'I' })).toBe(null)
     expect(resolveTheaterShortcut({ key: '1' })).toBe('tabLive')
     expect(resolveTheaterShortcut({ key: '2' })).toBe('tabSaved')
     expect(resolveTheaterShortcut({ key: 'u' })).toBe('undo')
     expect(resolveTheaterShortcut({ key: 'w' })).toBe('replay')
     expect(resolveTheaterShortcut({ key: 'p' })).toBe('keepPlaying')
     expect(resolveTheaterShortcut({ key: '.' })).toBe('toggleMenu')
+    expect(resolveTheaterShortcut({ key: 'q' })).toBe('toggleShowAll')
+    expect(resolveTheaterShortcut({ key: 'Q' })).toBe('toggleShowAll')
     expect(resolveTheaterShortcut({ key: '?' })).toBe('toggleHelp')
     expect(resolveTheaterShortcut({ key: '/', shiftKey: true })).toBe('toggleHelp')
     expect(resolveTheaterShortcut({ key: 'Escape' })).toBe('close')
@@ -56,7 +58,7 @@ describe('resolveTheaterShortcut', () => {
     const input = document.createElement('input')
     expect(resolveTheaterShortcut({ key: 's', target: input })).toBe(null)
     expect(resolveTheaterShortcut({ key: 's', altKey: true })).toBe(null)
-    expect(resolveTheaterShortcut({ key: 'q' })).toBe(null)
+    expect(resolveTheaterShortcut({ key: 'g' })).toBe(null)
   })
 
   it('keeps overlay block-list in sync with the mapped keys', () => {
@@ -71,12 +73,12 @@ describe('resolveTheaterShortcut', () => {
       'o',
       'a',
       'r',
-      'i',
       '1',
       '2',
       'w',
       'p',
       '.',
+      'q',
       '?',
       'Escape',
       ' ',
@@ -87,12 +89,12 @@ describe('resolveTheaterShortcut', () => {
     }
     expect(THEATER_ACTION_EVENTS.save).toBe('theater-save')
     expect(THEATER_ACTION_EVENTS.toggleMenu).toBe('theater-toggle-menu')
+    expect(THEATER_ACTION_EVENTS.toggleShowAll).toBe('theater-toggle-show-all')
     expect(THEATER_ACTION_EVENTS.toggleArticle).toBe('theater-toggle-article')
     expect(THEATER_ACTION_EVENTS.replay).toBe('theater-replay')
     expect(THEATER_ACTION_EVENTS.keepPlaying).toBe('theater-keep-playing')
     expect(THEATER_ACTION_EVENTS.toggleExpand).toBe('theater-toggle-expand')
     expect(THEATER_ACTION_EVENTS.cycleRepeat).toBe('theater-cycle-repeat')
-    expect(THEATER_ACTION_EVENTS.toggleVisual).toBe('theater-toggle-visual')
   })
 
   it('groups next vs previous keys on the help overlay', () => {
@@ -120,12 +122,12 @@ describe('resolveTheaterShortcut', () => {
     expect(actions?.rows.find((r) => r.label === 'Read / Watch')?.keys).toEqual(['F'])
   })
 
-  it('lists Live, Saved, and Visual on the theater help', () => {
+  it('lists Live and Saved on the theater help', () => {
     const theater = THEATER_SHORTCUT_HELP.find((s) => s.title === 'Theater')
     expect(theater?.rows).toEqual([
       { keys: ['1'], label: 'Live' },
       { keys: ['2'], label: 'Saved' },
-      { keys: ['I'], label: 'Visual only' },
+      { keys: ['Q'], label: 'Show all' },
     ])
   })
 

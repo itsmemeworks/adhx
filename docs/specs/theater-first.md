@@ -10,13 +10,13 @@ adhx.com becomes a **theater**: you land with the hottest community post already
 
 One mental model runs everything:
 
-| Surface                                                                                     | Same theater, different dock / chrome                                                                                                                     |
-| ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/` signed-out                                                                              | Desktop: full-width stage + bottom filmstrip dock (queue cards, transport, Send/Save/Link) + ⌘V paste-to-preview. Mobile: full-bleed reel + bottom sheet. |
-| Preview pages (`/{user}/status/{id}`, `/reels/{id}`, `/@{user}/video/{id}`, `/shorts/{id}`) | Same theater seeded at the shared post; "Shared post" chip, post meta pinned to stage, dock shows "More being sent right now" queue; SEO markup unchanged |
-| Mobile                                                                                      | Full-bleed reel (evolution of `/trending/play`): brand on the top scrim, Send primary, Up-next bottom sheet, swipe up/down                                |
-| Signed-in Collection                                                                        | Same theater; dock = your unread queue, actions = Keep / Done / Delete / Send, tabs Collection ↔ Live                                                     |
-| Browse (escape hatch)                                                                       | The Digg-style ranked list (round-2 design), dark, one click from the dock footer                                                                         |
+| Surface                                                                                     | Same theater, different dock / chrome                                                                                                                                                                                                                                                                   |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/` signed-out                                                                              | Desktop: full-width stage + bottom filmstrip dock (queue cards, transport, Send/Save/Link) + ⌘V paste-to-preview. Mobile: full-bleed reel + bottom sheet.                                                                                                                                               |
+| Preview pages (`/{user}/status/{id}`, `/reels/{id}`, `/@{user}/video/{id}`, `/shorts/{id}`) | Same theater seeded at the shared post; chrome paints on a URL stub while FxTwitter / a scrape / oEmbed streams in. "Shared post" chip, post meta pinned to stage, dock shows "More being sent right now" queue; SEO markup streams in a Suspense sibling, `generateMetadata` still awaits for crawlers |
+| Mobile                                                                                      | Full-bleed reel (evolution of `/trending/play`): brand on the top scrim, Send primary, Up-next bottom sheet, swipe up/down                                                                                                                                                                              |
+| Signed-in Collection                                                                        | Same theater; dock = your unread queue, actions = Keep / Done / Delete / Send, tabs Collection ↔ Live                                                                                                                                                                                                   |
+| Browse (escape hatch)                                                                       | The Digg-style ranked list (round-2 design), dark, one click from the dock footer                                                                                                                                                                                                                       |
 
 ## 2. Non-negotiable constraints (existing invariants)
 
@@ -55,13 +55,14 @@ StageText.tsx            — tweet typeset large (Newsreader) on the stage; phot
 TheaterDesktopChrome.tsx — `DesktopStageChrome` (overlays inside stage: top bar with brand + LIVE +
                            paste button (expands into the preview field; ⌘V still
                            works globally — signed-in Live / Saved add in
-                           place and stay on the tab; playlist has no paste); flame chip then
-                           Visual on Live (videos/photos; omitted on Saved / playlists; `I`) then paste
-                           on every post type; `1`/`2` Live⇄Saved when signed in); bottom-left meta overlay
+                           place and stay on the tab; playlist has no paste); flame chip left of paste
+                           on every post type; Live type pills (All / Videos / Photos / Text /
+                           Articles / Quotes) live in Show all (omitted on Saved / playlists);
+                           bottom-left meta overlay
                            for video/photo; bottom-right actions — Open is the source platform glyph)
                            + `DesktopDock` (in-flow bottom dock: two-row 3-col transport —
                            prev / play-pause / next over expand / repeat / mute — +
-                           horizontal filmstrip queue auto-scrolled to keep current visible + "Show all" panel)
+                           horizontal filmstrip queue auto-scrolled to keep current visible + "Show all" panel (`Q` toggles; ↑/↓ traverse while open; Esc / click away closes))
 TheaterMobileChrome.tsx  — mobile reel chrome: top/bottom scrims, peek bar with transport + audio +
                            de-clutter, swipe up/down navigation, 70dvh Up-next bottom sheet.
                            Read/Watch is icon-only on the left of the action row (book / TV).

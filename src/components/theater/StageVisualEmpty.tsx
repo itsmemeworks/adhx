@@ -1,20 +1,25 @@
 'use client'
 
 /**
- * Live visual lens with nothing to play: the pulse is text/articles right
- * now. Not StageWaiting ("caught up") — the queue isn't exhausted, it's
- * filtered. One action: turn the lens off.
+ * Live type filter with nothing to play. Not StageWaiting ("caught up") —
+ * the queue isn't exhausted, it's filtered. One action: show every type.
  */
 
 import { Images } from 'lucide-react'
 import { StageHeadline } from './stage-primitives'
 
-export function StageVisualEmpty({ onShowAll }: { onShowAll: () => void }) {
+export function StageVisualEmpty({
+  headline,
+  onShowAll,
+}: {
+  headline: string
+  onShowAll: () => void
+}) {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-[#08070a] px-6 text-center">
       <Images size={22} className="text-white/40" aria-hidden />
       <StageHeadline>
-        <span>No videos or photos in Live right now</span>
+        <span>{headline}</span>
       </StageHeadline>
       <button
         type="button"

@@ -3,8 +3,8 @@
 /**
  * Global keydown handling for TheaterShell. One keymap for every theater
  * surface (Live, collection, playlist, shared): →/←/j/k next-prev, ↑/↓
- * scroll text, 1/2 Live⇄Saved (signed-in), I visual, Space play/pause, M mute,
- * E expand, R repeat, S/T/L/C/D/O/A/F/W/P action buttons, . menu, Shift+? help.
+ * scroll text, 1/2 Live⇄Saved (signed-in), Space play/pause, M mute,
+ * E expand, R repeat, Q Show all, S/T/L/C/D/O/A/F/W/P action buttons, . menu, Shift+? help.
  * Collection still has U (undo Archive) and Escape (close). `personalKeyAction`
  * is re-exported from TheaterShell for tests.
  */
@@ -44,8 +44,9 @@ export interface UseTheaterKeyboardArgs {
   undoLastAction: () => void
   onClose?: () => void
   /**
-   * Signed-in Live ⇄ Saved. Omitted signed-out / playlist — 1 and 2 no-op.
-   * Shared+authed uses the same callback the tab pill does (`2` → `/saved`).
+   * Live ⇄ Saved (signed-in). Omitted where those controls don't exist —
+   * 1/2 no-op. Shared+authed uses the same callback the tab pill does
+   * (`2` → `/saved`).
    */
   onTabChange?: (tab: PersonalTab) => void
   helpOpen?: boolean
@@ -161,12 +162,12 @@ export function useTheaterKeyboard({
         case 'open':
         case 'archive':
         case 'toggleMenu':
+        case 'toggleShowAll':
         case 'toggleArticle':
         case 'replay':
         case 'keepPlaying':
         case 'toggleExpand':
         case 'cycleRepeat':
-        case 'toggleVisual':
           e.preventDefault()
           window.dispatchEvent(new CustomEvent(THEATER_ACTION_EVENTS[action]))
           break
