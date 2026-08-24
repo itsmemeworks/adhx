@@ -346,7 +346,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     const { rerender } = render(
       <TheaterMobileChrome
         {...base}
-        current={videoItem()}
+        current={videoItem({ trendCount: 12 })}
         visualOnly={false}
         onToggleVisual={onToggleVisual}
       />,
@@ -355,6 +355,10 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     expect(visual).toHaveAttribute('aria-pressed', 'false')
     fireEvent.click(visual)
     expect(onToggleVisual).toHaveBeenCalledTimes(1)
+    const flame = screen.getByLabelText('12 trending')
+    const paste = screen.getByRole('button', { name: 'Paste a link' })
+    expect(flame.compareDocumentPosition(visual) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(visual.compareDocumentPosition(paste) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 
     rerender(
       <TheaterMobileChrome

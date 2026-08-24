@@ -9,7 +9,7 @@
  *
  * Two components, one file:
  *  - `DesktopStageChrome` — absolutely-positioned overlays INSIDE the stage
- *    wrapper (brand + LIVE, paste-a-link input, flame chip,
+ *    wrapper (brand + LIVE, flame chip, Visual on Live, paste-a-link input,
  *    the media post's author/caption overlay (Read opens the stacked article),
  *    and the action buttons — Open is the source platform glyph).
  *  - `DesktopDock` — the in-flow bottom dock AFTER the stage wrapper
@@ -482,15 +482,15 @@ export function DesktopStageChrome({
               </span>
             </>
           )}
-          {onToggleVisual ? (
-            <TheaterVisualToggle visualOnly={visualOnly} onToggle={onToggleVisual} />
-          ) : null}
         </div>
 
         <div className="pointer-events-auto flex flex-none items-center gap-2.5">
-          {/* One slot: left of paste (or the playlist CTA). Never next to
+          {/* Stats, then Visual (Live only), then paste. Never next to
               the author/caption — every post type uses this same corner. */}
           {current ? <FlameChip trendCount={trendCount} /> : null}
+          {onToggleVisual ? (
+            <TheaterVisualToggle visualOnly={visualOnly} onToggle={onToggleVisual} />
+          ) : null}
           {playlist && !collection ? (
             !isPlaylistOwner && (
               <StageGlass

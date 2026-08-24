@@ -402,10 +402,10 @@ export function TheaterMobileChrome({
             <MatterLogo size={16} className="[&>span]:text-white" />
           </a>
           <div className="flex flex-none items-center gap-1.5">
+            {current ? <FlameChip trendCount={trendCount} /> : null}
             {onToggleVisual ? (
               <TheaterVisualToggle visualOnly={visualOnly} onToggle={onToggleVisual} />
             ) : null}
-            {current ? <FlameChip trendCount={trendCount} /> : null}
             {/* Same add-in-place paste as desktop — stay on Live / My
                 Collection; do not bounce to a preview page. */}
             <PasteLinkButton iconOnly onPastePost={onPastePost} />
@@ -462,10 +462,10 @@ export function TheaterMobileChrome({
             <MatterLogo size={16} className="[&>span]:text-white" />
           </a>
           <div className="flex flex-none items-center gap-1.5">
+            {current ? <FlameChip trendCount={trendCount} /> : null}
             {onToggleVisual ? (
               <TheaterVisualToggle visualOnly={visualOnly} onToggle={onToggleVisual} />
             ) : null}
-            {current ? <FlameChip trendCount={trendCount} /> : null}
             {/* Mobile equivalent of the desktop top bar's paste button (⌘V still works there)
                 input (spec §8/DesktopStageChrome) — touch Safari has no
                 paste gesture, so this covers the signed-out home theater and

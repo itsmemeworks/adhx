@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-24 — Visual sits left of paste
+
+Moved the Live Visual (media-only) toggle from next to LIVE / left of the flame to immediately left of paste. Flame stats stay to its left. In-flight until the PR merges.
+
 ## 2026-08-24 — Theater keys: Visual + Live/Saved
 
 `I` already toggled Visual. `1` / `2` now switch Live ⇄ Saved when signed in (personal theater + shared preview `2` → `/saved`). Signed-out and playlists no-op. Help overlay has a Theater section. In-flight until the PR merges.

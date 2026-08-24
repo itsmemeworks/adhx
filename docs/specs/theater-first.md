@@ -53,12 +53,11 @@ StageText.tsx            — tweet typeset large (Newsreader) on the stage; phot
                            tuck under. Typeset scroller uses the same action-row
                            clearance pad
 TheaterDesktopChrome.tsx — `DesktopStageChrome` (overlays inside stage: top bar with brand + LIVE +
-                           Visual toggle on Live (videos/photos; omitted on Saved / playlists; `I`) +
-                           `1`/`2` Live⇄Saved when signed in +
                            paste button (expands into the preview field; ⌘V still
                            works globally — signed-in Live / Saved add in
-                           place and stay on the tab; playlist has no paste); flame chip left of paste
-                           on every post type); bottom-left meta overlay
+                           place and stay on the tab; playlist has no paste); flame chip then
+                           Visual on Live (videos/photos; omitted on Saved / playlists; `I`) then paste
+                           on every post type; `1`/`2` Live⇄Saved when signed in); bottom-left meta overlay
                            for video/photo; bottom-right actions — Open is the source platform glyph)
                            + `DesktopDock` (in-flow bottom dock: two-row 3-col transport —
                            prev / play-pause / next over expand / repeat / mute — +
