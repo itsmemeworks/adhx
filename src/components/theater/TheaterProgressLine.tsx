@@ -31,15 +31,19 @@
  */
 
 import { useEffect, useRef } from 'react'
-import type { TheaterItem } from './types'
+import { isQuoteReader, type TheaterItem } from './types'
 
 export type ProgressKind = 'video' | 'timed' | 'none'
 
 export const NON_VIDEO_DWELL_MS = 10_000
 
 /** Pure: which progress treatment an item gets. */
-export function progressKindFor(item: TheaterItem | null): ProgressKind {
+export function progressKindFor(item: TheaterItem | null, _articleMode = false): ProgressKind {
   if (!item) return 'none'
+  // Text-only quotes have no full-bleed player. Video stays 'video' in
+  // article mode — the same element keeps playing above the reader.
+  // `_articleMode` is kept so existing call sites don't churn.
+  if (isQuoteReader(item, false)) return 'timed'
   if (
     item.platform === 'youtube' ||
     item.platform === 'tiktok' ||

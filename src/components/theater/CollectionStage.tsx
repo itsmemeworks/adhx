@@ -6,21 +6,25 @@
  * authed `FeedItem` — no `media[]`, `quotedTweet`, or `quoteContext` — so
  * this renders straight off the ORIGINAL `FeedItem` (ported verbatim from the
  * deleted `CollectionTheater.tsx`'s `CollectionStage`/`StageQuoteCard`)
- * rather than round-tripping through `feedItemToTheaterItem()`, which would
- * drop quote cards entirely.
+ * rather than round-tripping through `feedItemToTheaterItem()`, which now
+ * carries the quoted post on `TheaterItem.quote`.
  */
 
 import type { FeedItem } from '@/components/feed/types'
-import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { reelVideoSrc } from '@/components/feed/video-src'
 import { Stage } from './Stage'
 import { StageText } from './StageText'
-import { TheaterLinkedText } from './TheaterText'
 import { StageArticle } from './StageArticle'
 import { StageInstagram, useInstagramStage } from './StageInstagram'
 import { StageYouTube } from './StageYouTube'
 import { StageVideo } from './StageVideo'
-import type { TheaterItem } from './types'
+import {
+  STAGE_ARTICLE_ROOT,
+  STAGE_ARTICLE_TEXT_PANE,
+  STAGE_ARTICLE_VIDEO_BAND,
+  StageArticleVideoFade,
+} from './stage-primitives'
+import { isQuoteReader, type TheaterItem } from './types'
 import { feedItemToTheaterItem } from './collection-item'
 
 /** Subtle tag-chip row (unified-theater-collection.md §B) for the text/quote
@@ -38,36 +42,6 @@ function CollectionTagChips({ tags }: { tags?: string[] }) {
           #{t}
         </span>
       ))}
-    </div>
-  )
-}
-
-/** Minimal inline quote card for the stage — dark-themed, compact. There is no
- * exported `QuoteCard`, so this is a small purpose-built variant. */
-function CollectionQuoteCard({ item }: { item: FeedItem }) {
-  const q = item.quotedTweet
-  const qc = item.quoteContext
-  const qName = q?.authorName || q?.author || qc?.authorName || qc?.author || 'unknown'
-  const qHandle = q?.author || qc?.author || ''
-  const qText = q?.text || qc?.text || ''
-  const qHasMedia = !!(q?.media?.length || qc?.media?.photos?.length || qc?.media?.videos?.length)
-  if (!qText && !qHandle) return null
-  return (
-    <div className="mt-4 w-full max-w-2xl rounded-xl border border-white/15 bg-white/[0.04] p-4">
-      <div className="mb-2 flex items-center gap-2">
-        <AuthorAvatar
-          src={q?.authorProfileImageUrl || qc?.authorProfileImageUrl}
-          author={qHandle}
-          size="sm"
-        />
-        <span className="truncate text-[13px] font-semibold text-white">{qName}</span>
-        {qHandle && <span className="truncate font-mono text-xs text-white/50">@{qHandle}</span>}
-      </div>
-      {qText && (
-        <p className="line-clamp-4 text-[13.5px] leading-snug text-white/80">
-          <TheaterLinkedText text={qText} hasMedia={qHasMedia} platform="twitter" />
-        </p>
-      )}
     </div>
   )
 }
@@ -92,6 +66,8 @@ export interface CollectionStageProps {
   tags?: string[]
   /** Repeat-one / single-item loop — same player `loop` the live Stage uses. */
   repeat?: boolean
+  /** Video/photo + quote: stacked reader instead of full-bleed parent media. */
+  articleMode?: boolean
 }
 
 /** Dispatches the right stage variant for the current collection `FeedItem`,
@@ -104,11 +80,13 @@ export function CollectionStage({
   onEnded,
   tags,
   repeat,
+  articleMode = false,
 }: CollectionStageProps) {
   const theaterItem = feedItemToTheaterItem(feedItem)
   const platform = feedItem.platform ?? 'twitter'
   const primary = feedItem.media?.[0]
   const isVideo = primary?.mediaType === 'video' || primary?.mediaType === 'animated_gif'
+  const quoteReader = isQuoteReader(theaterItem, false)
 
   if (platform === 'instagram') {
     return (
@@ -118,15 +96,34 @@ export function CollectionStage({
         onRequestUnmute={onRequestUnmute}
         onEnded={onEnded}
         repeat={repeat}
+        articleMode={articleMode}
       />
     )
   }
 
   if (platform === 'youtube') {
-    // Videos in the Collection tab auto-advance on end just like every
-    // other playlist now — `onEnded` flows through to the shell's
-    // `personalAdvanceOnEnded` (pure navigation only; Done/Later/Delete still
-    // decide read state), same as StageVideo's twitter/tiktok branch below.
+    // Same keep-playing split as live Stage: the iframe stays in one slot so
+    // Read does not restart the Short. `onEnded` still flows through to
+    // `personalAdvanceOnEnded` (pure navigation).
+    if (articleMode) {
+      return (
+        <div className={STAGE_ARTICLE_ROOT}>
+          <div className={STAGE_ARTICLE_VIDEO_BAND}>
+            <StageYouTube
+              item={theaterItem}
+              muted={muted}
+              onRequestUnmute={onRequestUnmute}
+              onEnded={onEnded}
+              repeat={repeat}
+            />
+          </div>
+          <StageArticleVideoFade />
+          <div className={STAGE_ARTICLE_TEXT_PANE}>
+            <StageText item={theaterItem} hideTweetLinks omitParentVideo flushTop underBand />
+          </div>
+        </div>
+      )
+    }
     return (
       <StageYouTube
         item={theaterItem}
@@ -136,6 +133,38 @@ export function CollectionStage({
         repeat={repeat}
       />
     )
+  }
+
+  // Video + Read: keep the same StageVideo playing in a top band and put
+  // the article underneath. Checked before the full-bleed / swap-to-text
+  // branches so the player is not remounted.
+  if (articleMode && isVideo && (platform === 'twitter' || platform === 'tiktok')) {
+    return (
+      <div className={STAGE_ARTICLE_ROOT}>
+        <div className={STAGE_ARTICLE_VIDEO_BAND}>
+          <StageVideo
+            item={theaterItem}
+            src={reelVideoSrc(theaterItem)}
+            poster={theaterItem.thumbnailUrl ?? null}
+            muted={muted}
+            onRequestUnmute={onRequestUnmute}
+            onEnded={onEnded}
+            repeat={repeat}
+          />
+        </div>
+        <StageArticleVideoFade />
+        <div className={STAGE_ARTICLE_TEXT_PANE}>
+          <StageText item={theaterItem} hideTweetLinks omitParentVideo flushTop underBand />
+        </div>
+      </div>
+    )
+  }
+
+  // Photo + quote in article mode, or a text-only quote: stacked reader.
+  // Checked BEFORE the full-bleed video branch — otherwise a parent video
+  // hides the essay and the quoted clip.
+  if (quoteReader) {
+    return <StageText item={theaterItem} hideTweetLinks />
   }
 
   // Twitter and TikTok video both play through the SAME StageVideo the live
@@ -164,36 +193,23 @@ export function CollectionStage({
   }
 
   if (theaterItem.contentType === 'photo') {
+    if (articleMode) {
+      return <StageText item={theaterItem} hideTweetLinks />
+    }
     // Chrome already paints author + caption (same as Live's `photoCaption={false}`).
     return <StageText item={theaterItem} photo photoCaption={false} />
   }
 
   if (theaterItem.contentType === 'quote') {
-    return (
-      <div className="flex h-full w-full flex-col items-center justify-center overflow-y-auto bg-[#08070a] px-6 py-10 sm:px-10">
-        <StageText item={theaterItem} hideTweetLinks />
-        {/* Same "w-full max-w-2xl" sibling pattern CollectionQuoteCard below uses
-            to match the text column's width inside this flex-col parent —
-            keeps the chip row left-aligned with the post text, not pinned to
-            a viewport corner. */}
-        {tags && tags.length > 0 && (
-          <div className="mt-4 w-full max-w-2xl">
-            <CollectionTagChips tags={tags} />
-          </div>
-        )}
-        <CollectionQuoteCard item={feedItem} />
-      </div>
-    )
+    return <StageText item={theaterItem} hideTweetLinks />
   }
 
   return (
     <div className="relative h-full w-full">
       <StageText item={theaterItem} />
-      {/* StageText centers its own `max-w-2xl` text column via `flex
-          justify-center` + `px-6 sm:px-10` on a full-bleed wrapper. Mirroring
-          that exact recipe here — independently, as a sibling overlay —
-          lands this row's `max-w-2xl` box at the same horizontal position as
-          StageText's, without needing to reach into StageText itself. */}
+      {/* StageText's typeset column is `max-w-2xl` + `px-6 sm:px-10`.
+          Mirroring that here lands the tag row on the same horizontal
+          ruler, without reaching into StageText. */}
       {tags && tags.length > 0 && (
         <div className="pointer-events-none absolute inset-x-0 bottom-6 flex justify-center px-6 sm:px-10">
           <div className="pointer-events-auto w-full max-w-2xl">
@@ -221,16 +237,18 @@ function CollectionInstagramStage({
   onRequestUnmute,
   onEnded,
   repeat,
+  articleMode = false,
 }: {
   item: TheaterItem
   muted: boolean
   onRequestUnmute: () => void
   onEnded?: () => void
   repeat?: boolean
+  articleMode?: boolean
 }) {
   const instagram = useInstagramStage({ item, active: true, onEnded, repeat })
   if (instagram.status === 'ready' && instagram.src) {
-    return (
+    const player = (
       <StageVideo
         item={item}
         src={instagram.src}
@@ -241,6 +259,21 @@ function CollectionInstagramStage({
         repeat={repeat}
       />
     )
+    if (articleMode) {
+      return (
+        <div className={STAGE_ARTICLE_ROOT}>
+          <div className={STAGE_ARTICLE_VIDEO_BAND}>{player}</div>
+          <StageArticleVideoFade />
+          <div className={STAGE_ARTICLE_TEXT_PANE}>
+            <StageText item={item} hideTweetLinks omitParentVideo flushTop underBand />
+          </div>
+        </div>
+      )
+    }
+    return player
+  }
+  if (articleMode) {
+    return <StageText item={item} hideTweetLinks omitParentVideo flushTop />
   }
   return <StageInstagram item={item} status={instagram.status} slow={instagram.slow} />
 }

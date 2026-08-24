@@ -410,3 +410,24 @@ describe('PasteLinkButton — the helper is a centred dialog, not an anchored po
     expect(screen.queryByRole('dialog')).toBe(dialog)
   })
 })
+
+describe('PasteLinkButton — onPastePost (add in place)', () => {
+  beforeEach(() => {
+    mockIos = false
+    pushSpy.mockClear()
+  })
+
+  it('calls onPastePost with the pasted url and does not navigate', async () => {
+    const readText = vi.fn().mockResolvedValue('https://x.com/naval/status/2064012969239859490')
+    Object.assign(navigator, { clipboard: { readText } })
+    const onPastePost = vi.fn().mockResolvedValue(true)
+
+    render(<PasteLinkButton iconOnly onPastePost={onPastePost} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+
+    await waitFor(() => {
+      expect(onPastePost).toHaveBeenCalledWith('https://x.com/naval/status/2064012969239859490')
+    })
+    expect(pushSpy).not.toHaveBeenCalled()
+  })
+})

@@ -109,7 +109,10 @@ describe('SavePostButton — save to tag', () => {
 
     render(<SavePostButton current={current} className={CLASS} onTag={vi.fn()} tags={['social']} />)
     await waitFor(() => expect(screen.getByText('Tag · 1')).toBeInTheDocument())
-    expect(screen.getByRole('button', { name: 'Tag · 1' }).className).toContain('text-clay')
+    const btn = screen.getByRole('button', { name: 'Tag · 1' })
+    expect(btn.className).toContain('border-white/25')
+    expect(btn.className).not.toContain('text-clay')
+    expect(btn.querySelector('.lucide-tag')?.classList.contains('text-clay')).toBe(true)
   })
 
   it('stays on Saved when there is no onTag (no handoff)', async () => {

@@ -67,8 +67,11 @@ export interface ActivityInput {
 }
 
 const TEXT_CAP = 500
+/** Quotes can be long-form — don't clip them to the pulse card cap. */
+const QUOTE_TEXT_CAP = 8000
 const AUTHOR_CAP = 40
 const AUTHOR_NAME_CAP = 60
+const MAX_QUOTE_PHOTOS = 4
 const DEDUPE_WINDOW_MS = 60_000
 const MAX_TEXT_LINKS = 8
 
@@ -116,14 +119,24 @@ function packTextLinks(links: TextLinkRef[] | null | undefined): string | null {
 function packQuote(quote: TheaterQuoteRef | null | undefined): string | null {
   if (!quote) return null
   const author = clean(quote.author, AUTHOR_CAP) || ''
-  const text = clean(quote.text, TEXT_CAP)
+  const text = clean(quote.text, QUOTE_TEXT_CAP)
   if (!author && !text) return null
+  const photoUrls = (quote.photoUrls ?? [])
+    .map((url) => safeThumb(url))
+    .filter((url): url is string => !!url)
+    .slice(0, MAX_QUOTE_PHOTOS)
   const cleaned: TheaterQuoteRef = {
     author,
     authorName: clean(quote.authorName, AUTHOR_NAME_CAP),
     text,
     authorAvatarUrl: safeThumb(quote.authorAvatarUrl),
   }
+  const bookmarkId = clean(quote.bookmarkId, 32)
+  if (bookmarkId) cleaned.bookmarkId = bookmarkId
+  const thumbnailUrl = safeThumb(quote.thumbnailUrl)
+  if (thumbnailUrl) cleaned.thumbnailUrl = thumbnailUrl
+  if (photoUrls.length > 0) cleaned.photoUrls = photoUrls
+  if (quote.hasVideo) cleaned.hasVideo = true
   return JSON.stringify(cleaned)
 }
 

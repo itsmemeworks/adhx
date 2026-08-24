@@ -84,8 +84,11 @@ function buildTweetResponse(tweet: FxTweet) {
     }
   }
 
-  // Quote tweet
+  // Quote tweet — include media so the theater (and LLM clients) can show
+  // the full quoted post, not a text-only stub.
   if (tweet.quote) {
+    const qPhotos = tweet.quote.media?.photos || []
+    const qVideos = tweet.quote.media?.videos || []
     response.quoteTweet = {
       id: tweet.quote.id,
       url: tweet.quote.url,
@@ -96,6 +99,19 @@ function buildTweetResponse(tweet: FxTweet) {
         avatarUrl: tweet.quote.author.avatar_url,
       },
       createdAt: tweet.quote.created_at,
+      ...(qPhotos.length > 0 || qVideos.length > 0
+        ? {
+            media: {
+              photos: qPhotos.map((p) => ({ url: p.url, width: p.width, height: p.height })),
+              videos: qVideos.map((v) => ({
+                url: v.url,
+                thumbnailUrl: v.thumbnail_url,
+                width: v.width,
+                height: v.height,
+              })),
+            },
+          }
+        : {}),
     }
   }
 

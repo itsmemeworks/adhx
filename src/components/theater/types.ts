@@ -20,6 +20,64 @@ export function theaterItemKey(item: Pick<TheaterItem, 'platform' | 'bookmarkId'
   return `${item.platform}:${item.bookmarkId || item.url}`
 }
 
+/** Parent post has first-class video or photo — theater default is full-bleed. */
+export function parentHasStageMedia(
+  item: Pick<TheaterItem, 'contentType'> | null | undefined,
+): boolean {
+  return item?.contentType === 'video' || item?.contentType === 'photo'
+}
+
+/**
+ * Watch / Read switch: parent media is on stage, and a quote is worth
+ * opening as the stacked article reader (especially when the quote has
+ * its own video or photos).
+ */
+export function canQuoteArticleMode(
+  item: Pick<TheaterItem, 'contentType' | 'quote'> | null | undefined,
+): boolean {
+  return !!item?.quote && parentHasStageMedia(item)
+}
+
+/**
+ * Read is offered for a quote-on-media post, a media caption that overflows
+ * two lines, or once the viewer is already in article mode (so Watch stays
+ * after the clamped caption unmounts).
+ */
+export function offerArticleMode(
+  item: Pick<TheaterItem, 'contentType' | 'quote' | 'text'> | null | undefined,
+  overflowing: boolean,
+  articleMode = false,
+): boolean {
+  if (!parentHasStageMedia(item)) return false
+  if (articleMode || canQuoteArticleMode(item)) return true
+  return overflowing && !!(item?.text || '').trim()
+}
+
+/**
+ * Stacked StageText reader for a quote with no parent media to full-bleed.
+ * Video/photo + quote stays on the player unless `articleMode` is on.
+ */
+export function isQuoteReader(
+  item: Pick<TheaterItem, 'quote' | 'contentType'> | null | undefined,
+  articleMode = false,
+): boolean {
+  if (!item?.quote) return false
+  if (articleMode) return true
+  return !parentHasStageMedia(item)
+}
+
+/**
+ * Show the typeset article (text-only quotes, or Read on parent media).
+ * Distinct from `isQuoteReader` so a video can keep playing in article mode.
+ */
+export function isArticleReader(
+  item: Pick<TheaterItem, 'quote' | 'contentType'> | null | undefined,
+  articleMode = false,
+): boolean {
+  if (articleMode && parentHasStageMedia(item)) return true
+  return isQuoteReader(item, false)
+}
+
 /**
  * Which rail the theater carries: signed-out home, a shared preview (PR 3),
  * a public playlist (one shared tag, `/t/{username}/{tag}` — playlists-as-
